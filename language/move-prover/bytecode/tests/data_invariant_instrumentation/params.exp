@@ -14,9 +14,6 @@ public fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: Test::R, $t2|_si
   2: assume And(WellFormed($t2), Gt(select Test::S.y($t2), 0))
   3: assume And(WellFormed($t3), And(Gt(select Test::R.x($t3), select Test::S.y(select Test::R.s($t3))), Gt(select Test::S.y(select Test::R.s($t3)), 0)))
   4: trace_local[_mut_R]($t3)
-     # data invariant at tests/data_invariant_instrumentation/params.move:12:9+18
-     # VC: data invariant does not hold at tests/data_invariant_instrumentation/params.move:12:9+18
-  5: assert Gt(select Test::R.x($t3), select Test::S.y(select Test::R.s($t3)))
-  6: label L1
-  7: return ()
+  5: label L1
+  6: return ()
 }

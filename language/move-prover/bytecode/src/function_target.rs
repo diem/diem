@@ -82,11 +82,6 @@ pub struct FunctionData {
     pub modify_targets: BTreeMap<QualifiedId<StructId>, Vec<Exp>>,
 }
 
-pub struct FunctionDataBuilder<'a> {
-    pub data: &'a mut FunctionData,
-    pub next_attr_index: usize,
-}
-
 impl<'env> FunctionTarget<'env> {
     pub fn new(
         func_env: &'env FunctionEnv<'env>,
@@ -307,12 +302,6 @@ impl<'env> FunctionTarget<'env> {
         res
     }
 
-    /// Returns true if this is an unchecked parameter.
-    pub fn is_unchecked_param(&self, _idx: TempIndex) -> bool {
-        // This is currently disabled, may want to turn on again so keeping the logic.
-        false
-    }
-
     /// Gets modify targets for a type
     pub fn get_modify_targets_for_type(&self, ty: &QualifiedId<StructId>) -> Option<&Vec<Exp>> {
         self.get_modify_targets().get(ty)
@@ -518,10 +507,18 @@ impl<'env> FunctionTarget<'env> {
 
 impl<'env> fmt::Display for FunctionTarget<'env> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let modifier = if self.func_env.is_native() {
+            "native "
+        } else if self.func_env.is_intrinsic() {
+            "intrinsic "
+        } else {
+            ""
+        };
         write!(
             f,
-            "{}fun {}::{}",
+            "{}{}fun {}::{}",
             self.func_env.visibility_str(),
+            modifier,
             self.func_env
                 .module_env
                 .get_name()
@@ -531,11 +528,11 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         let tparams = &self.get_type_parameters();
         if !tparams.is_empty() {
             write!(f, "<")?;
-            for (i, TypeParameter(name, _)) in tparams.iter().enumerate() {
+            for i in 0..tparams.len() {
                 if i > 0 {
                     write!(f, ", ")?;
                 }
-                write!(f, "{}", name.display(self.symbol_pool()))?;
+                write!(f, "#{}", i)?;
             }
             write!(f, ">")?;
         }
@@ -581,21 +578,25 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 write!(f, ")")?;
             }
         }
-        writeln!(f, " {{")?;
-        for i in self.get_parameter_count()..self.get_local_count() {
-            write!(f, "     var ")?;
-            write_decl(f, i)?;
-            writeln!(f)?;
+        if self.func_env.is_native_or_intrinsic() {
+            writeln!(f, ";")?;
+        } else {
+            writeln!(f, " {{")?;
+            for i in self.get_parameter_count()..self.get_local_count() {
+                write!(f, "     var ")?;
+                write_decl(f, i)?;
+                writeln!(f)?;
+            }
+            let label_offsets = Bytecode::label_offsets(self.get_bytecode());
+            for (offset, code) in self.get_bytecode().iter().enumerate() {
+                writeln!(
+                    f,
+                    "{}",
+                    self.pretty_print_bytecode(&label_offsets, offset, code)
+                )?;
+            }
+            writeln!(f, "}}")?;
         }
-        let label_offsets = Bytecode::label_offsets(self.get_bytecode());
-        for (offset, code) in self.get_bytecode().iter().enumerate() {
-            writeln!(
-                f,
-                "{}",
-                self.pretty_print_bytecode(&label_offsets, offset, code)
-            )?;
-        }
-        writeln!(f, "}}")?;
         Ok(())
     }
 }

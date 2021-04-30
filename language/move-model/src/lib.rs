@@ -36,6 +36,7 @@ pub mod code_writer;
 pub mod exp_generator;
 pub mod exp_rewriter;
 pub mod model;
+pub mod native;
 pub mod pragmas;
 pub mod spec_translator;
 pub mod symbol;

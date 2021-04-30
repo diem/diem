@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+public fun Test::f1<#0>($t0|x1: #0): Test::A<#0, u64> {
      var $t1: #0
      var $t2: u64
      var $t3: Test::A<#0, u64>
@@ -25,7 +25,7 @@ public fun Test::f2($t0|x: u8): Test::B<u8> {
 
 
 [variant baseline]
-public fun Test::f3<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+public fun Test::f3<#0>($t0|x1: #0): Test::A<#0, u64> {
      var $t1: #0
      var $t2: u64
      var $t3: Test::A<#0, u64>
@@ -37,7 +37,7 @@ public fun Test::f3<$tv0>($t0|x1: #0): Test::A<#0, u64> {
 
 
 [variant baseline]
-public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
+public fun Test::f4<#0>($t0|x1: #0): Test::B<#0> {
      var $t1: #0
      var $t2: Test::A<#0, u64>
      var $t3: Test::B<#0>
@@ -60,7 +60,7 @@ public fun Test::f5(): Test::B<u128> {
 ============ after pipeline `mono_analysis` ================
 
 [variant baseline]
-public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+public fun Test::f1<#0>($t0|x1: #0): Test::A<#0, u64> {
      var $t1: u64
      var $t2: Test::A<#0, u64>
   0: $t1 := 10
@@ -71,7 +71,7 @@ public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
 
 
 [variant verification]
-public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+public fun Test::f1<#0>($t0|x1: #0): Test::A<#0, u64> {
      var $t1: u64
      var $t2: Test::A<#0, u64>
   0: assume WellFormed($t0)
@@ -98,7 +98,7 @@ public fun Test::f2($t0|x: u8): Test::B<u8> {
 
 
 [variant verification]
-public fun Test::f3<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+public fun Test::f3<#0>($t0|x1: #0): Test::A<#0, u64> {
      var $t1: u64
      var $t2: Test::A<#0, u64>
   0: assume WellFormed($t0)
@@ -110,7 +110,7 @@ public fun Test::f3<$tv0>($t0|x1: #0): Test::A<#0, u64> {
 
 
 [variant baseline]
-public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
+public fun Test::f4<#0>($t0|x1: #0): Test::B<#0> {
      var $t1: bool
      var $t2: num
      var $t3: Test::A<#0, u64>
@@ -135,7 +135,7 @@ public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
 
 
 [variant verification]
-public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
+public fun Test::f4<#0>($t0|x1: #0): Test::B<#0> {
      var $t1: bool
      var $t2: num
      var $t3: Test::A<#0, u64>

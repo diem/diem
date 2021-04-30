@@ -1,0 +1,41 @@
+Move prover returns: exiting with boogie verification errors
+error: data invariant does not hold
+
+   ┌── tests/sources/functional/mut_ref.move:8:21 ───
+   │
+ 8 │     spec struct T { invariant value > 0; }
+   │                     ^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/mut_ref.move:127
+   =     at tests/sources/functional/mut_ref.move:113: call_return_ref_different_path_vec2_incorrect
+   =         b = <redacted>
+   =     at tests/sources/functional/mut_ref.move:114: call_return_ref_different_path_vec2_incorrect
+   =         is = <redacted>
+   =     at tests/sources/functional/mut_ref.move:115: call_return_ref_different_path_vec2_incorrect
+   =         ts = <redacted>
+   =     at tests/sources/functional/mut_ref.move:116: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:117: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:8
+   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:8
+   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:8
+   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:8
+   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:120: call_return_ref_different_path_vec2_incorrect
+   =         x = <redacted>
+   =     at tests/sources/functional/mut_ref.move:121: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:90: return_ref_different_path_vec2
+   =         b = <redacted>
+   =         x = <redacted>
+   =     at tests/sources/functional/mut_ref.move:91: return_ref_different_path_vec2
+   =         <redacted> = <redacted>
+   =         result = <redacted>
+   =         x = <redacted>
+   =     at tests/sources/functional/mut_ref.move:92: return_ref_different_path_vec2
+   =         r = <redacted>
+   =     at tests/sources/functional/mut_ref.move:122: call_return_ref_different_path_vec2_incorrect
+   =     at tests/sources/functional/mut_ref.move:8

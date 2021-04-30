@@ -141,10 +141,6 @@ impl LiveVarAnalysisProcessor {
         func_target: &FunctionTarget,
         code: Vec<Bytecode>,
     ) -> (Vec<Bytecode>, Vec<Type>, BTreeMap<TempIndex, TempIndex>) {
-        if code.iter().any(|c| matches!(c, Bytecode::SpecBlock(..))) {
-            // TODO(wrwg): SpecBlock currently does not work with variable renaming.
-            return (code, func_target.data.local_types.clone(), BTreeMap::new());
-        }
         let mut new_code = vec![];
         let mut new_vars = vec![];
         let mut remap = BTreeMap::new();
@@ -360,12 +356,9 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
             Load(_, dst, _) => {
                 state.remove(&[*dst]);
             }
-            Call(_, dsts, oper, srcs, on_abort) => {
+            Call(_, dsts, _, srcs, on_abort) => {
                 state.remove(dsts);
                 state.insert(srcs);
-                if let Operation::Splice(map) = oper {
-                    state.insert(&map.values().cloned().collect_vec());
-                }
                 if let Some(AbortAction(_, dst)) = on_abort {
                     state.remove(&[*dst]);
                 }

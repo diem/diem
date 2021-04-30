@@ -11,7 +11,7 @@ public fun Exists::call_with_type_param1($t0|a: address): bool {
 
 
 [variant baseline]
-public fun Exists::call_with_type_param2<$tv0, $tv1>($t0|a: address): bool {
+public fun Exists::call_with_type_param2<#0, #1>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
   0: $t1 := copy($t0)
@@ -55,7 +55,7 @@ public fun Exists::exists_formal($t0|a: address): bool {
 
 
 [variant baseline]
-public fun Exists::exists_generic<$tv0>($t0|a: address): bool {
+public fun Exists::exists_generic<#0>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
   0: $t1 := copy($t0)
@@ -91,7 +91,7 @@ public fun Exists::call_with_type_param1($t0|a: address): bool {
 
 
 [variant baseline]
-public fun Exists::call_with_type_param2<$tv0, $tv1>($t0|a: address): bool {
+public fun Exists::call_with_type_param2<#0, #1>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
@@ -158,7 +158,7 @@ public fun Exists::exists_formal($t0|a: address): bool {
 
 
 [variant baseline]
-public fun Exists::exists_generic<$tv0>($t0|a: address): bool {
+public fun Exists::exists_generic<#0>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:

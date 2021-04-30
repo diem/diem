@@ -443,31 +443,31 @@ public fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPack
      # live_nodes: Reference($t0)
   0: $t2 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   1: $t3 := 0
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   2: TestPackUnpack::private_update_value($t2, $t3)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   3: $t4 := 1
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   4: $t5 := borrow_field<TestPackUnpack::S>.value($t2)
      # live_nodes: Reference($t0), Reference($t5)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   5: write_ref($t5, $t4)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   6: trace_local[r]($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   7: return ()
 }
 
@@ -482,31 +482,31 @@ public fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut
      # live_nodes: Reference($t0)
   0: $t2 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   1: $t3 := 0
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   2: TestPackUnpack::public_update_value($t2, $t3)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   3: $t4 := 1
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   4: $t5 := borrow_field<TestPackUnpack::S>.value($t2)
      # live_nodes: Reference($t0), Reference($t5)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   5: write_ref($t5, $t4)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   6: trace_local[r]($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t5) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t5))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t5) -> {(.value, Reference($t2))}
   7: return ()
 }
 
@@ -553,37 +553,37 @@ public fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPac
      # live_nodes: LocalRoot($t0)
   1: $t2 := copy($t1)
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}
   2: $t3 := get_field<TestPackUnpack::S>.value($t2)
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}
   3: $t4 := 3
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}
   4: $t5 := +($t3, $t4)
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}
   5: $t6 := borrow_local($t1)
      # live_nodes: LocalRoot($t0), LocalRoot($t2), Reference($t6)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2)), (*, Reference($t6))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}, Reference($t6) -> {(*, LocalRoot($t1))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2)), (@, Reference($t6))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}, Reference($t6) -> {(@, LocalRoot($t1))}
   6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
      # live_nodes: LocalRoot($t0), LocalRoot($t2), Reference($t7)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2)), (*, Reference($t6))}, Reference($t6) -> {(*, Reference($t7))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}, Reference($t6) -> {(*, LocalRoot($t1))}, Reference($t7) -> {(*, Reference($t6))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(.value, Reference($t7))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(.value, Reference($t6))}
   7: write_ref($t7, $t5)
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
-     # borrowed_by: LocalRoot($t1) -> {(*, LocalRoot($t2)), (*, Reference($t6))}, Reference($t6) -> {(*, Reference($t7))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t1))}, Reference($t6) -> {(*, LocalRoot($t1))}, Reference($t7) -> {(*, Reference($t6))}
+     # borrowed_by: LocalRoot($t1) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(.value, Reference($t7))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t1))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(.value, Reference($t6))}
   8: $t8 := move($t1)
      # live_nodes: LocalRoot($t0), LocalRoot($t2)
      # moved_nodes: LocalRoot($t1)
-     # borrowed_by: LocalRoot($t8) -> {(*, LocalRoot($t2)), (*, Reference($t6))}, Reference($t6) -> {(*, Reference($t7))}
-     # borrows_from: LocalRoot($t2) -> {(*, LocalRoot($t8))}, Reference($t6) -> {(*, LocalRoot($t8))}, Reference($t7) -> {(*, Reference($t6))}
+     # borrowed_by: LocalRoot($t8) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(.value, Reference($t7))}
+     # borrows_from: LocalRoot($t2) -> {(@, LocalRoot($t8))}, Reference($t6) -> {(@, LocalRoot($t8))}, Reference($t7) -> {(.value, Reference($t6))}
   9: return $t8
 }
 
@@ -595,16 +595,16 @@ fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): &mut u64 {
      # live_nodes: Reference($t0)
   0: $t1 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t1))}
-     # borrows_from: Reference($t1) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t1))}
+     # borrows_from: Reference($t1) -> {(.nested, Reference($t0))}
   1: $t2 := borrow_field<TestPackUnpack::S>.value($t1)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t1))}, Reference($t1) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t1) -> {(*, Reference($t0))}, Reference($t2) -> {(*, Reference($t1))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t1))}, Reference($t1) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t1) -> {(.nested, Reference($t0))}, Reference($t2) -> {(.value, Reference($t1))}
   2: trace_local[r]($t0)
      # live_nodes: Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t1))}, Reference($t1) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t1) -> {(*, Reference($t0))}, Reference($t2) -> {(*, Reference($t1))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t1))}, Reference($t1) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t1) -> {(.nested, Reference($t0))}, Reference($t2) -> {(.value, Reference($t1))}
   3: return $t2
 }
 
@@ -640,39 +640,39 @@ public fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t
      # live_nodes: Reference($t0), Reference($t1)
   7: $t9 := borrow_field<TestPackUnpack::R>.nested($t1)
      # live_nodes: Reference($t0), Reference($t1), Reference($t9)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t9))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t9))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}
   8: $t10 := borrow_field<TestPackUnpack::S>.value($t9)
      # live_nodes: Reference($t0), Reference($t1), Reference($t10)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}
   9: write_ref($t10, $t8)
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}
  10: $t11 := 1
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}
  11: $t12 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t1), Reference($t12)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t12))}, Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}, Reference($t12) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t12))}, Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}, Reference($t12) -> {(.nested, Reference($t0))}
  12: $t13 := borrow_field<TestPackUnpack::S>.value($t12)
      # live_nodes: Reference($t0), Reference($t1), Reference($t13)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t12))}, Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}, Reference($t12) -> {(*, Reference($t13))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}, Reference($t12) -> {(*, Reference($t0))}, Reference($t13) -> {(*, Reference($t12))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t12))}, Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}, Reference($t12) -> {(.value, Reference($t13))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}, Reference($t12) -> {(.nested, Reference($t0))}, Reference($t13) -> {(.value, Reference($t12))}
  13: write_ref($t13, $t11)
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t12))}, Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}, Reference($t12) -> {(*, Reference($t13))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}, Reference($t12) -> {(*, Reference($t0))}, Reference($t13) -> {(*, Reference($t12))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t12))}, Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}, Reference($t12) -> {(.value, Reference($t13))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}, Reference($t12) -> {(.nested, Reference($t0))}, Reference($t13) -> {(.value, Reference($t12))}
  14: trace_local[r1]($t0)
      # live_nodes: Reference($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t12))}, Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}, Reference($t12) -> {(*, Reference($t13))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}, Reference($t12) -> {(*, Reference($t0))}, Reference($t13) -> {(*, Reference($t12))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t12))}, Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}, Reference($t12) -> {(.value, Reference($t13))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}, Reference($t12) -> {(.nested, Reference($t0))}, Reference($t13) -> {(.value, Reference($t12))}
  15: trace_local[r2]($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t12))}, Reference($t1) -> {(*, Reference($t9))}, Reference($t9) -> {(*, Reference($t10))}, Reference($t12) -> {(*, Reference($t13))}
-     # borrows_from: Reference($t9) -> {(*, Reference($t1))}, Reference($t10) -> {(*, Reference($t9))}, Reference($t12) -> {(*, Reference($t0))}, Reference($t13) -> {(*, Reference($t12))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t12))}, Reference($t1) -> {(.nested, Reference($t9))}, Reference($t9) -> {(.value, Reference($t10))}, Reference($t12) -> {(.value, Reference($t13))}
+     # borrows_from: Reference($t9) -> {(.nested, Reference($t1))}, Reference($t10) -> {(.value, Reference($t9))}, Reference($t12) -> {(.nested, Reference($t0))}, Reference($t13) -> {(.value, Reference($t12))}
  16: return ()
 }
 
@@ -702,39 +702,39 @@ public fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut T
      # live_nodes: Reference($t0), Reference($t1)
   5: $t7 := borrow_field<TestPackUnpack::R>.nested($t1)
      # live_nodes: Reference($t0), Reference($t1), Reference($t7)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t7))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t7))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}
   6: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
      # live_nodes: Reference($t0), Reference($t1), Reference($t8)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}
   7: write_ref($t8, $t6)
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}
   8: $t9 := 0
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}
+     # borrowed_by: Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}
   9: $t10 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t1), Reference($t10)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t10))}, Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}, Reference($t10) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t10))}, Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}, Reference($t10) -> {(.nested, Reference($t0))}
  10: $t11 := borrow_field<TestPackUnpack::S>.value($t10)
      # live_nodes: Reference($t0), Reference($t1), Reference($t11)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t10))}, Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}, Reference($t10) -> {(*, Reference($t11))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}, Reference($t10) -> {(*, Reference($t0))}, Reference($t11) -> {(*, Reference($t10))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t10))}, Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}, Reference($t10) -> {(.value, Reference($t11))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}, Reference($t10) -> {(.nested, Reference($t0))}, Reference($t11) -> {(.value, Reference($t10))}
  11: write_ref($t11, $t9)
      # live_nodes: Reference($t0), Reference($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t10))}, Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}, Reference($t10) -> {(*, Reference($t11))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}, Reference($t10) -> {(*, Reference($t0))}, Reference($t11) -> {(*, Reference($t10))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t10))}, Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}, Reference($t10) -> {(.value, Reference($t11))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}, Reference($t10) -> {(.nested, Reference($t0))}, Reference($t11) -> {(.value, Reference($t10))}
  12: trace_local[r1]($t0)
      # live_nodes: Reference($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t10))}, Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}, Reference($t10) -> {(*, Reference($t11))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}, Reference($t10) -> {(*, Reference($t0))}, Reference($t11) -> {(*, Reference($t10))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t10))}, Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}, Reference($t10) -> {(.value, Reference($t11))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}, Reference($t10) -> {(.nested, Reference($t0))}, Reference($t11) -> {(.value, Reference($t10))}
  13: trace_local[r2]($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t10))}, Reference($t1) -> {(*, Reference($t7))}, Reference($t7) -> {(*, Reference($t8))}, Reference($t10) -> {(*, Reference($t11))}
-     # borrows_from: Reference($t7) -> {(*, Reference($t1))}, Reference($t8) -> {(*, Reference($t7))}, Reference($t10) -> {(*, Reference($t0))}, Reference($t11) -> {(*, Reference($t10))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t10))}, Reference($t1) -> {(.nested, Reference($t7))}, Reference($t7) -> {(.value, Reference($t8))}, Reference($t10) -> {(.value, Reference($t11))}
+     # borrows_from: Reference($t7) -> {(.nested, Reference($t1))}, Reference($t8) -> {(.value, Reference($t7))}, Reference($t10) -> {(.nested, Reference($t0))}, Reference($t11) -> {(.value, Reference($t10))}
  14: return ()
 }
 
@@ -773,16 +773,16 @@ fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u
      # live_nodes: LocalRoot($t1), Reference($t0)
   0: $t2 := borrow_field<TestPackUnpack::S>.value($t0)
      # live_nodes: LocalRoot($t1), Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   1: write_ref($t2, $t1)
      # live_nodes: LocalRoot($t1), Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   2: trace_local[s]($t0)
      # live_nodes: LocalRoot($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   3: return ()
 }
 
@@ -793,16 +793,16 @@ public fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t
      # live_nodes: LocalRoot($t1), Reference($t0)
   0: $t2 := borrow_field<TestPackUnpack::S>.value($t0)
      # live_nodes: LocalRoot($t1), Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   1: write_ref($t2, $t1)
      # live_nodes: LocalRoot($t1), Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   2: trace_local[s]($t0)
      # live_nodes: LocalRoot($t1)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.value, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.value, Reference($t0))}
   3: return ()
 }
 
@@ -826,15 +826,15 @@ public fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u6
      # live_nodes: Reference($t0)
   0: $t3 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   1: $t4 := get_field<TestPackUnpack::S>.value($t3)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   2: trace_local[r]($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   3: return $t4
 }
 
@@ -850,31 +850,31 @@ public fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mu
      # live_nodes: Reference($t0)
   0: $t2 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   1: $t3 := 0
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}
   2: $t4 := borrow_field<TestPackUnpack::S>.value($t2)
      # live_nodes: Reference($t0), Reference($t2), Reference($t4)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t4) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t4))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t4) -> {(.value, Reference($t2))}
   3: write_ref($t4, $t3)
      # live_nodes: Reference($t0), Reference($t2)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t4) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t4))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t4) -> {(.value, Reference($t2))}
   4: $t5 := read_ref($t2)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t4) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t4))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t4) -> {(.value, Reference($t2))}
   5: $t6 := TestPackUnpack::read_S_from_immutable($t5)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t4) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t4))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t4) -> {(.value, Reference($t2))}
   6: trace_local[r]($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t2) -> {(*, Reference($t0))}, Reference($t4) -> {(*, Reference($t2))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t2))}, Reference($t2) -> {(.value, Reference($t4))}
+     # borrows_from: Reference($t2) -> {(.nested, Reference($t0))}, Reference($t4) -> {(.value, Reference($t2))}
   7: return $t6
 }
 
@@ -892,35 +892,35 @@ public fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u6
      # live_nodes: Reference($t0)
   0: $t3 := borrow_field<TestPackUnpack::R>.nested($t0)
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   1: $t4 := get_field<TestPackUnpack::S>.value($t3)
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   2: $t5 := 2
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   3: $t6 := +($t4, $t5)
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}
   4: $t7 := borrow_field<TestPackUnpack::S>.value($t3)
      # live_nodes: Reference($t0), Reference($t3), Reference($t7)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}, Reference($t3) -> {(*, Reference($t7))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}, Reference($t7) -> {(*, Reference($t3))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}, Reference($t3) -> {(.value, Reference($t7))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}, Reference($t7) -> {(.value, Reference($t3))}
   5: write_ref($t7, $t6)
      # live_nodes: Reference($t0), Reference($t3)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}, Reference($t3) -> {(*, Reference($t7))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}, Reference($t7) -> {(*, Reference($t3))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}, Reference($t3) -> {(.value, Reference($t7))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}, Reference($t7) -> {(.value, Reference($t3))}
   6: $t8 := get_field<TestPackUnpack::S>.value($t3)
      # live_nodes: Reference($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}, Reference($t3) -> {(*, Reference($t7))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}, Reference($t7) -> {(*, Reference($t3))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}, Reference($t3) -> {(.value, Reference($t7))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}, Reference($t7) -> {(.value, Reference($t3))}
   7: trace_local[r]($t0)
-     # borrowed_by: Reference($t0) -> {(*, Reference($t3))}, Reference($t3) -> {(*, Reference($t7))}
-     # borrows_from: Reference($t3) -> {(*, Reference($t0))}, Reference($t7) -> {(*, Reference($t3))}
+     # borrowed_by: Reference($t0) -> {(.nested, Reference($t3))}, Reference($t3) -> {(.value, Reference($t7))}
+     # borrows_from: Reference($t3) -> {(.nested, Reference($t0))}, Reference($t7) -> {(.value, Reference($t3))}
   8: return $t8
 }
 
@@ -940,23 +940,26 @@ public fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
      # live_nodes: Reference($t4)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}
   4: $t5 := TestPackUnpack::get_value_ref($t4)
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   5: $t6 := 2
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   6: write_ref($t5, $t6)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   7: $t7 := move($t0)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: LocalRoot($t7) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t7))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: LocalRoot($t0), Reference($t4)
+     # borrowed_by: LocalRoot($t7) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t7))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   8: return $t7
 }
 
@@ -976,23 +979,26 @@ public fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPa
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
      # live_nodes: Reference($t4)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}
   4: $t5 := TestPackUnpack::get_value_ref($t4)
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   5: $t6 := 0
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   6: write_ref($t5, $t6)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   7: $t7 := move($t0)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: LocalRoot($t7) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t7))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: LocalRoot($t0), Reference($t4)
+     # borrowed_by: LocalRoot($t7) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t7))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   8: return $t7
 }
 
@@ -1012,22 +1018,33 @@ public fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpa
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
      # live_nodes: Reference($t4)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}
   4: $t5 := TestPackUnpack::get_value_ref($t4)
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   5: $t6 := 1
      # live_nodes: Reference($t5)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   6: write_ref($t5, $t6)
-     # borrowed_by: LocalRoot($t0) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t0))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: Reference($t4)
+     # borrowed_by: LocalRoot($t0) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t0))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   7: $t7 := move($t0)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: LocalRoot($t7) -> {(*, Reference($t4))}, Reference($t4) -> {(*, Reference($t5))}
-     # borrows_from: Reference($t4) -> {(*, LocalRoot($t7))}, Reference($t5) -> {(*, Reference($t4))}
+     # moved_nodes: LocalRoot($t0), Reference($t4)
+     # borrowed_by: LocalRoot($t7) -> {(@, Reference($t4))}, Reference($t4) -> {(.nested/.value, Reference($t5))}
+     # borrows_from: Reference($t4) -> {(@, LocalRoot($t7))}, Reference($t5) -> {(.nested/.value, Reference($t4))}
   8: return $t7
 }
+
+
+
+==== borrow analysis summaries ====
+
+fun TestPackUnpack::get_value_ref[baseline]
+borrowed_by: Reference($t0) -> {(.nested/.value, Return(0))}
+borrows_from: Return(0) -> {(.nested/.value, Reference($t0))}

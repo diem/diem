@@ -488,7 +488,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
             }
             Abort(..) => {}
             SaveMem(..) | Prop(..) | SaveSpecVar(..) | Branch(..) | Jump(..) | Label(..)
-            | SpecBlock(..) | Nop(..) => (),
+            | Nop(..) => (),
         }
     }
 }

@@ -1,356 +1,59 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
-     var $t2|i: u64
-     var $t3|len: u64
-     var $t4: u64
-     var $t5: &vector<#0>
-     var $t6: u64
-     var $t7: u64
-     var $t8: u64
-     var $t9: bool
-     var $t10: &vector<#0>
-     var $t11: u64
-     var $t12: &#0
-     var $t13: &#0
-     var $t14: bool
-     var $t15: &vector<#0>
-     var $t16: &#0
-     var $t17: bool
-     var $t18: u64
-     var $t19: u64
-     var $t20: u64
-     var $t21: &vector<#0>
-     var $t22: &#0
-     var $t23: bool
-  0: $t4 := 0
-  1: $t2 := $t4
-  2: $t5 := copy($t0)
-  3: $t6 := Vector::length<#0>($t5)
-  4: $t3 := $t6
-  5: goto 6
-  6: label L6
-  7: $t7 := copy($t2)
-  8: $t8 := copy($t3)
-  9: $t9 := <($t7, $t8)
- 10: if ($t9) goto 13 else goto 11
- 11: label L1
- 12: goto 35
- 13: label L0
- 14: $t10 := copy($t0)
- 15: $t11 := copy($t2)
- 16: $t12 := Vector::borrow<#0>($t10, $t11)
- 17: $t13 := copy($t1)
- 18: $t14 := ==($t12, $t13)
- 19: if ($t14) goto 22 else goto 20
- 20: label L4
- 21: goto 29
- 22: label L3
- 23: $t15 := move($t0)
- 24: destroy($t15)
- 25: $t16 := move($t1)
- 26: destroy($t16)
- 27: $t17 := true
- 28: return $t17
- 29: label L5
- 30: $t18 := copy($t2)
- 31: $t19 := 1
- 32: $t20 := +($t18, $t19)
- 33: $t2 := $t20
- 34: goto 6
- 35: label L2
- 36: $t21 := move($t0)
- 37: destroy($t21)
- 38: $t22 := move($t1)
- 39: destroy($t22)
- 40: $t23 := false
- 41: return $t23
-}
+public intrinsic fun Vector::contains<#0>($t0|v: &vector<#0>, $t1|e: &#0): bool;
 
 
 [variant baseline]
-public fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
-     var $t2|i: u64
-     var $t3|len: u64
-     var $t4: u64
-     var $t5: &vector<#0>
-     var $t6: u64
-     var $t7: u64
-     var $t8: u64
-     var $t9: bool
-     var $t10: &vector<#0>
-     var $t11: u64
-     var $t12: &#0
-     var $t13: &#0
-     var $t14: bool
-     var $t15: &vector<#0>
-     var $t16: &#0
-     var $t17: bool
-     var $t18: u64
-     var $t19: u64
-     var $t20: u64
-     var $t21: u64
-     var $t22: &vector<#0>
-     var $t23: &#0
-     var $t24: bool
-     var $t25: u64
-  0: $t4 := 0
-  1: $t2 := $t4
-  2: $t5 := copy($t0)
-  3: $t6 := Vector::length<#0>($t5)
-  4: $t3 := $t6
-  5: goto 6
-  6: label L6
-  7: $t7 := copy($t2)
-  8: $t8 := copy($t3)
-  9: $t9 := <($t7, $t8)
- 10: if ($t9) goto 13 else goto 11
- 11: label L1
- 12: goto 36
- 13: label L0
- 14: $t10 := copy($t0)
- 15: $t11 := copy($t2)
- 16: $t12 := Vector::borrow<#0>($t10, $t11)
- 17: $t13 := copy($t1)
- 18: $t14 := ==($t12, $t13)
- 19: if ($t14) goto 22 else goto 20
- 20: label L4
- 21: goto 30
- 22: label L3
- 23: $t15 := move($t0)
- 24: destroy($t15)
- 25: $t16 := move($t1)
- 26: destroy($t16)
- 27: $t17 := true
- 28: $t18 := copy($t2)
- 29: return ($t17, $t18)
- 30: label L5
- 31: $t19 := copy($t2)
- 32: $t20 := 1
- 33: $t21 := +($t19, $t20)
- 34: $t2 := $t21
- 35: goto 6
- 36: label L2
- 37: $t22 := move($t0)
- 38: destroy($t22)
- 39: $t23 := move($t1)
- 40: destroy($t23)
- 41: $t24 := false
- 42: $t25 := 0
- 43: return ($t24, $t25)
-}
+public intrinsic fun Vector::index_of<#0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64);
 
 
 [variant baseline]
-public fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
-     var $t2: &mut vector<#0>
-     var $t3: &vector<#0>
-     var $t4: bool
-     var $t5: bool
-     var $t6: &mut vector<#0>
-     var $t7: &mut vector<#0>
-     var $t8: #0
-     var $t9: &mut vector<#0>
-     var $t10: vector<#0>
-  0: $t2 := borrow_local($t1)
-  1: Vector::reverse<#0>($t2)
-  2: goto 3
-  3: label L3
-  4: $t3 := borrow_local($t1)
-  5: $t4 := Vector::is_empty<#0>($t3)
-  6: $t5 := !($t4)
-  7: if ($t5) goto 10 else goto 8
-  8: label L1
-  9: goto 16
- 10: label L0
- 11: $t6 := copy($t0)
- 12: $t7 := borrow_local($t1)
- 13: $t8 := Vector::pop_back<#0>($t7)
- 14: Vector::push_back<#0>($t6, $t8)
- 15: goto 3
- 16: label L2
- 17: $t9 := move($t0)
- 18: destroy($t9)
- 19: $t10 := move($t1)
- 20: Vector::destroy_empty<#0>($t10)
- 21: return ()
-}
+public intrinsic fun Vector::append<#0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>);
 
 
 [variant baseline]
-public fun Vector::is_empty<$tv0>($t0|v: &vector<#0>): bool {
-     var $t1: &vector<#0>
-     var $t2: u64
-     var $t3: u64
-     var $t4: bool
-  0: $t1 := move($t0)
-  1: $t2 := Vector::length<#0>($t1)
-  2: $t3 := 0
-  3: $t4 := ==($t2, $t3)
-  4: return $t4
-}
+public native fun Vector::borrow<#0>($t0|v: &vector<#0>, $t1|i: u64): &#0;
 
 
 [variant baseline]
-public fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
-     var $t2|len: u64
-     var $t3|tmp#$3: u64
-     var $t4|tmp#$4: &mut vector<#0>
-     var $t5: &mut vector<#0>
-     var $t6: &vector<#0>
-     var $t7: u64
-     var $t8: u64
-     var $t9: u64
-     var $t10: bool
-     var $t11: &mut vector<#0>
-     var $t12: u64
-     var $t13: u64
-     var $t14: u64
-     var $t15: u64
-     var $t16: u64
-     var $t17: u64
-     var $t18: bool
-     var $t19: &mut vector<#0>
-     var $t20: u64
-     var $t21: u64
-     var $t22: u64
-     var $t23: u64
-     var $t24: &mut vector<#0>
-     var $t25: u64
-     var $t26: u64
-     var $t27: &mut vector<#0>
-     var $t28: #0
-  0: $t5 := copy($t0)
-  1: $t6 := freeze_ref($t5)
-  2: $t7 := Vector::length<#0>($t6)
-  3: $t2 := $t7
-  4: $t8 := copy($t1)
-  5: $t9 := copy($t2)
-  6: $t10 := >=($t8, $t9)
-  7: if ($t10) goto 10 else goto 8
-  8: label L1
-  9: goto 15
- 10: label L0
- 11: $t11 := move($t0)
- 12: destroy($t11)
- 13: $t12 := 0
- 14: abort($t12)
- 15: label L2
- 16: $t13 := copy($t2)
- 17: $t14 := 1
- 18: $t15 := -($t13, $t14)
- 19: $t2 := $t15
- 20: goto 21
- 21: label L6
- 22: $t16 := copy($t1)
- 23: $t17 := copy($t2)
- 24: $t18 := <($t16, $t17)
- 25: if ($t18) goto 28 else goto 26
- 26: label L4
- 27: goto 42
- 28: label L3
- 29: $t19 := copy($t0)
- 30: $t4 := $t19
- 31: $t20 := copy($t1)
- 32: $t3 := $t20
- 33: $t21 := copy($t1)
- 34: $t22 := 1
- 35: $t23 := +($t21, $t22)
- 36: $t1 := $t23
- 37: $t24 := move($t4)
- 38: $t25 := move($t3)
- 39: $t26 := copy($t1)
- 40: Vector::swap<#0>($t24, $t25, $t26)
- 41: goto 21
- 42: label L5
- 43: $t27 := move($t0)
- 44: $t28 := Vector::pop_back<#0>($t27)
- 45: return $t28
-}
+public native fun Vector::borrow_mut<#0>($t0|v: &mut vector<#0>, $t1|i: u64): &mut #0;
 
 
 [variant baseline]
-public fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
-     var $t1|back_index: u64
-     var $t2|front_index: u64
-     var $t3|len: u64
-     var $t4: &mut vector<#0>
-     var $t5: &vector<#0>
-     var $t6: u64
-     var $t7: u64
-     var $t8: u64
-     var $t9: bool
-     var $t10: &mut vector<#0>
-     var $t11: u64
-     var $t12: u64
-     var $t13: u64
-     var $t14: u64
-     var $t15: u64
-     var $t16: u64
-     var $t17: bool
-     var $t18: &mut vector<#0>
-     var $t19: u64
-     var $t20: u64
-     var $t21: u64
-     var $t22: u64
-     var $t23: u64
-     var $t24: u64
-     var $t25: u64
-     var $t26: u64
-     var $t27: &mut vector<#0>
-  0: $t4 := copy($t0)
-  1: $t5 := freeze_ref($t4)
-  2: $t6 := Vector::length<#0>($t5)
-  3: $t3 := $t6
-  4: $t7 := copy($t3)
-  5: $t8 := 0
-  6: $t9 := ==($t7, $t8)
-  7: if ($t9) goto 10 else goto 8
-  8: label L1
-  9: goto 14
- 10: label L0
- 11: $t10 := move($t0)
- 12: destroy($t10)
- 13: return ()
- 14: label L2
- 15: $t11 := 0
- 16: $t2 := $t11
- 17: $t12 := copy($t3)
- 18: $t13 := 1
- 19: $t14 := -($t12, $t13)
- 20: $t1 := $t14
- 21: goto 22
- 22: label L6
- 23: $t15 := copy($t2)
- 24: $t16 := copy($t1)
- 25: $t17 := <($t15, $t16)
- 26: if ($t17) goto 29 else goto 27
- 27: label L4
- 28: goto 43
- 29: label L3
- 30: $t18 := copy($t0)
- 31: $t19 := copy($t2)
- 32: $t20 := copy($t1)
- 33: Vector::swap<#0>($t18, $t19, $t20)
- 34: $t21 := copy($t2)
- 35: $t22 := 1
- 36: $t23 := +($t21, $t22)
- 37: $t2 := $t23
- 38: $t24 := copy($t1)
- 39: $t25 := 1
- 40: $t26 := -($t24, $t25)
- 41: $t1 := $t26
- 42: goto 22
- 43: label L5
- 44: $t27 := move($t0)
- 45: destroy($t27)
- 46: return ()
-}
+public native fun Vector::destroy_empty<#0>($t0|v: vector<#0>);
 
 
 [variant baseline]
-public fun Vector::singleton<$tv0>($t0|e: #0): vector<#0> {
+public native fun Vector::empty<#0>(): vector<#0>;
+
+
+[variant baseline]
+public intrinsic fun Vector::is_empty<#0>($t0|v: &vector<#0>): bool;
+
+
+[variant baseline]
+public native fun Vector::length<#0>($t0|v: &vector<#0>): u64;
+
+
+[variant baseline]
+public native fun Vector::pop_back<#0>($t0|v: &mut vector<#0>): #0;
+
+
+[variant baseline]
+public native fun Vector::push_back<#0>($t0|v: &mut vector<#0>, $t1|e: #0);
+
+
+[variant baseline]
+public intrinsic fun Vector::remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
+
+
+[variant baseline]
+public intrinsic fun Vector::reverse<#0>($t0|v: &mut vector<#0>);
+
+
+[variant baseline]
+public fun Vector::singleton<#0>($t0|e: #0): vector<#0> {
      var $t1|v: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
@@ -367,32 +70,11 @@ public fun Vector::singleton<$tv0>($t0|e: #0): vector<#0> {
 
 
 [variant baseline]
-public fun Vector::swap_remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
-     var $t2|last_idx: u64
-     var $t3: &mut vector<#0>
-     var $t4: &vector<#0>
-     var $t5: u64
-     var $t6: u64
-     var $t7: u64
-     var $t8: &mut vector<#0>
-     var $t9: u64
-     var $t10: u64
-     var $t11: &mut vector<#0>
-     var $t12: #0
-  0: $t3 := copy($t0)
-  1: $t4 := freeze_ref($t3)
-  2: $t5 := Vector::length<#0>($t4)
-  3: $t6 := 1
-  4: $t7 := -($t5, $t6)
-  5: $t2 := $t7
-  6: $t8 := copy($t0)
-  7: $t9 := copy($t1)
-  8: $t10 := copy($t2)
-  9: Vector::swap<#0>($t8, $t9, $t10)
- 10: $t11 := move($t0)
- 11: $t12 := Vector::pop_back<#0>($t11)
- 12: return $t12
-}
+public native fun Vector::swap<#0>($t0|v: &mut vector<#0>, $t1|i: u64, $t2|j: u64);
+
+
+[variant baseline]
+public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
@@ -408,7 +90,11 @@ public fun Signer::address_of($t0|s: &signer): address {
 
 
 [variant baseline]
-public fun Diem::market_cap<$tv0>(): u128 {
+public native fun Signer::borrow_address($t0|s: &signer): &address;
+
+
+[variant baseline]
+public fun Diem::market_cap<#0>(): u128 {
      var $t0: address
      var $t1: &Diem::Info<#0>
      var $t2: &u128
@@ -422,7 +108,7 @@ public fun Diem::market_cap<$tv0>(): u128 {
 
 
 [variant baseline]
-public fun Diem::preburn<$tv0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: Diem::T<#0>) {
+public fun Diem::preburn<#0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: Diem::T<#0>) {
      var $t2|coin_value: u64
      var $t3|market_cap: &mut Diem::Info<#0>
      var $t4: &Diem::T<#0>
@@ -462,7 +148,7 @@ public fun Diem::preburn<$tv0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin
 
 
 [variant baseline]
-public fun Diem::preburn_to<$tv0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
+public fun Diem::preburn_to<#0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
      var $t2: &signer
      var $t3: address
      var $t4: &mut Diem::Preburn<#0>
@@ -477,7 +163,7 @@ public fun Diem::preburn_to<$tv0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
 
 
 [variant baseline]
-public fun Diem::preburn_value<$tv0>(): u64 {
+public fun Diem::preburn_value<#0>(): u64 {
      var $t0: address
      var $t1: &Diem::Info<#0>
      var $t2: &u64
@@ -491,7 +177,7 @@ public fun Diem::preburn_value<$tv0>(): u64 {
 
 
 [variant baseline]
-public fun Diem::value<$tv0>($t0|coin_ref: &Diem::T<#0>): u64 {
+public fun Diem::value<#0>($t0|coin_ref: &Diem::T<#0>): u64 {
      var $t1: &Diem::T<#0>
      var $t2: &u64
      var $t3: u64

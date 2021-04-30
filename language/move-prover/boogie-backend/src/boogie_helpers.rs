@@ -43,9 +43,20 @@ pub fn boogie_struct_name(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
 pub fn boogie_field_sel(field_env: &FieldEnv<'_>, inst: &[Type]) -> String {
     let struct_env = &field_env.struct_env;
     format!(
-        "{}#{}",
+        "${}#{}",
         field_env.get_name().display(struct_env.symbol_pool()),
         boogie_struct_name(struct_env, inst)
+    )
+}
+
+/// Return field selector for given field.
+pub fn boogie_field_update(field_env: &FieldEnv<'_>, inst: &[Type]) -> String {
+    let struct_env = &field_env.struct_env;
+    let suffix = boogie_type_suffix_for_struct(struct_env, inst);
+    format!(
+        "$Update'{}'_{}",
+        suffix,
+        field_env.get_name().display(struct_env.symbol_pool()),
     )
 }
 
@@ -199,6 +210,7 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
             Num => "num".to_string(),
             Address | Signer => "address".to_string(),
             Bool => "bool".to_string(),
+            Range => "range".to_string(),
             _ => format!("<<unsupported {:?}>>", ty),
         },
         Vector(et) => format!("vec{}", boogie_inst_suffix(env, &[et.as_ref().to_owned()])),

@@ -93,19 +93,6 @@ function {:inline} $IsEqual'bool'(x: bool, y: bool): bool {
     x == y
 }
 
-// ================================================================================
-// Path type
-
-type {:datatype} $Path;
-function {:constructor} $Path(p: [int]int, size: int): $Path;
-const $EmptyPath: $Path;
-axiom size#$Path($EmptyPath) == 0;
-
-function {:inline} $path_index_at(p: $Path, i: int): int {
-    p#$Path(p)[i]
-}
-
-
 // ============================================================================================
 // Memory
 
@@ -128,7 +115,7 @@ function {:constructor} $Param(i: int): $Location;
 // are single threaded in Move, we can keep them together and treat them as a value
 // during mutation until the point they are stored back to their original location.
 type {:datatype} $Mutation _;
-function {:constructor} $Mutation<T>(l: $Location, p: $Path, v: T): $Mutation T;
+function {:constructor} $Mutation<T>(l: $Location, p: Vec int, v: T): $Mutation T;
 
 // Representation of memory for a given type.
 type {:datatype} $Memory _;
@@ -151,17 +138,43 @@ function {:inline} $UpdateMutation<T>(m: $Mutation T, v: T): $Mutation T {
 }
 
 function {:inline} $ChildMutation<T1, T2>(m: $Mutation T1, offset: int, v: T2): $Mutation T2 {
-    (var p := p#$Mutation(m);
-    (var size := size#$Path(p);
-    (var p' := $Path(p#$Path(p)[size := offset], size + 1);
-    $Mutation(l#$Mutation(m), p, v))))
+    $Mutation(l#$Mutation(m), ExtendVec(p#$Mutation(m), offset), v)
 }
 
-// Return the index of the last path element in the mutation.
-function {:inline} $LastPathIndex<T>(m: $Mutation T): int {
-    (var p := p#$Mutation(m);
-     p#$Path(p)[size#$Path(p) - 1])
+// Return true of the mutation is a parent of a child which was derived with the given edge offset. This
+// is used to implement write-back choices.
+function {:inline} $IsParentMutation<T1, T2>(parent: $Mutation T1, edge: int, child: $Mutation T2 ): bool {
+    l#$Mutation(parent) == l#$Mutation(child) &&
+    (var pp := p#$Mutation(parent);
+    (var cp := p#$Mutation(child);
+    (var pl := LenVec(pp);
+    (var cl := LenVec(cp);
+     cl == pl + 1 &&
+     (forall i: int:: i >= 0 && i < pl ==> ReadVec(pp, i) ==  ReadVec(cp, i)) &&
+     $EdgeMatches(ReadVec(cp, pl), edge)
+    ))))
 }
+
+// Return true of the mutation is a parent of a child, for hyper edge.
+function {:inline} $IsParentMutationHyper<T1, T2>(parent: $Mutation T1, hyper_edge: Vec int, child: $Mutation T2 ): bool {
+    l#$Mutation(parent) == l#$Mutation(child) &&
+    (var pp := p#$Mutation(parent);
+    (var cp := p#$Mutation(child);
+    (var pl := LenVec(pp);
+    (var cl := LenVec(cp);
+    (var el := LenVec(hyper_edge);
+     cl == pl + el &&
+     (forall i: int:: i >= 0 && i < pl ==> ReadVec(pp, i) == ReadVec(cp, i)) &&
+     (forall i: int:: i >= 0 && i < el ==> $EdgeMatches(ReadVec(cp, pl + i), ReadVec(hyper_edge, i)))
+    )))))
+}
+
+function {:inline} $EdgeMatches(edge: int, edge_pattern: int): bool {
+    edge_pattern == -1 // wildcard
+    || edge_pattern == edge
+}
+
+
 
 function {:inline} $SameLocation<T1, T2>(m1: $Mutation T1, m2: $Mutation T2): bool {
     l#$Mutation(m1) == l#$Mutation(m2)

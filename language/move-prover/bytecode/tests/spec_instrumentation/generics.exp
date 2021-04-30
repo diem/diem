@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-fun Generics::remove<$tv0>($t0|a: address): Generics::R<#0> {
+fun Generics::remove<#0>($t0|a: address): Generics::R<#0> {
      var $t1: address
      var $t2: Generics::R<#0>
   0: $t1 := copy($t0)
@@ -22,7 +22,7 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
 ============ after pipeline `spec_instrumentation` ================
 
 [variant verification]
-fun Generics::remove<$tv0>($t0|a: address): Generics::R<#0> {
+fun Generics::remove<#0>($t0|a: address): Generics::R<#0> {
      var $t1: Generics::R<#0>
      var $t2: num
   0: assume WellFormed($t0)
