@@ -298,7 +298,7 @@ public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
   2: $t4 := -($t2, $t3)
   3: $t5 := borrow_field<TestMutRefs::T>.value($t0)
   4: write_ref($t5, $t4)
-  5: write_back[Reference($t0).0]($t5)
+  5: write_back[Reference($t0).value]($t5)
   6: $t6 := 0x0
   7: $t7 := borrow_global<TestMutRefs::TSum>($t6)
   8: $t8 := get_field<TestMutRefs::TSum>.sum($t7)
@@ -306,8 +306,8 @@ public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
  10: $t10 := -($t8, $t9)
  11: $t11 := borrow_field<TestMutRefs::TSum>.sum($t7)
  12: write_ref($t11, $t10)
- 13: write_back[Reference($t7).0]($t11)
- 14: write_back[TestMutRefs::TSum.D]($t7)
+ 13: write_back[Reference($t7).sum]($t11)
+ 14: write_back[TestMutRefs::TSum@]($t7)
  15: trace_local[x]($t0)
  16: return ()
 }
@@ -330,8 +330,8 @@ public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
   4: $t7 := -($t6, $t5)
   5: $t8 := borrow_field<TestMutRefs::TSum>.sum($t4)
   6: write_ref($t8, $t7)
-  7: write_back[Reference($t4).0]($t8)
-  8: write_back[TestMutRefs::TSum.D]($t4)
+  7: write_back[Reference($t4).sum]($t8)
+  8: write_back[TestMutRefs::TSum@]($t4)
   9: return ()
 }
 
@@ -354,7 +354,7 @@ public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
   2: $t4 := +($t2, $t3)
   3: $t5 := borrow_field<TestMutRefs::T>.value($t0)
   4: write_ref($t5, $t4)
-  5: write_back[Reference($t0).0]($t5)
+  5: write_back[Reference($t0).value]($t5)
   6: $t6 := 0x0
   7: $t7 := borrow_global<TestMutRefs::TSum>($t6)
   8: $t8 := get_field<TestMutRefs::TSum>.sum($t7)
@@ -362,8 +362,8 @@ public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
  10: $t10 := +($t8, $t9)
  11: $t11 := borrow_field<TestMutRefs::TSum>.sum($t7)
  12: write_ref($t11, $t10)
- 13: write_back[Reference($t7).0]($t11)
- 14: write_back[TestMutRefs::TSum.D]($t7)
+ 13: write_back[Reference($t7).sum]($t11)
+ 14: write_back[TestMutRefs::TSum@]($t7)
  15: trace_local[x]($t0)
  16: return ()
 }
@@ -380,7 +380,7 @@ public fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
   2: $t3 := +($t1, $t2)
   3: $t4 := borrow_field<TestMutRefs::T>.value($t0)
   4: write_ref($t4, $t3)
-  5: write_back[Reference($t0).0]($t4)
+  5: write_back[Reference($t0).value]($t4)
   6: trace_local[x]($t0)
   7: return ()
 }
@@ -401,8 +401,8 @@ public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
   3: $t5 := +($t4, $t0)
   4: $t6 := borrow_field<TestMutRefs::TSum>.sum($t3)
   5: write_ref($t6, $t5)
-  6: write_back[Reference($t3).0]($t6)
-  7: write_back[TestMutRefs::TSum.D]($t3)
+  6: write_back[Reference($t3).sum]($t6)
+  7: write_back[TestMutRefs::TSum@]($t3)
   8: $t7 := pack TestMutRefs::T($t0)
   9: return $t7
 }
@@ -433,7 +433,7 @@ fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
   2: $t4 := -($t2, $t3)
   3: $t5 := borrow_field<TestMutRefs::T>.value($t0)
   4: write_ref($t5, $t4)
-  5: write_back[Reference($t0).0]($t5)
+  5: write_back[Reference($t0).value]($t5)
   6: $t6 := 0x0
   7: $t7 := borrow_global<TestMutRefs::TSum>($t6)
   8: $t8 := get_field<TestMutRefs::TSum>.sum($t7)
@@ -441,8 +441,8 @@ fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
  10: $t10 := -($t8, $t9)
  11: $t11 := borrow_field<TestMutRefs::TSum>.sum($t7)
  12: write_ref($t11, $t10)
- 13: write_back[Reference($t7).0]($t11)
- 14: write_back[TestMutRefs::TSum.D]($t7)
+ 13: write_back[Reference($t7).sum]($t11)
+ 14: write_back[TestMutRefs::TSum@]($t7)
  15: trace_local[x]($t0)
  16: return ()
 }
@@ -467,7 +467,7 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
   2: $t3 := borrow_local($t1)
   3: TestMutRefs::private_decrement($t3)
   4: TestMutRefs::increment($t3)
-  5: write_back[LocalRoot($t1).D]($t3)
+  5: write_back[LocalRoot($t1)@]($t3)
   6: return ()
 }
 
@@ -482,7 +482,7 @@ public fun TestMutRefsUser::valid() {
   1: $t0 := TestMutRefs::new($t1)
   2: $t2 := borrow_local($t0)
   3: TestMutRefs::increment($t2)
-  4: write_back[LocalRoot($t0).D]($t2)
+  4: write_back[LocalRoot($t0)@]($t2)
   5: $t3 := move($t0)
   6: TestMutRefs::delete($t3)
   7: return ()

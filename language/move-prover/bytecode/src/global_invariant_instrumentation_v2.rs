@@ -204,7 +204,7 @@ impl<'a> Instrumenter<'a> {
         let target_invariants = &inv_ana_data.target_invariants;
         let disabled_inv_fun_set = &inv_ana_data.disabled_inv_fun_set;
         match &bc {
-            Call(_, _, WriteBack(GlobalRoot(mem), _), ..) => {
+            Call(_, _, WriteBack(GlobalRoot(mem), ..), ..) => {
                 self.emit_invariants_for_bytecode(
                     &bc,
                     &fun_id,

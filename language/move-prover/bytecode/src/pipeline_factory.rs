@@ -32,7 +32,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         MutRefInstrumenter::new(),
         ReachingDefProcessor::new(),
         LiveVarAnalysisProcessor::new(),
-        BorrowAnalysisProcessor::new(options.weak_edges),
+        BorrowAnalysisProcessor::new(),
         MemoryInstrumentationProcessor::new(),
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),

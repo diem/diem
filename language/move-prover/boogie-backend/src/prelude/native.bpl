@@ -127,18 +127,12 @@ procedure {:inline 1} $Vector_borrow_mut{{S}}(m: $Mutation (Vec ({{T}})), index:
 returns (dst: $Mutation ({{T}}), m': $Mutation (Vec ({{T}})))
 {
     var v: Vec ({{T}});
-    var p: $Path;
-    var size: int;
-
     v := $Dereference(m);
     if (!InRangeVec(v, index)) {
         call $ExecFailureAbort();
         return;
     }
-    p := p#$Mutation(m);
-    size := size#$Path(p);
-    p := $Path(p#$Path(p)[size := index], size+1);
-    dst := $Mutation(l#$Mutation(m), p, ReadVec(v, index));
+    dst := $Mutation(l#$Mutation(m), ExtendVec(p#$Mutation(m), index), ReadVec(v, index));
     m' := m;
 }
 

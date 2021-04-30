@@ -12,7 +12,7 @@ use bytecode::{
     function_target_pipeline::FunctionTargetsHolder,
     stackless_bytecode::{
         AbortAction, AssignKind, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Label,
-        Operation, StrongEdge,
+        Operation,
     },
 };
 use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
@@ -283,7 +283,7 @@ impl<'env> FunctionContext<'env> {
             // global memory and expressions (TODO: not supported yet)
             Bytecode::SaveMem(..) | Bytecode::Prop(..) => {}
             // deprecated
-            Bytecode::Nop(_) | Bytecode::SpecBlock(..) | Bytecode::SaveSpecVar(..) => {}
+            Bytecode::Nop(_) | Bytecode::SaveSpecVar(..) => {}
         }
         local_state.ready_pc_for_next_instruction();
         Ok(())
@@ -399,10 +399,7 @@ impl<'env> FunctionContext<'env> {
                 return Ok(());
             }
             // deprecated
-            Operation::Splice(..)
-            | Operation::PackRefDeep
-            | Operation::UnpackRefDeep
-            | Operation::WriteBack(_, BorrowEdge::Weak) => {
+            Operation::PackRefDeep | Operation::UnpackRefDeep => {
                 unreachable!();
             }
             // all others require args to be collected up front
@@ -558,12 +555,19 @@ impl<'env> FunctionContext<'env> {
                 Ok(vec![])
             }
             // write-back
-            Operation::WriteBack(BorrowNode::GlobalRoot(qid), BorrowEdge::Strong(edge)) => {
+            Operation::WriteBack(BorrowNode::ReturnPlaceholder(_), ..) => {
+                unreachable!("unexpected intermediate borrow node")
+            }
+            Operation::IsParent(..) => {
+                // TODO: implement write_back check
+                Ok(vec![TypedValue::mk_bool(true)])
+            }
+            Operation::WriteBack(BorrowNode::GlobalRoot(qid), edge) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                 }
                 match edge {
-                    StrongEdge::Direct => self.handle_write_back_global_struct(
+                    BorrowEdge::Direct => self.handle_write_back_global_struct(
                         qid.module_id,
                         qid.id,
                         &qid.inst,
@@ -574,27 +578,27 @@ impl<'env> FunctionContext<'env> {
                 }
                 Ok(vec![])
             }
-            Operation::WriteBack(BorrowNode::LocalRoot(idx), BorrowEdge::Strong(edge)) => {
+            Operation::WriteBack(BorrowNode::LocalRoot(idx), edge) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                 }
                 match edge {
-                    StrongEdge::Direct => {
+                    BorrowEdge::Direct => {
                         self.handle_write_back_local(*idx, typed_args.remove(0), local_state)
                     }
                     _ => unreachable!(),
                 }
                 Ok(vec![])
             }
-            Operation::WriteBack(BorrowNode::Reference(idx), BorrowEdge::Strong(edge)) => {
+            Operation::WriteBack(BorrowNode::Reference(idx), edge) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                 }
                 match edge {
-                    StrongEdge::Direct => {
+                    BorrowEdge::Direct => {
                         self.handle_write_back_ref_whole(*idx, typed_args.remove(0), local_state)
                     }
-                    StrongEdge::Field(qid, field_num) => self.handle_write_back_ref_field(
+                    BorrowEdge::Field(qid, field_num) => self.handle_write_back_ref_field(
                         qid.module_id,
                         qid.id,
                         &qid.inst,
@@ -603,8 +607,12 @@ impl<'env> FunctionContext<'env> {
                         typed_args.remove(0),
                         local_state,
                     ),
-                    StrongEdge::FieldUnknown => {
+                    BorrowEdge::Index => {
                         self.handle_write_back_ref_element(*idx, typed_args.remove(0), local_state)
+                    }
+                    BorrowEdge::Hyper(_) => {
+                        // TODO: implement
+                        unimplemented!("hyper edges")
                     }
                 }
                 Ok(vec![])
@@ -747,10 +755,8 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
             | Operation::TraceExp(..)
-            | Operation::Splice(..)
             | Operation::PackRefDeep
-            | Operation::UnpackRefDeep
-            | Operation::WriteBack(_, BorrowEdge::Weak) => {
+            | Operation::UnpackRefDeep => {
                 unreachable!();
             }
         };

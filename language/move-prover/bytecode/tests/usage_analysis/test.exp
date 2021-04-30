@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public fun Test::update<$tv0>($t0|x: #0) {
+public fun Test::update<#0>($t0|x: #0) {
      var $t1: #0
      var $t2: address
      var $t3: &mut Test::A<#0, #0>
@@ -16,7 +16,7 @@ public fun Test::update<$tv0>($t0|x: #0) {
 
 
 [variant baseline]
-public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
+public fun Test::publish<#0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
      var $t2: &signer
      var $t3: Test::A<#0, u8>
   0: $t2 := move($t0)
@@ -27,7 +27,7 @@ public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
 
 
 [variant baseline]
-public fun Test::test<$tv0>(): bool {
+public fun Test::test<#0>(): bool {
      var $t0: address
      var $t1: bool
   0: $t0 := 0x1
@@ -62,7 +62,7 @@ public fun Test::update_ints() {
 ============ after pipeline `usage_analysis` ================
 
 [variant baseline]
-public fun Test::update<$tv0>($t0|x: #0) {
+public fun Test::update<#0>($t0|x: #0) {
      var $t1: #0
      var $t2: address
      var $t3: &mut Test::A<#0, #0>
@@ -77,7 +77,7 @@ public fun Test::update<$tv0>($t0|x: #0) {
 
 
 [variant baseline]
-public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
+public fun Test::publish<#0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
      var $t2: &signer
      var $t3: Test::A<#0, u8>
   0: $t2 := move($t0)
@@ -88,7 +88,7 @@ public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
 
 
 [variant baseline]
-public fun Test::test<$tv0>(): bool {
+public fun Test::test<#0>(): bool {
      var $t0: address
      var $t1: bool
   0: $t0 := 0x1

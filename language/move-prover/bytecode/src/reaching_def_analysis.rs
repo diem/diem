@@ -93,8 +93,10 @@ impl ReachingDefProcessor {
         code.iter()
             .filter_map(|bc| match bc {
                 Call(_, _, Operation::BorrowLoc, srcs, _) => Some(srcs[0]),
-                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src), _), ..) => Some(*src),
-                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src), _), ..) => Some(*src),
+                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src), ..), ..)
+                | Call(_, _, Operation::IsParent(BorrowNode::LocalRoot(src), ..), ..) => Some(*src),
+                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src), ..), ..)
+                | Call(_, _, Operation::IsParent(BorrowNode::Reference(src), ..), ..) => Some(*src),
                 _ => None,
             })
             .collect()
@@ -179,7 +181,7 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
                 state.kill(*dest);
             }
             Call(_, dests, oper, _, on_abort) => {
-                if let WriteBack(LocalRoot(dest), _) = oper {
+                if let WriteBack(LocalRoot(dest), ..) = oper {
                     state.kill(*dest);
                 }
                 for dest in dests {

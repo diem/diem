@@ -7,7 +7,7 @@ use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{Exp, MemoryLabel, TempIndex},
     exp_rewriter::{ExpRewriter, RewriteTarget},
-    model::{FunId, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
+    model::{FunId, GlobalEnv, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
     ty::{Type, TypeDisplayContext},
 };
 use num::BigUint;
@@ -133,8 +133,8 @@ pub enum Operation {
     Stop,
 
     // Memory model
+    IsParent(BorrowNode, BorrowEdge),
     WriteBack(BorrowNode, BorrowEdge),
-    Splice(BTreeMap<usize, TempIndex>),
     UnpackRef,
     PackRef,
     UnpackRefDeep,
@@ -200,8 +200,8 @@ impl Operation {
             Operation::FreezeRef => false,
             Operation::Havoc(_) => false,
             Operation::Stop => false,
-            Operation::WriteBack(_, _) => false,
-            Operation::Splice(_) => false,
+            Operation::WriteBack(..) => false,
+            Operation::IsParent(..) => false,
             Operation::UnpackRef => false,
             Operation::PackRef => false,
             Operation::UnpackRefDeep => false,
@@ -244,6 +244,9 @@ pub enum BorrowNode {
     GlobalRoot(QualifiedInstId<StructId>),
     LocalRoot(TempIndex),
     Reference(TempIndex),
+    // Used in summaries to represent a returned mutation at return index. This does not
+    // appear in bytecode instructions.
+    ReturnPlaceholder(usize),
 }
 
 impl BorrowNode {
@@ -256,24 +259,28 @@ impl BorrowNode {
     }
 }
 
-/// A borrow with a path length of 0 or 1 -- used in memory operations
-/// A `Direct` edge is a borrow edge with length 0
-/// A `Field(usize)` edge has length 1 and the path in known
-/// A FieldUnknown has length 1 but the path is unknown
+/// A borrow edge.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum StrongEdge {
-    Direct,
-    Field(QualifiedInstId<StructId>, usize),
-    FieldUnknown,
-}
-
-/// A borrow edge -- used in memory operations
-#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum BorrowEdge {
-    Weak,
-    Strong(StrongEdge),
+    /// Direct borrow.
+    Direct,
+    /// Field borrow with static offset.
+    Field(QualifiedInstId<StructId>, usize),
+    /// Vector borrow with dynamic index.
+    Index,
+    /// Composed sequence of edges.
+    Hyper(Vec<BorrowEdge>),
 }
 
+impl BorrowEdge {
+    pub fn flatten(&self) -> Vec<&BorrowEdge> {
+        if let BorrowEdge::Hyper(edges) = self {
+            edges.iter().collect_vec()
+        } else {
+            vec![self]
+        }
+    }
+}
 /// A specification property kind.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub enum PropKind {
@@ -291,8 +298,6 @@ pub struct AbortAction(pub Label, pub TempIndex);
 /// The stackless bytecode.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
-    SpecBlock(AttrId, SpecBlockId), // deprecated, to be replaced by Prop(..)
-
     Assign(AttrId, TempIndex, TempIndex, AssignKind),
 
     Call(
@@ -320,8 +325,7 @@ impl Bytecode {
     pub fn get_attr_id(&self) -> AttrId {
         use Bytecode::*;
         match self {
-            SpecBlock(id, ..)
-            | Assign(id, ..)
+            Assign(id, ..)
             | Call(id, ..)
             | Ret(id, ..)
             | Load(id, ..)
@@ -462,33 +466,28 @@ impl Bytecode {
         let map_abort = |f: &mut F, aa: Option<AbortAction>| {
             aa.map(|AbortAction(l, code)| AbortAction(l, f(false, code)))
         };
+        let map_node = |f: &mut F, node: BorrowNode| match node {
+            LocalRoot(tmp) => LocalRoot(f(true, tmp)),
+            Reference(tmp) => Reference(f(true, tmp)),
+            _ => node,
+        };
         match self {
             Load(attr, dst, cons) => Load(attr, f(false, dst), cons),
             Assign(attr, dest, src, kind) => Assign(attr, f(false, dest), f(true, src), kind),
-            Call(attr, _, WriteBack(LocalRoot(dest), edge), srcs, aa) => Call(
+            Call(attr, _, WriteBack(node, edge), srcs, aa) => Call(
                 attr,
                 vec![],
-                WriteBack(LocalRoot(f(true, dest)), edge),
+                WriteBack(map_node(f, node), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),
-            Call(attr, _, WriteBack(Reference(dest), edge), srcs, aa) => Call(
+            Call(attr, dests, IsParent(node, edge), srcs, aa) => Call(
                 attr,
-                vec![],
-                WriteBack(Reference(f(true, dest)), edge),
+                map(false, f, dests),
+                IsParent(map_node(f, node), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),
-            Call(attr, dests, Splice(m), srcs, aa) => {
-                let m = m.into_iter().map(|(p, t)| (p, f(true, t))).collect();
-                Call(
-                    attr,
-                    map(false, f, dests),
-                    Splice(m),
-                    map(true, f, srcs),
-                    map_abort(f, aa),
-                )
-            }
             Call(attr, dests, op, srcs, aa) => Call(
                 attr,
                 map(false, f, dests),
@@ -629,25 +628,6 @@ impl Bytecode {
     }
 }
 
-impl std::fmt::Display for BorrowEdge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BorrowEdge::Weak => write!(f, "*"),
-            BorrowEdge::Strong(se) => write!(f, "{}", se),
-        }
-    }
-}
-
-impl std::fmt::Display for StrongEdge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StrongEdge::Field(_, field) => write!(f, "{}", field),
-            StrongEdge::FieldUnknown => write!(f, "U"),
-            StrongEdge::Direct => write!(f, "D"),
-        }
-    }
-}
-
 /// A display object for a bytecode.
 pub struct BytecodeDisplay<'env> {
     bytecode: &'env Bytecode,
@@ -659,13 +639,6 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Bytecode::*;
         match &self.bytecode {
-            SpecBlock(id, _) => {
-                // For now, use source location to print spec block. We currently do not have a
-                // pretty printer for spec expressions and conditions. We may need to add one as
-                // we start to generate spec blocks during transformations.
-                let loc = self.func_target.get_bytecode_loc(*id);
-                write!(f, "spec at {}..{}", loc.span().start(), loc.span().end())?;
-            }
             Assign(_, dst, src, AssignKind::Copy) => {
                 write!(f, "{} := copy({})", self.lstr(*dst), self.lstr(*src))?
             }
@@ -920,16 +893,19 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             UnpackRefDeep => {
                 write!(f, "unpack_ref_deep")?;
             }
-            WriteBack(node, edge) => {
-                write!(f, "write_back[{}.{}]", node.display(self.func_target), edge)?
-            }
-            Splice(map) => write!(
+            WriteBack(node, edge) => write!(
                 f,
-                "splice[{}]",
-                map.iter()
-                    .map(|(idx, local)| format!("{} -> $t{}", idx, *local))
-                    .join(", ")
+                "write_back[{}{}]",
+                node.display(self.func_target),
+                edge.display(self.func_target.global_env())
             )?,
+            IsParent(node, edge) => write!(
+                f,
+                "is_parent[{}{}]",
+                node.display(self.func_target),
+                edge.display(self.func_target.global_env())
+            )?,
+
             Havoc(kind) => {
                 write!(
                     f,
@@ -1064,7 +1040,7 @@ impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
         use BorrowNode::*;
         match self.node {
             GlobalRoot(s) => {
-                let ty = Type::Struct(s.module_id, s.id, vec![]);
+                let ty = Type::Struct(s.module_id, s.id, s.inst.to_owned());
                 let tctx = TypeDisplayContext::WithEnv {
                     env: self.func_target.global_env(),
                     type_param_names: None,
@@ -1077,7 +1053,48 @@ impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
             Reference(idx) => {
                 write!(f, "Reference($t{})", idx)?;
             }
+            ReturnPlaceholder(idx) => {
+                write!(f, "Return({})", idx)?;
+            }
         }
         Ok(())
+    }
+}
+impl BorrowEdge {
+    pub fn display<'a>(&'a self, env: &'a GlobalEnv) -> BorrowEdgeDisplay<'a> {
+        BorrowEdgeDisplay { env, edge: self }
+    }
+}
+
+pub struct BorrowEdgeDisplay<'a> {
+    env: &'a GlobalEnv,
+    edge: &'a BorrowEdge,
+}
+
+impl<'a> std::fmt::Display for BorrowEdgeDisplay<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use BorrowEdge::*;
+        match self.edge {
+            Field(qid, field) => {
+                let struct_env = self.env.get_struct(qid.to_qualified_id());
+                let field_env = struct_env.get_field_by_offset(*field);
+                write!(
+                    f,
+                    ".{}",
+                    field_env.get_name().display(self.env.symbol_pool())
+                )
+            }
+            Index => write!(f, "[]"),
+            Direct => write!(f, "@"),
+            Hyper(es) => {
+                write!(
+                    f,
+                    "{}",
+                    es.iter()
+                        .map(|e| format!("{}", e.display(self.env)))
+                        .join("/")
+                )
+            }
+        }
     }
 }

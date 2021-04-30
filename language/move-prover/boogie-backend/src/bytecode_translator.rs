@@ -13,9 +13,7 @@ use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
     mono_analysis,
-    stackless_bytecode::{
-        BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, StrongEdge,
-    },
+    stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation},
 };
 use move_model::{
     code_writer::CodeWriter,
@@ -28,10 +26,11 @@ use move_model::{
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
-        boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel,
-        boogie_function_name, boogie_modifies_memory_name, boogie_resource_memory_name,
-        boogie_struct_name, boogie_temp, boogie_type, boogie_type_param, boogie_type_suffix,
-        boogie_type_suffix_for_struct, boogie_well_formed_check, boogie_well_formed_expr,
+        boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel, boogie_field_update,
+        boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
+        boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
+        boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
+        boogie_well_formed_check, boogie_well_formed_expr,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -236,7 +235,7 @@ impl<'env> StructTranslator<'env> {
             .get_fields()
             .map(|field| {
                 format!(
-                    "{}: {}",
+                    "${}: {}",
                     field.get_name().display(env.symbol_pool()),
                     boogie_type(env, &self.inst(&field.get_type()))
                 )
@@ -581,6 +580,13 @@ impl<'env> FunctionTranslator<'env> {
             emitln!(writer, "$t{} := _$t{};", idx, idx);
         }
 
+        // Initialize mutations to have empty paths so $IsParentMutation works correctly.
+        for i in num_args..fun_target.get_local_count() {
+            if self.get_local_type(i).is_mutable_reference() {
+                emitln!(writer, "assume IsEmptyVec(p#$Mutation($t{}));", i);
+            }
+        }
+
         // Initial assumptions
         if variant.is_verified() {
             self.translate_verify_entry_assumptions(fun_target);
@@ -641,7 +647,6 @@ impl<'env> FunctionTranslator<'env> {
             let ty = fun_target.get_local_type(i);
             if ty.is_reference() {
                 emitln!(writer, "assume l#$Mutation($t{}) == $Param({});", i, i);
-                emitln!(writer, "assume size#$Path(p#$Mutation($t{})) == 0;", i);
             }
         }
     }
@@ -696,7 +701,6 @@ impl<'env> FunctionTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
-            SpecBlock(..) => panic!("deprecated"),
             SaveMem(_, label, mem) => {
                 let snapshot = boogie_resource_memory_name(env, mem, &Some(*label));
                 let current = boogie_resource_memory_name(env, mem, &None);
@@ -812,122 +816,51 @@ impl<'env> FunctionTranslator<'env> {
                     OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
                         // These are just markers.  There is no generated code.
                     }
-                    WriteBack(dest, edge) => {
-                        use BorrowNode::*;
-                        let src = srcs[0];
-                        let src_str = str_local(src);
-                        match dest {
-                            GlobalRoot(memory) => {
-                                assert!(matches!(edge, BorrowEdge::Strong(StrongEdge::Direct)));
-                                // TODO: we historically do not check for a matching address here.
-                                //   It appears we should, like we do with LocalRoot
-                                let memory = &memory.to_owned().instantiate(self.type_inst);
-                                emitln!(writer, "if ($HasGlobalLocation({})) {{", str_local(src),);
-                                writer.with_indent(|| {
-                                    let memory_name = boogie_resource_memory_name(env, memory, &None);
-                                    emitln!(writer, "{} := $ResourceUpdate({}, $GlobalLocationAddress({}),\n    \
-                                     $Dereference({}));",
-                                        memory_name, memory_name, src_str, src_str
-                                    );
-                                });
-                                emitln!(writer, "}");
-                            }
-                            LocalRoot(idx) => {
-                                assert!(matches!(edge, BorrowEdge::Strong(StrongEdge::Direct)));
-                                let dst_str = str_local(*idx);
-                                emitln!(writer, "if ($HasLocalLocation({}, {})) {{", src_str, idx);
-                                writer.with_indent(|| {
-                                    emitln!(writer, "{} := $Dereference({});", dst_str, src_str,);
-                                });
-                                emitln!(writer, "}");
-                            }
-                            Reference(idx) => {
-                                let dst_str = str_local(*idx);
-                                match edge {
-                                    BorrowEdge::Strong(StrongEdge::Direct) => {
-                                        emitln!(
-                                            writer,
-                                            "if ($SameLocation({}, {})) {{",
-                                            src_str,
-                                            dst_str
-                                        );
-                                        writer.with_indent(|| {
-                                            emitln!(
-                                                writer,
-                                                "{} := $UpdateMutation({}, $Dereference({}));",
-                                                dst_str,
-                                                dst_str,
-                                                src_str,
-                                            );
-                                        });
-                                        emitln!(writer, "}");
-                                    }
-                                    BorrowEdge::Strong(StrongEdge::Field(memory, offset)) => {
-                                        let memory = memory.to_owned().instantiate(self.type_inst);
-                                        let struct_env =
-                                            &env.get_struct_qid(memory.to_qualified_id());
-                                        let suffix =
-                                            boogie_type_suffix_for_struct(struct_env, &memory.inst);
-                                        let field_env = struct_env.get_field_by_offset(*offset);
-                                        emitln!(
-                                            writer,
-                                            "if ($SameLocation({}, {})) {{",
-                                            src_str,
-                                            dst_str
-                                        );
-                                        writer.with_indent(|| {
-                                            let update_exp = format!(
-                                                "$Update'{}'_{}($Dereference({}), $Dereference({}))",
-                                                suffix,
-                                                field_env.get_name().display(env.symbol_pool()),
-                                                dst_str,
-                                                src_str
-                                            );
-                                            emitln!(
-                                                writer,
-                                                "{} := $UpdateMutation({}, {});",
-                                                dst_str,
-                                                dst_str,
-                                                update_exp
-                                            );
-                                        });
-                                        emitln!(writer, "}");
-                                    }
-                                    BorrowEdge::Strong(StrongEdge::FieldUnknown) => {
-                                        emitln!(
-                                            writer,
-                                            "if ($SameLocation({}, {})) {{",
-                                            src_str,
-                                            dst_str
-                                        );
-                                        let update_vec = format!("UpdateVec($Dereference({}), $LastPathIndex({}), $Dereference({}))",
-                                            dst_str, src_str, src_str
-                                        );
-                                        writer.with_indent(|| {
-                                            emitln!(
-                                                writer,
-                                                "{} := $UpdateMutation({},\n    {});",
-                                                dst_str,
-                                                dst_str,
-                                                update_vec
-                                            );
-                                        });
-                                        emitln!(writer, "}");
-                                    }
-                                    _ => panic!("unexpected borrow edge"),
-                                }
-                            }
-                        }
+                    WriteBack(node, edge) => {
+                        self.translate_write_back(node, edge, srcs[0]);
                     }
-                    Splice(_map) => {
-                        panic!("unexpected splice")
+                    IsParent(node, edge) => {
+                        if let BorrowNode::Reference(parent) = node {
+                            let src_str = str_local(srcs[0]);
+                            let edge_pattern = edge
+                                .flatten()
+                                .into_iter()
+                                .filter_map(|e| match e {
+                                    BorrowEdge::Field(_, offset) => Some(format!("{}", offset)),
+                                    BorrowEdge::Index => Some("-1".to_owned()),
+                                    BorrowEdge::Direct => None,
+                                    _ => unreachable!(),
+                                })
+                                .collect_vec();
+                            if edge_pattern.len() == 1 {
+                                emitln!(
+                                    writer,
+                                    "{} := $IsParentMutation({}, {}, {});",
+                                    str_local(dests[0]),
+                                    str_local(*parent),
+                                    edge_pattern[0],
+                                    src_str
+                                );
+                            } else {
+                                emitln!(
+                                    writer,
+                                    "{} := $IsParentMutationHyper({}, {}, {});",
+                                    str_local(dests[0]),
+                                    str_local(*parent),
+                                    boogie_make_vec_from_strings(&edge_pattern),
+                                    src_str
+                                );
+                            }
+                        } else {
+                            panic!("inconsistent IsParent instruction: expected a reference node")
+                        }
                     }
                     BorrowLoc => {
                         let src = srcs[0];
                         let dest = dests[0];
                         emitln!(
                             writer,
-                            "{} := $Mutation($Local({}), $EmptyPath, {});",
+                            "{} := $Mutation($Local({}), EmptyVec(), {});",
                             str_local(dest),
                             src,
                             str_local(src)
@@ -1080,7 +1013,7 @@ impl<'env> FunctionTranslator<'env> {
                         writer.with_indent(|| {
                             emitln!(
                                 writer,
-                                "{} := $Mutation($Global({}), $EmptyPath, $ResourceValue({}, {}));",
+                                "{} := $Mutation($Global({}), EmptyVec(), $ResourceValue({}, {}));",
                                 dest_str,
                                 addr_str,
                                 memory,
@@ -1501,6 +1434,160 @@ impl<'env> FunctionTranslator<'env> {
             Nop(..) => {}
         }
         emitln!(writer);
+    }
+
+    fn translate_write_back(&self, dest: &BorrowNode, edge: &BorrowEdge, src: TempIndex) {
+        use BorrowNode::*;
+        let writer = self.parent.writer;
+        let env = self.parent.env;
+        let src_str = format!("$t{}", src);
+        match dest {
+            ReturnPlaceholder(_) => {
+                unreachable!("unexpected transient borrow node")
+            }
+            GlobalRoot(memory) => {
+                assert!(matches!(edge, BorrowEdge::Direct));
+                let memory = &memory.to_owned().instantiate(self.type_inst);
+                let memory_name = boogie_resource_memory_name(env, memory, &None);
+                emitln!(
+                    writer,
+                    "{} := $ResourceUpdate({}, $GlobalLocationAddress({}),\n    \
+                                     $Dereference({}));",
+                    memory_name,
+                    memory_name,
+                    src_str,
+                    src_str
+                );
+            }
+            LocalRoot(idx) => {
+                assert!(matches!(edge, BorrowEdge::Direct));
+                emitln!(writer, "$t{} := $Dereference({});", idx, src_str);
+            }
+            Reference(idx) => {
+                let dst_value = format!("$Dereference($t{})", idx);
+                let src_value = format!("$Dereference({})", src_str);
+                let get_path_index = |offset: usize| {
+                    if offset == 0 {
+                        format!(
+                            "ReadVec(p#$Mutation({}), LenVec(p#$Mutation($t{})))",
+                            src_str, idx
+                        )
+                    } else {
+                        format!(
+                            "ReadVec(p#$Mutation({}), LenVec(p#$Mutation($t{})) + {})",
+                            src_str, idx, offset
+                        )
+                    }
+                };
+                let update = if let BorrowEdge::Hyper(edges) = edge {
+                    self.translate_write_back_update(
+                        &mut || dst_value.clone(),
+                        &get_path_index,
+                        src_value,
+                        edges,
+                        0,
+                    )
+                } else {
+                    self.translate_write_back_update(
+                        &mut || dst_value.clone(),
+                        &get_path_index,
+                        src_value,
+                        &[edge.to_owned()],
+                        0,
+                    )
+                };
+                emitln!(
+                    writer,
+                    "$t{} := $UpdateMutation($t{}, {});",
+                    idx,
+                    idx,
+                    update
+                );
+            }
+        }
+    }
+
+    fn translate_write_back_update(
+        &self,
+        mk_dest: &mut dyn FnMut() -> String,
+        get_path_index: &dyn Fn(usize) -> String,
+        src: String,
+        edges: &[BorrowEdge],
+        at: usize,
+    ) -> String {
+        if at >= edges.len() {
+            src
+        } else {
+            match &edges[at] {
+                BorrowEdge::Direct => {
+                    self.translate_write_back_update(mk_dest, get_path_index, src, edges, at + 1)
+                }
+                BorrowEdge::Field(memory, offset) => {
+                    let memory = memory.to_owned().instantiate(self.type_inst);
+                    let struct_env = &self.parent.env.get_struct_qid(memory.to_qualified_id());
+                    let field_env = &struct_env.get_field_by_offset(*offset);
+                    let sel_fun = boogie_field_sel(field_env, &memory.inst);
+                    let new_dest = format!("{}({})", sel_fun, (*mk_dest)());
+                    let mut new_dest_needed = false;
+                    let new_src = self.translate_write_back_update(
+                        &mut || {
+                            new_dest_needed = true;
+                            format!("$$sel{}", at)
+                        },
+                        get_path_index,
+                        src,
+                        edges,
+                        at + 1,
+                    );
+                    let update_fun = boogie_field_update(field_env, &memory.inst);
+                    if new_dest_needed {
+                        format!(
+                            "(var $$sel{} := {}; {}({}, {}))",
+                            at,
+                            new_dest,
+                            update_fun,
+                            (*mk_dest)(),
+                            new_src
+                        )
+                    } else {
+                        format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
+                    }
+                }
+                BorrowEdge::Index => {
+                    // Compute the offset into the path where to retrieve the index.
+                    let offset = edges[0..at]
+                        .iter()
+                        .filter(|e| !matches!(e, BorrowEdge::Direct))
+                        .count();
+                    let index = (*get_path_index)(offset);
+                    let new_dest = format!("ReadVec({}, {})", (*mk_dest)(), index);
+                    let mut new_dest_needed = false;
+                    let new_src = self.translate_write_back_update(
+                        &mut || {
+                            new_dest_needed = true;
+                            format!("$$sel{}", at)
+                        },
+                        get_path_index,
+                        src,
+                        edges,
+                        at + 1,
+                    );
+                    if new_dest_needed {
+                        format!(
+                            "(var $$sel{} := {}; UpdateVec({}, {}, {}))",
+                            at,
+                            new_dest,
+                            (*mk_dest)(),
+                            index,
+                            new_src
+                        )
+                    } else {
+                        format!("UpdateVec({}, {}, {})", (*mk_dest)(), index, new_src)
+                    }
+                }
+                BorrowEdge::Hyper(_) => unreachable!("unexpected borrow edge"),
+            }
+        }
     }
 
     /// Track location for execution trace, avoiding to track the same line multiple times.
