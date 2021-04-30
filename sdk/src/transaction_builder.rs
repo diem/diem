@@ -114,6 +114,11 @@ impl TransactionFactory {
         self
     }
 
+    pub fn with_transaction_expiration_time(mut self, transaction_expiration_time: u64) -> Self {
+        self.transaction_expiration_time = transaction_expiration_time;
+        self
+    }
+
     pub fn with_chain_id(mut self, chain_id: ChainId) -> Self {
         self.chain_id = chain_id;
         self
