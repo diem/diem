@@ -169,18 +169,19 @@ impl Worker {
         while self.receive_commands() {
             // Process a reasonably small batch of work before trying to receive commands again,
             // in case `Command::Quit` is received (that's when we should quit.)
+            let least_readable_version = self.least_readable_version.load(Ordering::Relaxed);
             match prune_state(
                 Arc::clone(&self.db),
-                self.least_readable_version.load(Ordering::Relaxed),
+                least_readable_version,
                 self.target_least_readable_version,
                 Self::MAX_VERSIONS_TO_PRUNE_PER_BATCH,
             ) {
-                Ok(least_readable_version) => {
-                    self.record_progress(least_readable_version);
+                Ok(new_least_readable_version) => {
+                    self.record_progress(new_least_readable_version);
 
-                    // Make next recv() blocking if all done.
-                    self.blocking_recv =
-                        least_readable_version == self.target_least_readable_version;
+                    // Make next recv() blocking if nothing left to do.
+                    self.blocking_recv = new_least_readable_version == least_readable_version // did nothing
+                        || new_least_readable_version == self.target_least_readable_version; // did all
 
                     // Try to purge the log.
                     if let Err(e) = self.maybe_purge_index() {
