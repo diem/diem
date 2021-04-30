@@ -7,7 +7,7 @@ use diem_management::{
     error::Error,
     secure_backend::{SecureBackend, SharedBackend},
 };
-use std::path::PathBuf;
+use std::{convert::TryFrom, path::PathBuf, str::FromStr};
 use structopt::StructOpt;
 
 diem_management::secure_backend!(

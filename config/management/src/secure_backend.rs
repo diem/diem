@@ -163,6 +163,18 @@ pair: "k0=v0;k1=v1;...".  The current supported formats are:
             )]
             pub $field_name: Option<SecureBackend>,
         }
+
+        impl FromStr for $struct_name {
+            type Err = Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let secure_backend = SecureBackend::try_from(s)?;
+                let $field_name = $struct_name {
+                    $field_name: Some(secure_backend),
+                };
+                Ok($field_name)
+            }
+        }
     };
 }
 

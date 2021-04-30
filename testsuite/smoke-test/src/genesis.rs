@@ -98,7 +98,7 @@ fn test_genesis_transaction_flow() {
     let op_tool = get_op_tool(&env.validator_swarm, 0);
     let diem_root = load_diem_root_storage(&env.validator_swarm, 0);
     let config = op_tool
-        .validator_config(validator_address, &diem_root)
+        .validator_config(validator_address, Some(&diem_root))
         .unwrap();
     let name = config.name.as_bytes().to_vec();
 

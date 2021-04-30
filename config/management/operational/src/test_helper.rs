@@ -457,19 +457,25 @@ impl OperationalTool {
     pub fn validator_config(
         &self,
         account_address: AccountAddress,
-        backend: &config::SecureBackend,
+        backend: Option<&config::SecureBackend>,
     ) -> Result<DecryptedValidatorConfig, Error> {
+        let validator_backend = if let Some(backend) = backend {
+            Some(backend_args(backend)?)
+        } else {
+            None
+        };
+
         let args = format!(
             "
                 {command}
                 --json-server {json_server}
                 --account-address {account_address}
-                --validator-backend {backend_args}
+                {validator_backend}
             ",
             command = command(TOOL_NAME, CommandName::ValidatorConfig),
             json_server = self.host,
             account_address = account_address,
-            backend_args = backend_args(backend)?,
+            validator_backend = optional_arg("validator-backend", validator_backend),
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -479,19 +485,25 @@ impl OperationalTool {
     pub fn validator_set(
         &self,
         account_address: Option<AccountAddress>,
-        backend: &config::SecureBackend,
+        backend: Option<&config::SecureBackend>,
     ) -> Result<Vec<DecryptedValidatorInfo>, Error> {
+        let validator_backend = if let Some(backend) = backend {
+            Some(backend_args(backend)?)
+        } else {
+            None
+        };
+
         let args = format!(
             "
                 {command}
                 {account_address}
                 --json-server {json_server}
-                --validator-backend {backend_args}
+                {validator_backend}
             ",
             command = command(TOOL_NAME, CommandName::ValidatorSet),
             json_server = self.host,
             account_address = optional_arg("account-address", account_address),
-            backend_args = backend_args(backend)?,
+            validator_backend = optional_arg("validator-backend", validator_backend),
         );
 
         let command = Command::from_iter(args.split_whitespace());

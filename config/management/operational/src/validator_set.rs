@@ -18,19 +18,24 @@ pub struct ValidatorSet {
     json_server: Option<String>,
     #[structopt(long, help = "AccountAddress to retrieve the validator set info")]
     account_address: Option<AccountAddress>,
-    #[structopt(flatten)]
-    validator_backend: ValidatorBackend,
+    #[structopt(
+        long,
+        help = "The secure backend that contains the network address encryption keys"
+    )]
+    validator_backend: Option<ValidatorBackend>,
 }
 
 impl ValidatorSet {
     pub fn execute(self) -> Result<Vec<DecryptedValidatorInfo>, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_json_server(&self.json_server)
-            .override_validator_backend(&self.validator_backend.validator_backend)?;
-        let encryptor = config.validator_backend().encryptor();
-        let client = JsonRpcClientWrapper::new(config.json_server);
+        let mut config = self.config.load()?.override_json_server(&self.json_server);
+        let client = JsonRpcClientWrapper::new(config.clone().json_server);
+
+        let encryptor = if let Some(backend) = &self.validator_backend {
+            config = config.override_validator_backend(&backend.validator_backend)?;
+            config.validator_backend().encryptor()
+        } else {
+            Encryptor::empty()
+        };
 
         decode_validator_set(encryptor, client, self.account_address)
     }

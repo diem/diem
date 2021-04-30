@@ -121,7 +121,7 @@ fn rotate_operator_and_consensus_key(env: SmokeTestEnvironment, num_nodes: usize
     // Verify that the config has been updated correctly with the new consensus key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, config_consensus_key);

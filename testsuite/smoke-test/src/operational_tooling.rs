@@ -107,14 +107,14 @@ fn test_consensus_key_rotation() {
     // Verify that the config has been updated correctly with the new consensus key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, config_consensus_key);
 
     // Verify that the validator set info contains the new consensus key
     let info_consensus_key = op_tool
-        .validator_set(Some(validator_account), &backend)
+        .validator_set(Some(validator_account), Some(&backend))
         .unwrap()[0]
         .consensus_public_key
         .clone();
@@ -309,7 +309,7 @@ fn test_fullnode_network_key_rotation() {
     // Verify that the config has been loaded correctly with new key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .fullnode_network_address
         .find_noise_proto()
@@ -318,7 +318,7 @@ fn test_fullnode_network_key_rotation() {
 
     // Verify that the validator set info contains the new network key
     let info_network_key = op_tool
-        .validator_set(Some(validator_account), &backend)
+        .validator_set(Some(validator_account), Some(&backend))
         .unwrap()[0]
         .fullnode_network_address
         .find_noise_proto()
@@ -343,7 +343,7 @@ fn test_network_key_rotation() {
     // Verify that config has been loaded correctly with new key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .validator_network_address
         .find_noise_proto()
@@ -352,7 +352,7 @@ fn test_network_key_rotation() {
 
     // Verify that the validator set info contains the new network key
     let info_network_key = op_tool
-        .validator_set(Some(validator_account), &backend)
+        .validator_set(Some(validator_account), Some(&backend))
         .unwrap()[0]
         .validator_network_address
         .find_noise_proto()
@@ -387,7 +387,7 @@ fn test_network_key_rotation_recovery() {
     // Verify that config has been loaded correctly with new key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .validator_network_address
         .find_noise_proto()
@@ -396,7 +396,7 @@ fn test_network_key_rotation_recovery() {
 
     // Verify that the validator set info contains the new network key
     let info_network_key = op_tool
-        .validator_set(Some(validator_account), &backend)
+        .validator_set(Some(validator_account), Some(&backend))
         .unwrap()[0]
         .validator_network_address
         .find_noise_proto()
@@ -435,7 +435,7 @@ fn test_operator_key_rotation() {
     // Verify that the config has been updated correctly with the new consensus key
     let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
-        .validator_config(validator_account, &backend)
+        .validator_config(validator_account, Some(&backend))
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, config_consensus_key);
@@ -594,7 +594,9 @@ fn test_validator_config() {
     // Fetch the initial validator config for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let consensus_key = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
-    let original_validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let original_validator_config = op_tool
+        .validator_config(owner_account, Some(&backend))
+        .unwrap();
     assert_eq!(
         consensus_key,
         original_validator_config.consensus_public_key
@@ -615,7 +617,9 @@ fn test_validator_config() {
     assert_eq!(VMStatusView::Executed, txn_ctx.execution_result.unwrap());
 
     // Re-fetch the validator config and verify the changes
-    let new_validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let new_validator_config = op_tool
+        .validator_config(owner_account, Some(&backend))
+        .unwrap();
     assert_eq!(new_consensus_key, new_validator_config.consensus_public_key);
     assert!(new_validator_config
         .validator_network_address
@@ -634,9 +638,11 @@ fn test_validator_decryption() {
 
     // Fetch the validator config and validator info for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
-    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let validator_config = op_tool
+        .validator_config(owner_account, Some(&backend))
+        .unwrap();
     let validator_set_infos = op_tool
-        .validator_set(Some(owner_account), &backend)
+        .validator_set(Some(owner_account), Some(&backend))
         .unwrap();
     assert_eq!(1, validator_set_infos.len());
 
@@ -652,17 +658,20 @@ fn test_validator_decryption() {
         .set(VALIDATOR_NETWORK_ADDRESS_KEYS, "INVALID KEY")
         .unwrap();
 
-    // Fetch the validator config and validator info for this operator's owner again
-    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
-    let validator_set_infos = op_tool
-        .validator_set(Some(owner_account), &backend)
-        .unwrap();
+    // Verify that any failure to decrypt the address will still produce a result
+    for backend in &[Some(&backend), None] {
+        // Fetch the validator config and validator info for this operator's owner
+        let validator_config = op_tool.validator_config(owner_account, *backend).unwrap();
+        let validator_set_infos = op_tool
+            .validator_set(Some(owner_account), *backend)
+            .unwrap();
 
-    // Ensure the validator network addresses failed to decrypt, but everything else was fetched
-    let config_network_address = validator_config.validator_network_address;
-    let info_network_address = validator_set_infos[0].validator_network_address.clone();
-    assert_eq!(config_network_address, info_network_address,);
-    assert_eq!(failed_decryption_address, config_network_address);
+        // Ensure the validator network addresses failed to decrypt, but everything else was fetched
+        let config_network_address = validator_config.validator_network_address;
+        let info_network_address = validator_set_infos[0].validator_network_address.clone();
+        assert_eq!(config_network_address, info_network_address);
+        assert_eq!(failed_decryption_address, config_network_address);
+    }
 }
 
 #[test]
@@ -672,9 +681,11 @@ fn test_validator_set() {
 
     // Fetch the validator config and validator info for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
-    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let validator_config = op_tool
+        .validator_config(owner_account, Some(&backend))
+        .unwrap();
     let validator_set_infos = op_tool
-        .validator_set(Some(owner_account), &backend)
+        .validator_set(Some(owner_account), Some(&backend))
         .unwrap();
     assert_eq!(1, validator_set_infos.len());
 
@@ -696,7 +707,7 @@ fn test_validator_set() {
     );
 
     // Fetch the entire validator set and check this account is included
-    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    let validator_set_infos = op_tool.validator_set(None, Some(&backend)).unwrap();
     assert_eq!(num_nodes, validator_set_infos.len());
     let _ = validator_set_infos
         .iter()
@@ -709,7 +720,7 @@ fn test_validator_set() {
     let _ = storage
         .set(VALIDATOR_NETWORK_ADDRESS_KEYS, "random string")
         .unwrap();
-    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    let validator_set_infos = op_tool.validator_set(None, Some(&backend)).unwrap();
     assert_eq!(num_nodes, validator_set_infos.len());
 
     let validator_info = validator_set_infos
@@ -994,7 +1005,7 @@ fn set_operator_and_add_new_validator_helper() -> VMStatusView {
         .unwrap();
 
     // Check the validator set size
-    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    let validator_set_infos = op_tool.validator_set(None, Some(&backend)).unwrap();
     assert_eq!(num_nodes, validator_set_infos.len());
     assert!(validator_set_infos
         .iter()
@@ -1017,7 +1028,7 @@ fn set_operator_and_add_new_validator_helper() -> VMStatusView {
     assert_eq!(VMStatusView::Executed, txn_ctx.execution_result.unwrap());
 
     // Check the new validator has been added to the set
-    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    let validator_set_infos = op_tool.validator_set(None, Some(&backend)).unwrap();
     assert_eq!(num_nodes + 1, validator_set_infos.len());
     let validator_info = validator_set_infos
         .iter()
