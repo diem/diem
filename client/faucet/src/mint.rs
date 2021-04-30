@@ -2,22 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use diem_client::{Client, MethodRequest};
-use diem_crypto::traits::SigningKey;
 use diem_logger::prelude::warn;
-use diem_types::{
-    account_config::{
-        testnet_dd_account_address, treasury_compliance_account_address,
-        type_tag_for_currency_code, XUS_NAME,
+use diem_sdk::{
+    client::{Client, MethodRequest},
+    transaction_builder::{Currency, TransactionFactory},
+    types::{
+        account_address::AccountAddress,
+        account_config::{testnet_dd_account_address, treasury_compliance_account_address},
+        chain_id::ChainId,
+        transaction::{authenticator::AuthenticationKey, metadata, SignedTransaction},
+        LocalAccount,
     },
-    transaction::metadata,
 };
-use std::{convert::From, fmt};
+use serde::Deserialize;
+use std::{fmt, sync::Mutex};
 
 #[derive(Debug)]
 pub enum Response {
     DDAccountNextSeqNum(u64),
-    SubmittedTxns(Vec<diem_types::transaction::SignedTransaction>),
+    SubmittedTxns(Vec<SignedTransaction>),
 }
 
 impl std::fmt::Display for Response {
@@ -31,67 +34,19 @@ impl std::fmt::Display for Response {
     }
 }
 
-#[derive(serde_derive::Deserialize)]
+#[derive(Deserialize)]
 pub struct MintParams {
     pub amount: u64,
-    pub currency_code: move_core_types::identifier::Identifier,
-    pub auth_key: diem_types::transaction::authenticator::AuthenticationKey,
+    pub currency_code: Currency,
+    pub auth_key: AuthenticationKey,
     pub return_txns: Option<bool>,
     pub is_designated_dealer: Option<bool>,
     pub trade_id: Option<String>,
 }
 
 impl MintParams {
-    fn currency_code(&self) -> move_core_types::language_storage::TypeTag {
-        type_tag_for_currency_code(self.currency_code.to_owned())
-    }
-
-    fn create_parent_vasp_account_script(
-        &self,
-        seq: u64,
-    ) -> diem_types::transaction::TransactionPayload {
-        diem_types::transaction::TransactionPayload::Script(
-            diem_transaction_builder::stdlib::encode_create_parent_vasp_account_script(
-                self.currency_code(),
-                0, // sliding nonce
-                self.receiver(),
-                self.auth_key.prefix().to_vec(),
-                format!("No. {} VASP", seq).as_bytes().to_vec(),
-                false, /* add all currencies */
-            ),
-        )
-    }
-
-    fn create_designated_dealer_account_script(
-        &self,
-        seq: u64,
-    ) -> diem_types::transaction::TransactionPayload {
-        diem_types::transaction::TransactionPayload::Script(
-            diem_transaction_builder::stdlib::encode_create_designated_dealer_script(
-                self.currency_code(),
-                0, // sliding nonce
-                self.receiver(),
-                self.auth_key.prefix().to_vec(),
-                format!("No. {} DD", seq).as_bytes().to_vec(),
-                false, /* add all currencies */
-            ),
-        )
-    }
-
-    fn p2p_script(&self) -> diem_types::transaction::TransactionPayload {
-        diem_types::transaction::TransactionPayload::Script(
-            diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
-                self.currency_code(),
-                self.receiver(),
-                self.amount,
-                self.bcs_metadata(),
-                vec![],
-            ),
-        )
-    }
-
-    fn bcs_metadata(&self) -> Vec<u8> {
-        match self.trade_id.clone() {
+    fn bcs_metadata(&mut self) -> Vec<u8> {
+        match self.trade_id.take() {
             Some(trade_id) => {
                 let metadata = metadata::Metadata::CoinTradeMetadata(
                     metadata::CoinTradeMetadata::CoinTradeMetadataV0(
@@ -109,83 +64,115 @@ impl MintParams {
         }
     }
 
-    fn receiver(&self) -> diem_types::account_address::AccountAddress {
+    fn receiver(&self) -> AccountAddress {
         self.auth_key.derived_address()
     }
 }
 
 pub struct Service {
-    chain_id: diem_types::chain_id::ChainId,
-    private_key: diem_crypto::ed25519::Ed25519PrivateKey,
+    treasury_account: Mutex<LocalAccount>,
+    dd_account: Mutex<LocalAccount>,
+    transaction_factory: TransactionFactory,
     client: Client,
 }
 
 impl Service {
-    pub fn new(
-        server_url: String,
-        chain_id: diem_types::chain_id::ChainId,
-        private_key_file: String,
-    ) -> Self {
-        let private_key = generate_key::load_key(private_key_file);
+    pub fn new(server_url: String, chain_id: ChainId, private_key_file: String) -> Self {
+        let treasury_account = LocalAccount::new(
+            treasury_compliance_account_address(),
+            generate_key::load_key(&private_key_file),
+            0,
+        );
+        let dd_account = LocalAccount::new(
+            testnet_dd_account_address(),
+            generate_key::load_key(private_key_file),
+            0,
+        );
         let client = Client::new(server_url);
         Service {
-            chain_id,
-            private_key,
+            treasury_account: Mutex::new(treasury_account),
+            dd_account: Mutex::new(dd_account),
+            transaction_factory: TransactionFactory::new(chain_id)
+                .with_transaction_expiration_time(30),
             client,
         }
     }
 
-    pub async fn process(&self, params: &MintParams) -> Result<Response> {
+    pub async fn process(&self, mut params: MintParams) -> Result<Response> {
         let (tc_seq, dd_seq, receiver_seq) = self.sequences(params.receiver()).await?;
 
-        let mut txns = vec![];
-        if receiver_seq.is_none() {
-            let script = if params.is_designated_dealer.unwrap_or(false) {
-                params.create_designated_dealer_account_script(tc_seq)
-            } else {
-                params.create_parent_vasp_account_script(tc_seq)
-            };
-            txns.push(self.create_txn(script, treasury_compliance_account_address(), tc_seq)?);
-        }
-        txns.push(self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?);
+        let txns = {
+            let mut treasury_account = self.treasury_account.lock().unwrap();
+            let mut dd_account = self.dd_account.lock().unwrap();
+
+            // If the onchain sequence_number is greater than what we have, update our
+            // sequence_numbers
+            if tc_seq > treasury_account.sequence_number() {
+                *treasury_account.sequence_number_mut() = tc_seq;
+            }
+            if dd_seq > dd_account.sequence_number() {
+                *dd_account.sequence_number_mut() = tc_seq;
+            }
+
+            let mut txns = vec![];
+            if receiver_seq.is_none() {
+                let builder = if params.is_designated_dealer.unwrap_or(false) {
+                    self.transaction_factory.create_designated_dealer(
+                        params.currency_code,
+                        0, // sliding_nonce
+                        params.auth_key,
+                        &format!("No. {} DD", treasury_account.sequence_number()),
+                        false, // add all currencies
+                    )
+                } else {
+                    self.transaction_factory.create_parent_vasp_account(
+                        params.currency_code,
+                        0, // sliding_nonce
+                        params.auth_key,
+                        &format!("No. {} VASP", treasury_account.sequence_number()),
+                        false, // add all currencies
+                    )
+                };
+
+                txns.push(treasury_account.sign_with_transaction_builder(builder));
+            }
+
+            txns.push(dd_account.sign_with_transaction_builder(
+                self.transaction_factory.peer_to_peer_with_metadata(
+                    params.currency_code,
+                    params.receiver(),
+                    params.amount,
+                    params.bcs_metadata(),
+                    vec![],
+                ),
+            ));
+            txns
+        };
 
         let batch = txns
             .iter()
             .map(|txn| MethodRequest::submit(txn))
-            .collect::<Result<_, _>>()?;
-        self.client.batch(batch).await?;
+            .collect::<Result<_, _>>()
+            .expect("serialization should not fail");
+        let response = self.client.batch(batch).await?;
 
-        if let Some(return_txns) = params.return_txns {
-            if return_txns {
-                return Ok(Response::SubmittedTxns(txns));
-            }
+        // If there was an issue submitting a transaction we should just reset our sequence_numbers
+        // to what was on chain
+        if response.iter().any(Result::is_err) {
+            *self.treasury_account.lock().unwrap().sequence_number_mut() = tc_seq;
+            *self.dd_account.lock().unwrap().sequence_number_mut() = dd_seq;
         }
-        Ok(Response::DDAccountNextSeqNum(dd_seq + 1))
+
+        if params.return_txns.unwrap_or(false) {
+            Ok(Response::SubmittedTxns(txns))
+        } else {
+            Ok(Response::DDAccountNextSeqNum(
+                self.dd_account.lock().unwrap().sequence_number(),
+            ))
+        }
     }
 
-    fn create_txn(
-        &self,
-        payload: diem_types::transaction::TransactionPayload,
-        sender: diem_types::account_address::AccountAddress,
-        seq: u64,
-    ) -> Result<diem_types::transaction::SignedTransaction> {
-        diem_types::transaction::helpers::create_user_txn(
-            self,
-            payload,
-            sender,
-            seq,
-            1_000_000,
-            0,
-            XUS_NAME.to_owned(),
-            30,
-            self.chain_id,
-        )
-    }
-
-    async fn sequences(
-        &self,
-        receiver: diem_types::account_address::AccountAddress,
-    ) -> Result<(u64, u64, Option<u64>)> {
+    async fn sequences(&self, receiver: AccountAddress) -> Result<(u64, u64, Option<u64>)> {
         let accounts = vec![
             treasury_compliance_account_address(),
             testnet_dd_account_address(),
@@ -232,19 +219,5 @@ impl Service {
             None
         };
         Ok((treasury_compliance, designated_dealer, receiver_seq_num))
-    }
-}
-
-impl diem_types::transaction::helpers::TransactionSigner for Service {
-    fn sign_txn(
-        &self,
-        raw_txn: diem_types::transaction::RawTransaction,
-    ) -> Result<diem_types::transaction::SignedTransaction> {
-        let signature = self.private_key.sign(&raw_txn);
-        Ok(diem_types::transaction::SignedTransaction::new(
-            raw_txn,
-            diem_crypto::ed25519::Ed25519PublicKey::from(&self.private_key),
-            signature,
-        ))
     }
 }
