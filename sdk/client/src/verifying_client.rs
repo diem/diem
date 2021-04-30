@@ -147,7 +147,17 @@ impl<S: Storage> VerifyingClient<S> {
         &self,
         address: AccountAddress,
     ) -> Result<Response<Option<AccountView>>> {
-        self.send_via_batch(MethodRequest::GetAccount((address,)))
+        self.send_via_batch(MethodRequest::get_account(address))
+            .await?
+            .and_then(MethodResponse::try_into_get_account)
+    }
+
+    pub async fn get_account_by_version(
+        &self,
+        address: AccountAddress,
+        version: Version,
+    ) -> Result<Response<Option<AccountView>>> {
+        self.send_via_batch(MethodRequest::get_account_by_version(address, version))
             .await?
             .and_then(MethodResponse::try_into_get_account)
     }
@@ -381,7 +391,7 @@ impl VerifyingRequest {
 impl From<MethodRequest> for VerifyingRequest {
     fn from(request: MethodRequest) -> Self {
         match request {
-            MethodRequest::GetAccount((address,)) => verifying_get_account(address),
+            MethodRequest::GetAccount(address, version) => verifying_get_account(address, version),
             _ => todo!(),
         }
     }
@@ -401,11 +411,11 @@ impl From<MethodRequest> for VerifyingRequest {
 // would allow the from(MethodRequest) above to call a method on the enum inner
 // instead of these ad-hoc methods i think
 
-fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
-    let request = MethodRequest::GetAccount((address,));
+fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> VerifyingRequest {
+    let request = MethodRequest::GetAccount(address, version);
     let subrequests = vec![
-        MethodRequest::GetAccountStateWithProof(diem_root_address(), None, None),
-        MethodRequest::GetAccountStateWithProof(address, None, None),
+        MethodRequest::GetAccountStateWithProof(diem_root_address(), version, None),
+        MethodRequest::GetAccountStateWithProof(address, version, None),
     ];
     let callback: RequestCallback = |ctxt, subresponses| {
         match subresponses {
@@ -416,19 +426,19 @@ fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
             let account_state_with_proof =
                 AccountStateWithProof::try_from(account).map_err(Error::decode)?;
 
-            let latest_li = ctxt.state_proof.0.ledger_info();
-            let state_version = latest_li.version();
-
-            let address = match ctxt.request {
-                MethodRequest::GetAccount((address,)) => *address,
+            let (address, version) = match ctxt.request {
+                MethodRequest::GetAccount(address, version) => (*address, *version),
                 request => panic!("programmer error: unexpected request: {:?}", request),
             };
+            let latest_li = ctxt.state_proof.0.ledger_info();
+            let ledger_version = latest_li.version();
+            let version = version.unwrap_or(ledger_version);
 
             diem_root_with_proof
-                .verify(latest_li, state_version, diem_root_address())
+                .verify(latest_li, version, diem_root_address())
                 .map_err(Error::invalid_proof)?;
             account_state_with_proof
-                .verify(latest_li, state_version, address)
+                .verify(latest_li, version, address)
                 .map_err(Error::invalid_proof)?;
 
             // TODO(philiphayes): it seems wasteful to lookup the whole diem_root
@@ -459,7 +469,7 @@ fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
                         address,
                         account_state,
                         &currency_codes,
-                        state_version,
+                        version,
                     ).map_err(Error::decode)
                 })
                 .transpose()?;

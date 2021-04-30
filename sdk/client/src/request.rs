@@ -12,7 +12,7 @@ use std::sync::atomic::AtomicU64;
 pub enum MethodRequest {
     Submit((String,)),
     GetMetadata((Option<u64>,)),
-    GetAccount((AccountAddress,)),
+    GetAccount(AccountAddress, Option<u64>),
     GetTransactions(u64, u64, bool),
     GetAccountTransaction(AccountAddress, u64, bool),
     GetAccountTransactions(AccountAddress, u64, u64, bool),
@@ -43,8 +43,12 @@ impl MethodRequest {
         Self::GetMetadata((None,))
     }
 
+    pub fn get_account_by_version(address: AccountAddress, version: u64) -> Self {
+        Self::GetAccount(address, Some(version))
+    }
+
     pub fn get_account(address: AccountAddress) -> Self {
-        Self::GetAccount((address,))
+        Self::GetAccount(address, None)
     }
 
     pub fn get_transactions(start_seq: u64, limit: u64, include_events: bool) -> Self {
@@ -89,10 +93,10 @@ impl MethodRequest {
     }
     pub fn get_account_state_with_proof(
         address: AccountAddress,
-        from_version: Option<u64>,
-        to_version: Option<u64>,
+        version: Option<u64>,
+        ledger_version: Option<u64>,
     ) -> Self {
-        Self::GetAccountStateWithProof(address, from_version, to_version)
+        Self::GetAccountStateWithProof(address, version, ledger_version)
     }
 
     pub fn get_transactions_with_proofs(start_version: u64, limit: u64) -> Self {
@@ -107,7 +111,7 @@ impl MethodRequest {
         match self {
             MethodRequest::Submit(_) => Method::Submit,
             MethodRequest::GetMetadata(_) => Method::GetMetadata,
-            MethodRequest::GetAccount(_) => Method::GetAccount,
+            MethodRequest::GetAccount(_, _) => Method::GetAccount,
             MethodRequest::GetTransactions(_, _, _) => Method::GetTransactions,
             MethodRequest::GetAccountTransaction(_, _, _) => Method::GetAccountTransaction,
             MethodRequest::GetAccountTransactions(_, _, _, _) => Method::GetAccountTransactions,
