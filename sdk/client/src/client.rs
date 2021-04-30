@@ -149,6 +149,15 @@ impl Client {
         self.send(MethodRequest::get_account(address)).await
     }
 
+    pub async fn get_account_by_version(
+        &self,
+        address: AccountAddress,
+        version: u64,
+    ) -> Result<Response<Option<AccountView>>> {
+        self.send(MethodRequest::get_account_by_version(address, version))
+            .await
+    }
+
     pub async fn get_transactions(
         &self,
         start_seq: u64,

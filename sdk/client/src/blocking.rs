@@ -138,6 +138,14 @@ impl BlockingClient {
         self.send(MethodRequest::get_account(address))
     }
 
+    pub fn get_account_by_version(
+        &self,
+        address: AccountAddress,
+        version: u64,
+    ) -> Result<Response<Option<AccountView>>> {
+        self.send(MethodRequest::get_account_by_version(address, version))
+    }
+
     pub fn get_transactions(
         &self,
         start_seq: u64,
