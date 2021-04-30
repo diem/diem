@@ -16,6 +16,7 @@ client = ["diem-client"]
 [dependencies]
 bcs = "0.1"
 rand_core = "0.6.2"
+serde = { version = "1.0.124", features = ["derive"] }
 
 diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
 diem-types = { path = "../types", version = "0.0.1"}

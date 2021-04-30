@@ -2122,6 +2122,7 @@ dependencies = [
  "diem-workspace-hack",
  "move-core-types",
  "rand_core 0.6.2",
+ "serde",
 ]
 
 [[package]]

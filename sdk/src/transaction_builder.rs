@@ -9,6 +9,7 @@ use crate::{
         transaction::{authenticator::AuthenticationKey, RawTransaction, TransactionPayload},
     },
 };
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 pub use diem_transaction_builder::stdlib;
@@ -483,7 +484,8 @@ impl DualAttestationMessage {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum Currency {
     XDX,
     XUS,
