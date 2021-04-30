@@ -80,6 +80,7 @@ public fun Exists::call_with_type_param1($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/0x2::Exists::V<0x2::Exists::T>: Read
      #
      # Locals:
@@ -95,6 +96,7 @@ public fun Exists::call_with_type_param2<#0, #1>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/Exists::V<#1>: Read
      #
      # Locals:
@@ -127,6 +129,7 @@ public fun Exists::exists_field($t0|s: &Exists::S): bool {
      var $t3: address
      var $t4: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Read
      # Formal(0)/f/0x2::Exists::T: Read
      #
@@ -145,6 +148,7 @@ public fun Exists::exists_formal($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/0x2::Exists::T: Read
      #
      # Locals:
@@ -160,6 +164,7 @@ public fun Exists::exists_generic<#0>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/Exists::V<#0>: Read
      #
      # Locals:
@@ -175,6 +180,7 @@ public fun Exists::exists_generic_instantiated($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/0x2::Exists::V<0x2::Exists::T>: Read
      #
      # Locals:

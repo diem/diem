@@ -50,7 +50,10 @@ public fun UpdateReturn::abort_or_write($t0|s: &mut UpdateReturn::S, $t1|b: bool
      var $t7: u64
      var $t8: u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Write
+     # Formal(1): Read
+     # Formal(2): Read
      #
      # Locals:
      # Ret(0): Formal(2)
@@ -79,7 +82,9 @@ public fun UpdateReturn::write_f($t0|s: &mut UpdateReturn::S, $t1|x: u64): u64 {
      var $t4: &mut u64
      var $t5: u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Write
+     # Formal(1): Read
      #
      # Locals:
      # Ret(0): Formal(1)

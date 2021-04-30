@@ -91,6 +91,8 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      var $t4: u64
      var $t5: address
      # Accesses:
+     # Formal(0): Read
+     # Formal(1): Read
      #
      # Locals:
      # Ret(0): {0x2, Formal(0), }
@@ -133,6 +135,7 @@ public fun Footprint::reassign_field($t0|s: &mut Footprint::S) {
      var $t2: &mut Footprint::S
      var $t3: &mut address
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Write
      #
      # Locals:
@@ -154,7 +157,9 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      var $t5: &mut address
      var $t6: &mut Footprint::S
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Write
+     # Formal(1): Read
      #
      # Locals:
      # Formal(0)/f: {0x2, Formal(0)/f, }
@@ -183,6 +188,7 @@ public fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): ad
      var $t2: address
      var $t3: address
      # Accesses:
+     # Formal(1): Read
      #
      # Locals:
      # Ret(0): Formal(1)

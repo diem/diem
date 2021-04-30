@@ -253,8 +253,11 @@ impl AbsAddr {
                     extended_ap.add_offset(offset.clone());
                     extended_aps.insert(Addr::Footprint(extended_ap));
                 }
-                Addr::Constant(_) => {
-                    panic!("Type error: address constant as base")
+                Addr::Constant(c) => {
+                    panic!(
+                        "Type error: address constant {:?} as base for offset {:?}",
+                        c, offset
+                    )
                 }
             }
         }
@@ -471,10 +474,20 @@ impl Offset {
                 // we conflate address and signer, so this can happen
                 s.get_type()
             }
-            _ => panic!(
-                "Invalid base type {:?} for offset {:?} in get_type",
-                base, self
-            ),
+            (Type::Error, _) => {
+                // couldn't infer the type of `base`. propagate the error
+                Type::Error
+            }
+            _ => {
+                panic!(
+                    "get_type warning: Invalid base type {} for offset {:?} in get_type",
+                    base.display(&move_model::ty::TypeDisplayContext::WithEnv {
+                        env,
+                        type_param_names: None
+                    }),
+                    self,
+                )
+            }
         }
     }
 
@@ -602,7 +615,7 @@ impl AccessPath {
                                     struct_type.clone(),
                                 ));
                                 let mut new_offsets = vec![];
-                                for v in self.offsets.iter().skip(0) {
+                                for v in self.offsets[1..].iter() {
                                     new_offsets.push(v.clone())
                                 }
                                 acc.insert(Addr::footprint(AccessPath::new(root, new_offsets)));
@@ -628,17 +641,23 @@ impl AccessPath {
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) -> AbsAddr {
         let mut acc = AbsAddr::default();
+        let mut new_offsets = self.offsets.clone();
+        new_offsets.iter_mut().for_each(|o| {
+            o.substitute_footprint(type_actuals);
+        });
         match &self.root {
             Root::Formal(i) => {
-                acc.join(&self.prepend_addrs(&actuals[*i]));
+                let actual = &actuals[*i];
+                if !actual.is_empty() {
+                    let new_ap = AccessPath::new(self.root.clone(), new_offsets);
+                    acc.join(&new_ap.prepend_addrs(actual));
+                } else {
+                    // TODO: change actuals to &[TempIndex], look up actuals[i]/new_offsets in sub_map")
+                }
             }
             Root::Global(g) => {
                 let mut new_g = g.clone();
                 new_g.substitute_footprint(actuals, type_actuals, sub_map);
-                let mut new_offsets = self.offsets.clone();
-                new_offsets.iter_mut().for_each(|o| {
-                    o.substitute_footprint(type_actuals);
-                });
                 acc.insert(Addr::footprint(AccessPath::new(
                     Root::Global(new_g),
                     new_offsets,
@@ -845,10 +864,18 @@ impl<'a> fmt::Display for OffsetDisplay<'a> {
                         .get_identifier()
                         .as_str(),
                 ),
-                _ => panic!(
-                    "Invalid base type {:?} for field offset {:?}",
-                    self.base_type, self.offset
-                ),
+                Type::Error => {
+                    // this happens when we are trying to print an access path rooted in a stackless
+                    // bytecode-generated local. we do not know the type of this local, so we cannot
+                    // infer the type of its fields either. just print the index
+                    write!(f, "{}", *fld)
+                }
+                _ => {
+                    panic!(
+                        "Warning: Invalid base type {:?} for field offset {:?}",
+                        self.base_type, self.offset
+                    );
+                }
             },
             VectorIndex => f.write_str("[_]"),
             Global(g) => write!(f, "{}", g.display(self.env)),

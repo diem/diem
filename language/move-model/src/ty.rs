@@ -131,6 +131,11 @@ impl Type {
         matches!(self, Type::Struct(..))
     }
 
+    /// Determines whether this type is a vector
+    pub fn is_vector(&self) -> bool {
+        matches!(self, Type::Vector(..))
+    }
+
     /// Determines whether this is a struct, or a vector of structs, or a reference to any of
     /// those.
     pub fn is_struct_or_vector_of_struct(&self) -> bool {

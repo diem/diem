@@ -1,6 +1,7 @@
 Command `sandbox publish`:
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect`:
 Accesses:
+Formal(0): Read
 Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
 Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Read
 
@@ -24,6 +25,8 @@ Command `experimental read-write-set storage/0x00000000000000000000000000000001/
 
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec`:
 Accesses:
+Formal(0): Read
+Formal(0)/0x1::ConcretizeVector::S/v: Read
 Formal(0)/0x1::ConcretizeVector::S/v/[_]: Read
 Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Read
 
@@ -34,11 +37,13 @@ Command `experimental read-write-set storage/0x00000000000000000000000000000001/
 
 Command `sandbox run storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv publish --signers 0x1 0x2`:
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1`:
+0x1/0x1::ConcretizeVector::S/v: Read
 0x1/0x1::ConcretizeVector::S/v/[_]: Read
 0x1/0x1::ConcretizeVector::T/f: Read
 0x2/0x1::ConcretizeVector::T/f: Read
 
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv write_vec --concretize --args 0x1 2`:
+0x1/0x1::ConcretizeVector::S/v: Read
 0x1/0x1::ConcretizeVector::S/v/[_]: Read
 0x1/0x1::ConcretizeVector::T/f: Write
 0x2/0x1::ConcretizeVector::T/f: Write

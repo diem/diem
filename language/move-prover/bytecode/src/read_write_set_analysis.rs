@@ -134,7 +134,7 @@ impl ReadWriteSetState {
     pub fn apply_summary(
         &mut self, // caller state
         callee_summary_: &Self,
-        actuals: &[TempIndex],
+        actuals: &[AbsAddr],
         type_actuals: &[Type],
         returns: &[TempIndex],
         caller_fun_env: &FunctionEnv,
@@ -142,30 +142,21 @@ impl ReadWriteSetState {
     ) {
         // TODO: refactor this to work without copies
         let callee_summary = callee_summary_.clone();
-        let actual_values: Vec<AbsAddr> = actuals
-            .iter()
-            .map(|i| {
-                self.locals
-                    .get_local(*i, caller_fun_env)
-                    .cloned()
-                    .unwrap_or_default()
-            })
-            .collect();
         // (1) bind all footprint values and types in callee locals to their caller values
         let mut new_callee_locals = callee_summary.locals.substitute_footprint(
-            &actual_values,
+            actuals,
             type_actuals,
             &self.locals,
             AbsAddr::substitute_footprint,
         );
         // (2) bind all footprint values and types in callee accesses to their caller values
         let mut new_callee_accesses = callee_summary.accesses.substitute_footprint_skip_data(
-            &actual_values,
+            actuals,
             type_actuals,
             &self.locals,
         );
         // (3) bind footprint paths in callee accesses with their caller values
-        for (i, actual_v) in actual_values.iter().enumerate() {
+        for (i, actual_v) in actuals.iter().enumerate() {
             let formal_i = Root::from_index(i, callee_fun_env);
             assert!(
                 formal_i.is_formal(),
@@ -173,7 +164,10 @@ impl ReadWriteSetState {
             );
             if let Some(node) = new_callee_accesses.remove(&formal_i) {
                 let formal_ap = AccessPath::new(formal_i, vec![]);
-                for v in formal_ap.prepend_addrs(actual_v).iter() {
+                if actual_v.is_empty() {
+                    continue;
+                }
+                for v in formal_ap.prepend_addrs(&actual_v).iter() {
                     match v {
                         Addr::Footprint(ap) => {
                             self.accesses.join_access_path(ap.clone(), node.clone());
@@ -221,6 +215,20 @@ impl ReadWriteSetState {
             .unwrap_or_else(|| panic!("Unbound local {:?}", rhs_index))
             .clone();
         self.locals.bind_local(lhs_index, rhs_value, fun_env)
+    }
+
+    pub fn assign_local(
+        &mut self,
+        lhs_index: TempIndex,
+        rhs_index: TempIndex,
+        func_env: &FunctionEnv,
+    ) {
+        if let Some(rhs_data) = self.locals.get_local(rhs_index, func_env).cloned() {
+            self.locals.bind_local(lhs_index, rhs_data, func_env);
+            self.record_access(rhs_index, Access::Read, func_env)
+        } else if let Some(rhs_node) = self.locals.get_local_node(rhs_index, func_env).cloned() {
+            self.locals.bind_local_node(lhs_index, rhs_node, func_env);
+        }
     }
 
     /// Return the local access paths rooted in `addr_idx`/`mid`::`sid`<`types`>
@@ -317,23 +325,29 @@ impl ReadWriteSetState {
         access_type: Option<Access>,
         fun_env: &FunctionEnv,
     ) {
-        let borrowed = self
-            .locals
-            .get_local(base, fun_env)
-            .expect("Unbound local")
-            .clone();
-        let extended_aps = borrowed.add_offset(offset);
-        for ap in extended_aps.footprint_paths() {
-            self.locals
-                .update_access_path(ap.clone(), Some(AbsAddr::footprint(ap.clone())));
-            if access_type.is_some() {
-                self.accesses.update_access_path(ap.clone(), access_type)
+        let borrowed_opt = self.locals.get_local(base, fun_env);
+        if let Some(borrowed) = borrowed_opt {
+            let extended_aps = borrowed.add_offset(offset);
+            for ap in extended_aps.footprint_paths() {
+                self.locals
+                    .update_access_path(ap.clone(), Some(AbsAddr::footprint(ap.clone())));
+                if access_type.is_some() {
+                    self.accesses.update_access_path(ap.clone(), access_type)
+                }
             }
+            self.locals.bind_local(ret, extended_aps, fun_env)
+        } else {
+            let ap = AccessPath::new(Root::from_index(base, fun_env), vec![offset]);
+            let borrowed = self
+                .locals
+                .get_access_path(ap)
+                .unwrap_or_else(|| panic!("Unbound local {:?}", base))
+                .clone();
+            self.locals.bind_local(ret, borrowed, fun_env)
         }
-        self.locals.bind_local(ret, extended_aps, fun_env)
     }
 
-    /// Write rh
+    /// Write `rhs` to `lhs_ref`
     pub fn write_ref(&mut self, lhs_ref: TempIndex, rhs: TempIndex, fun_env: &FunctionEnv) {
         if let Some(rhs_val) = self.locals.get_local(rhs, fun_env).cloned() {
             let lhs_paths = self
@@ -446,6 +460,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
         use Operation::*;
 
         let func_env = &self.func_env;
+
         match instr {
             Call(_, rets, oper, args, _abort_action) => match oper {
                 BorrowField(_mid, _sid, _types, fld) => {
@@ -465,45 +480,36 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     // *args[0] = args1
                     state.write_ref(args[0], args[1], func_env)
                 }
-                FreezeRef | BorrowLoc => {
-                    if state.locals.local_exists(args[0], func_env) {
-                        state.copy_local(rets[0], args[0], func_env)
-                    }
-                }
+                FreezeRef | BorrowLoc => state.assign_local(rets[0], args[0], func_env),
                 BorrowGlobal(mid, sid, types) => {
                     // borrow_global<T>(a). bind ret to a/T
-                    // TODO: this crashes on the expect below, apparently with address
-                    // locals introduced by Unpack. For now we ignore it if the local
-                    // is not bound.
-                    if state.locals.local_exists(args[0], func_env) {
-                        let addrs = state
-                            .locals
-                            .get_local(args[0], func_env)
-                            .expect("Unbound address local")
-                            .clone();
-                        let offset = Offset::global(mid, *sid, types.clone());
-                        let mut extended_aps: AbsAddr = AbsAddr::default();
-                        for p in addrs.iter() {
-                            match p {
-                                Addr::Footprint(ap) => {
-                                    let mut extended_ap = ap.clone();
-                                    extended_ap.add_offset(offset.clone());
-                                    extended_aps.insert(Addr::Footprint(extended_ap.clone()));
-                                    state.locals.update_access_path(extended_ap.clone(), None);
-                                }
-                                Addr::Constant(c) => {
-                                    let extended_ap = AccessPath::new_address_constant(
-                                        c.clone(),
-                                        mid,
-                                        *sid,
-                                        types.clone(),
-                                    );
-                                    extended_aps.insert(Addr::footprint(extended_ap));
-                                }
+                    let addrs = state
+                        .locals
+                        .get_local(args[0], func_env)
+                        .expect("Unbound address local")
+                        .clone();
+                    let offset = Offset::global(mid, *sid, types.clone());
+                    let mut extended_aps: AbsAddr = AbsAddr::default();
+                    for p in addrs.iter() {
+                        match p {
+                            Addr::Footprint(ap) => {
+                                let mut extended_ap = ap.clone();
+                                extended_ap.add_offset(offset.clone());
+                                extended_aps.insert(Addr::Footprint(extended_ap.clone()));
+                                state.locals.update_access_path(extended_ap.clone(), None);
+                            }
+                            Addr::Constant(c) => {
+                                let extended_ap = AccessPath::new_address_constant(
+                                    c.clone(),
+                                    mid,
+                                    *sid,
+                                    types.clone(),
+                                );
+                                extended_aps.insert(Addr::footprint(extended_ap));
                             }
                         }
-                        state.locals.bind_local(rets[0], extended_aps, func_env)
                     }
+                    state.locals.bind_local(rets[0], extended_aps, func_env)
                 }
                 MoveFrom(mid, sid, types) => {
                     state.add_global_access(args[0], mid, *sid, types, Access::Write, func_env);
@@ -519,13 +525,23 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     let fun_id = mid.qualified(*fid);
                     let global_env = self.cache.global_env();
                     let callee_fun_env = global_env.get_function(fun_id);
+                    // TODO: fix crash here
                     if let Some(callee_summary) = self
                         .cache
                         .get::<ReadWriteSetState>(fun_id, &FunctionVariant::Baseline)
                     {
                         state.apply_summary(
                             callee_summary,
-                            args,
+                            &args
+                                .iter()
+                                .map(|i| {
+                                    state
+                                        .locals
+                                        .get_local(*i, func_env)
+                                        .cloned()
+                                        .unwrap_or_default()
+                                })
+                                .collect::<Vec<AbsAddr>>(),
                             types,
                             rets,
                             func_env,
@@ -556,18 +572,59 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                         state.record_access(args[1], Access::Read, func_env)
                     }
                 }
-                Pack(_mid, _sid, _types) => {
+                Pack(_mid, sid, _types) => {
                     // rets[0] = Pack<mid::sid<types>>(args)
+                    for (arg_index, fld) in func_env
+                        .module_env
+                        .get_struct(*sid)
+                        .get_fields()
+                        .enumerate()
+                    {
+                        let ty = fld.get_type();
+                        if ty.is_address() || ty.is_struct() || ty.is_vector() {
+                            if let Some(rhs) = state
+                                .locals
+                                .get_local_node(args[arg_index], func_env)
+                                .cloned()
+                            {
+                                // rets[0]/fld = args[arg_index]
+                                let mut ap = AccessPath::from_index(rets[0], func_env);
+                                ap.add_offset(Offset::field(fld.get_offset()));
+                                // TODO: join, or can we do a strong update?
+                                state.locals.join_access_path(ap, rhs);
+                            }
+                        }
+                    }
                 }
-                Unpack(..) => {
+                Unpack(_mid, sid, _types) => {
                     // rets = Unpack<mid::sid<types>>(args[0])
-                    // pack and unpack touch non-reference values; nothing to do
+                    if state.locals.local_exists(args[0], func_env) {
+                        for (ret_index, fld) in func_env
+                            .module_env
+                            .get_struct(*sid)
+                            .get_fields()
+                            .enumerate()
+                        {
+                            let ty = fld.get_type();
+                            if ty.is_address() || ty.is_struct() || ty.is_vector() {
+                                // rets[ret_index] = args[0]/fld
+                                state.assign_offset(
+                                    rets[ret_index],
+                                    args[0],
+                                    Offset::field(fld.get_offset()),
+                                    // TODO: add Some(Read) here?
+                                    None,
+                                    func_env,
+                                );
+                            }
+                        }
+                    }
                 }
                 CastU8 | CastU64 | CastU128 | Not | Add | Sub | Mul | Div | Mod | BitOr
                 | BitAnd | Xor | Shl | Shr | Lt | Gt | Le | Ge | Or | And => {
                     // These operations touch non-reference values; nothing to do
                 }
-                oper => panic!("unsupported oper {:?}", oper),
+                oper => unimplemented!("unsupported oper {:?}", oper),
             },
             Load(_attr_id, lhs, constant) => {
                 if let Constant::Address(a) = constant {
@@ -576,13 +633,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                         .bind_local(*lhs, AbsAddr::constant(a.clone()), func_env)
                 }
             }
-            Assign(_attr_id, lhs, rhs, _assign_kind) => {
-                if let Some(rhs_data) = state.locals.get_local(*rhs, func_env).cloned() {
-                    state.locals.bind_local(*lhs, rhs_data, func_env)
-                } else {
-                    state.locals.remove_local(*lhs, func_env)
-                }
-            }
+            Assign(_attr_id, lhs, rhs, _assign_kind) => state.assign_local(*lhs, *rhs, func_env),
             Ret(_attr_id, rets) => {
                 let ret_vals: Vec<Option<AbsAddr>> = rets
                     .iter()
@@ -590,7 +641,15 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     .collect();
                 for (ret_index, ret_val_opt) in ret_vals.iter().enumerate() {
                     if let Some(ret_val) = ret_val_opt {
-                        state.locals.bind_return(ret_index, ret_val.clone())
+                        /*assert!(
+                            !ret_val.is_empty(),
+                            "empty return value bound to ret index {:?}",
+                            ret_index
+                        );*/
+                        // TODO: replace with assertion above
+                        if !ret_val.is_empty() {
+                            state.locals.bind_return(ret_index, ret_val.clone())
+                        }
                     }
                 }
             }
@@ -669,12 +728,12 @@ fn call_native_function(
                 state.copy_local(rets[0], args[0], func_env)
             }
         }
-        ("Vector", "empty") | ("Vector", "destroy_empty") => (),
+        ("Vector", "empty") | ("Vector", "destroy_empty") | ("Vector", "reverse") => (),
         ("Event", "write_to_event_store") => (),
         ("Hash", "sha3_256") | ("Hash", "sha2_256") => (),
         ("Signature", "ed25519_validate_pubkey") | ("Signature", "ed25519_verify") => (),
         (m, f) => {
-            unimplemented!("Unsupported native function {:?}::{:?}", m, f)
+            panic!("Unsupported native function {:?}::{:?}", m, f)
         }
     }
 }

@@ -9,12 +9,15 @@ Command `experimental read-write-set storage/0x00000000000000000000000000000001/
 0xa/0x1::AccountFreezing::FreezingBit/is_frozen: Read
 0xa/0x1::VASP::ParentVASP: Read
 0xa/0x1::DiemAccount::DiemAccount: Read
+0xa/0x1::DiemAccount::DiemAccount/withdraw_capability: Read
 0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec: Read
 0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]: ReadWrite
 0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address: Read
+0xa/0x1::DiemAccount::DiemAccount/sent_events: Read
 0xa/0x1::DiemAccount::DiemAccount/sent_events/counter: ReadWrite
 0xa/0x1::DiemAccount::DiemAccount/sent_events/guid: Read
 0xa/0x1::DiemAccount::Balance<0x1::XUS::XUS>: Read
+0xa/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin: Read
 0xa/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin/value: ReadWrite
 0xb/0x1::AccountFreezing::FreezingBit: Read
 0xb/0x1::AccountFreezing::FreezingBit/is_frozen: Read
@@ -23,9 +26,11 @@ Command `experimental read-write-set storage/0x00000000000000000000000000000001/
 0xb/0x1::DualAttestation::Credential/base_url: Read
 0xb/0x1::DualAttestation::Credential/compliance_public_key: Read
 0xb/0x1::DiemAccount::DiemAccount: Read
+0xb/0x1::DiemAccount::DiemAccount/received_events: Read
 0xb/0x1::DiemAccount::DiemAccount/received_events/counter: ReadWrite
 0xb/0x1::DiemAccount::DiemAccount/received_events/guid: Read
 0xb/0x1::DiemAccount::Balance<0x1::XUS::XUS>: Read
+0xb/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin: Read
 0xb/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin/value: ReadWrite
 0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds: Read
 0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds/microseconds: Read

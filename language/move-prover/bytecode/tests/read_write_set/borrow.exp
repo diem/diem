@@ -28,6 +28,7 @@ fun Borrow::borrow_s($t0|a: address) {
      var $t1: address
      var $t2: &Borrow::S
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      #
@@ -43,6 +44,7 @@ fun Borrow::borrow_s_mut($t0|a: address) {
      var $t1: address
      var $t2: &mut Borrow::S
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      #

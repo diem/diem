@@ -90,7 +90,10 @@ public fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
      var $t3: &mut Funtions::R
      var $t4: vector<u8>
      # Accesses:
+     # Formal(0): Read
+     # Formal(0)/0x1::Funtions::R: Read
      # Formal(0)/0x1::Funtions::R/v: Write
+     # Formal(1): Read
      #
      # Locals:
      #
@@ -110,6 +113,9 @@ public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|
      var $t6: vector<address>
      var $t7: vector<address>
      # Accesses:
+     # Formal(0): Read
+     # Formal(1): Read
+     # Formal(2): Read
      #
      # Locals:
      # Ret(0): {Formal(0), Formal(1), }
@@ -136,6 +142,7 @@ public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|
 public fun Funtions::id($t0|a: address): address {
      var $t1: address
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      # Ret(0): Formal(0)
@@ -149,6 +156,7 @@ public fun Funtions::id($t0|a: address): address {
 public fun Funtions::id_generic<#0>($t0|t: #0): #0 {
      var $t1: #0
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      # Ret(0): Formal(0)
@@ -162,6 +170,7 @@ public fun Funtions::id_generic<#0>($t0|t: #0): #0 {
 public fun Funtions::id_ref($t0|a: &address): &address {
      var $t1: &address
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      # Ret(0): Formal(0)
@@ -175,6 +184,7 @@ public fun Funtions::id_ref($t0|a: &address): &address {
 public fun Funtions::id_ref_generic<#0>($t0|t: &#0): &#0 {
      var $t1: &#0
      # Accesses:
+     # Formal(0): Read
      #
      # Locals:
      # Ret(0): Formal(0)
@@ -190,7 +200,9 @@ public fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
      var $t3: &mut Funtions::R
      var $t4: &mut vector<u8>
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/v: Write
+     # Formal(1): Read
      #
      # Locals:
      # Formal(0)/v: Formal(1)

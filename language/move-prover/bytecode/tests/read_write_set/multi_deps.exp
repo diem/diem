@@ -57,8 +57,11 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      var $t13: &mut MultiDeps::S
      var $t14: &mut u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: ReadWrite
+     # Formal(1): Read
      # Formal(1)/f: Read
+     # Formal(2): Read
      #
      # Locals:
      # Formal(0)/f: {Formal(0)/f, Formal(1)/f, }

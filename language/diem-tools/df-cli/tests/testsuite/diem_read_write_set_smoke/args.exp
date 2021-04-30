@@ -11,6 +11,7 @@ Accesses:
 0xa550c18/0x1::DualAttestation::Limit/micro_xdx_limit: Read
 Formal(0): Read
 Formal(0)/0x1::DiemAccount::DiemAccount: Read
+Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]: ReadWrite
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address: Read
@@ -42,11 +43,14 @@ Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_addr
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::VASP::ChildVASP/parent_vasp_addr/AccountLimits::Window<#0>/limit_address/AccountLimits::LimitsDefinition<#0>/max_holding: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::VASP::ParentVASP: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount: Read
+Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/withdraw_capability: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/withdraw_capability/vec: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]: ReadWrite
+Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/sent_events: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/sent_events/counter: ReadWrite
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/0x1::DiemAccount::DiemAccount/sent_events/guid: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/DiemAccount::Balance<#0>: Read
+Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/DiemAccount::Balance<#0>/coin: Read
 Formal(0)/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address/DiemAccount::Balance<#0>/coin/value: ReadWrite
 Formal(1): Read
 Formal(1)/0x1::AccountFreezing::FreezingBit: Read
@@ -83,10 +87,14 @@ Formal(1)/0x1::DualAttestation::Credential: Read
 Formal(1)/0x1::DualAttestation::Credential/base_url: Read
 Formal(1)/0x1::DualAttestation::Credential/compliance_public_key: Read
 Formal(1)/0x1::DiemAccount::DiemAccount: Read
+Formal(1)/0x1::DiemAccount::DiemAccount/received_events: Read
 Formal(1)/0x1::DiemAccount::DiemAccount/received_events/counter: ReadWrite
 Formal(1)/0x1::DiemAccount::DiemAccount/received_events/guid: Read
 Formal(1)/DiemAccount::Balance<#0>: Read
+Formal(1)/DiemAccount::Balance<#0>/coin: Read
 Formal(1)/DiemAccount::Balance<#0>/coin/value: ReadWrite
+Formal(2): Read
+Formal(3): Read
 Formal(3)/[_]: ReadWrite
 Formal(4): Read
 

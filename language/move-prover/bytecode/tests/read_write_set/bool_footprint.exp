@@ -64,6 +64,7 @@ public fun BoolFootprint::call_get($t0|a: address) {
      var $t5: bool
      var $t6: u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/0x1::BoolFootprint::B: Read
      # Formal(0)/0x1::BoolFootprint::B/b: Read
      #
@@ -94,6 +95,7 @@ public fun BoolFootprint::global_get($t0|a: address): bool {
      var $t8: bool
      var $t9: bool
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/0x1::BoolFootprint::B: Read
      # Formal(0)/0x1::BoolFootprint::B/b: Read
      #

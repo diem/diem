@@ -31,6 +31,7 @@ public fun Fields::borrow_read($t0|s: &Fields::S): u64 {
      var $t2: &u64
      var $t3: u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Read
      #
      # Locals:
@@ -49,6 +50,7 @@ public fun Fields::borrow_read_generic<#0>($t0|t: &Fields::T<#0>): u64 {
      var $t2: &u64
      var $t3: u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Read
      #
      # Locals:

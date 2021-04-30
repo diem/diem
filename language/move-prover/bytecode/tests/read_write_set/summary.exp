@@ -51,6 +51,7 @@ public fun Summary::write_caller2($t0|a: address) {
 public fun Summary::write_addr() {
      var $t0: address
      # Accesses:
+     # 0x777/0x2::Summary::S1/s2: Read
      # 0x777/0x2::Summary::S1/s2/f: Write
      #
      # Locals:
@@ -67,6 +68,7 @@ public fun Summary::write_callee($t0|s2: &mut Summary::S2) {
      var $t2: &mut Summary::S2
      var $t3: &mut u64
      # Accesses:
+     # Formal(0): Read
      # Formal(0)/f: Write
      #
      # Locals:
@@ -84,6 +86,8 @@ public fun Summary::write_caller1($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S2
      # Accesses:
+     # Formal(0): Read
+     # Formal(0)/0x2::Summary::S2: Read
      # Formal(0)/0x2::Summary::S2/f: Write
      #
      # Locals:
@@ -101,6 +105,8 @@ public fun Summary::write_caller2($t0|a: address) {
      var $t2: &mut Summary::S1
      var $t3: &mut Summary::S2
      # Accesses:
+     # Formal(0): Read
+     # Formal(0)/0x2::Summary::S1/s2: Read
      # Formal(0)/0x2::Summary::S1/s2/f: Write
      #
      # Locals:
