@@ -29,7 +29,7 @@ This release includes several changes and enhancements:
 
 ## Standard Library
 
-To make it easier to use Move for projects besides Diem, we are working toward separating the parts of Move that are specific to Diem. There is much more to do, but in this release, the standard library has been separated into two parts: `move-stdlib` ([#7633](https://github.com/diem/diem/pull/7633)) and `diem-stdlib` ([#7529](https://github.com/diem/diem/pull/7529)).
+To make it easier to use Move for projects besides Diem, we are working toward separating the parts of Move that are specific to Diem. There is much more to do, but in this release, the standard library has been separated into two parts: `move-stdlib` ([#7633](https://github.com/diem/diem/pull/7633)) and `diem-framework` ([#7529](https://github.com/diem/diem/pull/7529)).
 
 ## Compiler
 
