@@ -1,6 +1,26 @@
 Move prover returns: exiting with boogie verification errors
 error: post-condition does not hold
 
+    ┌── tests/sources/functional/choice.move:54:9 ───
+    │
+ 54 │         ensures choice == Signer::spec_address_of(s2);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/choice.move:44: populate_R
+    =     at tests/sources/functional/choice.move:49
+    =     at tests/sources/functional/choice.move:50
+    =     at tests/sources/functional/choice.move:53
+    =     at tests/sources/functional/choice.move:52
+    =     at tests/sources/functional/choice.move:44: populate_R
+    =         s1 = <redacted>
+    =         s2 = <redacted>
+    =     at tests/sources/functional/choice.move:45: populate_R
+    =     at tests/sources/functional/choice.move:46: populate_R
+    =     at tests/sources/functional/choice.move:47: populate_R
+    =     at tests/sources/functional/choice.move:54
+
+error: post-condition does not hold
+
     ┌── tests/sources/functional/choice.move:21:9 ───
     │
  21 │         ensures result == TRACE(choose x: u64 where x >= 4 && x <= 5);
@@ -13,8 +33,8 @@ error: post-condition does not hold
     =         <redacted> = <redacted>
     =         result = <redacted>
     =     at tests/sources/functional/choice.move:17: simple_incorrect
-    =         `choose x: u64 where x >= 4 && x <= 5` = <redacted>
     =     at tests/sources/functional/choice.move:21
+    =         `TRACE(choose x: u64 where x >= 4 && x <= 5)` = <redacted>
 
 error: post-condition does not hold
 
@@ -24,7 +44,6 @@ error: post-condition does not hold
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/choice.move:74: test_not_using_min_incorrect
-    =     at tests/sources/functional/choice.move:74: test_not_using_min_incorrect
     =         v = <redacted>
     =     at tests/sources/functional/choice.move:75: test_not_using_min_incorrect
     =         v_ref = <redacted>
@@ -33,9 +52,8 @@ error: post-condition does not hold
     =     at tests/sources/functional/choice.move:78: test_not_using_min_incorrect
     =     at tests/sources/functional/choice.move:79: test_not_using_min_incorrect
     =     at tests/sources/functional/choice.move:80: test_not_using_min_incorrect
-    =     at tests/sources/functional/choice.move:80: test_not_using_min_incorrect
     =     at tests/sources/functional/choice.move:81: test_not_using_min_incorrect
     =         result = <redacted>
     =     at tests/sources/functional/choice.move:82: test_not_using_min_incorrect
-    =         `choose i in 0..len(result) where result[i] == 2` = <redacted>
     =     at tests/sources/functional/choice.move:85
+    =         `TRACE(choose i in 0..len(result) where result[i] == 2)` = <redacted>

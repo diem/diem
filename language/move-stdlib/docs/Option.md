@@ -667,7 +667,7 @@ Destroys <code>t.</code> If <code>t</code> holds a value, return it. Returns <co
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_is_some">is_some</a>(<b>old</b>(t))) <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t)) <b>else</b> default);
+<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_is_some">is_some</a>(t)) <a href="Option.md#0x1_Option_borrow">borrow</a>(t) <b>else</b> default);
 </code></pre>
 
 
@@ -711,7 +711,7 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t));
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(t);
 </code></pre>
 
 

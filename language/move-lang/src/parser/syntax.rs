@@ -2390,10 +2390,16 @@ fn parse_spec_variable(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
 }
 
 // Parse a specification let.
-//     SpecLet =  "let" <Identifier> "=" <Exp> ";"
+//     SpecLet =  "let" [ "post" ] <Identifier> "=" <Exp> ";"
 fn parse_spec_let(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     tokens.advance()?;
+    let post_state = if tokens.peek() == Tok::IdentifierValue && tokens.content() == "post" {
+        tokens.advance()?;
+        true
+    } else {
+        false
+    };
     let name = parse_identifier(tokens)?;
     consume_token(tokens, Tok::Equal)?;
     let def = parse_exp(tokens)?;
@@ -2402,7 +2408,11 @@ fn parse_spec_let(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        SpecBlockMember_::Let { name, def },
+        SpecBlockMember_::Let {
+            name,
+            post_state,
+            def,
+        },
     ))
 }
 

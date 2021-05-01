@@ -204,6 +204,7 @@ pub enum SpecBlockMember_ {
     },
     Let {
         name: Name,
+        post_state: bool,
         def: Exp,
     },
     Include {
@@ -838,8 +839,16 @@ impl AstDebug for SpecBlockMember_ {
                 w.write(": ");
                 type_.ast_debug(w);
             }
-            SpecBlockMember_::Let { name, def } => {
-                w.write(&format!("let {} = ", name));
+            SpecBlockMember_::Let {
+                name,
+                post_state,
+                def,
+            } => {
+                w.write(&format!(
+                    "let {}{} = ",
+                    if *post_state { "post " } else { "" },
+                    name
+                ));
                 def.ast_debug(w);
             }
             SpecBlockMember_::Include { properties: _, exp } => {

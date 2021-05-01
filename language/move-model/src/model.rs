@@ -378,7 +378,13 @@ impl<Id: Clone> QualifiedInstId<Id> {
 
     pub fn to_qualified_id(&self) -> QualifiedId<Id> {
         let Self { module_id, id, .. } = self;
-        module_id.qualified(id.clone())
+        module_id.qualified(id.to_owned())
+    }
+}
+
+impl QualifiedInstId<StructId> {
+    pub fn to_type(&self) -> Type {
+        Type::Struct(self.module_id, self.id, self.inst.to_owned())
     }
 }
 
@@ -489,8 +495,8 @@ pub struct GlobalEnv {
 
 /// Struct a helper type for implementing fmt::Display depending on GlobalEnv
 pub struct EnvDisplay<'a, T> {
-    env: &'a GlobalEnv,
-    val: &'a T,
+    pub env: &'a GlobalEnv,
+    pub val: &'a T,
 }
 
 impl GlobalEnv {
@@ -660,6 +666,23 @@ impl GlobalEnv {
         self.add_diag(diag);
     }
 
+    /// Adds a diagnostic of given severity to this environment, with secondary labels.
+    pub fn diag_with_labels(
+        &self,
+        severity: Severity,
+        loc: &Loc,
+        msg: &str,
+        labels: Vec<(Loc, String)>,
+    ) {
+        let mut diag = Diagnostic::new(severity, msg, Label::new(loc.file_id, loc.span, ""));
+        let labels = labels
+            .into_iter()
+            .map(|(l, m)| Label::new(l.file_id, l.span, m))
+            .collect_vec();
+        diag.secondary_labels = labels;
+        self.add_diag(diag);
+    }
+
     /// Checks whether any of the diagnostics contains string.
     pub fn has_diag(&self, pattern: &str) -> bool {
         self.diags
@@ -799,6 +822,7 @@ impl GlobalEnv {
 
     /// Writes accumulated diagnostics of given or higher severity.
     pub fn report_diag<W: WriteColor>(&self, writer: &mut W, severity: Severity) {
+        let mut shown = BTreeSet::new();
         for (diag, reported) in self
             .diags
             .borrow_mut()
@@ -806,8 +830,12 @@ impl GlobalEnv {
             .filter(|(d, _)| d.severity >= severity)
         {
             if !*reported {
-                emit(writer, &Config::default(), &self.source_files, diag)
-                    .expect("emit must not fail");
+                // Avoid showing the same message twice. This can happen e.g. because of
+                // duplication of expressions via schema inclusion.
+                if shown.insert(format!("{:?}", diag)) {
+                    emit(writer, &Config::default(), &self.source_files, diag)
+                        .expect("emit must not fail");
+                }
                 *reported = true;
             }
         }

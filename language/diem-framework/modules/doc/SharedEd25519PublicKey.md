@@ -141,7 +141,6 @@ Aborts if the length of <code>new_public_key</code> is not 32.
 <pre><code><b>schema</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishAbortsIf">PublishAbortsIf</a> {
     account: signer;
     key: vector&lt;u8&gt;;
-    <a name="0x1_SharedEd25519PublicKey_addr$5"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
     <b>include</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a> {
@@ -164,7 +163,6 @@ Aborts if the length of <code>new_public_key</code> is not 32.
 <pre><code><b>schema</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishEnsures">PublishEnsures</a> {
     account: signer;
     key: vector&lt;u8&gt;;
-    <a name="0x1_SharedEd25519PublicKey_addr$6"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_exists_at">exists_at</a>(addr);
     <b>include</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a> { shared_key: <b>global</b>&lt;<a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), new_public_key: key};
@@ -301,7 +299,6 @@ Aborts if the length of <code>new_public_key</code> is not 32.
 <pre><code><b>schema</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKeyAbortsIf">RotateKeyAbortsIf</a> {
     account: signer;
     new_public_key: vector&lt;u8&gt;;
-    <a name="0x1_SharedEd25519PublicKey_addr$7"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>aborts_if</b> !<a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_exists_at">exists_at</a>(addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a> {shared_key: <b>global</b>&lt;<a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)};
@@ -317,7 +314,6 @@ Aborts if the length of <code>new_public_key</code> is not 32.
 <pre><code><b>schema</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKeyEnsures">RotateKeyEnsures</a> {
     account: signer;
     new_public_key: vector&lt;u8&gt;;
-    <a name="0x1_SharedEd25519PublicKey_addr$8"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>include</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a> {shared_key: <b>global</b>&lt;<a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)};
 }

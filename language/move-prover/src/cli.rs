@@ -18,7 +18,7 @@ use simplelog::{
 
 use abigen::AbigenOptions;
 use boogie_backend::options::{BoogieOptions, VectorTheory};
-use bytecode::options::ProverOptions;
+use bytecode::options::{AutoTraceLevel, ProverOptions};
 use codespan_reporting::diagnostic::Severity;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
@@ -522,7 +522,7 @@ impl Options {
             options.run_read_write_set = true;
         }
         if matches.is_present("trace") {
-            options.prover.debug_trace = true;
+            options.prover.auto_trace_level = AutoTraceLevel::VerifiedFunction;
         }
         if matches.is_present("dump-bytecode") {
             options.prover.dump_bytecode = true;
@@ -625,15 +625,20 @@ impl Options {
     /// Sets up logging based on provided options. This should be called as early as possible
     /// and before any use of info!, warn! etc.
     pub fn setup_logging(&self) {
-        CombinedLogger::init(vec![TermLogger::new(
-            self.verbosity_level,
-            ConfigBuilder::new()
-                .set_time_level(LevelFilter::Debug)
-                .set_level_padding(LevelPadding::Off)
-                .build(),
-            TerminalMode::Mixed,
-        )])
-        .expect("Unexpected CombinedLogger init failure");
+        let config = ConfigBuilder::new()
+            .set_time_level(LevelFilter::Debug)
+            .set_level_padding(LevelPadding::Off)
+            .build();
+        let logger = if atty::is(atty::Stream::Stderr) && atty::is(atty::Stream::Stdout) {
+            CombinedLogger::init(vec![TermLogger::new(
+                self.verbosity_level,
+                config,
+                TerminalMode::Mixed,
+            )])
+        } else {
+            CombinedLogger::init(vec![SimpleLogger::new(self.verbosity_level, config)])
+        };
+        logger.expect("Unexpected CombinedLogger init failure");
     }
 
     pub fn setup_logging_for_test(&self) {

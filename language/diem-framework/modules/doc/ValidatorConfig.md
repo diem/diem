@@ -304,9 +304,6 @@ Note: Access control.  No one but the owner of the account may change .operator_
 Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
 
 
-<a name="0x1_ValidatorConfig_sender$15"></a>
-
-
 <pre><code><b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account);
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: sender};
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">SetOperatorAbortsIf</a>;
@@ -324,7 +321,6 @@ Must abort if the signer does not have the Validator role [B24].
 <pre><code><b>schema</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">SetOperatorAbortsIf</a> {
     validator_account: signer;
     operator_addr: address;
-    <a name="0x1_ValidatorConfig_validator_addr$13"></a>
     <b>let</b> validator_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account);
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: validator_addr};
     <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_addr)
@@ -343,7 +339,6 @@ Must abort if the signer does not have the Validator role [B24].
 <pre><code><b>schema</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">SetOperatorEnsures</a> {
     validator_account: signer;
     operator_addr: address;
-    <a name="0x1_ValidatorConfig_validator_addr$14"></a>
     <b>let</b> validator_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account);
     <b>ensures</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(validator_addr);
     <b>ensures</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_addr) == operator_addr;
@@ -399,9 +394,6 @@ The old config is preserved.
 
 
 Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
-
-
-<a name="0x1_ValidatorConfig_sender$16"></a>
 
 
 <pre><code><b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account);

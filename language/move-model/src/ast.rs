@@ -20,7 +20,7 @@ use std::{
 };
 
 use crate::{
-    model::{FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},
+    model::{EnvDisplay, FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},
     ty::TypeDisplayContext,
 };
 use itertools::Itertools;
@@ -58,6 +58,8 @@ pub struct SpecFunDecl {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ConditionKind {
+    LetPost(Symbol),
+    LetPre(Symbol),
     Assert,
     Assume,
     Axiom,
@@ -92,7 +94,10 @@ impl ConditionKind {
     /// Returns true of this condition allows the `old(..)` expression.
     pub fn allows_old(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Emits | Ensures | InvariantUpdate | VarUpdate(..))
+        matches!(
+            self,
+            Emits | Ensures | InvariantUpdate | VarUpdate(..) | LetPost(..)
+        )
     }
 
     /// Returns true if this condition is allowed on a public function declaration.
@@ -108,6 +113,8 @@ impl ConditionKind {
                 | Emits
                 | Ensures
                 | Modifies
+                | LetPost(..)
+                | LetPre(..)
         )
     }
 
@@ -124,13 +131,15 @@ impl ConditionKind {
                 | Emits
                 | Ensures
                 | Modifies
+                | LetPost(..)
+                | LetPre(..)
         )
     }
 
     /// Returns true if this condition is allowed in a function body.
     pub fn allowed_on_fun_impl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Assert | Assume | Decreases)
+        matches!(self, Assert | Assume | Decreases | LetPost(..) | LetPre(..))
     }
 
     /// Returns true if this condition is allowed on a struct.
@@ -150,6 +159,8 @@ impl std::fmt::Display for ConditionKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use ConditionKind::*;
         match self {
+            LetPost(sym) => write!(f, "let({:?})", sym),
+            LetPre(sym) => write!(f, "let old({:?})", sym),
             Assert => write!(f, "assert"),
             Assume => write!(f, "assume"),
             Axiom => write!(f, "axiom"),
@@ -193,8 +204,8 @@ impl std::fmt::Display for QuantKind {
         match self {
             Forall => write!(f, "forall"),
             Exists => write!(f, "exists"),
-            Choose => write!(f, "some"),
-            ChooseMin => write!(f, "min"),
+            Choose => write!(f, "choose"),
+            ChooseMin => write!(f, "choose min"),
         }
     }
 }
@@ -806,8 +817,8 @@ impl fmt::Display for Value {
 /// # Purity of Expressions
 
 impl Operation {
-    /// Determines whether this operation is pure (does not depend on global state)
-    pub fn is_pure<F>(&self, check_pure: &F) -> bool
+    /// Determines whether this operation depends on global memory
+    pub fn uses_memory<F>(&self, check_pure: &F) -> bool
     where
         F: Fn(ModuleId, SpecFunId) -> bool,
     {
@@ -821,20 +832,54 @@ impl Operation {
 }
 
 impl Exp {
-    /// Determines whether this expression is pure (does not depend on global state)
-    pub fn is_pure<F>(&self, check_pure: &F) -> bool
+    /// Determines whether this expression depends on global memory
+    pub fn uses_memory<F>(&self, check_pure: &F) -> bool
     where
         F: Fn(ModuleId, SpecFunId) -> bool,
     {
         use Exp::*;
-        let mut is_pure = true;
+        let mut no_use = true;
         self.visit(&mut |exp: &Exp| match exp {
             Call(_, oper, _) => {
-                is_pure = is_pure && oper.is_pure(check_pure);
+                no_use = no_use && oper.uses_memory(check_pure);
             }
-            SpecVar(..) => is_pure = false,
+            SpecVar(..) => no_use = false,
             _ => {}
         });
+        no_use
+    }
+}
+
+impl Exp {
+    /// Checks whether the expression is pure, i.e. does not depend on memory or mutable
+    /// variables.
+    pub fn is_pure(&self, env: &GlobalEnv) -> bool {
+        let mut is_pure = true;
+        let mut visitor = |e: &Exp| {
+            use Exp::*;
+            use Operation::*;
+            match e {
+                Temporary(id, _) => {
+                    if env.get_node_type(*id).is_mutable_reference() {
+                        is_pure = false;
+                    }
+                }
+                Call(_, oper, _) => match oper {
+                    Exists(..) | Global(..) => is_pure = false,
+                    Function(mid, fid, _) => {
+                        let module = env.get_module(*mid);
+                        let fun = module.get_spec_fun(*fid);
+                        if !fun.used_memory.is_empty() || !fun.used_spec_vars.is_empty() {
+                            is_pure = false;
+                        }
+                    }
+                    _ => {}
+                },
+                SpecVar(..) => is_pure = false,
+                _ => {}
+            }
+        };
+        self.visit(&mut visitor);
         is_pure
     }
 }
@@ -1219,5 +1264,50 @@ impl<'a> OperationDisplay<'a> {
 impl fmt::Display for MemoryLabel {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "@{}", self.as_usize())
+    }
+}
+
+impl<'a> fmt::Display for EnvDisplay<'a, Condition> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self.val.kind {
+            ConditionKind::LetPre(name) => write!(
+                f,
+                "let {} = {};",
+                name.display(self.env.symbol_pool()),
+                self.val.exp.display(self.env)
+            )?,
+            ConditionKind::LetPost(name) => write!(
+                f,
+                "let post {} = {};",
+                name.display(self.env.symbol_pool()),
+                self.val.exp.display(self.env)
+            )?,
+            ConditionKind::Emits => {
+                let exps = self.val.all_exps().collect_vec();
+                write!(
+                    f,
+                    "emit {} to {}",
+                    exps[0].display(self.env),
+                    exps[1].display(self.env)
+                )?;
+                if exps.len() > 2 {
+                    write!(f, "if {}", exps[2].display(self.env))?;
+                }
+                write!(f, ";")?
+            }
+            _ => write!(f, "{} {};", self.val.kind, self.val.exp.display(self.env))?,
+        }
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for EnvDisplay<'a, Spec> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "spec {{")?;
+        for cond in &self.val.conditions {
+            writeln!(f, "  {}", self.env.display(cond))?
+        }
+        writeln!(f, "}}")?;
+        Ok(())
     }
 }

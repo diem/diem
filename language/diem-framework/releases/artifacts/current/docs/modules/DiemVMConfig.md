@@ -275,9 +275,6 @@ Initialize the table under the diem root account
 
 
 
-<a name="0x1_DiemVMConfig_gas_constants$2"></a>
-
-
 <pre><code><b>let</b> gas_constants = <a href="DiemVMConfig.md#0x1_DiemVMConfig_GasConstants">GasConstants</a> {
     global_memory_per_byte_cost: 4,
     global_memory_per_byte_write_cost: 9,
@@ -393,13 +390,12 @@ No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSI
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetAbortsIf">DiemConfig::SetAbortsIf</a>&lt;<a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a>&gt;{account: dr_account };
 <b>aborts_if</b> min_price_per_gas_unit &gt; max_price_per_gas_unit <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>aborts_if</b> min_transaction_gas_units &gt; maximum_number_of_gas_units <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<a name="0x1_DiemVMConfig_config$3"></a>
 <b>let</b> config = <a href="DiemConfig.md#0x1_DiemConfig_spec_get_config">DiemConfig::spec_get_config</a>&lt;<a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a>&gt;();
 <b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a>&gt;();
 <b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a>&gt;() == <a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a> {
     gas_schedule: <a href="DiemVMConfig.md#0x1_DiemVMConfig_GasSchedule">GasSchedule</a> {
-        instruction_schedule: <b>old</b>(config).gas_schedule.instruction_schedule,
-        native_schedule: <b>old</b>(config).gas_schedule.native_schedule,
+        instruction_schedule: config.gas_schedule.instruction_schedule,
+        native_schedule: config.gas_schedule.native_schedule,
         gas_constants: <a href="DiemVMConfig.md#0x1_DiemVMConfig_GasConstants">GasConstants</a> {
                 global_memory_per_byte_cost,
                 global_memory_per_byte_write_cost,

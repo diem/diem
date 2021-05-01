@@ -1269,7 +1269,10 @@ impl<'env> SpecTranslator<'env> {
         // a more efficient representation of equality between $Mutation objects. Otherwise
         // we translate it the default way with automatic reference removal.
         match (&args[0], &args[1]) {
-            (Temporary(_, idx1), Temporary(_, idx2)) => {
+            (Temporary(id1, idx1), Temporary(id2, idx2))
+                if self.get_node_type(*id1).is_reference()
+                    && self.get_node_type(*id2).is_reference() =>
+            {
                 emit!(self.writer, "$t{} == $t{}", idx1, idx2);
             }
             _ => self.translate_rel_op("==", args),

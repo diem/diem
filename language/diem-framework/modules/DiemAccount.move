@@ -454,11 +454,13 @@ module DiemAccount {
         designated_dealer_address: address;
         mint_amount: u64;
         let dealer_balance = global<Balance<Token>>(designated_dealer_address).coin.value;
+        let post post_dealer_balance = global<Balance<Token>>(designated_dealer_address).coin.value;
         let currency_info = global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let post post_currency_info = global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         /// Total value of the currency increases by `amount`.
-        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + mint_amount);
+        ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + mint_amount);
         /// The balance of designated dealer increases by `amount`.
-        ensures dealer_balance == old(dealer_balance) + mint_amount;
+        ensures post_dealer_balance == dealer_balance + mint_amount;
     }
     spec schema TieredMintEmits<Token> {
         tc_account: signer;
@@ -697,8 +699,9 @@ module DiemAccount {
         amount: u64;
         modifies global<Balance<Token>>(payer);
         let payer_balance = global<Balance<Token>>(payer).coin.value;
+        let post post_payer_balance = global<Balance<Token>>(payer).coin.value;
         /// The balance of payer decreases by `amount`.
-        ensures payer_balance == old(payer_balance) - amount;
+        ensures post_payer_balance == payer_balance - amount;
         /// The value of preburn at `dd_addr` increases by `amount`;
         include Diem::PreburnToEnsures<Token>{amount, account: dd};
     }
@@ -1064,7 +1067,8 @@ module DiemAccount {
         ensures exists_at(new_account_addr);
         ensures AccountFreezing::spec_account_is_not_frozen(new_account_addr);
         let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
+        let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
         ensures spec_holds_own_key_rotation_cap(new_account_addr);
         ensures spec_holds_own_withdraw_cap(new_account_addr);
         include MakeAccountEmits{new_account_address: Signer::spec_address_of(new_account)};
@@ -1086,8 +1090,8 @@ module DiemAccount {
     }
     spec schema MakeAccountEmits {
         new_account_address: address;
-        let handle = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events;
-        let msg = CreateAccountEvent {
+        let post handle = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events;
+        let post msg = CreateAccountEvent {
             created: new_account_address,
             role_id: Roles::spec_get_role_id(new_account_address)
         };
@@ -1233,7 +1237,8 @@ module DiemAccount {
         include MakeAccountAbortsIf{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
         include CreateTreasuryComplianceAccountEnsures;
         let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
+        let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
         include MakeAccountEmits{new_account_address: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
     }
     spec schema CreateTreasuryComplianceAccountModifies {

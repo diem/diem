@@ -218,8 +218,9 @@ module DiemSystem {
         ensures ValidatorConfig::is_valid(validator_addr);
         ensures spec_is_validator(validator_addr);
         let vs = spec_get_validators();
-        ensures Vector::eq_push_back(vs,
-                                     old(vs),
+        let post post_vs = spec_get_validators();
+        ensures Vector::eq_push_back(post_vs,
+                                     vs,
                                      ValidatorInfo {
                                          addr: validator_addr,
                                          config: ValidatorConfig::spec_get_config(validator_addr),
@@ -264,7 +265,8 @@ module DiemSystem {
     spec schema RemoveValidatorEnsures {
         validator_addr: address;
         let vs = spec_get_validators();
-        ensures forall vi in vs where vi.addr != validator_addr: exists ovi in old(vs): vi == ovi;
+        let post post_vs = spec_get_validators();
+        ensures forall vi in post_vs where vi.addr != validator_addr: exists ovi in vs: vi == ovi;
         /// Removed validator is no longer a validator.  Depends on no other entries for same address
         /// in validator_set
         ensures !spec_is_validator(validator_addr);
@@ -338,16 +340,17 @@ module DiemSystem {
     spec schema UpdateConfigAndReconfigureEnsures {
         validator_addr: address;
         let vs = spec_get_validators();
-        ensures len(vs) == len(old(vs));
+        let post post_vs = spec_get_validators();
+        ensures len(post_vs) == len(vs);
         /// No addresses change in the validator set
-        ensures forall i in 0..len(vs): vs[i].addr == old(vs)[i].addr;
+        ensures forall i in 0..len(vs): post_vs[i].addr == vs[i].addr;
         /// If the `ValidatorInfo` address is not the one we're changing, the info does not change.
-        ensures forall i in 0..len(vs) where old(vs)[i].addr != validator_addr:
-                         vs[i] == old(vs)[i];
+        ensures forall i in 0..len(vs) where vs[i].addr != validator_addr:
+                         post_vs[i] == vs[i];
         /// It updates the correct entry in the correct way
-        ensures forall i in 0..len(vs): vs[i].config == old(vs[i].config) ||
-                    (old(vs)[i].addr == validator_addr &&
-                    vs[i].config == ValidatorConfig::get_config(validator_addr));
+        ensures forall i in 0..len(vs): post_vs[i].config == vs[i].config ||
+                    (vs[i].addr == validator_addr &&
+                     post_vs[i].config == ValidatorConfig::get_config(validator_addr));
         /// DIP-6 property
         ensures Roles::spec_has_validator_role_addr(validator_addr);
     }

@@ -10,7 +10,7 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, Operation,
+        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, Operation, Spec,
         TempIndex,
     },
     exp_generator::ExpGenerator,
@@ -22,9 +22,12 @@ use crate::{
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
+use codespan_reporting::diagnostic::Severity;
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
+    /// Whether we should autogenerate TRACE calls for top-level expressions of the VC.
+    auto_trace: bool,
     /// The builder for the function we are currently translating.
     /// Note this is not necessarily the same as the function for which we translate specs.
     /// The builder must implement the expression generation trait.
@@ -41,6 +44,8 @@ pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
     ret_locals: &'b [TempIndex],
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
     shadowed: Vec<BTreeSet<Symbol>>,
+    /// A map from let symbols to temporaries allocated for them.
+    let_temps: BTreeMap<Symbol, TempIndex>,
     /// The translated spec.
     result: TranslatedSpec,
 }
@@ -59,6 +64,7 @@ pub struct TranslatedSpec {
     pub emits: Vec<(Loc, Exp, Exp, Option<Exp>)>,
     pub modifies: Vec<(Loc, Exp)>,
     pub invariants: Vec<(Loc, GlobalId, Exp)>,
+    pub lets: Vec<(Loc, bool, TempIndex, Exp)>,
 }
 
 impl TranslatedSpec {
@@ -192,6 +198,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
     /// The later two parameters are used to instantiate a function specification for a given
     /// call context.
     pub fn translate_fun_spec(
+        auto_trace: bool,
         for_call: bool,
         builder: &'b mut T,
         fun_env: &'b FunctionEnv<'a>,
@@ -200,6 +207,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         ret_locals: &'b [TempIndex],
     ) -> TranslatedSpec {
         let mut translator = SpecTranslator {
+            auto_trace,
             builder,
             fun_env,
             type_args,
@@ -208,6 +216,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
+            let_temps: Default::default(),
         };
         translator.translate_spec(for_call);
         translator.result
@@ -216,11 +225,13 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
     /// Translates a set of invariants. If there are any references to `old(...)` they
     /// will be rewritten and respective memory/spec var saves will be generated.
     pub fn translate_invariants(
+        auto_trace: bool,
         builder: &'b mut T,
         invariants: impl Iterator<Item = &'b GlobalInvariant>,
     ) -> TranslatedSpec {
         let fun_env = builder.function_env().clone();
         let mut translator = SpecTranslator {
+            auto_trace,
             builder,
             fun_env: &fun_env,
             type_args: &[],
@@ -229,9 +240,10 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
+            let_temps: Default::default(),
         };
         for inv in invariants {
-            let exp = translator.translate_exp(&inv.cond, false);
+            let exp = translator.translate_exp(&translator.auto_trace(&inv.loc, &inv.cond), false);
             translator
                 .result
                 .invariants
@@ -241,6 +253,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
     }
 
     pub fn translate_invariants_by_id(
+        auto_trace: bool,
         builder: &'b mut T,
         inv_id_set: &BTreeSet<GlobalId>,
     ) -> TranslatedSpec {
@@ -248,7 +261,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         let invariants = inv_id_set
             .iter()
             .map(|inv_id| global_env.get_global_invariant(*inv_id).unwrap());
-        SpecTranslator::translate_invariants(builder, invariants)
+        SpecTranslator::translate_invariants(auto_trace, builder, invariants)
     }
 
     fn translate_spec(&mut self, for_call: bool) {
@@ -281,12 +294,17 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                 concrete || !abstract_
             }
         };
+
+        // First process `let` so subsequently expressions can refer to them.
+        self.translate_lets(false, spec);
+
+        // Next process requires
         for cond in spec
             .filter_kind(ConditionKind::Requires)
             .filter(is_applicable)
         {
             self.in_post_state = false;
-            let exp = self.translate_exp(&cond.exp, false);
+            let exp = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
             self.result.pre.push((cond.loc.clone(), exp));
         }
 
@@ -303,7 +321,8 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             } else {
                 Some(self.translate_exp(&cond.additional_exps[0], self.in_post_state))
             };
-            let exp = self.translate_exp(&cond.exp, self.in_post_state);
+            let exp =
+                self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), self.in_post_state);
             self.result.aborts.push((cond.loc.clone(), exp, code_opt));
         }
 
@@ -313,7 +332,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         {
             let codes = cond
                 .all_exps()
-                .map(|e| self.translate_exp(e, self.in_post_state))
+                .map(|e| self.translate_exp(&self.auto_trace_no_loc(e), self.in_post_state))
                 .collect_vec();
             self.result.aborts_with.push((cond.loc.clone(), codes));
         }
@@ -333,30 +352,48 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             ));
         }
 
-        for cond in spec
-            .filter_kind(ConditionKind::Ensures)
-            .filter(is_applicable)
-        {
-            self.in_post_state = true;
-            let exp = self.translate_exp(&cond.exp, false);
-            self.result.post.push((cond.loc.clone(), exp));
-        }
-
+        // Translate modifies.
         for cond in spec
             .filter_kind(ConditionKind::Modifies)
             .filter(is_applicable)
         {
             self.in_post_state = false;
-            let exp = self.translate_exp(&cond.exp, false);
-            self.result.modifies.push((cond.loc.clone(), exp));
+            for exp in cond.all_exps() {
+                // Auto trace the inner address expression.
+                let exp = match exp {
+                    Exp::Call(id, oper, args) if args.len() == 1 => Exp::Call(
+                        *id,
+                        oper.clone(),
+                        vec![self.auto_trace(&cond.loc, &args[0])],
+                    ),
+                    _ => cond.exp.to_owned(),
+                };
+                let exp = self.translate_exp(&exp, false);
+                self.result.modifies.push((cond.loc.clone(), exp));
+            }
         }
 
+        // Now translate `let update` which are evaluated in post state.
+        self.translate_lets(true, spec);
+
+        // Translate ensures.
+        for cond in spec
+            .filter_kind(ConditionKind::Ensures)
+            .filter(is_applicable)
+        {
+            self.in_post_state = true;
+            let exp = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
+            self.result.post.push((cond.loc.clone(), exp));
+        }
+
+        // Translate emits.
         for cond in spec.filter_kind(ConditionKind::Emits).filter(is_applicable) {
             self.in_post_state = true;
-            let event_exp = self.translate_exp(&cond.exp, false);
-            let handle_exp = self.translate_exp(&cond.additional_exps[0], false);
+            let event_exp = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
+            let handle_exp =
+                self.translate_exp(&self.auto_trace_no_loc(&cond.additional_exps[0]), false);
             let cond_exp = if cond.additional_exps.len() > 1 {
-                Some(self.translate_exp(&cond.additional_exps[1], false))
+                Some(self.translate_exp(&self.auto_trace_no_loc(&cond.additional_exps[1]), false))
             } else {
                 None
             };
@@ -366,10 +403,58 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         }
     }
 
+    fn translate_lets(&mut self, post_state: bool, spec: &Spec) {
+        for cond in &spec.conditions {
+            let sym = match &cond.kind {
+                ConditionKind::LetPost(sym) if post_state => sym,
+                ConditionKind::LetPre(sym) if !post_state => sym,
+                _ => continue,
+            };
+            let exp = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
+            let ty = self.builder.global_env().get_node_type(exp.node_id());
+            let temp = self.builder.add_local(ty.skip_reference().clone());
+            self.let_temps.insert(*sym, temp);
+            self.result
+                .lets
+                .push((cond.loc.clone(), post_state, temp, exp));
+        }
+    }
+
+    fn auto_trace(&self, loc: &Loc, exp: &Exp) -> Exp {
+        if self.auto_trace {
+            let env = self.builder.global_env();
+            let id = exp.node_id();
+            let ty = env.get_node_type(id);
+            let new_id = env.new_node(loc.clone(), ty.clone());
+            env.set_node_instantiation(new_id, vec![ty]);
+            Exp::Call(new_id, Operation::Trace, vec![exp.to_owned()])
+        } else {
+            exp.to_owned()
+        }
+    }
+
+    fn auto_trace_no_loc(&self, exp: &Exp) -> Exp {
+        self.auto_trace(&self.builder.global_env().get_node_loc(exp.node_id()), exp)
+    }
+
     fn translate_exp(&mut self, exp: &Exp, in_old: bool) -> Exp {
         use crate::ast::{Exp::*, Operation::*};
         let env = self.fun_env.module_env.env;
         match exp {
+            LocalVar(node_id, sym) => {
+                if !self.is_shadowed(*sym) {
+                    if let Some(temp) = self.let_temps.get(sym) {
+                        // Need to create new node id since the replacement `temp` may
+                        // differ w.r.t. references.
+                        let new_node_id = env.new_node(
+                            env.get_node_loc(*node_id),
+                            self.builder.get_local_type(*temp),
+                        );
+                        return Temporary(new_node_id, *temp);
+                    }
+                }
+                LocalVar(*node_id, *sym)
+            }
             Temporary(node_id, idx) => {
                 // Compute the effective index.
                 let is_mut = self.fun_env.get_local_type(*idx).is_mutable_reference();
@@ -451,22 +536,62 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                     self.translate_exp_vec(args, in_old),
                 )
             }
-            Call(_, Old, args) => self.translate_exp(&args[0], true),
+            Call(id, Old, args) => {
+                // Generate an error if an `old` function is applied to a pure expression.
+                let arg = &args[0];
+                if arg.is_pure(self.builder.global_env()) {
+                    let loc = self.builder.global_env().get_node_loc(*id);
+                    // Compute labels for any sub-expressions which are included into this
+                    // expression via substitution (from schema inclusion, for example). This
+                    // is done via checking the location of the sub-expression. We also try
+                    // to avoid to report a sub-expression which is a sub-expression of an
+                    // already reported one.
+                    let mut labels = vec![];
+                    let loc_contained = |loc: &Loc, cont: &Loc| {
+                        loc.file_id() == cont.file_id()
+                            && cont.span().start() >= loc.span().start()
+                            && cont.span().end() <= loc.span().end()
+                    };
+                    arg.visit_pre_post(&mut |up: bool, e: &Exp| {
+                        let sub_loc = self.builder.global_env().get_node_loc(e.node_id());
+                        if !up
+                            && !loc_contained(&loc, &sub_loc)
+                            && !labels.iter().any(|(l, _)| loc_contained(l, &sub_loc))
+                        {
+                            labels.push((sub_loc, "substituted sub-expression".to_owned()))
+                        }
+                    });
+                    self.builder.global_env().diag_with_labels(
+                        Severity::Error,
+                        &loc,
+                        "`old(..)` applied to expression which does not depend on state",
+                        labels,
+                    )
+                }
+                self.translate_exp(arg, true)
+            }
             Call(node_id, Result(n), _) => {
                 self.builder.set_loc_from_node(*node_id);
                 self.builder.mk_temporary(self.ret_locals[*n])
             }
             Call(id, Trace, args) => {
-                let global_env = self.builder.global_env();
-                if !args[0].free_vars(global_env).is_empty() {
-                    global_env.error(
-                        &global_env.get_node_loc(*id),
+                // Compute whether there are free LocalVar terms, excluding locals from lets.
+                let loc = env.get_node_loc(*id);
+                let has_free_vars = args[0]
+                    .free_vars(env)
+                    .iter()
+                    .any(|(s, _)| !self.let_temps.contains_key(s));
+
+                if has_free_vars {
+                    env.error(
+                        &loc,
                         "`TRACE(..)` function cannot be used for expressions depending \
                              on quantified variables or spec function parameters",
                     )
                 }
                 let exp = self.translate_exp(&args[0], in_old);
-                self.result.debug_traces.push((exp.node_id(), exp.clone()));
+                let trace_id = env.new_node(loc, env.get_node_type(exp.node_id()));
+                self.result.debug_traces.push((trace_id, exp.clone()));
                 exp
             }
             Call(node_id, oper, args) => Call(
@@ -535,6 +660,10 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             ),
             _ => exp.clone(),
         }
+    }
+
+    fn is_shadowed(&self, sym: Symbol) -> bool {
+        self.shadowed.iter().any(|bs| bs.contains(&sym))
     }
 
     /// Apply parameter substitution if present.

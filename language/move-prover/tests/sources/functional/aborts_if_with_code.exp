@@ -89,10 +89,11 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
     │ ╰─────^
     ·
  46 │         10 / x
-    │         -- abort happened here with execution failure
+    │            - abort happened here with execution failure
     │
     =     at tests/sources/functional/aborts_if_with_code.move:50
     =     at tests/sources/functional/aborts_if_with_code.move:45: exec_failure_invalid
     =         x = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:46: exec_failure_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:46: exec_failure_invalid
     =         ABORTED

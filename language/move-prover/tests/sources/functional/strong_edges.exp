@@ -7,6 +7,8 @@ error: post-condition does not hold
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/strong_edges.move:47: glob_and_field_edges_incorrect
+    =     at tests/sources/functional/strong_edges.move:56
+    =     at tests/sources/functional/strong_edges.move:47: glob_and_field_edges_incorrect
     =         addr = <redacted>
     =     at tests/sources/functional/strong_edges.move:48: glob_and_field_edges_incorrect
     =         s = <redacted>

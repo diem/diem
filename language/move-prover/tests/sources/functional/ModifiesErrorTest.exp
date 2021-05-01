@@ -7,6 +7,8 @@ error: caller does not have permission to modify `B::T` at given address
     │                 ^^^^^^^^^
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:63: move_from_test_incorrect
+    =     at tests/sources/functional/ModifiesErrorTest.move:74
+    =     at tests/sources/functional/ModifiesErrorTest.move:63: move_from_test_incorrect
     =         addr1 = <redacted>
     =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:64: move_from_test_incorrect
@@ -20,6 +22,8 @@ error: caller does not have permission to modify `B::T` at given address
  52 │         move_to<T>(account, T{x: 2});
     │         ^^^^^^^
     │
+    =     at tests/sources/functional/ModifiesErrorTest.move:50: move_to_test_incorrect
+    =     at tests/sources/functional/ModifiesErrorTest.move:60
     =     at tests/sources/functional/ModifiesErrorTest.move:50: move_to_test_incorrect
     =         account = <redacted>
     =         addr2 = <redacted>
@@ -36,6 +40,7 @@ error: caller does not have permission to modify `A::S` at given address
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:77: mutate_S_test1_incorrect
     =     at tests/sources/functional/ModifiesErrorTest.move:86
+    =     at tests/sources/functional/ModifiesErrorTest.move:87
     =     at tests/sources/functional/ModifiesErrorTest.move:77: mutate_S_test1_incorrect
     =         addr1 = <redacted>
     =         addr2 = <redacted>
@@ -50,6 +55,8 @@ error: unknown assertion failed
  95 │             assert x0 == x1;
     │             ^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/ModifiesErrorTest.move:90: mutate_S_test2_incorrect
+    =     at tests/sources/functional/ModifiesErrorTest.move:99
     =     at tests/sources/functional/ModifiesErrorTest.move:90: mutate_S_test2_incorrect
     =         addr = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:91: mutate_S_test2_incorrect
@@ -66,6 +73,8 @@ error: caller does not have permission to modify `B::T` at given address
  38 │         let t = borrow_global_mut<T>(addr1);
     │                 ^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/ModifiesErrorTest.move:36: mutate_at_test_incorrect
+    =     at tests/sources/functional/ModifiesErrorTest.move:47
     =     at tests/sources/functional/ModifiesErrorTest.move:36: mutate_at_test_incorrect
     =         addr1 = <redacted>
     =         addr2 = <redacted>

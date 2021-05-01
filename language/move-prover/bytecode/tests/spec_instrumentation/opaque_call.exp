@@ -85,44 +85,45 @@ fun Test::get_and_incr($t0|addr: address): u64 {
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
   2: assume Neq<address>($t0, 0)
-  3: @0 := save_mem(Test::R)
-  4: $t3 := exists<Test::R>($t0)
-  5: $t4 := !($t3)
-  6: if ($t4) goto 9 else goto 7
-  7: label L1
-  8: goto 13
-  9: label L0
- 10: $t5 := 33
- 11: $t6 := move($t5)
- 12: goto 30
- 13: label L2
+  3: assume CanModify<Test::R>($t0)
+  4: @0 := save_mem(Test::R)
+  5: $t3 := exists<Test::R>($t0)
+  6: $t4 := !($t3)
+  7: if ($t4) goto 10 else goto 8
+  8: label L1
+  9: goto 14
+ 10: label L0
+ 11: $t5 := 33
+ 12: $t6 := move($t5)
+ 13: goto 31
+ 14: label L2
      # VC: caller does not have permission to modify `Test::R` at given address at tests/spec_instrumentation/opaque_call.move:8:14+17
- 14: assert CanModify<Test::R>($t0)
- 15: $t7 := borrow_global<Test::R>($t0) on_abort goto 30 with $t6
- 16: $t8 := get_field<Test::R>.v($t7)
- 17: $t9 := get_field<Test::R>.v($t7)
- 18: $t10 := 1
- 19: $t11 := +($t9, $t10) on_abort goto 30 with $t6
- 20: $t12 := borrow_field<Test::R>.v($t7)
- 21: write_ref($t12, $t11)
- 22: write_back[Reference($t7).0]($t12)
- 23: write_back[Test::R.D]($t7)
- 24: label L3
+ 15: assert CanModify<Test::R>($t0)
+ 16: $t7 := borrow_global<Test::R>($t0) on_abort goto 31 with $t6
+ 17: $t8 := get_field<Test::R>.v($t7)
+ 18: $t9 := get_field<Test::R>.v($t7)
+ 19: $t10 := 1
+ 20: $t11 := +($t9, $t10) on_abort goto 31 with $t6
+ 21: $t12 := borrow_field<Test::R>.v($t7)
+ 22: write_ref($t12, $t11)
+ 23: write_back[Reference($t7).0]($t12)
+ 24: write_back[Test::R.D]($t7)
+ 25: label L3
      # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:16:6+35
- 25: assert Not(Not(exists[@0]<Test::R>($t0)))
+ 26: assert Not(Not(exists[@0]<Test::R>($t0)))
      # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:17:6+56
- 26: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
+ 27: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
      # VC: post-condition does not hold at tests/spec_instrumentation/opaque_call.move:19:6+56
- 27: assert Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global[@0]<Test::R>($t0)), 1))
+ 28: assert Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global[@0]<Test::R>($t0)), 1))
      # VC: post-condition does not hold at tests/spec_instrumentation/opaque_call.move:20:6+36
- 28: assert Eq<u64>($t8, select Test::R.v(global<Test::R>($t0)))
- 29: return $t8
- 30: label L4
+ 29: assert Eq<u64>($t8, select Test::R.v(global<Test::R>($t0)))
+ 30: return $t8
+ 31: label L4
      # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
- 31: assert Or(Not(exists[@0]<Test::R>($t0)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
+ 32: assert Or(Not(exists[@0]<Test::R>($t0)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
      # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
- 32: assert Or(And(Not(exists[@0]<Test::R>($t0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
- 33: abort($t6)
+ 33: assert Or(And(Not(exists[@0]<Test::R>($t0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
+ 34: abort($t6)
 }
 
 
@@ -189,4 +190,40 @@ fun Test::incr_twice() {
      # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+127
  42: assert And(Not(exists[@1]<Test::R>(1)), Eq(33, $t2))
  43: abort($t2)
+}
+
+
+
+==== spec-instrumenter input specs ====
+
+fun Test::get_and_incr[baseline[
+spec {
+  requires Neq<address>($t0, 0);
+  aborts_if Not(exists<Test::R>($t0));
+  aborts_if Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615);
+  modifies global<Test::R>($t0);
+  ensures Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(Old<Test::R>(global<Test::R>($t0))), 1));
+  ensures Eq<u64>(result0(), select Test::R.v(global<Test::R>($t0)));
+}
+
+fun Test::get_and_incr[verification[
+spec {
+  requires Neq<address>($t0, 0);
+  aborts_if Not(exists<Test::R>($t0));
+  aborts_if Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615);
+  modifies global<Test::R>($t0);
+  ensures Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(Old<Test::R>(global<Test::R>($t0))), 1));
+  ensures Eq<u64>(result0(), select Test::R.v(global<Test::R>($t0)));
+}
+
+fun Test::incr_twice[baseline[
+spec {
+  aborts_if Not(exists<Test::R>(1));
+  ensures Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(1))), 2));
+}
+
+fun Test::incr_twice[verification[
+spec {
+  aborts_if Not(exists<Test::R>(1));
+  ensures Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(1))), 2));
 }

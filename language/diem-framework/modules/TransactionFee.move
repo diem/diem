@@ -85,8 +85,9 @@ module TransactionFee {
         include DiemTimestamp::AbortsIfNotOperating;
         aborts_if !is_coin_initialized<CoinType>() with Errors::NOT_PUBLISHED;
         let fees = spec_transaction_fee<CoinType>().balance;
+        let post post_fees = spec_transaction_fee<CoinType>().balance;
         include Diem::DepositAbortsIf<CoinType>{coin: fees, check: coin};
-        ensures fees.value == old(fees.value) + coin.value;
+        ensures post_fees.value == fees.value + coin.value;
     }
 
     /// Preburns the transaction fees collected in the `CoinType` currency.

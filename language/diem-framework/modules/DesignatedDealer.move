@@ -168,8 +168,9 @@ module DesignatedDealer {
         modifies global<TierInfo<CoinType>>(dd_addr);
         ensures !exists<TierInfo<CoinType>>(dd_addr);
         let currency_info = global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let post post_currency_info = global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures result.value == amount;
-        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + amount);
+        ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + amount);
     }
     spec schema TieredMintAbortsIf<CoinType> {
         tc_account: signer;

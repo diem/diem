@@ -458,7 +458,6 @@ Rotate the base URL for <code>account</code> to <code>new_url</code>
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">RotateBaseUrlAbortsIf</a> {
     account: signer;
-    <a name="0x1_DualAttestation_sender$25"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -494,7 +493,6 @@ Must abort if the account does not have the resource Credential [[H17]][PERMISSI
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
     account: signer;
     new_url: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$26"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).base_url == new_url;
 }
@@ -519,11 +517,8 @@ The sender can only rotate its own base url [[H17]][PERMISSION].
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEmits">RotateBaseUrlEmits</a> {
     account: signer;
     new_url: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$27"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <a name="0x1_DualAttestation_handle$28"></a>
     <b>let</b> handle = <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).base_url_rotation_events;
-    <a name="0x1_DualAttestation_msg$29"></a>
     <b>let</b> msg = <a href="DualAttestation.md#0x1_DualAttestation_BaseUrlRotationEvent">BaseUrlRotationEvent</a> {
         new_base_url: new_url,
         time_rotated_seconds: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>(),
@@ -592,7 +587,6 @@ Rotate the compliance public key for <code>account</code> to <code>new_key</code
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">RotateCompliancePublicKeyAbortsIf</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$30"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -617,7 +611,6 @@ Must abort if the account does not have the resource Credential [[H17]][PERMISSI
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$31"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).compliance_public_key == new_key;
 }
@@ -642,11 +635,8 @@ The sender only rotates its own compliance_public_key [[H17]][PERMISSION].
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEmits">RotateCompliancePublicKeyEmits</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$32"></a>
     <b>let</b> sender = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <a name="0x1_DualAttestation_handle$33"></a>
     <b>let</b> handle = <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).compliance_key_rotation_events;
-    <a name="0x1_DualAttestation_msg$34"></a>
     <b>let</b> msg = <a href="DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">ComplianceKeyRotationEvent</a> {
         new_compliance_public_key: new_key,
         time_rotated_seconds: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>(),
@@ -1287,7 +1277,6 @@ Travel rule limit set during genesis
 <pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>aborts_if</b> <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<a name="0x1_DualAttestation_initial_limit$35"></a>
 <b>let</b> initial_limit = <a href="DualAttestation.md#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT">INITIAL_DUAL_ATTESTATION_LIMIT</a> * <a href="Diem.md#0x1_Diem_spec_scaling_factor">Diem::spec_scaling_factor</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;();
 <b>aborts_if</b> initial_limit &gt; <a href="DualAttestation.md#0x1_DualAttestation_MAX_U64">MAX_U64</a> <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> <a href="Diem.md#0x1_Diem_AbortsIfNoCurrency">Diem::AbortsIfNoCurrency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;;

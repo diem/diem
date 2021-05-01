@@ -48,6 +48,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
 };
+use codespan_reporting::diagnostic::Severity;
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
@@ -71,8 +72,9 @@ pub(crate) struct ModuleBuilder<'env, 'translator> {
     pub module_spec: Spec,
     /// Spec block infos.
     pub spec_block_infos: Vec<SpecBlockInfo>,
-    /// Let bindings for the current spec block, pointing to the function generated for the let.
-    pub spec_block_lets: BTreeMap<Symbol, SpecFunId>,
+    /// Let bindings for the current spec block, characterized by a boolean indicating whether
+    /// post state is active and the node id of the original expression of the let.
+    pub spec_block_lets: BTreeMap<Symbol, (bool, NodeId)>,
 }
 
 /// A value which we pass in to spec block analyzers, describing the resolved target of the spec
@@ -841,7 +843,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         assert!(self.spec_block_lets.is_empty());
 
-        for member in &block.value.members {
+        // Sort members so that lets are processed first. This is needed so that lets included
+        // from schemas are properly renamed on name clash.
+        let let_sorted_members = block.value.members.iter().sorted_by(|m1, m2| {
+            let m1_is_let = matches!(m1.value, EA::SpecBlockMember_::Let { .. });
+            let m2_is_let = matches!(m2.value, EA::SpecBlockMember_::Let { .. });
+            match (m1_is_let, m2_is_let) {
+                (true, true) | (false, false) => std::cmp::Ordering::Equal,
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+            }
+        });
+
+        for member in let_sorted_members {
             let loc = &self.parent.env.to_loc(&member.loc);
             match &member.value {
                 Condition {
@@ -864,7 +878,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 Function {
                     signature, body, ..
                 } => self.def_ana_spec_fun(signature, body),
-                Let { name, def } => self.def_ana_let(context, loc, name, def),
+                Let {
+                    name,
+                    post_state,
+                    def,
+                } => self.def_ana_let(context, loc, *post_state, name, def),
                 Include { properties, exp } => {
                     let properties = self.translate_properties(properties, &|_| None);
                     self.def_ana_schema_inclusion_outside_schema(
@@ -893,98 +911,44 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         context: &SpecBlockContext<'_>,
         loc: &Loc,
+        post_state: bool,
         name: &Name,
         def: &EA::Exp,
     ) {
-        // Check the expression and extract results. The let expression can access parameters,
-        // but not use the `old(..)` function, therefore we treat it like a requires or aborts_if.
-        let mut et = self
-            .exp_translator_for_context(loc, context, Some(&ConditionKind::Requires), true)
-            .set_in_let()
-            .mark_context_scopes();
-        let (_, mut def) = et.translate_exp_free(def);
-        let mut generated_type_params = et.get_type_params();
-        et.fix_types(&mut generated_type_params);
-        let accessed_locals = et.get_accessed_context_locals();
-
-        // Rewrite all type annotations in expressions to skip references. References
-        // will be removed by the caller to the spec function representing the let.
-        // In the body of a spec function, references do not appear.
-        for node_id in def.node_ids() {
-            let ty = et.get_node_type(node_id);
-            et.update_node_type(node_id, ty.skip_reference().clone());
-        }
-
-        // Prepare the type_params field for SpecFunDecl.
-        let mut type_params = vec![];
-        for (i, param_type) in generated_type_params.into_iter().enumerate() {
-            let name = et.symbol_pool().make(&format!("T{}", i));
-            type_params.push((name, param_type))
-        }
-
-        // Prepare the params field for SpecFunDecl.
-        let mut params = vec![];
-        for (local, in_old) in &accessed_locals {
-            let ty = et
-                .lookup_local(*local, false)
-                .expect("tracked local defined")
-                .type_
-                .skip_reference()
-                .clone();
-            let local = et.make_context_local_name(*local, *in_old);
-            params.push((local, et.subs.specialize(&ty)))
-        }
-
-        // If the let definition is a lambda, add the parameters from the lambda, and
-        // remove it from the definition.
-        if let Exp::Lambda(_, vars, body) = def {
-            for v in vars {
-                let ty = et
-                    .parent
-                    .parent
-                    .env
-                    .get_node_type(v.id)
-                    .skip_reference()
-                    .clone();
-                params.push((v.name, ty));
-            }
-            def = *body;
-        }
-
-        // Prepare the result_type for SpecFunDecl.
-        let result_type = et.parent.parent.env.get_node_type(def.node_id());
-
-        // Generate an id and name for the function representing this let.
-        let fid = SpecFunId::new(et.parent.spec_funs.len());
-        let fname = et
-            .symbol_pool()
-            .make(&format!("{}${}", name.value, fid.as_usize()));
-
-        // Add a function declaration.
-        self.spec_funs.push(SpecFunDecl {
-            loc: loc.clone(),
-            name: fname,
-            type_params,
-            params,
-            context_params: Some(accessed_locals),
-            result_type,
-            used_spec_vars: Default::default(),
-            used_memory: Default::default(),
-            uninterpreted: false,
-            is_move_fun: false,
-            is_native: false,
-            body: Some(def),
-        });
-
-        // Finally, check whether a let of this name is already defined, and add it to the
-        // map which tracks lets in this block.
+        // Check the expression and extract results.
         let sym = self.symbol_pool().make(&name.value);
-        if self.spec_block_lets.insert(sym, fid).is_some() {
+        let kind = if post_state {
+            ConditionKind::LetPost(sym)
+        } else {
+            ConditionKind::LetPre(sym)
+        };
+        let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
+        let (_, def) = et.translate_exp_free(def);
+        et.finalize_types();
+
+        // Check whether a let of this name is already defined, and add it to the
+        // map which tracks lets in this block.
+        if self
+            .spec_block_lets
+            .insert(sym, (post_state, def.node_id()))
+            .is_some()
+        {
             self.parent.error(
                 &self.parent.to_loc(&name.loc),
                 &format!("duplicate declaration of `{}`", name.value),
             );
         }
+
+        // Add the let to the context spec.
+        self.update_spec(context, |spec| {
+            spec.conditions.push(Condition {
+                loc: loc.clone(),
+                kind,
+                properties: Default::default(),
+                exp: def,
+                additional_exps: vec![],
+            })
+        })
     }
 }
 
@@ -1115,7 +1079,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         loc: &Loc,
         context: &SpecBlockContext,
         kind_opt: Option<&ConditionKind>,
-        result_as_symbol: bool,
     ) -> ExpTranslator<'env, 'translator, 'module_translator> {
         use SpecBlockContext::*;
         let allow_old = if let Some(kind) = kind_opt {
@@ -1123,7 +1086,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         } else {
             false
         };
-        match context {
+        let mut et = match context {
             Function(name) => {
                 let entry = &self
                     .parent
@@ -1142,25 +1105,17 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     }
                     // Define the placeholders for the result values of a function if this is an
                     // Ensures condition.
-                    if matches!(kind, ConditionKind::Ensures) {
+                    if matches!(kind, ConditionKind::Ensures | ConditionKind::LetPost(..)) {
                         et.enter_scope();
                         if let Type::Tuple(ts) = &entry.result_type {
                             for (i, ty) in ts.iter().enumerate() {
                                 let name = et.symbol_pool().make(&format!("result_{}", i + 1));
-                                let oper = if result_as_symbol {
-                                    None
-                                } else {
-                                    Some(Operation::Result(i))
-                                };
+                                let oper = Some(Operation::Result(i));
                                 et.define_local(loc, name, ty.clone(), oper, None);
                             }
                         } else {
                             let name = et.symbol_pool().make("result");
-                            let oper = if result_as_symbol {
-                                None
-                            } else {
-                                Some(Operation::Result(0))
-                            };
+                            let oper = Some(Operation::Result(0));
                             et.define_local(loc, name, entry.result_type.clone(), oper, None);
                         }
                     }
@@ -1255,7 +1210,25 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 et
             }
+        };
+
+        // Add lets to translator.
+        if !et.parent.spec_block_lets.is_empty() {
+            // Put them into a new scope, they can shadow outer names.
+            et.enter_scope();
+            for (name, (post_state, node_id)) in et.parent.spec_block_lets.to_owned() {
+                // If allow_old is true, we are looking at a condition in a post state like ensures.
+                // In this case all lets are available. If allow_old is false, only !post_state
+                // lets are available.
+                if allow_old || !post_state {
+                    let ty = et.parent.parent.env.get_node_type(node_id);
+                    let loc = et.parent.parent.env.get_node_loc(node_id);
+                    et.define_let_local(&loc, name, ty);
+                }
+            }
         }
+
+        et
     }
 }
 
@@ -1268,19 +1241,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         context: &SpecBlockContext,
         loc: &Loc,
-        kind: &ConditionKind,
+        cond: &Condition,
         detail: &str,
     ) -> bool {
         use SpecBlockContext::*;
         let mut notes = vec![];
-        let ok = match context {
-            Module => kind.allowed_on_module(),
+        let mut ok = match context {
+            Module => cond.kind.allowed_on_module(),
             Struct(s) => {
                 let mut ok = true;
-                if !kind.allowed_on_struct() {
+                if !cond.kind.allowed_on_struct() {
                     ok = false;
                 } else if matches!(
-                    kind,
+                    cond.kind,
                     ConditionKind::VarPack(..)
                         | ConditionKind::VarUnpack(..)
                         | ConditionKind::VarUpdate(..)
@@ -1302,26 +1275,75 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             Function(name) => {
                 let entry = self.parent.fun_table.get(name).expect("function defined");
                 if entry.is_public {
-                    kind.allowed_on_public_fun_decl()
+                    cond.kind.allowed_on_public_fun_decl()
                 } else {
-                    kind.allowed_on_private_fun_decl()
+                    cond.kind.allowed_on_private_fun_decl()
                 }
             }
-            FunctionCode(_, _) => kind.allowed_on_fun_impl(),
+            FunctionCode(_, _) => cond.kind.allowed_on_fun_impl(),
             Schema(_) => true,
         };
         if !ok {
             self.parent.error_with_notes(
                 loc,
-                &format!("`{}` not allowed in {} {}", kind, context, detail),
+                &format!("`{}` not allowed in {} {}", cond.kind, context, detail),
                 notes,
             );
+        }
+        if !cond.kind.allows_old() {
+            // Check whether the inclusion is correct regards usage of post state.
+
+            // First check for lets.
+            for name in cond.exp.free_vars(self.parent.env).keys() {
+                if let Some((true, id)) = self.spec_block_lets.get(name) {
+                    let label_cond = (cond.loc.clone(), "not allowed to use post state".to_owned());
+                    let label_let = (
+                        self.parent.env.get_node_loc(*id),
+                        "let defined here".to_owned(),
+                    );
+                    self.parent.env.diag_with_labels(
+                        Severity::Error,
+                        loc,
+                        &format!(
+                            "let bound `{}` propagated via schema inclusion is referring to post state",
+                            name.display(self.parent.env.symbol_pool())
+                        ),
+                        vec![label_cond, label_let],
+                    );
+                    ok = false;
+                }
+            }
+
+            // Next check for old(..) and Operation::Result
+            let mut visitor = |e: &Exp| {
+                if let Exp::Call(id, Operation::Old, ..)
+                | Exp::Call(id, Operation::Result(..), ..) = e
+                {
+                    let label_cond = (
+                        cond.loc.clone(),
+                        "not allowed to refer to post state".to_owned(),
+                    );
+                    let label_exp = (
+                        self.parent.env.get_node_loc(*id),
+                        "expression referring to post state".to_owned(),
+                    );
+                    self.parent.env.diag_with_labels(
+                        Severity::Error,
+                        loc,
+                        "invalid reference to post state",
+                        vec![label_cond, label_exp],
+                    );
+                    ok = false;
+                }
+            };
+            cond.exp.visit(&mut visitor);
         }
         ok
     }
 
     /// Add the given conditions to the context, after checking whether they are valid in the
-    /// context. Reports errors for invalid conditions.
+    /// context. Reports errors for invalid conditions. Also detects name clashes of let-bound
+    /// names.
     fn add_conditions_to_context(
         &mut self,
         context: &SpecBlockContext,
@@ -1330,7 +1352,87 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context_properties: PropertyBag,
         error_msg: &str,
     ) {
-        for cond in conditions {
+        use ConditionKind::*;
+        // Compute the let-bound names in the context block. (We misuse the update_spec function
+        // to get hold of them.)
+        let mut bound_lets = BTreeSet::new();
+        self.update_spec(context, |spec| {
+            bound_lets = spec
+                .conditions
+                .iter()
+                .filter_map(|c| match &c.kind {
+                    LetPost(name) | LetPre(name) => Some(*name),
+                    _ => None,
+                })
+                .collect()
+        });
+
+        // We build a substitution for imported let names which clash with names in the context.
+        let mut let_substitution = BTreeMap::new();
+        for mut cond in conditions {
+            if !let_substitution.is_empty() {
+                // If there is a non-empty let_substitution, apply it to all expressions in the
+                // condition.
+                let Condition {
+                    loc,
+                    kind,
+                    properties,
+                    exp,
+                    additional_exps,
+                } = cond;
+                let mut replacer = |id: NodeId, target: RewriteTarget| {
+                    if let RewriteTarget::LocalVar(name) = target {
+                        if let Some(unique_name) = let_substitution.get(&name) {
+                            return Some(Exp::LocalVar(id, *unique_name));
+                        }
+                    }
+                    None
+                };
+                let mut rewriter = ExpRewriter::new(&self.parent.env, &mut replacer);
+                let exp = rewriter.rewrite(&exp);
+                let additional_exps = additional_exps
+                    .into_iter()
+                    .map(|e| rewriter.rewrite(&e))
+                    .collect_vec();
+                cond = Condition {
+                    loc,
+                    kind,
+                    properties,
+                    exp,
+                    additional_exps,
+                }
+            }
+
+            // If this is a let, check for name collision.
+            match &cond.kind {
+                LetPost(name) | LetPre(name) => {
+                    let name = *name;
+                    if bound_lets.contains(&name) {
+                        // Find a new name by appending #0, #1, .. to this name.
+                        let mut cnt = 1;
+                        let new_name = loop {
+                            let symbol_pool = self.parent.env.symbol_pool();
+                            let new_name =
+                                symbol_pool.make(&format!("{}#{}", name.display(symbol_pool), cnt));
+                            if !bound_lets.contains(&new_name) {
+                                break new_name;
+                            }
+                            cnt += 1;
+                        };
+                        let_substitution.insert(name, new_name);
+                        if matches!(&cond.kind, LetPost(..)) {
+                            cond.kind = LetPost(new_name)
+                        } else {
+                            cond.kind = LetPre(new_name)
+                        }
+                        bound_lets.insert(new_name);
+                    } else {
+                        bound_lets.insert(name);
+                    }
+                }
+                _ => {}
+            }
+
             // If this is an invariant on a function decl, transform it into a pair of
             // requires and ensures.
             let derived_conds = match cond {
@@ -1391,7 +1493,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
             };
             for derived_cond in derived_conds {
-                if self.check_condition_is_valid(context, loc, &derived_cond.kind, error_msg)
+                if self.check_condition_is_valid(context, loc, &derived_cond, error_msg)
                     && !self
                         .parent
                         .env
@@ -1424,7 +1526,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             return;
         }
         let expected_type = self.expected_type_for_condition(&kind);
-        let mut et = self.exp_translator_for_context(loc, context, Some(&kind), false);
+        let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
         let (translated, translated_additional) = match kind {
             ConditionKind::AbortsIf => (
                 et.translate_exp(exp, &expected_type),
@@ -1584,7 +1686,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             if let EA::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
                 let var_name = self.module_access_to_qualified(maccess);
-                let mut et = self.exp_translator_for_context(&var_loc, context, None, false);
+                let mut et = self.exp_translator_for_context(&var_loc, context, None);
                 let tys = tys_opt
                     .as_ref()
                     .map(|tys| et.translate_types(tys))
@@ -1754,11 +1856,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let member_loc = self.parent.to_loc(&member.loc);
             if let EA::SpecBlockMember_::Let {
                 name: let_name,
+                post_state,
                 def,
             } = &member.value
             {
                 let context = SpecBlockContext::Schema(name.clone());
-                self.def_ana_let(&context, &member_loc, let_name, def);
+                self.def_ana_let(&context, &member_loc, *post_state, let_name, def);
             }
         }
 
@@ -2165,7 +2268,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
                 // There is a path condition to be added. This is only possible for proper
-                // boolean conditions.
+                // boolean conditions and lets.
                 if kind.get_spec_var_target().is_some() {
                     self.parent
                         .error(loc, &format!("`{}` cannot be included conditionally", kind));
@@ -2181,6 +2284,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         )
                     };
                     additional_exps.push(cond_exp);
+                } else if matches!(kind, ConditionKind::LetPre(..) | ConditionKind::LetPost(..)) {
+                    // Ignore path condition for lets.
                 } else {
                     // In case of AbortsIf, the path condition is combined with the predicate using
                     // &&, otherwise ==>.
@@ -2243,6 +2348,18 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 entry.temp_index,
             );
         }
+        et.enter_scope();
+        for (n, id) in et
+            .parent
+            .spec_block_lets
+            .iter()
+            .map(|(n, (_, id))| (*n, *id))
+            .collect_vec()
+        {
+            let ty = et.parent.parent.env.get_node_type(id);
+            let loc = et.parent.parent.env.get_node_loc(id);
+            et.define_let_local(&loc, n, ty);
+        }
         et
     }
 
@@ -2272,19 +2389,15 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         exp: &EA::Exp,
     ) {
         // Compute the type parameters and variables this spec block uses. We do this by constructing
-        // an expression build and immediately extracting  from it. Depending on whether in
+        // an expression translator and immediately extracting  from it. Depending on whether in
         // function or struct context, we use a condition kind which defines the maximum
         // of available symbols. We need to potentially revise this to only declare variables which
         // have a proper use in a condition/invariant, depending on what is actually included in
         // the block.
         let (mut vars, context_type_params) = match context {
             SpecBlockContext::Function(..) | SpecBlockContext::FunctionCode(..) => {
-                let et = self.exp_translator_for_context(
-                    loc,
-                    context,
-                    Some(&ConditionKind::Ensures),
-                    false,
-                );
+                let et =
+                    self.exp_translator_for_context(loc, context, Some(&ConditionKind::Ensures));
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
             SpecBlockContext::Struct(..) => {
@@ -2292,7 +2405,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     loc,
                     context,
                     Some(&ConditionKind::InvariantUpdate),
-                    false,
                 );
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
@@ -2451,7 +2563,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
         // Check for purity requirements. All data invariants must be pure expressions and
         // not depend on global state.
-        let check_pure = |mid: ModuleId, fid: SpecFunId| {
+        let check_uses_memory = |mid: ModuleId, fid: SpecFunId| {
             if mid.to_usize() < self.parent.env.get_module_count() {
                 // This is calling a function from another module we already have
                 // translated.
@@ -2466,7 +2578,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         };
         for struct_spec in self.struct_specs.values() {
             for cond in &struct_spec.conditions {
-                if cond.kind == ConditionKind::Invariant && !cond.exp.is_pure(&check_pure) {
+                if cond.kind == ConditionKind::Invariant
+                    && !cond.exp.uses_memory(&check_uses_memory)
+                {
                     self.parent.error(
                         &cond.loc,
                         "data invariants cannot depend on global state \

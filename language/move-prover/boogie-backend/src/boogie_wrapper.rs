@@ -210,17 +210,28 @@ impl<'env> BoogieWrapper<'env> {
         if error.kind.is_from_verification() && !error.execution_trace.is_empty() {
             let mut display = vec![];
             let mut last_loc = self.env.unknown_loc();
+            let mut abort_in_progress = None;
+            let print_loc = |loc: &Loc, last_loc: &mut Loc, display: &mut Vec<String>| {
+                let info = if let Some(fun) = self.env.get_enclosing_function(loc) {
+                    format!(": {}", fun.get_name().display(self.env.symbol_pool()))
+                } else {
+                    "".to_string()
+                };
+                display.push(format!("    {}{}", loc.display_line_only(self.env), info));
+                *last_loc = loc.clone();
+            };
+
             for entry in &error.execution_trace {
                 use TraceEntry::*;
+                if abort_in_progress.is_some() && !matches!(entry, Exp(..)) {
+                    // Once abort happened, only allow expression traces.
+                    continue;
+                }
                 match entry {
                     AtLocation(loc) => {
-                        let info = if let Some(fun) = self.env.get_enclosing_function(loc) {
-                            format!(": {}", fun.get_name().display(self.env.symbol_pool()))
-                        } else {
-                            "".to_string()
-                        };
-                        display.push(format!("    {}{}", loc.display_line_only(self.env), info));
-                        last_loc = loc.clone();
+                        if loc != &last_loc {
+                            print_loc(loc, &mut last_loc, &mut display);
+                        }
                     }
                     Temporary(fun, idx, value) if error.model.is_some() => {
                         let fun_env = self.env.get_function(*fun);
@@ -271,33 +282,36 @@ impl<'env> BoogieWrapper<'env> {
                     }
                     Abort(_, value) => {
                         display.push("        ABORTED".to_string());
-                        let code = if let Some(c) = value.extract_i128() {
-                            if c == -1 {
-                                " with execution failure".to_string()
-                            } else {
-                                format!(" with code 0x{:X}", c)
-                            }
-                        } else {
-                            "".to_string()
-                        };
-                        diag.secondary_labels = vec![Label::new(
-                            last_loc.file_id(),
-                            last_loc.span(),
-                            &format!("abort happened here{}", code),
-                        )];
-                        // Do not continue after first abort
-                        break;
+                        abort_in_progress = Some((last_loc.clone(), value));
                     }
                     Exp(node_id, value) => {
+                        let loc = self.env.get_node_loc(*node_id);
+                        if loc != last_loc {
+                            print_loc(&loc, &mut last_loc, &mut display);
+                        }
                         let ty = self.env.get_node_type(*node_id);
                         let exp_str = self.get_abbreviated_source(*node_id);
-                        display.extend(self.make_trace_entry(
-                            exp_str,
-                            value.pretty_or_raw(self, error.model.as_ref().unwrap(), &ty),
-                        ));
+                        let value = value.pretty_or_raw(self, error.model.as_ref().unwrap(), &ty);
+                        display.extend(self.make_trace_entry(exp_str, value));
                     }
                     _ => {}
                 }
+            }
+            if let Some((abort_loc, value)) = abort_in_progress {
+                let code = if let Some(c) = value.extract_i128() {
+                    if c == -1 {
+                        " with execution failure".to_string()
+                    } else {
+                        format!(" with code 0x{:X}", c)
+                    }
+                } else {
+                    "".to_string()
+                };
+                diag.secondary_labels = vec![Label::new(
+                    abort_loc.file_id(),
+                    abort_loc.span(),
+                    &format!("abort happened here{}", code),
+                )];
             }
             diag = diag.with_notes(display);
         }
@@ -356,22 +370,9 @@ impl<'env> BoogieWrapper<'env> {
         let mut errors = vec![];
         let mut at = 0;
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
-            at = usize::saturating_add(at, cap.get(0).unwrap().end());
-            let msg = cap.name("msg").unwrap().as_str();
-            if msg == "expected to fail" {
-                // Masks the failure from the negative test for the inconsistency checking
-                // which is expected to fail, and skips the error report of this instance.
-                continue;
-            }
             let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
             at = usize::saturating_add(at, cap.get(0).unwrap().end());
-
             let msg = cap.name("msg").unwrap().as_str();
-            if msg == "expected to fail" {
-                // Masks the failure from the negative test for the inconsistency checking
-                // which is expected to fail, and skips the error report of this instance.
-                continue;
-            }
 
             if !inbetween.is_empty() && !OTHER_DIAG_START.iter().any(|s| inbetween.starts_with(s)) {
                 // This is unexpected text and we report it as an internal error
@@ -392,13 +393,17 @@ impl<'env> BoogieWrapper<'env> {
             let execution_trace = self.extract_augmented_trace(out, &mut at);
             let mut model = Model::new(self);
             self.extract_model(&mut model, out, &mut at);
-            errors.push(BoogieError {
-                kind: BoogieErrorKind::Assertion,
-                loc,
-                message: msg.to_string(),
-                execution_trace,
-                model: if model.is_empty() { None } else { Some(model) },
-            });
+
+            if msg != "expected to fail" {
+                // Only add this if it is not a negative test. We still needed to parse it.
+                errors.push(BoogieError {
+                    kind: BoogieErrorKind::Assertion,
+                    loc,
+                    message: msg.to_string(),
+                    execution_trace,
+                    model: if model.is_empty() { None } else { Some(model) },
+                });
+            }
         }
         errors
     }
@@ -618,7 +623,7 @@ impl<'env> BoogieWrapper<'env> {
                 BoogieError {
                     kind: BoogieErrorKind::Inconsistency,
                     loc,
-                    message: "there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proved".to_string(),
+                    message: "there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven".to_string(),
                     execution_trace: vec![],
                     model: None,
                 }

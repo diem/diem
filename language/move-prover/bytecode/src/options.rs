@@ -6,6 +6,28 @@ use move_model::model::{GlobalEnv, VerificationScope};
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum AutoTraceLevel {
+    Off,
+    VerifiedFunction,
+    AllFunctions,
+}
+
+impl AutoTraceLevel {
+    pub fn verified_functions(self) -> bool {
+        use AutoTraceLevel::*;
+        matches!(self, VerifiedFunction | AllFunctions)
+    }
+    pub fn functions(self) -> bool {
+        use AutoTraceLevel::*;
+        matches!(self, AllFunctions)
+    }
+    pub fn invariants(self) -> bool {
+        use AutoTraceLevel::*;
+        matches!(self, VerifiedFunction | AllFunctions)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ProverOptions {
@@ -33,8 +55,8 @@ pub struct ProverOptions {
     pub assume_invariant_on_access: bool,
     /// Whether pack/unpack should recurse over the structure.
     pub deep_pack_unpack: bool,
-    /// Whether to automatically debug trace values of specification expression leafs.
-    pub debug_trace: bool,
+    /// Auto trace level.
+    pub auto_trace_level: AutoTraceLevel,
     /// Minimal severity level for diagnostics to be reported.
     pub report_severity: Severity,
     /// Whether to dump the transformed stackless bytecode to a file
@@ -67,8 +89,8 @@ impl Default for ProverOptions {
             resource_wellformed_axiom: false,
             assume_wellformed_on_access: false,
             deep_pack_unpack: false,
-            debug_trace: false,
-            report_severity: Severity::Error,
+            auto_trace_level: AutoTraceLevel::Off,
+            report_severity: Severity::Warning,
             assume_invariant_on_access: false,
             dump_bytecode: false,
             dump_cfg: false,

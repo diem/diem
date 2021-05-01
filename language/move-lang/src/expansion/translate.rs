@@ -1070,9 +1070,17 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 type_: t,
             }
         }
-        PM::Let { name, def: pdef } => {
+        PM::Let {
+            name,
+            post_state: old,
+            def: pdef,
+        } => {
             let def = exp_(context, pdef);
-            EM::Let { name, def }
+            EM::Let {
+                name,
+                post_state: old,
+                def,
+            }
         }
         PM::Include {
             properties: pproperties,

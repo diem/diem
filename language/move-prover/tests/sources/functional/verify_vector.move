@@ -185,7 +185,7 @@ module 0x42::VerifyVector {
     spec fun verify_model_append {
         ensures len(lhs) == old(len(lhs) + len(other));
         ensures lhs[0..len(old(lhs))] == old(lhs);
-        ensures lhs[len(old(lhs))..len(lhs)] == old(other);
+        ensures lhs[len(old(lhs))..len(lhs)] == other;
     }
 
     // Return true if the vector has no elements

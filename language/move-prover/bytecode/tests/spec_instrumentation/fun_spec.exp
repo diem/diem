@@ -345,40 +345,139 @@ fun Test::resource_with_old($t0|val: u64) {
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
   2: assume Gt($t0, 0)
-  3: @0 := save_mem(Test::R)
-  4: $t2 := 0x0
-  5: $t3 := exists<Test::R>($t2)
-  6: $t4 := !($t3)
-  7: if ($t4) goto 10 else goto 8
-  8: label L1
-  9: goto 14
- 10: label L0
- 11: $t5 := 33
- 12: $t6 := move($t5)
- 13: goto 29
- 14: label L2
- 15: $t7 := 0x0
+  3: assume CanModify<Test::R>(0)
+  4: @0 := save_mem(Test::R)
+  5: $t2 := 0x0
+  6: $t3 := exists<Test::R>($t2)
+  7: $t4 := !($t3)
+  8: if ($t4) goto 11 else goto 9
+  9: label L1
+ 10: goto 15
+ 11: label L0
+ 12: $t5 := 33
+ 13: $t6 := move($t5)
+ 14: goto 30
+ 15: label L2
+ 16: $t7 := 0x0
      # VC: caller does not have permission to modify `Test::R` at given address at tests/spec_instrumentation/fun_spec.move:36:14+17
- 16: assert CanModify<Test::R>($t7)
- 17: $t8 := borrow_global<Test::R>($t7) on_abort goto 29 with $t6
- 18: $t9 := get_field<Test::R>.v($t8)
- 19: $t10 := +($t9, $t0) on_abort goto 29 with $t6
- 20: $t11 := borrow_field<Test::R>.v($t8)
- 21: write_ref($t11, $t10)
- 22: write_back[Reference($t8).0]($t11)
- 23: write_back[Test::R.D]($t8)
- 24: label L3
+ 17: assert CanModify<Test::R>($t7)
+ 18: $t8 := borrow_global<Test::R>($t7) on_abort goto 30 with $t6
+ 19: $t9 := get_field<Test::R>.v($t8)
+ 20: $t10 := +($t9, $t0) on_abort goto 30 with $t6
+ 21: $t11 := borrow_field<Test::R>.v($t8)
+ 22: write_ref($t11, $t10)
+ 23: write_back[Reference($t8).0]($t11)
+ 24: write_back[Test::R.D]($t8)
+ 25: label L3
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+35
- 25: assert Not(Not(exists[@0]<Test::R>(0)))
+ 26: assert Not(Not(exists[@0]<Test::R>(0)))
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:42:6+58
- 26: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
+ 27: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:43:6+58
- 27: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
- 28: return ()
- 29: label L4
+ 28: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
+ 29: return ()
+ 30: label L4
      # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
- 30: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
+ 31: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
- 31: assert Or(And(Not(exists[@0]<Test::R>(0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
- 32: abort($t6)
+ 32: assert Or(And(Not(exists[@0]<Test::R>(0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
+ 33: abort($t6)
+}
+
+
+
+==== spec-instrumenter input specs ====
+
+fun Test::branching_result[baseline[
+spec {
+  aborts_if And($t0, Eq<u64>($t2, 0));
+  ensures Implies($t0, Eq<u64>(result0(), Div($t1, $t2)));
+  ensures Implies(Not($t0), Eq<u64>(result0(), Mul($t1, $t2)));
+}
+
+fun Test::branching_result[verification[
+spec {
+  aborts_if And($t0, Eq<u64>($t2, 0));
+  ensures Implies($t0, Eq<u64>(result0(), Div($t1, $t2)));
+  ensures Implies(Not($t0), Eq<u64>(result0(), Mul($t1, $t2)));
+}
+
+fun Test::implicit_and_explicit_abort[baseline[
+spec {
+  aborts_if Eq<u64>($t1, 0);
+  aborts_if Eq<u64>($t0, 0);
+  ensures Eq<u64>(result0(), Div($t0, $t1));
+}
+
+fun Test::implicit_and_explicit_abort[verification[
+spec {
+  aborts_if Eq<u64>($t1, 0);
+  aborts_if Eq<u64>($t0, 0);
+  ensures Eq<u64>(result0(), Div($t0, $t1));
+}
+
+fun Test::multiple_results[baseline[
+spec {
+  aborts_if Eq<u64>($t1, 0);
+  ensures Eq<u64>(result0(), Div($t0, $t1));
+  ensures Eq<u64>(result1(), Mod($t0, $t1));
+}
+
+fun Test::multiple_results[verification[
+spec {
+  aborts_if Eq<u64>($t1, 0);
+  ensures Eq<u64>(result0(), Div($t0, $t1));
+  ensures Eq<u64>(result1(), Mod($t0, $t1));
+}
+
+fun Test::mut_ref_param[baseline[
+spec {
+  aborts_if Eq<u64>(select Test::R.v($t0), 0);
+  ensures Eq<u64>(result0(), Old<u64>(select Test::R.v($t0)));
+  ensures Eq<u64>(select Test::R.v($t0), Add(Old<u64>(select Test::R.v($t0)), 1));
+}
+
+fun Test::mut_ref_param[verification[
+spec {
+  aborts_if Eq<u64>(select Test::R.v($t0), 0);
+  ensures Eq<u64>(result0(), Old<u64>(select Test::R.v($t0)));
+  ensures Eq<u64>(select Test::R.v($t0), Add(Old<u64>(select Test::R.v($t0)), 1));
+}
+
+fun Test::ref_param[baseline[
+spec {
+  ensures Eq<u64>(result0(), select Test::R.v($t0));
+}
+
+fun Test::ref_param[verification[
+spec {
+  ensures Eq<u64>(result0(), select Test::R.v($t0));
+}
+
+fun Test::ref_param_return_ref[baseline[
+spec {
+  ensures Eq<u64>(result0(), select Test::R.v($t0));
+}
+
+fun Test::ref_param_return_ref[verification[
+spec {
+  ensures Eq<u64>(result0(), select Test::R.v($t0));
+}
+
+fun Test::resource_with_old[baseline[
+spec {
+  requires Gt($t0, 0);
+  aborts_if Not(exists<Test::R>(0));
+  aborts_if Ge(Add(select Test::R.v(global<Test::R>(0)), $t0), 18446744073709551615);
+  ensures Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(0))), $t0));
+  modifies global<Test::R>(0);
+}
+
+fun Test::resource_with_old[verification[
+spec {
+  requires Gt($t0, 0);
+  aborts_if Not(exists<Test::R>(0));
+  aborts_if Ge(Add(select Test::R.v(global<Test::R>(0)), $t0), 18446744073709551615);
+  ensures Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(0))), $t0));
+  modifies global<Test::R>(0);
 }

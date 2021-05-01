@@ -375,6 +375,7 @@ module Diem {
     }
     spec fun cancel_burn {
         let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let post post_currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         modifies global<PreburnQueue<CoinType>>(preburn_address);
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include CancelBurnAbortsIf<CoinType>;
@@ -382,10 +383,10 @@ module Diem {
         include CancelBurnWithCapEmits<CoinType>;
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<PreburnQueue<CoinType>>(preburn_address);
-        ensures currency_info == update_field(
-            old(currency_info),
+        ensures post_currency_info == update_field(
+            currency_info,
             preburn_value,
-            currency_info.preburn_value
+            post_currency_info.preburn_value
         );
         ensures result.value == amount;
         ensures result.value > 0;
@@ -448,8 +449,9 @@ module Diem {
         value: u64;
         result: Diem<CoinType>;
         let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let post post_currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + value);
+        ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + value);
         ensures result.value == value;
     }
     spec schema MintEmits<CoinType> {
@@ -520,7 +522,8 @@ module Diem {
         amount: u64;
         preburn: Preburn<CoinType>;
         let info = spec_currency_info<CoinType>();
-        ensures info == update_field(old(info), preburn_value, old(info.preburn_value) + amount);
+        let post post_info = spec_currency_info<CoinType>();
+        ensures post_info == update_field(info, preburn_value, info.preburn_value + amount);
     }
     spec schema PreburnWithResourceEmits<CoinType> {
         amount: u64;
@@ -599,14 +602,12 @@ module Diem {
     spec schema PublishPreburnQueueEnsures<CoinType> {
         account: signer;
         let account_addr = Signer::spec_address_of(account);
-        let exists_preburn_queue = exists<PreburnQueue<CoinType>>(account_addr);
         // The preburn queue is published at the end of this function,
-        ensures exists_preburn_queue;
+        ensures exists<PreburnQueue<CoinType>>(account_addr);
         // there cannot be a preburn resource for the same currency as the account,
         ensures !exists<Preburn<CoinType>>(account_addr);
         // and the preburn queue is empty
         ensures Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) == 0;
-        ensures old(exists_preburn_queue) ==> exists_preburn_queue;
     }
 
     /// Publish a `Preburn` resource under `account`. This function is
@@ -681,40 +682,24 @@ module Diem {
     spec schema UpgradePreburnAbortsIf<CoinType> {
         account: signer;
         let account_addr = Signer::spec_address_of(account);
-        let preburn = global<Preburn<CoinType>>(account_addr);
-        let preburn_exists = exists<Preburn<CoinType>>(account_addr);
-        let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
+        let upgrade = exists<Preburn<CoinType>>(account_addr) && !exists<PreburnQueue<CoinType>>(account_addr);
         /// Must abort if the account doesn't have the `PreburnQueue` or
         /// `Preburn` resource to satisfy [[H4]][PERMISSION] of `preburn_to`.
+        include upgrade ==> PublishPreburnQueueAbortsIf<CoinType>;
         include Roles::AbortsIfNotDesignatedDealer;
-        include (preburn_exists && !preburn_queue_exists) ==> PublishPreburnQueueAbortsIf<CoinType>;
     }
     spec schema UpgradePreburnEnsures<CoinType> {
         account: signer;
         let account_addr = Signer::spec_address_of(account);
-        let preburn_exists = exists<Preburn<CoinType>>(account_addr);
-        let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
+        let upgrade = exists<Preburn<CoinType>>(account_addr) && !exists<PreburnQueue<CoinType>>(account_addr);
         let preburn = global<Preburn<CoinType>>(account_addr);
-        let preburn_queue = global<PreburnQueue<CoinType>>(account_addr);
-        let preburn_state_empty = preburn_exists && !preburn_queue_exists && preburn.to_burn.value == 0;
-        let preburn_state_full = preburn_exists && !preburn_queue_exists && preburn.to_burn.value > 0;
-        include preburn_state_empty ==> PublishPreburnQueueEnsures<CoinType>;
-        include preburn_state_full ==> UpgradePreburnEnsuresFullState<CoinType> {
-            preburn_queue_exists: preburn_queue_exists,
-            account_addr: account_addr,
-            preburn_queue: preburn_queue,
-            preburn: PreburnWithMetadata { preburn, metadata: x"" },
-        };
-    }
-    spec schema UpgradePreburnEnsuresFullState<CoinType> {
-        preburn_queue_exists: bool;
-        account_addr: address;
-        preburn_queue: PreburnQueue<CoinType>;
-        preburn: PreburnWithMetadata<CoinType>;
-        ensures preburn_queue_exists;
-        ensures !exists<Preburn<CoinType>>(account_addr);
-        ensures Vector::length(preburn_queue.preburns) == 1;
-        ensures Vector::eq_push_back(preburn_queue.preburns, old(preburn_queue).preburns, old(preburn));
+        ensures upgrade ==>
+            !exists<Preburn<CoinType>>(account_addr) && exists<PreburnQueue<CoinType>>(account_addr);
+        ensures upgrade && preburn.to_burn.value > 0 ==>
+            global<PreburnQueue<CoinType>>(account_addr).preburns ==
+                vec(PreburnWithMetadata { preburn, metadata: x"" });
+        ensures upgrade && preburn.to_burn.value == 0 ==>
+            global<PreburnQueue<CoinType>>(account_addr).preburns == vec();
     }
 
     /// Add the `preburn` request to the preburn queue of `account`, and check that the
@@ -735,11 +720,12 @@ module Diem {
         pragma opaque;
         let account_addr = Signer::spec_address_of(account);
         let preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
+        let post post_preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
         modifies global<PreburnQueue<CoinType>>(account_addr);
         aborts_if !exists<PreburnQueue<CoinType>>(account_addr) with Errors::INVALID_STATE;
         include AddPreburnToQueueAbortsIf<CoinType>;
         ensures exists<PreburnQueue<CoinType>>(account_addr);
-        ensures Vector::eq_push_back(preburns, old(preburns), preburn);
+        ensures Vector::eq_push_back(post_preburns, preburns, preburn);
     }
     spec schema AddPreburnToQueueAbortsIf<CoinType> {
         account: signer;
@@ -866,8 +852,7 @@ module Diem {
     spec schema RemovePreburnFromQueueEnsures<CoinType> {
         preburn_address: address;
         amount: u64;
-        let exists_preburn_queue = exists<PreburnQueue<CoinType>>(preburn_address);
-        ensures old(exists_preburn_queue) ==> exists_preburn_queue;
+        ensures old(exists<PreburnQueue<CoinType>>(preburn_address)) ==> exists<PreburnQueue<CoinType>>(preburn_address);
         // let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
         // let preburn = Preburn { to_burn: Diem { value: amount }};
         // let (found, index) = Vector::index_of(preburn_queue, preburn);
@@ -904,7 +889,7 @@ module Diem {
     spec schema BurnWithCapabilityAbortsIf<CoinType> {
         preburn_address: address;
         amount: u64;
-        let preburn = spec_make_preburn(amount);
+        let preburn = spec_make_preburn<CoinType>(amount);
         include AbortsIfNoPreburnQueue<CoinType>;
         include RemovePreburnFromQueueAbortsIf<CoinType>;
         include BurnWithResourceCapAbortsIf<CoinType>{preburn: preburn};
@@ -912,7 +897,7 @@ module Diem {
     spec schema BurnWithCapabilityEnsures<CoinType> {
         preburn_address: address;
         amount: u64;
-        let preburn = spec_make_preburn(amount);
+        let preburn = spec_make_preburn<CoinType>(amount);
         include BurnWithResourceCapEnsures<CoinType>{preburn: preburn};
         include RemovePreburnFromQueueEnsures<CoinType>;
     }
@@ -952,9 +937,10 @@ module Diem {
         };
     }
     spec fun burn_with_resource_cap {
-        include BurnWithResourceCapAbortsIf<CoinType>;
-        include BurnWithResourceCapEnsures<CoinType>;
-        include BurnWithResourceCapEmits<CoinType>;
+        let pre_preburn = preburn;
+        include BurnWithResourceCapAbortsIf<CoinType>{preburn: pre_preburn};
+        include BurnWithResourceCapEnsures<CoinType>{preburn: pre_preburn};
+        include BurnWithResourceCapEmits<CoinType>{preburn: pre_preburn};
     }
     spec schema BurnWithResourceCapAbortsIf<CoinType> {
         preburn: Preburn<CoinType>;
@@ -968,9 +954,9 @@ module Diem {
     spec schema BurnWithResourceCapEnsures<CoinType> {
         preburn: Preburn<CoinType>;
         ensures spec_currency_info<CoinType>().total_value
-                == old(spec_currency_info<CoinType>().total_value) - old(preburn.to_burn.value);
+                == old(spec_currency_info<CoinType>().total_value) - preburn.to_burn.value;
         ensures spec_currency_info<CoinType>().preburn_value
-                == old(spec_currency_info<CoinType>().preburn_value) - old(preburn.to_burn.value);
+                == old(spec_currency_info<CoinType>().preburn_value) - preburn.to_burn.value;
     }
     spec schema BurnWithResourceCapEmits<CoinType> {
         preburn: Preburn<CoinType>;
@@ -979,7 +965,7 @@ module Diem {
         let currency_code = spec_currency_code<CoinType>();
         let handle = info.burn_events;
         emits BurnEvent {
-                amount: old(preburn.to_burn.value),
+                amount: preburn.to_burn.value,
                 currency_code,
                 preburn_address,
             }
@@ -1043,7 +1029,8 @@ module Diem {
         amount: u64;
         include RemovePreburnFromQueueEnsures<CoinType>;
         let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures info == update_field(old(info), preburn_value, old(info.preburn_value) - amount);
+        let post post_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures post_info == update_field(info, preburn_value, info.preburn_value - amount);
     }
     spec schema CancelBurnWithCapEmits<CoinType> {
         preburn_address: address;
@@ -1074,10 +1061,11 @@ module Diem {
     spec fun burn_now {
         include BurnNowAbortsIf<CoinType>;
         let info = spec_currency_info<CoinType>();
+        let post post_info = spec_currency_info<CoinType>();
         include PreburnWithResourceEmits<CoinType>{amount: coin.value, preburn_address: preburn_address};
         include BurnWithResourceCapEmits<CoinType>{preburn: Preburn<CoinType>{to_burn: coin}};
         ensures preburn.to_burn.value == 0;
-        ensures info == update_field(old(info), total_value, old(info.total_value) - coin.value);
+        ensures post_info == update_field(info, total_value, info.total_value - coin.value);
     }
     spec schema BurnNowAbortsIf<CoinType> {
         coin: Diem<CoinType>;

@@ -53,8 +53,6 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     /// The number of outer context scopes in  `local_table` which are accounted for in
     /// `accessed_locals`. See also documentation of function `mark_context_scopes`.
     pub outer_context_scopes: usize,
-    /// A boolean indicating whether we are translating a let expression
-    pub in_let: bool,
     /// A flag to indicate whether we are translating expressions in a spec fun.
     pub translating_fun_as_spec_fun: bool,
     /// A flag to indicate whether errors have been generated so far.
@@ -87,7 +85,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             node_counter_start,
             accessed_locals: BTreeSet::new(),
             outer_context_scopes: 0,
-            in_let: false,
             /// Following flags used to translate pure Move functions.
             translating_fun_as_spec_fun: false,
             errors_generated: RefCell::new(false),
@@ -108,11 +105,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         et
     }
 
-    pub fn set_in_let(mut self) -> Self {
-        self.in_let = true;
-        self
-    }
-
     pub fn translate_fun_as_spec_fun(&mut self) {
         self.translating_fun_as_spec_fun = true;
     }
@@ -127,6 +119,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     // Get type parameters from this build.
+    #[allow(unused)]
     pub fn get_type_params(&self) -> Vec<Type> {
         self.type_params
             .iter()
@@ -219,11 +212,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Finalizes types in this build, producing errors if some could not be inferred
     /// and remained incomplete.
     pub fn finalize_types(&mut self) {
-        if self.parent.parent.env.has_errors() {
-            // Don't do that check if we already reported errors, as this would produce
-            // useless followup errors.
-            return;
-        }
         for i in self.node_counter_start..self.parent.parent.env.next_free_node_number() {
             let node_id = NodeId::new(i);
 
@@ -260,6 +248,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Fix any free type variables remaining in this expression build to a freshly
     /// generated type parameter, adding them to the passed vector.
+    #[allow(unused)]
     pub fn fix_types(&mut self, generated_params: &mut Vec<Type>) {
         if self.parent.parent.env.has_errors() {
             return;
@@ -325,6 +314,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Mark the current active scope level as context, i.e. symbols which are not
     /// declared in this expression. This is used to determine what
     /// `get_accessed_context_locals` returns.
+    #[allow(unused)]
     pub fn mark_context_scopes(mut self) -> Self {
         self.outer_context_scopes = self.local_table.len();
         self
@@ -332,6 +322,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Gets the locals this build has accessed so far and which belong to the
     /// context, i.a. are not declared in this expression.
+    #[allow(unused)]
     pub fn get_accessed_context_locals(&self) -> Vec<(Symbol, bool)> {
         self.accessed_locals.iter().cloned().collect_vec()
     }
@@ -351,6 +342,22 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// if the name already exists. The operation option is used for names
     /// which represent special operations.
     pub fn define_local(
+        &mut self,
+        loc: &Loc,
+        name: Symbol,
+        type_: Type,
+        operation: Option<Operation>,
+        temp_index: Option<usize>,
+    ) {
+        self.internal_define_local(loc, name, type_, operation, temp_index)
+    }
+
+    /// Defines a let local.
+    pub fn define_let_local(&mut self, loc: &Loc, name: Symbol, type_: Type) {
+        self.internal_define_local(loc, name, type_, None, None)
+    }
+
+    fn internal_define_local(
         &mut self,
         loc: &Loc,
         name: Symbol,
@@ -873,10 +880,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(expected_type, &loc);
                 return Exp::Invoke(id, Box::new(local_var), args);
             }
-            if let Some(fid) = self.parent.spec_block_lets.get(&sym).cloned() {
-                let (_, args) = self.translate_exp_list(args, false);
-                return self.translate_let(loc, generics, args, expected_type, fid);
-            }
         }
         // Next treat this as a call to a global function.
         let (module_name, name) = self.parent.module_access_to_parts(maccess);
@@ -1030,10 +1033,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 ) {
                     return exp;
                 }
-                // Next try to resolve simple name as a let.
-                if let Some(fid) = self.parent.spec_block_lets.get(&sym).cloned() {
-                    return self.translate_let(loc, type_args, vec![], expected_type, fid);
-                }
+
                 // If not found, try to resolve as builtin constant.
                 let builtin_sym = self.parent.parent.builtin_qualified_symbol(&name.value);
                 if let Some(entry) = self.parent.parent.const_table.get(&builtin_sym).cloned() {
@@ -1093,11 +1093,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn resolve_local(
         &mut self,
         loc: &Loc,
-        mut sym: Symbol,
+        sym: Symbol,
         in_old: bool,
         expected_type: &Type,
     ) -> Option<Exp> {
         if let Some(entry) = self.lookup_local(sym, in_old) {
+            // Make copies of some fields to avoid borrowing issues.
             let oper_opt = entry.operation.clone();
             let index_opt = entry.temp_index;
             let ty = entry.type_.clone();
@@ -1105,18 +1106,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let id = self.new_node_id_with_type_loc(&ty, loc);
             if let Some(oper) = oper_opt {
                 Some(Exp::Call(id, oper, vec![]))
-            } else if let Some(index) =
-                index_opt.filter(|_| !self.translating_fun_as_spec_fun && !self.in_let)
-            {
+            } else if let Some(index) = index_opt.filter(|_| !self.translating_fun_as_spec_fun) {
                 // Only create a temporary if we are not currently translating a move function as
                 // a spec function, or a let. In this case, the LocalVarEntry has a bytecode index, but
                 // we do not want to use this if interpreted as a spec fun.
                 Some(Exp::Temporary(id, index))
             } else {
-                if self.in_let {
-                    // Mangle the name for context local of let.
-                    sym = self.make_context_local_name(sym, in_old);
-                }
                 Some(Exp::LocalVar(id, sym))
             }
         } else {
@@ -1124,96 +1119,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    fn translate_let(
-        &mut self,
-        loc: &Loc,
-        user_type_args: Option<&[EA::Type]>,
-        args: Vec<Exp>,
-        expected_type: &Type,
-        fid: SpecFunId,
-    ) -> Exp {
-        let decl = &self.parent.spec_funs[fid.as_usize()].clone();
-        let type_args = user_type_args.map(|a| self.translate_types(a));
-        let context_type_args = self.get_type_params();
-        let (instantiation, diag) =
-            self.make_instantiation(decl.type_params.len(), context_type_args, type_args);
-        if let Some(msg) = diag {
-            self.error(loc, &msg);
-            return self.new_error_exp();
-        }
-
-        // Create the context args for this let.
-        let mut all_args = vec![];
-        for (name, in_old) in decl
-            .context_params
-            .as_ref()
-            .expect("context_params defined for let function")
-        {
-            let actual_name = self.make_context_local_name(*name, *in_old);
-            let (_, ty) = decl
-                .params
-                .iter()
-                .find(|(n, _)| *n == actual_name)
-                .expect("context param defined in params");
-            let ty = ty.instantiate(&instantiation);
-            if let Some(mut arg) = self.resolve_local(loc, *name, *in_old, &ty) {
-                if *in_old && !self.in_let {
-                    // Context local is accessed in old mode and outside of a let, wrap
-                    // expression to get the old value.
-                    arg = Exp::Call(arg.node_id(), Operation::Old, vec![arg]);
-                }
-                all_args.push(arg);
-            } else {
-                // This should not happen, but lets be robust and report an internal error.
-                self.error(
-                    loc,
-                    &format!(
-                        "[internal] error in resolving let context `{}`",
-                        self.symbol_pool().string(*name)
-                    ),
-                );
-            }
-        }
-
-        // Add additional args for lambda.
-        let remaining_args = decl.params.len() - all_args.len();
-        if remaining_args != args.len() {
-            self.error(
-                loc,
-                &format!(
-                    "expected {}, but got {} arguments for let name",
-                    remaining_args,
-                    args.len()
-                ),
-            );
-        } else {
-            // Type check args and add them.
-            let lambda_start = all_args.len();
-            for (i, arg) in args.into_iter().enumerate() {
-                let node_id = arg.node_id();
-                let env = &self.parent.parent.env;
-                let loc = env.get_node_loc(node_id);
-                let ty = env.get_node_type(node_id);
-                let param_ty = &decl.params[lambda_start + i].1;
-                self.check_type(&loc, &ty, param_ty, "lambda argument");
-                all_args.push(arg);
-            }
-        }
-
-        // Check the expected type.
-        let return_type = decl.result_type.instantiate(&instantiation);
-        self.check_type(loc, &return_type, expected_type, "let value");
-
-        // Create the call of the function representing this let.
-        let node_id = self.new_node_id_with_type_loc(&return_type, loc);
-        self.set_node_instantiation(node_id, instantiation);
-        Exp::Call(
-            node_id,
-            Operation::Function(self.parent.module_id, fid, None),
-            all_args,
-        )
-    }
-
+    #[allow(unused)]
     pub fn make_context_local_name(&self, name: Symbol, in_old: bool) -> Symbol {
         if in_old {
             self.symbol_pool()

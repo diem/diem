@@ -644,30 +644,6 @@ impl<'env> FunctionTranslator<'env> {
                 emitln!(writer, "assume size#$Path(p#$Mutation($t{})) == 0;", i);
             }
         }
-
-        self.initialize_modifies_permissions();
-    }
-
-    /// Initializes modifies permissions.
-    fn initialize_modifies_permissions(&self) {
-        let writer = self.parent.writer;
-        let spec_translator = &self.parent.spec_translator;
-        let fun_target = self.fun_target;
-
-        for (ref qid, addrs) in fun_target.get_modify_ids_and_exps() {
-            emit!(
-                writer,
-                "{} := {}",
-                boogie_modifies_memory_name(fun_target.global_env(), qid),
-                "$ConstMemoryDomain(false)"
-            );
-            for addr in addrs {
-                emit!(writer, "[");
-                spec_translator.translate(addr, self.type_inst);
-                emit!(writer, " := true]");
-            }
-            emitln!(writer, ";");
-        }
     }
 }
 
@@ -1507,6 +1483,8 @@ impl<'env> FunctionTranslator<'env> {
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(writer, "if ($abort_flag) {");
                     writer.indent();
+                    *last_tracked_loc = None;
+                    self.track_loc(last_tracked_loc, &loc);
                     let code_str = str_local(*code);
                     emitln!(writer, "{} := $abort_code;", code_str);
                     self.track_abort(&code_str);
@@ -1570,12 +1548,22 @@ impl<'env> FunctionTranslator<'env> {
         );
     }
 
-    fn track_exp(&self, node_id: NodeId, tmp: TempIndex) {
+    fn track_exp(&self, node_id: NodeId, temp: TempIndex) {
+        let env = self.parent.env;
+        let writer = self.parent.writer;
+        let ty = self.get_local_type(temp);
+        let temp_str = if ty.is_reference() {
+            let new_temp = boogie_temp(env, ty.skip_reference(), 0);
+            emitln!(writer, "{} := $Dereference($t{});", new_temp, temp);
+            new_temp
+        } else {
+            format!("$t{}", temp)
+        };
         emitln!(
             self.parent.writer,
-            "assume {{:print \"$track_exp({}):\", $t{}}} true;",
+            "assume {{:print \"$track_exp({}):\", {}}} true;",
             node_id.as_usize(),
-            tmp,
+            temp_str,
         );
     }
 
@@ -1596,6 +1584,7 @@ impl<'env> FunctionTranslator<'env> {
         let mut res: BTreeMap<String, (Type, usize)> = BTreeMap::new();
         let mut need = |ty: &Type, n: usize| {
             // Index by type suffix, which is more coarse grained then type.
+            let ty = ty.skip_reference();
             let suffix = boogie_type_suffix(env, ty);
             let cnt = res.entry(suffix).or_insert_with(|| (ty.to_owned(), 0));
             (*cnt).1 = (*cnt).1.max(n);
@@ -1604,14 +1593,9 @@ impl<'env> FunctionTranslator<'env> {
             match bc {
                 Call(_, _, oper, srcs, ..) => match oper {
                     TraceExp(id) => need(&self.inst(&env.get_node_type(*id)), 1),
-                    TraceReturn(idx) => need(
-                        &self.inst(fun_target.get_return_type(*idx).skip_reference()),
-                        1,
-                    ),
-                    TraceLocal(_) => need(self.get_local_type(srcs[0]).skip_reference(), 1),
-                    Havoc(HavocKind::MutationValue) => {
-                        need(self.get_local_type(srcs[0]).skip_reference(), 1)
-                    }
+                    TraceReturn(idx) => need(&self.inst(fun_target.get_return_type(*idx)), 1),
+                    TraceLocal(_) => need(&self.get_local_type(srcs[0]), 1),
+                    Havoc(HavocKind::MutationValue) => need(&self.get_local_type(srcs[0]), 1),
                     _ => {}
                 },
                 Prop(_, PropKind::Modifies, exp) => {

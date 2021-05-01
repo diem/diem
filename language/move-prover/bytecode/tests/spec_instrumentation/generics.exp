@@ -27,15 +27,16 @@ fun Generics::remove<$tv0>($t0|a: address): Generics::R<#0> {
      var $t2: num
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Generics::R<#0>>(): WellFormed($rsc)
+  2: assume CanModify<Generics::R<#0>>($t0)
      # VC: caller does not have permission to modify `Generics::R<#0>` at given address at tests/spec_instrumentation/generics.move:11:9+9
-  2: assert CanModify<Generics::R<#0>>($t0)
-  3: $t1 := move_from<Generics::R<#0>>($t0) on_abort goto 7 with $t2
-  4: label L1
+  3: assert CanModify<Generics::R<#0>>($t0)
+  4: $t1 := move_from<Generics::R<#0>>($t0) on_abort goto 8 with $t2
+  5: label L1
      # VC: post-condition does not hold at tests/spec_instrumentation/generics.move:20:9+25
-  5: assert Not(exists<Generics::R<#0>>($t0))
-  6: return $t1
-  7: label L2
-  8: abort($t2)
+  6: assert Not(exists<Generics::R<#0>>($t0))
+  7: return $t1
+  8: label L2
+  9: abort($t2)
 }
 
 
@@ -46,25 +47,54 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
      var $t3: Generics::R<u64>
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Generics::R<u64>>(): WellFormed($rsc)
+  2: assume CanModify<Generics::R<u64>>($t0)
      # >> opaque call: $t1 := Generics::remove<u64>($t0)
-  2: nop
+  3: nop
      # VC: caller does not have permission to modify `Generics::R<u64>` at given address at tests/spec_instrumentation/generics.move:24:9+14
-  3: assert CanModify<Generics::R<u64>>($t0)
-  4: havoc[val]($t1)
-  5: if ($t1) goto 6 else goto 9
-  6: label L4
-  7: trace_abort($t2)
-  8: goto 17
-  9: label L3
- 10: modifies global<Generics::R<u64>>($t0)
- 11: assume WellFormed($t3)
- 12: assume Not(exists<Generics::R<u64>>($t0))
+  4: assert CanModify<Generics::R<u64>>($t0)
+  5: havoc[val]($t1)
+  6: if ($t1) goto 7 else goto 10
+  7: label L4
+  8: trace_abort($t2)
+  9: goto 18
+ 10: label L3
+ 11: modifies global<Generics::R<u64>>($t0)
+ 12: assume WellFormed($t3)
+ 13: assume Not(exists<Generics::R<u64>>($t0))
      # << opaque call: $t1 := Generics::remove<u64>($t0)
- 13: nop
- 14: label L1
+ 14: nop
+ 15: label L1
      # VC: post-condition does not hold at tests/spec_instrumentation/generics.move:20:9+25
- 15: assert Not(exists<Generics::R<u64>>($t0))
- 16: return $t3
- 17: label L2
- 18: abort($t2)
+ 16: assert Not(exists<Generics::R<u64>>($t0))
+ 17: return $t3
+ 18: label L2
+ 19: abort($t2)
+}
+
+
+
+==== spec-instrumenter input specs ====
+
+fun Generics::remove[baseline[
+spec {
+  modifies global<Generics::R<#0>>($t0);
+  ensures Not(exists<Generics::R<#0>>($t0));
+}
+
+fun Generics::remove[verification[
+spec {
+  modifies global<Generics::R<#0>>($t0);
+  ensures Not(exists<Generics::R<#0>>($t0));
+}
+
+fun Generics::remove_u64[baseline[
+spec {
+  modifies global<Generics::R<u64>>($t0);
+  ensures Not(exists<Generics::R<u64>>($t0));
+}
+
+fun Generics::remove_u64[verification[
+spec {
+  modifies global<Generics::R<u64>>($t0);
+  ensures Not(exists<Generics::R<u64>>($t0));
 }

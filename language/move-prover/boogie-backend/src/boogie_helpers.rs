@@ -175,7 +175,7 @@ pub fn boogie_temp(env: &GlobalEnv, ty: &Type, instance: usize) -> String {
 }
 
 pub fn boogie_temp_from_suffix(_env: &GlobalEnv, suffix: &str, instance: usize) -> String {
-    format!("$temp_{}{}", instance, suffix)
+    format!("$temp_{}'{}'", instance, suffix)
 }
 
 /// Returns the suffix to specialize a name for the given type instance.

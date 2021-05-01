@@ -179,9 +179,7 @@ This is emitted on the new Child VASPS's <code><a href="DiemAccount.md#0x1_DiemA
 
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: parent_vasp};
-<a name="0x1_AccountCreationScripts_parent_addr$5"></a>
 <b>let</b> parent_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp);
-<a name="0x1_AccountCreationScripts_parent_cap$6"></a>
 <b>let</b> parent_cap = <a href="DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(parent_addr);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateChildVASPAccountAbortsIf">DiemAccount::CreateChildVASPAccountAbortsIf</a>&lt;CoinType&gt;{
     parent: parent_vasp, new_account_address: child_address};

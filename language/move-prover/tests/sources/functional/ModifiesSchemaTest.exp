@@ -7,6 +7,8 @@ error: caller does not have permission to modify `A::S` at given address
     │         ^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/ModifiesSchemaTest.move:29: mutate_at_wrapper2
+    =     at tests/sources/functional/ModifiesSchemaTest.move:9
+    =     at tests/sources/functional/ModifiesSchemaTest.move:29: mutate_at_wrapper2
     =         addr1 = <redacted>
     =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesSchemaTest.move:30: mutate_at_wrapper2

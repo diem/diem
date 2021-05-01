@@ -1,0 +1,49 @@
+error: undeclared `M::one`
+
+   ┌── tests/sources/lets_err.move:6:16 ───
+   │
+ 6 │     let zero = one;
+   │                ^^^
+   │
+
+error: let bound `new_a` propagated via schema inclusion is referring to post state
+
+    ┌── tests/sources/lets_err.move:22:5 ───
+    │
+ 22 │     include Ensures{actual: a, expected: new_a + sum - sum};
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 28 │     let a = expected;
+    │     ----------------- not allowed to use post state
+    ·
+ 21 │     let post new_a = old(a) / sum;
+    │                      ------------ let defined here
+    │
+
+error: invalid reference to post state
+
+    ┌── tests/sources/lets_err.move:43:5 ───
+    │
+ 43 │     include Requires{a: result};
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 48 │     requires a != 0;
+    │     ---------------- not allowed to refer to post state
+    ·
+ 43 │     include Requires{a: result};
+    │                         ------ expression referring to post state
+    │
+
+error: invalid reference to post state
+
+    ┌── tests/sources/lets_err.move:44:5 ───
+    │
+ 44 │     include Requires{a: old(x)};
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 48 │     requires a != 0;
+    │     ---------------- not allowed to refer to post state
+    ·
+ 44 │     include Requires{a: old(x)};
+    │                         ------ expression referring to post state
+    │

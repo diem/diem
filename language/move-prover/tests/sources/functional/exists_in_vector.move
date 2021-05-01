@@ -19,18 +19,17 @@ module 0x42::VectorExists {
     spec fun do_nothing_ref {
         aborts_if false;
 
-        ensures old(_v) == _v;
-        ensures exists l: u64: l == len(old(_v));
+        ensures _v == _v;
         ensures exists l: u64: l == len(_v);
-        ensures exists l: u64 where l == len(old(_v)): l == len(_v);
+        ensures exists l: u64 where l == len(_v): l == len(_v);
 
-        ensures old(e_in_v_vec(0, _v)) ==> e_in_v_vec(0, _v);
-        ensures old(e_in_v_range(0, _v)) ==> e_in_v_range(0, _v);
-        ensures old(e_in_v_u64(0, _v)) ==> e_in_v_u64(0, _v);
+        ensures e_in_v_vec(0, _v) ==> e_in_v_vec(0, _v);
+        ensures e_in_v_range(0, _v) ==> e_in_v_range(0, _v);
+        ensures e_in_v_u64(0, _v) ==> e_in_v_u64(0, _v);
 
-        ensures forall e: u64: (old(e_in_v_vec(e, _v)) ==> e_in_v_vec(e, _v));
-        ensures forall e: u64: (old(e_in_v_range(e, _v)) ==> e_in_v_range(e, _v));
-        ensures forall e: u64: (old(e_in_v_u64(e, _v)) ==> e_in_v_u64(e, _v));
+        ensures forall e: u64: (e_in_v_vec(e, _v) ==> e_in_v_vec(e, _v));
+        ensures forall e: u64: (e_in_v_range(e, _v) ==> e_in_v_range(e, _v));
+        ensures forall e: u64: (e_in_v_u64(e, _v) ==> e_in_v_u64(e, _v));
     }
 
     public fun do_nothing_ref_mut(_v: &mut vector<u64>) {

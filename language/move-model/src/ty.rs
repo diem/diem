@@ -721,9 +721,10 @@ impl Substitution {
             } else {
                 // It is not clear to me whether this can ever occur given we do no global
                 // unification with recursion, but to be on the save side, we have it.
-                Err(TypeError::new(
-                    "[internal] type unification cycle check failed. Try to annotate types.",
-                ))
+                Err(TypeError::new(&format!(
+                    "[internal] type unification cycle check failed ({:?} =?= {:?})",
+                    t1, t2
+                )))
             }
         } else {
             Ok(None)

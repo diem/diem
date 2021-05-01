@@ -15,6 +15,7 @@ use crate::{
     verification_analysis_v2::InvariantAnalysisData,
 };
 
+use crate::options::ProverOptions;
 use move_model::{
     ast::{ConditionKind, Exp},
     exp_generator::ExpGenerator,
@@ -60,6 +61,7 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
 }
 
 struct Instrumenter<'a> {
+    options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
     saved_from_before_instr_or_call: Option<(TranslatedSpec, BTreeSet<GlobalId>)>,
 }
@@ -67,8 +69,10 @@ struct Instrumenter<'a> {
 impl<'a> Instrumenter<'a> {
     fn run(fun_env: &FunctionEnv<'a>, data: FunctionData) -> FunctionData {
         let global_env = fun_env.module_env.env;
+        let options = ProverOptions::get(global_env);
         let builder = FunctionDataBuilder::new(fun_env, data);
         let mut instrumenter = Instrumenter {
+            options: options.as_ref(),
             builder,
             saved_from_before_instr_or_call: None,
         };
@@ -96,6 +100,7 @@ impl<'a> Instrumenter<'a> {
 
             let entrypoint_invariants = self.compute_entrypoint_invariants();
             let xlated_spec = SpecTranslator::translate_invariants_by_id(
+                self.options.auto_trace_level.invariants(),
                 &mut self.builder,
                 &entrypoint_invariants,
             );
@@ -121,6 +126,7 @@ impl<'a> Instrumenter<'a> {
                     .cloned()
                     .collect();
                 let xlated_spec = SpecTranslator::translate_invariants_by_id(
+                    self.options.auto_trace_level.invariants(),
                     &mut self.builder,
                     &return_invariants,
                 );
@@ -239,6 +245,7 @@ impl<'a> Instrumenter<'a> {
             Ret(_, _) => {
                 if disabled_inv_fun_set.contains(&fun_id) {
                     let xlated_spec = SpecTranslator::translate_invariants_by_id(
+                        self.options.auto_trace_level.invariants(),
                         &mut self.builder,
                         target_invariants,
                     );
@@ -360,8 +367,11 @@ impl<'a> Instrumenter<'a> {
         // translate all the invariants. Some were already translated at the entrypoint, but
         // that's ok because they are global invariants that don't have "old", so redundant
         // state tags are not going to be a problem
-        let mut xlated_invs =
-            SpecTranslator::translate_invariants_by_id(&mut self.builder, &modified_invs);
+        let mut xlated_invs = SpecTranslator::translate_invariants_by_id(
+            self.options.auto_trace_level.invariants(),
+            &mut self.builder,
+            &modified_invs,
+        );
         // separate out the update invariants, which need to be handled differently from global invs.
         // Specifically, update invariants are not assumed, but need consistent save tags.
         let (global_assumes, _update_invs) = self.separate_update_invariants(&modified_invs);

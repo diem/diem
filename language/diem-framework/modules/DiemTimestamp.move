@@ -78,16 +78,17 @@ module DiemTimestamp {
         modifies global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         let now = spec_now_microseconds();
+        let post post_now = spec_now_microseconds();
 
         /// Conditions unique for abstract and concrete version of this function.
         include AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM;
-        ensures now == timestamp; // refers to the `now` in the post state
+        ensures post_now == timestamp;
 
         /// Conditions we only check for the implementation, but do not pass to the caller.
         aborts_if [concrete]
             (if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
-                now != timestamp // Refers to the now in the pre state
+                now != timestamp
              } else  {
                 now >= timestamp
              }

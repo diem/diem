@@ -101,7 +101,6 @@ Publish the chain ID <code>id</code> of this Diem instance under the DiemRoot ac
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_ChainId_dr_addr$3"></a>
 <b>let</b> dr_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account);
 <b>modifies</b> <b>global</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(dr_addr);
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;

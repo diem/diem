@@ -197,26 +197,28 @@ being <code>preburn_address</code>.
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CancelBurnAbortsIf">DiemAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="Diem.md#0x1_Diem_CancelBurnWithCapEnsures">Diem::CancelBurnWithCapEnsures</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEnsures">DiemAccount::DepositEnsures</a>&lt;Token&gt;{payee: preburn_address};
-<a name="0x1_TreasuryComplianceScripts_total_preburn_value$10"></a>
 <b>let</b> total_preburn_value = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(
     <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
 ).preburn_value;
-<a name="0x1_TreasuryComplianceScripts_balance_at_addr$11"></a>
+<b>let</b> post post_total_preburn_value = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(
+    <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
+).preburn_value;
 <b>let</b> balance_at_addr = <a href="DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
+<b>let</b> post post_balance_at_addr = <a href="DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
 </code></pre>
 
 
 The total value of preburn for <code>Token</code> should decrease by the preburned amount.
 
 
-<pre><code><b>ensures</b> total_preburn_value == <b>old</b>(total_preburn_value) - amount;
+<pre><code><b>ensures</b> post_total_preburn_value == total_preburn_value - amount;
 </code></pre>
 
 
 The balance of <code>Token</code> at <code>preburn_address</code> should increase by the preburned amount.
 
 
-<pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + amount;
+<pre><code><b>ensures</b> post_balance_at_addr == balance_at_addr + amount;
 <b>include</b> <a href="Diem.md#0x1_Diem_CancelBurnWithCapEmits">Diem::CancelBurnWithCapEmits</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEmits">DiemAccount::DepositEmits</a>&lt;Token&gt;{
     payer: preburn_address,
@@ -475,9 +477,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<a name="0x1_TreasuryComplianceScripts_account_addr$12"></a>
 <b>let</b> account_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<a name="0x1_TreasuryComplianceScripts_cap$13"></a>
 <b>let</b> cap = <a href="DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(account_addr);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">DiemAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
@@ -1084,7 +1084,6 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
        numerator: new_exchange_rate_numerator,
        denominator: new_exchange_rate_denominator
 };
-<a name="0x1_TreasuryComplianceScripts_rate$14"></a>
 <b>let</b> rate = <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_spec_create_from_rational">FixedPoint32::spec_create_from_rational</a>(
         new_exchange_rate_numerator,
         new_exchange_rate_denominator

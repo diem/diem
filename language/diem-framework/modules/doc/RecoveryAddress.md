@@ -210,7 +210,6 @@ Aborts if <code>recovery_account</code> has delegated its <code>KeyRotationCapab
 <pre><code><b>schema</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_PublishAbortsIf">PublishAbortsIf</a> {
     recovery_account: signer;
     rotation_cap: KeyRotationCapability;
-    <a name="0x1_RecoveryAddress_addr$6"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
     <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
     <b>aborts_if</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
@@ -228,7 +227,6 @@ Aborts if <code>recovery_account</code> has delegated its <code>KeyRotationCapab
 <pre><code><b>schema</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_PublishEnsures">PublishEnsures</a> {
     recovery_account: signer;
     rotation_cap: KeyRotationCapability;
-    <a name="0x1_RecoveryAddress_addr$7"></a>
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
     <b>ensures</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr);
     <b>ensures</b> len(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr)) == 1;
@@ -415,7 +413,6 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address</code> belo
     recovery_address: address;
     <b>aborts_if</b> !<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>aborts_if</b> len(<b>global</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps) &gt;= <a href="RecoveryAddress.md#0x1_RecoveryAddress_MAX_REGISTERED_KEYS">MAX_REGISTERED_KEYS</a> <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
-    <a name="0x1_RecoveryAddress_to_recover_address$8"></a>
     <b>let</b> to_recover_address = <a href="DiemAccount.md#0x1_DiemAccount_key_rotation_capability_address">DiemAccount::key_rotation_capability_address</a>(to_recover);
     <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(recovery_address, to_recover_address) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
@@ -430,8 +427,7 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address</code> belo
 <pre><code><b>schema</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_AddRotationCapabilityEnsures">AddRotationCapabilityEnsures</a> {
     to_recover: KeyRotationCapability;
     recovery_address: address;
-    <a name="0x1_RecoveryAddress_num_rotation_caps$9"></a>
-    <b>let</b> num_rotation_caps = len(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address));
+    <b>let</b> post num_rotation_caps = len(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address));
     <b>ensures</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[num_rotation_caps - 1] == to_recover;
 }
 </code></pre>

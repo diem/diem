@@ -1,0 +1,66 @@
+Move prover returns: exiting with boogie verification errors
+error: function does not abort under this condition
+
+    ┌── tests/sources/functional/let.move:76:9 ───
+    │
+ 76 │         aborts_if sum != 0;
+    │         ^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/let.move:68: spec_let_with_abort_incorrect
+    =     at tests/sources/functional/let.move:74
+    =         `let sum = a + b;` = <redacted>
+    =     at tests/sources/functional/let.move:75
+    =         `let product = a * b;` = <redacted>
+    =     at tests/sources/functional/let.move:68: spec_let_with_abort_incorrect
+    =         a = <redacted>
+    =         b = <redacted>
+    =     at tests/sources/functional/let.move:69: spec_let_with_abort_incorrect
+    =         saved_a = <redacted>
+    =     at tests/sources/functional/let.move:70: spec_let_with_abort_incorrect
+    =     at tests/sources/functional/let.move:71: spec_let_with_abort_incorrect
+    =         a = <redacted>
+    =         b = <redacted>
+    =     at tests/sources/functional/let.move:72: spec_let_with_abort_incorrect
+    =     at tests/sources/functional/let.move:79
+    =         `let post new_a = old(a) / sum;` = <redacted>
+    =     at tests/sources/functional/let.move:76
+    =         `aborts_if sum != 0;` = <redacted>
+
+error: abort not covered by any of the `aborts_if` clauses
+
+    ┌── tests/sources/functional/let.move:73:5 ───
+    │
+ 73 │ ╭     spec fun spec_let_with_abort_incorrect {
+ 74 │ │         let sum = a + b;
+ 75 │ │         let product = a * b;
+ 76 │ │         aborts_if sum != 0;
+ 77 │ │         aborts_if sum >= MAX_U64;
+ 78 │ │         aborts_if product >= MAX_U64;
+ 79 │ │         let post new_a = old(a) / sum;
+ 80 │ │         ensures a == new_a;
+ 81 │ │         ensures b == product;
+ 82 │ │     }
+    │ ╰─────^
+    ·
+ 70 │         *a = *a / (*a + *b);
+    │                 - abort happened here with execution failure
+    │
+    =     at tests/sources/functional/let.move:68: spec_let_with_abort_incorrect
+    =     at tests/sources/functional/let.move:74
+    =         `let sum = a + b;` = <redacted>
+    =     at tests/sources/functional/let.move:75
+    =         `let product = a * b;` = <redacted>
+    =     at tests/sources/functional/let.move:68: spec_let_with_abort_incorrect
+    =         a = <redacted>
+    =         b = <redacted>
+    =     at tests/sources/functional/let.move:69: spec_let_with_abort_incorrect
+    =         saved_a = <redacted>
+    =     at tests/sources/functional/let.move:70: spec_let_with_abort_incorrect
+    =     at tests/sources/functional/let.move:70: spec_let_with_abort_incorrect
+    =         ABORTED
+    =     at tests/sources/functional/let.move:76
+    =         `aborts_if sum != 0;` = <redacted>
+    =     at tests/sources/functional/let.move:77
+    =         `aborts_if sum >= MAX_U64;` = <redacted>
+    =     at tests/sources/functional/let.move:78
+    =         `aborts_if product >= MAX_U64;` = <redacted>

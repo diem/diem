@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proved
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
 
     ┌── tests/sources/functional/inconsistency.move:48:5 ───
     │
@@ -9,7 +9,7 @@ error: there is an inconsistent assumption in the function, which may allow any 
     │ ╰─────^
     │
 
-error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proved
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
 
     ┌── tests/sources/functional/inconsistency.move:16:5 ───
     │
@@ -22,7 +22,7 @@ error: there is an inconsistent assumption in the function, which may allow any 
     │ ╰─────^
     │
 
-error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proved
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
 
     ┌── tests/sources/functional/inconsistency.move:39:5 ───
     │

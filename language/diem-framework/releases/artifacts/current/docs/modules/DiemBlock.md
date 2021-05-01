@@ -286,9 +286,7 @@ The runtime always runs this before executing the transactions in a block.
     timestamp: u64;
     previous_block_votes: vector&lt;address&gt;;
     proposer: address;
-    <a name="0x1_DiemBlock_handle$4"></a>
     <b>let</b> handle = <b>global</b>&lt;<a href="DiemBlock.md#0x1_DiemBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).new_block_events;
-    <a name="0x1_DiemBlock_msg$5"></a>
     <b>let</b> msg = <a href="DiemBlock.md#0x1_DiemBlock_NewBlockEvent">NewBlockEvent</a> {
         round,
         proposer,

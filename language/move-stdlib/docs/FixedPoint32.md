@@ -432,11 +432,8 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 <pre><code><b>schema</b> <a href="FixedPoint32.md#0x1_FixedPoint32_ConcreteCreateFromRationalAbortsIf">ConcreteCreateFromRationalAbortsIf</a> {
     numerator: u64;
     denominator: u64;
-    <a name="0x1_FixedPoint32_scaled_numerator$12"></a>
     <b>let</b> scaled_numerator = numerator &lt;&lt; 64;
-    <a name="0x1_FixedPoint32_scaled_denominator$13"></a>
     <b>let</b> scaled_denominator = denominator &lt;&lt; 32;
-    <a name="0x1_FixedPoint32_quotient$14"></a>
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
     <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
     <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;

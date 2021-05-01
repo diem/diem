@@ -189,7 +189,7 @@ module Option {
     spec fun destroy_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (is_some(old(t))) borrow(old(t)) else default);
+        ensures result == (if (is_some(t)) borrow(t) else default);
     }
 
     /// Unpack `t` and return its contents
@@ -204,7 +204,7 @@ module Option {
     spec fun destroy_some {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == borrow(old(t));
+        ensures result == borrow(t);
     }
 
     /// Unpack `t`

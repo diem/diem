@@ -81,6 +81,7 @@ pub fn run_model_builder(
         let fsrc = &files[fname];
         env.add_source(fname, fsrc, dep_sources.contains(fname));
     }
+
     // Add any documentation comments found by the Move compiler to the env.
     for (fname, documentation) in comment_map {
         let file_id = env.get_file_id(fname).expect("file name defined");

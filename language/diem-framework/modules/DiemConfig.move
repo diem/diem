@@ -82,9 +82,9 @@ module DiemConfig {
     }
     spec schema InitializeEnsures {
         ensures spec_has_config();
-        let new_config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        ensures new_config.epoch == 0;
-        ensures new_config.last_reconfiguration_time == 0;
+        let post post_config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        ensures post_config.epoch == 0;
+        ensures post_config.last_reconfiguration_time == 0;
     }
 
 
@@ -327,21 +327,22 @@ module DiemConfig {
         modifies global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures old(spec_has_config()) == spec_has_config();
         let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let post post_config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         let now = DiemTimestamp::spec_now_microseconds();
-        let epoch = config.epoch;
+        let post post_now = DiemTimestamp::spec_now_microseconds();
 
         include !spec_reconfigure_omitted() || (config.last_reconfiguration_time == now)
             ==> InternalReconfigureAbortsIf && ReconfigureAbortsIf;
 
-        ensures spec_reconfigure_omitted() || (old(config).last_reconfiguration_time == now)
-            ==> config == old(config);
+        ensures spec_reconfigure_omitted() || (config.last_reconfiguration_time == now)
+            ==> post_config == config;
 
         ensures !(spec_reconfigure_omitted() || (config.last_reconfiguration_time == now))
-            ==> config ==
+            ==> post_config ==
                 update_field(
-                update_field(old(config),
-                    epoch, old(config.epoch) + 1),
-                    last_reconfiguration_time, now);
+                update_field(config,
+                    epoch, config.epoch + 1),
+                    last_reconfiguration_time, post_now);
         include ReconfigureEmits;
     }
     /// The following schema describes aborts conditions which we do not want to be propagated to the verification
@@ -367,12 +368,13 @@ module DiemConfig {
     }
     spec schema ReconfigureEmits {
         let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        let now = DiemTimestamp::spec_now_microseconds();
-        let msg = NewEpochEvent {
-            epoch: config.epoch,
+        let post post_config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let post now = DiemTimestamp::spec_now_microseconds();
+        let post msg = NewEpochEvent {
+            epoch: post_config.epoch,
         };
         let handle = config.events;
-        emits msg to handle if (!spec_reconfigure_omitted() && now != old(config).last_reconfiguration_time);
+        emits msg to handle if (!spec_reconfigure_omitted() && now != config.last_reconfiguration_time);
     }
 
     /// Emit a `NewEpochEvent` event. This function will be invoked by genesis directly to generate the very first
@@ -391,9 +393,9 @@ module DiemConfig {
         );
     }
     spec fun emit_genesis_reconfiguration_event {
-        let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        let handle = config.events;
-        let msg = NewEpochEvent {
+        let post config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let post handle = config.events;
+        let post msg = NewEpochEvent {
                 epoch: config.epoch,
         };
         emits msg to handle;

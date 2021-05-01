@@ -14,6 +14,20 @@ error: `old(..)` expression not allowed in this context
     │               ^^^^^^
     │
 
+error: invalid reference to post state
+
+    ┌── tests/sources/invariants_err.move:11:5 ───
+    │
+ 11 │     invariant old(x) > 0;
+    │     ^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 11 │     invariant old(x) > 0;
+    │     --------------------- not allowed to refer to post state
+    ·
+ 11 │     invariant old(x) > 0;
+    │               ------ expression referring to post state
+    │
+
 error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
 
     ┌── tests/sources/invariants_err.move:13:5 ───

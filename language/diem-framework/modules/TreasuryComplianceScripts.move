@@ -81,13 +81,18 @@ module TreasuryComplianceScripts {
         let total_preburn_value = global<Diem::CurrencyInfo<Token>>(
             CoreAddresses::CURRENCY_INFO_ADDRESS()
         ).preburn_value;
+        let post post_total_preburn_value = global<Diem::CurrencyInfo<Token>>(
+            CoreAddresses::CURRENCY_INFO_ADDRESS()
+        ).preburn_value;
+
         let balance_at_addr = DiemAccount::balance<Token>(preburn_address);
+        let post post_balance_at_addr = DiemAccount::balance<Token>(preburn_address);
 
         /// The total value of preburn for `Token` should decrease by the preburned amount.
-        ensures total_preburn_value == old(total_preburn_value) - amount;
+        ensures post_total_preburn_value == total_preburn_value - amount;
 
         /// The balance of `Token` at `preburn_address` should increase by the preburned amount.
-        ensures balance_at_addr == old(balance_at_addr) + amount;
+        ensures post_balance_at_addr == balance_at_addr + amount;
 
         include Diem::CancelBurnWithCapEmits<Token>;
         include DiemAccount::DepositEmits<Token>{

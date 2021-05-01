@@ -321,10 +321,9 @@ Publishes <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configurati
 
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_InitializeEnsures">InitializeEnsures</a> {
     <b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
-    <a name="0x1_DiemConfig_new_config$16"></a>
-    <b>let</b> new_config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <b>ensures</b> new_config.epoch == 0;
-    <b>ensures</b> new_config.last_reconfiguration_time == 0;
+    <b>let</b> post post_config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+    <b>ensures</b> post_config.epoch == 0;
+    <b>ensures</b> post_config.last_reconfiguration_time == 0;
 }
 </code></pre>
 
@@ -885,22 +884,20 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 <pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>ensures</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>()) == <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
-<a name="0x1_DiemConfig_config$25"></a>
 <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-<a name="0x1_DiemConfig_now$26"></a>
+<b>let</b> post post_config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
-<a name="0x1_DiemConfig_epoch$27"></a>
-<b>let</b> epoch = config.epoch;
+<b>let</b> post post_now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
 <b>include</b> !<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now)
     ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> && <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
-<b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (<b>old</b>(config).last_reconfiguration_time == now)
-    ==&gt; config == <b>old</b>(config);
+<b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now)
+    ==&gt; post_config == config;
 <b>ensures</b> !(<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now))
-    ==&gt; config ==
+    ==&gt; post_config ==
         update_field(
-        update_field(<b>old</b>(config),
-            epoch, <b>old</b>(config.epoch) + 1),
-            last_reconfiguration_time, now);
+        update_field(config,
+            epoch, config.epoch + 1),
+            last_reconfiguration_time, post_now);
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">ReconfigureEmits</a>;
 </code></pre>
 
@@ -913,12 +910,8 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
 <a name="0x1_DiemConfig_InternalReconfigureAbortsIf"></a>
 
 
-<a name="0x1_DiemConfig_config$19"></a>
-
-
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> {
     <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <a name="0x1_DiemConfig_current_time$20"></a>
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
     <b>aborts_if</b> [concrete] current_time &lt; config.last_reconfiguration_time <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> [concrete] config.epoch == <a href="DiemConfig.md#0x1_DiemConfig_MAX_U64">MAX_U64</a>
@@ -933,12 +926,8 @@ This schema is to be used by callers of <code>reconfigure</code>
 <a name="0x1_DiemConfig_ReconfigureAbortsIf"></a>
 
 
-<a name="0x1_DiemConfig_config$17"></a>
-
-
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a> {
     <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <a name="0x1_DiemConfig_current_time$18"></a>
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
     <b>aborts_if</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>()
         && <a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>()
@@ -955,20 +944,15 @@ This schema is to be used by callers of <code>reconfigure</code>
 <a name="0x1_DiemConfig_ReconfigureEmits"></a>
 
 
-<a name="0x1_DiemConfig_config$21"></a>
-
-
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">ReconfigureEmits</a> {
     <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <a name="0x1_DiemConfig_now$22"></a>
-    <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
-    <a name="0x1_DiemConfig_msg$23"></a>
-    <b>let</b> msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
-        epoch: config.epoch,
+    <b>let</b> post post_config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+    <b>let</b> post now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
+    <b>let</b> post msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
+        epoch: post_config.epoch,
     };
-    <a name="0x1_DiemConfig_handle$24"></a>
     <b>let</b> handle = config.events;
-    emits msg <b>to</b> handle <b>if</b> (!<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() && now != <b>old</b>(config).last_reconfiguration_time);
+    emits msg <b>to</b> handle <b>if</b> (!<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() && now != config.last_reconfiguration_time);
 }
 </code></pre>
 
@@ -1017,14 +1001,9 @@ reconfiguration event.
 
 
 
-<a name="0x1_DiemConfig_config$28"></a>
-
-
-<pre><code><b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-<a name="0x1_DiemConfig_handle$29"></a>
-<b>let</b> handle = config.events;
-<a name="0x1_DiemConfig_msg$30"></a>
-<b>let</b> msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
+<pre><code><b>let</b> post config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>let</b> post handle = config.events;
+<b>let</b> post msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
         epoch: config.epoch,
 };
 emits msg <b>to</b> handle;

@@ -23,7 +23,12 @@ fn main() {
 fn run() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
     let options = Options::create_from_args(&args)?;
+    let color = if atty::is(atty::Stream::Stderr) && atty::is(atty::Stream::Stdout) {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    };
     options.setup_logging();
-    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+    let mut error_writer = StandardStream::stderr(color);
     run_move_prover(&mut error_writer, options)
 }

@@ -265,10 +265,10 @@ Deposit <code>coin</code> into the transaction fees bucket
 
 <pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
 <b>aborts_if</b> !<a href="TransactionFee.md#0x1_TransactionFee_is_coin_initialized">is_coin_initialized</a>&lt;CoinType&gt;() <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<a name="0x1_TransactionFee_fees$8"></a>
 <b>let</b> fees = <a href="TransactionFee.md#0x1_TransactionFee_spec_transaction_fee">spec_transaction_fee</a>&lt;CoinType&gt;().balance;
+<b>let</b> post post_fees = <a href="TransactionFee.md#0x1_TransactionFee_spec_transaction_fee">spec_transaction_fee</a>&lt;CoinType&gt;().balance;
 <b>include</b> <a href="Diem.md#0x1_Diem_DepositAbortsIf">Diem::DepositAbortsIf</a>&lt;CoinType&gt;{coin: fees, check: coin};
-<b>ensures</b> fees.value == <b>old</b>(fees.value) + coin.value;
+<b>ensures</b> post_fees.value == fees.value + coin.value;
 </code></pre>
 
 
@@ -394,7 +394,6 @@ Must abort if the account does not have BurnCapability [[H3]][PERMISSION].
 
 <pre><code><b>schema</b> <a href="TransactionFee.md#0x1_TransactionFee_BurnFeesNotXDX">BurnFeesNotXDX</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Diem.md#0x1_Diem_AbortsIfNoBurnCapability">Diem::AbortsIfNoBurnCapability</a>&lt;CoinType&gt;{account: tc_account};
-    <a name="0x1_TransactionFee_fees$7"></a>
     <b>let</b> fees = <a href="TransactionFee.md#0x1_TransactionFee_spec_transaction_fee">spec_transaction_fee</a>&lt;CoinType&gt;();
     <b>include</b> <a href="Diem.md#0x1_Diem_BurnNowAbortsIf">Diem::BurnNowAbortsIf</a>&lt;CoinType&gt;{coin: fees.balance, preburn: fees.preburn};
 }

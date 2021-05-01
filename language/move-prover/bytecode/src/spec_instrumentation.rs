@@ -34,7 +34,10 @@ use move_model::{
     model::NodeId,
     spec_translator::{SpecTranslator, TranslatedSpec},
 };
-use std::collections::BTreeMap;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
@@ -163,12 +166,41 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
     fn name(&self) -> String {
         "spec_instrumenter".to_string()
     }
+
+    fn dump_result(
+        &self,
+        f: &mut fmt::Formatter,
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+    ) -> fmt::Result {
+        writeln!(f, "\n\n==== spec-instrumenter input specs ====\n")?;
+        for ref module in env.get_modules() {
+            if !module.is_target() {
+                continue;
+            }
+            for ref fun in module.get_functions() {
+                for (variant, target) in targets.get_targets(fun) {
+                    let spec = target.get_spec();
+                    if !spec.conditions.is_empty() {
+                        writeln!(
+                            f,
+                            "fun {}[{}[\n{}",
+                            fun.get_full_name_str(),
+                            variant,
+                            fun.module_env.env.display(spec)
+                        )?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 struct Instrumenter<'a> {
-    _options: &'a ProverOptions,
+    options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
-    spec: TranslatedSpec,
     ret_locals: Vec<TempIndex>,
     ret_label: Label,
     can_return: bool,
@@ -207,6 +239,8 @@ impl<'a> Instrumenter<'a> {
         // Translate the specification. This deals with elimination of `old(..)` expressions,
         // as well as replaces `result_n` references with `ret_locals`.
         let spec = SpecTranslator::translate_fun_spec(
+            options.auto_trace_level.verified_functions() && builder.data.variant.is_verified()
+                || options.auto_trace_level.functions(),
             false,
             &mut builder,
             fun_env,
@@ -217,9 +251,8 @@ impl<'a> Instrumenter<'a> {
 
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
-            _options: options,
+            options,
             builder,
-            spec,
             ret_locals,
             ret_label,
             can_return: false,
@@ -227,7 +260,7 @@ impl<'a> Instrumenter<'a> {
             abort_label,
             can_abort: false,
         };
-        instrumenter.instrument();
+        instrumenter.instrument(&spec);
 
         // Run copy propagation (reaching definitions) and then assignment
         // elimination (live vars). This cleans up some redundancy created by
@@ -243,7 +276,7 @@ impl<'a> Instrumenter<'a> {
         self.builder.data.variant.is_verified()
     }
 
-    fn instrument(&mut self) {
+    fn instrument(&mut self, spec: &TranslatedSpec) {
         use Bytecode::*;
         use PropKind::*;
 
@@ -285,47 +318,64 @@ impl<'a> Instrumenter<'a> {
             }
         }
 
+        // Emit `let` bindings.
+        self.emit_lets(spec, &[], false);
+
         // Inject preconditions as assumes. This is done for all self.variant values.
         self.builder
             .set_loc(self.builder.fun_env.get_loc().at_start()); // reset to function level
-        for (loc, exp) in self.spec.pre_conditions(&self.builder) {
+        for (loc, exp) in spec.pre_conditions(&self.builder) {
             self.builder.set_loc(loc);
             self.builder
                 .emit_with(move |attr_id| Prop(attr_id, Assume, exp))
         }
 
         if self.is_verified() {
+            // Inject 'CanModify' assumptions for this function.
+            for (loc, exp) in &spec.modifies {
+                let struct_ty = self.builder.global_env().get_node_type(exp.node_id());
+                self.generate_modifies_check(
+                    PropKind::Assume,
+                    spec,
+                    loc,
+                    &[],
+                    &struct_ty,
+                    exp,
+                    exp.call_args()[0].to_owned(),
+                );
+            }
+
             // For the verification variant, we generate post-conditions. Inject any state
             // save instructions needed for this.
-            for (mem, label) in &self.spec.saved_memory {
+            for (mem, label) in &spec.saved_memory {
                 let mem = mem.clone();
                 self.builder
                     .emit_with(|attr_id| SaveMem(attr_id, *label, mem));
             }
-            for (spec_var, label) in &self.spec.saved_spec_vars {
+            for (spec_var, label) in &spec.saved_spec_vars {
                 let spec_var = spec_var.clone();
                 self.builder
                     .emit_with(|attr_id| SaveSpecVar(attr_id, *label, spec_var));
             }
-            let saved_params = self.spec.saved_params.clone();
+            let saved_params = spec.saved_params.clone();
             self.emit_save_for_old(&saved_params);
         }
 
         // Instrument and generate new code
         for bc in old_code {
-            self.instrument_bytecode(bc);
+            self.instrument_bytecode(spec, bc);
         }
 
         // Generate return and abort blocks
         if self.can_return {
-            self.generate_return_block();
+            self.generate_return_block(spec);
         }
         if self.can_abort {
-            self.generate_abort_block();
+            self.generate_abort_block(spec);
         }
     }
 
-    fn instrument_bytecode(&mut self, bc: Bytecode) {
+    fn instrument_bytecode(&mut self, spec: &TranslatedSpec, bc: Bytecode) {
         use Bytecode::*;
         use Operation::*;
 
@@ -337,19 +387,25 @@ impl<'a> Instrumenter<'a> {
             | Call(id, _, MoveFrom(mid, sid, targs), srcs, _) => {
                 let addr_exp = self.builder.mk_temporary(srcs[0]);
                 self.generate_modifies_check(
+                    PropKind::Assert,
+                    spec,
                     &self.builder.get_loc(*id),
-                    mid.qualified(*sid),
-                    targs,
+                    &[],
+                    &Type::Struct(*mid, *sid, targs.to_owned()),
                     &addr_exp,
+                    addr_exp.clone(),
                 );
             }
             Call(id, _, MoveTo(mid, sid, targs), srcs, _) => {
                 let addr_exp = self.builder.mk_temporary(srcs[1]);
                 self.generate_modifies_check(
+                    PropKind::Assert,
+                    spec,
                     &self.builder.get_loc(*id),
-                    mid.qualified(*sid),
-                    targs,
+                    &[],
+                    &Type::Struct(*mid, *sid, targs.to_owned()),
                     &addr_exp,
+                    addr_exp.clone(),
                 );
             }
             _ => {}
@@ -412,6 +468,7 @@ impl<'a> Instrumenter<'a> {
         let callee_env = env.get_module(mid).into_function(fid);
         let callee_opaque = callee_env.is_opaque();
         let mut callee_spec = SpecTranslator::translate_fun_spec(
+            self.options.auto_trace_level.functions(),
             true,
             &mut self.builder,
             &callee_env,
@@ -421,7 +478,6 @@ impl<'a> Instrumenter<'a> {
         );
 
         self.builder.set_loc_from_attr(id);
-
         let opaque_display = if callee_opaque {
             // Add a debug comment about the original function call to easier identify
             // the opaque call in dumped bytecode.
@@ -442,20 +498,20 @@ impl<'a> Instrumenter<'a> {
         } else {
             None
         };
-        // Emit all expression debug traces.
-        for (node_id, exp) in std::mem::take(&mut callee_spec.debug_traces) {
-            let exp = self.instantiate_exp(exp, targs);
-            let temp = self.builder.emit_let(exp).0;
 
-            self.builder
-                .emit_with(|id| Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None));
-        }
+        // Emit `let` assignments.
+        self.emit_lets(&callee_spec, targs, false);
+        self.builder.set_loc_from_attr(id);
+
         // Emit pre conditions if this is the verification variant or if the callee
         // is opaque. For inlined callees outside of verification entry points, we skip
         // emitting any pre-conditions because they are assumed already at entry into the
         // function.
         if self.is_verified() || callee_opaque {
             for (loc, cond) in callee_spec.pre_conditions(&self.builder) {
+                // Note we need to emit this before type instantiations, because
+                // the node_ids in the TranslatedSpec are for the generic version.
+                self.emit_traces(&callee_spec, targs, &cond);
                 let cond = self.instantiate_exp(cond, targs);
                 // Determine whether we want to emit this as an assertion or an assumption.
                 let prop_kind = match self.builder.data.variant {
@@ -475,12 +531,18 @@ impl<'a> Instrumenter<'a> {
         // verified.
         if self.is_verified() {
             let loc = self.builder.get_loc(id);
-            for (_, cond) in &callee_spec.modifies {
-                let cond = &self.instantiate_exp(cond.clone(), targs);
-                let env = self.builder.global_env();
-                let rty = &env.get_node_instantiation(cond.node_id())[0];
-                let (mid, sid, targs) = rty.require_struct();
-                self.generate_modifies_check(&loc, mid.qualified(sid), targs, &cond.call_args()[0]);
+            for (_, exp) in &callee_spec.modifies {
+                let rty = env.get_node_type(exp.node_id()).instantiate(targs);
+                let new_addr = self.instantiate_exp(exp.call_args()[0].clone(), targs);
+                self.generate_modifies_check(
+                    PropKind::Assert,
+                    &callee_spec,
+                    &loc,
+                    targs,
+                    &rty,
+                    exp,
+                    new_addr,
+                );
             }
         }
 
@@ -529,6 +591,7 @@ impl<'a> Instrumenter<'a> {
                     .emit_with(|id| Branch(id, abort_here_label, no_abort_label, abort_cond_temp));
                 self.builder.emit_with(|id| Label(id, abort_here_label));
                 if let Some(cond) = code_cond {
+                    self.emit_traces(&callee_spec, targs, &cond);
                     self.builder.emit_with(move |id| Prop(id, Assume, cond));
                 }
                 self.builder.emit_with(move |id| {
@@ -550,9 +613,10 @@ impl<'a> Instrumenter<'a> {
             }
 
             // Emit modifies properties which havoc memory at the modified location.
-            for (_, modifies) in std::mem::take(&mut callee_spec.modifies) {
-                let modifies = self.instantiate_exp(modifies, targs);
-                self.builder.emit_with(|id| Prop(id, Modifies, modifies));
+            for (_, exp) in std::mem::take(&mut callee_spec.modifies) {
+                self.emit_traces(&callee_spec, targs, &exp);
+                let exp = self.instantiate_exp(exp, targs);
+                self.builder.emit_with(|id| Prop(id, Modifies, exp));
             }
 
             // Havoc all &mut parameters, their post-value are to be determined by the post
@@ -597,14 +661,23 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(move |id| Prop(id, Assume, exp));
             }
 
+            // Emit `let update` assignments.
+            self.emit_lets(&callee_spec, targs, true);
+
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
+                self.emit_traces(&callee_spec, targs, &cond);
                 let cond = self.instantiate_exp(cond, targs);
                 self.builder.emit_with(|id| Prop(id, Assume, cond));
             }
 
             // Emit the events in the `emits` specs of the callee.
             for (_, msg, handle, cond) in std::mem::take(&mut callee_spec.emits) {
+                self.emit_traces(&callee_spec, targs, &msg);
+                self.emit_traces(&callee_spec, targs, &handle);
+                if let Some(c) = &cond {
+                    self.emit_traces(&callee_spec, targs, c);
+                }
                 let msg = self.instantiate_exp(msg, targs);
                 let handle = self.instantiate_exp(handle, targs);
                 let cond = cond.map(|e| self.instantiate_exp(e, targs));
@@ -658,7 +731,49 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    fn generate_abort_block(&mut self) {
+    fn emit_lets(&mut self, spec: &TranslatedSpec, targs: &[Type], post_state: bool) {
+        use Bytecode::*;
+        let lets = spec
+            .lets
+            .iter()
+            .filter(|(_, is_post, ..)| *is_post == post_state);
+        for (loc, _, temp, exp) in lets {
+            self.emit_traces(spec, targs, &exp);
+            let exp = self.instantiate_exp(exp.to_owned(), targs);
+            self.builder.set_loc(loc.to_owned());
+            let assign = self
+                .builder
+                .mk_identical(self.builder.mk_temporary(*temp), exp);
+            self.builder
+                .emit_with(|id| Prop(id, PropKind::Assume, assign));
+        }
+    }
+
+    /// Emit traces which are related to the `emitted_exp`.
+    fn emit_traces(&mut self, spec: &TranslatedSpec, targs: &[Type], emitted_exp: &Exp) {
+        use Bytecode::*;
+        // Collect all node_ids from the expression which is emitted and select those traces
+        // from the spec which have those ids.
+        let node_ids = emitted_exp.node_ids().into_iter().collect::<BTreeSet<_>>();
+        let traces = spec
+            .debug_traces
+            .iter()
+            .filter(|(_, exp)| node_ids.contains(&exp.node_id()));
+        for (node_id, exp) in traces {
+            let loc = self.builder.global_env().get_node_loc(*node_id);
+            self.builder.set_loc(loc);
+            let exp = self.instantiate_exp(exp.to_owned(), targs);
+            let temp = if let Exp::Temporary(_, temp) = &exp {
+                *temp
+            } else {
+                self.builder.emit_let(exp).0
+            };
+            self.builder
+                .emit_with(|id| Call(id, vec![], Operation::TraceExp(*node_id), vec![temp], None));
+        }
+    }
+
+    fn generate_abort_block(&mut self, spec: &TranslatedSpec) {
         use Bytecode::*;
         // Set the location to the function and emit label.
         let fun_loc = self.builder.fun_env.get_loc().at_end();
@@ -667,7 +782,7 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Label(id, abort_label));
 
         if self.is_verified() {
-            self.generate_abort_verify();
+            self.generate_abort_verify(spec);
         }
 
         // Emit abort
@@ -676,7 +791,7 @@ impl<'a> Instrumenter<'a> {
     }
 
     /// Generates verification conditions for abort block.
-    fn generate_abort_verify(&mut self) {
+    fn generate_abort_verify(&mut self, spec: &TranslatedSpec) {
         use Bytecode::*;
         use PropKind::*;
 
@@ -687,18 +802,20 @@ impl<'a> Instrumenter<'a> {
 
         if !is_partial {
             // If not partial, emit an assertion for the overall aborts condition.
-            if let Some(cond) = self.spec.aborts_condition(&self.builder) {
+            if let Some(cond) = spec.aborts_condition(&self.builder) {
                 let loc = self.builder.fun_env.get_spec_loc();
+                self.emit_traces(spec, &[], &cond);
                 self.builder.set_loc_and_vc_info(loc, ABORT_NOT_COVERED);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond));
             }
         }
 
-        if self.spec.has_aborts_code_specs() {
+        if spec.has_aborts_code_specs() {
             // If any codes are specified, emit an assertion for the code condition.
             let actual_code = self.builder.mk_temporary(self.abort_local);
-            if let Some(code_cond) = self.spec.aborts_code_condition(&self.builder, &actual_code) {
+            if let Some(code_cond) = spec.aborts_code_condition(&self.builder, &actual_code) {
                 let loc = self.builder.fun_env.get_spec_loc();
+                self.emit_traces(spec, &[], &code_cond);
                 self.builder
                     .set_loc_and_vc_info(loc, ABORTS_CODE_NOT_COVERED);
                 self.builder
@@ -744,7 +861,7 @@ impl<'a> Instrumenter<'a> {
         (Some(aborts_cond_temp), aborts_code_cond)
     }
 
-    fn generate_return_block(&mut self) {
+    fn generate_return_block(&mut self, spec: &TranslatedSpec) {
         use Bytecode::*;
         use PropKind::*;
 
@@ -755,23 +872,21 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Label(id, ret_label));
 
         if self.is_verified() {
-            // Emit all expression debug traces.
-            for (node_id, exp) in std::mem::take(&mut self.spec.debug_traces) {
-                let temp = self.builder.emit_let(exp).0;
-                self.builder.emit_with(|id| {
-                    Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None)
-                });
-            }
+            // Emit `let` bindings.
+            self.emit_lets(spec, &[], true);
+
             // Emit the negation of all aborts conditions.
-            for (loc, abort_cond, _) in &self.spec.aborts {
+            for (loc, abort_cond, _) in &spec.aborts {
+                self.emit_traces(spec, &[], abort_cond);
+                let exp = self.builder.mk_not(abort_cond.clone());
                 self.builder
                     .set_loc_and_vc_info(loc.clone(), ABORTS_IF_FAILS_MESSAGE);
-                let exp = self.builder.mk_not(abort_cond.clone());
                 self.builder.emit_with(|id| Prop(id, Assert, exp))
             }
 
             // Emit all post-conditions which must hold as we do not abort.
-            for (loc, cond) in &self.spec.post {
+            for (loc, cond) in &spec.post {
+                self.emit_traces(spec, &[], cond);
                 self.builder
                     .set_loc_and_vc_info(loc.clone(), ENSURES_FAILS_MESSAGE);
                 self.builder
@@ -779,7 +894,8 @@ impl<'a> Instrumenter<'a> {
             }
 
             // Emit all event `emits` checks.
-            for (loc, cond) in self.spec.emits_conditions(&self.builder) {
+            for (loc, cond) in spec.emits_conditions(&self.builder) {
+                self.emit_traces(spec, &[], &cond);
                 self.builder.set_loc_and_vc_info(loc, EMITS_FAILS_MESSAGE);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond))
             }
@@ -792,12 +908,13 @@ impl<'a> Instrumenter<'a> {
                 .builder
                 .fun_env
                 .is_pragma_true(EMITS_IS_STRICT_PRAGMA, || false);
-            if (!self.spec.emits.is_empty() && !emits_is_partial)
-                || (self.spec.emits.is_empty() && emits_is_strict)
+            if (!spec.emits.is_empty() && !emits_is_partial)
+                || (spec.emits.is_empty() && emits_is_strict)
             {
                 // If not partial, emit an assertion for the completeness of the emits specs.
-                let cond = self.spec.emits_completeness_condition(&self.builder);
+                let cond = spec.emits_completeness_condition(&self.builder);
                 let loc = self.builder.fun_env.get_spec_loc();
+                self.emit_traces(spec, &[], &cond);
                 self.builder.set_loc_and_vc_info(loc, EMITS_NOT_COVERED);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond));
             }
@@ -823,24 +940,37 @@ impl<'a> Instrumenter<'a> {
     /// (a) the target constraints the given memory (b) the target is the verification variant.
     fn generate_modifies_check(
         &mut self,
+        kind: PropKind,
+        spec: &TranslatedSpec,
         loc: &Loc,
-        memory: QualifiedId<StructId>,
-        type_args: &[Type],
-        addr: &Exp,
+        targs: &[Type],
+        resource_type: &Type,
+        original_exp: &Exp, // this contains the right node ids for tracing
+        addr: Exp,
     ) {
         let target = self.builder.get_target();
-        if self.is_verified() && target.get_modify_targets_for_type(&memory).is_some() {
+        let (mid, sid, _) = resource_type.require_struct();
+        if self.is_verified()
+            && target
+                .get_modify_targets_for_type(&mid.qualified(sid))
+                .is_some()
+        {
+            self.emit_traces(spec, targs, original_exp);
             let env = self.builder.global_env();
-            self.builder.set_loc_and_vc_info(
-                loc.clone(),
-                &modify_check_fails_message(env, memory, type_args),
-            );
             let node_id = env.new_node(loc.clone(), BOOL_TYPE.clone());
-            let rty = Type::Struct(memory.module_id, memory.id, type_args.to_vec());
-            env.set_node_instantiation(node_id, vec![rty]);
-            let can_modify = Exp::Call(node_id, ast::Operation::CanModify, vec![addr.clone()]);
+            env.set_node_instantiation(node_id, vec![resource_type.to_owned()]);
+            let can_modify = Exp::Call(node_id, ast::Operation::CanModify, vec![addr]);
+            if kind == PropKind::Assert {
+                let (mid, sid, inst) = resource_type.require_struct();
+                self.builder.set_loc_and_vc_info(
+                    loc.clone(),
+                    &modify_check_fails_message(env, mid.qualified(sid), inst),
+                );
+            } else {
+                self.builder.set_loc(loc.clone());
+            }
             self.builder
-                .emit_with(|id| Bytecode::Prop(id, PropKind::Assert, can_modify));
+                .emit_with(|id| Bytecode::Prop(id, kind, can_modify));
         }
     }
 

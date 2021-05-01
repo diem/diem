@@ -562,7 +562,6 @@ on-chain with the updated <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_
 };
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a>{validator_addr: validator_account};
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">DiemSystem::UpdateConfigAndReconfigureAbortsIf</a>{validator_addr: validator_account};
-<a name="0x1_ValidatorAdministrationScripts_is_validator_info_updated$6"></a>
 <b>let</b> is_validator_info_updated =
     (<b>exists</b> v_info in <a href="DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>():
         v_info.addr == validator_account
@@ -693,9 +692,6 @@ resource published under it. The sending <code>account</code> must be a Validato
 <details>
 <summary>Specification</summary>
 
-
-
-<a name="0x1_ValidatorAdministrationScripts_account_addr$7"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
@@ -830,9 +826,6 @@ the system is initiated by this script.
 <details>
 <summary>Specification</summary>
 
-
-
-<a name="0x1_ValidatorAdministrationScripts_account_addr$8"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);

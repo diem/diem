@@ -191,8 +191,8 @@ module DiemVMConfig {
         ensures DiemConfig::spec_is_published<DiemVMConfig>();
         ensures DiemConfig::get<DiemVMConfig>() == DiemVMConfig {
             gas_schedule: GasSchedule {
-                instruction_schedule: old(config).gas_schedule.instruction_schedule,
-                native_schedule: old(config).gas_schedule.native_schedule,
+                instruction_schedule: config.gas_schedule.instruction_schedule,
+                native_schedule: config.gas_schedule.native_schedule,
                 gas_constants: GasConstants {
                         global_memory_per_byte_cost,
                         global_memory_per_byte_write_cost,

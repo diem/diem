@@ -122,7 +122,7 @@ module AccountAdministrationScripts {
         };
 
         ensures RecoveryAddress::spec_get_rotation_caps(recovery_address)[
-            len(RecoveryAddress::spec_get_rotation_caps(recovery_address)) - 1] == old(rotation_cap);
+            len(RecoveryAddress::spec_get_rotation_caps(recovery_address)) - 1] == rotation_cap;
 
         aborts_with [check]
             Errors::INVALID_STATE,
@@ -586,7 +586,7 @@ module AccountAdministrationScripts {
 
         ensures RecoveryAddress::spec_is_recovery_address(account_addr);
         ensures len(RecoveryAddress::spec_get_rotation_caps(account_addr)) == 1;
-        ensures RecoveryAddress::spec_get_rotation_caps(account_addr)[0] == old(rotation_cap);
+        ensures RecoveryAddress::spec_get_rotation_caps(account_addr)[0] == rotation_cap;
 
         aborts_with [check]
             Errors::INVALID_STATE,

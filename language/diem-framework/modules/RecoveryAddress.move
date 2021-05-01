@@ -187,7 +187,7 @@ module RecoveryAddress {
     spec schema AddRotationCapabilityEnsures {
         to_recover: KeyRotationCapability;
         recovery_address: address;
-        let num_rotation_caps = len(spec_get_rotation_caps(recovery_address));
+        let post num_rotation_caps = len(spec_get_rotation_caps(recovery_address));
         ensures spec_get_rotation_caps(recovery_address)[num_rotation_caps - 1] == to_recover;
     }
 

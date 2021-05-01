@@ -1,3 +1,4 @@
+// flag: --trace
 module 0x42::TestLet {
 
     spec module {
@@ -22,36 +23,91 @@ module 0x42::TestLet {
     }
 
     fun spec_let_with_old(a: &mut u64, b: &mut u64) {
-        let saved_a = *a;
         *a = *a + 1 + *b;
-        *b = saved_a + *b;
+        *b = *a + *b;
     }
     spec fun spec_let_with_old {
-       let x = a + 1;
-       let y = x + b;
-       let r2 = a - 1;
-       ensures a == old(y); // y in the context of old accesses old a and b.
-       ensures b == r2;
+       let post new_a = old(a) + 1 + old(b);
+       let post new_b = a + old(b);
+       ensures a == new_a;
+       ensures b == new_b;
     }
 
-    fun spec_let_with_lambda(a: u64, b: u64): (u64, u64) {
-        (a + 1 + b, a + b)
+    fun spec_let_with_abort(a: &mut u64, b: &mut u64) {
+        let saved_a = *a;
+        *a = *a / (*a + *b);
+        *b = saved_a * *b;
     }
-    spec fun spec_let_with_lambda {
-        let add_to_a = |n| a + n;
-        let add_to_b = |n| b + n;
-        ensures result_1 == add_to_b(add_to_a(1));
-        ensures result_2 == result_1 - 1;
+    spec fun spec_let_with_abort {
+        pragma opaque;
+        let sum = a + b;
+        let product = a * b;
+        aborts_if sum == 0;
+        aborts_if sum > MAX_U64;
+        aborts_if product > MAX_U64;
+        let post new_a = old(a) / sum;
+        ensures a == new_a + sum - sum;
+        ensures b == product;
     }
 
-    fun spec_let_with_generic<T:copy + drop>(x: T, y: T): bool {
-        x == y
+    fun spec_let_with_abort_opaque_caller(a: &mut u64, b: &mut u64) {
+        spec_let_with_abort(a, b)
     }
-    spec fun spec_let_with_generic {
-        let equals_to_x = |z| x == z;
-        ensures result == equals_to_x(y);
+    spec fun spec_let_with_abort_opaque_caller {
+        // Same as the callee
+        let sum = a + b;
+        let product = a * b;
+        aborts_if sum == 0;
+        aborts_if sum > MAX_U64;
+        aborts_if product > MAX_U64;
+        let post new_a = old(a) / sum;
+        ensures a == new_a + sum - sum;
+        ensures b == product;
     }
 
+    fun spec_let_with_abort_incorrect(a: &mut u64, b: &mut u64) {
+        let saved_a = *a;
+        *a = *a / (*a + *b);
+        *b = saved_a * *b;
+    }
+    spec fun spec_let_with_abort_incorrect {
+        let sum = a + b;
+        let product = a * b;
+        aborts_if sum != 0;
+        aborts_if sum >= MAX_U64;
+        aborts_if product >= MAX_U64;
+        let post new_a = old(a) / sum;
+        ensures a == new_a;
+        ensures b == product;
+    }
+
+    fun spec_let_with_schema(a: &mut u64, b: &mut u64) {
+        let saved_a = *a;
+        *a = *a / (*a + *b);
+        *b = saved_a * *b;
+    }
+    spec fun spec_let_with_schema {
+        let sum = a + b;
+        let product = a * b;
+        aborts_if sum == 0;
+        aborts_if sum > MAX_U64;
+        aborts_if product > MAX_U64;
+        let post new_a = old(a) / sum;
+        include Ensures{actual: a, expected: new_a + sum - sum};
+        include Ensures{actual: b, expected: product};
+    }
+    spec schema Ensures {
+        actual: u64;
+        expected: u64;
+        let post a = expected;
+        let post b = actual;
+        include Ensures2{a: a, b: b};
+    }
+    spec schema Ensures2 {
+        a: u64;
+        b: u64;
+        ensures a == b;
+    }
 
     // Local Let
     // =========

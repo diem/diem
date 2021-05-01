@@ -18,9 +18,7 @@ module 0x42::TestVector {
     spec fun test_vector_equal {
         aborts_if false;
         ensures _v == _v;
-        ensures old(_v) == old(_v);
         ensures _v == _v[0..len(_v)];
-        ensures old(_v) == old(_v[0..len(_v)]);
         ensures _w == _w;
         ensures old(_w) == old(_w);
         ensures _w == _w[0..len(_w)];

@@ -10,16 +10,13 @@ error: unknown assertion failed
     =         a = <redacted>
     =         b = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
-    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
     =         length = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:59: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:60: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:62: nested_loop2
     =         i = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
-    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
     =         x = <redacted>
-    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
     =         y = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:66: nested_loop2
@@ -49,16 +46,13 @@ error: induction case of the loop invariant does not hold
     =         a = <redacted>
     =         b = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
-    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
     =         length = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:59: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:60: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:62: nested_loop2
     =         i = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
-    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
     =         x = <redacted>
-    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
     =         y = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:66: nested_loop2
@@ -75,9 +69,7 @@ error: induction case of the loop invariant does not hold
     =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
     =         i = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:86: nested_loop2
-    =     at tests/sources/functional/loops_with_memory_ops.move:89: nested_loop2
     =         x = <redacted>
-    =     at tests/sources/functional/loops_with_memory_ops.move:90: nested_loop2
     =     at tests/sources/functional/loops_with_memory_ops.move:90: nested_loop2
     =         y = <redacted>
     =     at tests/sources/functional/loops_with_memory_ops.move:67: nested_loop2

@@ -9,7 +9,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:71
     =     at tests/sources/functional/mono.move:70: vec_addr
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:70: vec_addr
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:71
 
@@ -23,7 +22,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:73
     =     at tests/sources/functional/mono.move:72: vec_bool
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:72: vec_bool
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:73
 
@@ -37,7 +35,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:69
     =     at tests/sources/functional/mono.move:68: vec_int
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:68: vec_int
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:69
 
@@ -51,7 +48,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:77
     =     at tests/sources/functional/mono.move:76: vec_struct_addr
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:76: vec_struct_addr
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:77
 
@@ -65,7 +61,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:75
     =     at tests/sources/functional/mono.move:74: vec_struct_int
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:74: vec_struct_int
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:75
 
@@ -79,8 +74,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/mono.move:82
     =     at tests/sources/functional/mono.move:79: vec_vec
     =         x = <redacted>
-    =     at tests/sources/functional/mono.move:80: vec_vec
-    =     at tests/sources/functional/mono.move:80: vec_vec
     =     at tests/sources/functional/mono.move:80: vec_vec
     =         result = <redacted>
     =     at tests/sources/functional/mono.move:81: vec_vec

@@ -837,9 +837,7 @@ This is emitted on the new Child VASPS's <code><a href="../../../../../releases/
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: parent_vasp};
-<a name="0x1_AccountCreationScripts_parent_addr$5"></a>
 <b>let</b> parent_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(parent_vasp);
-<a name="0x1_AccountCreationScripts_parent_cap$6"></a>
 <b>let</b> parent_cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(parent_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_CreateChildVASPAccountAbortsIf">DiemAccount::CreateChildVASPAccountAbortsIf</a>&lt;CoinType&gt;{
     parent: parent_vasp, new_account_address: child_address};
@@ -1688,15 +1686,13 @@ resource stored under the account at <code>recovery_address</code>.
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: to_recover_account};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>{account: to_recover_account};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityEnsures">DiemAccount::ExtractKeyRotationCapabilityEnsures</a>{account: to_recover_account};
-<a name="0x1_AccountAdministrationScripts_addr$10"></a>
 <b>let</b> addr = <a href="_spec_address_of">Signer::spec_address_of</a>(to_recover_account);
-<a name="0x1_AccountAdministrationScripts_rotation_cap$11"></a>
 <b>let</b> rotation_cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_AddRotationCapabilityAbortsIf">RecoveryAddress::AddRotationCapabilityAbortsIf</a>{
     to_recover: rotation_cap
 };
 <b>ensures</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(recovery_address)[
-    len(<a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(recovery_address)) - 1] == <b>old</b>(rotation_cap);
+    len(<a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(recovery_address)) - 1] == rotation_cap;
 <b>aborts_with</b> [check]
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
@@ -1874,10 +1870,8 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<a name="0x1_AccountAdministrationScripts_account_addr$12"></a>
 <b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
-<a name="0x1_AccountAdministrationScripts_key_rotation_capability$13"></a>
 <b>let</b> key_rotation_capability = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
@@ -1990,11 +1984,9 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<a name="0x1_AccountAdministrationScripts_account_addr$14"></a>
 <b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
-<a name="0x1_AccountAdministrationScripts_key_rotation_capability$15"></a>
 <b>let</b> key_rotation_capability = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
@@ -2108,11 +2100,9 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<a name="0x1_AccountAdministrationScripts_account_addr$16"></a>
 <b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ account: dr_account, seq_nonce: sliding_nonce };
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
-<a name="0x1_AccountAdministrationScripts_key_rotation_capability$17"></a>
 <b>let</b> key_rotation_capability = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
@@ -2249,9 +2239,6 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 The delegatee at the recovery address has to hold the key rotation capability for
 the address to recover. The address of the transaction signer has to be either
 the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
-
-
-<a name="0x1_AccountAdministrationScripts_account_addr$18"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
@@ -2547,9 +2534,7 @@ may be used as a recovery account for those accounts.
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityEnsures">DiemAccount::ExtractKeyRotationCapabilityEnsures</a>;
-<a name="0x1_AccountAdministrationScripts_account_addr$19"></a>
 <b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
-<a name="0x1_AccountAdministrationScripts_rotation_cap$20"></a>
 <b>let</b> rotation_cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_PublishAbortsIf">RecoveryAddress::PublishAbortsIf</a>{
     recovery_account: account,
@@ -2557,7 +2542,7 @@ may be used as a recovery account for those accounts.
 };
 <b>ensures</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">RecoveryAddress::spec_is_recovery_address</a>(account_addr);
 <b>ensures</b> len(<a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(account_addr)) == 1;
-<b>ensures</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(account_addr)[0] == <b>old</b>(rotation_cap);
+<b>ensures</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(account_addr)[0] == rotation_cap;
 <b>aborts_with</b> [check]
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
@@ -2708,9 +2693,7 @@ Successful execution of this script emits two events:
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: payer};
-<a name="0x1_PaymentScripts_payer_addr$1"></a>
 <b>let</b> payer_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(payer);
-<a name="0x1_PaymentScripts_cap$2"></a>
 <b>let</b> cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(payer_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: payer_addr};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">DiemAccount::PayFromAbortsIf</a>&lt;Currency&gt;{cap: cap};
@@ -3292,7 +3275,6 @@ on-chain with the updated <code><a href="../../../../../releases/artifacts/curre
 };
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a>{validator_addr: validator_account};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">DiemSystem::UpdateConfigAndReconfigureAbortsIf</a>{validator_addr: validator_account};
-<a name="0x1_ValidatorAdministrationScripts_is_validator_info_updated$6"></a>
 <b>let</b> is_validator_info_updated =
     (<b>exists</b> v_info in <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>():
         v_info.addr == validator_account
@@ -3423,9 +3405,6 @@ resource published under it. The sending <code>account</code> must be a Validato
 <details>
 <summary>Specification</summary>
 
-
-
-<a name="0x1_ValidatorAdministrationScripts_account_addr$7"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="_address_of">Signer::address_of</a>(account);
@@ -3560,9 +3539,6 @@ the system is initiated by this script.
 <details>
 <summary>Specification</summary>
 
-
-
-<a name="0x1_ValidatorAdministrationScripts_account_addr$8"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="_address_of">Signer::address_of</a>(account);
@@ -3737,26 +3713,28 @@ being <code>preburn_address</code>.
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_CancelBurnAbortsIf">DiemAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_CancelBurnWithCapEnsures">Diem::CancelBurnWithCapEnsures</a>&lt;Token&gt;;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_DepositEnsures">DiemAccount::DepositEnsures</a>&lt;Token&gt;{payee: preburn_address};
-<a name="0x1_TreasuryComplianceScripts_total_preburn_value$10"></a>
 <b>let</b> total_preburn_value = <b>global</b>&lt;<a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(
     <a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
 ).preburn_value;
-<a name="0x1_TreasuryComplianceScripts_balance_at_addr$11"></a>
+<b>let</b> post post_total_preburn_value = <b>global</b>&lt;<a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(
+    <a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
+).preburn_value;
 <b>let</b> balance_at_addr = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
+<b>let</b> post post_balance_at_addr = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
 </code></pre>
 
 
 The total value of preburn for <code>Token</code> should decrease by the preburned amount.
 
 
-<pre><code><b>ensures</b> total_preburn_value == <b>old</b>(total_preburn_value) - amount;
+<pre><code><b>ensures</b> post_total_preburn_value == total_preburn_value - amount;
 </code></pre>
 
 
 The balance of <code>Token</code> at <code>preburn_address</code> should increase by the preburned amount.
 
 
-<pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + amount;
+<pre><code><b>ensures</b> post_balance_at_addr == balance_at_addr + amount;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_CancelBurnWithCapEmits">Diem::CancelBurnWithCapEmits</a>&lt;Token&gt;;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_DepositEmits">DiemAccount::DepositEmits</a>&lt;Token&gt;{
     payer: preburn_address,
@@ -4015,9 +3993,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<a name="0x1_TreasuryComplianceScripts_account_addr$12"></a>
 <b>let</b> account_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
-<a name="0x1_TreasuryComplianceScripts_cap$13"></a>
 <b>let</b> cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(account_addr);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">DiemAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
@@ -4624,7 +4600,6 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
        numerator: new_exchange_rate_numerator,
        denominator: new_exchange_rate_denominator
 };
-<a name="0x1_TreasuryComplianceScripts_rate$14"></a>
 <b>let</b> rate = <a href="_spec_create_from_rational">FixedPoint32::spec_create_from_rational</a>(
         new_exchange_rate_numerator,
         new_exchange_rate_denominator
