@@ -244,6 +244,45 @@ fn fund_account() -> Result<()> {
 
 #[test]
 #[ignore]
+fn get_account_by_version() -> Result<()> {
+    let env = Environment::from_env();
+    let client = env.client();
+
+    let account = env.random_account();
+
+    // get_account(_) is like get_account_by_version(_, latest version). If we
+    // call get_account_by_version at the version get_account was fulfilled at,
+    // we should always get the same response.
+
+    let (account_view_1, state_1) = client.get_account(account.address())?.into_parts();
+    let account_view_2 = client
+        .get_account_by_version(account.address(), state_1.version)?
+        .into_inner();
+    assert_eq!(account_view_1, account_view_2);
+
+    env.coffer()
+        .fund(Currency::XUS, account.authentication_key(), 1000)?;
+
+    // The responses should still be the same after the account is created and funded.
+
+    let (account_view_3, state_3) = client.get_account(account.address())?.into_parts();
+    let account_view_4 = client
+        .get_account_by_version(account.address(), state_3.version)?
+        .into_inner();
+    assert_eq!(account_view_3, account_view_4);
+
+    // We should be able to look up the historical account state with get_account_by_version.
+
+    let account_view_5 = client
+        .get_account_by_version(account.address(), state_1.version)?
+        .into_inner();
+    assert_eq!(account_view_1, account_view_5);
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
 fn create_child_account() -> Result<()> {
     let env = Environment::from_env();
     let client = env.client();
