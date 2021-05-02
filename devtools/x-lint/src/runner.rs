@@ -239,7 +239,8 @@ impl<'cfg> LintEngine<'cfg> {
     // ---
 
     fn file_list(&self) -> Result<impl Iterator<Item = &'cfg Utf8Path> + 'cfg> {
-        let tracked_files = self.config.core.git_cli().tracked_files()?;
+        let git_cli = self.config.core.git_cli()?;
+        let tracked_files = git_cli.tracked_files()?;
         // TODO: make global exclusions configurable
         Ok(tracked_files
             .iter()

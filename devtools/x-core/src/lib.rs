@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 pub mod core_config;
 mod debug_ignore;
 mod errors;
-mod git;
+pub mod git;
 mod graph;
 mod workspace_subset;
 
@@ -29,7 +29,7 @@ pub struct XCoreContext {
     config: XCoreConfig,
     current_dir: PathBuf,
     current_rel_dir: PathBuf,
-    git_cli: GitCli,
+    git_cli: OnceCell<GitCli>,
     package_graph_plus: DebugIgnore<OnceCell<PackageGraphPlus>>,
 }
 
@@ -56,7 +56,7 @@ impl XCoreContext {
             config,
             current_dir,
             current_rel_dir,
-            git_cli: GitCli::new(project_root)?,
+            git_cli: OnceCell::new(),
             package_graph_plus: DebugIgnore(OnceCell::new()),
         })
     }
@@ -87,8 +87,9 @@ impl XCoreContext {
     }
 
     /// Returns the Git CLI for this workspace.
-    pub fn git_cli(&self) -> &GitCli {
-        &self.git_cli
+    pub fn git_cli(&self) -> Result<&GitCli> {
+        let root = self.project_root;
+        self.git_cli.get_or_try_init(|| GitCli::new(root))
     }
 
     /// Returns the package graph for this workspace.
