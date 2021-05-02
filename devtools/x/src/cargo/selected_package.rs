@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{changed_since::changed_since_impl, context::XContext, Result};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use guppy::graph::DependencyDirection;
 use log::warn;
 use std::collections::BTreeSet;
@@ -65,8 +65,10 @@ impl SelectedPackageArgs {
 
         // Intersect with --changed-since if specified.
         if let Some(base) = &self.changed_since {
-            let affected_set = changed_since_impl(&xctx, &base)?;
-
+            let git_cli = xctx.core().git_cli().with_context(|| {
+                "May only use --changes-since if working in a local git repository."
+            })?;
+            let affected_set = changed_since_impl(git_cli, &xctx, &base)?;
             includes = includes.intersection(
                 affected_set
                     .packages(DependencyDirection::Forward)

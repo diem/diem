@@ -7,6 +7,7 @@ use determinator::Determinator;
 use guppy::graph::{DependencyDirection, PackageSet};
 use log::trace;
 use structopt::StructOpt;
+use x_core::git::GitCli;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
@@ -15,15 +16,21 @@ pub struct Args {
 }
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
-    let affected_set = changed_since_impl(&xctx, &args.base)?;
+    let git_cli = xctx.core().git_cli().with_context(|| {
+        "`x changed-since` must be run within a project cloned from a git repo."
+    })?;
+    let affected_set = changed_since_impl(git_cli, &xctx, &args.base)?;
     for package in affected_set.packages(DependencyDirection::Forward) {
         println!("{}", package.name());
     }
     Ok(())
 }
 
-pub(crate) fn changed_since_impl<'g>(xctx: &'g XContext, base: &str) -> Result<PackageSet<'g>> {
-    let git_cli = xctx.core().git_cli();
+pub(crate) fn changed_since_impl<'g>(
+    git_cli: &GitCli,
+    xctx: &'g XContext,
+    base: &str,
+) -> Result<PackageSet<'g>> {
     let merge_base = git_cli
         .merge_base(&base)
         .with_context(|| "failed to get merge base with HEAD")?;
