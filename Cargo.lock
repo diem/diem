@@ -2900,6 +2900,7 @@ dependencies = [
 name = "executor-benchmark"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",

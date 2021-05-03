@@ -14,6 +14,7 @@ itertools = { version = "0.10.0", default-features = false }
 rand = "0.8.3"
 rayon = "1.5.0"
 structopt = "0.3.21"
+criterion = "0.3.4"
 
 executor = { path = "../executor" }
 executor-types = { path = "../executor-types" }
@@ -34,3 +35,7 @@ diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 [features]
 default = []
 fuzzing = ["diem-config/fuzzing", "diem-crypto/fuzzing", "diem-types/fuzzing"]
+
+[[bench]]
+name = "executor_benchmark"
+harness = false
