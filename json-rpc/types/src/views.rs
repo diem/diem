@@ -194,6 +194,7 @@ pub struct PreburnQueueView {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct PreburnWithMetadataView {
     pub preburn: AmountView,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<BytesView>,
 }
 
@@ -855,5 +856,38 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
                 account_state_proof.transaction_info_to_account_proof(),
             )?),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        proto::types as jsonrpc,
+        views::{AmountView, PreburnWithMetadataView},
+    };
+    use serde_json::json;
+
+    #[test]
+    fn test_serialize_preburn_with_metadata_view() {
+        let view = PreburnWithMetadataView {
+            preburn: AmountView {
+                amount: 1,
+                currency: "XUS".to_string(),
+            },
+            metadata: None,
+        };
+        let value = serde_json::to_value(&view).unwrap();
+        assert_eq!(
+            value,
+            json!({
+                "preburn": {
+                    "amount": 1,
+                    "currency": "XUS"
+                }
+            })
+        );
+
+        let preburn: jsonrpc::PreburnWithMetadata = serde_json::from_value(value).unwrap();
+        assert_eq!(preburn.metadata, "");
     }
 }
