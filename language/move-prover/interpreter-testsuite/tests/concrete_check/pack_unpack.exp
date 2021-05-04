@@ -1,0 +1,4 @@
+Running tests
+[ PASS    ] 0x2::A::pack
+[ PASS    ] 0x2::A::unpack
+Test result: OK. Total tests: 2; passed: 2; failed: 0
