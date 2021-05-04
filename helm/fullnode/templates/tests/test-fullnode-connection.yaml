@@ -14,18 +14,5 @@ spec:
         - -c
         - |-
           set -ex
-          metrics=http://{{ include "diem-fullnode.fullname" . }}:9101/metrics
-          sync1=$(curl -s $metrics  | grep 'diem_state_sync_version{type="synced"}' | awk '{ print $2 }')
-          echo "Synced version: $sync1"
-          echo "Sleeping 30s to wait for state sync..."
-          sleep 30
-          sync2=$(curl -s $metrics  | grep 'diem_state_sync_version{type="synced"}' | awk '{ print $2 }')
-          echo "Synced version: $sync2"
-          if [ "$sync2" -gt "$sync1" ]; then
-            echo "Success: state sync making progress"
-            exit 0
-          else
-            echo "Failed: state sync not making progress"
-            exit 1
-          fi
+          curl --fail -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0", "method":"get_metadata","params":[],"id":1}' http://{{ include "diem-fullnode.fullname" . }}-lb:80
   restartPolicy: Never

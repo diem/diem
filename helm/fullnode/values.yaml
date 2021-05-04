@@ -1,5 +1,5 @@
 chain:
-  era: 24
+  era: 26
   name: testnet
   genesisConfigmap:
 
