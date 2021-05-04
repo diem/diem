@@ -226,6 +226,7 @@ pub struct PreburnQueueView {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct PreburnWithMetadataView {
     pub preburn: AmountView,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<BytesView>,
 }
 
@@ -966,9 +967,13 @@ impl TryFrom<&AccountStateProofView> for AccountStateProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::views::EventDataView;
+    use crate::{
+        proto::types as jsonrpc,
+        views::{AmountView, EventDataView, PreburnWithMetadataView},
+    };
     use diem_types::{contract_event::ContractEvent, event::EventKey};
     use move_core_types::language_storage::TypeTag;
+    use serde_json::json;
     use std::{convert::TryInto, str::FromStr};
 
     #[test]
@@ -985,5 +990,29 @@ mod tests {
         } else {
             panic!("expect unknown event data");
         }
+    }
+
+    #[test]
+    fn test_serialize_preburn_with_metadata_view() {
+        let view = PreburnWithMetadataView {
+            preburn: AmountView {
+                amount: 1,
+                currency: "XUS".to_string(),
+            },
+            metadata: None,
+        };
+        let value = serde_json::to_value(&view).unwrap();
+        assert_eq!(
+            value,
+            json!({
+                "preburn": {
+                    "amount": 1,
+                    "currency": "XUS"
+                }
+            })
+        );
+
+        let preburn: jsonrpc::PreburnWithMetadata = serde_json::from_value(value).unwrap();
+        assert_eq!(preburn.metadata, "");
     }
 }
