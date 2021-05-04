@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use num::{ToPrimitive, Zero};
 use std::collections::BTreeMap;
 
 use bytecode::{
@@ -11,10 +12,7 @@ use bytecode::{
         Operation, StrongEdge,
     },
 };
-use move_binary_format::{
-    errors::{PartialVMError, PartialVMResult},
-    file_format::CodeOffset,
-};
+use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_model::{
     ast::TempIndex,
@@ -23,14 +21,13 @@ use move_model::{
 };
 
 use crate::concrete::{
-    local_state::{LocalState, TerminationStatus},
+    local_state::{AbortInfo, LocalState, TerminationStatus},
     ty::{
         convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
         Type,
     },
     value::{BaseValue, GlobalState, LocalSlot, Pointer, RefTypedValue, TypedValue},
 };
-use num::{ToPrimitive, Zero};
 
 //**************************************************************************************************
 // Internal structs and enums
@@ -40,7 +37,6 @@ struct FunctionContext<'env> {
     holder: &'env FunctionTargetsHolder,
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
-    num_bytecode: usize,
     label_offsets: BTreeMap<Label, CodeOffset>,
 }
 
@@ -50,13 +46,11 @@ impl<'env> FunctionContext<'env> {
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
     ) -> Self {
-        let num_bytecode = target.get_bytecode().len();
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
         Self {
             holder,
             target,
             ty_args,
-            num_bytecode,
             label_offsets,
         }
     }
@@ -82,11 +76,11 @@ pub fn entrypoint(
     let local_state = exec_function(&ctxt, typed_args, global_state)?;
     let termination = local_state.into_termination_status();
     let return_vals = match termination {
-        TerminationStatus::Abort(abort_code) => {
-            return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(abort_code));
+        TerminationStatus::Abort(abort_info) => {
+            return Err(abort_info.into_err());
         }
         TerminationStatus::Return(return_vals) => return_vals,
-        TerminationStatus::None | TerminationStatus::PostAbort => unreachable!(),
+        TerminationStatus::None | TerminationStatus::PostAbort(_) => unreachable!(),
     };
     Ok(return_vals)
 }
@@ -146,12 +140,8 @@ fn exec_function(
     let mut local_state = LocalState::new(local_slots);
     while !local_state.is_terminated() {
         let pc = local_state.get_pc() as usize;
-        if pc == ctxt.num_bytecode {
-            handle_return(ctxt, &[], &mut local_state);
-        } else {
-            let bytecode = instructions.get(pc).unwrap();
-            exec_bytecode(ctxt, bytecode, &mut local_state, global_state)?;
-        }
+        let bytecode = instructions.get(pc).unwrap();
+        exec_bytecode(ctxt, bytecode, &mut local_state, global_state)?;
     }
     Ok(local_state)
 }
@@ -661,14 +651,18 @@ fn handle_operation(
                 local_state.put_value(idx, ret_val, ret_ptr);
             }
         }
-        Err(abort_code) => match on_abort {
+        Err(abort_info) => match on_abort {
             None => {
-                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(abort_code));
+                return Err(abort_info.into_err());
             }
             Some(action) => {
-                local_state.put_value(action.1, BaseValue::mk_u64(abort_code), Pointer::None);
+                local_state.put_value(
+                    action.1,
+                    BaseValue::mk_u64(abort_info.get_status_code()),
+                    Pointer::None,
+                );
                 local_state.set_pc(ctxt.code_offset_by_label(action.0));
-                local_state.transit_to_post_abort();
+                local_state.transit_to_post_abort(abort_info);
             }
         },
     }
@@ -682,7 +676,7 @@ fn handle_call_user_function(
     ty_args: &[MT::Type],
     typed_args: Vec<RefTypedValue>,
     global_state: &mut GlobalState,
-) -> PartialVMResult<Result<Vec<TypedValue>, u64>> {
+) -> PartialVMResult<Result<Vec<TypedValue>, AbortInfo>> {
     let env = ctxt.target.global_env();
     let callee_env = env.get_function(module_id.qualified(fun_id));
     let callee_ctxt = derive_callee_ctxt(ctxt, &callee_env, ty_args);
@@ -698,9 +692,9 @@ fn handle_call_user_function(
     // check callee termination status
     let termination = callee_state.into_termination_status();
     let ok_or_abort = match termination {
-        TerminationStatus::Abort(abort_code) => Err(abort_code),
+        TerminationStatus::Abort(abort_info) => Err(abort_info),
         TerminationStatus::Return(return_vals) => Ok(return_vals),
-        TerminationStatus::None | TerminationStatus::PostAbort => unreachable!(),
+        TerminationStatus::None | TerminationStatus::PostAbort(_) => unreachable!(),
     };
     Ok(ok_or_abort)
 }
@@ -800,7 +794,7 @@ fn handle_move_to(
     op_signer: RefTypedValue,
     op_struct: RefTypedValue,
     global_state: &mut GlobalState,
-) -> Result<(), u64> {
+) -> Result<(), AbortInfo> {
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
@@ -810,7 +804,7 @@ fn handle_move_to(
     let (struct_ty, object, _) = op_struct.deref().decompose();
     let key = struct_ty.into_struct_inst();
     if !global_state.put_resource(signer, key, object) {
-        return Err(StatusCode::RESOURCE_ALREADY_EXISTS as u64);
+        return Err(AbortInfo::sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
     }
     Ok(())
 }
@@ -822,12 +816,12 @@ fn handle_move_from(
     ty_args: &[MT::Type],
     op_addr: RefTypedValue,
     global_state: &mut GlobalState,
-) -> Result<TypedValue, u64> {
+) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.del_resource(addr, inst) {
-        None => Err(StatusCode::RESOURCE_DOES_NOT_EXIST as u64),
+        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
         Some(object) => Ok(object),
     }
 }
@@ -839,12 +833,12 @@ fn handle_get_global(
     ty_args: &[MT::Type],
     op_addr: RefTypedValue,
     global_state: &mut GlobalState,
-) -> Result<TypedValue, u64> {
+) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.get_resource(None, addr, inst) {
-        None => Err(StatusCode::RESOURCE_DOES_NOT_EXIST as u64),
+        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
         Some(object) => Ok(object),
     }
 }
@@ -857,12 +851,12 @@ fn handle_borrow_global(
     is_mut: bool,
     op_addr: RefTypedValue,
     global_state: &mut GlobalState,
-) -> Result<TypedValue, u64> {
+) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.get_resource(Some(is_mut), addr, inst) {
-        None => Err(StatusCode::RESOURCE_DOES_NOT_EXIST as u64),
+        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
         Some(object) => Ok(object),
     }
 }
@@ -1000,27 +994,27 @@ fn handle_destroy(local_idx: TempIndex, local_state: &mut LocalState) {
     local_state.del_value(local_idx);
 }
 
-fn handle_cast_u8(val: RefTypedValue) -> Result<TypedValue, u64> {
+fn handle_cast_u8(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
     let (ty, val, _) = val.deref().decompose();
     let v = if ty.is_u8() {
         val.into_u8()
     } else if ty.is_u64() {
         let v = val.into_u64();
         if v > (u8::MAX as u64) {
-            return Err(StatusCode::ARITHMETIC_ERROR as u64);
+            return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
         }
         v as u8
     } else if ty.is_u128() {
         let v = val.into_u128();
         if v > (u8::MAX as u128) {
-            return Err(StatusCode::ARITHMETIC_ERROR as u64);
+            return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
         }
         v as u8
     } else {
         let n = val.into_num();
         match n.to_u8() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => v,
         }
@@ -1028,7 +1022,7 @@ fn handle_cast_u8(val: RefTypedValue) -> Result<TypedValue, u64> {
     Ok(TypedValue::mk_u8(v))
 }
 
-fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, u64> {
+fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
     let (ty, val, _) = val.deref().decompose();
     let v = if ty.is_u8() {
         val.into_u8() as u64
@@ -1037,14 +1031,14 @@ fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, u64> {
     } else if ty.is_u128() {
         let v = val.into_u128();
         if v > (u64::MAX as u128) {
-            return Err(StatusCode::ARITHMETIC_ERROR as u64);
+            return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
         }
         v as u64
     } else {
         let n = val.into_num();
         match n.to_u64() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => v,
         }
@@ -1052,7 +1046,7 @@ fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, u64> {
     Ok(TypedValue::mk_u64(v))
 }
 
-fn handle_cast_u128(val: RefTypedValue) -> Result<TypedValue, u64> {
+fn handle_cast_u128(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
     let (ty, val, _) = val.deref().decompose();
     let v = if ty.is_u8() {
         val.into_u8() as u128
@@ -1064,7 +1058,7 @@ fn handle_cast_u128(val: RefTypedValue) -> Result<TypedValue, u64> {
         let n = val.into_num();
         match n.to_u128() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => v,
         }
@@ -1077,7 +1071,7 @@ fn handle_binary_arithmetic(
     lhs: RefTypedValue,
     rhs: RefTypedValue,
     res: &Type,
-) -> Result<TypedValue, u64> {
+) -> Result<TypedValue, AbortInfo> {
     if cfg!(debug_assertions) {
         assert!(res.is_compatible_for_arithmetic(lhs.get_ty(), rhs.get_ty()));
     }
@@ -1088,20 +1082,20 @@ fn handle_binary_arithmetic(
         Operation::Add => lval + rval,
         Operation::Sub => {
             if lval < rval {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             lval - rval
         }
         Operation::Mul => lval * rval,
         Operation::Div => {
             if rval.is_zero() {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             lval / rval
         }
         Operation::Mod => {
             if rval.is_zero() {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             lval % rval
         }
@@ -1111,21 +1105,21 @@ fn handle_binary_arithmetic(
     let res_val = if res.is_u8() {
         match result.to_u8() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => TypedValue::mk_u8(v),
         }
     } else if res.is_u64() {
         match result.to_u64() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => TypedValue::mk_u64(v),
         }
     } else if res.is_u128() {
         match result.to_u128() {
             None => {
-                return Err(StatusCode::ARITHMETIC_ERROR as u64);
+                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             Some(v) => TypedValue::mk_u128(v),
         }

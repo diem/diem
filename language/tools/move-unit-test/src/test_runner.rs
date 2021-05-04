@@ -279,6 +279,13 @@ impl SharedTestingConfig {
                         pass(function_name);
                         stats.test_success();
                     }
+                    // Expected the test to abort and it aborted with internal error
+                    (Some(ExpectedFailure::Expected), None)
+                        if err.major_status() != StatusCode::EXECUTED =>
+                    {
+                        pass(function_name);
+                        stats.test_success();
+                    }
                     // Unexpected return status from the VM, signal that we hit an unknown error.
                     (_, None) => {
                         fail(function_name);

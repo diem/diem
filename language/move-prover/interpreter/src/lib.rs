@@ -186,7 +186,7 @@ pub fn interpret(
     }
 
     // collect and convert results
-    let result = env.get_extension::<ExecutionResult>().unwrap();
+    let result = env.clear_extension::<ExecutionResult>().unwrap();
     result.vm_result.clone().map(|rets| {
         rets.into_iter()
             .map(|v| {
@@ -235,10 +235,8 @@ fn stepwise_processing_internal(
         for module_env in env.get_modules() {
             for func_env in module_env.get_functions() {
                 for (variant, target) in targets.get_targets(&func_env) {
-                    if !target.data.code.is_empty() {
-                        target.register_annotation_formatters_for_test();
-                        text += &format!("[{}-{}: variant {}]\n{}\n", step, name, variant, target);
-                    }
+                    target.register_annotation_formatters_for_test();
+                    text += &format!("[{}-{}: variant {}]\n{}\n", step, name, variant, target);
                 }
             }
         }

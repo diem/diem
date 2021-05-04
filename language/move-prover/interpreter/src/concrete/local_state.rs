@@ -4,7 +4,8 @@
 // TODO (mengxu) remove this when the module is in good shape
 #![allow(dead_code)]
 
-use move_binary_format::file_format::CodeOffset;
+use move_binary_format::{errors::PartialVMError, file_format::CodeOffset};
+use move_core_types::vm_status::StatusCode;
 use move_model::ast::TempIndex;
 
 use crate::concrete::{
@@ -12,12 +13,43 @@ use crate::concrete::{
     value::{BaseValue, LocalSlot, Pointer, RefTypedValue, TypedValue},
 };
 
+#[derive(Clone, Debug)]
+pub enum AbortInfo {
+    User(u64),
+    Internal(StatusCode),
+}
+
+impl AbortInfo {
+    pub fn usr_abort(status_code: u64) -> Self {
+        AbortInfo::User(status_code)
+    }
+    pub fn sys_abort(status_code: StatusCode) -> Self {
+        AbortInfo::Internal(status_code)
+    }
+
+    pub fn into_err(self) -> PartialVMError {
+        match self {
+            Self::User(status_code) => {
+                PartialVMError::new(StatusCode::ABORTED).with_sub_status(status_code)
+            }
+            Self::Internal(status_code) => PartialVMError::new(status_code),
+        }
+    }
+
+    pub fn get_status_code(&self) -> u64 {
+        match self {
+            Self::User(status_code) => *status_code,
+            Self::Internal(status_code) => *status_code as u64,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum TerminationStatus {
     None,
-    PostAbort,
+    PostAbort(AbortInfo),
     Return(Vec<TypedValue>),
-    Abort(u64),
+    Abort(AbortInfo),
 }
 
 pub struct LocalState {
@@ -25,7 +57,7 @@ pub struct LocalState {
     slots: Vec<LocalSlot>,
     /// program counter
     pc: CodeOffset,
-    /// Whether we set the PC to branch in the handling of last bytecode
+    /// whether we set the PC to branch in the handling of last bytecode
     pc_branch: bool,
     /// termination status
     termination: TerminationStatus,
@@ -73,11 +105,11 @@ impl LocalState {
         }
     }
 
-    pub fn transit_to_post_abort(&mut self) {
+    pub fn transit_to_post_abort(&mut self, info: AbortInfo) {
         if cfg!(debug_assertions) {
             assert!(matches!(self.termination, TerminationStatus::None));
         }
-        self.termination = TerminationStatus::PostAbort;
+        self.termination = TerminationStatus::PostAbort(info);
     }
     pub fn is_terminated(&self) -> bool {
         matches!(
@@ -89,7 +121,17 @@ impl LocalState {
         if cfg!(debug_assertions) {
             assert!(!self.is_terminated());
         }
-        self.termination = TerminationStatus::Abort(abort_code);
+        let info = match &self.termination {
+            TerminationStatus::None => AbortInfo::usr_abort(abort_code),
+            TerminationStatus::PostAbort(original_info) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(original_info.get_status_code(), abort_code);
+                }
+                original_info.clone()
+            }
+            _ => unreachable!(),
+        };
+        self.termination = TerminationStatus::Abort(info);
     }
     pub fn terminate_with_return(&mut self, ret_vals: Vec<TypedValue>) {
         if cfg!(debug_assertions) {

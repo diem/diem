@@ -1,0 +1,12 @@
+Running tests
+[ PASS    ] 0x2::A::add_ok
+[ PASS    ] 0x2::A::add_overflow
+[ PASS    ] 0x2::A::div_by_zero
+[ PASS    ] 0x2::A::div_ok
+[ PASS    ] 0x2::A::mod_by_zero
+[ PASS    ] 0x2::A::mod_ok
+[ PASS    ] 0x2::A::mul_ok
+[ PASS    ] 0x2::A::mul_overflow
+[ PASS    ] 0x2::A::sub_ok
+[ PASS    ] 0x2::A::sub_underflow
+Test result: OK. Total tests: 10; passed: 10; failed: 0

@@ -5,7 +5,9 @@ use std::collections::BTreeMap;
 
 use bytecode::{
     function_target::FunctionTarget,
-    function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{
+        FunctionTargetsHolder, FunctionVariant, REGULAR_VERIFICATION_VARIANT,
+    },
 };
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::StatusCode};
@@ -106,6 +108,7 @@ impl<'env> Runtime<'env> {
             .functions
             .get_targets(&fun_env)
             .into_iter()
+            .filter(|(_, fun_target)| !fun_target.get_bytecode().is_empty())
             .map(|(fun_variant, fun_target)| {
                 let mut state = global_state.clone();
                 let result = self.execute_target(
@@ -119,7 +122,9 @@ impl<'env> Runtime<'env> {
             .collect();
 
         // cross-comparison of execution results
-        let baseline = match variants.remove(&FunctionVariant::Baseline) {
+        let baseline = match variants.remove(&FunctionVariant::Baseline).or_else(|| {
+            variants.remove(&FunctionVariant::Verification(REGULAR_VERIFICATION_VARIANT))
+        }) {
             None => {
                 return (
                     Err(

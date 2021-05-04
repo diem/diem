@@ -597,6 +597,18 @@ impl GlobalEnv {
         self.extensions.borrow().contains_key(&id)
     }
 
+    /// Clear extension data from the environment (return the data if it is previously set).
+    /// Use as in `env.clear_extension::<T>()` and an `Rc<T>` is returned if the extension data is
+    /// previously stored in the environment.
+    pub fn clear_extension<T: Any>(&self) -> Option<Rc<T>> {
+        let id = TypeId::of::<T>();
+        self.extensions
+            .borrow_mut()
+            .remove(&id)
+            .and_then(|d| d.downcast::<Rc<T>>().ok())
+            .map(|boxed| *boxed)
+    }
+
     /// Create a new global id unique to this environment.
     pub fn new_global_id(&self) -> GlobalId {
         let mut counter = self.global_id_counter.borrow_mut();
