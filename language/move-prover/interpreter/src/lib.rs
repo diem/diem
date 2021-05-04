@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
-use std::{
-    fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
-};
 use structopt::StructOpt;
 
 use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder};
@@ -52,9 +47,9 @@ pub struct InterpreterOptions {
     /// Run the interpreter at every step of the transformation pipeline
     #[structopt(long = "stepwise")]
     pub stepwise: bool,
-    /// Output directory that holds the debug information of produced during interpretation
-    #[structopt(short = "o", long = "output")]
-    pub output: Option<PathBuf>,
+    /// Print verbose debug information
+    #[structopt(short = "v", long = "verbose")]
+    pub verbose: bool,
 }
 
 fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
@@ -109,8 +104,8 @@ pub fn interpret_with_options(
         &options.ty_args,
         &args,
         pipeline,
-        options.output,
         options.stepwise,
+        options.verbose,
     )
 }
 
@@ -121,8 +116,8 @@ pub fn interpret(
     ty_args: &[TypeTag],
     args: &[MoveValue],
     pipeline: FunctionTargetPipeline,
-    output_opt: Option<PathBuf>,
     stepwise: bool,
+    verbose: bool,
 ) -> VMResult<Vec<Vec<u8>>> {
     // find the entrypoint
     let entrypoint_env = env
@@ -131,6 +126,12 @@ pub fn interpret(
         .ok_or_else(|| {
             PartialVMError::new(StatusCode::LOOKUP_FAILED).finish(Location::Undefined)
         })?;
+    if verbose {
+        println!(
+            "[compiled module]\n{:?}\n",
+            entrypoint_env.module_env.get_verified_module()
+        );
+    }
 
     // collect function targets
     let mut targets = FunctionTargetsHolder::default();
@@ -140,12 +141,6 @@ pub fn interpret(
         }
     }
 
-    // prepare workdir
-    let workdir_opt = output_opt.map(|workdir| {
-        fs::create_dir_all(&workdir).unwrap();
-        workdir
-    });
-
     // run through the pipeline
     if stepwise {
         pipeline.run_with_hook(
@@ -154,25 +149,25 @@ pub fn interpret(
             |holder| {
                 stepwise_processing(
                     env,
-                    workdir_opt.as_ref(),
                     0,
                     "stackless",
                     holder,
                     &entrypoint_env,
                     ty_args,
                     args,
+                    verbose,
                 )
             },
             |step, processor, holders| {
                 stepwise_processing(
                     env,
-                    workdir_opt.as_ref(),
                     step,
                     &processor.name(),
                     holders,
                     &entrypoint_env,
                     ty_args,
                     args,
+                    verbose,
                 )
             },
         );
@@ -180,13 +175,13 @@ pub fn interpret(
         pipeline.run(env, &mut targets);
         stepwise_processing(
             env,
-            workdir_opt.as_ref(),
             0,
             "final",
             &targets,
             &entrypoint_env,
             ty_args,
             args,
+            verbose,
         );
     }
 
@@ -203,63 +198,51 @@ pub fn interpret(
     })
 }
 
-fn stepwise_processing<P: AsRef<Path>>(
+fn stepwise_processing(
     env: &GlobalEnv,
-    workdir_opt: Option<P>,
     step: usize,
     name: &str,
     targets: &FunctionTargetsHolder,
     fun_env: &FunctionEnv,
     ty_args: &[TypeTag],
     args: &[MoveValue],
+    verbose: bool,
 ) {
-    match stepwise_processing_internal(
-        env,
-        workdir_opt,
-        step,
-        name,
-        targets,
-        fun_env,
-        ty_args,
-        args,
-    ) {
+    match stepwise_processing_internal(env, step, name, targets, fun_env, ty_args, args, verbose) {
         Ok(_) => (),
         Err(e) => panic!("Unexpected error during step {} - {}: {}", step, name, e),
     }
 }
 
-fn stepwise_processing_internal<P: AsRef<Path>>(
+fn stepwise_processing_internal(
     env: &GlobalEnv,
-    workdir_opt: Option<P>,
     step: usize,
     name: &str,
     targets: &FunctionTargetsHolder,
     fun_env: &FunctionEnv,
     ty_args: &[TypeTag],
     args: &[MoveValue],
+    verbose: bool,
 ) -> Result<()> {
     // short-circuit the execution if prior phases run into errors
     if env.has_errors() {
         return Ok(());
     }
-    let filebase_opt =
-        workdir_opt.map(|workdir| workdir.as_ref().join(format!("{}_{}", step, name)));
 
     // dump the bytecode if requested
-    if let Some(filebase) = &filebase_opt {
+    if verbose {
         let mut text = String::new();
         for module_env in env.get_modules() {
             for func_env in module_env.get_functions() {
                 for (variant, target) in targets.get_targets(&func_env) {
                     if !target.data.code.is_empty() {
                         target.register_annotation_formatters_for_test();
-                        text += &format!("\n[variant {}]\n{}\n", variant, target);
+                        text += &format!("[{}-{}: variant {}]\n{}\n", step, name, variant, target);
                     }
                 }
             }
         }
-        let mut file = File::create(filebase.with_extension("bytecode"))?;
-        file.write_all(text.as_bytes())?;
+        println!("{}", text);
     }
 
     // invoke the runtime

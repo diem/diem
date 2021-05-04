@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use std::path::Path;
+use std::{env, path::Path};
 
-use move_prover_test_utils::baseline_test::{diff, verify_or_update_baseline};
+use move_prover_test_utils::{
+    baseline_test::{diff, verify_or_update_baseline},
+    read_bool_env_var,
+};
 use move_unit_test::UnitTestingConfig;
 
 const BASELINE_EXTENSION: &str = "exp";
@@ -16,6 +19,7 @@ fn run_unit_test(path: &Path, use_stackless_vm: bool) -> Result<String> {
         num_threads: 1,
         source_files: vec![path.to_str().unwrap().to_owned()],
         use_stackless_vm,
+        verbose: read_bool_env_var("VERBOSE"),
     };
 
     let test_plan = config.build_test_plan().unwrap();
@@ -25,7 +29,7 @@ fn run_unit_test(path: &Path, use_stackless_vm: bool) -> Result<String> {
 }
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
-    std::env::set_var("NO_COLOR", "1");
+    env::set_var("NO_COLOR", "1");
     // first do a cross-vm comparison
     let move_vm_output = run_unit_test(path, false)?;
     let stackless_vm_output = run_unit_test(path, true)?;

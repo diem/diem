@@ -50,6 +50,10 @@ pub struct UnitTestingConfig {
     /// Use the stackless bytecode interpreter to run the tests
     #[structopt(long = "stackless")]
     pub use_stackless_vm: bool,
+
+    /// Verbose mode
+    #[structopt(short = "v", long = "verbose")]
+    pub verbose: bool,
 }
 
 fn format_module_id(module_id: &ModuleId) -> String {
@@ -114,6 +118,7 @@ impl UnitTestingConfig {
             self.instruction_execution_bound,
             self.num_threads,
             self.use_stackless_vm,
+            self.verbose,
             test_plan,
         )
         .unwrap();

@@ -34,6 +34,7 @@ pub struct SharedTestingConfig {
     starting_storage_state: InMemoryStorage,
     source_files: Vec<String>,
     use_stackless_vm: bool,
+    verbose: bool,
 }
 
 #[derive(Debug)]
@@ -76,6 +77,7 @@ impl TestRunner {
         execution_bound: u64,
         num_threads: usize,
         use_stackless_vm: bool,
+        verbose: bool,
         tests: TestPlan,
     ) -> Result<Self> {
         let source_files = tests
@@ -92,6 +94,7 @@ impl TestRunner {
                 cost_table: unit_cost_table(),
                 source_files,
                 use_stackless_vm,
+                verbose,
             },
             num_threads,
             tests,
@@ -166,8 +169,8 @@ impl SharedTestingConfig {
             &[], // no ty args, at least for now
             &test_info.arguments,
             pipeline,
-            /* output_opt */ None,
             /* stepwise */ true,
+            self.verbose,
         )
     }
 

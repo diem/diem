@@ -53,6 +53,7 @@ fn run_test(path: &Path) -> datatest_stable::Result<()> {
         filter: None,
         source_files: targets,
         use_stackless_vm: false,
+        verbose: false,
     };
 
     let test_plan = unit_test_config.build_test_plan();
