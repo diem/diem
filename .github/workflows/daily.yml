@@ -8,7 +8,7 @@ on:
   #   branches: [gha-test-*, canary, auto]
 
 jobs:
-  audit:
+  audit-rust:
     runs-on: ubuntu-latest
     container:
       image: diem/build_environment:main
@@ -52,6 +52,48 @@ jobs:
           body: ${{ env.ISSUE_BODY }}
           assignees: "@diem/diem-core-oncall"
           labels: "dependecies"
+      - uses: ./.github/actions/build-teardown
+
+  audit-docker:
+    runs-on: ubuntu-latest
+    env:
+      IMAGES: "diem/validator diem/validator_tcb diem/init diem/tools"
+      TAG: devnet
+      AUDIT_SUMMARY_FILE: /tmp/summary
+    steps:
+      - uses: actions/checkout@v2
+      - name: install trivy as needed
+        run: |
+          if [ ! -x "$(command -v trivy)" ]; then
+            wget https://github.com/aquasecurity/trivy/releases/download/v0.17.2/trivy_0.17.2_Linux-64bit.deb
+            sudo dpkg -i trivy_0.17.2_Linux-64bit.deb && rm trivy_0.17.2_Linux-64bit.deb
+          fi
+      - name: scan nightly images
+        run: |
+          for image in $IMAGES; do
+            docker pull $image:$TAG
+            echo "CONTAINER=$image:$TAG" >> $GITHUB_ENV
+            trivy -q i --exit-code 1 -o $AUDIT_SUMMARY_FILE $image:$TAG
+          done
+      - name: set issue body content
+        if: ${{ failure() }}
+        env:
+          JOB_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          echo "ISSUE_BODY<<EOF" >> $GITHUB_ENV
+          echo "Found vulnerability in container in job ${JOB_URL}" >> $GITHUB_ENV
+          echo "\`\`\`" >> $GITHUB_ENV
+          cat $AUDIT_SUMMARY_FILE >> $GITHUB_ENV
+          echo "\`\`\`" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - uses: diem/actions/create-issue@04f4286ca22e4b9efbc5eb49a20e2e5389c5318b
+        if: ${{ failure() }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Found vulnerability in container ${{ env.CONTAINER }}"
+          body: ${{ env.ISSUE_BODY }}
+          assignees: "@diem/diem-core-oncall"
+          labels: "dependecies, container"
       - uses: ./.github/actions/build-teardown
 
   coverage:
