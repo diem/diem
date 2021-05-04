@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::errors::*;
+use camino::{Utf8Path, Utf8PathBuf};
 use determinator::Utf8Paths0;
 use guppy::{graph::PackageGraph, MetadataCommand};
 use indoc::formatdoc;
@@ -11,7 +12,6 @@ use std::{
     borrow::Cow,
     ffi::{OsStr, OsString},
     fmt,
-    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -22,14 +22,14 @@ use std::{
 /// invalidated.
 #[derive(Clone, Debug)]
 pub struct GitCli {
-    root: &'static Path,
+    root: &'static Utf8Path,
     // Caches.
     tracked_files: OnceCell<Utf8Paths0>,
 }
 
 impl GitCli {
     /// Creates a new instance of the Git CLI.
-    pub fn new(root: &'static Path) -> Result<Self> {
+    pub fn new(root: &'static Utf8Path) -> Result<Self> {
         let git_cli = Self {
             root,
             tracked_files: OnceCell::new(),
@@ -146,7 +146,7 @@ impl GitCli {
             let msg = formatdoc!(
                 "unable to find a git repo at {}
                 (hint: did you download an archive from GitHub? x requires a git clone)",
-                self.root.display()
+                self.root
             );
             return Err(SystemError::git_root(msg));
         }
@@ -162,11 +162,11 @@ impl GitCli {
                 ));
             }
         };
-        if self.root != Path::new(&git_root) {
+        if self.root != &git_root {
             let msg = formatdoc!(
                 "git root expected to be at {}, but actually found at {}
                 (hint: did you download an archive from GitHub? x requires a git clone)",
-                self.root.display(),
+                self.root,
                 git_root,
             );
             return Err(SystemError::git_root(msg));
@@ -186,15 +186,12 @@ impl GitCli {
     ///
     /// The scratch worktree is meant to be persistent across invocations of `x`. This is done for
     /// performance reasons.
-    fn get_or_init_scratch(&self, hash: &GitHash) -> Result<PathBuf> {
+    fn get_or_init_scratch(&self, hash: &GitHash) -> Result<Utf8PathBuf> {
         let mut scratch_dir = self.root.join("target");
         scratch_dir.extend(&["x-scratch", "tree"]);
 
         if scratch_dir.is_dir() {
-            debug!(
-                "Using existing scratch worktree at {}",
-                scratch_dir.display()
-            );
+            debug!("Using existing scratch worktree at {}", scratch_dir,);
 
             // TODO: check if the directory is actually a Git worktree.
 
@@ -214,7 +211,7 @@ impl GitCli {
             }
         } else {
             // Try creating a scratch worktree at that location.
-            info!("Setting up scratch worktree in {}", scratch_dir.display());
+            info!("Setting up scratch worktree in {}", scratch_dir);
             let output = self
                 .git_command()
                 .args(&["worktree", "add"])

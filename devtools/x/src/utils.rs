@@ -3,15 +3,16 @@
 
 use crate::{config::CargoConfig, installer::install_if_needed, Result};
 use anyhow::anyhow;
+use camino::Utf8Path;
 use log::{info, warn};
-use std::{env::var_os, path::Path, process::Command};
+use std::{env::var_os, process::Command};
 
 /// The number of directories between the project root and the root of this crate.
 pub const X_DEPTH: usize = 2;
 
 /// Returns the project root. TODO: switch uses to XCoreContext::project_root instead)
-pub fn project_root() -> &'static Path {
-    Path::new(&env!("CARGO_MANIFEST_DIR"))
+pub fn project_root() -> &'static Utf8Path {
+    Utf8Path::new(&env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(X_DEPTH)
         .unwrap()
@@ -42,7 +43,7 @@ pub fn apply_sccache_if_possible(
                 .to_str()
                 .unwrap_or_default()
                 == sccache_config.required_cargo_home
-                && sccache_config.required_git_home == project_root().to_str().unwrap_or_default();
+                && sccache_config.required_git_home == project_root();
             if !correct_location {
                 warn!("You will not benefit from sccache in this build!!!");
                 warn!(
@@ -51,7 +52,7 @@ pub fn apply_sccache_if_possible(
                 );
                 warn!(
                     "Current diem root is '{}',  and current CARGO_HOME is '{}'",
-                    project_root().to_str().unwrap_or_default(),
+                    project_root(),
                     var_os("CARGO_HOME").unwrap_or_default().to_string_lossy()
                 );
             } else {
