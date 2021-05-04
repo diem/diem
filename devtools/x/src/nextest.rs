@@ -14,7 +14,9 @@ use anyhow::bail;
 use cargo_metadata::Message;
 use guppy::PackageId;
 use nextest_runner::{
-    reporter::{Color, ReporterOpts, TestReporter},
+    dispatch::ConfigOpts,
+    partition::BuildPartitioner,
+    reporter::{Color, TestReporter},
     runner::TestRunnerOpts,
     test_filter::{RunIgnored, TestFilter},
     test_list::{TestBinary, TestList},
@@ -24,6 +26,13 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
+    /// Nextest config options
+    #[structopt(flatten)]
+    config_opts: ConfigOpts,
+    /// Nextest profile to use
+    #[structopt(long, short = "P")]
+    test_profile: Option<String>,
+
     #[structopt(flatten)]
     pub(crate) package_args: SelectedPackageArgs,
     #[structopt(long, short)]
@@ -36,17 +45,21 @@ pub struct Args {
     #[structopt(long)]
     /// Do not run tests, only compile the test executables
     no_run: bool,
+
     /// Run ignored tests
     #[structopt(long, possible_values = &RunIgnored::variants(), default_value, case_insensitive = true)]
     run_ignored: RunIgnored,
+    /// Test partition, e.g. hash:1/2 or count:2/3
+    #[structopt(long)]
+    pub partition: Option<BuildPartitioner>,
     #[structopt(name = "FILTERS", last = true)]
     filters: Vec<String>,
-    #[structopt(flatten)]
-    reporter_opts: ReporterOpts,
 }
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
     let config = xctx.config();
+    let nextest_config = args.config_opts.make_config(xctx.core().project_root())?;
+    let profile = nextest_config.profile(args.test_profile.as_deref())?;
 
     let mut packages = args.package_args.to_selected_packages(&xctx)?;
     if args.unit {
@@ -119,17 +132,17 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
         }
     }
 
-    let test_filter = TestFilter::new(args.run_ignored, &args.filters);
+    let test_filter = TestFilter::new(args.run_ignored, args.partition, &args.filters);
     let test_list = TestList::new(executables, &test_filter)?;
 
-    let runner = args.runner_opts.build(&test_list);
+    let runner = args.runner_opts.build(&test_list, profile);
 
     let color = match args.build_args.color {
         Coloring::Auto => Color::Auto,
         Coloring::Always => Color::Always,
         Coloring::Never => Color::Never,
     };
-    let mut reporter = TestReporter::new(&test_list, color, args.reporter_opts);
+    let mut reporter = TestReporter::new(xctx.core().project_root(), &test_list, color, profile);
 
     let run_stats = runner.try_execute(|event| reporter.report_event(event))?;
     if !run_stats.is_success() {

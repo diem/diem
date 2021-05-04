@@ -4830,9 +4830,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "nextest-config"
+version = "0.1.0"
+source = "git+https://github.com/diem/diem-devtools?rev=135c929f93723467534387c6e0372908f863fad6#135c929f93723467534387c6e0372908f863fad6"
+dependencies = [
+ "anyhow",
+ "camino",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "nextest-runner"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?rev=1b61853016059b2dca577cefafff2825b49494a0#1b61853016059b2dca577cefafff2825b49494a0"
+source = "git+https://github.com/diem/diem-devtools?rev=135c929f93723467534387c6e0372908f863fad6#135c929f93723467534387c6e0372908f863fad6"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -4841,6 +4852,7 @@ dependencies = [
  "chrono",
  "crossbeam-channel",
  "duct",
+ "nextest-config",
  "num_cpus",
  "once_cell",
  "quick-junit",
@@ -4850,6 +4862,7 @@ dependencies = [
  "signal-hook",
  "structopt 0.3.21",
  "termcolor",
+ "twox-hash",
 ]
 
 [[package]]
@@ -5686,7 +5699,7 @@ checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 [[package]]
 name = "quick-junit"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?rev=1b61853016059b2dca577cefafff2825b49494a0#1b61853016059b2dca577cefafff2825b49494a0"
+source = "git+https://github.com/diem/diem-devtools?rev=135c929f93723467534387c6e0372908f863fad6#135c929f93723467534387c6e0372908f863fad6"
 dependencies = [
  "chrono",
  "indexmap",

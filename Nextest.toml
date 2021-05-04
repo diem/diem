@@ -1,0 +1,20 @@
+# This is configuration for `cargo nextest`.
+
+default-profile = "diem"
+
+[profiles.diem]
+name = "diem-run"
+failure-output = "immediate"
+
+# Profile used in CI tests.
+[profiles.ci-test]
+name = "diem-ci-test-run"
+retries = 2
+# Output failures at the end of the run to make it easier to scan logs.
+failure-output = "immediate-final"
+metadata-key = "diem-junit"
+
+# Metadata config used in CI tests.
+[metadata.diem-junit]
+dir = "target/nextest"
+junit = "../nextest-reports/nextest-junit.xml"
