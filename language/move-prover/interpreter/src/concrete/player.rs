@@ -232,7 +232,7 @@ fn handle_load(dst: TempIndex, constant: &Constant, local_state: &mut LocalState
         Constant::U64(v) => BaseValue::mk_u64(*v),
         Constant::U128(v) => BaseValue::mk_u128(*v),
         Constant::Address(v) => {
-            BaseValue::mk_address(AccountAddress::from_hex(format!("0x{:#x}", v)).unwrap())
+            BaseValue::mk_address(AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap())
         }
         Constant::ByteArray(v) => {
             let elems = v.iter().map(|e| BaseValue::mk_u8(*e)).collect();
