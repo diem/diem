@@ -200,8 +200,9 @@ fn handle_assign(dst: TempIndex, src: TempIndex, kind: &AssignKind, local_state:
 
     // execute
     let slot = match kind {
-        AssignKind::Move | AssignKind::Store => local_state.del_value(src),
-        AssignKind::Copy => local_state.get_value(src).deref(),
+        AssignKind::Move => local_state.del_value(src),
+        // TODO (mengxu): what exactly is the semantic of Store here? Why not just use Copy?
+        AssignKind::Copy | AssignKind::Store => local_state.get_value(src).deref(),
     };
     let (_, val, ptr) = slot.decompose();
     local_state.put_value(dst, val, ptr);
