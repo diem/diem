@@ -59,7 +59,7 @@ fn clean_for_baseline(content: &str) -> String {
 }
 
 /// Diffs old and new content.
-fn diff(old_content: &str, new_content: &str) -> anyhow::Result<()> {
+pub fn diff(old_content: &str, new_content: &str) -> anyhow::Result<()> {
     if old_content.trim() == new_content.trim() {
         return Ok(());
     }

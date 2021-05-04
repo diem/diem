@@ -40,6 +40,7 @@ struct FunctionContext<'env> {
     holder: &'env FunctionTargetsHolder,
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
+    num_bytecode: usize,
     label_offsets: BTreeMap<Label, CodeOffset>,
 }
 
@@ -49,11 +50,13 @@ impl<'env> FunctionContext<'env> {
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
     ) -> Self {
+        let num_bytecode = target.get_bytecode().len();
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
         Self {
             holder,
             target,
             ty_args,
+            num_bytecode,
             label_offsets,
         }
     }
@@ -142,8 +145,13 @@ fn exec_function(
     let instructions = target.get_bytecode();
     let mut local_state = LocalState::new(local_slots);
     while !local_state.is_terminated() {
-        let bytecode = instructions.get(local_state.get_pc() as usize).unwrap();
-        exec_bytecode(ctxt, bytecode, &mut local_state, global_state)?;
+        let pc = local_state.get_pc() as usize;
+        if pc == ctxt.num_bytecode {
+            handle_return(ctxt, &[], &mut local_state);
+        } else {
+            let bytecode = instructions.get(pc).unwrap();
+            exec_bytecode(ctxt, bytecode, &mut local_state, global_state)?;
+        }
     }
     Ok(local_state)
 }

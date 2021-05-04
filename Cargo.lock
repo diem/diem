@@ -607,6 +607,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode-interpreter-testsuite"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode-interpreter",
+ "datatest-stable",
+ "diem-workspace-hack",
+ "move-prover-test-utils",
+ "move-unit-test",
+]
+
+[[package]]
 name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [

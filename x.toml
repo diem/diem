@@ -164,6 +164,7 @@ features = ["fuzzing"]
 members = [
     # Please keep this list in alphabetical order!
 
+    "bytecode-interpreter-testsuite",
     "bytecode-verifier-tests",
     "cli",
     "cluster-test",
