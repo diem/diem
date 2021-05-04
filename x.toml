@@ -19,9 +19,9 @@ envs = [
 ]
 
 [cargo.sccache.installer]
-version = "0.2.14-alpha.0"
-git = "https://github.com/rexhoffman/sccache.git"
-git-rev = "549babdd3866aa60dae01668c42ee00bf1e8c763"
+version = "0.2.16-alpha.0"
+git = "https://github.com/diem/sccache.git"
+git-rev = "859b52d2dfa0f632f032a1faf43356e96000e01b"
 features = [ "s3" ]
 
 
