@@ -44,11 +44,21 @@ pub mod ty;
 // =================================================================================================
 // Entry Point
 
-/// Build the move model. This collects transitive dependencies for move sources
-/// from the provided directory list.
+/// Build the move model with default compilation flags.
+/// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder(
     move_sources: &[String],
     deps_dir: &[String],
+) -> anyhow::Result<GlobalEnv> {
+    run_model_builder_with_compilation_flags(move_sources, deps_dir, Flags::empty())
+}
+
+/// Build the move model with supplied compilation flags.
+/// This collects transitive dependencies for move sources from the provided directory list.
+pub fn run_model_builder_with_compilation_flags(
+    move_sources: &[String],
+    deps_dir: &[String],
+    flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
 
@@ -102,7 +112,7 @@ pub fn run_model_builder(
         }
         Ok(res) => res,
     };
-    let mut compilation_env = CompilationEnv::new(Flags::empty());
+    let mut compilation_env = CompilationEnv::new(flags.clone());
     let expansion_ast = match move_continue_up_to(
         &mut compilation_env,
         None,
@@ -163,7 +173,7 @@ pub fn run_model_builder(
         }
         Ok(res) => res,
     };
-    let mut compilation_env = CompilationEnv::new(Flags::empty());
+    let mut compilation_env = CompilationEnv::new(flags);
     let (expansion_ast, expansion_result) = match move_continue_up_to(
         &mut compilation_env,
         None,

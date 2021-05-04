@@ -1,23 +1,24 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use std::{
     fs::{self, File},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
 use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder};
-use move_binary_format::errors::VMResult;
+use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
-    identifier::Identifier,
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     parser::{parse_transaction_argument, parse_type_tag},
     transaction_argument::TransactionArgument,
-    value::MoveValue,
+    value::{MoveStruct, MoveValue},
+    vm_status::StatusCode,
 };
 use move_model::model::{FunctionEnv, GlobalEnv};
 
@@ -26,7 +27,8 @@ mod shared;
 
 use crate::concrete::{
     runtime::Runtime,
-    value::{GlobalState, TypedValue},
+    ty::{BaseType, IntType, PrimitiveType},
+    value::{BaseValue, GlobalState, TypedValue},
 };
 
 /// Options passed into the interpreter generator.
@@ -34,25 +36,25 @@ use crate::concrete::{
 pub struct InterpreterOptions {
     /// The function to be executed, specified in the format of `addr::module_name::function_name`
     #[structopt(long = "entry", parse(try_from_str = parse_entrypoint))]
-    entrypoint: (ModuleId, Identifier),
+    pub entrypoint: (ModuleId, Identifier),
 
     /// Possibly-empty list of signers for the execution
     #[structopt(long = "signers", parse(try_from_str = AccountAddress::from_hex_literal))]
-    signers: Vec<AccountAddress>,
+    pub signers: Vec<AccountAddress>,
     /// Possibly-empty list of arguments passed to the transaction
     #[structopt(long = "args", parse(try_from_str = parse_transaction_argument))]
-    args: Vec<TransactionArgument>,
+    pub args: Vec<TransactionArgument>,
     /// Possibly-empty list of type arguments passed to the transaction (e.g., `T` in
     /// `main<T>()`). Must match the type arguments kinds expected by `script_file`.
-    #[structopt(long = "type-args", parse(try_from_str = parse_type_tag))]
-    type_args: Vec<TypeTag>,
+    #[structopt(long = "ty-args", parse(try_from_str = parse_type_tag))]
+    pub ty_args: Vec<TypeTag>,
 
     /// Run the interpreter at every step of the transformation pipeline
     #[structopt(long = "stepwise")]
-    stepwise: bool,
+    pub stepwise: bool,
     /// Output directory that holds the debug information of produced during interpretation
     #[structopt(short = "o", long = "output")]
-    output: Option<String>,
+    pub output: Option<PathBuf>,
 }
 
 fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
@@ -68,53 +70,67 @@ fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
     Ok((module_id, func_name))
 }
 
+#[derive(Eq, PartialEq)]
+struct ExecutionResult {
+    vm_result: VMResult<Vec<TypedValue>>,
+    global_state: GlobalState,
+}
+
 //**************************************************************************************************
 // Entry
 //**************************************************************************************************
-pub fn interpret(
-    options: &InterpreterOptions,
+pub fn interpret_with_options(
+    options: InterpreterOptions,
     env: &GlobalEnv,
     pipeline: FunctionTargetPipeline,
-) -> Result<()> {
-    // find the entrypoint
-    let entrypoint_env = env
-        .find_module_by_language_storage_id(&options.entrypoint.0)
-        .and_then(|module_env| {
-            module_env.find_function(env.symbol_pool().make(options.entrypoint.1.as_str()))
-        })
-        .ok_or_else(|| {
-            anyhow!(
-                "Unable to find entrypoint: {}::{}",
-                options.entrypoint.0,
-                options.entrypoint.1
-            )
-        })?;
-
+) -> VMResult<Vec<Vec<u8>>> {
     // consolidate arguments
     let args: Vec<_> = options
         .signers
-        .iter()
-        .map(|addr| MoveValue::Signer(*addr))
-        .chain(options.args.iter().map(|arg| match arg {
-            TransactionArgument::Bool(v) => MoveValue::Bool(*v),
-            TransactionArgument::U8(v) => MoveValue::U8(*v),
-            TransactionArgument::U64(v) => MoveValue::U64(*v),
-            TransactionArgument::U128(v) => MoveValue::U128(*v),
-            TransactionArgument::Address(v) => MoveValue::Address(*v),
+        .into_iter()
+        .map(MoveValue::Signer)
+        .chain(options.args.into_iter().map(|arg| match arg {
+            TransactionArgument::Bool(v) => MoveValue::Bool(v),
+            TransactionArgument::U8(v) => MoveValue::U8(v),
+            TransactionArgument::U64(v) => MoveValue::U64(v),
+            TransactionArgument::U128(v) => MoveValue::U128(v),
+            TransactionArgument::Address(v) => MoveValue::Address(v),
             TransactionArgument::U8Vector(v) => {
-                MoveValue::Vector(v.iter().map(|e| MoveValue::U8(*e)).collect())
+                MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
             }
         }))
         .collect();
 
-    // prepare workdir
-    let workdir_opt = match &options.output {
-        None => None,
-        Some(workdir) => {
-            fs::create_dir_all(workdir)?;
-            Some(workdir)
-        }
-    };
+    // run the actual interpreter
+    interpret(
+        env,
+        &options.entrypoint.0,
+        &options.entrypoint.1,
+        &options.ty_args,
+        &args,
+        pipeline,
+        options.output,
+        options.stepwise,
+    )
+}
+
+pub fn interpret(
+    env: &GlobalEnv,
+    module_id: &ModuleId,
+    func_name: &IdentStr,
+    ty_args: &[TypeTag],
+    args: &[MoveValue],
+    pipeline: FunctionTargetPipeline,
+    output_opt: Option<PathBuf>,
+    stepwise: bool,
+) -> VMResult<Vec<Vec<u8>>> {
+    // find the entrypoint
+    let entrypoint_env = env
+        .find_module_by_language_storage_id(module_id)
+        .and_then(|module_env| module_env.find_function(env.symbol_pool().make(func_name.as_str())))
+        .ok_or_else(|| {
+            PartialVMError::new(StatusCode::LOOKUP_FAILED).finish(Location::Undefined)
+        })?;
 
     // collect function targets
     let mut targets = FunctionTargetsHolder::default();
@@ -124,33 +140,39 @@ pub fn interpret(
         }
     }
 
+    // prepare workdir
+    let workdir_opt = output_opt.map(|workdir| {
+        fs::create_dir_all(&workdir).unwrap();
+        workdir
+    });
+
     // run through the pipeline
-    if options.stepwise {
+    if stepwise {
         pipeline.run_with_hook(
             env,
             &mut targets,
             |holder| {
                 stepwise_processing(
                     env,
-                    workdir_opt,
+                    workdir_opt.as_ref(),
                     0,
                     "stackless",
                     holder,
                     &entrypoint_env,
-                    &options.type_args,
-                    &args,
+                    ty_args,
+                    args,
                 )
             },
             |step, processor, holders| {
                 stepwise_processing(
                     env,
-                    workdir_opt,
+                    workdir_opt.as_ref(),
                     step,
                     &processor.name(),
                     holders,
                     &entrypoint_env,
-                    &options.type_args,
-                    &args,
+                    ty_args,
+                    args,
                 )
             },
         );
@@ -158,16 +180,27 @@ pub fn interpret(
         pipeline.run(env, &mut targets);
         stepwise_processing(
             env,
-            workdir_opt,
+            workdir_opt.as_ref(),
             0,
             "final",
             &targets,
             &entrypoint_env,
-            &options.type_args,
-            &args,
+            ty_args,
+            args,
         );
     }
-    Ok(())
+
+    // collect and convert results
+    let result = env.get_extension::<ExecutionResult>().unwrap();
+    result.vm_result.clone().map(|rets| {
+        rets.into_iter()
+            .map(|v| {
+                let (ty, val, _) = v.decompose();
+                let move_val = convert_typed_value_to_move_value(ty.get_base_type(), val);
+                move_val.simple_serialize().unwrap()
+            })
+            .collect::<Vec<_>>()
+    })
 }
 
 fn stepwise_processing<P: AsRef<Path>>(
@@ -232,20 +265,51 @@ fn stepwise_processing_internal<P: AsRef<Path>>(
     // invoke the runtime
     let vm = Runtime::new(env, targets);
     let global_state = GlobalState::default();
-    let (result, updated_global_state) = vm.execute(fun_env, ty_args, args, global_state);
-    consume_execution_result(step, name, result, updated_global_state);
+    let (vm_result, updated_global_state) = vm.execute(fun_env, ty_args, args, global_state);
+    let actual_result = ExecutionResult {
+        vm_result,
+        global_state: updated_global_state,
+    };
+
+    // handle the results
+    if env.has_extension::<ExecutionResult>() {
+        let expect_result = env.get_extension::<ExecutionResult>().unwrap();
+        if expect_result.as_ref() != &actual_result {
+            bail!(
+                "Execution result in step {}: {} does not match with prior results",
+                step,
+                name
+            );
+        }
+    } else {
+        env.set_extension(actual_result);
+    }
     Ok(())
 }
 
-fn consume_execution_result(
-    step: usize,
-    name: &str,
-    result: VMResult<Vec<TypedValue>>,
-    _global_state: GlobalState,
-) {
-    println!("Execution results for step {}: {}", step, name);
-    match result {
-        Ok(_) => println!("Success"),
-        Err(e) => println!("Aborted with error: {}", e),
+fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue {
+    match ty {
+        BaseType::Primitive(PrimitiveType::Bool) => MoveValue::Bool(val.into_bool()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => MoveValue::U8(val.into_u8()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => MoveValue::U64(val.into_u64()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => MoveValue::U128(val.into_u128()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
+        BaseType::Primitive(PrimitiveType::Address) => MoveValue::Address(val.into_address()),
+        BaseType::Primitive(PrimitiveType::Signer) => MoveValue::Signer(val.into_signer()),
+        BaseType::Vector(elem) => MoveValue::Vector(
+            val.into_vector()
+                .into_iter()
+                .map(|e| convert_typed_value_to_move_value(elem, e))
+                .collect(),
+        ),
+        BaseType::Struct(inst) => MoveValue::Struct(MoveStruct::new(
+            val.into_struct()
+                .into_iter()
+                .zip(inst.fields.iter())
+                .map(|(field_val, field_info)| {
+                    convert_typed_value_to_move_value(&field_info.ty, field_val)
+                })
+                .collect(),
+        )),
     }
 }

@@ -6,15 +6,20 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestStatistics},
 };
 use anyhow::Result;
+use bytecode::pipeline_factory::default_pipeline;
 use colored::*;
-use move_binary_format::file_format::CompiledModule;
+use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasCost, GasUnits},
     identifier::IdentStr,
     value::serialize_values,
     vm_status::StatusCode,
 };
-use move_lang::unit_test::{ExpectedFailure, ModuleTestPlan, TestPlan};
+use move_lang::{
+    shared::Flags,
+    unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
+};
+use move_model::{model::GlobalEnv, run_model_builder_with_compilation_flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
@@ -27,6 +32,8 @@ pub struct SharedTestingConfig {
     execution_bound: u64,
     cost_table: CostTable,
     starting_storage_state: InMemoryStorage,
+    source_files: Vec<String>,
+    use_stackless_vm: bool,
 }
 
 #[derive(Debug)]
@@ -65,7 +72,17 @@ fn setup_test_storage<'a>(
 }
 
 impl TestRunner {
-    pub fn new(execution_bound: u64, num_threads: usize, tests: TestPlan) -> Result<Self> {
+    pub fn new(
+        execution_bound: u64,
+        num_threads: usize,
+        use_stackless_vm: bool,
+        tests: TestPlan,
+    ) -> Result<Self> {
+        let source_files = tests
+            .files
+            .keys()
+            .map(|filepath| filepath.to_string())
+            .collect();
         let modules = tests.module_info.values().map(|info| &info.0);
         let starting_storage_state = setup_test_storage(modules)?;
         Ok(Self {
@@ -73,6 +90,8 @@ impl TestRunner {
                 starting_storage_state,
                 execution_bound,
                 cost_table: unit_cost_table(),
+                source_files,
+                use_stackless_vm,
             },
             num_threads,
             tests,
@@ -112,6 +131,46 @@ impl TestRunner {
 }
 
 impl SharedTestingConfig {
+    fn execute_via_move_vm(
+        &self,
+        test_plan: &ModuleTestPlan,
+        function_name: &str,
+        test_info: &TestCase,
+    ) -> VMResult<Vec<Vec<u8>>> {
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.starting_storage_state);
+        let log_context = NoContextLog::new();
+
+        session.execute_function(
+            &test_plan.module_id,
+            &IdentStr::new(function_name).unwrap(),
+            vec![], // no ty args, at least for now
+            serialize_values(test_info.arguments.iter()),
+            &mut GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound)),
+            &log_context,
+        )
+    }
+
+    fn execute_via_stackless_vm(
+        &self,
+        env: &GlobalEnv,
+        test_plan: &ModuleTestPlan,
+        function_name: &str,
+        test_info: &TestCase,
+    ) -> VMResult<Vec<Vec<u8>>> {
+        let pipeline = default_pipeline();
+        bytecode_interpreter::interpret(
+            env,
+            &test_plan.module_id,
+            &IdentStr::new(function_name).unwrap(),
+            &[], // no ty args, at least for now
+            &test_info.arguments,
+            pipeline,
+            /* output_opt */ None,
+            /* stepwise */ true,
+        )
+    }
+
     fn exec_module_tests<W: Write>(
         &self,
         test_plan: &ModuleTestPlan,
@@ -149,19 +208,27 @@ impl SharedTestingConfig {
             .unwrap();
         };
 
-        for (function_name, test_info) in &test_plan.tests {
-            let move_vm = MoveVM::new();
-            let mut session = move_vm.new_session(&self.starting_storage_state);
-            let log_context = NoContextLog::new();
+        let stackless_model = if self.use_stackless_vm {
+            let model =
+                run_model_builder_with_compilation_flags(&self.source_files, &[], Flags::testing())
+                    .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
+            Some(model)
+        } else {
+            None
+        };
 
-            match session.execute_function(
-                &test_plan.module_id,
-                &IdentStr::new(function_name).unwrap(),
-                vec![], // no ty args, at least for now
-                serialize_values(test_info.arguments.iter()),
-                &mut GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound)),
-                &log_context,
-            ) {
+        for (function_name, test_info) in &test_plan.tests {
+            let exec_result = if self.use_stackless_vm {
+                self.execute_via_stackless_vm(
+                    stackless_model.as_ref().unwrap(),
+                    test_plan,
+                    function_name,
+                    test_info,
+                )
+            } else {
+                self.execute_via_move_vm(test_plan, function_name, test_info)
+            };
+            match exec_result {
                 Err(err) => match (test_info.expected_failure.as_ref(), err.sub_status()) {
                     // Ran out of ticks, report a test timeout and log a test failure
                     _ if err.major_status() == StatusCode::OUT_OF_GAS => {

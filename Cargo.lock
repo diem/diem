@@ -4586,6 +4586,8 @@ name = "move-unit-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytecode",
+ "bytecode-interpreter",
  "colored",
  "datatest-stable",
  "diem-workspace-hack",
@@ -4594,6 +4596,7 @@ dependencies = [
  "move-core-types",
  "move-lang",
  "move-lang-test-utils",
+ "move-model",
  "move-stdlib",
  "move-vm-runtime",
  "move-vm-test-utils",

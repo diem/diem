@@ -46,6 +46,10 @@ pub struct UnitTestingConfig {
     /// Source files
     #[structopt(name = "sources")]
     pub source_files: Vec<String>,
+
+    /// Use the stackless bytecode interpreter to run the tests
+    #[structopt(long = "stackless")]
+    pub use_stackless_vm: bool,
 }
 
 fn format_module_id(module_id: &ModuleId) -> String {
@@ -109,6 +113,7 @@ impl UnitTestingConfig {
         let mut test_runner = TestRunner::new(
             self.instruction_execution_bound,
             self.num_threads,
+            self.use_stackless_vm,
             test_plan,
         )
         .unwrap();
