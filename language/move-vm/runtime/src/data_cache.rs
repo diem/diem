@@ -18,6 +18,23 @@ use move_vm_types::{
     values::{GlobalValue, GlobalValueEffect, Value},
 };
 use std::collections::btree_map::BTreeMap;
+use std::ops::Deref;
+
+pub enum RefBytes<'life> {
+    Bytes(Vec<u8>),
+    Ref(&'life Vec<u8>),
+}
+
+impl<'life> Deref for RefBytes<'life> {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            RefBytes::Bytes(val) => &val,
+            RefBytes::Ref(xref) => xref,
+        }
+    }
+}
 
 /// Trait for the Move VM to abstract storage operations.
 ///
@@ -45,6 +62,14 @@ pub trait MoveStorage {
         address: &AccountAddress,
         tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>>;
+    fn get_resource_ref(
+        &self,
+        address: &AccountAddress,
+        tag: &StructTag,
+    ) -> PartialVMResult<Option<RefBytes>> {
+        self.get_resource(address, tag)
+            .map(|v| v.map(|v1| RefBytes::Bytes(v1)))
+    }
 }
 
 pub struct AccountDataCache {

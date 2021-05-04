@@ -2369,6 +2369,7 @@ dependencies = [
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
+ "num_cpus",
  "once_cell",
  "proptest",
  "rayon",

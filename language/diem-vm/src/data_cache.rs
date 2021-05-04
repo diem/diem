@@ -14,17 +14,18 @@ use diem_types::{
     write_set::{WriteOp, WriteSet},
 };
 use fail::fail_point;
-use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::MoveStorage;
 use std::collections::btree_map::BTreeMap;
+
+use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use std::sync::Mutex;
 
 /// A local cache for a given a `StateView`. The cache is private to the Diem layer
-/// but can be used as a one shot cache for systems that need a simple `RemoteCache`
+/// but can be used as a one shot cache for systems that need a simple `MoveStorage`
 /// implementation (e.g. tests or benchmarks).
 ///
 /// The cache is responsible to track all changes to the `StateView` that are the result
@@ -37,10 +38,13 @@ use std::sync::Mutex;
 /// If a system wishes to execute a block of transaction on a given view, a cache that keeps
 /// track of incremental changes is vital to the consistency of the data store and the system.
 pub struct StateViewCache<'a> {
-    data_view: &'a dyn StateView,
+    pub data_view: &'a dyn StateView,
     data_map: BTreeMap<AccessPath, Option<Vec<u8>>>,
     reads: Mutex<Vec<AccessPath>>,
+    record_reads: bool,
 }
+
+unsafe impl<'a> Sync for StateViewCache<'a> {}
 
 impl<'a> StateViewCache<'a> {
     /// Create a `StateViewCache` give a `StateView`. Hold updates to the data store and
@@ -49,11 +53,24 @@ impl<'a> StateViewCache<'a> {
         StateViewCache {
             data_view,
             data_map: BTreeMap::new(),
+            record_reads: false,
+            reads: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn new_recorder(data_view: &'a dyn StateView) -> Self {
+        StateViewCache {
+            data_view,
+            data_map: BTreeMap::new(),
+            record_reads: true,
             reads: Mutex::new(Vec::new()),
         }
     }
 
     pub fn read_set(&self) -> Vec<AccessPath> {
+        if !self.record_reads {
+            panic!("NOT CONFIGURED TO RECORD READS");
+        }
         self.reads.lock().unwrap().iter().cloned().collect()
     }
 
@@ -73,6 +90,16 @@ impl<'a> StateViewCache<'a> {
             }
         }
     }
+
+    /* Example of how to write directly from the Option(vec) using in the DB.
+
+    pub(crate) fn push_changes(&mut self, changes : Vec<(AccessPath, Option<Vec<u8>>)>) {
+        for (k, v) in changes {
+            self.data_map.insert(k, v);
+        }
+    }
+
+    */
 }
 
 impl<'block> StateView for StateViewCache<'block> {
@@ -82,7 +109,10 @@ impl<'block> StateView for StateViewCache<'block> {
             "Injected failure in data_cache::get"
         )));
 
-        self.reads.lock().unwrap().push(access_path.clone());
+        if self.record_reads {
+            self.reads.lock().unwrap().push(access_path.clone());
+        }
+
         match self.data_map.get(access_path) {
             Some(opt_data) => Ok(opt_data.clone()),
             None => match self.data_view.get(&access_path) {
@@ -135,7 +165,7 @@ impl<'block> ConfigStorage for StateViewCache<'block> {
     }
 }
 
-// Adapter to convert a `StateView` into a `RemoteCache`.
+// Adapter to convert a `StateView` into a `MoveStorage`.
 pub struct RemoteStorage<'a, S>(&'a S);
 
 impl<'a, S: StateView> RemoteStorage<'a, S> {
@@ -162,7 +192,7 @@ impl<'a, S: StateView> MoveStorage for RemoteStorage<'a, S> {
         address: &AccountAddress,
         struct_tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        let ap = create_access_path(*address, struct_tag.clone());
+        let ap = create_access_path(*address, struct_tag);
         self.get(&ap)
     }
 }

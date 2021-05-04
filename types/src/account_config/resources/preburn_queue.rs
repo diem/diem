@@ -40,7 +40,7 @@ impl PreburnQueueResource {
 
     // TODO: remove this once the MoveResource trait allows type arguments to `resource_path`.
     pub fn access_path_for(currency_typetag: TypeTag) -> Vec<u8> {
-        AccessPath::resource_access_vec(PreburnQueueResource::struct_tag_for_currency(
+        AccessPath::resource_access_vec(&PreburnQueueResource::struct_tag_for_currency(
             currency_typetag,
         ))
     }

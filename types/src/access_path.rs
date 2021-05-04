@@ -41,7 +41,12 @@ use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_T
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::{convert::TryFrom, fmt};
+
+// A thread local cache ...
+thread_local!(static CACHE_AP: RefCell<HashMap<StructTag, Vec<u8>>> = RefCell::new(HashMap::new()));
 
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -62,19 +67,35 @@ impl AccessPath {
         AccessPath { address, path }
     }
 
-    pub fn resource_access_vec(tag: StructTag) -> Vec<u8> {
-        bcs::to_bytes(&Path::Resource(tag)).expect("Unexpected serialization error")
+    // pub fn resource_access_vec(tag: StructTag) -> Vec<u8> {
+    //     bcs::to_bytes(&Path::Resource(tag)).expect("Unexpected serialization error")
+    // }
+    pub fn resource_access_vec(tag: &StructTag) -> Vec<u8> {
+        CACHE_AP.with(|f| {
+            if f.borrow().contains_key(tag) {
+                return f.borrow().get(tag).unwrap().clone();
+            } else {
+                let val = bcs::to_bytes(&Path::Resource(tag.clone()))
+                    .expect("Unexpected serialization error");
+                f.borrow_mut().insert(tag.clone(), val.clone());
+                val
+            }
+        })
     }
 
     /// Convert Accesses into a byte offset which would be used by the storage layer to resolve
     /// where fields are stored.
-    pub fn resource_access_path(key: ResourceKey) -> AccessPath {
-        let path = AccessPath::resource_access_vec(key.type_);
-        AccessPath {
-            address: key.address,
-            path,
-        }
+    pub fn resource_access_path(address: AccountAddress, tag: &StructTag) -> AccessPath {
+        let path = AccessPath::resource_access_vec(tag);
+        AccessPath::new(address, path)
     }
+    // pub fn resource_access_path(key: ResourceKey) -> AccessPath {
+    //     let path = AccessPath::resource_access_vec(key.type_);
+    //     AccessPath {
+    //         address: key.address,
+    //         path,
+    //     }
+    // }
 
     fn code_access_path_vec(key: ModuleId) -> Vec<u8> {
         bcs::to_bytes(&Path::Code(key)).expect("Unexpected serialization error")
@@ -83,7 +104,7 @@ impl AccessPath {
     pub fn code_access_path(key: ModuleId) -> AccessPath {
         let address = *key.address();
         let path = AccessPath::code_access_path_vec(key);
-        AccessPath { address, path }
+        AccessPath::new(address, path)
     }
 
     /// Extract the structured resource or module `Path` from `self`
@@ -139,10 +160,7 @@ impl fmt::Display for AccessPath {
 
 impl From<&ModuleId> for AccessPath {
     fn from(id: &ModuleId) -> AccessPath {
-        AccessPath {
-            address: *id.address(),
-            path: id.access_vector(),
-        }
+        AccessPath::new(*id.address(), id.access_vector())
     }
 }
 

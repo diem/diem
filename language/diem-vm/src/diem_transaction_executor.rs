@@ -20,6 +20,7 @@ use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::access_path::AccessPath;
 use diem_types::transaction::TransactionArgument;
+use diem_types::write_set::WriteOp;
 use diem_types::{
     account_config,
     block_metadata::BlockMetadata,
@@ -41,8 +42,8 @@ use move_core_types::{
 use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 use rayon::prelude::*;
-use std::cmp::max;
-use std::collections::HashMap;
+use std::cmp::{max, min};
+use std::collections::{BTreeMap, HashMap};
 use std::time::Instant;
 use std::{
     collections::HashSet,
@@ -789,213 +790,470 @@ impl DiemVM {
         })
     }
 
+    fn dependency_structure_hack(
+        &self,
+        transactions: &Vec<Transaction>,
+        data_cache: &mut StateViewCache,
+    ) -> Result<HashMap<Vec<u8>, ScriptReadWriteSet>, ()> {
+        // STARTS -- DEPENDENCY INFERENCE HACK / Replace with static analysis of write set
+        let mut read_write_infer = HashMap::new();
+        for (_idx, txn) in transactions.iter().enumerate() {
+            match txn {
+                Transaction::UserTransaction(user_txn) => {
+                    match user_txn.payload() {
+                        TransactionPayload::Script(script) => {
+                            // If the transaction is not known, then execute it to infer its read/write logic.
+                            if !read_write_infer.contains_key(script.code()) {
+                                println!("COMPUTE READ/WRITE SET");
+                                let xref = &*data_cache;
+                                let local_state_view_cache = StateViewCache::new_recorder(xref);
+                                let log_context = AdapterLogSchema::new(xref.id(), 0);
+                                // Execute the transaction
+                                let verify_txn = preprocess_transaction(txn.clone());
+                                if let Ok((vm_status, output, _)) = self.execute_single_transaction(
+                                    &verify_txn,
+                                    &local_state_view_cache,
+                                    &log_context,
+                                ) {
+                                    if vm_status != VMStatus::Executed {
+                                        return Err(());
+                                    }
+                                    // Record the read-set
+                                    let read_set = local_state_view_cache.read_set();
+
+                                    // Create a params list
+                                    let mut params = vec![user_txn.sender()];
+                                    for arg in script.args() {
+                                        match arg {
+                                            TransactionArgument::Address(address) => {
+                                                params.push(address.clone());
+                                            }
+                                            _ => {}
+                                        };
+                                    }
+
+                                    let mut reads = Vec::new();
+                                    let mut writes = Vec::new();
+                                    let write_set: HashSet<AccessPath> = output
+                                        .write_set()
+                                        .iter()
+                                        .map(|(k, _)| k)
+                                        .cloned()
+                                        .collect();
+                                    // println!("Params: {:?}", params);
+                                    for path in read_set {
+                                        if write_set.contains(&path) {
+                                            reads.push(path.clone());
+                                            writes.push(path.clone());
+                                            // println!("  -W {}", path);
+                                        } else {
+                                            reads.push(path.clone());
+                                            // println!("  -R {}", path);
+                                        }
+                                    }
+
+                                    read_write_infer.insert(
+                                        script.code().to_vec(),
+                                        ScriptReadWriteSet::new(params, reads, writes),
+                                    );
+                                } else {
+                                    panic!("NO LOGIC TO INFER READ/WRITE SET");
+                                }
+                            }
+                        }
+                        _ => {
+                            println!("NON SCIPT TRANSACTION");
+                            return Err(());
+                        }
+                    }
+                }
+                Transaction::BlockMetadata(meta) => {
+                    let xref = &*data_cache;
+                    let local_state_view_cache = StateViewCache::new_recorder(xref);
+                    let log_context = AdapterLogSchema::new(xref.id(), 0);
+                    // Execute the transaction
+                    let verify_txn = preprocess_transaction(txn.clone());
+                    if let Ok((_vm_status, output, _)) = self.execute_single_transaction(
+                        &verify_txn,
+                        &local_state_view_cache,
+                        &log_context,
+                    ) {
+                        // Record the read-set
+                        let read_set = local_state_view_cache.read_set();
+
+                        // Create a params list
+                        let (_, _, _, proposer) = meta.clone().into_inner();
+                        let params = vec![proposer];
+
+                        let mut reads = Vec::new();
+                        let mut writes = Vec::new();
+                        let write_set: HashSet<AccessPath> =
+                            output.write_set().iter().map(|(k, _)| k).cloned().collect();
+                        // println!("Params: {:?}", params);
+                        for path in read_set {
+                            if write_set.contains(&path) {
+                                reads.push(path.clone());
+                                writes.push(path.clone());
+                                // println!("  -W {}", path);
+                            } else {
+                                reads.push(path.clone());
+                                // println!("  -R {}", path);
+                            }
+                        }
+
+                        read_write_infer
+                            .insert(vec![], ScriptReadWriteSet::new(params, reads, writes));
+                    }
+                }
+                _ => {
+                    println!("NON USER TRANSACTION");
+                    return Err(());
+                }
+            }
+        }
+        // ENDS
+        Ok(read_write_infer.clone())
+    }
+
     fn execute_block_impl_parallel(
         &mut self,
         transactions: Vec<Transaction>,
         data_cache: &mut StateViewCache,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-        let count = transactions.len();
-        let mut result = vec![];
+        let mut exec_tally: u128 = 0;
 
-        info!(
-            AdapterLogSchema::new(data_cache.id(), 0),
-            "Executing block, transaction count: {}",
-            transactions.len()
+        use crate::scheduler_parallel::{
+            OutcomeArray, SingleThreadReadCache, VersionedStateView, WriteVersionValue,
+            WritesPlaceholder,
+        };
+
+        // Count and print the number of transactions.
+        let num_txns = transactions.len();
+        let cpus = num_cpus::get();
+        let chunks = max(1, num_txns / cpus);
+
+        // TODO: deal with execution restarting ...
+        let mut _should_restart = false;
+        println!("Executing block, transaction count: {}", num_txns);
+
+        // Update the dependency analysis structure. We only do this for blocks that
+        // purely consist of UserTransactions (Extending this is a TODO). If non-user
+        // transactions are detected this returns and err, and we revert to sequential
+        // block processing.
+        let execute_start = std::time::Instant::now();
+        let infer_result = self.dependency_structure_hack(&transactions, data_cache);
+        let read_write_infer = match infer_result {
+            Err(_) => return self.execute_block_impl(transactions, data_cache, false),
+            Ok(val) => val,
+        };
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
+        println!(
+            "Check Dependencies. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
         );
+        exec_tally += execute_time.as_millis();
 
-        let t = Instant::now();
-        let signature_verified_block: Vec<PreprocessedTransaction>;
+        let execute_start = std::time::Instant::now();
+        let mut signature_verified_block: Vec<PreprocessedTransaction> = Vec::new();
         {
             // Verify the signatures of all the transactions in parallel.
             // This is time consuming so don't wait and do the checking
             // sequentially while executing the transactions.
-            signature_verified_block = transactions
-                .clone()
+            transactions
+                // .clone()
                 .into_par_iter()
                 .map(preprocess_transaction)
-                .collect();
+                .collect_into_vec(&mut signature_verified_block);
         }
+
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
         println!(
-            "Signature verification takes: {}ms",
-            Instant::now().duration_since(t).as_millis()
+            "Check Signatures. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
         );
+        exec_tally += execute_time.as_millis();
 
-        let mut read_write_infer = HashMap::<Vec<u8>, ScriptReadWriteSet>::new();
-        let mut versioning = HashMap::new();
-        let mut max_dependency = 0;
+        let execute_start = std::time::Instant::now();
 
-        let mut transaction_schedule = HashMap::new();
-
-        let t = Instant::now();
-        // Check the first transaction
-        for txn in &signature_verified_block {
-            if let PreprocessedTransaction::UserTransaction(user_txn) = txn {
-                match user_txn.payload() {
-                    TransactionPayload::Script(script) => {
-                        // If the transaction is not known, then execute it to infer its read/write logic.
-                        if !read_write_infer.contains_key(script.code()) {
-                            println!("COMPUTE READ/WRITE SET");
-                            let xref = &*data_cache;
-                            let local_state_view_cache = StateViewCache::new(xref);
-                            let log_context = AdapterLogSchema::new(xref.id(), 0);
-                            // Execute the transaction
-                            if let Ok((_, output, _)) = self.execute_single_transaction(
-                                txn,
-                                &local_state_view_cache,
-                                &log_context,
-                            ) {
-                                // Record the read-set
-                                let read_set = local_state_view_cache.read_set();
-
-                                // Create a params list
-                                let mut params = vec![user_txn.sender()];
-                                for arg in script.args() {
-                                    match arg {
-                                        TransactionArgument::Address(address) => {
+        // Analyse each user script for its write-set and create the placeholder structure
+        // that allows for parallel execution.
+        let path_version_tuples: Vec<(AccessPath, usize)> = signature_verified_block
+            .par_iter()
+            .enumerate()
+            .with_min_len(chunks)
+            .fold(
+                || Vec::new(),
+                |mut acc, (idx, txn)| {
+                    match txn {
+                        PreprocessedTransaction::UserTransaction(user_txn) => {
+                            match user_txn.payload() {
+                                TransactionPayload::Script(script) => {
+                                    let mut params = Vec::with_capacity(5);
+                                    params.push(user_txn.sender());
+                                    for arg in script.args() {
+                                        if let TransactionArgument::Address(address) = arg {
                                             params.push(address.clone());
                                         }
-                                        _ => {}
-                                    };
-                                }
-
-                                let mut reads = Vec::new();
-                                let mut writes = Vec::new();
-                                let write_set: HashSet<AccessPath> =
-                                    output.write_set().iter().map(|(k, _)| k).cloned().collect();
-                                //println!("Params: {:?}", params);
-                                for path in read_set {
-                                    if write_set.contains(&path) {
-                                        reads.push(path.clone());
-                                        writes.push(path.clone());
-                                        //println!("  -W {}", path);
-                                    } else {
-                                        reads.push(path.clone());
-                                        //println!("  -R {}", path);
                                     }
-                                }
 
-                                read_write_infer.insert(
-                                    script.code().to_vec(),
-                                    ScriptReadWriteSet::new(params, reads, writes),
-                                );
-                            } else {
-                                panic!("NO LOGIC TO INFER READ/WRITE SET");
+                                    // Create the dependency structure
+                                    let deps = read_write_infer.get(script.code()).unwrap();
+                                    acc.extend(deps.writes(&params).map(|w| (w, idx)));
+                                }
+                                _ => {
+                                    unreachable!()
+                                }
+                            }
+                        }
+                        PreprocessedTransaction::BlockMetadata(meta) => {
+                            let (_, _, _, proposer) = meta.clone().into_inner();
+                            let params = vec![proposer];
+                            // Create the dependency structure
+                            let deps = read_write_infer.get(&vec![]).unwrap();
+                            acc.extend(deps.writes(&params).map(|w| (w, idx)));
+                        }
+                        _ => unreachable!(),
+                    }
+                    acc
+                },
+            )
+            .flatten()
+            .collect();
+
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
+
+        println!(
+            "Schedule Parallel. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
+        );
+        exec_tally += execute_time.as_millis();
+
+        let execute_start = std::time::Instant::now();
+
+        fn split_merge(
+            num_cpus: usize,
+            num: usize,
+            split: Vec<(AccessPath, usize)>,
+        ) -> (
+            usize,
+            HashMap<AccessPath, BTreeMap<usize, WriteVersionValue>>,
+        ) {
+            if ((2 << num) > num_cpus) || split.len() < 1000 {
+                let mut data = HashMap::new();
+                let mut max_len = 0;
+                for (path, version) in split.into_iter() {
+                    let place = data.entry(path).or_insert(BTreeMap::new());
+                    place.insert(version, WriteVersionValue::new());
+                    max_len = max(max_len, place.len());
+                }
+                (max_len, data)
+            } else {
+                let pivot_address = split[split.len() / 2].0.clone();
+                let (left, right): (Vec<_>, Vec<_>) =
+                    split.into_iter().partition(|(p, _)| *p < pivot_address);
+                let ((m0, mut left_map), (m1, right_map)) = rayon::join(
+                    || split_merge(num_cpus, num + 1, left),
+                    || split_merge(num_cpus, num + 1, right),
+                );
+                left_map.extend(right_map);
+                (max(m0, m1), left_map)
+            }
+        }
+
+        let ((max_len, data), outcomes) = rayon::join(
+            || split_merge(cpus, 0, path_version_tuples),
+            || OutcomeArray::new(num_txns),
+        );
+
+        let placeholders = WritesPlaceholder::new_from(data);
+
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
+
+        println!(
+            "Schedule Reduce. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
+        );
+        exec_tally += execute_time.as_millis();
+
+        use rayon::scope;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        // The advanced scheduler
+        let execute_start = std::time::Instant::now();
+        let curent_idx = AtomicUsize::new(0);
+        let stop_when = signature_verified_block.len();
+
+        use std::collections::VecDeque;
+
+        scope(|s| {
+            // How many threads to use?
+            let compute_cpus = min(1 + (num_txns / 50), cpus - 1); // Ensure we have at least 50 tx per thread.
+            let compute_cpus = min(num_txns / max_len, compute_cpus); // Ensure we do not higher rate of conflict than concurrency.
+
+            println!(
+                "Launching {} threads to execute (Max conflict {}) ...",
+                compute_cpus, max_len
+            );
+            for _ in 0..(compute_cpus) {
+                s.spawn(|_| {
+                    // Make a per thread cache to de-congest mem bus
+                    let thread_data_cache = SingleThreadReadCache::new(data_cache);
+                    // Make a new VM per thread -- with its own module cache
+                    let thread_vm = DiemVM::new(&thread_data_cache);
+                    let mut tx_idx_ring_buffer = VecDeque::with_capacity(10);
+
+                    loop {
+                        if tx_idx_ring_buffer.len() < 10 {
+                            // How many transactions to have in the buffer.
+
+                            let idx = curent_idx.fetch_add(1, Ordering::Relaxed);
+                            if idx < stop_when {
+                                let txn = &signature_verified_block[idx];
+
+                                let (params, deps) = match txn {
+                                    PreprocessedTransaction::UserTransaction(user_txn) => {
+                                        match user_txn.payload() {
+                                            TransactionPayload::Script(script) => {
+                                                let mut params = Vec::with_capacity(5);
+                                                params.push(user_txn.sender());
+                                                for arg in script.args() {
+                                                    if let TransactionArgument::Address(address) =
+                                                        arg
+                                                    {
+                                                        params.push(address.clone());
+                                                    }
+                                                }
+
+                                                // Create the dependency structure
+                                                let deps =
+                                                    read_write_infer.get(script.code()).unwrap();
+                                                (params, deps)
+                                            }
+                                            _ => {
+                                                unreachable!();
+                                            }
+                                        }
+                                    }
+                                    PreprocessedTransaction::BlockMetadata(meta) => {
+                                        let (_, _, _, proposer) = meta.clone().into_inner();
+                                        let params = vec![proposer];
+                                        // Create the dependency structure
+                                        let deps = read_write_infer.get(&vec![]).unwrap();
+                                        (params, deps)
+                                    }
+                                    _ => {
+                                        unreachable!();
+                                    }
+                                };
+
+                                tx_idx_ring_buffer.push_back((idx, txn, params, deps));
                             }
                         }
 
-                        let mut params = vec![user_txn.sender()];
-                        for arg in script.args() {
-                            match arg {
-                                TransactionArgument::Address(address) => {
-                                    params.push(address.clone());
+                        if tx_idx_ring_buffer.len() == 0 {
+                            break;
+                        }
+
+                        let (idx, txn, params, deps) = tx_idx_ring_buffer.pop_front().unwrap(); // safe due to previous check
+
+                        let versioned_state_view =
+                            VersionedStateView::new(idx, &thread_data_cache, &placeholders);
+
+                        // Delay and move to next tx if cannot execure now.
+                        if deps
+                            .reads(&params)
+                            .any(|k| versioned_state_view.will_read_block(&k))
+                        {
+                            // println!("Delay {}", idx);
+                            tx_idx_ring_buffer.push_back((idx, txn, params, deps));
+
+                            // This causes a PAUSE on an x64 arch, and takes 140 cycles. Allows other
+                            // core to take resources and better HT.
+                            ::std::sync::atomic::spin_loop_hint();
+                            continue;
+                        }
+
+                        // Execute the transaction
+                        let log_context = AdapterLogSchema::new(versioned_state_view.id(), idx);
+                        let res = thread_vm.execute_single_transaction(
+                            txn,
+                            &versioned_state_view,
+                            &log_context,
+                        );
+                        match res {
+                            Ok((vm_status, output, _)) => {
+                                if !output.status().is_discarded() {
+                                    for (k, v) in output.write_set() {
+                                        let val = match v {
+                                            WriteOp::Deletion => None,
+                                            WriteOp::Value(data) => Some(data.clone()),
+                                        };
+
+                                        placeholders.write(k, idx, val).unwrap();
+                                    }
+
+                                    for w in deps.writes(&params) {
+                                        placeholders.skip_if_not_set(&w, idx).unwrap();
+                                    }
+
+                                    // Commit the results to the data cache
+                                    outcomes.set_result(idx, (vm_status, output), true);
+                                } else {
+                                    for w in deps.writes(&params) {
+                                        placeholders.skip(&w, idx).unwrap();
+                                    }
+
+                                    outcomes.set_result(idx, (vm_status, output), false);
                                 }
-                                _ => {}
-                            };
+                            }
+                            Err(_) => {
+                                panic!("TODO STOP VM & RETURN ERROR");
+                                // return Err(e);
+                            }
                         }
-
-                        // Create the dependency structure
-                        let deps = read_write_infer.get(script.code()).unwrap();
-                        let mut max_read = 0;
-                        for r in deps.reads(&params) {
-                            max_read = max(max_read, *versioning.entry(r).or_insert(0));
-                        }
-
-                        for w in deps.writes(&params) {
-                            *versioning.entry(w).or_insert(max_read + 1) = max_read + 1;
-                        }
-                        // println!("Max write version: {}", max_read+1);
-
-                        let dep_transactions = transaction_schedule
-                            .entry(max_read + 1)
-                            .or_insert(Vec::new());
-                        dep_transactions.push(txn);
-
-                        max_dependency = max(max_dependency, max_read + 1);
                     }
-                    _ => {
-                        println!("NON SCIPT TRANSACTION");
-                        return self.execute_block_impl(transactions, data_cache, false);
-                    }
-                }
-            } else {
-                println!("NON USER TRANSACTION");
-                return self.execute_block_impl(transactions, data_cache, false);
+                    // println!("   - Exec thread: wait {} proceed {}", wait_num, proceed_num);
+                });
             }
-        }
+        });
+
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
+
         println!(
-            "Scheduling takes: {}ms",
-            Instant::now().duration_since(t).as_millis()
+            "Advanced Exec. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
         );
+        exec_tally += execute_time.as_millis();
+        //
+        let execute_start = std::time::Instant::now();
+        let (num_success, num_fail) = outcomes.get_stats();
+        println!("Block: {} success, {} failures", num_success, num_fail);
 
-        println!("Max dependency: {}", max_dependency);
-        if max_dependency > 40 {
-            println!("REVERT TO SEQUENTIAL");
-            return self.execute_block_impl(transactions, data_cache, false);
-        }
+        let all_results = outcomes.get_all_results();
 
-        let mut discarded = 0;
-        let mut exec_step = 0;
-        loop {
-            let current_level = transaction_schedule.keys().min();
-            let level = match current_level {
-                None => break,
-                Some(level) => level.clone(),
-            };
+        use std::thread;
 
-            let current_processed_transactions = transaction_schedule.remove(&level).unwrap();
+        // Dropping large structures is expensive -- do this is a separate thread.
+        thread::spawn(move || {
+            drop(signature_verified_block); // Explicit drops to measure their cost.
+            drop(placeholders);
+        });
 
-            println!(
-                "EXEC_STEP {} TX: {}",
-                exec_step,
-                current_processed_transactions.len()
-            );
-            let xref = &*data_cache;
-            let mut inner_results = Vec::new();
-            let ref_vm = &*self;
-            let t = Instant::now();
-            inner_results = current_processed_transactions
-                .par_iter()
-                .enumerate()
-                .map(|(idx, txn)| {
-                    // Make a fresh data cache using the overall data cache underneath.
-                    //let local_state_view_cache = StateViewCache::new(xref);
-                    let log_context = AdapterLogSchema::new(xref.id(), idx);
-                    // Execute the transaction
-                    ref_vm.execute_single_transaction(txn, xref, &log_context)
-                })
-                .collect();
+        let execute_time = std::time::Instant::now().duration_since(execute_start);
+        println!(
+            "Extract results. Execute time: {} ms. TPS: {}.",
+            execute_time.as_millis(),
+            num_txns as u128 * 1_000_000_000 / execute_time.as_nanos(),
+        );
+        exec_tally += execute_time.as_millis();
+        println!("Exec tally: {}ms", exec_tally);
 
-            for res in inner_results.into_iter() {
-                match res {
-                    Ok((vm_status, output, _)) => {
-                        if !output.status().is_discarded() {
-                            // Commit the results to the data cache
-                            data_cache.push_write_set(output.write_set());
-                            result.push((vm_status, output))
-                        } else {
-                            discarded += 1;
-                            result.push((vm_status, output));
-                        }
-                    }
-                    Err(e) => {
-                        return Err(e);
-                    }
-                }
-            }
-            println!(
-                "Execution step {} takes: {}ms",
-                exec_step,
-                Instant::now().duration_since(t).as_millis()
-            );
-            exec_step += 1;
-        }
-        println!("Discarded {}", discarded);
-
-        // Record the histogram count for transactions per block.
-        BLOCK_TRANSACTION_COUNT.observe(count as f64);
-
-        println!("RETURN {} resutls", result.len());
-        Ok(result)
+        all_results
     }
 
     /// Alternate form of 'execute_block' that keeps the vm_status before it goes into the
@@ -1113,13 +1371,13 @@ impl AsMut<DiemVMImpl> for DiemVM {
 }
 
 // Structure that holds infered read/write sets
-
 #[derive(Clone)]
 enum ScriptReadWriteSetVar {
     Const,
     Param(usize),
 }
 
+#[derive(Clone)]
 pub struct ScriptReadWriteSet {
     reads: Vec<(ScriptReadWriteSetVar, AccessPath)>,
     writes: Vec<(ScriptReadWriteSetVar, AccessPath)>,
@@ -1159,33 +1417,59 @@ impl ScriptReadWriteSet {
 
     // Return the read access paths specialized for these parameters
     // TODO: return a result in case the params are not long enough.
-    pub fn reads(&self, params: &Vec<AccountAddress>) -> Vec<AccessPath> {
-        self.reads
-            .iter()
-            .cloned()
-            .map(|(v, mut p)| match v {
-                ScriptReadWriteSetVar::Const => p,
-                ScriptReadWriteSetVar::Param(i) => {
-                    p.address = params[i];
-                    p
-                }
-            })
-            .collect()
+    pub fn reads<'a>(&'a self, params: &'a Vec<AccountAddress>) -> ScriptReadWriteSetVarIter {
+        return ScriptReadWriteSetVarIter::new(&self.reads, params);
     }
 
     // Return the write access paths specialized for these parameters
     // TODO: return a result in case the params are not long enough.
-    pub fn writes(&self, params: &Vec<AccountAddress>) -> Vec<AccessPath> {
-        self.writes
-            .iter()
-            .cloned()
-            .map(|(v, mut p)| match v {
-                ScriptReadWriteSetVar::Const => p,
+    pub fn writes<'a>(&'a self, params: &'a Vec<AccountAddress>) -> ScriptReadWriteSetVarIter<'a> {
+        return ScriptReadWriteSetVarIter::new(&self.writes, params);
+    }
+}
+
+pub struct ScriptReadWriteSetVarIter<'a> {
+    // A link to the array we iterate over
+    array: &'a Vec<(ScriptReadWriteSetVar, AccessPath)>,
+    // The parameters we use to popular the read-write set
+    params: &'a Vec<AccountAddress>,
+    // the position we are in the array.
+    seq: usize,
+}
+
+impl<'a> ScriptReadWriteSetVarIter<'a> {
+    fn new(
+        array: &'a Vec<(ScriptReadWriteSetVar, AccessPath)>,
+        params: &'a Vec<AccountAddress>,
+    ) -> ScriptReadWriteSetVarIter<'a> {
+        ScriptReadWriteSetVarIter {
+            array,
+            params,
+            seq: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for ScriptReadWriteSetVarIter<'a> {
+    // we will be counting with usize
+    type Item = AccessPath;
+
+    // next() is the only required method
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.seq < self.array.len() {
+            let (v, p) = &self.array[self.seq];
+            let current_item = match v {
+                ScriptReadWriteSetVar::Const => p.clone(),
                 ScriptReadWriteSetVar::Param(i) => {
-                    p.address = params[i];
+                    let mut p = p.clone();
+                    p.address = self.params[*i];
                     p
                 }
-            })
-            .collect()
+            };
+            self.seq += 1;
+            Some(current_item)
+        } else {
+            None
+        }
     }
 }

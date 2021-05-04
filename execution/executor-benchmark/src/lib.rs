@@ -14,6 +14,7 @@ use diem_logger::prelude::*;
 use diem_transaction_builder::stdlib::{
     encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
 };
+use diem_types::block_metadata::BlockMetadata;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{
@@ -260,7 +261,17 @@ impl TransactionExecutor {
         let start_time = Instant::now();
         let mut version = 0;
 
-        while let Ok(transactions) = self.block_receiver.recv() {
+        while let Ok(mut transactions) = self.block_receiver.recv() {
+            transactions.insert(
+                0,
+                Transaction::BlockMetadata(BlockMetadata::new(
+                    HashValue::zero(),
+                    0,
+                    0,
+                    vec![],
+                    AccountAddress::ZERO,
+                )),
+            );
             let num_txns = transactions.len();
             version += num_txns as u64;
 

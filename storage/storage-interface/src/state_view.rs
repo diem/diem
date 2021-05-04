@@ -168,11 +168,14 @@ impl<'a> StateView for VerifiedStateView<'a> {
                             err
                         )
                     })?;
-                assert!(self
-                    .account_to_proof_cache
+                self.account_to_proof_cache
                     .write()
-                    .insert(address_hash, proof)
-                    .is_none());
+                    .insert(address_hash, proof);
+                // assert!(self
+                //     .account_to_proof_cache
+                //     .write()
+                //     .insert(address_hash, proof)
+                //     .is_none());
                 blob
             }
         };
