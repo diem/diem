@@ -2,15 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
-use std::collections::BTreeSet;
 use structopt::StructOpt;
 
-use bytecode::{
-    function_target_pipeline::{
-        FunctionTargetPipeline, FunctionTargetProcessor, FunctionTargetsHolder,
-    },
-    reaching_def_analysis::ReachingDefProcessor,
-};
+use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder};
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -50,9 +44,6 @@ pub struct InterpreterOptions {
     #[structopt(long = "ty-args", parse(try_from_str = parse_type_tag))]
     pub ty_args: Vec<TypeTag>,
 
-    /// Run the interpreter at every step of the transformation pipeline
-    #[structopt(long = "stepwise")]
-    pub stepwise: bool,
     /// Print verbose debug information
     #[structopt(short = "v", long = "verbose")]
     pub verbose: bool,
@@ -110,7 +101,6 @@ pub fn interpret_with_options(
         &options.ty_args,
         &args,
         pipeline,
-        options.stepwise,
         options.verbose,
     )
 }
@@ -122,7 +112,6 @@ pub fn interpret(
     ty_args: &[TypeTag],
     args: &[MoveValue],
     pipeline: FunctionTargetPipeline,
-    stepwise: bool,
     verbose: bool,
 ) -> VMResult<Vec<Vec<u8>>> {
     // find the entrypoint
@@ -139,72 +128,18 @@ pub fn interpret(
         );
     }
 
-    // collect function targets
+    // collect and transform function targets
     let mut targets = FunctionTargetsHolder::default();
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
             targets.add_target(&func_env)
         }
     }
+    pipeline.run(env, &mut targets);
 
-    // run through the pipeline
-    if stepwise {
-        // NOTE: list of processors to skip in step-wise processing
-        let skipped_processors: Vec<Box<dyn FunctionTargetProcessor>> = vec![
-            // ReachingDefProcessor creates local slots that are moved multiple times. It has to
-            // be paired with the LiveVarAnalysisProcessor to obtain a program in good shape.
-            ReachingDefProcessor::new(),
-        ];
-        let skipset: BTreeSet<_> = skipped_processors.into_iter().map(|p| p.name()).collect();
-
-        pipeline.run_with_hook(
-            env,
-            &mut targets,
-            |holder| {
-                stepwise_processing(
-                    env,
-                    0,
-                    "stackless",
-                    holder,
-                    &entrypoint_env,
-                    ty_args,
-                    args,
-                    verbose,
-                )
-            },
-            |step, processor, holders| {
-                if skipset.contains(&processor.name()) {
-                    return;
-                }
-                stepwise_processing(
-                    env,
-                    step,
-                    &processor.name(),
-                    holders,
-                    &entrypoint_env,
-                    ty_args,
-                    args,
-                    verbose,
-                )
-            },
-        );
-    } else {
-        pipeline.run(env, &mut targets);
-        stepwise_processing(
-            env,
-            0,
-            "final",
-            &targets,
-            &entrypoint_env,
-            ty_args,
-            args,
-            verbose,
-        );
-    }
-
-    // collect and convert results
-    let result = env.clear_extension::<ExecutionResult>().unwrap();
-    result.vm_result.clone().map(|rets| {
+    // execute and convert results
+    let (vm_result, _) = interpret_internal(env, &targets, &entrypoint_env, ty_args, args, verbose);
+    vm_result.map(|rets| {
         rets.into_iter()
             .map(|v| {
                 let (ty, val, _) = v.decompose();
@@ -215,37 +150,14 @@ pub fn interpret(
     })
 }
 
-fn stepwise_processing(
+fn interpret_internal(
     env: &GlobalEnv,
-    step: usize,
-    name: &str,
     targets: &FunctionTargetsHolder,
     fun_env: &FunctionEnv,
     ty_args: &[TypeTag],
     args: &[MoveValue],
     verbose: bool,
-) {
-    match stepwise_processing_internal(env, step, name, targets, fun_env, ty_args, args, verbose) {
-        Ok(_) => (),
-        Err(e) => panic!("Unexpected error during step {} - {}: {}", step, name, e),
-    }
-}
-
-fn stepwise_processing_internal(
-    env: &GlobalEnv,
-    step: usize,
-    name: &str,
-    targets: &FunctionTargetsHolder,
-    fun_env: &FunctionEnv,
-    ty_args: &[TypeTag],
-    args: &[MoveValue],
-    verbose: bool,
-) -> Result<()> {
-    // short-circuit the execution if prior phases run into errors
-    if env.has_errors() {
-        return Ok(());
-    }
-
+) -> (VMResult<Vec<TypedValue>>, GlobalState) {
     // dump the bytecode if requested
     if verbose {
         let mut text = String::new();
@@ -253,7 +165,7 @@ fn stepwise_processing_internal(
             for func_env in module_env.get_functions() {
                 for (variant, target) in targets.get_targets(&func_env) {
                     target.register_annotation_formatters_for_test();
-                    text += &format!("[{}-{}: variant {}]\n{}\n", step, name, variant, target);
+                    text += &format!("[variant {}]\n{}\n", variant, target);
                 }
             }
         }
@@ -263,26 +175,7 @@ fn stepwise_processing_internal(
     // invoke the runtime
     let vm = Runtime::new(env, targets);
     let global_state = GlobalState::default();
-    let (vm_result, updated_global_state) = vm.execute(fun_env, ty_args, args, global_state);
-    let actual_result = ExecutionResult {
-        vm_result,
-        global_state: updated_global_state,
-    };
-
-    // handle the results
-    if env.has_extension::<ExecutionResult>() {
-        let expect_result = env.get_extension::<ExecutionResult>().unwrap();
-        if expect_result.as_ref() != &actual_result {
-            bail!(
-                "Execution result in step {}: {} does not match with prior results",
-                step,
-                name
-            );
-        }
-    } else {
-        env.set_extension(actual_result);
-    }
-    Ok(())
+    vm.execute(fun_env, ty_args, args, global_state)
 }
 
 fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue {

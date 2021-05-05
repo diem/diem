@@ -169,7 +169,6 @@ impl SharedTestingConfig {
             &[], // no ty args, at least for now
             &test_info.arguments,
             pipeline,
-            /* stepwise */ true,
             self.verbose,
         )
     }
