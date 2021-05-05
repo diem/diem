@@ -1340,6 +1340,7 @@ module DiemAccount {
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
+        DiemId::publish_diem_id_domain(&new_account, creator_account);
     }
 
     spec fun create_parent_vasp_account {
