@@ -17,6 +17,7 @@ pub enum Metadata {
     UnstructuredBytesMetadata(UnstructuredBytesMetadata),
     RefundMetadata(RefundMetadata),
     CoinTradeMetadata(CoinTradeMetadata),
+    PaymentMetadata(PaymentMetadata),
 }
 
 /// List of supported transaction metadata format versions for regular
@@ -127,4 +128,17 @@ pub enum CoinTradeMetadata {
 pub struct CoinTradeMetadataV0 {
     /// A list of trade_ids this transaction wants to settle
     pub trade_ids: Vec<String>,
+}
+
+/// List of supported transaction metadata format versions for transactions for payments
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum PaymentMetadata {
+    PaymentMetadataVersion0(PaymentMetadataV0),
+}
+
+/// Transaction metadata format for transactions for payments
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PaymentMetadataV0 {
+    /// Reference ID needed for off-chain reference ID exchange.
+    reference_id: [u8; 16],
 }
