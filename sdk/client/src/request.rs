@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{JsonRpcVersion, Method};
-use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use diem_types::{
+    account_address::AccountAddress, event::EventKey, transaction::SignedTransaction,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicU64;
 
@@ -16,7 +18,7 @@ pub enum MethodRequest {
     GetTransactions(u64, u64, bool),
     GetAccountTransaction(AccountAddress, u64, bool),
     GetAccountTransactions(AccountAddress, u64, u64, bool),
-    GetEvents(String, u64, u64),
+    GetEvents(EventKey, u64, u64),
     GetCurrencies([(); 0]),
     GetNetworkStatus([(); 0]),
 
@@ -26,7 +28,7 @@ pub enum MethodRequest {
     GetStateProof((u64,)),
     GetAccountStateWithProof(AccountAddress, Option<u64>, Option<u64>),
     GetTransactionsWithProofs(u64, u64),
-    GetEventsWithProofs(String, u64, u64),
+    GetEventsWithProofs(EventKey, u64, u64),
 }
 
 impl MethodRequest {
@@ -72,8 +74,8 @@ impl MethodRequest {
         Self::GetAccountTransactions(address, start_seq, limit, include_events)
     }
 
-    pub fn get_events(key: &str, start_seq: u64, limit: u64) -> Self {
-        Self::GetEvents(key.to_owned(), start_seq, limit)
+    pub fn get_events(key: EventKey, start_seq: u64, limit: u64) -> Self {
+        Self::GetEvents(key, start_seq, limit)
     }
 
     pub fn get_currencies() -> Self {
@@ -103,8 +105,8 @@ impl MethodRequest {
         Self::GetTransactionsWithProofs(start_version, limit)
     }
 
-    pub fn get_events_with_proofs(key: &str, start_seq: u64, limit: u64) -> Self {
-        Self::GetEventsWithProofs(key.to_owned(), start_seq, limit)
+    pub fn get_events_with_proofs(key: EventKey, start_seq: u64, limit: u64) -> Self {
+        Self::GetEventsWithProofs(key, start_seq, limit)
     }
 
     pub fn method(&self) -> Method {

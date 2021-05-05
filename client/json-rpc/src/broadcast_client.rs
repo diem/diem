@@ -7,7 +7,9 @@ use diem_client::{
     },
     Client, MethodRequest, MethodResponse, Response, Result,
 };
-use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use diem_types::{
+    account_address::AccountAddress, event::EventKey, transaction::SignedTransaction,
+};
 
 use crate::views::{AccountStateWithProofView, CurrencyInfoView, EventView, StateProofView};
 use futures::future::join_all;
@@ -134,7 +136,7 @@ impl BroadcastingClient {
 
     pub async fn get_events(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventView>>> {
@@ -198,7 +200,7 @@ impl BroadcastingClient {
 
     pub async fn get_events_with_proofs(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventWithProofView>>> {

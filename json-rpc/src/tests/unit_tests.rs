@@ -1225,7 +1225,11 @@ fn test_get_events_page_limit() {
     let (_, client, _runtime) = create_database_client_and_runtime();
 
     let ret = client
-        .get_events("13000000000000000000000000000000000000000a550c18", 0, 1001)
+        .get_events(
+            EventKey::from_hex("13000000000000000000000000000000000000000a550c18").unwrap(),
+            0,
+            1001,
+        )
         .unwrap_err();
 
     let error = ret.json_rpc_error().unwrap();
@@ -1250,11 +1254,11 @@ fn test_get_events() {
     let event_index = 0;
     let mock_db_events = mock_db.events;
     let (first_event_version, first_event) = mock_db_events[event_index].clone();
-    let event_key = hex::encode(first_event.key().as_bytes());
+    let event_key = first_event.key();
 
     let events = client
         .get_events(
-            &event_key,
+            *event_key,
             first_event.sequence_number(),
             first_event.sequence_number() + 10,
         )

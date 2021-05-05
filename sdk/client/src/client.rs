@@ -204,7 +204,7 @@ impl Client {
 
     pub async fn get_events(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventView>>> {
@@ -257,7 +257,7 @@ impl Client {
 
     pub async fn get_events_with_proofs(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventWithProofView>>> {
@@ -276,7 +276,7 @@ impl Client {
         limit: u64,
     ) -> Result<Response<Vec<Event<T>>>> {
         let (events, state) = self
-            .get_events_with_proofs(&hex::encode(event_key.as_bytes()), start_seq, limit)
+            .get_events_with_proofs(*event_key, start_seq, limit)
             .await?
             .into_parts();
         Ok(Response::new(

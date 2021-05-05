@@ -202,7 +202,7 @@ fn get_events() -> Result<()> {
     let currencies = client.get_currencies()?.into_inner();
 
     for currency in currencies {
-        client.get_events(&currency.mint_events_key.to_string(), 0, 10)?;
+        client.get_events(currency.mint_events_key, 0, 10)?;
     }
 
     Ok(())

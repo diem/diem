@@ -54,7 +54,7 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
     ) -> Result<Vec<EventWithProof>> {
         let events = self
             .client
-            .get_events_with_proofs(key.to_string().as_str(), start_seq, limit)?
+            .get_events_with_proofs(*key, start_seq, limit)?
             .into_inner();
         let mut result = vec![];
         for event in events {

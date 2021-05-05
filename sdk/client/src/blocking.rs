@@ -189,7 +189,7 @@ impl BlockingClient {
 
     pub fn get_events(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventView>>> {
@@ -238,7 +238,7 @@ impl BlockingClient {
 
     pub fn get_events_with_proofs(
         &self,
-        key: &str,
+        key: EventKey,
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<EventWithProofView>>> {
@@ -256,7 +256,7 @@ impl BlockingClient {
         limit: u64,
     ) -> Result<Response<Vec<Event<T>>>> {
         let (events, state) = self
-            .get_events_with_proofs(&hex::encode(event_key.as_bytes()), start_seq, limit)?
+            .get_events_with_proofs(*event_key, start_seq, limit)?
             .into_parts();
         Ok(Response::new(
             move_deserialize::get_events::<T>(events)?,

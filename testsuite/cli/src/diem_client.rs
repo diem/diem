@@ -10,6 +10,7 @@ use diem_types::{
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
     epoch_change::EpochChangeProof,
+    event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
@@ -90,7 +91,7 @@ impl DiemClient {
 
     pub fn get_events(
         &self,
-        event_key: &str,
+        event_key: EventKey,
         start: u64,
         limit: u64,
     ) -> Result<Vec<views::EventView>> {
@@ -244,7 +245,7 @@ impl DiemClient {
                 };
 
                 // get_events
-                let events = self.get_events(&event_key.to_string(), start_event_seq_num, limit)?;
+                let events = self.get_events(*event_key, start_event_seq_num, limit)?;
                 Ok((events, account_view))
             }
         }

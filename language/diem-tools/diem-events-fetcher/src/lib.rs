@@ -58,7 +58,7 @@ impl DiemEventsFetcher {
     ) -> Result<Vec<EventView>> {
         let resp = self
             .0
-            .get_events(&hex::encode(event_key.as_bytes()), start, limit)
+            .get_events(*event_key, start, limit)
             .await?
             .into_inner();
 
