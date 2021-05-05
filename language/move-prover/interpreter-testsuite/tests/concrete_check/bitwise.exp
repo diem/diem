@@ -1,0 +1,7 @@
+Running tests
+[ PASS    ] 0x2::A::bitand
+[ PASS    ] 0x2::A::bitor
+[ PASS    ] 0x2::A::bitxor
+[ PASS    ] 0x2::A::shl
+[ PASS    ] 0x2::A::shr
+Test result: OK. Total tests: 5; passed: 5; failed: 0
