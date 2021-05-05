@@ -8,9 +8,9 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, DesignatedDealerPreburns, FreezingBit, MintEvent, NewBlockEvent,
-        NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
-        ToXDXExchangeRateUpdateEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomains, FreezingBit, MintEvent,
+        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
+        SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -73,6 +73,7 @@ pub enum AccountRoleView {
         num_children: u64,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
+        diem_id_domains: DiemIdDomains,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {
@@ -1136,7 +1137,11 @@ impl From<AccountRole> for AccountRoleView {
             AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
                 parent_vasp_address: child_vasp.parent_vasp_addr(),
             },
-            AccountRole::ParentVASP { vasp, credential } => AccountRoleView::ParentVASP {
+            AccountRole::ParentVASP {
+                vasp,
+                credential,
+                diem_id_domains,
+            } => AccountRoleView::ParentVASP {
                 human_name: credential.human_name().to_string(),
                 base_url: credential.base_url().to_string(),
                 expiration_time: credential.expiration_date(),
@@ -1146,6 +1151,7 @@ impl From<AccountRole> for AccountRoleView {
                     .compliance_key_rotation_events()
                     .key(),
                 base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
+                diem_id_domains,
             },
             AccountRole::DesignatedDealer {
                 dd_credential,
