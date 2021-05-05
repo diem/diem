@@ -13,7 +13,6 @@ edition = "2018"
 anyhow = "1.0.38"
 structopt = "0.3.21"
 colored = "2.0.0"
-once_cell = "1.7.2"
 rayon = "1.5.0"
 
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

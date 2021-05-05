@@ -4615,7 +4615,6 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
- "once_cell",
  "rayon",
  "resource-viewer",
  "structopt 0.3.21",

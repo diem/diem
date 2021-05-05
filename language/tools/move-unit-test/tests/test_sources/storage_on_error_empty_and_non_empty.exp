@@ -1,0 +1,43 @@
+Running tests
+[ PASS    ] 0x1::A::a
+[ PASS    ] 0x1::A::b
+[ PASS    ] 0x1::A::c
+[ FAIL    ] 0x1::A::x
+[ FAIL    ] 0x1::A::y
+
+Test failures:
+
+Failures in 0x1::A:
+
+┌── x ──────
+│ error: 
+│ 
+│    ┌── tests/test_sources/storage_on_error_empty_and_non_empty.move:6:9 ───
+│    │
+│  6 │         abort 0
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│    ·
+│  5 │     fun x() {
+│    │         - In this function in 0x1::A
+│    │
+│ 
+│ 
+└──────────────────
+
+
+┌── y ──────
+│ error: 
+│ 
+│     ┌── tests/test_sources/storage_on_error_empty_and_non_empty.move:12:9 ───
+│     │
+│  12 │         abort 0
+│     │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│     ·
+│  10 │     fun y(a: signer) {
+│     │         - In this function in 0x1::A
+│     │
+│ 
+│ 
+└──────────────────
+
+Test result: FAILED. Total tests: 5; passed: 3; failed: 2

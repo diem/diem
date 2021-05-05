@@ -18,7 +18,7 @@ use std::{
 };
 use structopt::*;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, StructOpt, Clone)]
 #[structopt(name = "Move Unit Test", about = "Unit testing for Move code.")]
 pub struct UnitTestingConfig {
     /// Bound the number of instructions that can be executed by any one test.
@@ -42,6 +42,14 @@ pub struct UnitTestingConfig {
         long = "threads"
     )]
     pub num_threads: usize,
+
+    /// Report test statistics at the end of testing
+    #[structopt(name = "report_statistics", short = "s", long = "statistics")]
+    pub report_statistics: bool,
+
+    /// Show the storage state at the end of execution of a failing test
+    #[structopt(name = "global_state_on_error", short = "g", long = "state_on_error")]
+    pub report_storage_on_error: bool,
 
     /// Source files
     #[structopt(name = "sources")]
@@ -120,6 +128,7 @@ impl UnitTestingConfig {
             self.num_threads,
             self.check_stackless_vm,
             self.verbose,
+            self.report_storage_on_error,
             test_plan,
         )
         .unwrap();
@@ -128,10 +137,12 @@ impl UnitTestingConfig {
             test_runner.filter(filter_str)
         }
 
-        test_runner
-            .run(&shared_writer)
-            .unwrap()
-            .summarize(&shared_writer)?;
+        let test_results = test_runner.run(&shared_writer).unwrap();
+        if self.report_statistics {
+            test_results.report_statistics(&shared_writer)?;
+        }
+        test_results.summarize(&shared_writer)?;
+
         let writer = shared_writer.into_inner().unwrap();
         Ok(writer)
     }
