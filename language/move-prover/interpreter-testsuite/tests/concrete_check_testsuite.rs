@@ -16,7 +16,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         filter: None,
         num_threads: 1,
         source_files: vec![path.to_str().unwrap().to_owned()],
-        use_stackless_vm: true,
+        check_stackless_vm: true,
         verbose: read_bool_env_var("VERBOSE"),
     };
 

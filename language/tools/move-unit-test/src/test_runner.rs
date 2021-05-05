@@ -36,7 +36,7 @@ pub struct SharedTestingConfig {
     cost_table: CostTable,
     starting_storage_state: InMemoryStorage,
     source_files: Vec<String>,
-    use_stackless_vm: bool,
+    check_stackless_vm: bool,
     verbose: bool,
 }
 
@@ -79,7 +79,7 @@ impl TestRunner {
     pub fn new(
         execution_bound: u64,
         num_threads: usize,
-        use_stackless_vm: bool,
+        check_stackless_vm: bool,
         verbose: bool,
         tests: TestPlan,
     ) -> Result<Self> {
@@ -96,7 +96,7 @@ impl TestRunner {
                 execution_bound,
                 cost_table: unit_cost_table(),
                 source_files,
-                use_stackless_vm,
+                check_stackless_vm,
                 verbose,
             },
             num_threads,
@@ -145,6 +145,7 @@ impl SharedTestingConfig {
     ) -> VMResult<Vec<Vec<u8>>> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.starting_storage_state);
+        // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set
         let log_context = NoContextLog::new();
 
         session.execute_function(
@@ -231,7 +232,7 @@ impl SharedTestingConfig {
             .unwrap();
         };
 
-        let stackless_model = if self.use_stackless_vm {
+        let stackless_model = if self.check_stackless_vm {
             let model =
                 run_model_builder_with_compilation_flags(&self.source_files, &[], Flags::testing())
                     .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
@@ -242,7 +243,7 @@ impl SharedTestingConfig {
 
         for (function_name, test_info) in &test_plan.tests {
             let exec_result = self.execute_via_move_vm(test_plan, function_name, test_info);
-            if self.use_stackless_vm {
+            if self.check_stackless_vm {
                 let stackless_vm_result = self.execute_via_stackless_vm(
                     stackless_model.as_ref().unwrap(),
                     test_plan,
