@@ -480,11 +480,7 @@ impl TypedValue {
         }
     }
 
-    pub fn update_ref_vector_element(
-        self,
-        elem_val: TypedValue,
-        local_idx: TempIndex,
-    ) -> TypedValue {
+    pub fn update_ref_vector_element(self, elem_val: TypedValue) -> TypedValue {
         let (elem_ty, elem_val, elem_ptr) = elem_val.decompose();
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
         let elem = vec_ty.into_ref_vector_elem(Some(true));
@@ -492,12 +488,7 @@ impl TypedValue {
             assert!(elem_ty.is_ref_of(&elem, Some(true)));
         }
         let elem_num = match elem_ptr {
-            Pointer::RefElement(ref_idx, elem_num) => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(ref_idx, local_idx);
-                }
-                elem_num
-            }
+            Pointer::RefElement(_, elem_num) => elem_num,
             _ => unreachable!(),
         };
         let mut elems = vec_val.into_vector();
@@ -577,20 +568,12 @@ impl TypedValue {
         }
     }
 
-    pub fn update_ref_struct_field(
-        self,
-        field_num: usize,
-        field_val: TypedValue,
-        local_idx: TempIndex,
-    ) -> TypedValue {
+    pub fn update_ref_struct_field(self, field_num: usize, field_val: TypedValue) -> TypedValue {
         let (field_ty, field_val, field_ptr) = field_val.decompose();
         let (struct_ty, struct_val, struct_ptr) = self.decompose();
         let inst = struct_ty.into_ref_struct_inst(Some(true));
         if cfg!(debug_assertions) {
-            assert!(matches!(
-                field_ptr,
-                Pointer::RefField(ref_idx, ref_field)
-                if ref_idx == local_idx && ref_field == field_num));
+            assert!(matches!(field_ptr, Pointer::RefField(_, ref_field) if ref_field == field_num));
             assert!(field_ty.is_ref_of(&inst.fields.get(field_num).unwrap().ty, Some(true)));
         }
         let mut fields = struct_val.into_struct();

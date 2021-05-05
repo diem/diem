@@ -906,15 +906,17 @@ fn handle_write_back_local(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
-    let old_val = local_state.del_value(local_root);
-    let (ty, val, ptr) = op_val.decompose();
+    let (old_ty, old_val, old_ptr) = local_state.del_value(local_root).decompose();
+    let (new_ty, new_val, new_ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
-        assert!(ty.is_ref_of(old_val.get_ty().get_base_type(), Some(true)));
+        assert!(new_ty.is_ref_of(old_ty.get_base_type(), Some(true)));
     }
-    match ptr {
+    match new_ptr {
         Pointer::Local(root_idx) => {
             if root_idx == local_root {
-                local_state.put_value(local_root, val, Pointer::None);
+                local_state.put_value(local_root, new_val, old_ptr);
+            } else {
+                local_state.put_value(local_root, old_val, old_ptr);
             }
         }
         _ => unreachable!(),
@@ -926,15 +928,22 @@ fn handle_write_back_ref_whole(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
-    let (ty, val, ptr) = op_val.decompose();
-    let ref_val = local_state.del_value(local_ref);
-    let (ref_ty, _, ref_ptr) = ref_val.decompose();
+    let (ref_ty, ref_val, ref_ptr) = local_state.del_value(local_ref).decompose();
+    let (new_ty, new_val, new_ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
-        assert!(matches!(ptr, Pointer::RefWhole(ref_idx) if ref_idx == local_ref));
-        assert_eq!(ref_ty, ty);
-        assert!(ty.is_ref(Some(true)));
+        assert_eq!(ref_ty, new_ty);
+        assert!(new_ty.is_ref(Some(true)));
     }
-    local_state.put_value(local_ref, val, ref_ptr);
+    match new_ptr {
+        Pointer::RefWhole(ref_idx) => {
+            if ref_idx == local_ref {
+                local_state.put_value(local_ref, new_val, ref_ptr);
+            } else {
+                local_state.put_value(local_ref, ref_val, ref_ptr);
+            }
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn handle_write_back_ref_field(
@@ -953,8 +962,20 @@ fn handle_write_back_ref_field(
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
         assert!(old_struct.get_ty().is_ref_struct_of(&inst, Some(true)));
     }
-    let updated_struct = old_struct.update_ref_struct_field(field_num, op_val, local_ref);
-    let (_, val, ptr) = updated_struct.decompose();
+    let new_struct = match op_val.get_ptr() {
+        Pointer::RefField(ref_idx, ref_field) => {
+            if cfg!(debug_assertions) {
+                assert_eq!(*ref_field, field_num);
+            }
+            if *ref_idx == local_ref {
+                old_struct.update_ref_struct_field(field_num, op_val)
+            } else {
+                old_struct
+            }
+        }
+        _ => unreachable!(),
+    };
+    let (_, val, ptr) = new_struct.decompose();
     local_state.put_value(local_ref, val, ptr);
 }
 
@@ -964,8 +985,17 @@ fn handle_write_back_ref_element(
     local_state: &mut LocalState,
 ) {
     let old_vector = local_state.del_value(local_ref);
-    let updated_vector = old_vector.update_ref_vector_element(op_val, local_ref);
-    let (_, val, ptr) = updated_vector.decompose();
+    let new_vector = match op_val.get_ptr() {
+        Pointer::RefElement(ref_idx, _) => {
+            if *ref_idx == local_ref {
+                old_vector.update_ref_vector_element(op_val)
+            } else {
+                old_vector
+            }
+        }
+        _ => unreachable!(),
+    };
+    let (_, val, ptr) = new_vector.decompose();
     local_state.put_value(local_ref, val, ptr);
 }
 
