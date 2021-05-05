@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod accurate_measurment;
 mod compatibility_test;
 mod cpu_flamegraph;
 mod load_test;
@@ -48,7 +49,10 @@ use crate::{
     tx_emitter::{EmitJobRequest, TxEmitter},
 };
 
-use crate::cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm};
+use crate::{
+    cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
+    experiments::accurate_measurment::AccurateMeasurementParams,
+};
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use structopt::{clap::AppSettings, StructOpt};
@@ -153,6 +157,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("reconfiguration", f::<ReconfigurationParams>());
     known_experiments.insert("load_test", f::<LoadTestParams>());
     known_experiments.insert("state_sync_performance", f::<StateSyncPerformanceParams>());
+    known_experiments.insert("measure", f::<AccurateMeasurementParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
