@@ -4,7 +4,7 @@
 use crate::{
     cargo::selected_package::{SelectedInclude, SelectedPackages},
     config::CargoConfig,
-    utils::{apply_sccache_if_possible, project_root},
+    utils::{apply_sccache_if_possible, project_root, sccache_log_stats},
     Result,
 };
 use anyhow::{anyhow, Context};
@@ -27,6 +27,14 @@ pub struct Cargo {
     inner: Command,
     pass_through_args: Vec<OsString>,
     env_additions: IndexMap<OsString, Option<OsString>>,
+    on_close: fn(),
+}
+
+impl Drop for Cargo {
+    fn drop(&mut self) {
+        info!("Sccache statics:");
+        (self.on_close)();
+    }
 }
 
 impl Cargo {
@@ -67,6 +75,7 @@ impl Cargo {
             inner,
             pass_through_args: Vec::new(),
             env_additions: envs,
+            on_close: sccache_log_stats(cargo_config),
         }
     }
 
