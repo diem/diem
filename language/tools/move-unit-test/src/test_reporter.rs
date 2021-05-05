@@ -3,7 +3,7 @@
 
 use crate::format_module_id;
 use colored::{control, Colorize};
-use move_binary_format::errors::{Location, VMError};
+use move_binary_format::errors::{Location, VMError, VMResult};
 use move_core_types::language_storage::ModuleId;
 use move_lang::{
     errors,
@@ -25,6 +25,11 @@ pub enum FailureReason {
     Aborted(String, u64),
     // Test timed out
     Timeout(String),
+    // The execution results of the Move VM and stackless VM does not match
+    Mismatch {
+        move_vm: Box<VMResult<Vec<Vec<u8>>>>,
+        stackless_vm: Box<VMResult<Vec<Vec<u8>>>>,
+    },
     // The test failed for some unknown reason. This shouldn't be encountered
     Unknown(String),
 }
@@ -70,6 +75,13 @@ impl FailureReason {
         FailureReason::Timeout("Test timed out".to_string())
     }
 
+    pub fn mismatch(move_vm: VMResult<Vec<Vec<u8>>>, stackless_vm: VMResult<Vec<Vec<u8>>>) -> Self {
+        FailureReason::Mismatch {
+            move_vm: Box::new(move_vm),
+            stackless_vm: Box::new(stackless_vm),
+        }
+    }
+
     pub fn unknown() -> Self {
         FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
     }
@@ -99,6 +111,17 @@ impl TestFailure {
             FailureReason::Aborted(message, code) => {
                 let base_message = format!("{} but it aborted with {} here", message, code);
                 Self::report_abort(test_plan, base_message, &self.vm_error)
+            }
+            FailureReason::Mismatch {
+                move_vm,
+                stackless_vm,
+            } => {
+                format!(
+                    "Executions via Move VM [M] and stackless VM [S] yield different results.\n\
+                    [M]: {:?}\n\
+                    [S]: {:?}",
+                    move_vm, stackless_vm
+                )
             }
             FailureReason::Unknown(message) => {
                 format!(

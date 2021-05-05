@@ -8,7 +8,10 @@ use crate::{
 use anyhow::Result;
 use bytecode::pipeline_factory::default_pipeline;
 use colored::*;
-use move_binary_format::{errors::VMResult, file_format::CompiledModule};
+use move_binary_format::{
+    errors::{PartialVMError, VMResult},
+    file_format::CompiledModule,
+};
 use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasCost, GasUnits},
     identifier::IdentStr,
@@ -173,6 +176,24 @@ impl SharedTestingConfig {
         )
     }
 
+    // The result returned by the stackless VM does not contain code offsets and indices. In order to
+    // do cross-vm comparison, we need to adapt the Move VM result by removing these fields.
+    fn adapt_move_vm_result(result: VMResult<Vec<Vec<u8>>>) -> VMResult<Vec<Vec<u8>>> {
+        result.map_err(|err| {
+            let (status_code, sub_status, message, location, _, _) = err.all_data();
+            let adapted = PartialVMError::new(status_code);
+            let adapted = match sub_status {
+                None => adapted,
+                Some(status_code) => adapted.with_sub_status(status_code),
+            };
+            let adapted = match message {
+                None => adapted,
+                Some(message) => adapted.with_message(message),
+            };
+            adapted.finish(location)
+        })
+    }
+
     fn exec_module_tests<W: Write>(
         &self,
         test_plan: &ModuleTestPlan,
@@ -220,15 +241,27 @@ impl SharedTestingConfig {
         };
 
         for (function_name, test_info) in &test_plan.tests {
-            let exec_result = if self.use_stackless_vm {
-                self.execute_via_stackless_vm(
+            let exec_result = self.execute_via_move_vm(test_plan, function_name, test_info);
+            if self.use_stackless_vm {
+                let stackless_vm_result = self.execute_via_stackless_vm(
                     stackless_model.as_ref().unwrap(),
                     test_plan,
                     function_name,
                     test_info,
-                )
-            } else {
-                self.execute_via_move_vm(test_plan, function_name, test_info)
+                );
+                let move_vm_result = Self::adapt_move_vm_result(exec_result.clone());
+                if stackless_vm_result != move_vm_result {
+                    fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::mismatch(move_vm_result, stackless_vm_result),
+                            function_name,
+                            None,
+                        ),
+                        &test_plan,
+                    );
+                    continue;
+                }
             };
             match exec_result {
                 Err(err) => match (test_info.expected_failure.as_ref(), err.sub_status()) {
