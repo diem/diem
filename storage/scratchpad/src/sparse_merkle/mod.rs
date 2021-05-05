@@ -319,19 +319,26 @@ where
                         let right_weak = internal_node.right.weak();
                         let right_hash = right_weak.hash();
                         // TODO: parallelize calls up to a certain depth.
-                        let (left_tree, left_hashes) = Self::batches_update_subtree(
-                            left_weak,
-                            subtree_depth + 1,
-                            &updates[..pivot],
-                            proof_reader,
-                        )?;
-                        let (right_tree, right_hashes) = Self::batches_update_subtree(
-                            right_weak,
-                            subtree_depth + 1,
-                            &updates[pivot..],
-                            proof_reader,
-                        )?;
-
+                        let (left_result, right_result) = rayon::join(
+                            || {
+                                Self::batches_update_subtree(
+                                    left_weak,
+                                    subtree_depth + 1,
+                                    &updates[..pivot],
+                                    proof_reader,
+                                )
+                            },
+                            || {
+                                Self::batches_update_subtree(
+                                    right_weak,
+                                    subtree_depth + 1,
+                                    &updates[pivot..],
+                                    proof_reader,
+                                )
+                            },
+                        );
+                        let (left_tree, left_hashes) = left_result?;
+                        let (right_tree, right_hashes) = right_result?;
                         let merged_hashes = Self::merge_txn_hashes(
                             left_hash,
                             left_hashes,
@@ -470,43 +477,51 @@ where
         let sibling_pre_hash = *siblings
             .get(subtree_depth)
             .unwrap_or(&SPARSE_MERKLE_PLACEHOLDER_HASH);
+        let siblings_len = siblings.len();
 
         // TODO: parallelize up to certain depth.
-        let (sibling_tree, sibling_hashes) = if siblings.len() <= subtree_depth {
-            // Implies sibling_pre_hash is empty.
-            if sibling_updates.is_empty() {
-                (SubTree::new_empty(), vec![])
-            } else {
+        let (sibling_result, child_result) = rayon::join(
+            || {
+                if siblings_len <= subtree_depth {
+                    // Implies sibling_pre_hash is empty.
+                    if sibling_updates.is_empty() {
+                        Ok((SubTree::new_empty(), vec![]))
+                    } else {
+                        Self::batch_create_subtree(
+                            SubTree::new_empty(),
+                            /* target_key = */ sibling_updates[0].0,
+                            /* siblings = */ vec![],
+                            subtree_depth + 1,
+                            sibling_updates,
+                            proof_reader,
+                        )
+                    }
+                } else {
+                    // Only have the sibling hash, need to use proofs.
+                    let (subtree, hashes, child_hash) = Self::batch_create_subtree_by_proof(
+                        sibling_updates,
+                        proof_reader,
+                        sibling_pre_hash,
+                        subtree_depth + 1,
+                        child_pre_hash,
+                    )?;
+                    child_pre_hash = child_hash;
+                    Ok((subtree, hashes))
+                }
+            },
+            || {
                 Self::batch_create_subtree(
-                    SubTree::new_empty(),
-                    /* target_key = */ sibling_updates[0].0,
-                    /* siblings = */ vec![],
+                    bottom_subtree,
+                    target_key,
+                    siblings,
                     subtree_depth + 1,
-                    sibling_updates,
+                    child_updates,
                     proof_reader,
-                )?
-            }
-        } else {
-            // Only have the sibling hash, need to use proofs.
-            let (subtree, hashes, child_hash) = Self::batch_create_subtree_by_proof(
-                sibling_updates,
-                proof_reader,
-                sibling_pre_hash,
-                subtree_depth + 1,
-                child_pre_hash,
-            )?;
-            child_pre_hash = child_hash;
-            (subtree, hashes)
-        };
-        let (child_tree, child_hashes) = Self::batch_create_subtree(
-            bottom_subtree,
-            target_key,
-            siblings,
-            subtree_depth + 1,
-            child_updates,
-            proof_reader,
-        )?;
-
+                )
+            },
+        );
+        let (sibling_tree, sibling_hashes) = sibling_result?;
+        let (child_tree, child_hashes) = child_result?;
         let (left_tree, right_tree) = Self::swap_if(child_tree, sibling_tree, child_is_right);
         let (left_hashes, right_hashes) =
             Self::swap_if(child_hashes, sibling_hashes, child_is_right);
