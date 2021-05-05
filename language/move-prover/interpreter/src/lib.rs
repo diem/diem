@@ -2,9 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use std::collections::BTreeSet;
 use structopt::StructOpt;
 
-use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder};
+use bytecode::{
+    function_target_pipeline::{
+        FunctionTargetPipeline, FunctionTargetProcessor, FunctionTargetsHolder,
+    },
+    reaching_def_analysis::ReachingDefProcessor,
+};
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -143,6 +149,14 @@ pub fn interpret(
 
     // run through the pipeline
     if stepwise {
+        // NOTE: list of processors to skip in step-wise processing
+        let skipped_processors: Vec<Box<dyn FunctionTargetProcessor>> = vec![
+            // ReachingDefProcessor creates local slots that are moved multiple times. It has to
+            // be paired with the LiveVarAnalysisProcessor to obtain a program in good shape.
+            ReachingDefProcessor::new(),
+        ];
+        let skipset: BTreeSet<_> = skipped_processors.into_iter().map(|p| p.name()).collect();
+
         pipeline.run_with_hook(
             env,
             &mut targets,
@@ -159,6 +173,9 @@ pub fn interpret(
                 )
             },
             |step, processor, holders| {
+                if skipset.contains(&processor.name()) {
+                    return;
+                }
                 stepwise_processing(
                     env,
                     step,
