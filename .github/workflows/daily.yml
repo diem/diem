@@ -184,7 +184,6 @@ jobs:
           cd /opt/git/diem/
           MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
           MVP_TEST_FEATURE=cvc4 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
-          sccache -s
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_MOVE_PROVER }}

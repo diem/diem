@@ -519,13 +519,11 @@ jobs:
       - name: run unit tests
         run: |
           $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
-          sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run doctests
         run: |
           $pre_command && cargo xtest --doc --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
-          sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: upload unit test results
@@ -561,7 +559,6 @@ jobs:
       - name: run unit tests
         run: |
           $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
-          sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
@@ -569,7 +566,6 @@ jobs:
       - name: run doctests
         run: |
           $pre_command && cargo xtest --doc --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
-          sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}

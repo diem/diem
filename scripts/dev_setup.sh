@@ -13,9 +13,9 @@
 
 SHELLCHECK_VERSION=0.7.1
 HADOLINT_VERSION=1.17.4
-SCCACHE_VERSION=0.2.14-alpha.0
+SCCACHE_VERSION=0.2.16-alpha.0
 #If installing sccache from a git repp set url@revision.
-SCCACHE_GIT='https://github.com/rexhoffman/sccache.git@549babdd3866aa60dae01668c42ee00bf1e8c763'
+SCCACHE_GIT='https://github.com/diem/sccache.git@ef50d87a58260c30767520045e242ccdbdb965af'
 KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4

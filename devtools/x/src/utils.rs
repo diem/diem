@@ -21,69 +21,59 @@ pub fn project_root() -> &'static Path {
         .unwrap()
 }
 
-/// Is the project configured to use sccache, and are the CARGO_HOME and project root in the correct location.
-/// If the warn_if_not parameter is set to true warnings will be logged if the project is configured for sccache
+/// If the project is configured for sccache, and the env variable SKIP_SCCACHE is unset then returns true.
+/// If the warn_if_not_correct_location parameter is set to true, warnings will be logged if the project is configured for sccache
 /// but the CARGO_HOME or project root are not in the right locations.
-fn sccache_correct_locations(cargo_config: &CargoConfig, warn_if_not: bool) -> bool {
-    if let Some(sccache_config) = &cargo_config.sccache {
-        // Are we work on items in the right location:
-        // See: https://github.com/mozilla/sccache#known-caveats
-        let correct_location = var_os("CARGO_HOME")
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default()
-            == sccache_config.required_cargo_home
-            && sccache_config.required_git_home == project_root().to_str().unwrap_or_default();
-        if !correct_location && warn_if_not {
-            warn!("You will not benefit from sccache in this build!!!");
-            warn!(
-                "To get the best experience, please move your diem source code to {} and your set your CARGO_HOME to be {}, simply export it in your .profile or .bash_rc",
-                &sccache_config.required_git_home, &sccache_config.required_cargo_home
-            );
-            warn!(
-                "Current diem root is '{}',  and current CARGO_HOME is '{}'",
-                project_root().to_str().unwrap_or_default(),
-                var_os("CARGO_HOME").unwrap_or_default().to_string_lossy()
-            );
+pub fn sccache_should_run(cargo_config: &CargoConfig, warn_if_not_correct_location: bool) -> bool {
+    if var_os("SKIP_SCCACHE").is_none() {
+        if let Some(sccache_config) = &cargo_config.sccache {
+            // Are we work on items in the right location:
+            // See: https://github.com/mozilla/sccache#known-caveats
+            let correct_location = var_os("CARGO_HOME")
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default()
+                == sccache_config.required_cargo_home
+                && sccache_config.required_git_home == project_root().to_str().unwrap_or_default();
+            if !correct_location && warn_if_not_correct_location {
+                warn!("You will not benefit from sccache in this build!!!");
+                warn!(
+                    "To get the best experience, please move your diem source code to {} and your set your CARGO_HOME to be {}, simply export it in your .profile or .bash_rc",
+                    &sccache_config.required_git_home, &sccache_config.required_cargo_home
+                );
+                warn!(
+                    "Current diem root is '{}',  and current CARGO_HOME is '{}'",
+                    project_root().to_str().unwrap_or_default(),
+                    var_os("CARGO_HOME").unwrap_or_default().to_string_lossy()
+                );
+            }
+            correct_location
+        } else {
+            false
         }
-        correct_location
     } else {
         false
     }
 }
 
-/// If the project is configured for sccache, and the env variable SKIP_SCCACHE is unset then
-/// this function will return true.
-fn sccache_should_skip(cargo_config: &CargoConfig) -> bool {
-    var_os("SKIP_SCCACHE").is_some() || cargo_config.sccache.is_none()
-}
-
-fn print_sccache_stats() {
+/// Logs the output of "sccache --show-stats"
+pub fn log_sccache_stats() {
+    info!("Sccache statistics:");
     let mut sccache = Command::new("sccache");
     sccache.arg("--show-stats");
     sccache.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     if let Err(error) = sccache.output() {
-        warn!("Could not log sccache status: {}", error);
+        warn!("Could not log sccache statistics: {}", error);
     }
 }
 
-pub fn sccache_log_stats(cargo_config: &CargoConfig) -> fn() {
-    if !sccache_should_skip(cargo_config) && sccache_correct_locations(cargo_config, false) {
-        print_sccache_stats
-    } else {
-        || ()
-    }
-}
-
-fn stop_sccache_server_if_needed(cargo_config: &CargoConfig) {
-    if !sccache_should_skip(cargo_config) && sccache_correct_locations(cargo_config, false) {
-        let mut sccache = Command::new("sccache");
-        sccache.arg("--stop-server");
-        let result = sccache.output();
-        if let Ok(output) = result {
-            if output.status.success() {
-                info!("Stopped already running sccache.");
-            }
+pub fn stop_sccache_server() {
+    let mut sccache = Command::new("sccache");
+    sccache.arg("--stop-server");
+    let result = sccache.output();
+    if let Ok(output) = result {
+        if output.status.success() {
+            info!("Stopped already running sccache.");
         }
     }
 }
@@ -93,12 +83,12 @@ pub fn apply_sccache_if_possible(
 ) -> Result<Vec<(&str, Option<String>)>> {
     let mut envs = vec![];
 
-    if !sccache_should_skip(cargo_config) && sccache_correct_locations(cargo_config, true) {
+    if sccache_should_run(cargo_config, true) {
         if let Some(sccache_config) = &cargo_config.sccache {
             if !install_if_needed(cargo_config, "sccache", &sccache_config.installer) {
                 return Err(anyhow!("Failed to install sccache, bailing"));
             }
-            stop_sccache_server_if_needed(cargo_config);
+            stop_sccache_server();
             envs.push(("RUSTC_WRAPPER", Some("sccache".to_owned())));
             envs.push(("CARGO_INCREMENTAL", Some("false".to_owned())));
             envs.push(("SCCACHE_BUCKET", Some(sccache_config.bucket.to_owned())));

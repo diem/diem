@@ -49,8 +49,6 @@ jobs:
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
         run: |
           $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
-          echo stats:
-          sccache -s
         env:
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
           SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
