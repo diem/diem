@@ -893,6 +893,8 @@ fn handle_write_back_global_struct(
         assert_eq!(inst, converted);
     }
     let addr = match ptr {
+        // TODO (mengxu) this needs to be extended to check for actual address in borrow graph
+        // only put the resource back when the address matches
         Pointer::Global(addr) => addr,
         _ => unreachable!(),
     };
@@ -907,10 +909,16 @@ fn handle_write_back_local(
     let old_val = local_state.del_value(local_root);
     let (ty, val, ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
-        assert!(matches!(ptr, Pointer::Local(root_idx) if root_idx == local_root));
         assert!(ty.is_ref_of(old_val.get_ty().get_base_type(), Some(true)));
     }
-    local_state.put_value(local_root, val, Pointer::None);
+    match ptr {
+        Pointer::Local(root_idx) => {
+            if root_idx == local_root {
+                local_state.put_value(local_root, val, Pointer::None);
+            }
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn handle_write_back_ref_whole(
