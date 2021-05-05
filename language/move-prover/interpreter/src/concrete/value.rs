@@ -1,9 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO (mengxu) remove this when the module is in good shape
-#![allow(dead_code)]
-
 use num::{BigUint, ToPrimitive};
 use std::collections::BTreeMap;
 
@@ -122,8 +119,10 @@ pub enum Pointer {
     None,
     Global(AccountAddress),
     Local(TempIndex),
+    #[allow(dead_code)]
     RefWhole(TempIndex),
     RefField(TempIndex, usize),
+    #[allow(dead_code)]
     RefElement(TempIndex, usize),
 }
 
@@ -134,6 +133,7 @@ pub struct TypedValue {
     ptr: Pointer,
 }
 
+#[allow(dead_code)]
 impl TypedValue {
     //
     // value creation
@@ -593,6 +593,7 @@ pub struct RefTypedValue<'a> {
     ptr: &'a Pointer,
 }
 
+#[allow(dead_code)]
 impl<'a> RefTypedValue<'a> {
     pub fn get_ty(&self) -> &'a Type {
         self.ty

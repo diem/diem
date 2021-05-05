@@ -1,9 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO (mengxu) remove this when the module is in good shape
-#![allow(dead_code)]
-
 use std::fmt;
 
 use bytecode::stackless_bytecode::Constant;
