@@ -74,6 +74,9 @@ impl LocalState {
         self.slots.get(index).unwrap().get_type()
     }
 
+    pub fn has_value(&self, index: TempIndex) -> bool {
+        self.slots.get(index).unwrap().has_value()
+    }
     pub fn get_value(&self, index: TempIndex) -> RefTypedValue {
         self.slots.get(index).unwrap().get_value()
     }

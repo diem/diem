@@ -230,6 +230,9 @@ fn handle_load(dst: TempIndex, constant: &Constant, local_state: &mut LocalState
             BaseValue::mk_vector(elems)
         }
     };
+    if local_state.has_value(dst) {
+        local_state.del_value(dst);
+    }
     local_state.put_value(dst, val, Pointer::None);
 }
 
@@ -253,6 +256,34 @@ fn handle_operation(
                     .is_compatible_for_abort_code());
             }
         }
+    }
+
+    // operations that does not need to have the argument in storage
+    match op {
+        Operation::Havoc(kind) => {
+            if cfg!(debug_assertions) {
+                assert_eq!(srcs.len(), 1);
+                let target_ty = local_state.get_type(*srcs.get(0).unwrap());
+                match kind {
+                    HavocKind::Value => {
+                        assert!(target_ty.is_base());
+                    }
+                    HavocKind::MutationValue | HavocKind::MutationAll => {
+                        assert!(target_ty.is_ref(Some(true)));
+                    }
+                }
+            }
+            return Ok(());
+        }
+        // deprecated
+        Operation::Splice(..)
+        | Operation::PackRefDeep
+        | Operation::UnpackRefDeep
+        | Operation::WriteBack(_, BorrowEdge::Weak) => {
+            unreachable!();
+        }
+        // all others require args to be collected up front
+        _ => (),
     }
 
     // collect arguments
@@ -500,21 +531,6 @@ fn handle_operation(
             handle_destroy(srcs[0], local_state);
             Ok(vec![])
         }
-        Operation::Havoc(kind) => {
-            if cfg!(debug_assertions) {
-                assert_eq!(typed_args.len(), 1);
-                let target = typed_args[0];
-                match kind {
-                    HavocKind::Value => {
-                        assert!(target.get_ty().is_base());
-                    }
-                    HavocKind::MutationValue | HavocKind::MutationAll => {
-                        assert!(target.get_ty().is_ref(Some(true)));
-                    }
-                }
-            }
-            Ok(vec![])
-        }
         Operation::Stop(label) => {
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 0);
@@ -639,8 +655,9 @@ fn handle_operation(
         }
         // event (TODO: not supported yet)
         Operation::EmitEvent | Operation::EventStoreDiverge => Ok(vec![]),
-        // deprecated
-        Operation::Splice(..)
+        // already handled
+        Operation::Havoc(..)
+        | Operation::Splice(..)
         | Operation::PackRefDeep
         | Operation::UnpackRefDeep
         | Operation::WriteBack(_, BorrowEdge::Weak) => {
@@ -658,6 +675,9 @@ fn handle_operation(
                 let (ret_ty, ret_val, ret_ptr) = typed_ret.decompose();
                 if cfg!(debug_assertions) {
                     assert_eq!(&ret_ty, local_state.get_type(idx));
+                }
+                if local_state.has_value(idx) {
+                    local_state.del_value(idx);
                 }
                 local_state.put_value(idx, ret_val, ret_ptr);
             }

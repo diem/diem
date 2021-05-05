@@ -649,6 +649,9 @@ impl LocalSlot {
         &self.ty
     }
 
+    pub fn has_value(&self) -> bool {
+        self.content.is_some()
+    }
     pub fn get_value(&self) -> RefTypedValue {
         let (val, ptr) = self.content.as_ref().unwrap();
         RefTypedValue {
