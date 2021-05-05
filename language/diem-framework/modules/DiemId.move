@@ -4,6 +4,9 @@ address 0x1 {
 module DiemId {
 
     use 0x1::Event::{Self, EventHandle};
+    use 0x1::DiemAccount::{Self, EventHandle};
+    use 0x1::Vector;
+    use 0x1::CoreAddresses;
 
     /// This resource holds an entity's domain names needed to send and receive payments using diem IDs.
     struct DiemIdDomains has key {
@@ -34,28 +37,10 @@ module DiemId {
     const MAX_U64: u128 = 18446744073709551615;
 
     // Error codes
-    /// A credential is not or already published.
+    /// DiemIdDomains resource is not or already published.
     const EDIEMIDDOMAIN: u64 = 0;
-    /// A limit is not or already published.
-    const ELIMIT: u64 = 1;
-    /// Cannot parse this as an ed25519 public key
-    const EINVALID_PUBLIC_KEY: u64 = 2;
-    /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
-    const EMALFORMED_METADATA_SIGNATURE: u64 = 3;
-    /// Signature does not match message and public key
-    const EINVALID_METADATA_SIGNATURE: u64 = 4;
-    /// The recipient of a dual attestation payment needs to set a compliance public key
-    const EPAYEE_COMPLIANCE_KEY_NOT_SET: u64 = 5;
-    /// The recipient of a dual attestation payment needs to set a base URL
-    const EPAYEE_BASE_URL_NOT_SET: u64 = 6;
-
-    /// Value of the dual attestation limit at genesis
-    const INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
-    /// Suffix of every signed dual attestation message
-    const DOMAIN_SEPARATOR: vector<u8> = b"@@$$DIEM_ATTEST$$@@";
-    /// A year in microseconds
-    const ONE_YEAR: u64 = 31540000000000;
-    const U64_MAX: u64 = 18446744073709551615;
+    /// DiemIdDomainManager resource is not or already published.
+    const EDIEMIDDOMAINMANAGER: u64 = 1;
 
     /// Publish a `DiemIdDomains` resource under `created` with an empty `domains`.
     /// Before sending or receiving any payments using Diem IDs, the Treasury Compliance account must send
@@ -79,8 +64,70 @@ module DiemId {
         include Roles::AbortsIfNotTreasuryCompliance{account: creator};
         aborts_if spec_has_diem_id_domains(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
     }
+
     spec define spec_has_diem_id_domains(addr: address): bool {
         exists<DiemIdDomains>(addr)
+    }
+
+    /// Publish a `DiemIdDomainManager` resource under `created` with an empty `diem_id_domain_events`.
+    /// When Treasury Compliance account sends a transaction that invokes `update_diem_id_domain`,
+    /// a `DiemIdDomainEvent` is emitted and added to `diem_id_domain_events`.
+    public fun publish_diem_id_domain_manager(
+        created: &signer,
+    ) {
+        Roles::assert_treasury_compliance(created);
+        assert(
+            !exists<DiemIdDomainManager>(Signer::address_of(created)),
+            Errors::already_published(EDIEMIDDOMAINMANAGER)
+        );
+        move_to(
+            created,
+            DiemIdDomainManager {
+                diem_id_domain_events: Event::new_event_handle<DiemIdDomainEvent>(created),
+            }
+        );
+    }
+
+    spec define spec_has_diem_id_domain_manager(addr: address): bool {
+        exists<DiemIdDomainManager>(addr)
+    }
+
+    spec fun publish_diem_id_domain_manager {
+        include Roles::AbortsIfNotTreasuryCompliance{account: created};
+        aborts_if spec_has_diem_id_domain_manager(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+    }
+
+    public fun update_diem_id_domain(tc_account: &signer, to_update_address: address, domain: vec<u8>, is_remove: bool) {
+        Roles::assert_treasury_compliance(tc_account);
+        assert(exists_at(to_update_address), Errors::not_published(DiemAccount::EACCOUNT));
+        let account = borrow_global_mut<DiemAccount>(to_update_address);
+        diem_id_domain = DiemIdDomain {
+            domain: domain
+        }
+        Vector::push_back(&(account.domains), diem_id_domain);
+
+        Event::emit_event(
+            &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).creation_events,
+            DiemIdDomainEvent {
+                removed: is_remove,
+                domain: diem_id_domain,
+                address: address
+            },
+        );
+
+        // Send ReceivedMintEvent
+        Event::emit_event<DiemIdDomainEvent>(
+            &mut borrow_global_mut<Dealer>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
+            DiemIdDomainEvent {
+                removed: is_remove,
+                domain: diem_id_domain,
+                address: address
+            },
+        );
+    }
+
+    spec fun update_diem_id_domain {
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
 
 }

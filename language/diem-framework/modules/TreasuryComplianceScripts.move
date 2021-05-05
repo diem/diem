@@ -14,6 +14,7 @@ module TreasuryComplianceScripts {
     use 0x1::AccountFreezing;
     use 0x1::DualAttestation;
     use 0x1::FixedPoint32;
+    use 0x1::DiemId;
 
     /// # Summary
     /// Cancels and returns the coins held in the preburn area under
@@ -644,5 +645,43 @@ module TreasuryComplianceScripts {
     ) {
         Diem::update_minting_ability<Currency>(&tc_account, allow_minting);
     }
+
+    /// # Summary
+        /// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
+        /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
+        /// payments over this limit must be checked for dual attestation.
+        ///
+        /// # Technical Description
+        /// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
+        /// `0xA550C18`. The amount is set in micro-XDX.
+        ///
+        /// # Parameters
+        /// | Name                  | Type     | Description                                                                                     |
+        /// | ------                | ------   | -------------                                                                                   |
+        /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+        /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+        /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+        ///
+        /// # Common Abort Conditions
+        /// | Error Category             | Error Reason                            | Description                                                                                |
+        /// | ----------------           | --------------                          | -------------                                                                              |
+        /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+        /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+        /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+        /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+        /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+        ///
+        /// # Related Scripts
+        /// * `TreasuryComplianceScripts::update_exchange_rate`
+        /// * `TreasuryComplianceScripts::update_minting_ability`
+
+        public(script) fun update_diem_id_domain (
+                tc_account: signer,
+                to_update_address: address,
+                domain: vector<u8>,
+                is_remove: bool,
+            ) {
+            DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove)
+        }
 }
 }
