@@ -40,7 +40,7 @@ use network::{
     ProtocolId,
 };
 use network_simple_onchain_discovery::{
-    builder::ConfigurationChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
+    builder::ValidatorSetChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
 };
 use std::{clone::Clone, collections::HashMap, sync::Arc};
 use subscription_service::ReconfigSubscription;
@@ -64,7 +64,7 @@ pub struct NetworkBuilder {
     time_service: TimeService,
     network_context: Arc<NetworkContext>,
 
-    configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
+    configuration_change_listener_builder: Option<ValidatorSetChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
     peer_manager_builder: PeerManagerBuilder,
@@ -416,7 +416,7 @@ impl NetworkBuilder {
             .push(simple_discovery_reconfig_subscription);
 
         self.configuration_change_listener_builder =
-            Some(ConfigurationChangeListenerBuilder::create(
+            Some(ValidatorSetChangeListenerBuilder::create(
                 self.network_context.clone(),
                 pubkey,
                 encryptor,

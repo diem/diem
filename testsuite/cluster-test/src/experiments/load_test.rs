@@ -296,7 +296,7 @@ impl StubbedNode {
 
         conn_req_tx
             .send(ConnectivityRequest::UpdateDiscoveredPeers(
-                DiscoverySource::OnChain,
+                DiscoverySource::OnChainValidatorSet,
                 seed_peers,
             ))
             .await

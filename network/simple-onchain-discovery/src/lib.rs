@@ -69,7 +69,7 @@ pub static NETWORK_KEY_MISMATCH: Lazy<IntGaugeVec> = Lazy::new(|| {
 
 /// Listener which converts published  updates from the OnChainConfig to ConnectivityRequests
 /// for the ConnectivityManager.
-pub struct ConfigurationChangeListener {
+pub struct ValidatorSetChangeListener {
     network_context: Arc<NetworkContext>,
     expected_pubkey: PublicKey,
     encryptor: Encryptor,
@@ -83,7 +83,7 @@ pub fn gen_simple_discovery_reconfig_subscription(
 }
 
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
-fn extract_updates(
+fn extract_validator_set_updates(
     network_context: Arc<NetworkContext>,
     encryptor: &Encryptor,
     node_set: ValidatorSet,
@@ -133,13 +133,12 @@ fn extract_updates(
         .collect();
 
     vec![ConnectivityRequest::UpdateDiscoveredPeers(
-        DiscoverySource::OnChain,
+        DiscoverySource::OnChainValidatorSet,
         discovered_peers,
     )]
 }
 
-impl ConfigurationChangeListener {
-    /// Creates a new ConfigurationChangeListener
+impl ValidatorSetChangeListener {
     pub fn new(
         network_context: Arc<NetworkContext>,
         expected_pubkey: PublicKey,
@@ -194,7 +193,8 @@ impl ConfigurationChangeListener {
             .get()
             .expect("failed to get ValidatorSet from payload");
 
-        let updates = extract_updates(self.network_context.clone(), &self.encryptor, node_set);
+        let updates =
+            extract_validator_set_updates(self.network_context.clone(), &self.encryptor, node_set);
 
         // Ensure that the public key matches what's onchain for this peer
         for request in &updates {
@@ -291,7 +291,7 @@ mod tests {
         let (conn_mgr_reqs_tx, _rx) = channel::new_test(1);
         let (mut reconfig_tx, reconfig_rx) = gen_simple_discovery_reconfig_subscription();
         let network_context = NetworkContext::mock_with_peer_id(peer_id);
-        let listener = ConfigurationChangeListener::new(
+        let listener = ValidatorSetChangeListener::new(
             network_context.clone(),
             pubkey,
             Encryptor::for_testing(),
