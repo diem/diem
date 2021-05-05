@@ -69,7 +69,7 @@ pub fn entrypoint(
     holder: &FunctionTargetsHolder,
     target: FunctionTarget,
     ty_args: &[BaseType],
-    typed_args: Vec<RefTypedValue>,
+    typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
 ) -> PartialVMResult<Vec<TypedValue>> {
     let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
@@ -88,7 +88,7 @@ pub fn entrypoint(
 /// Execute a function with the type arguments and value arguments.
 fn exec_function(
     ctxt: &FunctionContext,
-    typed_args: Vec<RefTypedValue>,
+    typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
 ) -> PartialVMResult<LocalState> {
     let target = &ctxt.target;
@@ -122,7 +122,7 @@ fn exec_function(
             assert_eq!(&ty, typed_arg.get_ty());
         }
 
-        let slot = LocalSlot::new_arg(name, typed_arg.deref());
+        let slot = LocalSlot::new_arg(name, typed_arg);
         local_slots.push(slot);
     }
     for i in param_decls.len()..target.get_local_count() {
@@ -256,13 +256,23 @@ fn handle_operation(
     }
 
     // collect arguments
-    let typed_args = srcs.iter().map(|idx| local_state.get_value(*idx)).collect();
+    let typed_args: Vec<_> = srcs.iter().map(|idx| local_state.get_value(*idx)).collect();
 
     // case on operation type
     let op_result = match op {
         // function call
         Operation::Function(module_id, fun_id, ty_args) => {
-            handle_call_user_function(ctxt, *module_id, *fun_id, ty_args, typed_args, global_state)?
+            let derefed_typed_args = typed_args.into_iter().map(|arg| arg.deref()).collect();
+            handle_call_user_function(
+                ctxt,
+                *module_id,
+                *fun_id,
+                ty_args,
+                derefed_typed_args,
+                srcs,
+                local_state,
+                global_state,
+            )?
         }
         // opaque
         Operation::OpaqueCallBegin(module_id, fun_id, ty_args)
@@ -675,7 +685,9 @@ fn handle_call_user_function(
     module_id: ModuleId,
     fun_id: FunId,
     ty_args: &[MT::Type],
-    typed_args: Vec<RefTypedValue>,
+    typed_args: Vec<TypedValue>,
+    srcs: &[TempIndex],
+    local_state: &mut LocalState,
     global_state: &mut GlobalState,
 ) -> PartialVMResult<Result<Vec<TypedValue>, AbortInfo>> {
     let env = ctxt.target.global_env();
@@ -687,8 +699,27 @@ fn handle_call_user_function(
         assert_eq!(callee_ctxt.target.get_parameter_count(), typed_args.len());
     }
 
+    // collect mutable arguments
+    let mut_args: Vec<_> = typed_args
+        .iter()
+        .enumerate()
+        .filter(|(_, arg)| arg.get_ty().is_ref(Some(true)))
+        .map(|(callee_idx, _)| (callee_idx, *srcs.get(callee_idx).unwrap()))
+        .collect();
+
     // execute the function
-    let callee_state = exec_function(&callee_ctxt, typed_args, global_state)?;
+    let mut callee_state = exec_function(&callee_ctxt, typed_args, global_state)?;
+
+    // update mutable arguments
+    for (callee_idx, origin_idx) in mut_args {
+        let (old_ty, _, old_ptr) = local_state.del_value(origin_idx).decompose();
+        let (new_ty, new_val, new_ptr) = callee_state.del_value(callee_idx).decompose();
+        if cfg!(debug_assertions) {
+            assert_eq!(old_ty, new_ty);
+            assert_eq!(old_ptr, new_ptr);
+        }
+        local_state.put_value(origin_idx, new_val, old_ptr);
+    }
 
     // check callee termination status
     let termination = callee_state.into_termination_status();

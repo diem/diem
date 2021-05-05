@@ -201,12 +201,11 @@ impl<'env> Runtime<'env> {
         global_state: &mut GlobalState,
     ) -> VMResult<Vec<TypedValue>> {
         let module_id = fun_target.module_env().get_verified_module().self_id();
-        let typed_args = args.iter().map(|arg| arg.to_ref()).collect();
         player::entrypoint(
             self.functions,
             fun_target,
             ty_args,
-            typed_args,
+            args.to_vec(),
             global_state,
         )
         .map_err(|err| err.finish(Location::Module(module_id)))
