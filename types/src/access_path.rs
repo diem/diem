@@ -37,7 +37,7 @@
 
 use crate::account_address::AccountAddress;
 use diem_crypto::hash::HashValue;
-use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG};
+use move_core_types::language_storage::{ModuleId, StructTag, CODE_TAG, RESOURCE_TAG};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

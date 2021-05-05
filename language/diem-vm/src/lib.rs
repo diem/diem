@@ -125,7 +125,7 @@ pub mod system_module_names;
 mod unit_tests;
 
 pub use crate::{
-    diem_transaction_executor::DiemVM, diem_transaction_validator::DiemVMValidator,
+    diem_transaction_executor::{DiemVM, DiemVM_}, diem_transaction_validator::DiemVMValidator,
     diem_vm::convert_changeset_and_events,
 };
 
@@ -137,7 +137,7 @@ use diem_types::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    language_storage::{ResourceKey, StructTag},
+    language_storage::StructTag,
 };
 
 /// This trait describes the VM's validation interfaces.

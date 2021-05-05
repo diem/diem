@@ -9,7 +9,7 @@ use diem_types::{
     vm_status::KeptVMStatus,
     write_set::WriteOp,
 };
-use diem_vm::DiemVM;
+use diem_vm::DiemVM_;
 use diem_writeset_generator::build_changeset;
 use language_e2e_tests::{
     compile::compile_module_with_address, test_with_different_versions,
@@ -66,7 +66,7 @@ fn build_upgrade_writeset() {
 
         executor.apply_write_set(output.write_set());
 
-        let new_vm = DiemVM::new(executor.get_state_view());
+        let new_vm = DiemVM_::new(executor.get_state_view());
         assert_eq!(
             new_vm.internals().diem_version().unwrap(),
             DiemVersion { major: 11 }

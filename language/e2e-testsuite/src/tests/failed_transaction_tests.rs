@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
-use diem_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, DiemVM};
+use diem_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, DiemVM_};
 use language_e2e_tests::{
     account, common_transactions::peer_to_peer_txn, test_with_different_versions,
     versioning::CURRENT_RELEASE_VERSIONS,
@@ -19,7 +19,7 @@ fn failed_transaction_cleanup_test() {
         executor.add_account_data(&sender);
 
         let log_context = NoContextLog::new();
-        let diem_vm = DiemVM::new(executor.get_state_view());
+        let diem_vm = DiemVM_::new(executor.get_state_view());
         let data_cache = StateViewCache::new(executor.get_state_view());
 
         let txn_data = TransactionMetadata {

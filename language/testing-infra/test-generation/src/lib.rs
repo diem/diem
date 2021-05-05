@@ -22,7 +22,7 @@ use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use diem_logger::{debug, error, info};
 use diem_state_view::StateView;
 use diem_types::{account_address::AccountAddress, vm_status::StatusCode};
-use diem_vm::DiemVM;
+use diem_vm::DiemVM_;
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use module_generation::generate_module;
@@ -101,7 +101,7 @@ fn execute_function_in_module<S: StateView>(
         module.identifier_at(entry_name_idx)
     };
     {
-        let diem_vm = DiemVM::new(state_view);
+        let diem_vm = DiemVM_::new(state_view);
 
         let internals = diem_vm.internals();
 

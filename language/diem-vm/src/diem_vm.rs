@@ -37,12 +37,13 @@ use move_vm_runtime::{
     session::Session,
 };
 use move_vm_types::gas_schedule::{calculate_intrinsic_gas, GasStatus};
-use std::{convert::TryFrom, sync::Arc};
+use std::convert::TryFrom;
+use std::rc::Rc;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
 pub struct DiemVMImpl {
-    move_vm: Arc<MoveVM>,
+    move_vm: Rc<MoveVM>,
     on_chain_config: Option<VMConfig>,
     version: Option<DiemVersion>,
     publishing_option: Option<VMPublishingOption>,
@@ -53,7 +54,7 @@ impl DiemVMImpl {
     pub fn new<S: StateView>(state: &S) -> Self {
         let inner = MoveVM::new();
         let mut vm = Self {
-            move_vm: Arc::new(inner),
+            move_vm: Rc::new(inner),
             on_chain_config: None,
             version: None,
             publishing_option: None,
@@ -69,7 +70,7 @@ impl DiemVMImpl {
     ) -> Self {
         let inner = MoveVM::new();
         Self {
-            move_vm: Arc::new(inner),
+            move_vm: Rc::new(inner),
             on_chain_config: Some(on_chain_config),
             version: Some(version),
             publishing_option: Some(publishing_option),

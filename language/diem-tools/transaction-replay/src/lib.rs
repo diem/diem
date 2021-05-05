@@ -15,7 +15,9 @@ use diem_types::{
 use diem_validator_interface::{
     DBDebuggerInterface, DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
-use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
+use diem_vm::{
+    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, DiemVM_, VMExecutor,
+};
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_cli::on_disk_state_view::OnDiskStateView;
 use move_core_types::{effects::ChangeSet as MoveChanges, language_storage::TypeTag};
@@ -122,7 +124,7 @@ impl DiemDebugger {
         save_write_set: bool,
     ) -> Result<TransactionOutput> {
         let state_view = DebuggerStateView::new(&*self.debugger, version + 1);
-        let vm = DiemVM::new(&state_view);
+        let vm = DiemVM_::new(&state_view);
         let cache = diem_vm::data_cache::StateViewCache::new(&state_view);
         let log_context = NoContextLog::new();
         let sequence_number = match self

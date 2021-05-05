@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::cell::RefCell;
+
 use crate::{
     counters::*, create_access_path, data_cache::StateViewCache, diem_vm::DiemVMImpl,
     transaction_metadata::TransactionMetadata, VMValidator,
@@ -25,16 +27,19 @@ use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Ses
 
 use crate::logging::AdapterLogSchema;
 
+thread_local!(static CACHE_VM: RefCell<Option<DiemVMImpl>> = RefCell::new(None));
+
 #[derive(Clone)]
-pub struct DiemVMValidator(DiemVMImpl);
+pub struct DiemVMValidator;
 
 impl DiemVMValidator {
     pub fn new<S: StateView>(state: &S) -> Self {
-        info!(
-            AdapterLogSchema::new(state.id(), 0),
-            "Adapter created for Validation"
-        );
-        Self(DiemVMImpl::new(state))
+        Self
+        // info!(
+        //     AdapterLogSchema::new(state.id(), 0),
+        //     "Adapter created for Validation"
+        // );
+        // Self(DiemVMImpl::new(state))
     }
 
     pub fn init_with_config(
@@ -42,12 +47,13 @@ impl DiemVMValidator {
         on_chain_config: VMConfig,
         publishing_option: VMPublishingOption,
     ) -> Self {
-        info!("Adapter restarted for Validation");
-        DiemVMValidator(DiemVMImpl::init_with_config(
-            version,
-            on_chain_config,
-            publishing_option,
-        ))
+        // info!("Adapter restarted for Validation");
+        // DiemVMValidator(DiemVMImpl::init_with_config(
+        //     version,
+        //     on_chain_config,
+        //     publishing_option,
+        // ))
+        Self
     }
 }
 
@@ -85,10 +91,20 @@ impl VMValidator for DiemVMValidator {
 
         let remote_cache = StateViewCache::new(state_view);
         let account_role = get_account_role(txn_sender, &remote_cache);
-        let mut session = self.0.new_session(&remote_cache);
+        let vm = CACHE_VM.with(|cell| {
+            let mut borrow= cell.borrow_mut();
+            if let Some(ref vm) = *borrow {
+                vm.clone()
+            } else {
+                let vm = DiemVMImpl::new(&remote_cache);
+                *borrow = Some(vm.clone());
+                vm
+            }
+        });
+        let mut session = vm.new_session(&remote_cache);
 
         let (status, normalized_gas_price) = match validate_signature_checked_transaction(
-            &self.0,
+            &vm,
             &mut session,
             &txn,
             &remote_cache,

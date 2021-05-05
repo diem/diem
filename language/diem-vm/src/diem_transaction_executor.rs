@@ -50,9 +50,10 @@ use std::{
     convert::{AsMut, AsRef},
 };
 
-pub struct DiemVM(DiemVMImpl);
+pub struct DiemVM;
+pub struct DiemVM_(DiemVMImpl);
 
-impl DiemVM {
+impl DiemVM_ {
     pub fn new<S: StateView>(state: &S) -> Self {
         Self(DiemVMImpl::new(state))
     }
@@ -1103,7 +1104,7 @@ impl DiemVM {
                     // Make a per thread cache to de-congest mem bus
                     let thread_data_cache = SingleThreadReadCache::new(data_cache);
                     // Make a new VM per thread -- with its own module cache
-                    let thread_vm = DiemVM::new(&thread_data_cache);
+                    let thread_vm = Self::new(&thread_data_cache);
                     let mut tx_idx_ring_buffer = VecDeque::with_capacity(10);
 
                     loop {
@@ -1263,7 +1264,7 @@ impl DiemVM {
         state_view: &dyn StateView,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let mut state_view_cache = StateViewCache::new(state_view);
-        let mut vm = DiemVM::new(&state_view_cache);
+        let mut vm = Self::new(&state_view_cache);
         vm.execute_block_impl(transactions, &mut state_view_cache, true)
     }
 }
@@ -1328,7 +1329,7 @@ impl VMExecutor for DiemVM {
             ))
         });
 
-        let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
+        let output = DiemVM_::execute_block_and_keep_vm_status(transactions, state_view)?;
         Ok(output
             .into_iter()
             .map(|(_vm_status, txn_output)| txn_output)
@@ -1358,13 +1359,13 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
     )
 }
 
-impl AsRef<DiemVMImpl> for DiemVM {
+impl AsRef<DiemVMImpl> for DiemVM_ {
     fn as_ref(&self) -> &DiemVMImpl {
         &self.0
     }
 }
 
-impl AsMut<DiemVMImpl> for DiemVM {
+impl AsMut<DiemVMImpl> for DiemVM_ {
     fn as_mut(&mut self) -> &mut DiemVMImpl {
         &mut self.0
     }

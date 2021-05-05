@@ -220,7 +220,7 @@ impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
             };
             let ty_layout = self.loader.type_to_type_layout(ty)?;
 
-            let gv = match self.remote.get_resource(&addr, &ty_tag) {
+            let gv = match self.remote.get_resource_ref(&addr, &ty_tag) {
                 Ok(Some(blob)) => {
                     let val = match Value::simple_deserialize(&blob, &ty_layout) {
                         Some(val) => val,

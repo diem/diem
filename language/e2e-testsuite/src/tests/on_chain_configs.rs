@@ -9,7 +9,7 @@ use diem_types::{
     transaction::{Script, ScriptFunction, TransactionArgument, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode},
 };
-use diem_vm::DiemVM;
+use diem_vm::DiemVM_;
 use language_e2e_tests::{
     account::{self, Account},
     assert_prologue_parity,
@@ -28,7 +28,7 @@ fn initial_diem_version() {
     test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
         let mut executor = test_env.executor;
 
-        let vm = DiemVM::new(executor.get_state_view());
+        let vm = DiemVM_::new(executor.get_state_view());
 
         assert_eq!(
             vm.internals().diem_version().unwrap(),
@@ -50,7 +50,7 @@ fn initial_diem_version() {
         executor.new_block();
         executor.execute_and_apply(txn);
 
-        let new_vm = DiemVM::new(executor.get_state_view());
+        let new_vm = DiemVM_::new(executor.get_state_view());
         assert_eq!(
             new_vm.internals().diem_version().unwrap(),
             DiemVersion { major: test_env.version_number + 1 }
@@ -63,7 +63,7 @@ fn initial_diem_version() {
 fn drop_txn_after_reconfiguration() {
     test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
         let mut executor = test_env.executor;
-        let vm = DiemVM::new(executor.get_state_view());
+        let vm = DiemVM_::new(executor.get_state_view());
 
         assert_eq!(
             vm.internals().diem_version().unwrap(),

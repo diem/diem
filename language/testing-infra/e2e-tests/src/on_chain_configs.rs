@@ -7,7 +7,7 @@ use diem_types::{
     on_chain_config::DiemVersion,
     transaction::{Script, TransactionArgument},
 };
-use diem_vm::DiemVM;
+use diem_vm::{DiemVM, DiemVM_};
 
 pub fn set_diem_version(executor: &mut FakeExecutor, version: DiemVersion) {
     let account = Account::new_genesis_account(diem_types::on_chain_config::config_address());
@@ -28,6 +28,6 @@ pub fn set_diem_version(executor: &mut FakeExecutor, version: DiemVersion) {
     executor.new_block();
     executor.execute_and_apply(txn);
 
-    let new_vm = DiemVM::new(executor.get_state_view());
+    let new_vm = DiemVM_::new(executor.get_state_view());
     assert_eq!(new_vm.internals().diem_version().unwrap(), version);
 }

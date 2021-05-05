@@ -79,7 +79,7 @@ pub trait BlockExecutor: Send {
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error>;
 }
 
-pub trait TransactionReplayer: Send {
+pub trait TransactionReplayer {
     fn replay_chunk(
         &mut self,
         first_version: Version,
