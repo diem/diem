@@ -71,7 +71,7 @@ fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
     Ok((module_id, func_name))
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 struct ExecutionResult {
     vm_result: VMResult<Vec<TypedValue>>,
     global_state: GlobalState,

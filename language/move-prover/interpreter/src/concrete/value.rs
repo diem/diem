@@ -693,7 +693,7 @@ impl LocalSlot {
 // Global state
 //**************************************************************************************************
 
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 struct AccountState {
     storage: BTreeMap<StructInstantiation, BaseValue>,
 }
@@ -716,7 +716,7 @@ impl AccountState {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct GlobalState {
     accounts: BTreeMap<AccountAddress, AccountState>,
 }

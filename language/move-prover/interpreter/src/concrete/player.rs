@@ -904,11 +904,11 @@ fn handle_write_back_local(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
+    let old_val = local_state.del_value(local_root);
     let (ty, val, ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
         assert!(matches!(ptr, Pointer::Local(root_idx) if root_idx == local_root));
-        let root_val = local_state.get_value(local_root);
-        assert!(ty.is_ref_of(root_val.get_ty().get_base_type(), Some(true)));
+        assert!(ty.is_ref_of(old_val.get_ty().get_base_type(), Some(true)));
     }
     local_state.put_value(local_root, val, Pointer::None);
 }
@@ -919,11 +919,11 @@ fn handle_write_back_ref_whole(
     local_state: &mut LocalState,
 ) {
     let (ty, val, ptr) = op_val.decompose();
-    let ref_val = local_state.get_value(local_ref);
-    let ref_ptr = ref_val.get_ptr().clone();
+    let ref_val = local_state.del_value(local_ref);
+    let (ref_ty, _, ref_ptr) = ref_val.decompose();
     if cfg!(debug_assertions) {
         assert!(matches!(ptr, Pointer::RefWhole(ref_idx) if ref_idx == local_ref));
-        assert_eq!(ref_val.get_ty(), &ty);
+        assert_eq!(ref_ty, ty);
         assert!(ty.is_ref(Some(true)));
     }
     local_state.put_value(local_ref, val, ref_ptr);
@@ -939,17 +939,13 @@ fn handle_write_back_ref_field(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
+    let old_struct = local_state.del_value(local_ref);
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
-        assert!(local_state
-            .get_type(local_ref)
-            .is_ref_struct_of(&inst, Some(true)));
+        assert!(old_struct.get_ty().is_ref_struct_of(&inst, Some(true)));
     }
-    let updated_struct = local_state
-        .get_value(local_ref)
-        .deref()
-        .update_ref_struct_field(field_num, op_val, local_ref);
+    let updated_struct = old_struct.update_ref_struct_field(field_num, op_val, local_ref);
     let (_, val, ptr) = updated_struct.decompose();
     local_state.put_value(local_ref, val, ptr);
 }
@@ -959,10 +955,8 @@ fn handle_write_back_ref_element(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
-    let updated_vector = local_state
-        .get_value(local_ref)
-        .deref()
-        .update_ref_vector_element(op_val, local_ref);
+    let old_vector = local_state.del_value(local_ref);
+    let updated_vector = old_vector.update_ref_vector_element(op_val, local_ref);
     let (_, val, ptr) = updated_vector.decompose();
     local_state.put_value(local_ref, val, ptr);
 }
@@ -976,13 +970,12 @@ fn handle_read_ref(from_ref: RefTypedValue) -> TypedValue {
 }
 
 fn handle_write_ref(from_val: TypedValue, into_ref: TempIndex, local_state: &mut LocalState) {
-    let ref_val = local_state.get_value(into_ref);
+    let old_ref_val = local_state.del_value(into_ref);
+    let (old_ty, _, old_ptr) = old_ref_val.decompose();
     if cfg!(debug_assertions) {
-        assert!(ref_val
-            .get_ty()
-            .is_ref_of(from_val.get_ty().get_base_type(), Some(true)));
+        assert!(old_ty.is_ref_of(from_val.get_ty().get_base_type(), Some(true)));
     }
-    let updated_ref = from_val.write_ref(ref_val.get_ptr().clone());
+    let updated_ref = from_val.write_ref(old_ptr);
     let (_, val, ptr) = updated_ref.decompose();
     local_state.put_value(into_ref, val, ptr);
 }
