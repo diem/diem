@@ -822,7 +822,7 @@ fn handle_move_from(
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.del_resource(addr, inst) {
-        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
+        None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
     }
 }
@@ -839,7 +839,7 @@ fn handle_get_global(
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.get_resource(None, addr, inst) {
-        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
+        None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
     }
 }
@@ -857,7 +857,7 @@ fn handle_borrow_global(
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     let addr = op_addr.deref().into_address();
     match global_state.get_resource(Some(is_mut), addr, inst) {
-        None => Err(AbortInfo::sys_abort(StatusCode::RESOURCE_DOES_NOT_EXIST)),
+        None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
     }
 }

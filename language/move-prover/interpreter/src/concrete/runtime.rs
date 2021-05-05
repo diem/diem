@@ -11,7 +11,10 @@ use bytecode::{
 };
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::StatusCode};
-use move_model::model::{AbilitySet, FunctionEnv, GlobalEnv, TypeParameter};
+use move_model::{
+    model::{AbilitySet, FunctionEnv, GlobalEnv, TypeParameter},
+    ty as MT,
+};
 
 use crate::{
     concrete::{
@@ -92,13 +95,36 @@ impl<'env> Runtime<'env> {
                 let param_ty = &params.get(i).unwrap().1;
                 assert_eq!(&local_ty, param_ty);
             }
-            let base_ty = convert_model_base_type(self.env, &local_ty, &converted_ty_args);
-            match convert_move_value(self.env, arg, &base_ty) {
-                Ok(converted) => {
-                    converted_args.push(converted);
+            // NOTE: for historical reasons, we may receive `&signer` as arguments
+            // TODO (mengxu): clean this up when we no longer accept `&signer` as valid arguments
+            // for transaction scripts and `public(script)` functions.
+            match local_ty {
+                MT::Type::Reference(false, base_ty)
+                    if matches!(*base_ty, MT::Type::Primitive(MT::PrimitiveType::Signer)) =>
+                {
+                    match arg {
+                        MoveValue::Address(v) => {
+                            converted_args.push(TypedValue::mk_signer(*v));
+                        }
+                        _ => {
+                            return (
+                                Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
+                                    .finish(Location::Undefined)),
+                                global_state,
+                            );
+                        }
+                    }
                 }
-                Err(err) => {
-                    return (Err(err.finish(Location::Undefined)), global_state);
+                _ => {
+                    let base_ty = convert_model_base_type(self.env, &local_ty, &converted_ty_args);
+                    match convert_move_value(self.env, arg, &base_ty) {
+                        Ok(converted) => {
+                            converted_args.push(converted);
+                        }
+                        Err(err) => {
+                            return (Err(err.finish(Location::Undefined)), global_state);
+                        }
+                    }
                 }
             }
         }
