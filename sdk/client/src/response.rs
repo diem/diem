@@ -9,6 +9,7 @@ use crate::{
     },
     Error, State,
 };
+use diem_json_rpc_types::views::{EventWithProofView, TransactionsWithProofsView};
 use serde_json::Value;
 
 #[derive(Debug)]
@@ -66,8 +67,8 @@ pub enum MethodResponse {
 
     GetStateProof(StateProofView),
     GetAccountStateWithProof(AccountStateWithProofView),
-    GetTransactionsWithProofs,
-    GetEventsWithProofs,
+    GetTransactionsWithProofs(Option<TransactionsWithProofsView>),
+    GetEventsWithProofs(Vec<EventWithProofView>),
 }
 
 impl MethodResponse {
@@ -94,8 +95,12 @@ impl MethodResponse {
             Method::GetAccountStateWithProof => {
                 MethodResponse::GetAccountStateWithProof(serde_json::from_value(json)?)
             }
-            Method::GetTransactionsWithProofs => MethodResponse::GetTransactionsWithProofs,
-            Method::GetEventsWithProofs => MethodResponse::GetEventsWithProofs,
+            Method::GetTransactionsWithProofs => {
+                MethodResponse::GetTransactionsWithProofs(serde_json::from_value(json)?)
+            }
+            Method::GetEventsWithProofs => {
+                MethodResponse::GetEventsWithProofs(serde_json::from_value(json)?)
+            }
         };
 
         Ok(response)
@@ -114,8 +119,8 @@ impl MethodResponse {
             MethodResponse::GetNetworkStatus(_) => Method::GetNetworkStatus,
             MethodResponse::GetStateProof(_) => Method::GetStateProof,
             MethodResponse::GetAccountStateWithProof(_) => Method::GetAccountStateWithProof,
-            MethodResponse::GetTransactionsWithProofs => Method::GetTransactionsWithProofs,
-            MethodResponse::GetEventsWithProofs => Method::GetEventsWithProofs,
+            MethodResponse::GetTransactionsWithProofs(_) => Method::GetTransactionsWithProofs,
+            MethodResponse::GetEventsWithProofs(_) => Method::GetEventsWithProofs,
         }
     }
 
