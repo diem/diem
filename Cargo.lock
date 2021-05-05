@@ -2413,7 +2413,6 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
  "either",
- "fail",
  "futures",
  "futures-channel",
  "futures-core",

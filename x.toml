@@ -88,6 +88,13 @@ name = "x-lint"
 version = "0.1.0"
 workspace-path = "devtools/x-lint"
 
+# Exclude the fail crate because the failpoints feature should only be enabled
+# for certain builds.
+[[hakari.omitted-packages]]
+name = "fail"
+version = "0.4.0"
+crates-io = true
+
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
 version = "v2"
