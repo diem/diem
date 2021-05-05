@@ -31,43 +31,6 @@ function {:inline} MakeVec4<T>(v1: T, v2: T, v3: T, v4: T): Vec T {
     Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4], 4)
 }
 
-function {:inline} MakeVec5<T>(v1: T, v2: T, v3: T, v4: T, v5: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5], 5)
-}
-
-function {:inline} MakeVec6<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6], 6)
-}
-
-function {:inline} MakeVec7<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7], 7)
-}
-
-function {:inline} MakeVec8<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7][7 := v8], 8)
-}
-
-function {:inline} MakeVec9<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T, v9: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7][7 := v8][8 := v9], 9)
-}
-
-function {:inline} MakeVec10<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T, v9: T, v10: T): Vec T {
-    Vec(DefaultVecMap()[0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7][7 := v8][8 := v9][9 := v10], 10)
-}
-
-function {:inline} MakeVec11<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T, v9: T, v10: T, v11: T): Vec T {
-    Vec(DefaultVecMap()
-        [0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7][7 := v8][8 := v9][9 := v10][10 := v11],
-        11)
-}
-
-function {:inline} MakeVec12<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T, v7: T, v8: T, v9: T, v10: T, v11: T, v12: T): Vec T {
-    Vec(DefaultVecMap()
-        [0 := v1][1 := v2][2 := v3][3 := v4][4 := v5][5 := v6][6 := v7][7 := v8][8 := v9][9 := v10][10 := v11][11 := v12],
-        12)
-}
-
-
 function {:inline} ExtendVec<T>(v: Vec T, elem: T): Vec T {
     (var l := l#Vec(v);
     Vec(v#Vec(v)[l := elem], l + 1))

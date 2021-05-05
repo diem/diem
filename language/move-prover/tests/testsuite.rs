@@ -19,6 +19,8 @@ use log::{debug, info, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use walkdir::WalkDir;
 
+use once_cell::sync::OnceCell;
+
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
 const ENV_TEST_INCONSISTENCY: &str = "MVP_TEST_INCONSISTENCY";
@@ -54,6 +56,10 @@ struct Feature {
     /// does not support function values and closures, we need to have a different runner for
     /// each feature
     runner: fn(&Path) -> datatest_stable::Result<()>,
+    /// A predicate to be called on the path determining whether the feature is enabled.
+    /// The first name is the name of the test group, the second the path to the test
+    /// source.
+    enabling_condition: fn(&str, &str) -> bool,
 }
 
 /// An inclusion mode. A feature may be run in one of these modes.
@@ -65,41 +71,43 @@ enum InclusionMode {
     Implicit,
 }
 
-const TESTED_FEATURES: &[Feature] = &[
-    Feature {
-        name: "default",
-        flags: &[],
-        inclusion_mode: InclusionMode::Implicit,
-        enable_in_ci: true,
-        only_if_requested: false,
-        separate_baseline: false,
-        runner: runner_default,
-    },
-    Feature {
-        name: "cvc4",
-        flags: &["--use-cvc4"],
-        inclusion_mode: InclusionMode::Explicit,
-        enable_in_ci: false, // Do not enable in CI until boogie <-> cvc4 issues are fixed
-        only_if_requested: true,
-        separate_baseline: true,
-        runner: runner_cvc4,
-    },
-];
+fn get_features() -> &'static [Feature] {
+    static TESTED_FEATURES: OnceCell<Vec<Feature>> = OnceCell::new();
+    TESTED_FEATURES.get_or_init(|| {
+        // Tests the default configuration.
+        vec![
+            Feature {
+                name: "default",
+                flags: &[],
+                inclusion_mode: InclusionMode::Implicit,
+                enable_in_ci: true,
+                only_if_requested: false,
+                separate_baseline: false,
+                runner: |p| test_runner_for_feature(p, get_feature_by_name("default")),
+                enabling_condition: |_, _| true,
+            },
+            // Tests with cvc4 as a backend for boogie.
+            Feature {
+                name: "cvc4",
+                flags: &["--use-cvc4"],
+                inclusion_mode: InclusionMode::Explicit,
+                enable_in_ci: false, // Do not enable in CI until we have more data about stability
+                only_if_requested: false,
+                separate_baseline: true,
+                runner: |p| test_runner_for_feature(p, get_feature_by_name("cvc4")),
+                enabling_condition: |group, _| group == "unit",
+            },
+        ]
+    })
+}
 
 fn get_feature_by_name(name: &str) -> &'static Feature {
-    for feature in TESTED_FEATURES {
+    for feature in get_features() {
         if feature.name == name {
             return feature;
         }
     }
     panic!("feature not found")
-}
-
-fn runner_default(p: &Path) -> datatest_stable::Result<()> {
-    test_runner_for_feature(p, get_feature_by_name("default"))
-}
-fn runner_cvc4(p: &Path) -> datatest_stable::Result<()> {
-    test_runner_for_feature(p, get_feature_by_name("cvc4"))
 }
 
 /// Test runner for a given feature.
@@ -253,12 +261,17 @@ fn collect_enabled_tests(reqs: &mut Vec<Requirements>, group: &str, feature: &Fe
                         .unwrap_or_default()
                         .is_empty();
             }
+            let root_str = p.to_string_lossy().to_string();
+            let path_str = path.to_string_lossy().to_string();
+            if included {
+                included = (feature.enabling_condition)(group, &path_str);
+            }
             if included {
                 reqs.push(Requirements::new(
                     feature.runner,
                     format!("prover {}[{}]", group, feature.name),
-                    p.to_string_lossy().to_string(),
-                    path.to_string_lossy().to_string(),
+                    root_str,
+                    path_str,
                 ));
             }
         }
@@ -268,7 +281,7 @@ fn collect_enabled_tests(reqs: &mut Vec<Requirements>, group: &str, feature: &Fe
 // Test entry point based on datatest runner.
 fn main() {
     let mut reqs = vec![];
-    for feature in TESTED_FEATURES {
+    for feature in get_features() {
         // Evaluate whether the user narrowed which feature to test.
         let feature_narrow = read_env_var(ENV_TEST_FEATURE);
         if !feature_narrow.is_empty() && feature.name != feature_narrow {

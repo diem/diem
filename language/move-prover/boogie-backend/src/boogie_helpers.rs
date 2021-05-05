@@ -16,7 +16,7 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 
-pub const MAX_MAKE_VEC_ARGS: usize = 12;
+pub const MAX_MAKE_VEC_ARGS: usize = 4;
 
 /// Return boogie name of given module.
 pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
@@ -136,11 +136,20 @@ pub fn boogie_make_vec_from_strings(args: &[String]) -> String {
     if args.is_empty() {
         "EmptyVec()".to_string()
     } else {
-        let n = usize::min(args.len(), MAX_MAKE_VEC_ARGS);
-        let direct_args = &args[0..n];
-        let mut make = format!("MakeVec{}({})", n, direct_args.iter().join(", "));
-        for arg in args.iter().skip(n) {
-            make = format!("ExtendVec({}, {})", make, arg)
+        let mut make = "".to_owned();
+        let mut at = 0;
+        loop {
+            let n = usize::min(args.len() - at, MAX_MAKE_VEC_ARGS);
+            let m = format!("MakeVec{}({})", n, args[at..at + n].iter().join(", "));
+            make = if make.is_empty() {
+                m
+            } else {
+                format!("ConcatVec({}, {})", make, m)
+            };
+            at += n;
+            if at >= args.len() {
+                break;
+            }
         }
         make
     }

@@ -1,7 +1,7 @@
+// also_include_for: cvc4
 module 0x42::TestSome {
     use 0x1::Signer;
     use 0x1::Vector;
-
     // Basic tests
     // ===========
 

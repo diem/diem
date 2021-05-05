@@ -16,7 +16,7 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-monomorphize",
 ];
 
-const MIN_BOOGIE_VERSION: &str = "2.8.31";
+const MIN_BOOGIE_VERSION: &str = "2.8.32";
 const MIN_Z3_VERSION: &str = "4.8.9";
 const EXPECTED_CVC4_VERSION: &str = "aac53f51";
 

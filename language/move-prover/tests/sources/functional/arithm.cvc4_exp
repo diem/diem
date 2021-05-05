@@ -1,54 +1,126 @@
-Move prover returns: [internal] boogie exited with prover errors:
-Prover error: Unexpected value: ($Path (as @uc_T@[Int]Int_0 T@[Int]Int) 0)
+Move prover returns: exiting with boogie verification errors
+error: abort not covered by any of the `aborts_if` clauses
 
-Advisory: $TestArithmetic_div_by_zero_u64_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
-arithm.bpl(1594,27): Verification inconclusive ($TestArithmetic_div_by_zero_u64_incorrect$verify)
-arithm.bpl(1714,27): Verification inconclusive ($TestArithmetic_f$verify)
-arithm.bpl(1837,27): Verification inconclusive ($TestArithmetic_g$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:128:5 ───
+     │
+ 128 │ ╭     spec fun div_by_zero_u64_incorrect {
+ 129 │ │         aborts_if false;
+ 130 │ │     }
+     │ ╰─────^
+     ·
+ 126 │         x / y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:125: div_by_zero_u64_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:126: div_by_zero_u64_incorrect
+     =         ABORTED
 
-arithm.bpl(1910,27): Verification inconclusive ($TestArithmetic_h$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2191,27): Verification inconclusive ($TestArithmetic_multiple_ops$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:180:5 ───
+     │
+ 180 │ ╭     spec fun overflow_u128_add_incorrect {
+ 181 │ │         aborts_if false;
+ 182 │ │     }
+     │ ╰─────^
+     ·
+ 178 │         x + y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:177: overflow_u128_add_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:178: overflow_u128_add_incorrect
+     =         ABORTED
 
-arithm.bpl(2274,27): Verification inconclusive ($TestArithmetic_overflow_u128_add$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2344,27): Verification inconclusive ($TestArithmetic_overflow_u128_add_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:232:5 ───
+     │
+ 232 │ ╭     spec fun overflow_u128_mul_incorrect {
+ 233 │ │         aborts_if false;
+ 234 │ │     }
+     │ ╰─────^
+     ·
+ 230 │         x * y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:229: overflow_u128_mul_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:230: overflow_u128_mul_incorrect
+     =         ABORTED
 
-arithm.bpl(2414,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2484,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:164:5 ───
+     │
+ 164 │ ╭     spec fun overflow_u64_add_incorrect {
+ 165 │ │         aborts_if false;
+ 166 │ │     }
+     │ ╰─────^
+     ·
+ 162 │         x + y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:161: overflow_u64_add_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:162: overflow_u64_add_incorrect
+     =         ABORTED
 
-arithm.bpl(2554,27): Verification inconclusive ($TestArithmetic_overflow_u64_add$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2624,27): Verification inconclusive ($TestArithmetic_overflow_u64_add_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:217:5 ───
+     │
+ 217 │ ╭     spec fun overflow_u64_mul_incorrect {
+ 218 │ │         aborts_if false;
+ 219 │ │     }
+     │ ╰─────^
+     ·
+ 215 │         x * y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:214: overflow_u64_mul_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:215: overflow_u64_mul_incorrect
+     =         ABORTED
 
-arithm.bpl(2694,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2764,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/arithm.move:148:5 ───
+     │
+ 148 │ ╭     spec fun overflow_u8_add_incorrect {
+ 149 │ │         aborts_if false;
+ 150 │ │     }
+     │ ╰─────^
+     ·
+ 146 │         x + y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:145: overflow_u8_add_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:146: overflow_u8_add_incorrect
+     =         ABORTED
 
-arithm.bpl(2834,27): Verification inconclusive ($TestArithmetic_overflow_u8_add$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort not covered by any of the `aborts_if` clauses
 
-arithm.bpl(2904,27): Verification inconclusive ($TestArithmetic_overflow_u8_add_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
-
-arithm.bpl(2974,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul$verify)
-Prover error: Invalid PING response from the prover: unsat
-
-arithm.bpl(3044,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul_incorrect$verify)
-Prover error: Invalid PING response from the prover: unsat
-
-arithm.bpl(3114,27): Verification inconclusive ($TestArithmetic_underflow$verify)
-
-Boogie program verifier finished with 0 errors, 18 inconclusives
+     ┌── tests/sources/functional/arithm.move:201:5 ───
+     │
+ 201 │ ╭     spec fun overflow_u8_mul_incorrect {
+ 202 │ │         aborts_if false;
+ 203 │ │     }
+     │ ╰─────^
+     ·
+ 199 │         x * y
+     │           - abort happened here with execution failure
+     │
+     =     at tests/sources/functional/arithm.move:198: overflow_u8_mul_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/arithm.move:199: overflow_u8_mul_incorrect
+     =         ABORTED

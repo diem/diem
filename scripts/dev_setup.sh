@@ -23,7 +23,7 @@ VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
 CVC4_VERSION=aac53f51
 DOTNET_VERSION=3.1
-BOOGIE_VERSION=2.8.31
+BOOGIE_VERSION=2.8.32
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit

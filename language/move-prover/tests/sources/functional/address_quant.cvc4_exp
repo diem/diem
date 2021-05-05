@@ -1,7 +1,16 @@
-Move prover returns: [internal] boogie exited with prover errors:
-Prover error: Unexpected value: ($Path (as @uc_T@[Int]Int_0 T@[Int]Int) 0)
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
 
-Advisory: $AddressQuant_multiple_copy_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
-address_quant.bpl(1250,27): Verification inconclusive ($AddressQuant_multiple_copy_incorrect$verify)
-
-Boogie program verifier finished with 0 errors, 1 inconclusive
+    ┌── tests/sources/functional/address_quant.move:53:10 ───
+    │
+ 53 │          invariant atMostOne();
+    │          ^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/address_quant.move:46: multiple_copy_incorrect
+    =     at tests/sources/functional/address_quant.move:53
+    =     at tests/sources/functional/address_quant.move:54
+    =     at tests/sources/functional/address_quant.move:46: multiple_copy_incorrect
+    =         sndr = <redacted>
+    =     at tests/sources/functional/address_quant.move:47: multiple_copy_incorrect
+    =     at tests/sources/functional/address_quant.move:48: multiple_copy_incorrect
+    =     at tests/sources/functional/address_quant.move:53

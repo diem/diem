@@ -1,24 +1,99 @@
-Move prover returns: [internal] boogie exited with prover errors:
-Prover error: Unexpected value: ($Path (as @uc_T@[Int]Int_0 T@[Int]Int) 0)
+Move prover returns: exiting with boogie verification errors
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
-Advisory: $TestAbortsIfWithCode_aborts_if_with_code_mixed_invalid$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
-aborts_if_with_code.bpl(1097,27): Verification inconclusive ($TestAbortsIfWithCode_aborts_if_with_code_mixed_invalid$verify)
-aborts_if_with_code.bpl(1237,27): Verification inconclusive ($TestAbortsIfWithCode_aborts_with$verify)
-aborts_if_with_code.bpl(1362,27): Verification inconclusive ($TestAbortsIfWithCode_aborts_with_invalid$verify)
-Prover error: Invalid PING response from the prover: unsat
+    ┌── tests/sources/functional/aborts_if_with_code.move:77:5 ───
+    │
+ 77 │ ╭     spec fun aborts_if_with_code_mixed_invalid {
+ 78 │ │         aborts_if x == 1;
+ 79 │ │         aborts_if x == 2 with 1;
+ 80 │ │     }
+    │ ╰─────^
+    ·
+ 74 │             abort(2)
+    │             -------- abort happened here with code 0x2
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:69: aborts_if_with_code_mixed_invalid
+    =         x = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:70: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:74: aborts_if_with_code_mixed_invalid
+    =         ABORTED
 
-aborts_if_with_code.bpl(1487,27): Verification inconclusive ($TestAbortsIfWithCode_aborts_with_mixed$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
-aborts_if_with_code.bpl(1618,27): Verification inconclusive ($TestAbortsIfWithCode_aborts_with_mixed_invalid$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/aborts_if_with_code.move:105:5 ───
+     │
+ 105 │ ╭     spec fun aborts_with_invalid {
+ 106 │ │         aborts_with 1,3;
+ 107 │ │     }
+     │ ╰─────^
+     ·
+ 102 │             abort(2)
+     │             -------- abort happened here with code 0x2
+     │
+     =     at tests/sources/functional/aborts_if_with_code.move:97: aborts_with_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/aborts_if_with_code.move:98: aborts_with_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:102: aborts_with_invalid
+     =         ABORTED
 
-aborts_if_with_code.bpl(1749,27): Verification inconclusive ($TestAbortsIfWithCode_conditional_abort$verify)
-Prover error: Invalid PING response from the prover: unsat
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
-aborts_if_with_code.bpl(1921,27): Verification inconclusive ($TestAbortsIfWithCode_conditional_abort_invalid$verify)
-Prover error: Invalid PING response from the prover: unsat
+     ┌── tests/sources/functional/aborts_if_with_code.move:131:5 ───
+     │
+ 131 │ ╭     spec fun aborts_with_mixed_invalid {
+ 132 │ │         pragma aborts_if_is_partial = true;
+ 133 │ │         aborts_if x == 1 with 1;
+ 134 │ │         aborts_with 2;
+ 135 │ │     }
+     │ ╰─────^
+     ·
+ 128 │             abort(1)
+     │             -------- abort happened here with code 0x1
+     │
+     =     at tests/sources/functional/aborts_if_with_code.move:123: aborts_with_mixed_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/aborts_if_with_code.move:124: aborts_with_mixed_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:128: aborts_with_mixed_invalid
+     =         ABORTED
 
-aborts_if_with_code.bpl(2079,27): Verification inconclusive ($TestAbortsIfWithCode_exec_failure_invalid$verify)
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
-Boogie program verifier finished with 0 errors, 8 inconclusives
+    ┌── tests/sources/functional/aborts_if_with_code.move:38:5 ───
+    │
+ 38 │ ╭     spec fun conditional_abort_invalid {
+ 39 │ │         aborts_if x == 1 with 1; // wrong code
+ 40 │ │         aborts_if y == 2 with 3;
+ 41 │ │         ensures result == x;
+ 42 │ │     }
+    │ ╰─────^
+    ·
+ 31 │             abort 2
+    │             ------- abort happened here with code 0x2
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:41
+    =     at tests/sources/functional/aborts_if_with_code.move:29: conditional_abort_invalid
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:30: conditional_abort_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:31: conditional_abort_invalid
+    =         ABORTED
+
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:48:5 ───
+    │
+ 48 │ ╭     spec fun exec_failure_invalid {
+ 49 │ │         aborts_if x == 0 with 1; // wrong code
+ 50 │ │         ensures result == 10 / x;
+ 51 │ │     }
+    │ ╰─────^
+    ·
+ 46 │         10 / x
+    │            - abort happened here with execution failure
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:50
+    =     at tests/sources/functional/aborts_if_with_code.move:45: exec_failure_invalid
+    =         x = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:46: exec_failure_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:46: exec_failure_invalid
+    =         ABORTED

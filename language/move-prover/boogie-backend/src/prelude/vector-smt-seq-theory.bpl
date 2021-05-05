@@ -32,14 +32,6 @@ function {:inline} MakeVec4<T>(v1: T, v2: T, v3: T, v4: T): Vec T {
     ConcatVec(MakeVec3(v1, v2, v3), MakeVec1(v4))
 }
 
-function {:inline} MakeVec5<T>(v1: T, v2: T, v3: T, v4: T, v5: T): Vec T {
-    ConcatVec(MakeVec4(v1, v2, v3, v4), MakeVec1(v5))
-}
-
-function {:inline} MakeVec6<T>(v1: T, v2: T, v3: T, v4: T, v5: T, v6: T): Vec T {
-    ConcatVec(MakeVec5(v1, v2, v3, v4, v5), MakeVec1(v6))
-}
-
 function {:inline} ExtendVec<T>(v: Vec T, elem: T): Vec T {
     ConcatVec(v, MakeVec1(elem))
 }
