@@ -186,8 +186,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             EA::ModuleAccess_::Name(n) => (None, self.symbol_pool().make(n.value.as_str())),
             EA::ModuleAccess_::ModuleAccess(m, n) => {
                 let module_name = ModuleName::from_str(
-                    &m.value.0.to_string(),
-                    self.symbol_pool().make(m.value.1.as_str()),
+                    &m.value.address.to_string(),
+                    self.symbol_pool().make(m.value.module.0.value.as_str()),
                 );
                 (Some(module_name), self.symbol_pool().make(n.value.as_str()))
             }

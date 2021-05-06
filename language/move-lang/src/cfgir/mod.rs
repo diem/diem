@@ -15,9 +15,9 @@ mod simplify_jumps;
 pub(crate) mod translate;
 
 use crate::{
-    expansion::ast::AbilitySet,
+    expansion::ast::{AbilitySet, ModuleIdent},
     hlir::ast::*,
-    parser::ast::{ModuleIdent, StructName, Var},
+    parser::ast::{StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use cfg::*;

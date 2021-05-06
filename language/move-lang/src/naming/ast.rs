@@ -4,11 +4,9 @@
 use crate::{
     expansion::ast::{
         ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attribute, Fields,
-        Friend, SpecId, Value, Value_,
+        Friend, ModuleIdent, SpecId, Value, Value_,
     },
-    parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp, Var, Visibility,
-    },
+    parser::ast::{BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, Visibility},
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -24,6 +22,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub struct Program {
+    // Map of known named address values. Not all addresses will be present
+    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
 }
@@ -551,7 +551,15 @@ impl fmt::Display for TypeName_ {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program { modules, scripts } = self;
+        let Program {
+            addresses,
+            modules,
+            scripts,
+        } = self;
+        for (_, addr, bytes) in addresses {
+            w.writeln(&format!("address {} = {};", addr, bytes));
+        }
+
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));

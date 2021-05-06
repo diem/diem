@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{Attribute, Friend},
+    expansion::ast::{Attribute, Friend, ModuleIdent},
     hlir::ast::{
         BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
     },
-    parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var, Visibility},
-    shared::{ast_debug::*, unique_map::UniqueMap},
+    parser::ast::{ConstantName, FunctionName, StructName, Var, Visibility},
+    shared::{ast_debug::*, unique_map::UniqueMap, AddressBytes, Name},
 };
 use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
@@ -21,6 +21,8 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Debug, Clone)]
 pub struct Program {
+    // Map of known named address values. Not all addresses will be present
+    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
 }
@@ -178,7 +180,15 @@ fn remap_labels_cmd(remapping: &BTreeMap<Label, Label>, sp!(_, cmd_): &mut Comma
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program { modules, scripts } = self;
+        let Program {
+            addresses,
+            modules,
+            scripts,
+        } = self;
+        for (_, addr, bytes) in addresses {
+            w.writeln(&format!("address {} = {};", addr, bytes));
+        }
+
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));

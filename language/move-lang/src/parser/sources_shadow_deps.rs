@@ -7,6 +7,8 @@ use crate::{
 };
 use std::collections::BTreeSet;
 
+use super::ast::LeadingNameAccess_;
+
 /// Given a parsed program, if a module id is found in both the source and lib definitions, filter
 /// out the lib definition and re-construct a new parsed program
 pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
@@ -21,14 +23,17 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
     let mut modules_defined_in_src = BTreeSet::new();
     for def in &source_definitions {
         match def {
-            Definition::Address(_, _, addr, modules) => {
-                for module in modules {
-                    modules_defined_in_src.insert((*addr, module.name.clone()));
+            Definition::Address(a) => {
+                let addr = &a.addr.value;
+                for module in &a.modules {
+                    modules_defined_in_src.insert((addr.clone(), module.name.clone()));
                 }
             }
             Definition::Module(module) => {
                 modules_defined_in_src.insert((
-                    module.address.map(|a| a.value).unwrap_or_default(),
+                    module.address.clone().map(|a| a.value).unwrap_or_else(|| {
+                        LeadingNameAccess_::AnonymousAddress(AddressBytes::DEFAULT_ERROR_BYTES)
+                    }),
                     module.name.clone(),
                 ));
             }
@@ -42,12 +47,26 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
     //  2. this library definition is a Module AST and the module is already defined in the source.
     let lib_definitions = lib_definitions
         .into_iter()
+        .map(|def| match def {
+            Definition::Address(mut a) => {
+                let addr = &a.addr.value;
+                let modules = std::mem::take(&mut a.modules);
+                a.modules = modules
+                    .into_iter()
+                    .filter(|module| {
+                        !modules_defined_in_src.contains(&(addr.clone(), module.name.clone()))
+                    })
+                    .collect();
+                Definition::Address(a)
+            }
+            def => def,
+        })
         .filter(|def| match def {
-            Definition::Address(_, _, addr, modules) => !modules
-                .iter()
-                .any(|module| modules_defined_in_src.contains(&(*addr, module.name.clone()))),
+            Definition::Address(_) => true,
             Definition::Module(module) => !modules_defined_in_src.contains(&(
-                module.address.map(|a| a.value).unwrap_or_default(),
+                module.address.clone().map(|a| a.value).unwrap_or_else(|| {
+                    LeadingNameAccess_::AnonymousAddress(AddressBytes::DEFAULT_ERROR_BYTES)
+                }),
                 module.name.clone(),
             )),
             Definition::Script(_) => false,

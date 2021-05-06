@@ -7,10 +7,10 @@ use crate::{
         ast::{self as G, BasicBlock, BasicBlocks, BlockInfo},
         cfg::BlockCFG,
     },
-    expansion::ast::{AbilitySet, Value, Value_},
+    expansion::ast::{AbilitySet, ModuleIdent, Value, Value_},
     hlir::ast::{self as H, Label},
-    parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
-    shared::{unique_map::UniqueMap, CompilationEnv},
+    parser::ast::{ConstantName, FunctionName, StructName, Var},
+    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Name},
     FullyCompiledProgram,
 };
 use cfgir::ast::LoopInfo;
@@ -27,6 +27,7 @@ use std::{
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
+    addresses: &'env UniqueMap<Name, AddressBytes>,
     struct_declared_abilities: UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     start: Option<Label>,
     loop_begin: Option<Label>,
@@ -44,9 +45,10 @@ impl<'env> Context<'env> {
     pub fn new(
         env: &'env mut CompilationEnv,
         pre_compiled_lib: Option<&FullyCompiledProgram>,
-        prog: &H::Program,
+        addresses: &'env UniqueMap<Name, AddressBytes>,
+        modules: &UniqueMap<ModuleIdent, H::ModuleDefinition>,
     ) -> Self {
-        let all_modules = prog.modules.key_cloned_iter().chain(
+        let all_modules = modules.key_cloned_iter().chain(
             pre_compiled_lib
                 .iter()
                 .map(|pre_compiled| {
@@ -54,7 +56,7 @@ impl<'env> Context<'env> {
                         .hlir
                         .modules
                         .key_cloned_iter()
-                        .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+                        .filter(|(mident, _m)| !modules.contains_key(mident))
                 })
                 .flatten(),
         );
@@ -65,6 +67,7 @@ impl<'env> Context<'env> {
         .unwrap();
         Context {
             env,
+            addresses,
             struct_declared_abilities,
             next_label: None,
             loop_begin: None,
@@ -154,15 +157,22 @@ pub fn program(
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: H::Program,
 ) -> G::Program {
-    let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let H::Program {
+        addresses,
         modules: hmodules,
         scripts: hscripts,
     } = prog;
+
+    let mut context = Context::new(compilation_env, pre_compiled_lib, &addresses, &hmodules);
+
     let modules = modules(&mut context, hmodules);
     let scripts = scripts(&mut context, hscripts);
 
-    G::Program { modules, scripts }
+    G::Program {
+        addresses,
+        modules,
+        scripts,
+    }
 }
 
 fn modules(
@@ -248,7 +258,7 @@ fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Co
     } = c;
 
     let final_value = constant_(context, loc, signature.clone(), locals, block);
-    let value = final_value.and_then(move_value_from_exp);
+    let value = final_value.and_then(|v| move_value_from_exp(context, v));
 
     G::Constant {
         attributes,
@@ -335,26 +345,32 @@ fn check_constant_value(context: &mut Context, e: &H::Exp) {
     }
 }
 
-fn move_value_from_exp(e: H::Exp) -> Option<MoveValue> {
+fn move_value_from_exp(context: &mut Context, e: H::Exp) -> Option<MoveValue> {
     use H::UnannotatedExp_ as E;
     match e.exp.value {
-        E::Value(v) => Some(move_value_from_value(v)),
+        E::Value(v) => move_value_from_value(context, v),
         _ => None,
     }
 }
 
-fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
+fn move_value_from_value(context: &mut Context, sp!(loc, v_): Value) -> Option<MoveValue> {
     use MoveValue as MV;
     use Value_ as V;
-    match v_ {
+    Some(match v_ {
         V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
-        V::Address(a) => MV::Address(MoveAddress::new(a.to_u8())),
+        V::Address(a) => match a.to_addr_bytes(&context.addresses, loc, "address value") {
+            Ok(bytes) => MV::Address(MoveAddress::new(bytes.to_bytes())),
+            Err(err) => {
+                context.env.add_error(err);
+                return None;
+            }
+        },
         V::U8(u) => MV::U8(u),
         V::U64(u) => MV::U64(u),
         V::U128(u) => MV::U128(u),
         V::Bool(b) => MV::Bool(b),
         V::Bytearray(v) => MV::Vector(v.into_iter().map(MV::U8).collect()),
-    }
+    })
 }
 
 //**************************************************************************************************

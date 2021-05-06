@@ -3,13 +3,12 @@
 
 use crate::{
     errors::*,
-    expansion::ast as E,
-    parser::ast::ModuleIdent,
+    expansion::ast::{self as E, ModuleIdent},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
 use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Entry
@@ -76,7 +75,7 @@ struct Context<'a> {
     // and a script cannot declare friends. Hence, is no way to form a cyclic dependency via scripts
     module_neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
     // A summary of neighbors keyed by module or script
-    neighbors_by_node: BTreeMap<NodeIdent, BTreeSet<E::Neighbor>>,
+    neighbors_by_node: BTreeMap<NodeIdent, UniqueMap<ModuleIdent, E::Neighbor>>,
     // The module or script we are currently exploring
     current_node: Option<NodeIdent>,
 }
@@ -106,13 +105,15 @@ impl<'a> Context<'a> {
         }
 
         let neighbor = match dep_type {
-            DepType::Use => E::Neighbor::Dependency(mident.clone()),
-            DepType::Friend => E::Neighbor::Friend(mident.clone()),
+            DepType::Use => E::Neighbor::Dependency,
+            DepType::Friend => E::Neighbor::Friend,
         };
-        self.neighbors_by_node
+        let current_neighbors = self
+            .neighbors_by_node
             .entry(current.clone())
-            .or_insert_with(BTreeSet::new)
-            .insert(neighbor);
+            .or_insert_with(UniqueMap::new);
+        current_neighbors.remove(&mident);
+        current_neighbors.add(mident.clone(), neighbor).unwrap();
 
         match current {
             NodeIdent::Module(current_mident) => {

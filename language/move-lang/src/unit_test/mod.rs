@@ -1,11 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    compiled_unit::CompiledUnit,
-    errors::FilesSourceText,
-    shared::{Address, CompilationEnv},
-};
+use crate::{compiled_unit::CompiledUnit, errors::FilesSourceText, shared::AddressBytes};
 use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::file_format::CompiledModule;
 use move_core_types::{
@@ -49,25 +45,14 @@ pub enum ExpectedFailure {
     ExpectedWithCode(u64),
 }
 
-struct Context<'env> {
-    env: &'env mut CompilationEnv,
-}
-
-impl<'env> Context<'env> {
-    fn new(compilation_env: &'env mut CompilationEnv) -> Self {
-        Self {
-            env: compilation_env,
-        }
-    }
-}
-
 impl ModuleTestPlan {
     pub fn new(
-        (addr, module_name): &(Address, String),
+        addr: &AddressBytes,
+        module_name: &str,
         tests: BTreeMap<TestName, TestCase>,
     ) -> Self {
-        let addr = AccountAddress::new(addr.to_u8());
-        let name = Identifier::new(module_name.to_string()).unwrap();
+        let addr = AccountAddress::new((*addr).to_bytes());
+        let name = Identifier::new(module_name.to_owned()).unwrap();
         let module_id = ModuleId::new(addr, name);
         ModuleTestPlan { module_id, tests }
     }

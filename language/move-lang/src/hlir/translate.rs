@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{AbilitySet, Fields, Value_},
+    expansion::ast::{AbilitySet, Fields, ModuleIdent, Value_},
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{BinOp_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
@@ -143,13 +143,18 @@ pub fn program(
 ) -> H::Program {
     let mut context = Context::new(compilation_env);
     let T::Program {
+        addresses,
         modules: tmodules,
         scripts: tscripts,
     } = prog;
     let modules = modules(&mut context, tmodules);
     let scripts = scripts(&mut context, tscripts);
 
-    H::Program { modules, scripts }
+    H::Program {
+        addresses,
+        modules,
+        scripts,
+    }
 }
 
 fn modules(

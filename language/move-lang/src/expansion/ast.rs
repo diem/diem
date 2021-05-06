@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    errors::Error,
     parser::ast::{
         Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleIdent, QuantKind,
         SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
@@ -12,6 +13,7 @@ use move_ir_types::location::*;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
+    hash::Hash,
 };
 
 //**************************************************************************************************
@@ -20,6 +22,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub struct Program {
+    // Map of known named address values. Not all addresses will be present
+    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
 }
@@ -61,7 +65,7 @@ impl Attribute_ {
 pub struct Script {
     pub attributes: Vec<Attribute>,
     pub loc: Loc,
-    pub immediate_neighbors: BTreeSet<Neighbor>,
+    pub immediate_neighbors: UniqueMap<ModuleIdent, Neighbor>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
@@ -72,6 +76,18 @@ pub struct Script {
 // Modules
 //**************************************************************************************************
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Address {
+    Anonymous(Spanned<AddressBytes>),
+    Named(Name),
+}
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ModuleIdent_ {
+    pub address: Address,
+    pub module: ModuleName,
+}
+pub type ModuleIdent = Spanned<ModuleIdent_>;
+
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
     pub attributes: Vec<Attribute>,
@@ -80,7 +96,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
-    pub immediate_neighbors: BTreeSet<Neighbor>,
+    pub immediate_neighbors: UniqueMap<ModuleIdent, Neighbor>,
     pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -100,8 +116,8 @@ pub struct Friend {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Neighbor {
-    Dependency(ModuleIdent),
-    Friend(ModuleIdent),
+    Dependency,
+    Friend,
 }
 
 //**************************************************************************************************
@@ -381,8 +397,76 @@ pub enum SequenceItem_ {
 pub type SequenceItem = Spanned<SequenceItem_>;
 
 //**************************************************************************************************
+// Traits
+//**************************************************************************************************
+
+impl TName for ModuleIdent {
+    type Key = ModuleIdent_;
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Loc, ModuleIdent_) {
+        (self.loc, self.value)
+    }
+
+    fn add_loc(loc: Loc, value: ModuleIdent_) -> ModuleIdent {
+        sp(loc, value)
+    }
+
+    fn borrow(&self) -> (&Loc, &ModuleIdent_) {
+        (&self.loc, &self.value)
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+//**************************************************************************************************
 // impls
 //**************************************************************************************************
+
+impl Address {
+    pub const fn anonymous(loc: Loc, address: [u8; ADDRESS_LENGTH]) -> Self {
+        Self::Anonymous(sp(loc, AddressBytes::new(address)))
+    }
+
+    pub fn to_addr_bytes_opt(
+        self,
+        addresses: &UniqueMap<Name, AddressBytes>,
+    ) -> Option<AddressBytes> {
+        match self {
+            Self::Anonymous(sp!(_, bytes)) => Some(bytes),
+            Self::Named(n) => addresses.get(&n).cloned(),
+        }
+    }
+
+    pub fn to_addr_bytes(
+        self,
+        addresses: &UniqueMap<Name, AddressBytes>,
+        loc: Loc,
+        case: &str,
+    ) -> Result<AddressBytes, Error> {
+        match self {
+            Self::Anonymous(sp!(_, bytes)) => Ok(bytes),
+            Self::Named(n) => match addresses.get(&n) {
+                Some(a) => Ok(*a),
+                None => {
+                    let unable_msg = format!("Unable to fully compile and resolve {}", case);
+                    let addr_msg = format!(" No value specified for address '{}'", n);
+                    Err(vec![(loc, unable_msg), (n.loc, addr_msg)])
+                }
+            },
+        }
+    }
+}
+
+impl ModuleIdent_ {
+    pub fn new(address: Address, module: ModuleName) -> Self {
+        Self { address, module }
+    }
+}
 
 impl SpecId {
     pub fn new(u: usize) -> Self {
@@ -391,15 +475,6 @@ impl SpecId {
 
     pub fn inner(self) -> usize {
         self.0
-    }
-}
-
-impl Neighbor {
-    pub fn into_module_ident(self) -> ModuleIdent {
-        match self {
-            Neighbor::Dependency(mident) => mident,
-            Neighbor::Friend(mident) => mident,
-        }
     }
 }
 
@@ -550,6 +625,30 @@ impl<'a> IntoIterator for AbilitySet {
 // Display
 //**************************************************************************************************
 
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Anonymous(sp!(_, bytes)) => write!(f, "{}", bytes),
+            Self::Named(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+impl fmt::Display for Neighbor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Neighbor::Dependency => write!(f, "neighbor#dependency"),
+            Neighbor::Friend => write!(f, "neighbor#friend"),
+        }
+    }
+}
+
+impl fmt::Display for ModuleIdent_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}::{}", self.address, &self.module)
+    }
+}
+
 impl fmt::Display for ModuleAccess_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         use ModuleAccess_::*;
@@ -598,7 +697,15 @@ impl fmt::Display for SpecId {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program { modules, scripts } = self;
+        let Program {
+            addresses,
+            modules,
+            scripts,
+        } = self;
+        for (_, addr, bytes) in addresses {
+            w.writeln(&format!("address {} = {};", addr, bytes));
+        }
+
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
@@ -667,12 +774,10 @@ impl AstDebug for Script {
             specs,
         } = self;
         attributes.ast_debug(w);
-        w.write("immediate neighbors: [");
-        w.list(immediate_neighbors, ", ", |w, neighbor| {
-            neighbor.ast_debug(w);
-            false
-        });
-        w.writeln("]");
+        for (mident, neighbor) in immediate_neighbors.key_cloned_iter() {
+            w.write(&format!("{} {};", neighbor, mident));
+            w.new_line();
+        }
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
@@ -706,12 +811,10 @@ impl AstDebug for ModuleDefinition {
             "library module"
         });
         w.writeln(&format!("dependency order #{}", dependency_order));
-        w.write("immediate neighbors: [");
-        w.list(immediate_neighbors, ", ", |w, neighbor| {
-            neighbor.ast_debug(w);
-            false
-        });
-        w.writeln("]");
+        for (mident, neighbor) in immediate_neighbors.key_cloned_iter() {
+            w.write(&format!("{} {};", neighbor, mident));
+            w.new_line();
+        }
         for (mident, _loc) in friends.key_cloned_iter() {
             w.write(&format!("friend {};", mident));
             w.new_line();
@@ -731,15 +834,6 @@ impl AstDebug for ModuleDefinition {
         for spec in specs {
             spec.ast_debug(w);
             w.new_line();
-        }
-    }
-}
-
-impl AstDebug for Neighbor {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            Neighbor::Dependency(mident) => w.write(&format!("{} (dependency)", mident)),
-            Neighbor::Friend(mident) => w.write(&format!("{} (friend)", mident)),
         }
     }
 }

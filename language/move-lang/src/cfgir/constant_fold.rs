@@ -3,7 +3,7 @@
 
 use super::cfg::BlockCFG;
 use crate::{
-    expansion::ast::{Value, Value_},
+    expansion::ast::{Address, Value, Value_},
     hlir::ast::{Command, Command_, Exp, ExpListItem, UnannotatedExp_},
     naming::ast::{BuiltinTypeName, BuiltinTypeName_},
     parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_},
@@ -276,7 +276,7 @@ fn evalue_(loc: Loc, fv: FoldableValue) -> UnannotatedExp_ {
         FV::U64(u) => V::U64(u),
         FV::U128(u) => V::U128(u),
         FV::Bool(b) => V::Bool(b),
-        FV::Address(a) => V::Address(a),
+        FV::Address(a) => V::Address(Address::Anonymous(sp(loc, a))),
         FV::Bytearray(b) => V::Bytearray(b),
     };
 
@@ -293,28 +293,29 @@ enum FoldableValue {
     U64(u64),
     U128(u128),
     Bool(bool),
-    Address(Address),
+    Address(AddressBytes),
     Bytearray(Vec<u8>),
 }
 
-fn foldable_value(sp!(_, v_): &Value) -> FoldableValue {
+fn foldable_value(sp!(_, v_): &Value) -> Option<FoldableValue> {
     use FoldableValue as FV;
     use Value_ as V;
-    match v_ {
+    Some(match v_ {
         V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
         V::U8(u) => FV::U8(*u),
         V::U64(u) => FV::U64(*u),
         V::U128(u) => FV::U128(*u),
         V::Bool(b) => FV::Bool(*b),
-        V::Address(a) => FV::Address(*a),
         V::Bytearray(b) => FV::Bytearray(b.clone()),
-    }
+        V::Address(Address::Anonymous(a)) => FV::Address(a.value),
+        V::Address(Address::Named(_)) => return None,
+    })
 }
 
 fn foldable_exp(e: &Exp) -> Option<FoldableValue> {
     use UnannotatedExp_ as E;
     match &e.exp.value {
-        E::Value(v) => Some(foldable_value(v)),
+        E::Value(v) => foldable_value(v),
         _ => None,
     }
 }

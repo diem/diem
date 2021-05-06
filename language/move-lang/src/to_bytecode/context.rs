@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::SpecId,
+    errors::Error,
+    expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
-    parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{ConstantName, FunctionName, StructName, Var},
+    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Name},
 };
 use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::ast as IR;
+use move_ir_types::{ast as IR, location::Loc};
 use std::{
     clone::Clone,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -17,6 +19,8 @@ use IR::Ability;
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the dependencies actually used in the module
 pub struct Context<'a> {
+    pub env: &'a mut CompilationEnv,
+    addresses: &'a UniqueMap<Name, AddressBytes>,
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
@@ -24,11 +28,14 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    /// Given the dependencies and the current module, creates an empty context.
-    /// The current module is a dummy `Self` for CompiledScript.
-    /// It initializes an "import" of `Self` as the alias for the current_module.
-    pub fn new(current_module: Option<&'a ModuleIdent>) -> Self {
+    pub fn new(
+        env: &'a mut CompilationEnv,
+        addresses: &'a UniqueMap<Name, AddressBytes>,
+        current_module: Option<&'a ModuleIdent>,
+    ) -> Self {
         Self {
+            env,
+            addresses,
             current_module,
             seen_structs: BTreeSet::new(),
             seen_functions: BTreeSet::new(),
@@ -70,6 +77,8 @@ impl<'a> Context<'a> {
         >,
     ) -> (Vec<IR::ImportDefinition>, Vec<IR::ModuleDependency>) {
         let Context {
+            env,
+            addresses,
             current_module: _current_module,
             mut seen_structs,
             seen_functions,
@@ -88,7 +97,13 @@ impl<'a> Context<'a> {
         for (module, (structs, functions)) in module_dependencies {
             let dependency_order = dependency_orderings[&module];
             let ir_name = Self::ir_module_alias(&module);
-            let ir_ident = Self::translate_module_ident(module);
+            let ir_ident = match Self::translate_module_ident_impl(addresses, module) {
+                Ok(ident) => ident,
+                Err(e) => {
+                    env.add_error(e);
+                    continue;
+                }
+            };
             imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name.clone())));
             ordered_dependencies.push((
                 dependency_order,
@@ -207,18 +222,40 @@ impl<'a> Context<'a> {
     // Name translation
     //**********************************************************************************************
 
-    fn ir_module_alias(ident: &ModuleIdent) -> IR::ModuleName {
-        let (address, name) = &ident.value;
-        IR::ModuleName::new(format!("{}::{}", address, name))
+    fn ir_module_alias(sp!(_, ModuleIdent_ { address, module }): &ModuleIdent) -> IR::ModuleName {
+        IR::ModuleName::new(format!("{}::{}", address, module))
     }
 
-    pub fn translate_module_ident(ident: ModuleIdent) -> IR::ModuleIdent {
-        let (address, name) = ident.value;
-        let name = Self::translate_module_name_(name);
-        IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
+    pub fn resolve_address(&mut self, loc: Loc, addr: Address, case: &str) -> Option<AddressBytes> {
+        match addr.to_addr_bytes(self.addresses, loc, case) {
+            Ok(addr) => Some(addr),
+            Err(e) => {
+                self.env.add_error(e);
+                None
+            }
+        }
+    }
+
+    pub fn translate_module_ident(&mut self, ident: ModuleIdent) -> Option<IR::ModuleIdent> {
+        match Self::translate_module_ident_impl(&self.addresses, ident) {
+            Ok(ident) => Some(ident),
+            Err(e) => {
+                self.env.add_error(e);
+                None
+            }
+        }
+    }
+
+    fn translate_module_ident_impl(
+        addresses: &UniqueMap<Name, AddressBytes>,
+        sp!(loc, ModuleIdent_ { address, module }): ModuleIdent,
+    ) -> Result<IR::ModuleIdent, Error> {
+        let address_bytes = address.to_addr_bytes(addresses, loc, "module identifier")?;
+        let name = Self::translate_module_name_(module.0.value);
+        Ok(IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
-            MoveAddress::new(address.to_u8()),
-        ))
+            MoveAddress::new(address_bytes.to_bytes()),
+        )))
     }
 
     fn translate_module_name_(s: String) -> IR::ModuleName {

@@ -1,0 +1,43 @@
+error: 
+
+    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:14:9 ───
+    │
+ 14 │     use B::M;
+    │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:15:5 ───
+    │
+ 15 │     friend B::M;
+    │     ^^^^^^^^^^^^ Invalid friend declaration
+    ·
+ 15 │     friend B::M;
+    │            ---- Cannot declare modules out of the current address as a friend
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:16:22 ───
+    │
+ 16 │     public fun ex(): B::M::S {
+    │                      ^^^^^^^ Unbound module 'B::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:17:9 ───
+    │
+ 17 │         B::M::C;
+    │         ^^^^^^^ Unbound module 'B::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:18:9 ───
+    │
+ 18 │         B::M::s()
+    │         ^^^^^^^ Unbound module 'B::M'
+    │
+

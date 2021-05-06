@@ -3,8 +3,9 @@
 
 use crate::{
     errors::*,
+    expansion::ast::ModuleIdent,
     naming::ast::{self as N, TypeName_},
-    parser::ast::{ModuleIdent, StructName},
+    parser::ast::StructName,
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };

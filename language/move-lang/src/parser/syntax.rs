@@ -223,16 +223,41 @@ fn parse_identifier(tokens: &mut Lexer) -> Result<Name, Error> {
     Ok(spanned(tokens.file_name(), start_loc, end_loc, id))
 }
 
-// Parse an account address:
-//      Address = <Number>
-fn parse_address(tokens: &mut Lexer) -> Result<Address, Error> {
-    if tokens.peek() != Tok::NumValue {
-        return Err(unexpected_token_error(tokens, "an account address value"));
+// Parse a numerical address value
+//     AddressBytes = <Number>
+fn parse_address_bytes(tokens: &mut Lexer) -> Result<Spanned<AddressBytes>, Error> {
+    let loc = current_token_loc(tokens);
+    let addr_res = AddressBytes::parse_str(tokens.content());
+    consume_token(tokens, Tok::NumValue)?;
+    match addr_res {
+        Ok(addr_) => Ok(sp(loc, addr_)),
+        Err(msg) => Err(vec![(loc, msg)]),
     }
-    let addr =
-        Address::parse_str(&tokens.content()).map_err(|msg| vec![(current_token_loc(tokens), msg)]);
-    tokens.advance()?;
-    addr
+}
+
+// Helper for parse_leading_name_access_with_description with default description
+fn parse_leading_name_access(tokens: &mut Lexer) -> Result<LeadingNameAccess, Error> {
+    parse_leading_name_access_with_description(tokens, || "an address or an identifier")
+}
+
+// Parse an the beginning of an acces, either an address or an identifier:
+//      LeadingNameAccess = <AddressBytes> | <Identifier>
+fn parse_leading_name_access_with_description<'a, F: FnOnce() -> &'a str>(
+    tokens: &mut Lexer,
+    item_description: F,
+) -> Result<LeadingNameAccess, Error> {
+    match tokens.peek() {
+        Tok::IdentifierValue => {
+            let loc = current_token_loc(tokens);
+            let n = parse_identifier(tokens)?;
+            Ok(sp(loc, LeadingNameAccess_::Name(n)))
+        }
+        Tok::NumValue => {
+            let sp!(loc, addr) = parse_address_bytes(tokens)?;
+            Ok(sp(loc, LeadingNameAccess_::AnonymousAddress(addr)))
+        }
+        _ => Err(unexpected_token_error(tokens, item_description())),
+    }
 }
 
 // Parse a variable name:
@@ -257,65 +282,80 @@ fn parse_module_name(tokens: &mut Lexer) -> Result<ModuleName, Error> {
 //      ModuleIdent = <Address> "::" <ModuleName>
 fn parse_module_ident(tokens: &mut Lexer) -> Result<ModuleIdent, Error> {
     let start_loc = tokens.start_loc();
-    let address = parse_address(tokens)?;
-    if tokens.peek() != Tok::ColonColon {
-        let unexp_loc = current_token_loc(tokens);
-        let unexp_msg = format!("Unexpected {}", current_token_error_string(tokens));
+    let address = parse_leading_name_access(tokens)?;
 
-        let end_loc = tokens.previous_end_loc();
-        let addr_loc = make_loc(tokens.file_name(), start_loc, end_loc);
-        let exp_msg = "Expected '::' after an address in a module identifier";
-        return Err(vec![
-            (unexp_loc, unexp_msg),
-            (addr_loc, exp_msg.to_string()),
-        ]);
-    }
-
-    consume_token(tokens, Tok::ColonColon)?;
-    let name = parse_module_name(tokens)?.0;
+    consume_access_colon_colon(tokens, start_loc, "after an address in a module identifier")?;
+    let module = parse_module_name(tokens)?;
     let end_loc = tokens.previous_end_loc();
     let loc = make_loc(tokens.file_name(), start_loc, end_loc);
-    Ok(ModuleIdent {
-        locs: (loc, name.loc),
-        value: (address, name.value),
-    })
+    Ok(sp(loc, ModuleIdent_ { address, module }))
 }
 
 // Parse a module access (a variable, struct type, or function):
 //      ModuleAccess =
 //          <Identifier>
-//          | <ModuleName> "::" <Identifier>
-//          | <ModuleIdent> "::" <Identifier>
-fn parse_module_access<F: FnOnce() -> String>(
+//          | <LeadingNameAccess> "::" <Identifier>
+//          | <LeadingNameAccess> "::" <Identifier> "::" <Identifier>
+fn parse_name_access_chain<'a, F: FnOnce() -> &'a str>(
     tokens: &mut Lexer,
     item_description: F,
-) -> Result<ModuleAccess, Error> {
+) -> Result<NameAccessChain, Error> {
     let start_loc = tokens.start_loc();
-    let acc = match tokens.peek() {
-        Tok::IdentifierValue => {
-            // Check if this is a ModuleName followed by "::".
-            let m = parse_identifier(tokens)?;
-            if match_token(tokens, Tok::ColonColon)? {
-                let n = parse_identifier(tokens)?;
-                ModuleAccess_::ModuleAccess(ModuleName(m), n)
-            } else {
-                ModuleAccess_::Name(m)
-            }
-        }
-
-        Tok::NumValue => {
-            let m = parse_module_ident(tokens)?;
-            consume_token(tokens, Tok::ColonColon)?;
-            let n = parse_identifier(tokens)?;
-            ModuleAccess_::QualifiedModuleAccess(m, n)
-        }
-
-        _ => {
-            return Err(unexpected_token_error(tokens, &item_description()));
-        }
-    };
+    let access = parse_name_access_chain_(tokens, item_description)?;
     let end_loc = tokens.previous_end_loc();
-    Ok(spanned(tokens.file_name(), start_loc, end_loc, acc))
+    Ok(spanned(tokens.file_name(), start_loc, end_loc, access))
+}
+
+// Helper for parse_name_access_chain
+fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
+    tokens: &mut Lexer,
+    item_description: F,
+) -> Result<NameAccessChain_, Error> {
+    let start_loc = tokens.start_loc();
+    let ln = parse_leading_name_access_with_description(tokens, item_description)?;
+    let ln = match ln {
+        // A name by itself is a valid access chain
+        sp!(_, LeadingNameAccess_::Name(n1)) if tokens.peek() != Tok::ColonColon => {
+            return Ok(NameAccessChain_::One(n1))
+        }
+        ln => ln,
+    };
+
+    consume_access_colon_colon(
+        tokens,
+        start_loc,
+        "after an address in a module access chain",
+    )?;
+    let n2 = parse_identifier(tokens)?;
+    if tokens.peek() != Tok::ColonColon {
+        return Ok(NameAccessChain_::Two(ln, n2));
+    }
+
+    consume_token(tokens, Tok::ColonColon)?;
+    let n3 = parse_identifier(tokens)?;
+    Ok(NameAccessChain_::Three(ln, n2, n3))
+}
+
+fn consume_access_colon_colon(
+    tokens: &mut Lexer,
+    start_loc: usize,
+    case: &str,
+) -> Result<(), Error> {
+    match tokens.peek() {
+        Tok::ColonColon => {
+            tokens.advance()?;
+            Ok(())
+        }
+        _ => {
+            let unexp_loc = current_token_loc(tokens);
+            let unexp_msg = format!("Unexpected {}", current_token_error_string(tokens));
+
+            let end_loc = tokens.previous_end_loc();
+            let addr_loc = make_loc(tokens.file_name(), start_loc, end_loc);
+            let exp_msg = format!("Expected '::' {}", case);
+            Err(vec![(unexp_loc, unexp_msg), (addr_loc, exp_msg)])
+        }
+    }
 }
 
 //**************************************************************************************************
@@ -417,7 +457,7 @@ fn parse_attribute_value(tokens: &mut Lexer) -> Result<AttributeValue, Error> {
         return Ok(sp(v.loc, AttributeValue_::Value(v)));
     }
 
-    let ma = parse_module_access(tokens, || "attribute name value".to_string())?;
+    let ma = parse_name_access_chain(tokens, || "attribute name value")?;
     Ok(sp(ma.loc, AttributeValue_::ModuleAccess(ma)))
 }
 
@@ -484,7 +524,7 @@ fn parse_exp_field(tokens: &mut Lexer) -> Result<(Field, Exp), Error> {
     } else {
         sp(
             f.loc(),
-            Exp_::Name(sp(f.loc(), ModuleAccess_::Name(f.0.clone())), None),
+            Exp_::Name(sp(f.loc(), NameAccessChain_::One(f.0.clone())), None),
         )
     };
     Ok((f, arg))
@@ -523,7 +563,7 @@ fn parse_bind(tokens: &mut Lexer) -> Result<Bind, Error> {
     // The item description specified here should include the special case above for
     // variable names, because if the current tokens cannot be parsed as a struct name
     // it is possible that the user intention was to use a variable name.
-    let ty = parse_module_access(tokens, || "a variable or struct name".to_string())?;
+    let ty = parse_name_access_chain(tokens, || "a variable or struct name")?;
     let ty_args = parse_optional_type_args(tokens)?;
     let args = parse_comma_list(
         tokens,
@@ -612,7 +652,7 @@ fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Error> {
     let val = match tokens.peek() {
         Tok::AtSign => {
             tokens.advance()?;
-            let addr = parse_address(tokens)?;
+            let addr = parse_leading_name_access(tokens)?;
             Value_::Address(addr)
         }
         Tok::True => {
@@ -827,7 +867,7 @@ fn parse_term(tokens: &mut Lexer) -> Result<Exp, Error> {
 //          | <ModuleAccess> <OptionalTypeArgs> "(" Comma<Exp> ")"
 //          | <ModuleAccess> <OptionalTypeArgs>
 fn parse_name_exp(tokens: &mut Lexer) -> Result<Exp_, Error> {
-    let n = parse_module_access(tokens, || {
+    let n = parse_name_access_chain(tokens, || {
         panic!("parse_name_exp with something other than a ModuleAccess")
     })?;
 
@@ -1330,7 +1370,7 @@ fn parse_quant_binding(tokens: &mut Lexer) -> Result<Spanned<(Bind, Exp)>, Error
 }
 
 fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
-    let maccess = sp(loc, ModuleAccess_::Name(sp(loc, name.to_string())));
+    let maccess = sp(loc, NameAccessChain_::One(sp(loc, name.to_string())));
     sp(loc, Exp_::Call(maccess, type_args, sp(loc, args)))
 }
 
@@ -1377,7 +1417,7 @@ fn parse_type(tokens: &mut Lexer) -> Result<Type, Error> {
             ));
         }
         _ => {
-            let tn = parse_module_access(tokens, || "a type name".to_string())?;
+            let tn = parse_name_access_chain(tokens, || "a type name")?;
             let tys = if tokens.peek() == Tok::Less {
                 parse_comma_list(tokens, Tok::Less, Tok::Greater, parse_type, "a type")?
             } else {
@@ -1537,8 +1577,8 @@ fn parse_function_decl(
     if match_token(tokens, Tok::Acquires)? {
         let follows_acquire = |tok| matches!(tok, Tok::Semicolon | Tok::LBrace);
         loop {
-            acquires.push(parse_module_access(tokens, || {
-                "a resource struct name".to_string()
+            acquires.push(parse_name_access_chain(tokens, || {
+                "a resource struct name"
             })?);
             if follows_acquire(tokens.peek()) {
                 break;
@@ -1747,7 +1787,10 @@ fn parse_constant_decl(
 //          "}"
 //
 // Note that "address" is not a token.
-fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDefinition>), Error> {
+fn parse_address_block(
+    attributes: Vec<Attributes>,
+    tokens: &mut Lexer,
+) -> Result<AddressDefinition, Error> {
     const UNEXPECTED_TOKEN: &str = "Invalid code unit. Expected 'address', 'module', or 'script'";
     if tokens.peek() != Tok::IdentifierValue {
         let start = tokens.start_loc();
@@ -1770,19 +1813,43 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
         )]);
     }
     let start_loc = tokens.start_loc();
-    let addr = parse_address(tokens)?;
+    let addr = parse_leading_name_access(tokens)?;
     let end_loc = tokens.previous_end_loc();
     let loc = make_loc(tokens.file_name(), start_loc, end_loc);
 
-    consume_token(tokens, Tok::LBrace)?;
-    let mut modules = vec![];
-    while tokens.peek() != Tok::RBrace {
-        let attributes = parse_attributes(tokens)?;
-        modules.push(parse_module(attributes, tokens)?);
-    }
-    consume_token(tokens, Tok::RBrace)?;
+    let addr_value = match tokens.peek() {
+        Tok::Equal => {
+            tokens.advance()?;
+            Some(parse_address_bytes(tokens)?)
+        }
+        _ => None,
+    };
 
-    Ok((loc, addr, modules))
+    let modules = match tokens.peek() {
+        Tok::Semicolon => {
+            tokens.advance()?;
+            vec![]
+        }
+        Tok::LBrace => {
+            tokens.advance()?;
+            let mut modules = vec![];
+            while tokens.peek() != Tok::RBrace {
+                let attributes = parse_attributes(tokens)?;
+                modules.push(parse_module(attributes, tokens)?);
+            }
+            consume_token(tokens, Tok::RBrace)?;
+            modules
+        }
+        _ => return Err(unexpected_token_error(tokens, "one of `;` or `{{`")),
+    };
+
+    Ok(AddressDefinition {
+        attributes,
+        loc,
+        addr,
+        addr_value,
+        modules,
+    })
 }
 
 //**************************************************************************************************
@@ -1795,15 +1862,14 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
 fn parse_friend_decl(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<FriendDecl, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Friend)?;
-    let friend_ = if tokens.peek() == Tok::NumValue {
-        Friend_::QualifiedModule(parse_module_ident(tokens)?)
-    } else {
-        Friend_::Module(parse_module_name(tokens)?)
-    };
+    let friend = parse_name_access_chain(tokens, || "a friend declaration")?;
     consume_token(tokens, Tok::Semicolon)?;
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
-    let friend = sp(loc, friend_);
-    Ok(FriendDecl { attributes, friend })
+    Ok(FriendDecl {
+        attributes,
+        loc,
+        friend,
+    })
 }
 
 //**************************************************************************************************
@@ -1883,15 +1949,17 @@ fn parse_module(
         consume_token(tokens, Tok::Module)?;
         false
     };
-    let address = if tokens.peek() == Tok::NumValue {
-        let loc = current_token_loc(tokens);
-        let address = parse_address(tokens)?;
-        consume_token(tokens, Tok::ColonColon)?;
-        Some(sp(loc, address))
-    } else {
-        None
+    let sp!(n1_loc, n1_) = parse_leading_name_access(tokens)?;
+    let (address, name) = match (n1_, tokens.peek()) {
+        (addr_ @ LeadingNameAccess_::AnonymousAddress(_), _)
+        | (addr_ @ LeadingNameAccess_::Name(_), Tok::ColonColon) => {
+            let addr = sp(n1_loc, addr_);
+            consume_token(tokens, Tok::ColonColon)?;
+            let name = parse_module_name(tokens)?;
+            (Some(addr), name)
+        }
+        (LeadingNameAccess_::Name(name), _) => (None, ModuleName(name)),
     };
-    let name = parse_module_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
 
     let mut members = vec![];
@@ -2614,8 +2682,8 @@ fn parse_spec_property(tokens: &mut Lexer) -> Result<PragmaProperty, Error> {
             }
             _ => {
                 // Parse as a module access for a possibly qualified identifier
-                Some(PragmaValue::Ident(parse_module_access(tokens, || {
-                    "an identifier as pragma value".to_string()
+                Some(PragmaValue::Ident(parse_name_access_chain(tokens, || {
+                    "an identifier as pragma value"
                 })?))
             }
         }
@@ -2671,10 +2739,7 @@ fn parse_file(tokens: &mut Lexer) -> Result<Vec<Definition>, Error> {
         defs.push(match tokens.peek() {
             Tok::Spec | Tok::Module => Definition::Module(parse_module(attributes, tokens)?),
             Tok::Script => Definition::Script(parse_script(attributes, tokens)?),
-            _ => {
-                let (loc, addr, modules) = parse_address_block(tokens)?;
-                Definition::Address(attributes, loc, addr, modules)
-            }
+            _ => Definition::Address(parse_address_block(attributes, tokens)?),
         })
     }
     Ok(defs)

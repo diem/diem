@@ -6,6 +6,6 @@ error:
    │                ^ Unexpected ';'
    ·
  3 │     friend 0x42;
-   │            ---- Expected '::' after an address in a module identifier
+   │            ---- Expected '::' after an address in a module access chain
    │
 

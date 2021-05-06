@@ -72,6 +72,7 @@ pub enum Pass {
     Compilation,
 }
 
+#[derive(Debug)]
 pub enum PassResult {
     Parser(parser::ast::Program),
     Expansion(expansion::ast::Program),

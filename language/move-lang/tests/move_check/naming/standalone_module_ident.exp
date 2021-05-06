@@ -1,11 +1,38 @@
 error: 
 
-   ┌── tests/move_check/naming/standalone_module_ident.move:9:23 ───
+   ┌── tests/move_check/naming/standalone_module_ident.move:6:14 ───
+   │
+ 6 │     use 0x2::X;
+   │              ^ Unused 'use' of alias 'X'. Consider removing it
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/standalone_module_ident.move:8:17 ───
+   │
+ 8 │         let x = X;
+   │                 ^ Unbound constant 'X'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/standalone_module_ident.move:9:17 ───
    │
  9 │         let x = 0x2::X;
-   │                       ^ Unexpected ';'
+   │                 ^^^^^^ Unexpected module identifier. A module identifier is not a valid expression
    ·
  9 │         let x = 0x2::X;
-   │                       - Expected '::'
+   │                 --- Expected a module name
    │
+
+error: 
+
+    ┌── tests/move_check/naming/standalone_module_ident.move:10:17 ───
+    │
+ 10 │         let y = 0x2::Y;
+    │                 ^^^^^^ Unexpected module identifier. A module identifier is not a valid expression
+    ·
+ 10 │         let y = 0x2::Y;
+    │                 --- Expected a module name
+    │
 

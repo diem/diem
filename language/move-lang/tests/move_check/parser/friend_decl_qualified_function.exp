@@ -1,11 +1,8 @@
 error: 
 
-   ┌── tests/move_check/parser/friend_decl_qualified_function.move:7:19 ───
+   ┌── tests/move_check/parser/friend_decl_qualified_function.move:7:21 ───
    │
  7 │     friend 0x42::A::a;
-   │                   ^^ Unexpected '::'
-   ·
- 7 │     friend 0x42::A::a;
-   │                   -- Expected ';'
+   │                     ^ Unexpected module member access. Expected a module identifier only
    │
 

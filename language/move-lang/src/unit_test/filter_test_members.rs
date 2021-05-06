@@ -4,9 +4,20 @@
 use crate::{
     parser::ast as P,
     shared::{known_attributes, CompilationEnv},
-    unit_test::Context,
 };
 use move_ir_types::location::Loc;
+
+struct Context<'env> {
+    env: &'env mut CompilationEnv,
+}
+
+impl<'env> Context<'env> {
+    fn new(compilation_env: &'env mut CompilationEnv) -> Self {
+        Self {
+            env: compilation_env,
+        }
+    }
+}
 
 //***************************************************************************
 // Filtering of test-annotated module members
@@ -45,13 +56,26 @@ fn filter_tests_from_definition(
 ) -> Option<P::Definition> {
     match def {
         P::Definition::Module(m) => filter_tests_from_module(context, m).map(P::Definition::Module),
-        P::Definition::Address(attributes, loc, addr, ms) => {
-            let ms: Vec<_> = ms
-                .into_iter()
-                .filter_map(|m| filter_tests_from_module(context, m))
-                .collect();
-            if !ms.is_empty() && !should_remove_node(context.env, &attributes) {
-                Some(P::Definition::Address(attributes, loc, addr, ms))
+        P::Definition::Address(a) => {
+            let P::AddressDefinition {
+                addr,
+                attributes,
+                loc,
+                addr_value,
+                modules,
+            } = a;
+            if !should_remove_node(context.env, &attributes) {
+                let modules = modules
+                    .into_iter()
+                    .filter_map(|m| filter_tests_from_module(context, m))
+                    .collect();
+                Some(P::Definition::Address(P::AddressDefinition {
+                    addr,
+                    attributes,
+                    loc,
+                    addr_value,
+                    modules,
+                }))
             } else {
                 None
             }

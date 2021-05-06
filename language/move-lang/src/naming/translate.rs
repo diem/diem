@@ -3,11 +3,11 @@
 
 use crate::{
     expansion::{
-        ast::{self as E, AbilitySet},
+        ast::{self as E, AbilitySet, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
     },
     naming::ast as N,
-    parser::ast::{Ability_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
@@ -327,12 +327,17 @@ pub fn program(
 ) -> N::Program {
     let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let E::Program {
+        addresses,
         modules: emodules,
         scripts: escripts,
     } = prog;
     let modules = modules(&mut context, emodules);
     let scripts = scripts(&mut context, escripts);
-    N::Program { modules, scripts }
+    N::Program {
+        addresses,
+        modules,
+        scripts,
+    }
 }
 
 fn modules(
@@ -430,22 +435,23 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
 //**************************************************************************************************
 // Friends
 //**************************************************************************************************
+
 fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Option<E::Friend> {
     let current_mident = context.current_module.as_ref().unwrap();
-    if mident.value.0 != current_mident.value.0 {
+    if &mident.value.address != &current_mident.value.address {
         // NOTE: in alignment with the bytecode verifier, this constraint is a policy decision
         // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
         // rely on the assumption that friend modules must reside within the same account address.
         let msg = "Cannot declare modules out of the current address as a friend";
         context.env.add_error(vec![
             (friend.loc, "Invalid friend declaration"),
-            (mident.loc(), msg),
+            (mident.loc, msg),
         ]);
         None
     } else if &mident == current_mident {
         context.env.add_error(vec![
             (friend.loc, "Invalid friend declaration"),
-            (mident.loc(), "Cannot declare the module itself as a friend"),
+            (mident.loc, "Cannot declare the module itself as a friend"),
         ]);
         None
     } else if context.resolve_module(friend.loc, &mident) {

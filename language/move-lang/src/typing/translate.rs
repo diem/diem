@@ -6,11 +6,9 @@ use super::{
     expand, globals, infinite_instantiations, recursive_structs,
 };
 use crate::{
-    expansion::ast::{Fields, Value_},
+    expansion::ast::{Fields, ModuleIdent, Value_},
     naming::ast::{self as N, Type, TypeName_, Type_},
-    parser::ast::{
-        Ability_, BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var,
-    },
+    parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
@@ -29,6 +27,7 @@ pub fn program(
 ) -> T::Program {
     let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let N::Program {
+        addresses,
         modules: nmodules,
         scripts: nscripts,
     } = prog;
@@ -38,7 +37,11 @@ pub fn program(
     assert!(context.constraints.is_empty());
     recursive_structs::modules(context.env, &modules);
     infinite_instantiations::modules(context.env, &modules);
-    T::Program { modules, scripts }
+    T::Program {
+        addresses,
+        modules,
+        scripts,
+    }
 }
 
 fn modules(

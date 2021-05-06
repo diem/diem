@@ -3,14 +3,12 @@
 
 use crate::{
     errors::*,
-    expansion::ast::AbilitySet,
+    expansion::ast::{AbilitySet, ModuleIdent},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, TParam, TParamID, TVar,
         Type, TypeName, TypeName_, Type_,
     },
-    parser::ast::{
-        Ability_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var, Visibility,
-    },
+    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var, Visibility},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };

@@ -530,8 +530,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     },
                     ModuleType(m, n) => {
                         let module_name = ModuleName::from_str(
-                            &m.value.0.to_string(),
-                            self.symbol_pool().make(m.value.1.as_str()),
+                            &m.value.address.to_string(),
+                            self.symbol_pool().make(m.value.module.0.value.as_str()),
                         );
                         let symbol = self.symbol_pool().make(n.0.value.as_str());
                         let qsym = QualifiedSymbol {

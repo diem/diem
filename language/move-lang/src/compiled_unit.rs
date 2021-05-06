@@ -3,10 +3,10 @@
 
 use crate::{
     errors::*,
-    expansion::ast::SpecId,
+    expansion::ast::{ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
-    parser::ast::{FunctionName, ModuleIdent, Var},
-    shared::unique_map::UniqueMap,
+    parser::ast::{FunctionName, ModuleName, Var},
+    shared::{unique_map::UniqueMap, AddressBytes, Name},
 };
 use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::file_format as F;
@@ -37,9 +37,17 @@ pub struct FunctionInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct CompiledModuleIdent {
+    pub loc: Loc,
+    pub address_name: Option<Name>,
+    pub address_bytes: AddressBytes,
+    pub module_name: ModuleName,
+}
+
+#[derive(Debug, Clone)]
 pub enum CompiledUnit {
     Module {
-        ident: ModuleIdent,
+        ident: CompiledModuleIdent,
         module: F::CompiledModule,
         source_map: SourceMap<Loc>,
         function_infos: UniqueMap<FunctionName, FunctionInfo>,
@@ -53,17 +61,49 @@ pub enum CompiledUnit {
     },
 }
 
+impl CompiledModuleIdent {
+    pub fn new(
+        loc: Loc,
+        address_name: Option<Name>,
+        address_bytes: AddressBytes,
+        module_name: ModuleName,
+    ) -> Self {
+        Self {
+            loc,
+            address_name,
+            address_bytes,
+            module_name,
+        }
+    }
+
+    pub fn to_module_ident(self) -> ModuleIdent {
+        use crate::expansion::ast::Address;
+
+        let Self {
+            loc,
+            address_name,
+            address_bytes,
+            module_name,
+        } = self;
+        let address = match address_name {
+            None => Address::Anonymous(sp(loc, address_bytes)),
+            Some(n) => Address::Named(n),
+        };
+        sp(loc, ModuleIdent_::new(address, module_name))
+    }
+}
+
 impl CompiledUnit {
     pub fn name(&self) -> String {
         match self {
-            CompiledUnit::Module { ident, .. } => ident.value.1.to_owned(),
+            CompiledUnit::Module { ident, .. } => ident.module_name.0.value.to_owned(),
             CompiledUnit::Script { key, .. } => key.to_owned(),
         }
     }
 
     pub fn loc(&self) -> &Loc {
         match self {
-            CompiledUnit::Module { ident, .. } => &ident.locs.1,
+            CompiledUnit::Module { ident, .. } => &ident.loc,
             CompiledUnit::Script { loc, .. } => loc,
         }
     }
@@ -101,7 +141,7 @@ impl CompiledUnit {
                 source_map,
                 function_infos,
             } => {
-                let (module, errors) = verify_module(ident.loc(), module);
+                let (module, errors) = verify_module(ident.loc, module);
                 let verified = CompiledUnit::Module {
                     ident,
                     module,

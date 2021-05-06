@@ -141,7 +141,7 @@ impl MovePackage {
                         let mut data = vec![];
                         module.serialize(&mut data)?;
                         let file_path = pkg_bin_path
-                            .join(ident.value.1)
+                            .join(ident.module_name.0.value)
                             .with_extension(MOVE_COMPILED_EXTENSION);
                         let mut fp = File::create(file_path)?;
                         fp.write_all(&data)?;

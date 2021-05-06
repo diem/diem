@@ -1,0 +1,131 @@
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:2:8 ───
+   │
+ 2 │ module A::M { // suggests declaration
+   │        ^ Unbound address 'A'. Try declaring it with 'address A;'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:3:9 ───
+   │
+ 3 │     use B::M;
+   │         ^ Unbound address 'B'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:3:9 ───
+   │
+ 3 │     use B::M;
+   │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:5:5 ───
+   │
+ 5 │     friend C::M;
+   │     ^^^^^^^^^^^^ Invalid friend declaration
+   ·
+ 5 │     friend C::M;
+   │            ---- Cannot declare modules out of the current address as a friend
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:5:12 ───
+   │
+ 5 │     friend C::M;
+   │            ^ Unbound address 'C'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:6:12 ───
+   │
+ 6 │     friend D::M::foo;
+   │            ^ Unbound address 'D'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:6:18 ───
+   │
+ 6 │     friend D::M::foo;
+   │                  ^^^ Unexpected module member access. Expected a module identifier only
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:9:12 ───
+   │
+ 9 │         x: E::M::S,
+   │            ^ Unbound address 'E'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unbound_named_address.move:9:12 ───
+   │
+ 9 │         x: E::M::S,
+   │            ^^^^^^^ Unbound module 'E::M'
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:13:17 ───
+    │
+ 13 │         let x = F::M::S {};
+    │                 ^ Unbound address 'F'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:13:17 ───
+    │
+ 13 │         let x = F::M::S {};
+    │                 ^^^^^^^ Unbound module 'F::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:14:9 ───
+    │
+ 14 │         G::M::foo();
+    │         ^ Unbound address 'G'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:14:9 ───
+    │
+ 14 │         G::M::foo();
+    │         ^^^^^^^^^ Unbound module 'G::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:15:17 ───
+    │
+ 15 │         let c = H::M::C;
+    │                 ^ Unbound address 'H'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:15:17 ───
+    │
+ 15 │         let c = H::M::C;
+    │                 ^^^^^^^ Unbound module 'H::M'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unbound_named_address.move:16:18 ───
+    │
+ 16 │         let a = @I; // suggests declaration
+    │                  ^ Unbound address 'I'. Try declaring it with 'address I;'
+    │
+

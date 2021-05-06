@@ -5,8 +5,8 @@ error:
  3 │     friend Self;
    │     ^^^^^^^^^^^^ Invalid friend declaration
    ·
- 3 │     friend Self;
-   │            ---- Cannot declare the module itself as a friend
+ 2 │ module M {
+   │        - Cannot declare the module itself as a friend
    │
 
 error: 

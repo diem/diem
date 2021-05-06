@@ -6,13 +6,13 @@ pub mod state;
 use super::absint::*;
 use crate::{
     errors::*,
-    expansion::ast::AbilitySet,
+    expansion::ast::{AbilitySet, ModuleIdent},
     hlir::{
         ast::*,
         translate::{display_var, DisplayVar},
     },
     naming::ast::{self as N, TParam},
-    parser::ast::{Ability_, ModuleIdent, StructName, Var},
+    parser::ast::{Ability_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;

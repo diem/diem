@@ -15,13 +15,14 @@ use move_binary_format::{
     file_format::{CompiledModule, FunctionDefinitionIndex, StructDefinitionIndex},
 };
 use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::sp;
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
-    expansion::ast::{ModuleDefinition, Program},
+    expansion::ast::{Address, ModuleDefinition, ModuleIdent, ModuleIdent_, Program},
     move_continue_up_to, move_parse,
-    parser::ast::ModuleIdent,
-    shared::{unique_map::UniqueMap, Address, CompilationEnv, Flags},
+    parser::ast::ModuleName as ParserModuleName,
+    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Flags},
     Pass as MovePass, PassResult as MovePassResult,
 };
 use num::{BigUint, Num};
@@ -139,9 +140,9 @@ pub fn run_model_builder_with_compilation_flags(
         let src_file = sdef.loc.file();
         if !dep_sources.contains(src_file) {
             selective_files.insert(src_file.to_owned());
-            for neighbor in sdef.immediate_neighbors {
+            for (mident, _neighbor) in sdef.immediate_neighbors {
                 collect_related_modules_recursive(
-                    neighbor.into_module_ident(),
+                    mident,
                     &expansion_ast.modules,
                     &mut visited_modules,
                 );
@@ -224,8 +225,8 @@ fn collect_related_modules_recursive(
     let mdef = modules.get(&mident).unwrap();
     let deps: BTreeSet<_> = mdef
         .immediate_neighbors
-        .iter()
-        .map(|neighbor| neighbor.clone().into_module_ident())
+        .key_cloned_iter()
+        .map(|(mident, _neighbor)| mident)
         .collect();
     visited.insert(mident);
     for next_mident in deps {
@@ -302,17 +303,24 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                     source_map,
                     function_infos,
                 } => {
-                    let expanded_module = match eprog.modules.remove(&ident) {
+                    let module_ident = ident.to_module_ident();
+                    let expanded_module = match eprog.modules.remove(&module_ident) {
                         Some(m) => m,
                         None => {
                             warn!(
                                 "[internal] cannot associate bytecode module `{}` with AST",
-                                ident
+                                module_ident
                             );
                             return None;
                         }
                     };
-                    (ident, expanded_module, module, source_map, function_infos)
+                    (
+                        module_ident,
+                        expanded_module,
+                        module,
+                        source_map,
+                        function_infos,
+                    )
                 }
                 CompiledUnit::Script {
                     loc: _loc,
@@ -340,10 +348,11 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                         }
                     };
                     // Convert the script into a module.
-                    let ident = ModuleIdent {
-                        locs: (loc, loc),
-                        value: (Address::default(), function_name.0.value.clone()),
-                    };
+                    let address = Address::Anonymous(sp(loc, AddressBytes::DEFAULT_ERROR_BYTES));
+                    let ident = sp(
+                        loc,
+                        ModuleIdent_::new(address, ParserModuleName(function_name.0.clone())),
+                    );
                     let mut function_infos = UniqueMap::new();
                     function_infos
                         .add(function_name.clone(), function_info)
@@ -374,8 +383,11 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
     {
         let loc = builder.to_loc(&expanded_module.loc);
         let module_name = ModuleName::from_str(
-            &module_id.value.0.to_string(),
-            builder.env.symbol_pool().make(&module_id.value.1),
+            &module_id.value.address.to_string(),
+            builder
+                .env
+                .symbol_pool()
+                .make(&module_id.value.module.0.value),
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleBuilder::new(&mut builder, module_id, module_name);

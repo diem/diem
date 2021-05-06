@@ -4,8 +4,9 @@
 use super::core::{self, Subst, TParamSubst};
 use crate::{
     errors::*,
+    expansion::ast::ModuleIdent,
     naming::ast::{self as N, TParam, Type, Type_},
-    parser::ast::{FunctionName, ModuleIdent},
+    parser::ast::FunctionName,
     shared::{unique_map::UniqueMap, CompilationEnv},
     typing::ast as T,
 };

@@ -3,13 +3,46 @@
 
 use crate::{
     cfgir::ast as G,
-    expansion::ast as E,
-    shared::{known_attributes, Address, CompilationEnv, Identifier},
-    unit_test::{Context, ExpectedFailure, ModuleTestPlan, TestCase},
+    expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
+    shared::{
+        known_attributes, unique_map::UniqueMap, AddressBytes, CompilationEnv, Identifier, Name,
+    },
+    unit_test::{ExpectedFailure, ModuleTestPlan, TestCase},
 };
 use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
 use move_ir_types::location::Loc;
 use std::collections::BTreeMap;
+
+struct Context<'env> {
+    env: &'env mut CompilationEnv,
+    addresses: &'env UniqueMap<Name, AddressBytes>,
+}
+
+impl<'env> Context<'env> {
+    fn new(
+        compilation_env: &'env mut CompilationEnv,
+        addresses: &'env UniqueMap<Name, AddressBytes>,
+    ) -> Self {
+        Self {
+            env: compilation_env,
+            addresses,
+        }
+    }
+
+    fn resolve_address(
+        &mut self,
+        loc: Loc,
+        addr: &Address,
+        case: impl FnOnce() -> String,
+    ) -> Option<AddressBytes> {
+        let resolved = addr.clone().to_addr_bytes_opt(self.addresses);
+        if resolved.is_none() {
+            let msg = format!("{}. No value specified for address '{}'", case(), addr);
+            self.env.add_error(vec![(loc, msg)]);
+        }
+        resolved
+    }
+}
 
 //***************************************************************************
 // Test Plan Building
@@ -24,11 +57,11 @@ pub fn construct_test_plan(
     if !compilation_env.flags().is_testing() {
         return None;
     }
-    let mut context = Context::new(compilation_env);
+    let mut context = Context::new(compilation_env, &prog.addresses);
     Some(
         prog.modules
-            .iter()
-            .flat_map(|(_, module_ident, module_def)| {
+            .key_cloned_iter()
+            .flat_map(|(module_ident, module_def)| {
                 construct_module_test_plan(&mut context, module_ident, module_def)
             })
             .collect(),
@@ -37,7 +70,7 @@ pub fn construct_test_plan(
 
 fn construct_module_test_plan(
     context: &mut Context,
-    module_ident: &(Address, String),
+    module_ident: ModuleIdent,
     module: &G::ModuleDefinition,
 ) -> Option<ModuleTestPlan> {
     let tests: BTreeMap<_, _> = module
@@ -52,7 +85,11 @@ fn construct_module_test_plan(
     if tests.is_empty() {
         None
     } else {
-        Some(ModuleTestPlan::new(module_ident, tests))
+        let sp!(loc, ModuleIdent_ { address, module }) = &module_ident;
+        let addr_bytes = context.resolve_address(*loc, address, || {
+            format!("Unable to generate test plan for module {}", module_ident)
+        })?;
+        Some(ModuleTestPlan::new(&addr_bytes, &module.0.value, tests))
     }
 }
 
@@ -191,7 +228,7 @@ fn parse_test_attribute(
             BTreeMap::new()
         }
         EA::Assigned(nm, sp!(assign_loc, attr_value)) => {
-            let value = match convert_attribute_value_to_move_value(attr_value) {
+            let value = match convert_attribute_value_to_move_value(context, attr_value) {
                 Some(move_value) => move_value,
                 None => {
                     context.env.add_error(vec![
@@ -313,11 +350,18 @@ fn parse_failure_attribute(
     }
 }
 
-fn convert_attribute_value_to_move_value(value: &E::AttributeValue_) -> Option<MoveValue> {
+fn convert_attribute_value_to_move_value(
+    context: &mut Context,
+    value: &E::AttributeValue_,
+) -> Option<MoveValue> {
     use E::{AttributeValue_ as EAV, Value_ as EV};
     match value {
         // Only addresses are allowed
-        EAV::Value(sp!(_, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(a.to_u8()))),
+        EAV::Value(sp!(loc, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(
+            context
+                .resolve_address(*loc, a, || "Unable to convert attribute value".to_owned())?
+                .to_bytes(),
+        ))),
         _ => None,
     }
 }

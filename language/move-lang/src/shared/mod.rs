@@ -54,23 +54,24 @@ pub fn parse_u128(s: &str) -> Result<u128, ParseIntError> {
 
 pub const ADDRESS_LENGTH: usize = 16;
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy)]
-pub struct Address([u8; ADDRESS_LENGTH]);
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
+pub struct AddressBytes([u8; ADDRESS_LENGTH]);
 
-impl Address {
-    pub const DIEM_CORE: Address = Address::new([
+impl AddressBytes {
+    // bytes used for errors when an address is not known but is needed
+    pub const DEFAULT_ERROR_BYTES: Self = AddressBytes([
         0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,
     ]);
 
-    pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
-        Address(address)
+    pub const fn new(bytes: [u8; ADDRESS_LENGTH]) -> Self {
+        Self(bytes)
     }
 
-    pub fn to_u8(self) -> [u8; ADDRESS_LENGTH] {
+    pub fn to_bytes(self) -> [u8; ADDRESS_LENGTH] {
         self.0
     }
 
-    pub fn parse_str(s: &str) -> Result<Address, String> {
+    pub fn parse_str(s: &str) -> Result<AddressBytes, String> {
         let decoded = match parse_u128(s) {
             Ok(n) => n.to_be_bytes(),
             Err(_) => {
@@ -81,29 +82,29 @@ impl Address {
                     .to_owned());
             }
         };
-        Ok(Address(decoded))
+        Ok(AddressBytes(decoded))
     }
 }
 
-impl AsRef<[u8]> for Address {
+impl AsRef<[u8]> for AddressBytes {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl fmt::Display for Address {
+impl fmt::Display for AddressBytes {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "0x{:#X}", self)
     }
 }
 
-impl fmt::Debug for Address {
+impl fmt::Debug for AddressBytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:#X}", self)
     }
 }
 
-impl fmt::LowerHex for Address {
+impl fmt::LowerHex for AddressBytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let encoded = hex::encode(&self.0);
         let dropped = encoded
@@ -118,7 +119,21 @@ impl fmt::LowerHex for Address {
     }
 }
 
-impl fmt::UpperHex for Address {
+impl TryFrom<&[u8]> for AddressBytes {
+    type Error = String;
+
+    fn try_from(bytes: &[u8]) -> Result<AddressBytes, String> {
+        if bytes.len() != ADDRESS_LENGTH {
+            Err(format!("The address {:?} is of invalid length", bytes))
+        } else {
+            let mut addr = [0u8; ADDRESS_LENGTH];
+            addr.copy_from_slice(bytes);
+            Ok(AddressBytes(addr))
+        }
+    }
+}
+
+impl fmt::UpperHex for AddressBytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let encoded = hex::encode_upper(&self.0);
         let dropped = encoded
@@ -129,20 +144,6 @@ impl fmt::UpperHex for Address {
             write!(f, "0")
         } else {
             write!(f, "{}", dropped)
-        }
-    }
-}
-
-impl TryFrom<&[u8]> for Address {
-    type Error = String;
-
-    fn try_from(bytes: &[u8]) -> Result<Address, String> {
-        if bytes.len() != ADDRESS_LENGTH {
-            Err(format!("The Address {:?} is of invalid length", bytes))
-        } else {
-            let mut addr = [0u8; ADDRESS_LENGTH];
-            addr.copy_from_slice(bytes);
-            Ok(Address(addr))
         }
     }
 }

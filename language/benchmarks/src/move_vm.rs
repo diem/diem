@@ -13,7 +13,7 @@ use move_core_types::{
 };
 use move_lang::{
     compiled_unit::CompiledUnit,
-    shared::{Address, Flags},
+    shared::{AddressBytes, Flags},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
@@ -71,7 +71,7 @@ fn execute<M: Measurement + 'static>(
     fun: &str,
 ) {
     // establish running context
-    let sender = AccountAddress::new(Address::DIEM_CORE.to_u8());
+    let sender = AccountAddress::new(AddressBytes::DEFAULT_ERROR_BYTES.to_bytes());
     let state = EmptyStateView;
     let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();

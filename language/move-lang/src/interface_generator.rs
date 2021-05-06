@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::Address;
+use crate::shared::AddressBytes;
 use anyhow::{anyhow, Result};
 use move_binary_format::{
     access::ModuleAccess,
@@ -44,7 +44,7 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
     let id = module.self_id();
     push_line!(
         out,
-        format!("address {} {{", Address::new(id.address().to_u8()),)
+        format!("address {} {{", AddressBytes::new(id.address().to_u8()),)
     );
     push_line!(out, format!("module {} {{", id.name()));
     push_line!(out, "");
@@ -92,7 +92,7 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
                 out,
                 format!(
                     "    use {}::{};",
-                    Address::new(module_id.address().to_u8()),
+                    AddressBytes::new(module_id.address().to_u8()),
                     module_id.name()
                 )
             );
@@ -101,7 +101,7 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
                 out,
                 format!(
                     "    use {}::{} as {};",
-                    Address::new(module_id.address().to_u8()),
+                    AddressBytes::new(module_id.address().to_u8()),
                     module_id.name(),
                     alias
                 )
