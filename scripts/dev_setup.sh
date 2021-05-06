@@ -24,6 +24,7 @@ Z3_VERSION=4.8.9
 CVC4_VERSION=aac53f51
 DOTNET_VERSION=3.1
 BOOGIE_VERSION=2.8.32
+TRIVY_VERSION=0.17.2
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -207,6 +208,19 @@ function install_awscli {
     fi
   fi
   aws --version
+}
+
+function install_trivy {
+  VERSION=$(trivy --version | head -1)
+  if [[ "$VERSION" != "Version: ${TRIVY_VERSION}" ]]; then
+    if [[ $(uname -s) == "Darwin" ]]; then
+      install_pkg aquasecurity/trivy/trivy brew
+    else
+      # Use trivy's script to downloads the binary based on OS and arch
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "${HOME}"/bin "v$TRIVY_VERSION"
+    fi
+  fi
+  trivy --version | head -1
 }
 
 function install_pkg {
@@ -487,6 +501,7 @@ Operation tools (since -o was provided):
   * yamllint
   * python3
   * docker
+  * trivy
   * vault
   * terraform
   * kubectl
@@ -678,6 +693,7 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_terraform
   install_kubectl
   install_awscli
+  install_trivy
 fi
 
 if [[ "$INSTALL_PROVER" == "true" ]]; then

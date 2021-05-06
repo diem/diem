@@ -29,6 +29,7 @@ FROM setup_ci as tested_ci
 # Test that all commands we need are installed and on the PATH
 RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v hadolint)" ] \
+    && [ -x "$(command -v trivy)" ] \
     && [ -x "$(command -v vault)" ] \
     && [ -x "$(command -v terraform)" ] \
     && [ -x "$(command -v kubectl)" ] \
