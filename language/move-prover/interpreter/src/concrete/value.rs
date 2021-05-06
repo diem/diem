@@ -749,12 +749,15 @@ impl GlobalState {
         &mut self,
         addr: AccountAddress,
         key: StructInstantiation,
-        object: BaseValue,
+        object: TypedValue,
     ) -> bool {
+        if cfg!(debug_assertions) {
+            assert_eq!(key, object.ty.into_struct_inst());
+        }
         self.accounts
             .entry(addr)
             .or_insert_with(AccountState::default)
-            .put_resource(key, object)
+            .put_resource(key, object.val)
             .is_none()
     }
 

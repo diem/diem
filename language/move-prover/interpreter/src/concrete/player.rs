@@ -788,15 +788,10 @@ impl<'env> FunctionContext<'env> {
         op_struct: TypedValue,
         global_state: &mut GlobalState,
     ) -> Result<(), AbortInfo> {
-        if cfg!(debug_assertions) {
-            let env = self.target.global_env();
-            let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
-            assert_eq!(&inst, op_struct.get_ty().get_struct_inst());
-        }
-        let signer = op_signer.into_signer();
-        let (struct_ty, object, _) = op_struct.decompose();
-        let key = struct_ty.into_struct_inst();
-        if !global_state.put_resource(signer, key, object) {
+        let env = self.target.global_env();
+        let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
+        let addr = op_signer.into_signer();
+        if !global_state.put_resource(addr, inst, op_struct) {
             return Err(AbortInfo::sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
         }
         Ok(())
@@ -876,21 +871,15 @@ impl<'env> FunctionContext<'env> {
         op_struct: TypedValue,
         global_state: &mut GlobalState,
     ) {
-        let (struct_ty, object, ptr) = op_struct.decompose();
-        let inst = struct_ty.into_ref_struct_inst(Some(true));
-        if cfg!(debug_assertions) {
-            let env = self.target.global_env();
-            let converted =
-                convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
-            assert_eq!(inst, converted);
-        }
-        let addr = match ptr {
+        let env = self.target.global_env();
+        let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
+        let addr = match op_struct.get_ptr() {
             // TODO (mengxu) this needs to be extended to check for actual address in borrow graph
             // only put the resource back when the address matches
-            Pointer::Global(addr) => addr,
+            Pointer::Global(addr) => *addr,
             _ => unreachable!(),
         };
-        global_state.put_resource(addr, inst, object);
+        global_state.put_resource(addr, inst, op_struct.read_ref());
     }
 
     fn handle_write_back_local(
@@ -1401,7 +1390,7 @@ impl<'env> FunctionContext<'env> {
 // Entrypoint
 //**************************************************************************************************
 
-/// Entrypoint of the step-by-step interpretation logic
+/// Entrypoint of the interpretation logic
 pub fn entrypoint(
     holder: &FunctionTargetsHolder,
     target: FunctionTarget,
