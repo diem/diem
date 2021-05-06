@@ -88,6 +88,7 @@ before and after every transaction.
 <b>use</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer">0x1::DesignatedDealer</a>;
 <b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="DiemConfig.md#0x1_DiemConfig">0x1::DiemConfig</a>;
+<b>use</b> <a href="DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">0x1::DiemTransactionPublishingOption</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
@@ -2954,6 +2955,7 @@ all available currencies in the system will also be added.
     <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="DualAttestation.md#0x1_DualAttestation_publish_credential">DualAttestation::publish_credential</a>(&new_account, creator_account, human_name);
     <a href="DiemAccount.md#0x1_DiemAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(&new_account, add_all_currencies);
+    <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&new_account);
     <a href="DiemAccount.md#0x1_DiemAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
 </code></pre>

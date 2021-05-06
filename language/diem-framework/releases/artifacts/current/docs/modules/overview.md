@@ -103,6 +103,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::DiemBlock`](DiemBlock.md#0x1_DiemBlock)
 -  [`0x1::DiemConfig`](DiemConfig.md#0x1_DiemConfig)
 -  [`0x1::DiemConsensusConfig`](DiemConsensusConfig.md#0x1_DiemConsensusConfig)
+-  [`0x1::DiemId`](DiemId.md#0x1_DiemId)
 -  [`0x1::DiemSystem`](DiemSystem.md#0x1_DiemSystem)
 -  [`0x1::DiemTimestamp`](DiemTimestamp.md#0x1_DiemTimestamp)
 -  [`0x1::DiemTransactionPublishingOption`](DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption)

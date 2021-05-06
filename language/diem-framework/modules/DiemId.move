@@ -107,7 +107,7 @@ module DiemId {
         let diem_id_domain = DiemIdDomain {
             domain: domain
         };
-        Vector::push_back(&mut account_domains.domains, diem_id_domain);
+        Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
 
         Event::emit_event(
             &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,

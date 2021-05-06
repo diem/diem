@@ -1843,6 +1843,38 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
+    /// Initializes the sending account as a recovery address that may be used by
+    /// other accounts belonging to the same VASP as `account`.
+    /// The sending account must be a VASP account, and can be either a child or parent VASP account.
+    /// Multiple recovery addresses can exist for a single VASP, but accounts in
+    /// each must be disjoint.
+    ///
+    /// # Technical Description
+    /// Publishes a `RecoveryAddress::RecoveryAddress` resource under `account`. It then
+    /// extracts the `DiemAccount::KeyRotationCapability` for `account` and adds
+    /// it to the resource. After the successful execution of this transaction
+    /// other accounts may add their key rotation to this resource so that `account`
+    /// may be used as a recovery account for those accounts.
+    ///
+    /// # Parameters
+    /// | Name      | Type     | Description                                           |
+    /// | ------    | ------   | -------------                                         |
+    /// | `account` | `signer` | The signer of the sending account of the transaction. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category              | Error Reason                                               | Description                                                                                   |
+    /// | ----------------            | --------------                                             | -------------                                                                                 |
+    /// | `Errors::INVALID_STATE`     | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.          |
+    /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
+    /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
+    /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
+    ///
+    /// # Related Scripts
+    /// * `Script::add_recovery_rotation_capability`
+    /// * `Script::rotate_authentication_key_with_recovery_address`
+    CreateDiemIdDomains {},
+
+    /// # Summary
     /// Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
     ///
     /// # Technical Description
@@ -2850,6 +2882,40 @@ pub enum ScriptFunctionCall {
     UpdateDiemConsensusConfig { sliding_nonce: u64, config: Bytes },
 
     /// # Summary
+    /// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
+    /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
+    /// payments over this limit must be checked for dual attestation.
+    ///
+    /// # Technical Description
+    /// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
+    /// `0xA550C18`. The amount is set in micro-XDX.
+    ///
+    /// # Parameters
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                            | Description                                                                                |
+    /// | ----------------           | --------------                          | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    ///
+    /// # Related Scripts
+    /// * `TreasuryComplianceScripts::update_exchange_rate`
+    /// * `TreasuryComplianceScripts::update_minting_ability`
+    UpdateDiemIdDomain {
+        to_update_address: AccountAddress,
+        domain: Bytes,
+        is_remove: bool,
+    },
+
+    /// # Summary
     /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
     /// transaction can only be sent from the Diem Root account.
     ///
@@ -3285,6 +3351,7 @@ impl ScriptFunctionCall {
                 human_name,
                 add_all_currencies,
             ),
+            CreateDiemIdDomains {} => encode_create_diem_id_domains_script_function(),
             CreateParentVaspAccount {
                 coin_type,
                 sliding_nonce,
@@ -3470,6 +3537,11 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 config,
             } => encode_update_diem_consensus_config_script_function(sliding_nonce, config),
+            UpdateDiemIdDomain {
+                to_update_address,
+                domain,
+                is_remove,
+            } => encode_update_diem_id_domain_script_function(to_update_address, domain, is_remove),
             UpdateDiemVersion {
                 sliding_nonce,
                 major,
@@ -4018,6 +4090,48 @@ pub fn encode_create_designated_dealer_script_function(
             bcs::to_bytes(&human_name).unwrap(),
             bcs::to_bytes(&add_all_currencies).unwrap(),
         ],
+    ))
+}
+
+/// # Summary
+/// Initializes the sending account as a recovery address that may be used by
+/// other accounts belonging to the same VASP as `account`.
+/// The sending account must be a VASP account, and can be either a child or parent VASP account.
+/// Multiple recovery addresses can exist for a single VASP, but accounts in
+/// each must be disjoint.
+///
+/// # Technical Description
+/// Publishes a `RecoveryAddress::RecoveryAddress` resource under `account`. It then
+/// extracts the `DiemAccount::KeyRotationCapability` for `account` and adds
+/// it to the resource. After the successful execution of this transaction
+/// other accounts may add their key rotation to this resource so that `account`
+/// may be used as a recovery account for those accounts.
+///
+/// # Parameters
+/// | Name      | Type     | Description                                           |
+/// | ------    | ------   | -------------                                         |
+/// | `account` | `signer` | The signer of the sending account of the transaction. |
+///
+/// # Common Abort Conditions
+/// | Error Category              | Error Reason                                               | Description                                                                                   |
+/// | ----------------            | --------------                                             | -------------                                                                                 |
+/// | `Errors::INVALID_STATE`     | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.          |
+/// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
+/// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
+/// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
+///
+/// # Related Scripts
+/// * `Script::add_recovery_rotation_capability`
+/// * `Script::rotate_authentication_key_with_recovery_address`
+pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("AccountAdministrationScripts").unwrap(),
+        ),
+        Identifier::new("create_diem_id_domains").unwrap(),
+        vec![],
+        vec![],
     ))
 }
 
@@ -5364,6 +5478,54 @@ pub fn encode_update_diem_consensus_config_script_function(
         vec![
             bcs::to_bytes(&sliding_nonce).unwrap(),
             bcs::to_bytes(&config).unwrap(),
+        ],
+    ))
+}
+
+/// # Summary
+/// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
+/// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
+/// payments over this limit must be checked for dual attestation.
+///
+/// # Technical Description
+/// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
+/// `0xA550C18`. The amount is set in micro-XDX.
+///
+/// # Parameters
+/// | Name                  | Type     | Description                                                                                     |
+/// | ------                | ------   | -------------                                                                                   |
+/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+/// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                            | Description                                                                                |
+/// | ----------------           | --------------                          | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+///
+/// # Related Scripts
+/// * `TreasuryComplianceScripts::update_exchange_rate`
+/// * `TreasuryComplianceScripts::update_minting_ability`
+pub fn encode_update_diem_id_domain_script_function(
+    to_update_address: AccountAddress,
+    domain: Vec<u8>,
+    is_remove: bool,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("TreasuryComplianceScripts").unwrap(),
+        ),
+        Identifier::new("update_diem_id_domain").unwrap(),
+        vec![],
+        vec![
+            bcs::to_bytes(&to_update_address).unwrap(),
+            bcs::to_bytes(&domain).unwrap(),
+            bcs::to_bytes(&is_remove).unwrap(),
         ],
     ))
 }
@@ -7346,6 +7508,16 @@ fn decode_create_designated_dealer_script_function(
     }
 }
 
+fn decode_create_diem_id_domains_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(_script) = payload {
+        Some(ScriptFunctionCall::CreateDiemIdDomains {})
+    } else {
+        None
+    }
+}
+
 fn decode_create_parent_vasp_account_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -7674,6 +7846,20 @@ fn decode_update_diem_consensus_config_script_function(
         Some(ScriptFunctionCall::UpdateDiemConsensusConfig {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
             config: bcs::from_bytes(script.args().get(1)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
+fn decode_update_diem_id_domain_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::UpdateDiemIdDomain {
+            to_update_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            domain: bcs::from_bytes(script.args().get(1)?).ok()?,
+            is_remove: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -8172,6 +8358,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_create_designated_dealer_script_function),
         );
         map.insert(
+            "AccountAdministrationScriptscreate_diem_id_domains".to_string(),
+            Box::new(decode_create_diem_id_domains_script_function),
+        );
+        map.insert(
             "AccountCreationScriptscreate_parent_vasp_account".to_string(),
             Box::new(decode_create_parent_vasp_account_script_function),
         );
@@ -8267,6 +8457,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "SystemAdministrationScriptsupdate_diem_consensus_config".to_string(),
             Box::new(decode_update_diem_consensus_config_script_function),
+        );
+        map.insert(
+            "TreasuryComplianceScriptsupdate_diem_id_domain".to_string(),
+            Box::new(decode_update_diem_id_domain_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsupdate_diem_version".to_string(),

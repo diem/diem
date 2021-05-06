@@ -79,11 +79,18 @@ per-transaction basis.
     -  [Parameters](#@Parameters_54)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_55)
     -  [Related Scripts](#@Related_Scripts_56)
+-  [Function `update_diem_id_domain`](#0x1_TreasuryComplianceScripts_update_diem_id_domain)
+    -  [Summary](#@Summary_57)
+    -  [Technical Description](#@Technical_Description_58)
+    -  [Parameters](#@Parameters_59)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_60)
+    -  [Related Scripts](#@Related_Scripts_61)
 
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
 <b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
+<b>use</b> <a href="DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
 <b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
@@ -1178,6 +1185,83 @@ This transaction needs to be sent by the Treasury Compliance account.
     allow_minting: bool
 ) {
     <a href="Diem.md#0x1_Diem_update_minting_ability">Diem::update_minting_ability</a>&lt;Currency&gt;(&tc_account, allow_minting);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_TreasuryComplianceScripts_update_diem_id_domain"></a>
+
+## Function `update_diem_id_domain`
+
+
+<a name="@Summary_57"></a>
+
+### Summary
+
+Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
+only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
+payments over this limit must be checked for dual attestation.
+
+
+<a name="@Technical_Description_58"></a>
+
+### Technical Description
+
+Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
+<code>0xA550C18</code>. The amount is set in micro-XDX.
+
+
+<a name="@Parameters_59"></a>
+
+### Parameters
+
+| Name                  | Type     | Description                                                                                     |
+| ------                | ------   | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>       | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
+
+
+<a name="@Common_Abort_Conditions_60"></a>
+
+### Common Abort Conditions
+
+| Error Category             | Error Reason                            | Description                                                                                |
+| ----------------           | --------------                          | -------------                                                                              |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>tc_account</code>.                             |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+
+
+<a name="@Related_Scripts_61"></a>
+
+### Related Scripts
+
+* <code><a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_exchange_rate">TreasuryComplianceScripts::update_exchange_rate</a></code>
+* <code><a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_minting_ability">TreasuryComplianceScripts::update_minting_ability</a></code>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a> (
+        tc_account: signer,
+        to_update_address: address,
+        domain: vector&lt;u8&gt;,
+        is_remove: bool,
+    ) {
+    <a href="DiemId.md#0x1_DiemId_update_diem_id_domain">DiemId::update_diem_id_domain</a>(&tc_account, to_update_address, domain, is_remove);
 }
 </code></pre>
 
