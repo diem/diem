@@ -427,15 +427,6 @@ impl TypedValue {
     pub fn get_ptr(&self) -> &Pointer {
         &self.ptr
     }
-
-    pub fn to_ref(&self) -> RefTypedValue {
-        RefTypedValue {
-            ty: &self.ty,
-            val: &self.val,
-            ptr: &self.ptr,
-        }
-    }
-
     pub fn decompose(self) -> (Type, BaseValue, Pointer) {
         (self.ty, self.val, self.ptr)
     }
@@ -444,6 +435,19 @@ impl TypedValue {
     // Operations
     //
 
+    /// Cast this value into a compatible type. Cast `ty` must be compatible
+    pub fn assign_cast(self, ty: Type) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert!(ty.is_compatible_for_assign(&self.ty));
+        }
+        TypedValue {
+            ty,
+            val: self.val,
+            ptr: self.ptr,
+        }
+    }
+
+    /// Create a reference to the base value
     pub fn borrow_local(self, is_mut: bool, local_idx: TempIndex) -> TypedValue {
         TypedValue {
             ty: Type::Reference(is_mut, self.ty.into_base_type()),
@@ -452,6 +456,7 @@ impl TypedValue {
         }
     }
 
+    /// Read the reference and create a base value
     pub fn read_ref(self) -> TypedValue {
         TypedValue {
             ty: Type::Base(self.ty.into_ref_type().1),
@@ -460,6 +465,7 @@ impl TypedValue {
         }
     }
 
+    /// Create a mutable reference to this base value
     pub fn write_ref(self, ptr: Pointer) -> TypedValue {
         TypedValue {
             ty: Type::Reference(true, self.ty.into_base_type()),
@@ -468,6 +474,7 @@ impl TypedValue {
         }
     }
 
+    /// Convert the mutable reference into immutable
     pub fn freeze_ref(self) -> TypedValue {
         let (is_mut, base_ty) = self.ty.into_ref_type();
         if cfg!(debug_assertions) {
@@ -586,34 +593,6 @@ impl TypedValue {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct RefTypedValue<'a> {
-    ty: &'a Type,
-    val: &'a BaseValue,
-    ptr: &'a Pointer,
-}
-
-#[allow(dead_code)]
-impl<'a> RefTypedValue<'a> {
-    pub fn get_ty(&self) -> &'a Type {
-        self.ty
-    }
-    pub fn get_val(&self) -> &'a BaseValue {
-        self.val
-    }
-    pub fn get_ptr(&self) -> &'a Pointer {
-        self.ptr
-    }
-
-    pub fn deref(&self) -> TypedValue {
-        TypedValue {
-            ty: self.ty.clone(),
-            val: self.val.clone(),
-            ptr: self.ptr.clone(),
-        }
-    }
-}
-
 //**************************************************************************************************
 // Local state
 //**************************************************************************************************
@@ -627,6 +606,7 @@ pub struct LocalSlot {
 }
 
 impl LocalSlot {
+    /// Create a local slot that holds a function argument
     pub fn new_arg(name: String, val: TypedValue) -> Self {
         let (ty, val, ptr) = val.decompose();
         LocalSlot {
@@ -636,6 +616,7 @@ impl LocalSlot {
             content: Some((val, ptr)),
         }
     }
+    /// Create a local slot that holds a function temporary
     pub fn new_tmp(name: String, ty: Type) -> Self {
         LocalSlot {
             name,
@@ -645,27 +626,40 @@ impl LocalSlot {
         }
     }
 
+    /// Get the type of this local slot
     pub fn get_type(&self) -> &Type {
         &self.ty
     }
 
+    /// Check whether this local slot holds a value
     pub fn has_value(&self) -> bool {
         self.content.is_some()
     }
-    pub fn get_value(&self) -> RefTypedValue {
+    /// Get the value held in this local slot. Panics if the slot does not hold a value
+    pub fn get_value(&self) -> TypedValue {
         let (val, ptr) = self.content.as_ref().unwrap();
-        RefTypedValue {
-            ty: &self.ty,
-            val,
-            ptr,
+        TypedValue {
+            ty: self.ty.clone(),
+            val: val.clone(),
+            ptr: ptr.clone(),
         }
     }
-    pub fn put_value(&mut self, val: BaseValue, ptr: Pointer) {
+    /// Put the value held in this local slot. Override if the slot already holds a value
+    pub fn put_value_override(&mut self, val: TypedValue) {
+        let (ty, val, ptr) = val.decompose();
         if cfg!(debug_assertions) {
-            assert!(self.content.is_none());
+            assert_eq!(ty, self.ty);
         }
         self.content = Some((val, ptr));
     }
+    /// Put the value held in this local slot. Panics if the slot already holds a value
+    pub fn put_value(&mut self, val: TypedValue) {
+        if cfg!(debug_assertions) {
+            assert!(self.content.is_none());
+        }
+        self.put_value_override(val);
+    }
+    /// Delete the value held in this local slot. Panics if the slot does not hold a value
     pub fn del_value(&mut self) -> TypedValue {
         let (val, ptr) = self.content.take().unwrap();
         TypedValue {
@@ -686,18 +680,22 @@ struct AccountState {
 }
 
 impl AccountState {
+    /// Get a resource from the address, return None of the resource does not exist
     fn get_resource(&self, key: &StructInstantiation) -> Option<BaseValue> {
         self.storage.get(key).cloned()
     }
 
+    /// Remove a resource from the address, return the old resource if exists
     fn del_resource(&mut self, key: &StructInstantiation) -> Option<BaseValue> {
         self.storage.remove(key)
     }
 
+    /// Put a resource into the address, return the old resource if exists
     fn put_resource(&mut self, key: StructInstantiation, object: BaseValue) -> Option<BaseValue> {
         self.storage.insert(key, object)
     }
 
+    /// Check whether the address has a resource
     fn has_resource(&self, key: &StructInstantiation) -> bool {
         self.storage.contains_key(key)
     }
@@ -709,6 +707,7 @@ pub struct GlobalState {
 }
 
 impl GlobalState {
+    /// Get a reference to a resource from the address, return None of the resource does not exist
     pub fn get_resource(
         &self,
         is_mut_opt: Option<bool>,
@@ -730,6 +729,7 @@ impl GlobalState {
         })
     }
 
+    /// Remove a resource from the address, return the old resource (as struct) if exists
     pub fn del_resource(
         &mut self,
         addr: AccountAddress,
@@ -744,6 +744,7 @@ impl GlobalState {
         })
     }
 
+    /// Put a resource into the address, return `true` if an old resource exists
     pub fn put_resource(
         &mut self,
         addr: AccountAddress,
@@ -757,6 +758,7 @@ impl GlobalState {
             .is_none()
     }
 
+    /// Check whether the address has a resource
     pub fn has_resource(&self, addr: &AccountAddress, key: &StructInstantiation) -> bool {
         self.accounts
             .get(addr)

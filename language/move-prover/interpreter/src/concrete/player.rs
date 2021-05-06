@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use num::{ToPrimitive, Zero};
+use num::{BigUint, ToPrimitive, Zero};
 use std::collections::BTreeMap;
 
 use bytecode::{
@@ -26,7 +26,7 @@ use crate::concrete::{
         convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
         Type,
     },
-    value::{BaseValue, GlobalState, LocalSlot, Pointer, RefTypedValue, TypedValue},
+    value::{GlobalState, LocalSlot, Pointer, TypedValue},
 };
 
 //**************************************************************************************************
@@ -191,49 +191,30 @@ fn exec_bytecode(
 //**************************************************************************************************
 
 fn handle_assign(dst: TempIndex, src: TempIndex, kind: &AssignKind, local_state: &mut LocalState) {
-    // check types
-    if cfg!(debug_assertions) {
-        assert!(local_state
-            .get_type(dst)
-            .is_compatible_for_assign(local_state.get_type(src)));
-    }
-
-    // execute
-    let slot = match kind {
+    let from_val = match kind {
         AssignKind::Move => local_state.del_value(src),
         // TODO (mengxu): what exactly is the semantic of Store here? Why not just use Copy?
-        AssignKind::Copy | AssignKind::Store => local_state.get_value(src).deref(),
+        AssignKind::Copy | AssignKind::Store => local_state.get_value(src),
     };
-    let (_, val, ptr) = slot.decompose();
-    local_state.put_value(dst, val, ptr);
+    let into_val = from_val.assign_cast(local_state.get_type(dst).clone());
+    local_state.put_value_override(dst, into_val);
 }
 
 fn handle_load(dst: TempIndex, constant: &Constant, local_state: &mut LocalState) {
-    // check types
-    if cfg!(debug_assertions) {
-        assert!(local_state
-            .get_type(dst)
-            .is_compatible_for_constant(constant));
-    }
-
-    // execute
     let val = match constant {
-        Constant::Bool(v) => BaseValue::mk_bool(*v),
-        Constant::U8(v) => BaseValue::mk_u8(*v),
-        Constant::U64(v) => BaseValue::mk_u64(*v),
-        Constant::U128(v) => BaseValue::mk_u128(*v),
+        Constant::Bool(v) => TypedValue::mk_bool(*v),
+        Constant::U8(v) => TypedValue::mk_u8(*v),
+        Constant::U64(v) => TypedValue::mk_u64(*v),
+        Constant::U128(v) => TypedValue::mk_u128(*v),
         Constant::Address(v) => {
-            BaseValue::mk_address(AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap())
+            TypedValue::mk_address(AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap())
         }
         Constant::ByteArray(v) => {
-            let elems = v.iter().map(|e| BaseValue::mk_u8(*e)).collect();
-            BaseValue::mk_vector(elems)
+            let elems = v.iter().map(|e| TypedValue::mk_u8(*e)).collect();
+            TypedValue::mk_vector(BaseType::mk_u8(), elems)
         }
     };
-    if local_state.has_value(dst) {
-        local_state.del_value(dst);
-    }
-    local_state.put_value(dst, val, Pointer::None);
+    local_state.put_value_override(dst, val);
 }
 
 fn handle_operation(
@@ -287,24 +268,21 @@ fn handle_operation(
     }
 
     // collect arguments
-    let typed_args: Vec<_> = srcs.iter().map(|idx| local_state.get_value(*idx)).collect();
+    let mut typed_args: Vec<_> = srcs.iter().map(|idx| local_state.get_value(*idx)).collect();
 
     // case on operation type
     let op_result = match op {
         // function call
-        Operation::Function(module_id, fun_id, ty_args) => {
-            let derefed_typed_args = typed_args.into_iter().map(|arg| arg.deref()).collect();
-            handle_call_user_function(
-                ctxt,
-                *module_id,
-                *fun_id,
-                ty_args,
-                derefed_typed_args,
-                srcs,
-                local_state,
-                global_state,
-            )?
-        }
+        Operation::Function(module_id, fun_id, ty_args) => handle_call_user_function(
+            ctxt,
+            *module_id,
+            *fun_id,
+            ty_args,
+            typed_args,
+            srcs,
+            local_state,
+            global_state,
+        )?,
         // opaque
         Operation::OpaqueCallBegin(module_id, fun_id, ty_args)
         | Operation::OpaqueCallEnd(module_id, fun_id, ty_args) => {
@@ -323,7 +301,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 1);
             }
-            let unpacked = handle_unpack(ctxt, *module_id, *struct_id, ty_args, typed_args[0]);
+            let unpacked =
+                handle_unpack(ctxt, *module_id, *struct_id, ty_args, typed_args.remove(0));
             Ok(unpacked)
         }
         Operation::GetField(module_id, struct_id, ty_args, field_num) => {
@@ -336,7 +315,7 @@ fn handle_operation(
                 *struct_id,
                 ty_args,
                 *field_num,
-                typed_args[0],
+                typed_args.remove(0),
             );
             Ok(vec![field])
         }
@@ -353,7 +332,7 @@ fn handle_operation(
                 *field_num,
                 is_mut,
                 srcs[0],
-                typed_args[0],
+                typed_args.remove(0),
             );
             Ok(vec![field])
         }
@@ -366,8 +345,8 @@ fn handle_operation(
                 *module_id,
                 *struct_id,
                 ty_args,
-                typed_args[1],
-                typed_args[0],
+                typed_args.remove(1),
+                typed_args.remove(0),
                 global_state,
             )
             .map(|_| vec![])
@@ -381,7 +360,7 @@ fn handle_operation(
                 *module_id,
                 *struct_id,
                 ty_args,
-                typed_args[0],
+                typed_args.remove(0),
                 global_state,
             )
             .map(|object| vec![object])
@@ -395,7 +374,7 @@ fn handle_operation(
                 *module_id,
                 *struct_id,
                 ty_args,
-                typed_args[0],
+                typed_args.remove(0),
                 global_state,
             )
             .map(|object| vec![object])
@@ -411,7 +390,7 @@ fn handle_operation(
                 *struct_id,
                 ty_args,
                 is_mut,
-                typed_args[0],
+                typed_args.remove(0),
                 global_state,
             )
             .map(|object| vec![object])
@@ -425,7 +404,7 @@ fn handle_operation(
                 *module_id,
                 *struct_id,
                 ty_args,
-                typed_args[0],
+                typed_args.remove(0),
                 global_state,
             );
             Ok(vec![exists])
@@ -450,7 +429,7 @@ fn handle_operation(
                     qid.module_id,
                     qid.id,
                     &qid.inst,
-                    typed_args[0],
+                    typed_args.remove(0),
                     global_state,
                 ),
                 _ => unreachable!(),
@@ -463,7 +442,7 @@ fn handle_operation(
             }
             match edge {
                 StrongEdge::Direct => {
-                    handle_write_back_local(*idx, typed_args[0].deref(), local_state)
+                    handle_write_back_local(*idx, typed_args.remove(0), local_state)
                 }
                 _ => unreachable!(),
             }
@@ -475,7 +454,7 @@ fn handle_operation(
             }
             match edge {
                 StrongEdge::Direct => {
-                    handle_write_back_ref_whole(*idx, typed_args[0].deref(), local_state)
+                    handle_write_back_ref_whole(*idx, typed_args.remove(0), local_state)
                 }
                 StrongEdge::Field(qid, field_num) => handle_write_back_ref_field(
                     ctxt,
@@ -484,11 +463,11 @@ fn handle_operation(
                     &qid.inst,
                     *idx,
                     *field_num,
-                    typed_args[0].deref(),
+                    typed_args.remove(0),
                     local_state,
                 ),
                 StrongEdge::FieldUnknown => {
-                    handle_write_back_ref_element(*idx, typed_args[0].deref(), local_state)
+                    handle_write_back_ref_element(*idx, typed_args.remove(0), local_state)
                 }
             }
             Ok(vec![])
@@ -499,28 +478,28 @@ fn handle_operation(
                 assert_eq!(typed_args.len(), 1);
             }
             let (is_mut, _) = local_state.get_type(dsts[0]).get_ref_type();
-            let object = handle_borrow_local(is_mut, typed_args[0], srcs[0]);
+            let object = handle_borrow_local(is_mut, typed_args.remove(0), srcs[0]);
             Ok(vec![object])
         }
         Operation::ReadRef => {
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 1);
             }
-            let object = handle_read_ref(typed_args[0]);
+            let object = handle_read_ref(typed_args.remove(0));
             Ok(vec![object])
         }
         Operation::WriteRef => {
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            handle_write_ref(typed_args[1].deref(), srcs[0], local_state);
+            handle_write_ref(typed_args.remove(1), srcs[0], local_state);
             Ok(vec![])
         }
         Operation::FreezeRef => {
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 1);
             }
-            let object = handle_freeze_ref(typed_args[0]);
+            let object = handle_freeze_ref(typed_args.remove(0));
             Ok(vec![object])
         }
         // built-in
@@ -543,7 +522,7 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 1);
             }
-            let val = typed_args[0];
+            let val = typed_args.remove(0);
             match op {
                 Operation::CastU8 => handle_cast_u8(val),
                 Operation::CastU64 => handle_cast_u64(val),
@@ -557,8 +536,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             handle_binary_arithmetic(op, lhs, rhs, local_state.get_type(dsts[0]))
                 .map(|calculated| vec![calculated])
         }
@@ -567,8 +546,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             let calculated = handle_binary_bitwise(op, lhs, rhs, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -577,8 +556,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             let calculated = handle_binary_bitshift(op, lhs, rhs, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -587,8 +566,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             let calculated = handle_binary_comparision(op, lhs, rhs, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -597,8 +576,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             let calculated = handle_binary_equality(op, lhs, rhs, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -607,7 +586,7 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 1);
             }
-            let opv = typed_args[0];
+            let opv = typed_args.remove(0);
             let calculated = handle_unary_boolean(op, opv, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -616,8 +595,8 @@ fn handle_operation(
             if cfg!(debug_assertions) {
                 assert_eq!(typed_args.len(), 2);
             }
-            let lhs = typed_args[0];
-            let rhs = typed_args[1];
+            let rhs = typed_args.remove(1);
+            let lhs = typed_args.remove(0);
             let calculated = handle_binary_boolean(op, lhs, rhs, local_state.get_type(dsts[0]));
             Ok(vec![calculated])
         }
@@ -672,14 +651,7 @@ fn handle_operation(
                 assert_eq!(typed_rets.len(), dsts.len());
             }
             for (typed_ret, &idx) in typed_rets.into_iter().zip(dsts) {
-                let (ret_ty, ret_val, ret_ptr) = typed_ret.decompose();
-                if cfg!(debug_assertions) {
-                    assert_eq!(&ret_ty, local_state.get_type(idx));
-                }
-                if local_state.has_value(idx) {
-                    local_state.del_value(idx);
-                }
-                local_state.put_value(idx, ret_val, ret_ptr);
+                local_state.put_value_override(idx, typed_ret);
             }
         }
         Err(abort_info) => match on_abort {
@@ -687,11 +659,13 @@ fn handle_operation(
                 return Err(abort_info.into_err());
             }
             Some(action) => {
-                local_state.put_value(
-                    action.1,
-                    BaseValue::mk_u64(abort_info.get_status_code()),
-                    Pointer::None,
-                );
+                let abort_idx = action.1;
+                let abort_val = if local_state.get_type(abort_idx).is_u64() {
+                    TypedValue::mk_u64(abort_info.get_status_code())
+                } else {
+                    TypedValue::mk_num(BigUint::from(abort_info.get_status_code()))
+                };
+                local_state.put_value(abort_idx, abort_val);
                 local_state.set_pc(ctxt.code_offset_by_label(action.0));
                 local_state.transit_to_post_abort(abort_info);
             }
@@ -732,13 +706,12 @@ fn handle_call_user_function(
 
     // update mutable arguments
     for (callee_idx, origin_idx) in mut_args {
-        let (old_ty, _, old_ptr) = local_state.del_value(origin_idx).decompose();
-        let (new_ty, new_val, new_ptr) = callee_state.del_value(callee_idx).decompose();
+        let old_val = local_state.del_value(origin_idx);
+        let new_val = callee_state.del_value(callee_idx);
         if cfg!(debug_assertions) {
-            assert_eq!(old_ty, new_ty);
-            assert_eq!(old_ptr, new_ptr);
+            assert_eq!(old_val.get_ptr(), new_val.get_ptr());
         }
-        local_state.put_value(origin_idx, new_val, old_ptr);
+        local_state.put_value(origin_idx, new_val);
     }
 
     // check callee termination status
@@ -769,15 +742,14 @@ fn handle_pack(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_fields: Vec<RefTypedValue>,
+    op_fields: Vec<TypedValue>,
 ) -> TypedValue {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
     if cfg!(debug_assertions) {
         assert_eq!(inst.fields.len(), op_fields.len());
     }
-    let field_vals = op_fields.into_iter().map(|val| val.deref()).collect();
-    TypedValue::mk_struct(inst, field_vals)
+    TypedValue::mk_struct(inst, op_fields)
 }
 
 fn handle_unpack(
@@ -785,14 +757,14 @@ fn handle_unpack(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_struct: RefTypedValue,
+    op_struct: TypedValue,
 ) -> Vec<TypedValue> {
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
         assert_eq!(&inst, op_struct.get_ty().get_struct_inst());
     }
-    op_struct.deref().unpack_struct()
+    op_struct.unpack_struct()
 }
 
 fn handle_get_field(
@@ -801,7 +773,7 @@ fn handle_get_field(
     struct_id: StructId,
     ty_args: &[MT::Type],
     field_num: usize,
-    op_struct: RefTypedValue,
+    op_struct: TypedValue,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
@@ -812,9 +784,9 @@ fn handle_get_field(
         );
     }
     if op_struct.get_ty().is_struct() {
-        op_struct.deref().unpack_struct_field(field_num)
+        op_struct.unpack_struct_field(field_num)
     } else {
-        op_struct.deref().unpack_ref_struct_field(field_num, None)
+        op_struct.unpack_ref_struct_field(field_num, None)
     }
 }
 
@@ -826,16 +798,14 @@ fn handle_borrow_field(
     field_num: usize,
     is_mut: bool,
     local_idx: TempIndex,
-    op_struct: RefTypedValue,
+    op_struct: TypedValue,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
         assert_eq!(&inst, op_struct.get_ty().get_ref_struct_inst(None));
     }
-    op_struct
-        .deref()
-        .borrow_ref_struct_field(field_num, is_mut, local_idx)
+    op_struct.borrow_ref_struct_field(field_num, is_mut, local_idx)
 }
 
 fn handle_move_to(
@@ -843,8 +813,8 @@ fn handle_move_to(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_signer: RefTypedValue,
-    op_struct: RefTypedValue,
+    op_signer: TypedValue,
+    op_struct: TypedValue,
     global_state: &mut GlobalState,
 ) -> Result<(), AbortInfo> {
     if cfg!(debug_assertions) {
@@ -852,8 +822,8 @@ fn handle_move_to(
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
         assert_eq!(&inst, op_struct.get_ty().get_struct_inst());
     }
-    let signer = op_signer.deref().into_signer();
-    let (struct_ty, object, _) = op_struct.deref().decompose();
+    let signer = op_signer.into_signer();
+    let (struct_ty, object, _) = op_struct.decompose();
     let key = struct_ty.into_struct_inst();
     if !global_state.put_resource(signer, key, object) {
         return Err(AbortInfo::sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
@@ -866,12 +836,12 @@ fn handle_move_from(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_addr: RefTypedValue,
+    op_addr: TypedValue,
     global_state: &mut GlobalState,
 ) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
-    let addr = op_addr.deref().into_address();
+    let addr = op_addr.into_address();
     match global_state.del_resource(addr, inst) {
         None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
@@ -883,12 +853,12 @@ fn handle_get_global(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_addr: RefTypedValue,
+    op_addr: TypedValue,
     global_state: &mut GlobalState,
 ) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
-    let addr = op_addr.deref().into_address();
+    let addr = op_addr.into_address();
     match global_state.get_resource(None, addr, inst) {
         None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
@@ -901,12 +871,12 @@ fn handle_borrow_global(
     struct_id: StructId,
     ty_args: &[MT::Type],
     is_mut: bool,
-    op_addr: RefTypedValue,
+    op_addr: TypedValue,
     global_state: &mut GlobalState,
 ) -> Result<TypedValue, AbortInfo> {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
-    let addr = op_addr.deref().into_address();
+    let addr = op_addr.into_address();
     match global_state.get_resource(Some(is_mut), addr, inst) {
         None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
         Some(object) => Ok(object),
@@ -918,12 +888,12 @@ fn handle_exists_global(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_addr: RefTypedValue,
+    op_addr: TypedValue,
     global_state: &GlobalState,
 ) -> TypedValue {
     let env = ctxt.target.global_env();
     let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &ctxt.ty_args);
-    let addr = op_addr.deref().into_address();
+    let addr = op_addr.into_address();
     TypedValue::mk_bool(global_state.has_resource(&addr, &inst))
 }
 
@@ -932,10 +902,10 @@ fn handle_write_back_global_struct(
     module_id: ModuleId,
     struct_id: StructId,
     ty_args: &[MT::Type],
-    op_struct: RefTypedValue,
+    op_struct: TypedValue,
     global_state: &mut GlobalState,
 ) {
-    let (struct_ty, object, ptr) = op_struct.deref().decompose();
+    let (struct_ty, object, ptr) = op_struct.decompose();
     let inst = struct_ty.into_ref_struct_inst(Some(true));
     if cfg!(debug_assertions) {
         let env = ctxt.target.global_env();
@@ -957,17 +927,16 @@ fn handle_write_back_local(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
-    let (old_ty, old_val, old_ptr) = local_state.del_value(local_root).decompose();
-    let (new_ty, new_val, new_ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
-        assert!(new_ty.is_ref_of(old_ty.get_base_type(), Some(true)));
+        assert!(op_val
+            .get_ty()
+            .is_ref_of(local_state.get_type(local_root).get_base_type(), Some(true)));
+        assert!(local_state.has_value(local_root));
     }
-    match new_ptr {
+    match op_val.get_ptr() {
         Pointer::Local(root_idx) => {
-            if root_idx == local_root {
-                local_state.put_value(local_root, new_val, old_ptr);
-            } else {
-                local_state.put_value(local_root, old_val, old_ptr);
+            if *root_idx == local_root {
+                local_state.put_value_override(local_root, op_val.read_ref());
             }
         }
         _ => unreachable!(),
@@ -979,18 +948,16 @@ fn handle_write_back_ref_whole(
     op_val: TypedValue,
     local_state: &mut LocalState,
 ) {
-    let (ref_ty, ref_val, ref_ptr) = local_state.del_value(local_ref).decompose();
-    let (new_ty, new_val, new_ptr) = op_val.decompose();
     if cfg!(debug_assertions) {
-        assert_eq!(ref_ty, new_ty);
+        let new_ty = op_val.get_ty();
         assert!(new_ty.is_ref(Some(true)));
+        assert_eq!(new_ty, local_state.get_type(local_ref));
+        assert!(local_state.has_value(local_ref));
     }
-    match new_ptr {
+    match op_val.get_ptr() {
         Pointer::RefWhole(ref_idx) => {
-            if ref_idx == local_ref {
-                local_state.put_value(local_ref, new_val, ref_ptr);
-            } else {
-                local_state.put_value(local_ref, ref_val, ref_ptr);
+            if *ref_idx == local_ref {
+                local_state.put_value_override(local_ref, op_val);
             }
         }
         _ => unreachable!(),
@@ -1026,8 +993,7 @@ fn handle_write_back_ref_field(
         }
         _ => unreachable!(),
     };
-    let (_, val, ptr) = new_struct.decompose();
-    local_state.put_value(local_ref, val, ptr);
+    local_state.put_value(local_ref, new_struct);
 }
 
 fn handle_write_back_ref_element(
@@ -1046,39 +1012,37 @@ fn handle_write_back_ref_element(
         }
         _ => unreachable!(),
     };
-    let (_, val, ptr) = new_vector.decompose();
-    local_state.put_value(local_ref, val, ptr);
+    local_state.put_value(local_ref, new_vector);
 }
 
-fn handle_borrow_local(is_mut: bool, local_val: RefTypedValue, local_idx: TempIndex) -> TypedValue {
-    local_val.deref().borrow_local(is_mut, local_idx)
+fn handle_borrow_local(is_mut: bool, local_val: TypedValue, local_idx: TempIndex) -> TypedValue {
+    local_val.borrow_local(is_mut, local_idx)
 }
 
-fn handle_read_ref(from_ref: RefTypedValue) -> TypedValue {
-    from_ref.deref().read_ref()
+fn handle_read_ref(from_ref: TypedValue) -> TypedValue {
+    from_ref.read_ref()
 }
 
 fn handle_write_ref(from_val: TypedValue, into_ref: TempIndex, local_state: &mut LocalState) {
-    let old_ref_val = local_state.del_value(into_ref);
-    let (old_ty, _, old_ptr) = old_ref_val.decompose();
+    let old_val = local_state.del_value(into_ref);
+    let (old_ty, _, old_ptr) = old_val.decompose();
     if cfg!(debug_assertions) {
         assert!(old_ty.is_ref_of(from_val.get_ty().get_base_type(), Some(true)));
     }
-    let updated_ref = from_val.write_ref(old_ptr);
-    let (_, val, ptr) = updated_ref.decompose();
-    local_state.put_value(into_ref, val, ptr);
+    let new_val = from_val.write_ref(old_ptr);
+    local_state.put_value(into_ref, new_val);
 }
 
-fn handle_freeze_ref(ref_val: RefTypedValue) -> TypedValue {
-    ref_val.deref().freeze_ref()
+fn handle_freeze_ref(ref_val: TypedValue) -> TypedValue {
+    ref_val.freeze_ref()
 }
 
 fn handle_destroy(local_idx: TempIndex, local_state: &mut LocalState) {
     local_state.del_value(local_idx);
 }
 
-fn handle_cast_u8(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
-    let (ty, val, _) = val.deref().decompose();
+fn handle_cast_u8(val: TypedValue) -> Result<TypedValue, AbortInfo> {
+    let (ty, val, _) = val.decompose();
     let v = if ty.is_u8() {
         val.into_u8()
     } else if ty.is_u64() {
@@ -1105,8 +1069,8 @@ fn handle_cast_u8(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
     Ok(TypedValue::mk_u8(v))
 }
 
-fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
-    let (ty, val, _) = val.deref().decompose();
+fn handle_cast_u64(val: TypedValue) -> Result<TypedValue, AbortInfo> {
+    let (ty, val, _) = val.decompose();
     let v = if ty.is_u8() {
         val.into_u8() as u64
     } else if ty.is_u64() {
@@ -1129,8 +1093,8 @@ fn handle_cast_u64(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
     Ok(TypedValue::mk_u64(v))
 }
 
-fn handle_cast_u128(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
-    let (ty, val, _) = val.deref().decompose();
+fn handle_cast_u128(val: TypedValue) -> Result<TypedValue, AbortInfo> {
+    let (ty, val, _) = val.decompose();
     let v = if ty.is_u8() {
         val.into_u8() as u128
     } else if ty.is_u64() {
@@ -1151,16 +1115,16 @@ fn handle_cast_u128(val: RefTypedValue) -> Result<TypedValue, AbortInfo> {
 
 fn handle_binary_arithmetic(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> Result<TypedValue, AbortInfo> {
     if cfg!(debug_assertions) {
         assert!(res.is_compatible_for_arithmetic(lhs.get_ty(), rhs.get_ty()));
     }
 
-    let lval = lhs.deref().into_int();
-    let rval = rhs.deref().into_int();
+    let lval = lhs.into_int();
+    let rval = rhs.into_int();
     let result = match op {
         Operation::Add => lval + rval,
         Operation::Sub => {
@@ -1215,16 +1179,16 @@ fn handle_binary_arithmetic(
 
 fn handle_binary_bitwise(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
         assert!(res.is_compatible_for_bitwise(lhs.get_ty(), rhs.get_ty()));
     }
 
-    let lval = lhs.deref().into_int();
-    let rval = rhs.deref().into_int();
+    let lval = lhs.into_int();
+    let rval = rhs.into_int();
     let result = match op {
         Operation::BitAnd => lval & rval,
         Operation::BitOr => lval | rval,
@@ -1244,17 +1208,17 @@ fn handle_binary_bitwise(
 
 fn handle_binary_bitshift(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
         assert!(res.is_compatible_for_bitshift(lhs.get_ty()));
         assert!(rhs.get_ty().is_u8());
     }
-    let rval = rhs.deref().into_u8();
+    let rval = rhs.into_u8();
     if lhs.get_ty().is_u8() {
-        let lval = lhs.deref().into_u8();
+        let lval = lhs.into_u8();
         let result = match op {
             Operation::Shl => lval << rval,
             Operation::Shr => lval >> rval,
@@ -1262,7 +1226,7 @@ fn handle_binary_bitshift(
         };
         TypedValue::mk_u8(result)
     } else if lhs.get_ty().is_u64() {
-        let lval = lhs.deref().into_u64();
+        let lval = lhs.into_u64();
         let result = match op {
             Operation::Shl => lval << rval,
             Operation::Shr => lval >> rval,
@@ -1271,7 +1235,7 @@ fn handle_binary_bitshift(
         TypedValue::mk_u64(result)
     } else {
         assert!(lhs.get_ty().is_u128());
-        let lval = lhs.deref().into_u128();
+        let lval = lhs.into_u128();
         let result = match op {
             Operation::Shl => lval << rval,
             Operation::Shr => lval >> rval,
@@ -1283,8 +1247,8 @@ fn handle_binary_bitshift(
 
 fn handle_binary_comparision(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
@@ -1292,8 +1256,8 @@ fn handle_binary_comparision(
         assert!(res.is_bool());
     }
 
-    let lval = lhs.deref().into_int();
-    let rval = rhs.deref().into_int();
+    let lval = lhs.into_int();
+    let rval = rhs.into_int();
     let result = match op {
         Operation::Lt => lval < rval,
         Operation::Le => lval <= rval,
@@ -1306,8 +1270,8 @@ fn handle_binary_comparision(
 
 fn handle_binary_equality(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
@@ -1324,12 +1288,12 @@ fn handle_binary_equality(
     TypedValue::mk_bool(result)
 }
 
-fn handle_unary_boolean(op: &Operation, opv: RefTypedValue, res: &Type) -> TypedValue {
+fn handle_unary_boolean(op: &Operation, opv: TypedValue, res: &Type) -> TypedValue {
     if cfg!(debug_assertions) {
         assert!(opv.get_ty().is_bool());
         assert!(res.is_bool());
     }
-    let opval = opv.deref().into_bool();
+    let opval = opv.into_bool();
     let result = match op {
         Operation::Not => !opval,
         _ => unreachable!(),
@@ -1339,8 +1303,8 @@ fn handle_unary_boolean(op: &Operation, opv: RefTypedValue, res: &Type) -> Typed
 
 fn handle_binary_boolean(
     op: &Operation,
-    lhs: RefTypedValue,
-    rhs: RefTypedValue,
+    lhs: TypedValue,
+    rhs: TypedValue,
     res: &Type,
 ) -> TypedValue {
     if cfg!(debug_assertions) {
@@ -1348,8 +1312,8 @@ fn handle_binary_boolean(
         assert!(rhs.get_ty().is_bool());
         assert!(res.is_bool());
     }
-    let lval = lhs.deref().into_bool();
-    let rval = rhs.deref().into_bool();
+    let lval = lhs.into_bool();
+    let rval = rhs.into_bool();
     let result = match op {
         Operation::And => lval && rval,
         Operation::Or => lval || rval,
@@ -1369,7 +1333,7 @@ fn handle_conditional_branch(
     if cfg!(debug_assertions) {
         assert!(cond_val.get_ty().is_bool());
     }
-    let label = if cond_val.deref().into_bool() {
+    let label = if cond_val.into_bool() {
         then_label
     } else {
         else_label
@@ -1378,7 +1342,7 @@ fn handle_conditional_branch(
 }
 
 fn handle_abort(index: TempIndex, local_state: &mut LocalState) {
-    let val = local_state.get_value(index).deref();
+    let val = local_state.get_value(index);
     if cfg!(debug_assertions) {
         assert!(val.get_ty().is_compatible_for_abort_code());
     }
@@ -1402,7 +1366,7 @@ fn handle_return(ctxt: &FunctionContext, rets: &[TempIndex], local_state: &mut L
     }
     let ret_vals = rets
         .iter()
-        .map(|index| local_state.get_value(*index).deref())
+        .map(|index| local_state.get_value(*index))
         .collect();
     local_state.terminate_with_return(ret_vals);
 }
