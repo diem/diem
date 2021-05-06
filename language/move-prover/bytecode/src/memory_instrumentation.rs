@@ -92,10 +92,9 @@ impl<'a> Instrumenter<'a> {
     ) -> (Vec<Bytecode>, Vec<Bytecode>) {
         let (mut before, mut after) = self.public_function_instrumentation(code_offset, bytecode);
         let destroy_instr = self.ref_create_destroy_instrumentation(code_offset, bytecode);
-        if matches!(
-            bytecode,
-            Bytecode::Ret(..) | Bytecode::Branch(..) | Bytecode::Jump(..) | Bytecode::Abort(..)
-        ) {
+        if bytecode.is_branch()
+            || matches!(bytecode, Bytecode::Call(_, _, Operation::Destroy, _, _))
+        {
             // Add this to before instrumentation.
             before.extend(destroy_instr);
         } else {

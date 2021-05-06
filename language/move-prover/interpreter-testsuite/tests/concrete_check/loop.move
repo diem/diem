@@ -7,7 +7,7 @@ module 0x2::A {
         };
     }
 
-    // TODO (mengxu): there is an error in the transformation pipeline, a destroy($t) appears before the writeback($t).
+    #[test]
     public fun loop_ind_ref() {
         let i = 0;
         let p = &mut i;

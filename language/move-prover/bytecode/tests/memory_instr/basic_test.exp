@@ -381,8 +381,8 @@ fun TestPackref::test7($t0|b: bool) {
  17: write_back[LocalRoot($t2).D]($t3)
  18: return ()
  19: label L3
- 20: destroy($t3)
- 21: write_back[LocalRoot($t1).D]($t3)
+ 20: write_back[LocalRoot($t1).D]($t3)
+ 21: destroy($t3)
  22: goto 10
  23: label L4
  24: destroy($t6)
@@ -418,9 +418,9 @@ fun TestPackref::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestPackref::R) 
   9: label L1
  10: goto 31
  11: label L0
- 12: destroy($t5)
- 13: write_back[LocalRoot($t3).D]($t5)
- 14: write_back[LocalRoot($t4).D]($t5)
+ 12: write_back[LocalRoot($t3).D]($t5)
+ 13: write_back[LocalRoot($t4).D]($t5)
+ 14: destroy($t5)
  15: $t10 := 2
  16: $t11 := /($t1, $t10)
  17: $t12 := 0
@@ -442,9 +442,9 @@ fun TestPackref::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestPackref::R) 
  33: label L9
  34: goto 42
  35: label L8
- 36: destroy($t5)
- 37: write_back[LocalRoot($t3).D]($t5)
- 38: write_back[LocalRoot($t4).D]($t5)
+ 36: write_back[LocalRoot($t3).D]($t5)
+ 37: write_back[LocalRoot($t4).D]($t5)
+ 38: destroy($t5)
  39: $t15 := 0
  40: TestPackref::test3($t2, $t15)
  41: goto 48
