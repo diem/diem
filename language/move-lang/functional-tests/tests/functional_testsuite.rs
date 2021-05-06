@@ -91,9 +91,16 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         let cur_path = cur_file.path().to_str().unwrap().to_owned();
 
         let targets = &vec![cur_path.clone()];
-        let (files, units_or_errors) = self.move_compile_with_stdlib(targets)?;
+        let (mut files, units_or_errors) = self.move_compile_with_stdlib(targets)?;
         let unit = match units_or_errors {
             Err(errors) => {
+                for (file_name, text) in &self.pre_compiled_deps.files {
+                    // TODO This is bad. Rethink this when errors are redone
+                    if !files.contains_key(file_name) {
+                        files.insert(&**file_name, text.clone());
+                    }
+                }
+
                 let error_buffer = if read_bool_env_var(testsuite::PRETTY) {
                     move_lang::errors::report_errors_to_color_buffer(files, errors)
                 } else {
@@ -129,7 +136,7 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
 }
 
 static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
-    let (files, program_res) = move_lang::move_construct_pre_compiled_lib(
+    let program_res = move_lang::move_construct_pre_compiled_lib(
         &mut CompilationEnv::new(Flags::empty()),
         &diem_framework::diem_stdlib_files(),
         None,
@@ -138,7 +145,7 @@ static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     .unwrap();
     match program_res {
         Ok(stdlib) => stdlib,
-        Err(errors) => {
+        Err((files, errors)) => {
             eprintln!("!!!Standard library failed to compile!!!");
             errors::report_errors(files, errors)
         }

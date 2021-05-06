@@ -84,6 +84,8 @@ pub enum PassResult {
 
 #[derive(Clone)]
 pub struct FullyCompiledProgram {
+    // TODO don't store this...
+    pub files: FilesSourceText,
     pub parser: parser::ast::Program,
     pub expansion: expansion::ast::Program,
     pub naming: naming::ast::Program,
@@ -229,11 +231,11 @@ pub fn move_construct_pre_compiled_lib(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
-) -> anyhow::Result<(FilesSourceText, Result<FullyCompiledProgram, Errors>)> {
+) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Errors)>> {
     let (files, pprog_and_comments_res) =
         move_parse(&[], deps, interface_files_dir_opt, sources_shadow_deps)?;
     let (_comments, pprog) = match pprog_and_comments_res {
-        Err(errors) => return Ok((files, Err(errors))),
+        Err(errors) => return Ok(Err((files, errors))),
         Ok(res) => res,
     };
 
@@ -285,8 +287,10 @@ pub fn move_construct_pre_compiled_lib(
             compiled = Some(units.clone())
         }
     };
-    let result = run(compilation_env, None, start, Pass::Compilation, save_result).map(|_| {
-        FullyCompiledProgram {
+    match run(compilation_env, None, start, Pass::Compilation, save_result) {
+        Err(errors) => Ok(Err((files, errors))),
+        Ok(_) => Ok(Ok(FullyCompiledProgram {
+            files,
             parser: parser.unwrap(),
             expansion: expansion.unwrap(),
             naming: naming.unwrap(),
@@ -294,10 +298,8 @@ pub fn move_construct_pre_compiled_lib(
             hlir: hlir.unwrap(),
             cfgir: cfgir.unwrap(),
             compiled: compiled.unwrap(),
-        }
-    });
-
-    Ok((files, result))
+        })),
+    }
 }
 
 /// Runs the compiler from a previous result until a stopping point.
