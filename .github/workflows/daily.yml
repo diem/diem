@@ -121,6 +121,16 @@ jobs:
       - name: replay transactions
         run: |
           cargo run --release --bin db-restore -- --concurrent-downloads 2 --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
+      - uses: diem/actions/create-issue@04f4286ca22e4b9efbc5eb49a20e2e5389c5318b
+        if: ${{ failure() }}
+        env:
+          JOB_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: "DB restore in transaction replay failed"
+          body: "Found db-restore failure in job ${{ env.JOB_URL }}"
+          assignees: "msmouse"
+          labels: "storage"
       - uses: ./.github/actions/build-teardown
 
   json-rpc-backward-compat-test:
