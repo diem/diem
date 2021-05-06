@@ -1,11 +1,11 @@
+// separate_baseline: cvc4
+// TODO(cvc4): cvc4 produces a false positive
 module 0x42::TestBCS {
     use 0x1::BCS;
-
 
     spec module {
         pragma verify = true;
     }
-
 
     fun bcs_test1<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
     {

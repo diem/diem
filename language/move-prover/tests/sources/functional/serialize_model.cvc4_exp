@@ -1,0 +1,46 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/serialize_model.move:21:9 ───
+    │
+ 21 │         ensures len(result_1) > 0 ==> result_1[0] <= max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/serialize_model.move:21
+    =     at tests/sources/functional/serialize_model.move:10: bcs_test1
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:12: bcs_test1
+    =         s1 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:13: bcs_test1
+    =         s2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:14: bcs_test1
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:15: bcs_test1
+    =     at tests/sources/functional/serialize_model.move:17
+    =     at tests/sources/functional/serialize_model.move:18
+    =     at tests/sources/functional/serialize_model.move:19
+    =     at tests/sources/functional/serialize_model.move:21
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/serialize_model.move:34:9 ───
+    │
+ 34 │         ensures result_1 == result_2;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/serialize_model.move:35
+    =     at tests/sources/functional/serialize_model.move:26: bcs_test1_incorrect
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:28: bcs_test1_incorrect
+    =         s1 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:29: bcs_test1_incorrect
+    =         s2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:30: bcs_test1_incorrect
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:31: bcs_test1_incorrect
+    =     at tests/sources/functional/serialize_model.move:33
+    =     at tests/sources/functional/serialize_model.move:34

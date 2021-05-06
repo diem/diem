@@ -1,0 +1,103 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/simple_vector_client.move:282:9 ───
+     │
+ 282 │         ensures exists x in result_1: x == 1;
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/simple_vector_client.move:264: test_contains
+     =         ev1 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:265: test_contains
+     =     at tests/sources/functional/simple_vector_client.move:266: test_contains
+     =     at tests/sources/functional/simple_vector_client.move:267: test_contains
+     =     at tests/sources/functional/simple_vector_client.move:268: test_contains
+     =     at tests/sources/functional/simple_vector_client.move:269: test_contains
+     =         <redacted> = <redacted>
+     =         <redacted> = <redacted>
+     =         b1 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:270: test_contains
+     =         <redacted> = <redacted>
+     =         <redacted> = <redacted>
+     =         b2 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:271: test_contains
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =         result_3 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:272: test_contains
+     =     at tests/sources/functional/simple_vector_client.move:274
+     =     at tests/sources/functional/simple_vector_client.move:275
+     =     at tests/sources/functional/simple_vector_client.move:276
+     =     at tests/sources/functional/simple_vector_client.move:277
+     =     at tests/sources/functional/simple_vector_client.move:278
+     =     at tests/sources/functional/simple_vector_client.move:279
+     =     at tests/sources/functional/simple_vector_client.move:280
+     =     at tests/sources/functional/simple_vector_client.move:281
+     =     at tests/sources/functional/simple_vector_client.move:282
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/simple_vector_client.move:94:9 ───
+    │
+ 94 │         ensures result_1 != result_2;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/simple_vector_client.move:87: test_neq2
+    =         ev1 = <redacted>
+    =     at tests/sources/functional/simple_vector_client.move:88: test_neq2
+    =         ev2 = <redacted>
+    =     at tests/sources/functional/simple_vector_client.move:89: test_neq2
+    =     at tests/sources/functional/simple_vector_client.move:90: test_neq2
+    =     at tests/sources/functional/simple_vector_client.move:91: test_neq2
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/simple_vector_client.move:92: test_neq2
+    =     at tests/sources/functional/simple_vector_client.move:94
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/simple_vector_client.move:138:9 ───
+     │
+ 138 │         ensures result_1 != result_2;
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/simple_vector_client.move:128: test_reverse3
+     =         ev1 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:129: test_reverse3
+     =         ev2 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:130: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:131: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:132: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:133: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:134: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:135: test_reverse3
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:136: test_reverse3
+     =     at tests/sources/functional/simple_vector_client.move:138
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/simple_vector_client.move:253:9 ───
+     │
+ 253 │         ensures result_1 != result_2[0..2];
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/simple_vector_client.move:239: test_slice
+     =         ev1 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:240: test_slice
+     =         ev2 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:241: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:242: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:243: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:244: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:245: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:246: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:247: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:248: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:249: test_slice
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =     at tests/sources/functional/simple_vector_client.move:250: test_slice
+     =     at tests/sources/functional/simple_vector_client.move:252
+     =     at tests/sources/functional/simple_vector_client.move:253

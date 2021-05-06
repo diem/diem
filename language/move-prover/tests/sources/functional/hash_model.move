@@ -1,7 +1,7 @@
+// separate_baseline: cvc4
+// TODO(cvc4): cvc4 produces false positives.
 module 0x42::TestHash {
     use 0x1::Hash;
-
-
     spec module {
         pragma verify = true;
     }

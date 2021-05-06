@@ -25,21 +25,37 @@ set of tests which are run with a specific configuration. By default, when `carg
 is executed in the prover crate, all groups are executed.
 
 There is one group called `cvc4` which contains the enabled tests for CVC4. This group
-is configured as follows at this early point:
+is configured as follows at this point:
 
-- Only test sources are included which have the marker `// also_include_for: cvc4` in the source.
+- Only unit tests contained in `move-prover/tests` are included. Diem framework tests
+  are skipped.
 - Those tests are only run locally and nightly, but not in CI.
-- CVC4 tests have there own separate baseline (`source.cvc4_exp`)
+- By default, cvc4 tests share the same baseline (`.exp` file) with the `default` test group
+  which uses [Z3].
+- Some cvc4 tests have their separate baseline, which is indicated by the
+  tag `// separate_baseline: cvc4` in the source. Those tests represent cases where
+  there is an issue (most of the time false positives); in some cases those are also legit
+  differences resulting from different choices in the model.
 
-> TODO: The current set of enabled tests needs to be reviewed regards verification
-> outcome, and more should be added. Once we have passed the unit tests,
-> we can change the feature group to be inclusive, which means every test is included
-> (also Diem) unless disabled explicitly. For the configuration logic, see the
-> [testsuite.rs](../../tests/testsuite.rs) code.
+For the configuration logic, see the [testsuite.rs](../../tests/testsuite.rs) code.
 
 During development, it is often useful to focus on only running a specific test group.
 This is done using `MVP_TEST_FEATURE=cvc4 cargo test`. For documentation of all test parameters, see
 [here](../../tests/README.md).
+
+## Obtaining the smtlib file
+
+In order to analyze a problem based on the smtlib file Boogie generates for it, use the following
+command line:
+
+```shell
+# mvp --generate-smt [ --verify-only <function-name> ] source.move
+
+```
+
+This will generate a file ending with `.smt` for each function in the Move source. The content
+of those files is hermetic and contains all the settings which have been passed from upstream
+to the solver.
 
 ## Specializing the Encoding for CVC4
 

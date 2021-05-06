@@ -66,6 +66,7 @@ struct Feature {
 #[derive(Clone, Copy)]
 enum InclusionMode {
     /// Only a test which has the comment `// also_include_for: <feature>` will be included.
+    #[allow(dead_code)]
     Explicit,
     /// Every test will be included unless it has the comment `// exclude_for: <feature>`.
     Implicit,
@@ -90,10 +91,10 @@ fn get_features() -> &'static [Feature] {
             Feature {
                 name: "cvc4",
                 flags: &["--use-cvc4"],
-                inclusion_mode: InclusionMode::Explicit,
+                inclusion_mode: InclusionMode::Implicit,
                 enable_in_ci: false, // Do not enable in CI until we have more data about stability
                 only_if_requested: false,
-                separate_baseline: true,
+                separate_baseline: false,
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("cvc4")),
                 enabling_condition: |group, _| group == "unit",
             },
@@ -113,7 +114,7 @@ fn get_feature_by_name(name: &str) -> &'static Feature {
 /// Test runner for a given feature.
 fn test_runner_for_feature(path: &Path, feature: &Feature) -> datatest_stable::Result<()> {
     // Use the below + `cargo test -- --test-threads=1` to identify a long running test
-    //println!(">>> testing {}", path.to_string_lossy().to_string());
+    // println!(">>> testing {}", path.to_string_lossy().to_string());
 
     info!(
         "testing {} with feature `{}` (flags = `{}`)",
@@ -202,9 +203,12 @@ fn get_flags_and_baseline(
         if path_str.contains("diem-framework/") || path_str.contains("move-stdlib/") {
             (stdlib_test_flags, None)
         } else {
+            let feature_name = feature.name.to_string();
+            let separate_baseline = feature.separate_baseline
+                || extract_test_directives(path, "// separate_baseline: ")?.contains(&feature_name);
             (
                 REGULAR_TEST_FLAGS,
-                Some(path.with_extension(if feature.separate_baseline {
+                Some(path.with_extension(if separate_baseline {
                     format!("{}_exp", feature.name)
                 } else {
                     "exp".to_string()

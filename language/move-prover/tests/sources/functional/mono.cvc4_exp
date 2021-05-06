@@ -1,0 +1,111 @@
+Move prover returns: exiting with boogie verification errors
+error: function does not emit the expected event
+
+    ┌── tests/sources/functional/mono.move:62:9 ───
+    │
+ 62 │         emits E{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:58: use_event
+    =         handle = <redacted>
+    =     at tests/sources/functional/mono.move:59: use_event
+    =         handle = <redacted>
+    =     at tests/sources/functional/mono.move:60: use_event
+    =     at tests/sources/functional/mono.move:62
+
+error: emitted event not covered by any of the `emits` clauses
+
+    ┌── tests/sources/functional/mono.move:61:5 ───
+    │
+ 61 │ ╭     spec fun use_event {
+ 62 │ │         emits E{msg: 0} to handle;
+ 63 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/mono.move:58: use_event
+    =         handle = <redacted>
+    =     at tests/sources/functional/mono.move:59: use_event
+    =         handle = <redacted>
+    =     at tests/sources/functional/mono.move:60: use_event
+    =     at tests/sources/functional/mono.move:62
+    =     at tests/sources/functional/mono.move:61
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:71:25 ───
+    │
+ 71 │     spec fun vec_addr { ensures result[0] != @0x1; }
+    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:71
+    =     at tests/sources/functional/mono.move:70: vec_addr
+    =         x = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:71
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:73:25 ───
+    │
+ 73 │     spec fun vec_bool { ensures result[0] != true; }
+    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:73
+    =     at tests/sources/functional/mono.move:72: vec_bool
+    =         x = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:73
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:69:24 ───
+    │
+ 69 │     spec fun vec_int { ensures result[0] != 1; }
+    │                        ^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:69
+    =     at tests/sources/functional/mono.move:68: vec_int
+    =         x = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:69
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:77:32 ───
+    │
+ 77 │     spec fun vec_struct_addr { ensures result[0].x != @0x1; }
+    │                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:77
+    =     at tests/sources/functional/mono.move:76: vec_struct_addr
+    =         x = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:77
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:75:31 ───
+    │
+ 75 │     spec fun vec_struct_int { ensures result[0].x != 1; }
+    │                               ^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:75
+    =     at tests/sources/functional/mono.move:74: vec_struct_int
+    =         x = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:75
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/mono.move:82:24 ───
+    │
+ 82 │     spec fun vec_vec { ensures len(result[0]) != 0; }
+    │                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mono.move:82
+    =     at tests/sources/functional/mono.move:79: vec_vec
+    =         x = <redacted>
+    =     at tests/sources/functional/mono.move:80: vec_vec
+    =         result = <redacted>
+    =     at tests/sources/functional/mono.move:81: vec_vec
+    =     at tests/sources/functional/mono.move:82

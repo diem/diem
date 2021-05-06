@@ -1,6 +1,6 @@
 module 0x42::TestResources {
-    use 0x1::Signer;
 
+    use 0x1::Signer;
     spec module {
         pragma verify = true;
     }

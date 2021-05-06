@@ -179,10 +179,11 @@ jobs:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
-      - name: Run the prover tests with the inconsistency check
+      - name: Run the prover tests with the inconsistency check and other nightly checks
         run: |
           cd /opt/git/diem/
           MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
+          MVP_TEST_FEATURE=cvc4 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
           sccache -s
       - uses: ./.github/actions/slack-file
         with:

@@ -1,5 +1,5 @@
-// also_include_for: cvc4
 module 0x42::TestAbortsIf {
+
     spec module {
         pragma verify = true;
     }

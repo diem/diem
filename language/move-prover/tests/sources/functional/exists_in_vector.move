@@ -1,7 +1,7 @@
 // This file contain various test cases for existentially quantifying vectors.
 module 0x42::VectorExists {
-    use 0x1::Vector;
 
+    use 0x1::Vector;
     spec module {
         define e_in_v_vec(e: u64, v: vector<u64>): bool {
             exists x in v: x == e

@@ -1,13 +1,13 @@
+// separate_baseline: cvc4
+// TODO(cvc4): cvc4 produces false positives caused by emit specs (like the basic test `emits.move`)
 module 0x42::TestMonomorphization {
     use 0x1::Signer;
     use 0x1::BCS;
     use 0x1::Event;
     use 0x1::Vector;
 
-    struct R<T: store> has key {
-        x: T,
-        y: T
-    }
+    struct R<T: store> has key { x: T, y: T }
+
 
     public fun pack_R(): R<u64> {
         R{x: 1, y: 2}

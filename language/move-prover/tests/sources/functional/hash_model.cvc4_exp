@@ -1,0 +1,94 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model.move:25:9 ───
+    │
+ 25 │         ensures len(result_1) > 0 ==> result_1[0] <= max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model.move:25
+    =     at tests/sources/functional/hash_model.move:13: hash_test1
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:15: hash_test1
+    =         h1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:16: hash_test1
+    =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:17: hash_test1
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:18: hash_test1
+    =     at tests/sources/functional/hash_model.move:20
+    =     at tests/sources/functional/hash_model.move:21
+    =     at tests/sources/functional/hash_model.move:22
+    =     at tests/sources/functional/hash_model.move:23
+    =     at tests/sources/functional/hash_model.move:25
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model.move:48:9 ───
+    │
+ 48 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model.move:48
+    =     at tests/sources/functional/hash_model.move:39: hash_test1_incorrect
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:41: hash_test1_incorrect
+    =         h1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:42: hash_test1_incorrect
+    =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:43: hash_test1_incorrect
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:44: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:46
+    =     at tests/sources/functional/hash_model.move:48
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model.move:91:9 ───
+    │
+ 91 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model.move:91
+    =     at tests/sources/functional/hash_model.move:82: hash_test2_incorrect
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:84: hash_test2_incorrect
+    =         h1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:85: hash_test2_incorrect
+    =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:86: hash_test2_incorrect
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:87: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:89
+    =     at tests/sources/functional/hash_model.move:91
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model.move:68:9 ───
+    │
+ 68 │         ensures len(result_1) > 0 ==> result_1[0] <= max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model.move:68
+    =     at tests/sources/functional/hash_model.move:56: hash_test3
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:58: hash_test3
+    =         h1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:59: hash_test3
+    =         h2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:60: hash_test3
+    =         result_1 = <redacted>
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:61: hash_test3
+    =     at tests/sources/functional/hash_model.move:63
+    =     at tests/sources/functional/hash_model.move:64
+    =     at tests/sources/functional/hash_model.move:65
+    =     at tests/sources/functional/hash_model.move:66
+    =     at tests/sources/functional/hash_model.move:68

@@ -1,7 +1,7 @@
-// This file consists of test cases for invariants with hand-written triggers.
+// exclude_for: cvc4
+// TODO(cvc4): this leads to non-termination with cvc4.
 module 0x42::TestQuantInvariant {
     use 0x1::Vector;
-
     spec module {
         pragma verify = true;
     }

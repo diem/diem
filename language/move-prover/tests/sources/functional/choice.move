@@ -1,13 +1,13 @@
-// also_include_for: cvc4
+// separate_baseline: cvc4
+// TODO(cvc4): this test requires a separate baseline because cvc4 produces false positives for some of choices
 module 0x42::TestSome {
     use 0x1::Signer;
     use 0x1::Vector;
+
     // Basic tests
     // ===========
 
-    fun simple(): u64 {
-        4
-    }
+    fun simple(): u64 { 4 }
     spec fun simple {
         ensures result <= (choose x: u64 where x >= 4);
     }

@@ -1,0 +1,135 @@
+Move prover returns: exiting with boogie verification errors
+error: unknown assertion failed
+
+     ┌── tests/sources/functional/verify_vector.move:255:12 ───
+     │
+ 255 │            assert !(exists x in v: x==e);
+     │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:261
+     =     at tests/sources/functional/verify_vector.move:242: verify_contains
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:243: verify_contains
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:244: verify_contains
+     =         len = <redacted>
+     =     at tests/sources/functional/verify_vector.move:246: verify_contains
+     =     at tests/sources/functional/verify_vector.move:247: verify_contains
+     =     at tests/sources/functional/verify_vector.move:249: verify_contains
+     =     at tests/sources/functional/verify_vector.move:245: verify_contains
+     =     at tests/sources/functional/verify_vector.move:255: verify_contains
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:247:16 ───
+     │
+ 247 │                assert !(exists j in 0..i: v[j]==e);
+     │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:261
+     =     at tests/sources/functional/verify_vector.move:242: verify_contains
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:243: verify_contains
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:244: verify_contains
+     =         len = <redacted>
+     =     at tests/sources/functional/verify_vector.move:246: verify_contains
+     =     at tests/sources/functional/verify_vector.move:247: verify_contains
+     =     at tests/sources/functional/verify_vector.move:249: verify_contains
+     =     at tests/sources/functional/verify_vector.move:245: verify_contains
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:247: verify_contains
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:213:17 ───
+     │
+ 213 │                 assert !(exists j in 0..i: v[j]==e);
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:227
+     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =         len = <redacted>
+     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:224:9 ───
+     │
+ 224 │         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:227
+     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =         len = <redacted>
+     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =     at tests/sources/functional/verify_vector.move:223
+     =     at tests/sources/functional/verify_vector.move:224
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:226:9 ───
+     │
+ 226 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:227
+     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =         len = <redacted>
+     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =     at tests/sources/functional/verify_vector.move:223
+     =     at tests/sources/functional/verify_vector.move:224
+     =     at tests/sources/functional/verify_vector.move:225
+     =     at tests/sources/functional/verify_vector.move:226
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:237:9 ───
+     │
+ 237 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:238
+     =     at tests/sources/functional/verify_vector.move:230: verify_model_index_of
+     =         v = <redacted>
+     =         e = <redacted>
+     =     at tests/sources/functional/verify_vector.move:231: verify_model_index_of
+     =         result_1 = <redacted>
+     =         result_2 = <redacted>
+     =     at tests/sources/functional/verify_vector.move:232: verify_model_index_of
+     =     at tests/sources/functional/verify_vector.move:234
+     =     at tests/sources/functional/verify_vector.move:235
+     =     at tests/sources/functional/verify_vector.move:236
+     =     at tests/sources/functional/verify_vector.move:237

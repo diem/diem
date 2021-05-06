@@ -1,0 +1,30 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/invariants_resources.move:23:9 ───
+    │
+ 23 │         ensures result > 0;
+    │         ^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/invariants_resources.move:23
+    =     at tests/sources/functional/invariants_resources.move:19: get
+    =         a = <redacted>
+    =     at tests/sources/functional/invariants_resources.move:20: get
+    =         result = <redacted>
+    =     at tests/sources/functional/invariants_resources.move:21: get
+    =     at tests/sources/functional/invariants_resources.move:23
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/invariants_resources.move:31:9 ───
+    │
+ 31 │         ensures result < 1;
+    │         ^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/invariants_resources.move:31
+    =     at tests/sources/functional/invariants_resources.move:27: get_invalid
+    =         a = <redacted>
+    =     at tests/sources/functional/invariants_resources.move:28: get_invalid
+    =         result = <redacted>
+    =     at tests/sources/functional/invariants_resources.move:29: get_invalid
+    =     at tests/sources/functional/invariants_resources.move:31
