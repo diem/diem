@@ -4598,7 +4598,6 @@ name = "move-unit-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytecode",
  "bytecode-interpreter",
  "colored",
  "datatest-stable",

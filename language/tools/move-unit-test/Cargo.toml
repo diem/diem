@@ -25,7 +25,6 @@ move-vm-test-utils = { path = "../../move-vm/test-utils" }
 resource-viewer = { path = "../resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }
 move-model = { path = "../../move-model" }
-bytecode = { path = "../../move-prover/bytecode" }
 bytecode-interpreter = { path = "../../move-prover/interpreter" }
 
 [dev-dependencies]

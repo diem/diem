@@ -476,12 +476,9 @@ impl<'env> FunctionContext<'env> {
                 self.handle_destroy(srcs[0], local_state);
                 Ok(vec![])
             }
-            Operation::Stop(label) => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 0);
-                }
-                local_state.set_pc(self.code_offset_by_label(*label));
-                Ok(vec![])
+            Operation::Stop => {
+                // we should never see the Stop operation in interpreter mode
+                unreachable!()
             }
             // cast
             Operation::CastU8 | Operation::CastU64 | Operation::CastU128 => {

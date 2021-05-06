@@ -75,6 +75,8 @@ pub struct ProverOptions {
     pub run_mono: bool,
     /// Whether to use new global invariant checking
     pub invariants_v2: bool,
+    /// Whether to run the transformation passes for concrete interpretation (instead of proving)
+    pub for_interpretation: bool,
 }
 
 impl Default for ProverOptions {
@@ -100,6 +102,7 @@ impl Default for ProverOptions {
             weak_edges: false,
             run_mono: true,
             invariants_v2: false,
+            for_interpretation: false,
         }
     }
 }

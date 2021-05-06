@@ -1199,7 +1199,7 @@ impl<'env> FunctionTranslator<'env> {
                             emitln!(writer, &check);
                         }
                     }
-                    Stop(_) => {
+                    Stop => {
                         // the two statements combined terminate any execution trace that reaches it
                         emitln!(writer, "assume false;");
                         emitln!(writer, "return;");

@@ -4,7 +4,11 @@
 use anyhow::{bail, Result};
 use structopt::StructOpt;
 
-use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder};
+use bytecode::{
+    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    options::ProverOptions,
+    pipeline_factory::default_pipeline_with_options,
+};
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -74,7 +78,6 @@ struct ExecutionResult {
 pub fn interpret_with_options(
     options: InterpreterOptions,
     env: &GlobalEnv,
-    pipeline: FunctionTargetPipeline,
 ) -> VMResult<Vec<Vec<u8>>> {
     // consolidate arguments
     let args: Vec<_> = options
@@ -94,15 +97,31 @@ pub fn interpret_with_options(
         .collect();
 
     // run the actual interpreter
-    interpret(
+    interpret_with_default_pipeline(
         env,
         &options.entrypoint.0,
         &options.entrypoint.1,
         &options.ty_args,
         &args,
-        pipeline,
         options.verbose,
     )
+}
+
+pub fn interpret_with_default_pipeline(
+    env: &GlobalEnv,
+    module_id: &ModuleId,
+    func_name: &IdentStr,
+    ty_args: &[TypeTag],
+    args: &[MoveValue],
+    verbose: bool,
+) -> VMResult<Vec<Vec<u8>>> {
+    let options = ProverOptions {
+        for_interpretation: true,
+        ..Default::default()
+    };
+    let pipeline = default_pipeline_with_options(&options);
+    env.set_extension(options);
+    interpret(env, module_id, func_name, ty_args, args, pipeline, verbose)
 }
 
 pub fn interpret(

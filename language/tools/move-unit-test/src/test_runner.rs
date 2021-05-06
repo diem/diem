@@ -6,7 +6,6 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestStatistics},
 };
 use anyhow::Result;
-use bytecode::pipeline_factory::default_pipeline;
 use colored::*;
 use move_binary_format::{
     errors::{PartialVMError, VMResult},
@@ -165,14 +164,12 @@ impl SharedTestingConfig {
         function_name: &str,
         test_info: &TestCase,
     ) -> VMResult<Vec<Vec<u8>>> {
-        let pipeline = default_pipeline();
-        bytecode_interpreter::interpret(
+        bytecode_interpreter::interpret_with_default_pipeline(
             env,
             &test_plan.module_id,
             &IdentStr::new(function_name).unwrap(),
             &[], // no ty args, at least for now
             &test_info.arguments,
-            pipeline,
             self.verbose,
         )
     }

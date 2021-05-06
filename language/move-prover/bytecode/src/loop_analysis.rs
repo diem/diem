@@ -6,6 +6,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::{Graph, NaturalLoop},
+    options::ProverOptions,
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
@@ -111,6 +112,8 @@ impl LoopAnalysisProcessor {
         data: FunctionData,
         loop_annotation: &LoopAnnotation,
     ) -> FunctionData {
+        let options = ProverOptions::get(func_env.module_env.env);
+
         let back_edge_locs = loop_annotation.back_edges_locations();
         let invariant_locs = loop_annotation.invariants_locations();
         let mut builder = FunctionDataBuilder::new_with_options(
@@ -220,9 +223,13 @@ impl LoopAnalysisProcessor {
                 builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assert, exp.clone()));
             }
 
-            // stop the checking
+            // stop the checking in proving mode (branch back to loop header for interpretation mode)
             builder.emit_with(|attr_id| {
-                Bytecode::Call(attr_id, vec![], Operation::Stop(*label), vec![], None)
+                if options.for_interpretation {
+                    Bytecode::Jump(attr_id, *label)
+                } else {
+                    Bytecode::Call(attr_id, vec![], Operation::Stop, vec![], None)
+                }
             });
         }
 
