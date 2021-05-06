@@ -44,15 +44,14 @@ impl<'a> MoveSourceCompiler<'a> {
         errors::FilesSourceText,
         Result<Vec<CompiledUnit>, errors::Errors>,
     )> {
-        let (files, pprog_and_comments_res) = move_lang::move_parse(
-            targets, &self.deps, None, /* sources_shadow_deps */ true,
-        )?;
+        let mut compilation_env = CompilationEnv::new(Flags::empty());
+        let (files, pprog_and_comments_res) =
+            move_lang::move_parse(&compilation_env, targets, &self.deps, None)?;
         let (_comments, pprog) = match pprog_and_comments_res {
             Err(errors) => return Ok((files, Err(errors))),
             Ok(res) => res,
         };
 
-        let mut compilation_env = CompilationEnv::new(Flags::empty());
         let result = match move_lang::move_continue_up_to(
             &mut compilation_env,
             Some(&self.pre_compiled_deps),
@@ -137,10 +136,9 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
 
 static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     let program_res = move_lang::move_construct_pre_compiled_lib(
-        &mut CompilationEnv::new(Flags::empty()),
+        &mut CompilationEnv::new(Flags::empty().set_sources_shadow_deps(false)),
         &diem_framework::diem_stdlib_files(),
         None,
-        false,
     )
     .unwrap();
     match program_res {

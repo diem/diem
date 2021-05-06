@@ -87,7 +87,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
 
 pub(crate) fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_files, compiled_units) =
-        move_compile_and_report(&diem_stdlib_files(), &[], None, false, Flags::empty()).unwrap();
+        move_compile_and_report(&diem_stdlib_files(), &[], None, Flags::empty()).unwrap();
     let mut modules = BTreeMap::new();
     for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
         let name = compiled_unit.name();

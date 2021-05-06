@@ -311,19 +311,45 @@ pub struct Flags {
         long = cli::TEST,
     )]
     test: bool,
+
+    /// If set, do not allow modules defined in source_files to shadow modules of the same id that
+    /// exist in dependencies. Checking will fail in this case.
+    #[structopt(
+        name = "SOURCES_DO_NOT_SHADOW_DEPS",
+        short = cli::NO_SHADOW_SHORT,
+        long = cli::NO_SHADOW,
+    )]
+    no_shadow: bool,
 }
 
 impl Flags {
     pub fn empty() -> Self {
-        Self { test: false }
+        Self {
+            test: false,
+            no_shadow: false,
+        }
     }
 
     pub fn testing() -> Self {
-        Self { test: true }
+        Self {
+            test: true,
+            no_shadow: false,
+        }
+    }
+
+    pub fn set_sources_shadow_deps(self, sources_shadow_deps: bool) -> Self {
+        Self {
+            no_shadow: !sources_shadow_deps,
+            ..self
+        }
     }
 
     pub fn is_testing(&self) -> bool {
         self.test
+    }
+
+    pub fn sources_shadow_deps(&self) -> bool {
+        !self.no_shadow
     }
 }
 

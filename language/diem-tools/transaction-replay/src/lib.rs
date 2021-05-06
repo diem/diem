@@ -399,8 +399,7 @@ fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
         targets,
         &diem_framework::diem_stdlib_files(),
         None,
-        false,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(false),
     )?;
     let unit = match units_or_errors {
         Err(errors) => {

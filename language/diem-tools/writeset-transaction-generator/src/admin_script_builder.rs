@@ -21,8 +21,7 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
         &[source_file_str],
         &diem_framework::diem_stdlib_files(),
         None,
-        false,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(false),
     )
     .unwrap();
     let mut script_bytes = vec![];

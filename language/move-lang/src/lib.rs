@@ -97,10 +97,6 @@ pub struct FullyCompiledProgram {
 
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
-/// - If the `sources_shadow_deps` flag is set, modules defined in targets can shadow (i.e.,
-///   override) the modules in dependencies, and the checker will not complain about it. In other
-///   words, if the same module id (<address::name>) is found in both targets and dependencies, the
-///   module definition in targets takes priority.
 /// Does not run compile to Move bytecode
 /// Very large programs might fail on compilation even though they have been checked due to size
 ///   limitations of the Move bytecode
@@ -108,12 +104,11 @@ pub fn move_check(
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
     flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
     let mut compilation_env = CompilationEnv::new(flags);
     let (files, pprog_and_comments_res) =
-        move_parse(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
+        move_parse(&compilation_env, targets, deps, interface_files_dir_opt)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
@@ -137,16 +132,9 @@ pub fn move_check_and_report(
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
     flags: Flags,
 ) -> anyhow::Result<FilesSourceText> {
-    let (files, errors_result) = move_check(
-        targets,
-        deps,
-        interface_files_dir_opt,
-        sources_shadow_deps,
-        flags,
-    )?;
+    let (files, errors_result) = move_check(targets, deps, interface_files_dir_opt, flags)?;
     unwrap_or_report_errors!(files, errors_result);
     Ok(files)
 }
@@ -154,21 +142,17 @@ pub fn move_check_and_report(
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
 /// - Compiles the targets to Move bytecode
-/// - If the `sources_shadow_deps` flag is set, modules defined in targets can shadow (i.e.,
-///   override) the modules in dependencies. In other words, if the same module id (<address::name>)
-///   is found in both targets and dependencies, the module definition in targets takes priority.
-/// Does not run the Move bytecode verifier on the compiled targets, as the Move front end should
+/// - Does not run the Move bytecode verifier on the compiled targets, as the Move front end should
 ///   be more restrictive
 pub fn move_compile(
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
     flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
     let mut compilation_env = CompilationEnv::new(flags);
     let (files, pprog_and_comments_res) =
-        move_parse(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
+        move_parse(&compilation_env, targets, deps, interface_files_dir_opt)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
@@ -192,16 +176,9 @@ pub fn move_compile_and_report(
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
     flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, units_res) = move_compile(
-        targets,
-        deps,
-        interface_files_dir_opt,
-        sources_shadow_deps,
-        flags,
-    )?;
+    let (files, units_res) = move_compile(targets, deps, interface_files_dir_opt, flags)?;
     let units = unwrap_or_report_errors!(files, units_res);
     Ok((files, units))
 }
@@ -209,17 +186,17 @@ pub fn move_compile_and_report(
 /// Given a set of targets and a set of dependencies, produces a `parser::ast::Program` along side a
 /// `CommentMap`. The `sender_opt` is returned for ease of use with `PassResult::Parser`
 pub fn move_parse(
+    compilation_env: &CompilationEnv,
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(CommentMap, parser::ast::Program), Errors>,
 )> {
     let mut deps = deps.to_vec();
     generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
-    let (files, pprog_and_comments_res) = parse_program(targets, &deps, sources_shadow_deps)?;
+    let (files, pprog_and_comments_res) = parse_program(compilation_env, targets, &deps)?;
     let result = pprog_and_comments_res.map(|(pprog, comments)| (comments, pprog));
     Ok((files, result))
 }
@@ -230,10 +207,9 @@ pub fn move_construct_pre_compiled_lib(
     compilation_env: &mut CompilationEnv,
     deps: &[String],
     interface_files_dir_opt: Option<String>,
-    sources_shadow_deps: bool,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Errors)>> {
     let (files, pprog_and_comments_res) =
-        move_parse(&[], deps, interface_files_dir_opt, sources_shadow_deps)?;
+        move_parse(compilation_env, &[], deps, interface_files_dir_opt)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok(Err((files, errors))),
         Ok(res) => res,
@@ -488,55 +464,6 @@ pub fn generate_interface_files(
     Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
 }
 
-/// Given a parsed program, if a module id is found in both the source and lib definitions, filter
-/// out the lib definition and re-construct a new parsed program
-fn shadow_lib_module_definitions(pprog: parser::ast::Program) -> parser::ast::Program {
-    let parser::ast::Program {
-        source_definitions,
-        lib_definitions,
-    } = pprog;
-    let mut modules_defined_in_src = BTreeSet::new();
-    for def in &source_definitions {
-        match def {
-            parser::ast::Definition::Address(_, _, addr, modules) => {
-                for module in modules {
-                    modules_defined_in_src.insert((*addr, module.name.clone()));
-                }
-            }
-            parser::ast::Definition::Module(module) => {
-                modules_defined_in_src.insert((
-                    module.address.map(|a| a.value).unwrap_or_default(),
-                    module.name.clone(),
-                ));
-            }
-            parser::ast::Definition::Script(_) => (),
-        }
-    }
-
-    // Shadow (i.e., filter out) library definitions with the following criteria
-    //  1. this library definition is an Address space AST and any module in the address space is
-    //    already defined in the source.
-    //  2. this library definition is a Module AST and the module is already defined in the source.
-    let lib_definitions = lib_definitions
-        .into_iter()
-        .filter(|def| match def {
-            parser::ast::Definition::Address(_, _, addr, modules) => !modules
-                .iter()
-                .any(|module| modules_defined_in_src.contains(&(*addr, module.name.clone()))),
-            parser::ast::Definition::Module(module) => !modules_defined_in_src.contains(&(
-                module.address.map(|a| a.value).unwrap_or_default(),
-                module.name.clone(),
-            )),
-            parser::ast::Definition::Script(_) => false,
-        })
-        .collect();
-
-    parser::ast::Program {
-        source_definitions,
-        lib_definitions,
-    }
-}
-
 fn has_compiled_module_magic_number(path: &str) -> bool {
     use move_binary_format::file_format_common::BinaryConstants;
     let mut file = match File::open(path) {
@@ -597,6 +524,7 @@ fn run(
 
     match cur {
         PassResult::Parser(prog) => {
+            let prog = parser::sources_shadow_deps::program(compilation_env, prog);
             let prog = unit_test::filter_test_members::program(compilation_env, prog);
             let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
             run(
@@ -671,9 +599,9 @@ fn run(
 //**************************************************************************************************
 
 fn parse_program(
+    compilation_env: &CompilationEnv,
     targets: &[String],
     deps: &[String],
-    sources_shadow_deps: bool,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
@@ -686,7 +614,7 @@ fn parse_program(
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
-    ensure_targets_deps_dont_intersect(&targets, &mut deps, sources_shadow_deps)?;
+    ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -711,11 +639,6 @@ fn parse_program(
             source_definitions,
             lib_definitions,
         };
-        let pprog = if sources_shadow_deps {
-            shadow_lib_module_definitions(pprog)
-        } else {
-            pprog
-        };
         Ok((pprog, source_comments))
     } else {
         Err(errors)
@@ -724,9 +647,9 @@ fn parse_program(
 }
 
 fn ensure_targets_deps_dont_intersect(
+    compilation_env: &CompilationEnv,
     targets: &[&'static str],
     deps: &mut Vec<&'static str>,
-    sources_shadow_deps: bool,
 ) -> anyhow::Result<()> {
     /// Canonicalize a file path.
     fn canonicalize(path: &str) -> String {
@@ -747,7 +670,7 @@ fn ensure_targets_deps_dont_intersect(
     if intersection.is_empty() {
         return Ok(());
     }
-    if sources_shadow_deps {
+    if compilation_env.flags().sources_shadow_deps() {
         deps.retain(|fname| !intersection.contains(&&canonicalize(fname)));
         return Ok(());
     }

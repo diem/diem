@@ -61,14 +61,11 @@ pub fn run_model_builder_with_compilation_flags(
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
+    let mut compilation_env = CompilationEnv::new(flags.clone());
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
-    let (files, pprog_and_comments_res) = move_parse(
-        move_sources,
-        deps_dir,
-        None,
-        /* sources_shadow_deps */ true,
-    )?;
+    let (files, pprog_and_comments_res) =
+        move_parse(&compilation_env, move_sources, deps_dir, None)?;
     let (comment_map, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             // Add source files so that the env knows how to translate locations of parse errors
@@ -104,7 +101,7 @@ pub fn run_model_builder_with_compilation_flags(
         .map(|(fname, _)| fname.to_owned())
         .collect();
     // Run the compiler up to expansion
-    let (_, pprog_and_comments_res) = move_parse(&all_sources, &[], None, false)?;
+    let (_, pprog_and_comments_res) = move_parse(&compilation_env, &all_sources, &[], None)?;
     let (_, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
@@ -112,7 +109,6 @@ pub fn run_model_builder_with_compilation_flags(
         }
         Ok(res) => res,
     };
-    let mut compilation_env = CompilationEnv::new(flags.clone());
     let expansion_ast = match move_continue_up_to(
         &mut compilation_env,
         None,
@@ -165,7 +161,8 @@ pub fn run_model_builder_with_compilation_flags(
     let selective_sources: Vec<_> = selective_files.into_iter().collect();
 
     // Run the compiler up to expansion and clone a copy of the expansion program ast
-    let (_, pprog_and_comments_res) = move_parse(&selective_sources, &[], None, false)?;
+    let mut compilation_env = CompilationEnv::new(flags);
+    let (_, pprog_and_comments_res) = move_parse(&compilation_env, &selective_sources, &[], None)?;
     let (_, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
@@ -173,7 +170,6 @@ pub fn run_model_builder_with_compilation_flags(
         }
         Ok(res) => res,
     };
-    let mut compilation_env = CompilationEnv::new(flags);
     let (expansion_ast, expansion_result) = match move_continue_up_to(
         &mut compilation_env,
         None,

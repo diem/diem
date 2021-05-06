@@ -131,8 +131,7 @@ impl MovePackage {
                 &[path_to_string(&pkg_src_path)?],
                 &src_dirs,
                 None,
-                false,
-                Flags::empty(),
+                Flags::empty().set_sources_shadow_deps(false),
             )?;
 
             // save modules and ignore scripts

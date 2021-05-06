@@ -5,3 +5,4 @@ mod lexer;
 pub(crate) mod syntax;
 
 pub mod ast;
+pub(crate) mod sources_shadow_deps;

@@ -33,15 +33,6 @@ pub struct Options {
     )]
     pub out_dir: String,
 
-    /// If set, do not allow modules defined in source_files to shadow modules of the same id that
-    /// exist in dependencies. Compilation will fail in this case.
-    #[structopt(
-        name = "SOURCES_DO_NOT_SHADOW_DEPS",
-        short = cli::NO_SHADOW_SHORT,
-        long = cli::NO_SHADOW,
-    )]
-    pub no_shadow: bool,
-
     /// Save bytecode source map to disk
     #[structopt(
         name = "",
@@ -59,7 +50,6 @@ pub fn main() -> anyhow::Result<()> {
         source_files,
         dependencies,
         out_dir,
-        no_shadow,
         emit_source_map,
         flags,
     } = Options::from_args();
@@ -69,7 +59,6 @@ pub fn main() -> anyhow::Result<()> {
         &source_files,
         &dependencies,
         Some(interface_files_dir),
-        !no_shadow,
         flags,
     )?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)

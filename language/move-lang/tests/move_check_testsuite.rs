@@ -86,8 +86,9 @@ fn run_test(
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let deps = move_stdlib::move_stdlib_files();
 
-    let (files, pprog_and_comments_res) = move_parse(&targets, &deps, None, false)?;
-    let errors = match move_check_for_errors(pprog_and_comments_res, flags) {
+    let compilation_env = CompilationEnv::new(flags);
+    let (files, pprog_and_comments_res) = move_parse(&compilation_env, &targets, &deps, None)?;
+    let errors = match move_check_for_errors(compilation_env, pprog_and_comments_res) {
         Err(errors) | Ok(errors) => errors,
     };
 
@@ -146,10 +147,9 @@ fn run_test(
 }
 
 fn move_check_for_errors(
+    mut compilation_env: CompilationEnv,
     pprog_and_comments_res: Result<(CommentMap, parser::ast::Program), Errors>,
-    flags: Flags,
 ) -> Result<Errors, Errors> {
-    let mut compilation_env = CompilationEnv::new(flags);
     let (_, prog) = pprog_and_comments_res?;
     let cfgir = match move_continue_up_to(
         &mut compilation_env,

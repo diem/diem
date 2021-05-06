@@ -70,7 +70,7 @@ impl UnitTestingConfig {
     pub fn build_test_plan(&self) -> Option<TestPlan> {
         let mut compilation_env = CompilationEnv::new(Flags::testing());
         let (files, pprog_and_comments_res) =
-            move_lang::move_parse(&self.source_files, &[], None, false).ok()?;
+            move_lang::move_parse(&compilation_env, &self.source_files, &[], None).ok()?;
         let (_, pprog) = move_lang::unwrap_or_report_errors!(files, pprog_and_comments_res);
         let cfgir_result = move_lang::move_continue_up_to(
             &mut compilation_env,

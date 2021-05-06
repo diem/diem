@@ -51,8 +51,7 @@ fn compile_modules() -> Vec<CompiledModule> {
         ],
         &[],
         None,
-        false,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(false),
     )
     .expect("Error compiling...");
     compiled_units

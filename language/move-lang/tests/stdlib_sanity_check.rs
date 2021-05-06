@@ -4,8 +4,13 @@
 use move_lang::{move_compile, shared::Flags};
 
 fn sanity_check_testsuite_impl(targets: Vec<String>, deps: Vec<String>) {
-    let (files, units_or_errors) =
-        move_compile(&targets, &deps, None, false, Flags::empty()).unwrap();
+    let (files, units_or_errors) = move_compile(
+        &targets,
+        &deps,
+        None,
+        Flags::empty().set_sources_shadow_deps(false),
+    )
+    .unwrap();
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

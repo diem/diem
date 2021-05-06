@@ -36,15 +36,6 @@ pub struct Options {
     )]
     pub out_dir: Option<String>,
 
-    /// If set, do not allow modules defined in source_files to shadow modules of the same id that
-    /// exist in dependencies. Checking will fail in this case.
-    #[structopt(
-        name = "SOURCES_DO_NOT_SHADOW_DEPS",
-        short = cli::NO_SHADOW_SHORT,
-        long = cli::NO_SHADOW,
-    )]
-    pub no_shadow: bool,
-
     #[structopt(flatten)]
     pub flags: Flags,
 }
@@ -54,11 +45,9 @@ pub fn main() -> anyhow::Result<()> {
         source_files,
         dependencies,
         out_dir,
-        no_shadow,
         flags,
     } = Options::from_args();
 
-    let _files =
-        move_lang::move_check_and_report(&source_files, &dependencies, out_dir, !no_shadow, flags)?;
+    let _files = move_lang::move_check_and_report(&source_files, &dependencies, out_dir, flags)?;
     Ok(())
 }

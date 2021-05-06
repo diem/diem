@@ -20,8 +20,7 @@ pub fn compile_units(s: &str) -> Result<Vec<CompiledUnit>> {
         &[file_path.to_str().unwrap().to_string()],
         &[],
         None,
-        false,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(false),
     )?;
 
     dir.close()?;
@@ -43,8 +42,7 @@ pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
         &[path.to_str().unwrap().to_string()],
         &[],
         None,
-        false,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(false),
     )?;
 
     expect_modules(units).collect()

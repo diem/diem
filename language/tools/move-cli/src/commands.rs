@@ -56,8 +56,7 @@ pub fn check(
         files,
         &[state.interface_files_dir()?],
         None,
-        republish,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(republish),
     )?;
     Ok(())
 }
@@ -77,8 +76,7 @@ pub fn publish(
         files,
         &[state.interface_files_dir()?],
         None,
-        republish,
-        Flags::empty(),
+        Flags::empty().set_sources_shadow_deps(republish),
     )?;
 
     let num_modules = compiled_units
@@ -179,8 +177,7 @@ pub fn run(
             &[script_file.to_string()],
             &[state.interface_files_dir()?],
             None,
-            false,
-            Flags::empty(),
+            Flags::empty().set_sources_shadow_deps(false),
         )?;
 
         let mut script_opt = None;
