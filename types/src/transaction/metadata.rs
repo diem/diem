@@ -115,6 +115,7 @@ pub enum RefundReason {
     InvalidSubaddress,
     UserInitiatedPartialRefund,
     UserInitiatedFullRefund,
+    InvalidReferenceId,
 }
 
 /// List of supported transaction metadata format versions for coin trade transaction

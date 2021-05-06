@@ -93,6 +93,7 @@ enum RefundReason {
   InvalidSubaddress = 1,
   UserInitiatedPartialRefund = 2,
   UserInitiatedFullRefund = 3,
+  InvalidReferenceId = 4,
 }
 ```
 
