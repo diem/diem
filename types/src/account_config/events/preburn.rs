@@ -5,7 +5,7 @@ use crate::{account_address::AccountAddress, account_config::DIEM_MODULE_NAME};
 use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +38,7 @@ impl PreburnEvent {
     }
 }
 
-impl MoveResource for PreburnEvent {
+impl MoveStructType for PreburnEvent {
     const MODULE_NAME: &'static str = DIEM_MODULE_NAME;
     const STRUCT_NAME: &'static str = "PreburnEvent";
 }

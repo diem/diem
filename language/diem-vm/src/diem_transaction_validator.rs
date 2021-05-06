@@ -19,7 +19,7 @@ use diem_types::{
 };
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
 use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Session};
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::MoveStructType;
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a BaseUrlRotationEvent.
@@ -28,7 +28,7 @@ impl BaseUrlRotationEvent {
     }
 }
 
-impl MoveResource for BaseUrlRotationEvent {
+impl MoveStructType for BaseUrlRotationEvent {
     const MODULE_NAME: &'static str = "DualAttestation";
     const STRUCT_NAME: &'static str = "BaseUrlRotationEvent";
 }

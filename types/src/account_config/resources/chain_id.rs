@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chain_id::ChainId;
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -16,7 +16,9 @@ impl ChainIdResource {
     }
 }
 
-impl MoveResource for ChainIdResource {
+impl MoveStructType for ChainIdResource {
     const MODULE_NAME: &'static str = "ChainId";
     const STRUCT_NAME: &'static str = "ChainId";
 }
+
+impl MoveResource for ChainIdResource {}

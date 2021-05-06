@@ -7,7 +7,7 @@ use crate::{
 };
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
-    move_resource::MoveResource,
+    move_resource::{MoveResource, MoveStructType},
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -45,7 +45,7 @@ impl BalanceResource {
     }
 }
 
-impl MoveResource for BalanceResource {
+impl MoveStructType for BalanceResource {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
     const STRUCT_NAME: &'static str = "Balance";
 
@@ -53,3 +53,5 @@ impl MoveResource for BalanceResource {
         vec![xus_tag()]
     }
 }
+
+impl MoveResource for BalanceResource {}

@@ -8,19 +8,19 @@ use diem_types::{
     account_state_blob::AccountStateBlob,
     contract_event::{ContractEvent, EventWithProof},
 };
-use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
+use move_core_types::{language_storage::TypeTag, move_resource::{MoveResource, MoveStructType}};
 use serde::de::DeserializeOwned;
 use std::convert::TryFrom;
 
 /// Wrapper for a deserialized Move event and its containing `ContractEvent`
 #[derive(Debug, Clone)]
-pub struct Event<T: MoveResource + DeserializeOwned> {
+pub struct Event<T: MoveStructType + DeserializeOwned> {
     /// The deserialized event type
     data: T,
     event: ContractEvent,
 }
 
-impl<T: MoveResource + DeserializeOwned> Event<T> {
+impl<T: MoveStructType + DeserializeOwned> Event<T> {
     pub fn data(&self) -> &T {
         &self.data
     }
@@ -32,7 +32,7 @@ impl<T: MoveResource + DeserializeOwned> Event<T> {
 
 /// Deserialize and return the Move events of type `T` in `events`
 /// The type `T` must match the specified event types in `events`
-pub fn get_events<T: MoveResource + DeserializeOwned>(
+pub fn get_events<T: MoveStructType + DeserializeOwned>(
     events: Vec<EventWithProofView>,
 ) -> Result<Vec<Event<T>>> {
     let events_with_proof: Vec<EventWithProof> = events
@@ -78,7 +78,7 @@ fn get_account_state(
 
 /// Deserialize and return the Move value of type `T` in `account_state_with_proof`
 /// Returns None if no resource of type `T` exists under `address`
-pub fn get_resource<T: MoveResource + DeserializeOwned>(
+pub fn get_resource<T: MoveResource>(
     account_state_with_proof: AccountStateWithProofView,
 ) -> Result<Option<T>> {
     if let Some(account_state) = get_account_state(account_state_with_proof)? {

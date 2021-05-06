@@ -6,7 +6,7 @@ use crate::account_address::AccountAddress;
 use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +39,7 @@ impl ReceivedMintEvent {
     }
 }
 
-impl MoveResource for ReceivedMintEvent {
+impl MoveStructType for ReceivedMintEvent {
     const MODULE_NAME: &'static str = "DesignatedDealer";
     const STRUCT_NAME: &'static str = "ReceivedMintEvent";
 }

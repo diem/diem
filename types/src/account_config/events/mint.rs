@@ -5,7 +5,7 @@ use crate::account_config::DIEM_MODULE_NAME;
 use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ impl MintEvent {
     }
 }
 
-impl MoveResource for MintEvent {
+impl MoveStructType for MintEvent {
     const MODULE_NAME: &'static str = DIEM_MODULE_NAME;
     const STRUCT_NAME: &'static str = "MintEvent";
 }

@@ -26,7 +26,7 @@ use diem_types::{
 use hex::FromHex;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag,
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{

@@ -21,8 +21,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_config::{
         diem_root_address, from_currency_code_string, testnet_dd_account_address,
-        treasury_compliance_account_address, type_tag_for_currency_code,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, XDX_NAME, XUS_NAME,
+        treasury_compliance_account_address, type_tag_for_currency_code, XDX_NAME, XUS_NAME,
     },
     account_state::AccountState,
     chain_id::ChainId,
@@ -1159,15 +1158,19 @@ impl ClientProxy {
             space_delim_strings.len()
         );
         let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let account_view = match self.client.get_account(&account)? {
+            None => bail!("No account found for address {:?}", account),
+            Some(account) => account,
+        };
+
         let path = match space_delim_strings[2] {
-            "sent" => ACCOUNT_SENT_EVENT_PATH.to_vec(),
-            "received" => ACCOUNT_RECEIVED_EVENT_PATH.to_vec(),
+            "sent" => account_view.sent_events_key,
+            "received" => account_view.received_events_key,
             _ => bail!(
                 "Unknown event type: {:?}, only sent and received are supported",
                 space_delim_strings[2]
             ),
         };
-        let access_path = AccessPath::new(account, path);
         let start_seq_number = space_delim_strings[3].parse::<u64>().map_err(|error| {
             format_parse_data_error(
                 "start_seq_number",
@@ -1184,8 +1187,10 @@ impl ClientProxy {
                 error,
             )
         })?;
-        self.client
-            .get_events_by_access_path(access_path, start_seq_number, limit)
+        Ok((
+            self.client.get_events(path, start_seq_number, limit)?,
+            account_view,
+        ))
     }
 
     /// Write mnemonic recover to the file specified.

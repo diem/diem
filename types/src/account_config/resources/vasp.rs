@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -30,12 +30,15 @@ impl ChildVASP {
     }
 }
 
-impl MoveResource for ParentVASP {
+impl MoveStructType for ParentVASP {
     const MODULE_NAME: &'static str = "VASP";
     const STRUCT_NAME: &'static str = "ParentVASP";
 }
 
-impl MoveResource for ChildVASP {
+impl MoveStructType for ChildVASP {
     const MODULE_NAME: &'static str = "VASP";
     const STRUCT_NAME: &'static str = "ChildVASP";
 }
+
+impl MoveResource for ParentVASP {}
+impl MoveResource for ChildVASP {}

@@ -10,7 +10,7 @@ use crate::{
 };
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
-    move_resource::MoveResource,
+    move_resource::{MoveResource, MoveStructType},
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -55,7 +55,7 @@ impl PreburnWithMetadataResource {
     }
 }
 
-impl MoveResource for PreburnWithMetadataResource {
+impl MoveStructType for PreburnWithMetadataResource {
     const MODULE_NAME: &'static str = DIEM_MODULE_NAME;
     const STRUCT_NAME: &'static str = "PreburnWithMetadata";
 
@@ -63,3 +63,5 @@ impl MoveResource for PreburnWithMetadataResource {
         vec![xus_tag()]
     }
 }
+
+impl MoveResource for PreburnWithMetadataResource {}

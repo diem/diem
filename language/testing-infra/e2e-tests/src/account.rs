@@ -24,7 +24,7 @@ use diem_types::{
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
     value::{MoveStructLayout, MoveTypeLayout},
 };
 use move_vm_types::values::{Struct, Value};

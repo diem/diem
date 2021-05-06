@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_address::AccountAddress, account_config::constants::ACCOUNT_MODULE_NAME};
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,9 @@ pub struct WithdrawCapabilityResource {
     account_address: AccountAddress,
 }
 
-impl MoveResource for WithdrawCapabilityResource {
+impl MoveStructType for WithdrawCapabilityResource {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
     const STRUCT_NAME: &'static str = "WithdrawCapability";
 }
+
+impl MoveResource for WithdrawCapabilityResource {}

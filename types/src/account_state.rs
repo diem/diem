@@ -229,7 +229,7 @@ impl AccountState {
         self.get_resource_impl(&T::CONFIG_ID.access_path().path)
     }
 
-    pub fn get_resource<T: MoveResource + DeserializeOwned>(&self) -> Result<Option<T>> {
+    pub fn get_resource<T: MoveResource>(&self) -> Result<Option<T>> {
         self.get_resource_impl(&T::struct_tag().access_vector())
     }
 

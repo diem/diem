@@ -10,7 +10,7 @@ use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag},
-    move_resource::MoveResource,
+    move_resource::{MoveResource, MoveStructType},
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,10 +32,12 @@ pub struct CurrencyInfoResource {
     exchange_rate_update_events: EventHandle,
 }
 
-impl MoveResource for CurrencyInfoResource {
+impl MoveStructType for CurrencyInfoResource {
     const MODULE_NAME: &'static str = "Diem";
     const STRUCT_NAME: &'static str = "CurrencyInfo";
 }
+
+impl MoveResource for CurrencyInfoResource {}
 
 impl CurrencyInfoResource {
     pub fn new(

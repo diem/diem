@@ -7,7 +7,7 @@ use crate::{
     },
     event::EventHandle,
 };
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,9 @@ impl AccountResource {
     }
 }
 
-impl MoveResource for AccountResource {
+impl MoveStructType for AccountResource {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
     const STRUCT_NAME: &'static str = ACCOUNT_MODULE_NAME;
 }
+
+impl MoveResource for AccountResource {}

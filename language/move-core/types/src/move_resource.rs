@@ -5,8 +5,9 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::{StructTag, TypeTag},
 };
+use serde::de::DeserializeOwned;
 
-pub trait MoveResource {
+pub trait MoveStructType {
     const MODULE_NAME: &'static str;
     const STRUCT_NAME: &'static str;
 
@@ -34,7 +35,9 @@ pub trait MoveResource {
             type_params: Self::type_params(),
         }
     }
+}
 
+pub trait MoveResource: MoveStructType + DeserializeOwned {
     fn resource_path() -> Vec<u8> {
         Self::struct_tag().access_vector()
     }

@@ -11,7 +11,7 @@ use anyhow::{format_err, Result};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
-    move_resource::MoveResource,
+    move_resource::{MoveResource, MoveStructType},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, fmt, sync::Arc};
@@ -223,7 +223,9 @@ impl Default for ConfigurationResource {
     }
 }
 
-impl MoveResource for ConfigurationResource {
+impl MoveStructType for ConfigurationResource {
     const MODULE_NAME: &'static str = "DiemConfig";
     const STRUCT_NAME: &'static str = "Configuration";
 }
+
+impl MoveResource for ConfigurationResource {}

@@ -1,25 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_address::AccountAddress,
-    account_config::{constants::ACCOUNT_MODULE_NAME, resources::AccountResource},
-};
+use crate::{account_address::AccountAddress, account_config::constants::ACCOUNT_MODULE_NAME};
 use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    move_resource::MoveResource,
+    move_resource::MoveStructType,
 };
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-
-/// Returns the path to the received event counter for an Account resource.
-/// It can be used to query the event DB for the given event.
-pub static ACCOUNT_RECEIVED_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = AccountResource::resource_path();
-    path.extend_from_slice(b"/received_events_count/");
-    path
-});
 
 /// Struct that represents a ReceivedPaymentEvent.
 #[derive(Debug, Serialize, Deserialize)]
@@ -56,7 +44,7 @@ impl ReceivedPaymentEvent {
     }
 }
 
-impl MoveResource for ReceivedPaymentEvent {
+impl MoveStructType for ReceivedPaymentEvent {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
     const STRUCT_NAME: &'static str = "ReceivedPaymentEvent";
 }

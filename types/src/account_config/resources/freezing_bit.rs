@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,7 +15,9 @@ impl FreezingBit {
     }
 }
 
-impl MoveResource for FreezingBit {
+impl MoveStructType for FreezingBit {
     const MODULE_NAME: &'static str = "AccountFreezing";
     const STRUCT_NAME: &'static str = "FreezingBit";
 }
+
+impl MoveResource for FreezingBit {}

@@ -5,7 +5,10 @@ use crate::{
     account_config::{PreburnQueueResource, PreburnResource},
     event::EventHandle,
 };
-use move_core_types::{identifier::Identifier, move_resource::MoveResource};
+use move_core_types::{
+    identifier::Identifier,
+    move_resource::{MoveResource, MoveStructType},
+};
 use serde::{Deserialize, Serialize};
 use std::collections::btree_map::BTreeMap;
 
@@ -21,10 +24,12 @@ impl DesignatedDealer {
     }
 }
 
-impl MoveResource for DesignatedDealer {
+impl MoveStructType for DesignatedDealer {
     const MODULE_NAME: &'static str = "DesignatedDealer";
     const STRUCT_NAME: &'static str = "Dealer";
 }
+
+impl MoveResource for DesignatedDealer {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum DesignatedDealerPreburns {

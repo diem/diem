@@ -16,7 +16,7 @@ use crate::{
 use anyhow::{ensure, Error, Result};
 use diem_crypto::hash::CryptoHash;
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
-use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
+use move_core_types::{language_storage::TypeTag, move_resource::MoveStructType};
 
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

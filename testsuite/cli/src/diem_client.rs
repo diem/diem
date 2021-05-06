@@ -1,13 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{ensure, Result};
 use diem_client::{views, BlockingClient, Response, WaitForTransactionError};
 use diem_logger::prelude::info;
 use diem_types::{
-    access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
     epoch_change::EpochChangeProof,
     event::EventKey,
@@ -223,31 +221,5 @@ impl DiemClient {
             .get_transactions(start_version, limit, fetch_events)
             .map_err(Into::into)
             .map(Response::into_inner)
-    }
-
-    pub fn get_events_by_access_path(
-        &self,
-        access_path: AccessPath,
-        start_event_seq_num: u64,
-        limit: u64,
-    ) -> Result<(Vec<views::EventView>, views::AccountView)> {
-        // get event key from access_path
-        match self.get_account(&access_path.address)? {
-            None => bail!("No account found for address {:?}", access_path.address),
-            Some(account_view) => {
-                let path = access_path.path;
-                let event_key = if path == ACCOUNT_SENT_EVENT_PATH.to_vec() {
-                    &account_view.sent_events_key
-                } else if path == ACCOUNT_RECEIVED_EVENT_PATH.to_vec() {
-                    &account_view.received_events_key
-                } else {
-                    bail!("Unexpected event path found in access path");
-                };
-
-                // get_events
-                let events = self.get_events(*event_key, start_event_seq_num, limit)?;
-                Ok((events, account_view))
-            }
-        }
     }
 }

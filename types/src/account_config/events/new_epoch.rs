@@ -3,7 +3,7 @@
 
 use crate::event::EventKey;
 use anyhow::Result;
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::MoveStructType;
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a NewEpochEvent.
@@ -26,7 +26,7 @@ impl NewEpochEvent {
     }
 }
 
-impl MoveResource for NewEpochEvent {
+impl MoveStructType for NewEpochEvent {
     const MODULE_NAME: &'static str = "DiemConfig";
     const STRUCT_NAME: &'static str = "NewEpochEvent";
 }

@@ -22,7 +22,7 @@ use diem_types::{
     event::EventKey,
     transaction::{SignedTransaction, Transaction},
 };
-use move_core_types::move_resource::MoveResource;
+use move_core_types::move_resource::{MoveResource, MoveStructType};
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
@@ -249,7 +249,7 @@ impl BlockingClient {
     /// results
     /// Returns an empty vector if there are no such event
     /// The type `T` must match the event types associated with `event_key`
-    pub fn get_deserialized_events<T: MoveResource + DeserializeOwned>(
+    pub fn get_deserialized_events<T: MoveStructType + DeserializeOwned>(
         &self,
         event_key: &EventKey,
         start_seq: u64,
@@ -266,7 +266,7 @@ impl BlockingClient {
 
     /// Deserialize and return the resource value of type `T` stored under `address`
     /// Returns None if there is no such value
-    pub fn get_deserialized_resource<T: MoveResource + DeserializeOwned>(
+    pub fn get_deserialized_resource<T: MoveResource>(
         &self,
         address: AccountAddress,
     ) -> Result<Response<Option<T>>> {
