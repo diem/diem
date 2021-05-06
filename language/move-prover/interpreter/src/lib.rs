@@ -135,7 +135,18 @@ pub fn interpret(
             targets.add_target(&func_env)
         }
     }
-    pipeline.run(env, &mut targets);
+    if verbose {
+        pipeline.run_with_hook(
+            env,
+            &mut targets,
+            |holder| verbose_stepwise_processing(env, 0, "stackless", holder),
+            |step, processor, holders| {
+                verbose_stepwise_processing(env, step, &processor.name(), holders)
+            },
+        )
+    } else {
+        pipeline.run(env, &mut targets);
+    }
 
     // execute and convert results
     let (vm_result, _) = interpret_internal(env, &targets, &entrypoint_env, ty_args, args, verbose);
@@ -176,6 +187,30 @@ fn interpret_internal(
     let vm = Runtime::new(env, targets);
     let global_state = GlobalState::default();
     vm.execute(fun_env, ty_args, args, global_state)
+}
+
+fn verbose_stepwise_processing(
+    env: &GlobalEnv,
+    step: usize,
+    name: &str,
+    targets: &FunctionTargetsHolder,
+) {
+    // short-circuit the execution if prior phases run into errors
+    if env.has_errors() {
+        return;
+    }
+    let mut text = String::new();
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            for (_, target) in targets.get_targets(&func_env) {
+                if !target.data.code.is_empty() {
+                    target.register_annotation_formatters_for_test();
+                    text += &format!("[{}-{}]\n{}\n", step, name, target);
+                }
+            }
+        }
+    }
+    println!("{}", text);
 }
 
 fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue {
