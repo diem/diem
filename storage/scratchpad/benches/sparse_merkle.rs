@@ -96,6 +96,21 @@ impl Group {
                     BatchSize::LargeInput,
                 )
             });
+            group.bench_function(
+                BenchmarkId::new("batch_update_by_updater", block_size),
+                |b| {
+                    b.iter_batched(
+                        || one_large_batch.clone(),
+                        |one_large_batch| {
+                            block
+                                .smt
+                                .batch_update_by_updater(one_large_batch, &block.proof_reader)
+                                .unwrap();
+                        },
+                        BatchSize::LargeInput,
+                    )
+                },
+            );
         }
         group.finish();
     }

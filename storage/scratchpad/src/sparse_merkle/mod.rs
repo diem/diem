@@ -70,6 +70,7 @@
 #![allow(clippy::while_let_loop)]
 
 mod node;
+mod updater;
 mod utils;
 
 #[cfg(test)]
@@ -79,6 +80,7 @@ pub mod test_utils;
 
 use crate::sparse_merkle::{
     node::{LeafValue, Node, SubTree},
+    updater::SubTreeUpdater,
     utils::{partition, swap_if},
 };
 use arc_swap::{ArcSwap, ArcSwapOption};
@@ -959,6 +961,28 @@ where
         }
     }
 
+    pub fn batch_update_by_updater(
+        &self,
+        updates: Vec<(HashValue, &V)>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<Self, UpdateError> {
+        // Flatten, dedup and sort the updates with a btree map since the updates between different
+        // versions may overlap on the same address in which case the latter always overwrites.
+        let kvs = updates
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let current_root = self.root_weak();
+        if kvs.is_empty() {
+            Ok(self.clone())
+        } else {
+            let root = SubTreeUpdater::update(current_root, &kvs[..], proof_reader)?;
+            Ok(Self::new_with_base(root, self))
+        }
+    }
+
     /// Given a current subtree node with its depth and a list of updates with key and value, update the
     /// subtree according to the new k-v pairs.
     fn batch_update_subtree(
@@ -1335,4 +1359,11 @@ pub enum UpdateError {
     /// The update intends to insert a key that does not exist in the tree, so the operation needs
     /// proof to get more information about the tree, but no proof is provided.
     MissingProof,
+    /// At `depth` a persisted subtree was encountered and a proof was requested to assist finding
+    /// details about the subtree, but the result proof indicates the subtree is empty.
+    ShortProof {
+        key: HashValue,
+        num_siblings: usize,
+        depth: usize,
+    },
 }

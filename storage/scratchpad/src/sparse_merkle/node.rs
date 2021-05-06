@@ -28,7 +28,7 @@ use diem_crypto::{
 use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use std::sync::{Arc, Weak};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct InternalNode<V> {
     pub left: SubTree<V>,
     pub right: SubTree<V>,

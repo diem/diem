@@ -691,8 +691,6 @@ fn test_update_consistency() {
     let mut kvs = vec![];
     let smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
     let proof_reader = ProofReader::default();
-    let mut smt_serial;
-    let mut smt_batch;
     for i in 1..=5 {
         for _ in 0..1000 {
             let key = HashValue::random_with_rng(&mut rng);
@@ -707,15 +705,23 @@ fn test_update_consistency() {
         println!("naive {}-th run: {}ms", i, start.elapsed().as_millis());
 
         let start = std::time::Instant::now();
-        smt_serial = smt.update(batch.clone(), &proof_reader).unwrap();
+        let smt_serial = smt.update(batch.clone(), &proof_reader).unwrap();
         println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
 
         let start = std::time::Instant::now();
-        smt_batch = smt.batch_update(batch.clone(), &proof_reader).unwrap();
+        let smt_batch = smt.batch_update(batch.clone(), &proof_reader).unwrap();
         println!("batch {}-th run: {}ms", i, start.elapsed().as_millis());
+
+        let start = std::time::Instant::now();
+        let smt_updater = smt
+            .batch_update_by_updater(batch.clone(), &proof_reader)
+            .unwrap();
+        println!("updater{}-th run: {}ms", i, start.elapsed().as_millis());
+
         kvs.clear();
         assert_eq!(smt_serial.root_hash(), smt_batch.root_hash());
         assert_eq!(smt_serial.root_hash(), naive_smt.get_root_hash());
+        assert_eq!(smt_serial.root_hash(), smt_updater.root_hash());
     }
 }
 
@@ -781,6 +787,7 @@ proptest! {
         let mut batch_updated_tree = SparseMerkleTree::new(initial_state_root);
         let mut batches_updated_tree = SparseMerkleTree::new(initial_state_root);
         let mut naive_tree = NaiveSmt::new::<AccountStateBlob>(&[]);
+        let mut updater_tree = SparseMerkleTree::new(initial_state_root);
 
         for (txns_to_commit, ledger_info_with_sigs) in input.iter() {
             let updates = txns_to_commit.iter()
@@ -831,6 +838,9 @@ proptest! {
             naive_tree = naive_tree.update(&merged_batch);
             batch_updated_tree = batch_updated_tree.batch_update(merged_batch, &proof_reader)
                 .unwrap();
+            updater_tree = updater_tree.batch_update_by_updater(
+                updates.iter().flatten().map(|(k, v)| (*k, *v)).collect::<Vec<_>>(), &proof_reader
+            ).unwrap();
             serial_updated_tree = serial_updated_tree
                 .serial_update(updates.clone(), &proof_reader)
                 .unwrap().1;
@@ -840,6 +850,7 @@ proptest! {
 
             prop_assert_eq!(batch_updated_tree.root_hash(), batches_updated_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), serial_updated_tree.root_hash());
+            prop_assert_eq!(batch_updated_tree.root_hash(), updater_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), root_in_db);
             prop_assert_eq!(batch_updated_tree.root_hash(), naive_tree.get_root_hash());
             batch_updated_tree.prune();
