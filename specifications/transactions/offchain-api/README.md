@@ -205,8 +205,7 @@ In order to facilitate idempotent functionality, the requesting participant shou
 
 All `CommandRequestObject` and `CommandResponseObject` messages exchanged on the off-chain channel between two services must be signed using a specific configuration of the JWS scheme.
 
-The JSON Web Signature (JWS) scheme is specified in [RFC 7515](https://
-tools.ietf.org/html/rfc7515). Messages are signed with the following parameters:
+The JSON Web Signature (JWS) scheme is specified in [RFC 7515](https://tools.ietf.org/html/rfc7515). Messages are signed with the following parameters:
 
 * The JWS Signature Scheme is EdDSA as specified in [RFC 8032 (EdDSA)](https://tools.ietf.org/html/rfc8032) and [RFC 8037 (Elliptic Curve signatures for JWS)](https://tools.ietf.org/html/rfc8037).
 * The JWS Serialization scheme is Compact as specified in [Section 3.1 of RFC 7515](https://tools.ietf.org/html/rfc7515#section-3.1)
