@@ -615,6 +615,7 @@ dependencies = [
  "datatest-stable",
  "diem-workspace-hack",
  "move-prover-test-utils",
+ "move-stdlib",
  "move-unit-test",
 ]
 

@@ -12,6 +12,7 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 # diem dependencies
 bytecode-interpreter = { path = "../interpreter" }
 move-prover-test-utils = { path = "../test-utils" }
+move-stdlib = { path = "../../move-stdlib" }
 move-unit-test = { path = "../../tools/move-unit-test" }
 
 # external dependencies
