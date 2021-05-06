@@ -681,7 +681,7 @@ module TreasuryComplianceScripts {
                 domain: vector<u8>,
                 is_remove: bool,
             ) {
-            DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove)
+            DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove);
         }
 }
 }

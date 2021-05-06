@@ -4,9 +4,11 @@ address 0x1 {
 module DiemId {
 
     use 0x1::Event::{Self, EventHandle};
-    use 0x1::DiemAccount::{Self, EventHandle};
     use 0x1::Vector;
     use 0x1::CoreAddresses;
+    use 0x1::Roles;
+    use 0x1::Errors;
+    use 0x1::Signer;
 
     /// This resource holds an entity's domain names needed to send and receive payments using diem IDs.
     struct DiemIdDomains has key {
@@ -15,8 +17,8 @@ module DiemId {
     }
 
     /// Struct to store the limit on-chain
-    struct DiemIdDomain has key {
-        domain: vector<u8>, // UTF-8 encoded
+    struct DiemIdDomain has drop, store, copy {
+        domain: vector<u8>, // UTF-8 encoded and 63 characters
     }
 
     struct DiemIdDomainManager has key {
@@ -45,12 +47,10 @@ module DiemId {
     /// Publish a `DiemIdDomains` resource under `created` with an empty `domains`.
     /// Before sending or receiving any payments using Diem IDs, the Treasury Compliance account must send
     /// a transaction that invokes `add_domain_id` to set the `domains` field with a valid domain
-    public fun publish_diem_id_domain(
+    public fun publish_diem_id_domains(
         created: &signer,
-        creator: &signer,
     ) {
-        Roles::assert_parent_vasp_or_designated_dealer(created);
-        Roles::assert_treasury_compliance(creator);
+        Roles::assert_parent_vasp_role(created);
         assert(
             !exists<DiemIdDomains>(Signer::address_of(created)),
             Errors::already_published(EDIEMIDDOMAIN)
@@ -59,13 +59,12 @@ module DiemId {
             domains: Vector::empty(),
         })
     }
-    spec fun publish_diem_id_domain {
-        include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
-        include Roles::AbortsIfNotTreasuryCompliance{account: creator};
-        aborts_if spec_has_diem_id_domains(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+    spec fun publish_diem_id_domains {
+        include Roles::AbortsIfNotParentVasp{account: created};
+        aborts_if has_diem_id_domains(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
     }
 
-    spec define spec_has_diem_id_domains(addr: address): bool {
+    public fun has_diem_id_domains(addr: address): bool {
         exists<DiemIdDomains>(addr)
     }
 
@@ -97,31 +96,25 @@ module DiemId {
         aborts_if spec_has_diem_id_domain_manager(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
     }
 
-    public fun update_diem_id_domain(tc_account: &signer, to_update_address: address, domain: vec<u8>, is_remove: bool) {
+    public fun update_diem_id_domain(
+        tc_account: &signer,
+        to_update_address: address,
+        domain: vector<u8>,
+        is_remove: bool
+    ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
-        assert(exists_at(to_update_address), Errors::not_published(DiemAccount::EACCOUNT));
-        let account = borrow_global_mut<DiemAccount>(to_update_address);
-        diem_id_domain = DiemIdDomain {
+        let account_domains = borrow_global_mut<DiemIdDomains>(to_update_address);
+        let diem_id_domain = DiemIdDomain {
             domain: domain
-        }
-        Vector::push_back(&(account.domains), diem_id_domain);
+        };
+        Vector::push_back(&mut account_domains.domains, diem_id_domain);
 
         Event::emit_event(
-            &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).creation_events,
+            &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
             DiemIdDomainEvent {
                 removed: is_remove,
                 domain: diem_id_domain,
-                address: address
-            },
-        );
-
-        // Send ReceivedMintEvent
-        Event::emit_event<DiemIdDomainEvent>(
-            &mut borrow_global_mut<Dealer>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
-            DiemIdDomainEvent {
-                removed: is_remove,
-                domain: diem_id_domain,
-                address: address
+                address: to_update_address,
             },
         );
     }

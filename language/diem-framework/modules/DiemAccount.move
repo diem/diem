@@ -30,6 +30,7 @@ module DiemAccount {
     use 0x1::Diem::{Self, Diem};
     use 0x1::Option::{Self, Option};
     use 0x1::Roles;
+    use 0x1::DiemId;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
     struct DiemAccount has key {
@@ -1224,7 +1225,6 @@ module DiemAccount {
         let new_account_address = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         let new_account = create_signer(new_account_address);
         Roles::grant_treasury_compliance_role(&new_account, dr_account);
-        DiemId::publish_diem_id_domain_manager(&new_account);
         SlidingNonce::publish(&new_account);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
@@ -1340,7 +1340,7 @@ module DiemAccount {
         Event::publish_generator(&new_account);
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
-        DiemId::publish_diem_id_domain(&new_account, creator_account);
+        DiemId::publish_diem_id_domains(&new_account);
         make_account(new_account, auth_key_prefix)
     }
 
