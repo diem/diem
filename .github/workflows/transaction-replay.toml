@@ -33,5 +33,5 @@ save_metadata_line= '''
 list_metadata_files = '''
     # list files under the metadata folder
     (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata/$SAS" ||:) \
-    | sed -ne "s#; .*##;s#INFO: \(.*\)#metadata/\1#p"
+    | sed -ne "s#; .*##;s#INFO: \(.*\.meta\)#metadata/\1#p"
 '''
