@@ -1,11 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc::JsonRpcClientWrapper, validator_config::DecryptedValidatorConfig};
+use crate::{
+    json_rpc::JsonRpcClientWrapper,
+    validator_config::{fullnode_addresses, validator_addresses, DecryptedValidatorConfig},
+};
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use diem_network_address_encryption::Encryptor;
-use diem_types::{account_address::AccountAddress, network_address::NetworkAddress};
+use diem_types::{
+    account_address::AccountAddress, network_address::NetworkAddress, validator_info::ValidatorInfo,
+};
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -73,6 +78,42 @@ pub fn decode_validator_set(
     Ok(decoded_set)
 }
 
+pub fn validator_set_full_node_addresses(
+    client: JsonRpcClientWrapper,
+    account_address: Option<AccountAddress>,
+) -> Result<Vec<(String, AccountAddress, Vec<NetworkAddress>)>, Error> {
+    validator_set_addresses(client, account_address, |info| {
+        fullnode_addresses(info.config())
+    })
+}
+
+pub fn validator_set_validator_addresses(
+    client: JsonRpcClientWrapper,
+    encryptor: &Encryptor,
+    account_address: Option<AccountAddress>,
+) -> Result<Vec<(String, AccountAddress, Vec<NetworkAddress>)>, Error> {
+    validator_set_addresses(client, account_address, |info| {
+        validator_addresses(info.config(), *info.account_address(), encryptor)
+    })
+}
+
+fn validator_set_addresses<F: Fn(ValidatorInfo) -> Result<Vec<NetworkAddress>, Error>>(
+    client: JsonRpcClientWrapper,
+    account_address: Option<AccountAddress>,
+    address_accessor: F,
+) -> Result<Vec<(String, AccountAddress, Vec<NetworkAddress>)>, Error> {
+    let set = client.validator_set(account_address)?;
+    let mut decoded_set = Vec::new();
+    for info in set {
+        let config_resource = client.validator_config(*info.account_address())?;
+        let name = DecryptedValidatorConfig::human_name(&config_resource.human_name);
+        let peer_id = *info.account_address();
+        let addrs = address_accessor(info)?;
+        decoded_set.push((name, peer_id, addrs));
+    }
+
+    Ok(decoded_set)
+}
 #[derive(Serialize)]
 pub struct DecryptedValidatorInfo {
     pub name: String,

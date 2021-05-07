@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::json_rpc::JsonRpcClientWrapper;
+use crate::{
+    json_rpc::JsonRpcClientWrapper,
+    validator_set::{validator_set_full_node_addresses, validator_set_validator_addresses},
+};
 use diem_config::{
     config::{RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
@@ -123,24 +126,23 @@ fn parse_validator_key_hex(src: &str) -> Result<Key, Error> {
 impl CheckValidatorSetEndpoints {
     pub fn execute(self) -> Result<String, Error> {
         let is_validator = self.role.is_validator();
+        let client = JsonRpcClientWrapper::new(self.json_server);
 
-        // Following unwraps shouldn't fail as it is in memory
-        let mut encryptor = Encryptor::new(Storage::InMemoryStorage(InMemoryStorage::new()));
-        encryptor.initialize().unwrap();
-        let encryptor = if is_validator {
+        let nodes = if is_validator {
+            // Following unwraps shouldn't fail as it is in memory
+            let mut encryptor = Encryptor::new(Storage::InMemoryStorage(InMemoryStorage::new()));
+            encryptor.initialize().unwrap();
             encryptor
                 .add_key(self.version.unwrap(), self.address_encryption_key.unwrap())
                 .unwrap();
             encryptor
                 .set_current_version(self.version.unwrap())
                 .unwrap();
-            encryptor
-        } else {
-            encryptor
-        };
 
-        let client = JsonRpcClientWrapper::new(self.json_server);
-        let validator_set = crate::validator_set::decode_validator_set(encryptor, client, None)?;
+            validator_set_validator_addresses(client, &encryptor, None)?
+        } else {
+            validator_set_full_node_addresses(client, None)?
+        };
 
         // Build a single upgrade context to run all the checks
         let network_id = if is_validator {
@@ -156,23 +158,13 @@ impl CheckValidatorSetEndpoints {
         let timeout = timeout_duration(self.timeout_seconds);
 
         // Check all the addresses accordingly
-        for info in validator_set {
-            let address = if is_validator {
-                info.validator_network_address.clone()
-            } else {
-                info.fullnode_network_address.clone()
-            };
-
-            match check_endpoint(
-                upgrade_context.clone(),
-                address,
-                peer_id,
-                public_key,
-                timeout,
-            ) {
-                Ok(_) => println!("{} -- good", info.name),
-                Err(err) => println!("{} -- bad -- {}", info.name, err),
-            };
+        for (name, peer_id, addrs) in nodes {
+            for addr in addrs {
+                match check_endpoint(upgrade_context.clone(), addr, peer_id, public_key, timeout) {
+                    Ok(_) => println!("{} -- good", name),
+                    Err(err) => println!("{} -- bad -- {}", name, err),
+                };
+            }
         }
 
         Ok("Complete!".to_string())

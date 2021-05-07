@@ -324,17 +324,10 @@ impl DecryptedValidatorConfig {
         account_address: AccountAddress,
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {
-        let fullnode_network_addresses = config
-            .fullnode_network_addresses()
-            .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
-
-        let validator_network_addresses = encryptor
-            .decrypt(&config.validator_network_addresses, account_address)
+        let fullnode_network_addresses = fullnode_addresses(config)?;
+        let validator_network_addresses = validator_addresses(config, account_address, encryptor)
             .unwrap_or_else(|error| {
-                println!(
-                    "Unable to decode network address for account {}: {}. Using a dummy validator network address!",
-                    account_address, error
-                );
+                println!("{}: Using a dummy validator network address!", error);
                 vec![NetworkAddress::from_str("/dns4/could-not-decrypt").unwrap()]
             });
 
@@ -351,4 +344,27 @@ impl DecryptedValidatorConfig {
             .map(|v| v.to_string())
             .unwrap_or_else(|_| hex::encode(name))
     }
+}
+
+pub fn fullnode_addresses(
+    config: &diem_types::validator_config::ValidatorConfig,
+) -> Result<Vec<NetworkAddress>, Error> {
+    config
+        .fullnode_network_addresses()
+        .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))
+}
+
+pub fn validator_addresses(
+    config: &diem_types::validator_config::ValidatorConfig,
+    account_address: AccountAddress,
+    encryptor: &Encryptor,
+) -> Result<Vec<NetworkAddress>, Error> {
+    encryptor
+        .decrypt(&config.validator_network_addresses, account_address)
+        .map_err(|error| {
+            Error::CommandArgumentError(format!(
+                "Unable to decode network address for account {}: {}",
+                account_address, error
+            ))
+        })
 }
