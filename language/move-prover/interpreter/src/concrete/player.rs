@@ -227,6 +227,13 @@ impl<'env> FunctionContext<'env> {
                 let res = self.native_hash_sha3_256(dummy_state.del_value(0));
                 Ok(vec![res])
             }
+            (DIEM_CORE_ADDR, "BCS", "to_bytes") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                self.native_bcs_to_bytes(dummy_state.del_value(0))
+                    .map(|res| vec![res])
+            }
             _ => unreachable!(),
         }
     }
@@ -1612,6 +1619,22 @@ impl<'env> FunctionContext<'env> {
         let digest = HashValue::sha3_256_of(&bytes).to_vec();
         let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
         TypedValue::mk_vector(elem_ty, hashed)
+    }
+
+    fn native_bcs_to_bytes(&self, object: TypedValue) -> Result<TypedValue, AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            object
+                .get_ty()
+                .is_ref_of(self.ty_args.get(0).unwrap(), Some(false));
+        }
+        object
+            .into_bcs_bytes()
+            .map(|bytes| {
+                let bcs_val = bytes.into_iter().map(TypedValue::mk_u8).collect();
+                TypedValue::mk_vector(BaseType::mk_u8(), bcs_val)
+            })
+            .ok_or_else(|| AbortInfo::usr_abort(sub_status::NFE_BCS_SERIALIZATION_FAILURE))
     }
 
     //

@@ -4,7 +4,10 @@
 use num::{BigUint, ToPrimitive};
 use std::collections::BTreeMap;
 
-use move_core_types::account_address::AccountAddress;
+use move_core_types::{
+    account_address::AccountAddress,
+    value::{MoveStruct, MoveValue},
+};
 use move_model::ast::TempIndex;
 
 use crate::concrete::ty::{BaseType, StructInstantiation, Type};
@@ -673,6 +676,61 @@ impl TypedValue {
             val: BaseValue::mk_struct(fields),
             ptr: struct_ptr,
         }
+    }
+
+    fn into_move_value(self) -> MoveValue {
+        match self.val {
+            BaseValue::Bool(v) => MoveValue::Bool(v),
+            BaseValue::Int(v) => {
+                if self.ty.is_u8() {
+                    MoveValue::U8(v.to_u8().unwrap())
+                } else if self.ty.is_u64() {
+                    MoveValue::U64(v.to_u64().unwrap())
+                } else {
+                    if cfg!(debug_assertions) {
+                        assert!(self.ty.is_u128());
+                    }
+                    MoveValue::U128(v.to_u128().unwrap())
+                }
+            }
+            BaseValue::Address(v) => MoveValue::Address(v),
+            BaseValue::Signer(v) => MoveValue::Signer(v),
+            BaseValue::Vector(v) => {
+                let elem_ty = self.ty.into_vector_elem();
+                let move_elems = v
+                    .into_iter()
+                    .map(|elem| {
+                        let full_elem = TypedValue {
+                            ty: Type::Base(elem_ty.clone()),
+                            val: elem,
+                            ptr: Pointer::None,
+                        };
+                        full_elem.into_move_value()
+                    })
+                    .collect();
+                MoveValue::Vector(move_elems)
+            }
+            BaseValue::Struct(v) => {
+                let move_fields = v
+                    .into_iter()
+                    .zip(self.ty.into_struct_inst().fields)
+                    .map(|(field_val, field_info)| {
+                        let full_field = TypedValue {
+                            ty: Type::Base(field_info.ty),
+                            val: field_val,
+                            ptr: Pointer::None,
+                        };
+                        full_field.into_move_value()
+                    })
+                    .collect();
+                MoveValue::Struct(MoveStruct::new(move_fields))
+            }
+        }
+    }
+
+    /// Into BCS-serialized bytes
+    pub fn into_bcs_bytes(self) -> Option<Vec<u8>> {
+        self.into_move_value().simple_serialize()
     }
 }
 
