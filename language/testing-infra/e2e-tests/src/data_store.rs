@@ -20,6 +20,7 @@ use move_core_types::{
 };
 use move_vm_runtime::data_cache::MoveStorage;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
@@ -34,7 +35,7 @@ pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
 ///
 /// Tests use this to set up state, and pass in a reference to the cache whenever a `StateView` or
 /// `RemoteCache` is needed.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct FakeDataStore {
     data: HashMap<AccessPath, Vec<u8>>,
 }
