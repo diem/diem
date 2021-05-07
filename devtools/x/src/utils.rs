@@ -70,10 +70,21 @@ pub fn log_sccache_stats() {
 pub fn stop_sccache_server() {
     let mut sccache = Command::new("sccache");
     sccache.arg("--stop-server");
+    sccache.stdout(Stdio::piped()).stderr(Stdio::piped());
     let result = sccache.output();
-    if let Ok(output) = result {
-        if output.status.success() {
-            info!("Stopped already running sccache.");
+    match sccache.output() {
+        Ok(output) => {
+            if output.status.success() {
+                info!("Stopped already running sccache.");
+            } else {
+                info!("Failed to stopped already running sccache.");
+                warn!("status: {}", output.status);
+                warn!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+                warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            }
+        }
+        Err(error) => {
+            warn!("Failed to stop running sccache: {}", error)
         }
     }
 }
