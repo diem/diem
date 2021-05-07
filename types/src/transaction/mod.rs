@@ -752,7 +752,7 @@ impl VMValidatorResult {
 }
 
 /// The output of executing a transaction.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TransactionOutput {
     /// The list of writes this transaction intends to do.
     write_set: WriteSet,
