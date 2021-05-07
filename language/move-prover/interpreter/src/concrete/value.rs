@@ -845,6 +845,7 @@ impl AccountState {
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct GlobalState {
     accounts: BTreeMap<AccountAddress, AccountState>,
+    events: BTreeMap<Vec<u8>, BTreeMap<u64, TypedValue>>,
 }
 
 impl GlobalState {
@@ -907,5 +908,17 @@ impl GlobalState {
         self.accounts
             .get(addr)
             .map_or(false, |account| account.has_resource(key))
+    }
+
+    /// Emit an event to the event store
+    pub fn emit_event(&mut self, guid: Vec<u8>, seq: u64, msg: TypedValue) {
+        let res = self
+            .events
+            .entry(guid)
+            .or_insert_with(BTreeMap::new)
+            .insert(seq, msg);
+        if cfg!(debug_assertions) {
+            assert!(res.is_none());
+        }
     }
 }

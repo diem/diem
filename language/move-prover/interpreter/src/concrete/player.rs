@@ -9,7 +9,9 @@ use diem_crypto::HashValue;
 
 use bytecode::{
     function_target::FunctionTarget,
-    function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{
+        FunctionTargetsHolder, FunctionVariant, REGULAR_VERIFICATION_VARIANT,
+    },
     stackless_bytecode::{
         AbortAction, AssignKind, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Label,
         Operation, StrongEdge,
@@ -99,7 +101,7 @@ impl<'env> FunctionContext<'env> {
         srcs: &[TempIndex],
         typed_args: Vec<TypedValue>,
         local_state: &mut LocalState,
-        _global_state: &mut GlobalState,
+        global_state: &mut GlobalState,
     ) -> Result<Vec<TypedValue>, AbortInfo> {
         let mut dummy_state = self.prepare_local_state(typed_args);
         if cfg!(debug_assertions) {
@@ -233,6 +235,18 @@ impl<'env> FunctionContext<'env> {
                 }
                 self.native_bcs_to_bytes(dummy_state.del_value(0))
                     .map(|res| vec![res])
+            }
+            (DIEM_CORE_ADDR, "Event", "write_to_event_store") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 3);
+                }
+                self.native_event_write_to_event_store(
+                    dummy_state.del_value(0),
+                    dummy_state.del_value(1),
+                    dummy_state.del_value(2),
+                    global_state,
+                );
+                Ok(vec![])
             }
             _ => unreachable!(),
         }
@@ -377,12 +391,17 @@ impl<'env> FunctionContext<'env> {
                 global_state,
             )?,
             // opaque
-            Operation::OpaqueCallBegin(module_id, fun_id, ty_args)
-            | Operation::OpaqueCallEnd(module_id, fun_id, ty_args) => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 0);
-                }
-                self.handle_opaque_call_lifetime(*module_id, *fun_id, ty_args);
+            Operation::OpaqueCallBegin(module_id, fun_id, ty_args) => self.handle_call_function(
+                *module_id,
+                *fun_id,
+                ty_args,
+                typed_args,
+                srcs,
+                local_state,
+                global_state,
+            )?,
+            Operation::OpaqueCallEnd(module_id, fun_id, ty_args) => {
+                self.handle_opaque_call_end(*module_id, *fun_id, ty_args, typed_args);
                 Ok(vec![])
             }
             // struct
@@ -820,16 +839,18 @@ impl<'env> FunctionContext<'env> {
         Ok(ok_or_abort)
     }
 
-    fn handle_opaque_call_lifetime(
+    fn handle_opaque_call_end(
         &self,
         module_id: ModuleId,
         fun_id: FunId,
         ty_args: &[MT::Type],
+        typed_args: Vec<TypedValue>,
     ) {
         if cfg!(debug_assertions) {
             let env = self.target.global_env();
             let callee_env = env.get_function(module_id.qualified(fun_id));
-            self.derive_callee_ctxt(&callee_env, ty_args);
+            let callee_ctxt = self.derive_callee_ctxt(&callee_env, ty_args);
+            assert_eq!(callee_ctxt.target.get_parameter_count(), typed_args.len());
         }
     }
 
@@ -1489,7 +1510,7 @@ impl<'env> FunctionContext<'env> {
     fn native_vector_length(&self, vec_val: TypedValue) -> TypedValue {
         if cfg!(debug_assertions) {
             assert_eq!(self.ty_args.len(), 1);
-            // NOTE: this length function accept a value instead of a reference!
+            // NOTE: this function accepts a value instead of a reference!
             // This is different from the Move native implementation.
             assert_eq!(
                 vec_val.get_ty().get_vector_elem(),
@@ -1582,10 +1603,9 @@ impl<'env> FunctionContext<'env> {
         if cfg!(debug_assertions) {
             assert_eq!(self.ty_args.len(), 0);
         }
-        let (addr, is_mut, _) = signer_val.into_ref_signer();
-        if cfg!(debug_assertions) {
-            assert!(!is_mut);
-        }
+        // NOTE: this function accepts a value instead of a reference!
+        // This is different from the Move native implementation.
+        let addr = signer_val.into_signer();
         TypedValue::mk_address(addr)
     }
 
@@ -1637,6 +1657,29 @@ impl<'env> FunctionContext<'env> {
             .ok_or_else(|| AbortInfo::usr_abort(sub_status::NFE_BCS_SERIALIZATION_FAILURE))
     }
 
+    fn native_event_write_to_event_store(
+        &self,
+        guid_val: TypedValue,
+        seq_val: TypedValue,
+        msg_val: TypedValue,
+        global_state: &mut GlobalState,
+    ) {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                msg_val.get_ty().get_base_type(),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        let guid = guid_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let seq = seq_val.into_u64();
+        global_state.emit_event(guid, seq, msg_val);
+    }
+
     //
     // utilities
     //
@@ -1652,10 +1695,23 @@ impl<'env> FunctionContext<'env> {
     ) -> FunctionContext<'env> {
         let env = self.target.global_env();
 
-        // TODO (mengxu): might need to call a different function variant?
-        let callee_target = self
-            .holder
-            .get_target(callee_env, &FunctionVariant::Baseline);
+        // TODO (mengxu): find a better way to determine which variant to call
+        let mut target_variant = None;
+        for (variant, target) in self.holder.get_targets(callee_env) {
+            // regular verification variant is preferred, baseline version is the second choice
+            match variant {
+                FunctionVariant::Baseline => {
+                    if target_variant.is_none() {
+                        target_variant = Some(target);
+                    }
+                }
+                FunctionVariant::Verification(REGULAR_VERIFICATION_VARIANT) => {
+                    target_variant = Some(target);
+                }
+                _ => (),
+            }
+        }
+        let callee_target = target_variant.unwrap();
 
         // check and convert type arguments
         if cfg!(debug_assertions) {
