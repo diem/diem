@@ -350,6 +350,7 @@ impl<'env> FunctionContext<'env> {
 
         // operations that does not need to have the argument in storage
         match op {
+            // built-ins
             Operation::Havoc(kind) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
@@ -362,6 +363,38 @@ impl<'env> FunctionContext<'env> {
                             assert!(target_ty.is_ref(Some(true)));
                         }
                     }
+                }
+                return Ok(());
+            }
+            // debugging
+            Operation::TraceLocal(index) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                    assert_eq!(local_state.get_type(*index), local_state.get_type(srcs[0]));
+                }
+                return Ok(());
+            }
+            Operation::TraceReturn(num) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                    assert!(*num < self.target.get_return_count());
+                }
+                return Ok(());
+            }
+            Operation::TraceAbort => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                    assert!(local_state.get_type(srcs[0]).is_compatible_for_abort_code());
+                }
+                return Ok(());
+            }
+            Operation::TraceExp(node_id) => {
+                if cfg!(debug_assertions) {
+                    let env = self.target.global_env();
+                    let node_ty =
+                        convert_model_local_type(env, &env.get_node_type(*node_id), &self.ty_args);
+                    assert_eq!(srcs.len(), 1);
+                    assert_eq!(local_state.get_type(srcs[0]), &node_ty);
                 }
                 return Ok(());
             }
@@ -706,42 +739,14 @@ impl<'env> FunctionContext<'env> {
                     self.handle_binary_boolean(op, lhs, rhs, local_state.get_type(dsts[0]));
                 Ok(vec![calculated])
             }
-            // debugging
-            Operation::TraceLocal(index) => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 1);
-                    assert_eq!(local_state.get_type(*index), typed_args[0].get_ty());
-                }
-                Ok(vec![])
-            }
-            Operation::TraceReturn(num) => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 1);
-                    assert!(*num < self.target.get_return_count());
-                }
-                Ok(vec![])
-            }
-            Operation::TraceAbort => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 1);
-                    assert!(typed_args[0].get_ty().is_compatible_for_abort_code());
-                }
-                Ok(vec![])
-            }
-            Operation::TraceExp(node_id) => {
-                if cfg!(debug_assertions) {
-                    let env = self.target.global_env();
-                    let node_ty =
-                        convert_model_local_type(env, &env.get_node_type(*node_id), &self.ty_args);
-                    assert_eq!(typed_args.len(), 1);
-                    assert_eq!(typed_args[0].get_ty(), &node_ty);
-                }
-                Ok(vec![])
-            }
             // event (TODO: not supported yet)
             Operation::EmitEvent | Operation::EventStoreDiverge => Ok(vec![]),
             // already handled
             Operation::Havoc(..)
+            | Operation::TraceLocal(..)
+            | Operation::TraceReturn(..)
+            | Operation::TraceAbort
+            | Operation::TraceExp(..)
             | Operation::Splice(..)
             | Operation::PackRefDeep
             | Operation::UnpackRefDeep
@@ -823,7 +828,11 @@ impl<'env> FunctionContext<'env> {
         // update mutable arguments
         for (callee_idx, origin_idx) in mut_args {
             let old_val = local_state.del_value(origin_idx);
-            let new_val = callee_state.del_value(callee_idx);
+            let new_val = if callee_state.has_value(callee_idx) {
+                callee_state.del_value(callee_idx)
+            } else {
+                callee_state.load_destroyed_arg(callee_idx)
+            };
             if cfg!(debug_assertions) {
                 assert_eq!(old_val.get_ptr(), new_val.get_ptr());
             }
@@ -1158,7 +1167,10 @@ impl<'env> FunctionContext<'env> {
     }
 
     fn handle_destroy(&self, local_idx: TempIndex, local_state: &mut LocalState) {
-        local_state.del_value(local_idx);
+        let val = local_state.del_value(local_idx);
+        if local_idx < self.target.get_parameter_count() {
+            local_state.save_destroyed_arg(local_idx, val);
+        }
     }
 
     fn handle_cast_u8(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {

@@ -9,9 +9,9 @@ module 0x2::A {
         Event::destroy_handle(handle);
     }
 
-    // TODO(mengxu) currently blocked by handling of opaque functions
-    // #[test(a=@0x2)]
+    #[test(a=@0x2)]
     public fun emit(a: &signer) {
+        Event::publish_generator(a);
         do_emit<u64>(a);
     }
 }

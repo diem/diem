@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeMap;
+
 use move_binary_format::{errors::PartialVMError, file_format::CodeOffset};
 use move_core_types::vm_status::StatusCode;
 use move_model::ast::TempIndex;
@@ -64,6 +66,8 @@ pub struct LocalState {
     pc_branch: bool,
     /// termination status
     termination: TerminationStatus,
+    /// mutable parameters that gets destroyed during the execution
+    destroyed_args: BTreeMap<TempIndex, TypedValue>,
 }
 
 impl LocalState {
@@ -73,6 +77,7 @@ impl LocalState {
             pc: 0,
             pc_branch: false,
             termination: TerminationStatus::None,
+            destroyed_args: BTreeMap::new(),
         }
     }
 
@@ -105,6 +110,18 @@ impl LocalState {
     /// Delete the value held in local slot `index`. Panics if the slot does not hold a value
     pub fn del_value(&mut self, index: TempIndex) -> TypedValue {
         self.slots.get_mut(index).unwrap().del_value()
+    }
+
+    /// Save a mutable argument that is destroyed
+    pub fn save_destroyed_arg(&mut self, index: TempIndex, val: TypedValue) {
+        let exists = self.destroyed_args.insert(index, val);
+        if cfg!(debug_assertions) {
+            assert!(exists.is_none());
+        }
+    }
+    /// Load a mutable argument that is destroyed
+    pub fn load_destroyed_arg(&mut self, index: TempIndex) -> TypedValue {
+        self.destroyed_args.remove(&index).unwrap()
     }
 
     /// Get the current PC location (i.e., which bytecode to be executed)
