@@ -493,7 +493,12 @@ impl<'a> Instrumenter<'a> {
                 .to_string();
             self.builder
                 .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
-            self.builder.emit_with(Nop);
+            // create a function call if we are instrumenting for the interpreter, nop otherwise
+            if self.options.for_interpretation {
+                self.builder.emit(bc);
+            } else {
+                self.builder.emit_with(Nop);
+            }
             Some(bc_display)
         } else {
             None
