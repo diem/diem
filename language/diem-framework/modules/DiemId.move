@@ -104,10 +104,15 @@ module DiemId {
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
         let account_domains = borrow_global_mut<DiemIdDomains>(to_update_address);
-        let diem_id_domain = DiemIdDomain {
-            domain: domain
+        let diem_id_domain = DiemIdDomain {domain: domain};
+        if (is_remove) {
+            let (has, index) = Vector::index_of(&account_domains.domains, &diem_id_domain);
+            if (has) {
+                Vector::remove(&mut account_domains.domains, index);
+            };
+        } else {
+            Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
         };
-        Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
 
         Event::emit_event(
             &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
@@ -121,6 +126,18 @@ module DiemId {
 
     spec fun update_diem_id_domain {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+    }
+
+    public fun has_diem_id_domain(addr: address, domain: vector<u8>): bool acquires DiemIdDomains {
+        let account_domains = borrow_global<DiemIdDomains>(addr);
+        let diem_id_domain = DiemIdDomain {
+            domain: domain
+        };
+        Vector::contains(&account_domains.domains, &diem_id_domain)
+    }
+
+    public fun tc_domain_manager_exists(): bool {
+        exists<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
 
 }

@@ -1,16 +1,18 @@
-//! account: freddymac
-//! account: alice, 0, 0, address
+//! account: bob, 0, 0, address
 
 //! sender: blessed
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    use 0x1::BCS;
+    use 0x1::DiemId;
+
     fun main(account: signer) {
-        let account = &account;
-        let addr: address = @0x111101;
+        let tc_account = &account;
+        let addr: address = @{{bob}};
         assert(!DiemAccount::exists_at(addr), 83);
-        DiemAccount::create_parent_vasp_account<XUS>(account, addr, BCS::to_bytes(&addr), x"aa", false);
+        DiemAccount::create_parent_vasp_account<XUS>(tc_account, addr, {{bob::auth_key}}, x"aa", false);
+        DiemId::publish_diem_id_domain_manager(tc_account);
+        assert(DiemId::tc_domain_manager_exists(), 77);
     }
 }
 // check: "Keep(EXECUTED)"
@@ -22,28 +24,20 @@ script{
     use 0x1::DiemId;
 
     fun main(tc_account: signer) {
-        let addr: address = @0x111101;
-        assert(!DiemAccount::exists_at(addr), 83);
+        let addr: address = @{{bob}};
+        assert(DiemAccount::exists_at(addr), 455);
         let tc_account = &tc_account;
+        let domain_name = b"diem";
 
         /// add a diem id domain
-        DiemId::update_diem_id_domain(tc_account, addr, x"aa", false);
+        DiemId::update_diem_id_domain(tc_account, addr, copy domain_name, false);
 
         /// check if diem id domain is added to DiemIdDomains
-        let account_domains = borrow_global_mut<DiemId::DiemIdDomains>(address);
-        diem_id_domain = DiemId::DiemIdDomain {
-            domain: domain
-        };
-        assert(Vector::contains(&account_domains.domains, diem_id_domain));
-
-        /// check if diem id domain event is added to DiemIdDomainManager
-        let domain_events = borrow_global_mut<DiemId::DiemIdDomainManager>(address).diem_id_domain_events;
-        assert(Vector::contains(&account_domains.domains, diem_id_domain));
+        assert(DiemId::has_diem_id_domain(addr, domain_name), 5);
     }
 }
-// check: "Keep(EXECUTED)"
 // check: DiemIdDomainEvent
-
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -52,42 +46,31 @@ script{
     use 0x1::DiemId;
 
     fun main(tc_account: signer) {
-        let addr: address = @0x111101;
-        assert(!DiemAccount::exists_at(addr), 83);
+        let addr: address = @{{bob}};
+        assert(DiemAccount::exists_at(addr), 2);
         let tc_account = &tc_account;
+        let domain_name = b"diem";
 
         /// remove a diem id domain
-        DiemId::update_diem_id_domain(tc_account, addr, x"aa", false);
+        DiemId::update_diem_id_domain(tc_account, addr, copy domain_name, true);
 
         /// check if diem id domain is removed from DiemIdDomains
-        let account_domains = borrow_global_mut<DiemId::DiemIdDomains>(address);
-        diem_id_domain = DiemId::DiemIdDomain {
-            domain: domain
-        };
-        assert(Vector::contains(&account_domains.domains, diem_id_domain));
-
-        /// check if diem id domain event is added to DiemIdDomainManager
-        let domain_events = borrow_global_mut<DiemId::DiemIdDomainManager>(address).diem_id_domain_events;
-        assert(Vector::contains(&account_domains.domains, diem_id_domain));
+        assert(!DiemId::has_diem_id_domain(addr, domain_name), 205);
     }
 }
-// check: "Keep(EXECUTED)"
 // check: DiemIdDomainEvent
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
-//! sender: freddymac
+//! sender: bob
 script{
-    use 0x1::DiemAccount;
     use 0x1::DiemId;
 
     fun main(account: signer) {
         /// check if vasp account tries to add domain id, it fails
         let account = &account;
-        let addr: address = @0x111101;
-        DiemId::update_diem_id_domain(account, addr, x"aa", false);
+        let addr: address = @{{bob}};
+        DiemId::update_diem_id_domain(account, addr, b"diem", false);
     }
 }
 // check: "Keep(ABORTED { code: 258,"
-
-
-/// check if domain is removed properly
