@@ -71,7 +71,6 @@ pub fn stop_sccache_server() {
     let mut sccache = Command::new("sccache");
     sccache.arg("--stop-server");
     sccache.stdout(Stdio::piped()).stderr(Stdio::piped());
-    let result = sccache.output();
     match sccache.output() {
         Ok(output) => {
             if output.status.success() {
