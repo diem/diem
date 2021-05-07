@@ -49,7 +49,7 @@ pub struct CheckEndpoint {
     network_id: NetworkId,
     /// `PrivateKey` to connect to remote server
     #[structopt(long, parse(try_from_str = parse_private_key_hex))]
-    private_key: x25519::PrivateKey,
+    private_key: Option<x25519::PrivateKey>,
     /// Optional number of seconds to timeout attempting to connect to endpoint
     #[structopt(long)]
     timeout_seconds: Option<u64>,
@@ -76,13 +76,20 @@ fn parse_private_key_hex(src: &str) -> Result<x25519::PrivateKey, Error> {
 impl CheckEndpoint {
     pub fn execute(self) -> Result<String, Error> {
         validate_address(&self.address)?;
-        let (peer_id, public_key) = private_key_to_public_info(&self.private_key);
+        let private_key = self.private_key.unwrap_or_else(|| {
+            let dummy = [0; PRIVATE_KEY_SIZE];
+            x25519::PrivateKey::from(dummy)
+        });
+        let (peer_id, public_key) = private_key_to_public_info(&private_key);
+        let timeout = timeout_duration(self.timeout_seconds);
+        println!(
+            "Connecting with peer_id {} and pubkey {} to {} with timeout: {:?}",
+            peer_id, public_key, self.address, timeout
+        );
         check_endpoint(
-            build_upgrade_context(self.chain_id, self.network_id, peer_id, self.private_key),
+            build_upgrade_context(self.chain_id, self.network_id, peer_id, private_key),
             self.address,
-            peer_id,
-            public_key,
-            timeout_duration(self.timeout_seconds),
+            timeout,
         )
     }
 }
@@ -106,7 +113,7 @@ pub struct CheckValidatorSetEndpoints {
     chain_id: ChainId,
     /// Private key to connect to remote server
     #[structopt(long, parse(try_from_str = parse_private_key_hex))]
-    private_key: x25519::PrivateKey,
+    private_key: Option<x25519::PrivateKey>,
     /// Optional number of seconds to timeout attempting to connect to endpoint
     #[structopt(long)]
     timeout_seconds: Option<u64>,
@@ -127,17 +134,32 @@ impl CheckValidatorSetEndpoints {
     pub fn execute(self) -> Result<String, Error> {
         let is_validator = self.role.is_validator();
         let client = JsonRpcClientWrapper::new(self.json_server);
+        let private_key = if let Some(private_key) = self.private_key {
+            private_key
+        } else if is_validator {
+            return Err(Error::CommandArgumentError(
+                "Must provide a private key for validators".into(),
+            ));
+        } else {
+            let dummy = [0; PRIVATE_KEY_SIZE];
+            x25519::PrivateKey::from(dummy)
+        };
 
         let nodes = if is_validator {
+            let address_encryption_key = self.address_encryption_key.ok_or_else(|| {
+                Error::CommandArgumentError(
+                    "Must provide address encryption key for validators".into(),
+                )
+            })?;
+            let version = self.version.ok_or_else(|| {
+                Error::CommandArgumentError("Must provide version for validators".into())
+            })?;
+
             // Following unwraps shouldn't fail as it is in memory
             let mut encryptor = Encryptor::new(Storage::InMemoryStorage(InMemoryStorage::new()));
             encryptor.initialize().unwrap();
-            encryptor
-                .add_key(self.version.unwrap(), self.address_encryption_key.unwrap())
-                .unwrap();
-            encryptor
-                .set_current_version(self.version.unwrap())
-                .unwrap();
+            encryptor.add_key(version, address_encryption_key).unwrap();
+            encryptor.set_current_version(version).unwrap();
 
             validator_set_validator_addresses(client, &encryptor, None)?
         } else {
@@ -151,18 +173,22 @@ impl CheckValidatorSetEndpoints {
             NetworkId::Public
         };
 
-        let (peer_id, public_key) = private_key_to_public_info(&self.private_key);
+        let (peer_id, public_key) = private_key_to_public_info(&private_key);
         let upgrade_context =
-            build_upgrade_context(self.chain_id, network_id, peer_id, self.private_key);
+            build_upgrade_context(self.chain_id, network_id, peer_id, private_key);
 
         let timeout = timeout_duration(self.timeout_seconds);
+        println!(
+            "Checking nodes with peer_id {} and public_key {}, timeout {:?}",
+            peer_id, public_key, timeout
+        );
 
         // Check all the addresses accordingly
         for (name, peer_id, addrs) in nodes {
             for addr in addrs {
-                match check_endpoint(upgrade_context.clone(), addr, peer_id, public_key, timeout) {
+                match check_endpoint(upgrade_context.clone(), addr, timeout) {
                     Ok(_) => println!("{} -- good", name),
-                    Err(err) => println!("{} -- bad -- {}", name, err),
+                    Err(err) => println!("{} : {} -- bad -- {}", name, peer_id, err),
                 };
             }
         }
@@ -229,16 +255,10 @@ fn validate_address(address: &NetworkAddress) -> Result<(), Error> {
 fn check_endpoint(
     upgrade_context: Arc<UpgradeContext>,
     address: NetworkAddress,
-    peer_id: PeerId,
-    public_key: x25519::PublicKey,
     timeout: Duration,
 ) -> Result<String, Error> {
     let runtime = Runtime::new().unwrap();
     let remote_pubkey = address.find_noise_proto().unwrap();
-    println!(
-        "Connecting with peer_id {} and pubkey {} to {} with timeout: {:?}",
-        peer_id, public_key, address, timeout
-    );
 
     let connect_future = async {
         tokio::time::timeout(
