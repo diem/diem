@@ -647,20 +647,21 @@ module TreasuryComplianceScripts {
     }
 
     /// # Summary
-        /// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
-        /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
-        /// payments over this limit must be checked for dual attestation.
+        /// Update the Diem ID domains of a parent VASP account. The transaction can
+        /// only be sent by the Treasury Compliance account. Domains can only be added or removed.
         ///
         /// # Technical Description
-        /// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
-        /// `0xA550C18`. The amount is set in micro-XDX.
+        /// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
+        /// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
+        /// and set to `true` if removing a domain name.
         ///
         /// # Parameters
         /// | Name                  | Type     | Description                                                                                     |
         /// | ------                | ------   | -------------                                                                                   |
         /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-        /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-        /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+        /// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+        /// | `domain` | `vector<u8>`    | The domain name.                                             |
+        /// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
         ///
         /// # Common Abort Conditions
         /// | Error Category             | Error Reason                            | Description                                                                                |

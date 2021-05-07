@@ -66,13 +66,12 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Technical Description](#@Technical_Description_47)
     -  [Parameters](#@Parameters_48)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_49)
-    -  [Related Scripts](#@Related_Scripts_50)
 -  [Function `create_diem_id_domains`](#0x1_AccountAdministrationScripts_create_diem_id_domains)
-    -  [Summary](#@Summary_51)
-    -  [Technical Description](#@Technical_Description_52)
-    -  [Parameters](#@Parameters_53)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_54)
-    -  [Related Scripts](#@Related_Scripts_55)
+    -  [Summary](#@Summary_50)
+    -  [Technical Description](#@Technical_Description_51)
+    -  [Parameters](#@Parameters_52)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_53)
+    -  [Related Scripts](#@Related_Scripts_54)
 
 
 <pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
@@ -1093,14 +1092,6 @@ may be used as a recovery account for those accounts.
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
-<a name="@Related_Scripts_50"></a>
-
-### Related Scripts
-
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::rotate_authentication_key_with_recovery_address</code>
-
-
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">create_recovery_address</a>(account: signer)
 </code></pre>
 
@@ -1151,7 +1142,7 @@ may be used as a recovery account for those accounts.
 ## Function `create_diem_id_domains`
 
 
-<a name="@Summary_51"></a>
+<a name="@Summary_50"></a>
 
 ### Summary
 
@@ -1162,7 +1153,7 @@ Multiple recovery addresses can exist for a single VASP, but accounts in
 each must be disjoint.
 
 
-<a name="@Technical_Description_52"></a>
+<a name="@Technical_Description_51"></a>
 
 ### Technical Description
 
@@ -1173,7 +1164,7 @@ other accounts may add their key rotation to this resource so that <code>account
 may be used as a recovery account for those accounts.
 
 
-<a name="@Parameters_53"></a>
+<a name="@Parameters_52"></a>
 
 ### Parameters
 
@@ -1182,7 +1173,7 @@ may be used as a recovery account for those accounts.
 | <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
-<a name="@Common_Abort_Conditions_54"></a>
+<a name="@Common_Abort_Conditions_53"></a>
 
 ### Common Abort Conditions
 
@@ -1194,7 +1185,7 @@ may be used as a recovery account for those accounts.
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
-<a name="@Related_Scripts_55"></a>
+<a name="@Related_Scripts_54"></a>
 
 ### Related Scripts
 

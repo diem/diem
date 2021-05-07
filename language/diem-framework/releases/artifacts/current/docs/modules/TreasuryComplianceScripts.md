@@ -84,7 +84,6 @@ per-transaction basis.
     -  [Technical Description](#@Technical_Description_58)
     -  [Parameters](#@Parameters_59)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_60)
-    -  [Related Scripts](#@Related_Scripts_61)
 
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
@@ -1231,19 +1230,8 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttesta
 
 | Error Category             | Error Reason                            | Description                                                                                |
 | ----------------           | --------------                          | -------------                                                                              |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>tc_account</code>.                             |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
-
-
-<a name="@Related_Scripts_61"></a>
-
-### Related Scripts
-
-* <code><a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_exchange_rate">TreasuryComplianceScripts::update_exchange_rate</a></code>
-* <code><a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_minting_ability">TreasuryComplianceScripts::update_minting_ability</a></code>
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
@@ -1256,11 +1244,11 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttesta
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a> (
-        tc_account: signer,
-        to_update_address: address,
-        domain: vector&lt;u8&gt;,
-        is_remove: bool,
-    ) {
+    tc_account: signer,
+    to_update_address: address,
+    domain: vector&lt;u8&gt;,
+    is_remove: bool,
+) {
     <a href="DiemId.md#0x1_DiemId_update_diem_id_domain">DiemId::update_diem_id_domain</a>(&tc_account, to_update_address, domain, is_remove);
 }
 </code></pre>

@@ -1957,10 +1957,6 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
     /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
-    ///
-    /// # Related Scripts
-    /// * `Script::add_recovery_rotation_capability`
-    /// * `Script::rotate_authentication_key_with_recovery_address`
     CreateRecoveryAddress {},
 
     /// # Summary
@@ -2900,15 +2896,8 @@ pub enum ScriptFunctionCall {
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
     /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-    ///
-    /// # Related Scripts
-    /// * `TreasuryComplianceScripts::update_exchange_rate`
-    /// * `TreasuryComplianceScripts::update_minting_ability`
     UpdateDiemIdDomain {
         to_update_address: AccountAddress,
         domain: Bytes,
@@ -4234,10 +4223,6 @@ pub fn encode_create_parent_vasp_account_script_function(
 /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
 /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
-///
-/// # Related Scripts
-/// * `Script::add_recovery_rotation_capability`
-/// * `Script::rotate_authentication_key_with_recovery_address`
 pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -5501,15 +5486,8 @@ pub fn encode_update_diem_consensus_config_script_function(
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |
 /// | ----------------           | --------------                          | -------------                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-///
-/// # Related Scripts
-/// * `TreasuryComplianceScripts::update_exchange_rate`
-/// * `TreasuryComplianceScripts::update_minting_ability`
 pub fn encode_update_diem_id_domain_script_function(
     to_update_address: AccountAddress,
     domain: Vec<u8>,

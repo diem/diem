@@ -15,6 +15,8 @@ Module managing Diem ID.
 -  [Function `has_diem_id_domains`](#0x1_DiemId_has_diem_id_domains)
 -  [Function `publish_diem_id_domain_manager`](#0x1_DiemId_publish_diem_id_domain_manager)
 -  [Function `update_diem_id_domain`](#0x1_DiemId_update_diem_id_domain)
+-  [Function `has_diem_id_domain`](#0x1_DiemId_has_diem_id_domain)
+-  [Function `tc_domain_manager_exists`](#0x1_DiemId_tc_domain_manager_exists)
 -  [Module Specification](#@Module_Specification_1)
 
 
@@ -333,10 +335,15 @@ a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainEvent">DiemIdDomainEvent</a></
 ) <b>acquires</b> <a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a>, <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> account_domains = borrow_global_mut&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(to_update_address);
-    <b>let</b> diem_id_domain = <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {
-        domain: domain
+    <b>let</b> diem_id_domain = <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {domain: domain};
+    <b>if</b> (is_remove) {
+        <b>let</b> (has, index) = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_index_of">Vector::index_of</a>(&account_domains.domains, &diem_id_domain);
+        <b>if</b> (has) {
+            <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> account_domains.domains, index);
+        };
+    } <b>else</b> {
+        <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> account_domains.domains, <b>copy</b> diem_id_domain);
     };
-    <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> account_domains.domains, <b>copy</b> diem_id_domain);
 
     <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_emit_event">Event::emit_event</a>(
         &<b>mut</b> borrow_global_mut&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()).diem_id_domain_events,
@@ -359,6 +366,58 @@ a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainEvent">DiemIdDomainEvent</a></
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemId_has_diem_id_domain"></a>
+
+## Function `has_diem_id_domain`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_has_diem_id_domain">has_diem_id_domain</a>(addr: address, domain: vector&lt;u8&gt;): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_has_diem_id_domain">has_diem_id_domain</a>(addr: address, domain: vector&lt;u8&gt;): bool <b>acquires</b> <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
+    <b>let</b> account_domains = borrow_global&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(addr);
+    <b>let</b> diem_id_domain = <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {
+        domain: domain
+    };
+    <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_contains">Vector::contains</a>(&account_domains.domains, &diem_id_domain)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemId_tc_domain_manager_exists"></a>
+
+## Function `tc_domain_manager_exists`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_tc_domain_manager_exists">tc_domain_manager_exists</a>(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_tc_domain_manager_exists">tc_domain_manager_exists</a>(): bool {
+    <b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>())
+}
 </code></pre>
 
 
