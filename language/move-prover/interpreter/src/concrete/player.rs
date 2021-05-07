@@ -9,9 +9,7 @@ use diem_crypto::HashValue;
 
 use bytecode::{
     function_target::FunctionTarget,
-    function_target_pipeline::{
-        FunctionTargetsHolder, FunctionVariant, REGULAR_VERIFICATION_VARIANT,
-    },
+    function_target_pipeline::FunctionTargetsHolder,
     stackless_bytecode::{
         AbortAction, AssignKind, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Label,
         Operation, StrongEdge,
@@ -28,13 +26,16 @@ use move_model::{
     ty as MT,
 };
 
-use crate::concrete::{
-    local_state::{AbortInfo, LocalState, TerminationStatus},
-    ty::{
-        convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
-        Type,
+use crate::{
+    concrete::{
+        local_state::{AbortInfo, LocalState, TerminationStatus},
+        ty::{
+            convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
+            Type,
+        },
+        value::{GlobalState, LocalSlot, Pointer, TypedValue},
     },
-    value::{GlobalState, LocalSlot, Pointer, TypedValue},
+    shared::variant::choose_variant,
 };
 
 //**************************************************************************************************
@@ -1694,24 +1695,7 @@ impl<'env> FunctionContext<'env> {
         ty_args: &[MT::Type],
     ) -> FunctionContext<'env> {
         let env = self.target.global_env();
-
-        // TODO (mengxu): find a better way to determine which variant to call
-        let mut target_variant = None;
-        for (variant, target) in self.holder.get_targets(callee_env) {
-            // regular verification variant is preferred, baseline version is the second choice
-            match variant {
-                FunctionVariant::Baseline => {
-                    if target_variant.is_none() {
-                        target_variant = Some(target);
-                    }
-                }
-                FunctionVariant::Verification(REGULAR_VERIFICATION_VARIANT) => {
-                    target_variant = Some(target);
-                }
-                _ => (),
-            }
-        }
-        let callee_target = target_variant.unwrap();
+        let callee_target = choose_variant(self.holder, callee_env);
 
         // check and convert type arguments
         if cfg!(debug_assertions) {

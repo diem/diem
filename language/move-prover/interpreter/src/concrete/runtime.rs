@@ -1,14 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use bytecode::{
-    function_target::FunctionTarget,
-    function_target_pipeline::{
-        FunctionTargetsHolder, FunctionVariant, REGULAR_VERIFICATION_VARIANT,
-    },
-};
+use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::StatusCode};
 use move_model::{
@@ -25,7 +18,7 @@ use crate::{
         },
         value::{GlobalState, TypedValue},
     },
-    shared::ident::StructIdent,
+    shared::{ident::StructIdent, variant::choose_variant},
 };
 
 /// A stackless bytecode runtime in charge of pre- and post-execution checking, conversion, and
@@ -58,7 +51,7 @@ impl<'env> Runtime<'env> {
         fun_env: &FunctionEnv,
         ty_args: &[TypeTag],
         args: &[MoveValue],
-        global_state: GlobalState,
+        mut global_state: GlobalState,
     ) -> (VMResult<Vec<TypedValue>>, GlobalState) {
         // check and convert type arguments
         match check_type_instantiation(self.env, &fun_env.get_type_parameters(), ty_args) {
@@ -129,64 +122,14 @@ impl<'env> Runtime<'env> {
             }
         }
 
-        // execute each variant of the function and collect results
-        let mut variants: BTreeMap<_, _> = self
-            .functions
-            .get_targets(&fun_env)
-            .into_iter()
-            .filter(|(_, fun_target)| !fun_target.get_bytecode().is_empty())
-            .map(|(fun_variant, fun_target)| {
-                let mut state = global_state.clone();
-                let result = self.execute_target(
-                    fun_target,
-                    &converted_ty_args,
-                    &converted_args,
-                    &mut state,
-                );
-                (fun_variant, (result, state))
-            })
-            .collect();
-
-        // cross-comparison of execution results
-        let baseline = match variants.remove(&FunctionVariant::Baseline).or_else(|| {
-            variants.remove(&FunctionVariant::Verification(REGULAR_VERIFICATION_VARIANT))
-        }) {
-            None => {
-                return (
-                    Err(
-                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(format!(
-                                "Unable to find the baseline variant for function target: {}",
-                                fun_env.get_full_name_str()
-                            ))
-                            .finish(Location::Undefined),
-                    ),
-                    global_state,
-                );
-            }
-            Some(baseline) => baseline,
-        };
-        for (variant, result) in variants {
-            if result != baseline {
-                // TODO (mengxu) maybe show details of disagreement between the results?
-                return (
-                    Err(
-                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(format!(
-                                "Executions of function target variants do not match: {} {} vs {}",
-                                fun_env.get_full_name_str(),
-                                &FunctionVariant::Baseline,
-                                variant
-                            ))
-                            .finish(Location::Undefined),
-                    ),
-                    global_state,
-                );
-            }
-        }
-
-        // all execution results agree, return the common version
-        baseline
+        let fun_target = choose_variant(self.functions, &fun_env);
+        let result = self.execute_target(
+            fun_target,
+            &converted_ty_args,
+            &converted_args,
+            &mut global_state,
+        );
+        (result, global_state)
     }
 
     //
