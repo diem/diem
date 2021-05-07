@@ -70,11 +70,15 @@
 #![allow(clippy::while_let_loop)]
 
 mod node;
+mod utils;
 
 #[cfg(test)]
 mod sparse_merkle_test;
 
-use crate::sparse_merkle::node::{LeafValue, Node, SubTree};
+use crate::sparse_merkle::{
+    node::{LeafValue, Node, SubTree},
+    utils::{partition, swap_if},
+};
 use arc_swap::{ArcSwap, ArcSwapOption};
 use diem_crypto::{
     hash::{CryptoHash, HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -313,7 +317,7 @@ where
             match root.get_node_if_in_mem() {
                 Some(arc_node) => match arc_node.borrow() {
                     Node::Internal(internal_node) => {
-                        let pivot = Self::partition(updates, subtree_depth);
+                        let pivot = partition(updates, subtree_depth);
                         let left_weak = internal_node.left.weak();
                         let left_hash = left_weak.hash();
                         let right_weak = internal_node.right.weak();
@@ -428,15 +432,6 @@ where
         Ok((subtree, hashes, sibling_hash))
     }
 
-    /// Swap template-type values if 'cond'=true - useful to determine left/right parameters.
-    fn swap_if<T>(first: T, second: T, cond: bool) -> (T, T) {
-        if cond {
-            (second, first)
-        } else {
-            (first, second)
-        }
-    }
-
     /// Creates a new subtree. Important parameters are:
     /// - 'bottom_subtree' will be added at the bottom of the construction. It is either empty
     ///  or a leaf, containing either (a weak pointer to) a node from the previous version
@@ -461,10 +456,10 @@ where
             }
         }
 
-        let pivot = Self::partition(updates, subtree_depth);
+        let pivot = partition(updates, subtree_depth);
         let child_is_right = target_key.bit(subtree_depth);
         let (child_updates, sibling_updates) =
-            Self::swap_if(&updates[..pivot], &updates[pivot..], child_is_right);
+            swap_if(&updates[..pivot], &updates[pivot..], child_is_right);
 
         let mut child_pre_hash = bottom_subtree.hash();
         let sibling_pre_hash = *siblings
@@ -507,11 +502,10 @@ where
             proof_reader,
         )?;
 
-        let (left_tree, right_tree) = Self::swap_if(child_tree, sibling_tree, child_is_right);
-        let (left_hashes, right_hashes) =
-            Self::swap_if(child_hashes, sibling_hashes, child_is_right);
+        let (left_tree, right_tree) = swap_if(child_tree, sibling_tree, child_is_right);
+        let (left_hashes, right_hashes) = swap_if(child_hashes, sibling_hashes, child_is_right);
         let (left_pre_hash, right_pre_hash) =
-            Self::swap_if(child_pre_hash, sibling_pre_hash, child_is_right);
+            swap_if(child_pre_hash, sibling_pre_hash, child_is_right);
 
         let merged_hashes =
             Self::merge_txn_hashes(left_pre_hash, left_hashes, right_pre_hash, right_hashes);
@@ -963,24 +957,6 @@ where
         }
     }
 
-    /// Return the index of the first bit that is 1 at the given depth when updates are
-    /// lexicographically sorted.
-    fn partition<T>(updates: &[(HashValue, T)], depth: usize) -> usize {
-        // Binary search for the cut-off point where the bit at this depth turns from 0 to 1.
-        // TODO: with stable partition_point: updates.partition_point(|&u| !u.0.bit(depth));
-        let (mut i, mut j) = (0, updates.len());
-        // Find the first index that starts with bit 1.
-        while i < j {
-            let mid = i + (j - i) / 2;
-            if updates[mid].0.bit(depth) {
-                j = mid;
-            } else {
-                i = mid + 1;
-            }
-        }
-        i
-    }
-
     /// Given a current subtree node with its depth and a list of updates with key and value, update the
     /// subtree according to the new k-v pairs.
     fn batch_update_subtree(
@@ -1008,7 +984,7 @@ where
                     if let Some(node) = root.get_node_if_in_mem() {
                         match node.borrow() {
                             Node::Internal(internal_node) => {
-                                let idx = Self::partition(kvs, depth);
+                                let idx = partition(kvs, depth);
                                 let (left, right) = if is_generated_from_proofs {
                                     (internal_node.left.clone(), internal_node.right.clone())
                                 } else {
@@ -1127,7 +1103,7 @@ where
         } else {
             let mut bits_on_path = vec![];
             loop {
-                let idx = Self::partition(kvs, depth);
+                let idx = partition(kvs, depth);
                 depth += 1;
                 if idx == 0 {
                     bits_on_path.push(true);
@@ -1197,7 +1173,7 @@ where
             let mut bits_on_path = vec![];
             let mut siblings_on_path = vec![];
             loop {
-                let idx = Self::partition(key_proof_pairs, depth);
+                let idx = partition(key_proof_pairs, depth);
                 let siblings = key_proof_pairs[0].1.siblings();
                 if idx == 0 || idx == n {
                     let sibling_hash = siblings[siblings.len() - 1 - depth];
@@ -1257,7 +1233,7 @@ where
         } else {
             let mut bits_on_path = vec![];
             loop {
-                let idx = Self::partition(kvs, depth);
+                let idx = partition(kvs, depth);
                 if idx == 0 {
                     if existing_leaf_key.bit(depth) {
                         bits_on_path.push(true);
