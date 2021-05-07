@@ -487,6 +487,89 @@ impl TypedValue {
         }
     }
 
+    pub fn borrow_ref_vector_element(
+        self,
+        elem_num: usize,
+        is_mut: bool,
+        local_idx: TempIndex,
+    ) -> Option<TypedValue> {
+        if cfg!(debug_assertions) {
+            let (self_is_mut, _) = self.ty.get_ref_type();
+            assert!(self_is_mut || !is_mut);
+        }
+        let elem_ty = self.ty.into_ref_vector_elem(None);
+        let val = match self.val {
+            BaseValue::Vector(mut v) => {
+                if elem_num >= v.len() {
+                    return None;
+                }
+                v.remove(elem_num)
+            }
+            _ => unreachable!(),
+        };
+        Some(TypedValue {
+            ty: Type::Reference(is_mut, elem_ty),
+            val,
+            ptr: Pointer::RefElement(local_idx, elem_num),
+        })
+    }
+
+    pub fn update_ref_vector_push_back(self, elem_val: TypedValue) -> TypedValue {
+        let (elem_ty, elem_val, _) = elem_val.decompose();
+        let (vec_ty, vec_val, vec_ptr) = self.decompose();
+        let elem = vec_ty.into_ref_vector_elem(Some(true));
+        if cfg!(debug_assertions) {
+            assert!(elem_ty.is_base_of(&elem));
+        }
+        let mut elems = vec_val.into_vector();
+        elems.push(elem_val);
+        TypedValue {
+            ty: Type::mk_ref_vector(elem, true),
+            val: BaseValue::mk_vector(elems),
+            ptr: vec_ptr,
+        }
+    }
+
+    pub fn update_ref_vector_pop_back(self) -> Option<(TypedValue, TypedValue)> {
+        let (vec_ty, vec_val, vec_ptr) = self.decompose();
+        let elem_ty = vec_ty.into_ref_vector_elem(Some(true));
+        let mut elems = vec_val.into_vector();
+        match elems.pop() {
+            None => None,
+            Some(elem_val) => {
+                let elem = TypedValue {
+                    ty: Type::Base(elem_ty.clone()),
+                    val: elem_val,
+                    ptr: Pointer::None,
+                };
+                let new_vec = TypedValue {
+                    ty: Type::mk_ref_vector(elem_ty, true),
+                    val: BaseValue::mk_vector(elems),
+                    ptr: vec_ptr,
+                };
+                Some((new_vec, elem))
+            }
+        }
+    }
+
+    pub fn update_ref_vector_swap(self, lhs: usize, rhs: usize) -> Option<TypedValue> {
+        let (vec_ty, vec_val, vec_ptr) = self.decompose();
+        if cfg!(debug_assertions) {
+            assert!(vec_ty.is_ref_vector(Some(true)));
+        }
+        let mut elems = vec_val.into_vector();
+        if lhs >= elems.len() || rhs >= elems.len() {
+            return None;
+        }
+        elems.swap(lhs, rhs);
+        let new_vec = TypedValue {
+            ty: vec_ty,
+            val: BaseValue::mk_vector(elems),
+            ptr: vec_ptr,
+        };
+        Some(new_vec)
+    }
+
     pub fn update_ref_vector_element(self, elem_val: TypedValue) -> TypedValue {
         let (elem_ty, elem_val, elem_ptr) = elem_val.decompose();
         let (vec_ty, vec_val, vec_ptr) = self.decompose();

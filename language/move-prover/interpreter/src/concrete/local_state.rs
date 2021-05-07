@@ -76,6 +76,11 @@ impl LocalState {
         }
     }
 
+    /// Get the number of slots available in this state
+    pub fn num_slots(&self) -> usize {
+        self.slots.len()
+    }
+
     /// Get the type of the local slot at `index`
     pub fn get_type(&self, index: TempIndex) -> &Type {
         self.slots.get(index).unwrap().get_type()

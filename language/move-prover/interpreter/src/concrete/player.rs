@@ -13,7 +13,10 @@ use bytecode::{
     },
 };
 use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
-use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
+use move_core_types::{
+    account_address::AccountAddress,
+    vm_status::{sub_status, StatusCode},
+};
 use move_model::{
     ast::TempIndex,
     model::{FunId, FunctionEnv, ModuleId, StructId},
@@ -28,6 +31,18 @@ use crate::concrete::{
     },
     value::{GlobalState, LocalSlot, Pointer, TypedValue},
 };
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+const DIEM_CORE_ADDR: AccountAddress =
+    AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+
+// TODO(mengxu): these constants are defined in values_impl.rs which are currently not exposed.
+const INDEX_OUT_OF_BOUNDS: u64 = sub_status::NFE_VECTOR_ERROR_BASE + 1;
+const POP_EMPTY_VEC: u64 = sub_status::NFE_VECTOR_ERROR_BASE + 2;
+const DESTROY_NON_EMPTY_VEC: u64 = sub_status::NFE_VECTOR_ERROR_BASE + 3;
 
 //**************************************************************************************************
 // Execution context
@@ -59,65 +74,137 @@ impl<'env> FunctionContext<'env> {
     // execution
     //
 
-    /// Execute a function with the type arguments and value arguments.
-    pub fn exec_function(
+    /// Execute a user function with value arguments.
+    pub fn exec_user_function(
         &self,
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
     ) -> PartialVMResult<LocalState> {
-        let target = &self.target;
-        let env = target.global_env();
-
-        // discover and validate local slots
-        let param_decls = target.func_env.get_parameters();
-        if cfg!(debug_assertions) {
-            assert_eq!(param_decls.len(), typed_args.len());
-            assert!(param_decls.len() <= target.get_local_count());
-        }
-
-        let mut local_slots = vec![];
-        for (i, typed_arg) in typed_args.into_iter().enumerate() {
-            let name = env
-                .symbol_pool()
-                .string(target.get_local_name(i))
-                .to_string();
-
-            // check that types for local slots is compatible with the declared parameter type
-            if cfg!(debug_assertions) {
-                let local_ty = target.get_local_type(i);
-                let param_decl_ty = &param_decls.get(i).unwrap().1;
-                if local_ty != param_decl_ty {
-                    assert!(matches!(
-                            param_decl_ty,
-                            MT::Type::Reference(false, base_ty)
-                            if local_ty == base_ty.as_ref()));
-                }
-                let ty = convert_model_local_type(env, local_ty, &self.ty_args);
-                assert_eq!(&ty, typed_arg.get_ty());
-            }
-
-            let slot = LocalSlot::new_arg(name, typed_arg);
-            local_slots.push(slot);
-        }
-        for i in param_decls.len()..target.get_local_count() {
-            let name = env
-                .symbol_pool()
-                .string(target.get_local_name(i))
-                .to_string();
-            let ty = convert_model_local_type(env, target.get_local_type(i), &self.ty_args);
-            let slot = LocalSlot::new_tmp(name, ty);
-            local_slots.push(slot);
-        }
-
-        // execute the bytecode stepwise
-        let instructions = target.get_bytecode();
-        let mut local_state = LocalState::new(local_slots);
+        let mut local_state = self.prepare_local_state(typed_args);
+        let instructions = self.target.get_bytecode();
         while !local_state.is_terminated() {
             let pc = local_state.get_pc() as usize;
             let bytecode = instructions.get(pc).unwrap();
             self.exec_bytecode(bytecode, &mut local_state, global_state)?;
         }
         Ok(local_state)
+    }
+
+    /// Execute a native function with the type arguments and value arguments.
+    fn exec_native_function(
+        &self,
+        srcs: &[TempIndex],
+        typed_args: Vec<TypedValue>,
+        local_state: &mut LocalState,
+        _global_state: &mut GlobalState,
+    ) -> Result<Vec<TypedValue>, AbortInfo> {
+        let mut dummy_state = self.prepare_local_state(typed_args);
+        if cfg!(debug_assertions) {
+            assert_eq!(dummy_state.num_slots(), srcs.len());
+        }
+
+        // locate
+        let env = self.target.global_env();
+        let addr = *self.target.module_env().self_address();
+        let module_name = env
+            .symbol_pool()
+            .string(self.target.module_env().get_name().name());
+        let function_name = env.symbol_pool().string(self.target.get_name());
+
+        // dispatch
+        match (addr, module_name.as_str(), function_name.as_str()) {
+            (DIEM_CORE_ADDR, "Vector", "empty") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 0);
+                }
+                let res = self.native_vector_empty();
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "Vector", "length") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_vector_length(dummy_state.del_value(0));
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "Vector", "borrow") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 2);
+                }
+                self.native_vector_borrow(
+                    false,
+                    *srcs.get(0).unwrap(),
+                    dummy_state.del_value(0),
+                    dummy_state.del_value(1),
+                )
+                .map(|res| vec![res])
+            }
+            (DIEM_CORE_ADDR, "Vector", "borrow_mut") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 2);
+                }
+                self.native_vector_borrow(
+                    true,
+                    *srcs.get(0).unwrap(),
+                    dummy_state.del_value(0),
+                    dummy_state.del_value(1),
+                )
+                .map(|res| vec![res])
+            }
+            (DIEM_CORE_ADDR, "Vector", "push_back") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 2);
+                }
+                let res = self
+                    .native_vector_push_back(dummy_state.del_value(0), dummy_state.del_value(1));
+                local_state.put_value_override(*srcs.get(0).unwrap(), res);
+                Ok(vec![])
+            }
+            (DIEM_CORE_ADDR, "Vector", "pop_back") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_vector_pop_back(dummy_state.del_value(0));
+                match res {
+                    Ok((new_vec, elem_val)) => {
+                        local_state.put_value_override(*srcs.get(0).unwrap(), new_vec);
+                        Ok(vec![elem_val])
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            (DIEM_CORE_ADDR, "Vector", "destroy_empty") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_vector_destroy_empty(dummy_state.del_value(0));
+                match res {
+                    Ok(_) => {
+                        local_state.del_value(*srcs.get(0).unwrap());
+                        Ok(vec![])
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            (DIEM_CORE_ADDR, "Vector", "swap") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 3);
+                }
+                let res = self.native_vector_swap(
+                    dummy_state.del_value(0),
+                    dummy_state.del_value(1),
+                    dummy_state.del_value(2),
+                );
+                match res {
+                    Ok(new_vec) => {
+                        local_state.put_value_override(*srcs.get(0).unwrap(), new_vec);
+                        Ok(vec![])
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn exec_bytecode(
@@ -249,7 +336,7 @@ impl<'env> FunctionContext<'env> {
         // case on operation type
         let op_result = match op {
             // function call
-            Operation::Function(module_id, fun_id, ty_args) => self.handle_call_user_function(
+            Operation::Function(module_id, fun_id, ty_args) => self.handle_call_function(
                 *module_id,
                 *fun_id,
                 ty_args,
@@ -642,7 +729,7 @@ impl<'env> FunctionContext<'env> {
         Ok(())
     }
 
-    fn handle_call_user_function(
+    fn handle_call_function(
         &self,
         module_id: ModuleId,
         fun_id: FunId,
@@ -661,6 +748,16 @@ impl<'env> FunctionContext<'env> {
             assert_eq!(callee_ctxt.target.get_parameter_count(), typed_args.len());
         }
 
+        // short-circuit the execution if this is a native function
+        if callee_env.is_native() {
+            return Ok(callee_ctxt.exec_native_function(
+                srcs,
+                typed_args,
+                local_state,
+                global_state,
+            ));
+        }
+
         // collect mutable arguments
         let mut_args: Vec<_> = typed_args
             .iter()
@@ -669,8 +766,8 @@ impl<'env> FunctionContext<'env> {
             .map(|(callee_idx, _)| (callee_idx, *srcs.get(callee_idx).unwrap()))
             .collect();
 
-        // execute the function
-        let mut callee_state = callee_ctxt.exec_function(typed_args, global_state)?;
+        // execute the user function
+        let mut callee_state = callee_ctxt.exec_user_function(typed_args, global_state)?;
 
         // update mutable arguments
         for (callee_idx, origin_idx) in mut_args {
@@ -1348,6 +1445,109 @@ impl<'env> FunctionContext<'env> {
     }
 
     //
+    // natives
+    //
+
+    fn native_vector_empty(&self) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+        }
+        TypedValue::mk_vector(self.ty_args.get(0).unwrap().clone(), vec![])
+    }
+
+    fn native_vector_length(&self, vec_val: TypedValue) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            // NOTE: this length function accept a value instead of a reference!
+            // This is different from the Move native implementation.
+            assert_eq!(
+                vec_val.get_ty().get_vector_elem(),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        TypedValue::mk_u64(vec_val.into_vector().len() as u64)
+    }
+
+    fn native_vector_borrow(
+        &self,
+        is_mut: bool,
+        vec_idx: TempIndex,
+        vec_val: TypedValue,
+        elem_val: TypedValue,
+    ) -> Result<TypedValue, AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                vec_val.get_ty().get_ref_vector_elem(None),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        let elem_num = elem_val.into_u64() as usize;
+        vec_val
+            .borrow_ref_vector_element(elem_num, is_mut, vec_idx)
+            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+    }
+
+    fn native_vector_push_back(&self, vec_val: TypedValue, elem_val: TypedValue) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                vec_val.get_ty().get_ref_vector_elem(Some(true)),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        vec_val.update_ref_vector_push_back(elem_val)
+    }
+
+    fn native_vector_pop_back(
+        &self,
+        vec_val: TypedValue,
+    ) -> Result<(TypedValue, TypedValue), AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                vec_val.get_ty().get_ref_vector_elem(Some(true)),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        vec_val
+            .update_ref_vector_pop_back()
+            .ok_or_else(|| AbortInfo::usr_abort(POP_EMPTY_VEC))
+    }
+
+    fn native_vector_destroy_empty(&self, vec_val: TypedValue) -> Result<(), AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                vec_val.get_ty().get_vector_elem(),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        if !vec_val.into_vector().is_empty() {
+            return Err(AbortInfo::usr_abort(DESTROY_NON_EMPTY_VEC));
+        }
+        Ok(())
+    }
+
+    fn native_vector_swap(
+        &self,
+        vec_val: TypedValue,
+        lhs: TypedValue,
+        rhs: TypedValue,
+    ) -> Result<TypedValue, AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            assert_eq!(
+                vec_val.get_ty().get_ref_vector_elem(Some(true)),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        vec_val
+            .update_ref_vector_swap(lhs.into_u64() as usize, rhs.into_u64() as usize)
+            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+    }
+
+    //
     // utilities
     //
 
@@ -1381,6 +1581,53 @@ impl<'env> FunctionContext<'env> {
         // build the context
         FunctionContext::new(self.holder, callee_target, callee_ty_insts)
     }
+
+    fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
+        let target = &self.target;
+        let env = target.global_env();
+
+        // discover and validate local slots
+        let param_decls = target.func_env.get_parameters();
+        if cfg!(debug_assertions) {
+            assert_eq!(param_decls.len(), typed_args.len());
+            assert!(param_decls.len() <= target.get_local_count());
+        }
+
+        let mut local_slots = vec![];
+        for (i, typed_arg) in typed_args.into_iter().enumerate() {
+            let name = env
+                .symbol_pool()
+                .string(target.get_local_name(i))
+                .to_string();
+
+            // check that types for local slots is compatible with the declared parameter type
+            if cfg!(debug_assertions) {
+                let local_ty = target.get_local_type(i);
+                let param_decl_ty = &param_decls.get(i).unwrap().1;
+                if local_ty != param_decl_ty {
+                    assert!(matches!(
+                            param_decl_ty,
+                            MT::Type::Reference(false, base_ty)
+                            if local_ty == base_ty.as_ref()));
+                }
+                let ty = convert_model_local_type(env, local_ty, &self.ty_args);
+                assert_eq!(&ty, typed_arg.get_ty());
+            }
+
+            let slot = LocalSlot::new_arg(name, typed_arg);
+            local_slots.push(slot);
+        }
+        for i in param_decls.len()..target.get_local_count() {
+            let name = env
+                .symbol_pool()
+                .string(target.get_local_name(i))
+                .to_string();
+            let ty = convert_model_local_type(env, target.get_local_type(i), &self.ty_args);
+            let slot = LocalSlot::new_tmp(name, ty);
+            local_slots.push(slot);
+        }
+        LocalState::new(local_slots)
+    }
 }
 
 //**************************************************************************************************
@@ -1396,7 +1643,7 @@ pub fn entrypoint(
     global_state: &mut GlobalState,
 ) -> PartialVMResult<Vec<TypedValue>> {
     let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
-    let local_state = ctxt.exec_function(typed_args, global_state)?;
+    let local_state = ctxt.exec_user_function(typed_args, global_state)?;
     let termination = local_state.into_termination_status();
     let return_vals = match termination {
         TerminationStatus::Abort(abort_info) => {
