@@ -1085,7 +1085,7 @@ impl DiemVM_ {
 
         // The advanced scheduler
         let execute_start = std::time::Instant::now();
-        let curent_idx = AtomicUsize::new(0);
+        let current_idx = AtomicUsize::new(0);
         let stop_when = signature_verified_block.len();
 
         use std::collections::VecDeque;
@@ -1111,7 +1111,7 @@ impl DiemVM_ {
                         if tx_idx_ring_buffer.len() < 10 {
                             // How many transactions to have in the buffer.
 
-                            let idx = curent_idx.fetch_add(1, Ordering::Relaxed);
+                            let idx = current_idx.fetch_add(1, Ordering::Relaxed);
                             if idx < stop_when {
                                 let txn = &signature_verified_block[idx];
 
@@ -1194,7 +1194,9 @@ impl DiemVM_ {
                                             WriteOp::Value(data) => Some(data.clone()),
                                         };
 
-                                        placeholders.write(k, idx, val).unwrap();
+                                        if let Err(_) = placeholders.write(k, idx, val) {
+                                            panic!("{:?} has unexpected write at {}, version {}, vm_status {}", txn, k, idx, vm_status);
+                                        }
                                     }
 
                                     for w in deps.writes(&params) {

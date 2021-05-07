@@ -23,7 +23,7 @@ pub use crate::{
 #[cfg(test)]
 mod tests;
 
-fn id_and_transactions_from_block(block: &Block) -> (HashValue, Vec<Transaction>) {
+pub fn id_and_transactions_from_block(block: &Block) -> (HashValue, Vec<Transaction>) {
     let id = block.id();
     let mut transactions = vec![Transaction::BlockMetadata(block.into())];
     transactions.extend(

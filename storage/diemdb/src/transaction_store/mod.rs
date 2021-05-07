@@ -76,7 +76,7 @@ impl TransactionStore {
     /// version 0).
     pub fn get_block_metadata(&self, version: Version) -> Result<Option<(Version, BlockMetadata)>> {
         // Maximum TPS from benchmark is around 1000.
-        const MAX_VERSIONS_TO_SEARCH: usize = 1000 * 3;
+        const MAX_VERSIONS_TO_SEARCH: usize = 1000 * 10;
 
         // Linear search via `DB::rev_iter()` here, NOT expecting performance hit, due to the fact
         // that the iterator caches data block and that there are limited number of transactions in

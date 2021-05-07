@@ -21,8 +21,10 @@ use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_mempool::ConsensusRequest;
 use diem_types::on_chain_config::OnChainConfigPayload;
+use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use execution_correctness::ExecutionCorrectnessManager;
+use executor::Executor;
 use futures::channel::mpsc;
 use state_sync::client::StateSyncClient;
 use std::{
@@ -56,12 +58,10 @@ pub fn start_consensus(
         node_config.consensus.mempool_executed_txn_timeout_ms,
         pending_txns.clone(),
     ));
-    let execution_correctness_manager =
-        ExecutionCorrectnessManager::new(node_config, Some(DbReaderWriter::from_arc(diem_db)));
-    let state_computer = Arc::new(ExecutionProxy::new(
-        execution_correctness_manager.client(),
-        state_sync_client,
-    ));
+    // let execution_correctness_manager =
+    //     ExecutionCorrectnessManager::new(node_config, Some(DbReaderWriter::from_arc(diem_db)));
+    let executor = Box::new(Executor::<DiemVM>::new(DbReaderWriter::from_arc(diem_db)));
+    let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
@@ -71,14 +71,13 @@ pub fn start_consensus(
     let (execute_tx, execute_rx) = channel::new_test(1000);
     let (commit_tx, commit_rx) = channel::new_test(1000);
     let order_only_computer = Arc::new(OrderProxy::new(execute_tx, pending_txns.clone()));
-    let execution_phase = ExecutionPhase::new(
+    let execution_phase = ExecutionPhase::new(state_computer.clone(), execute_rx, commit_tx);
+    let commit_phase = CommitPhase::new(
         state_computer.clone(),
-        execute_rx,
-        commit_tx,
+        commit_rx,
         back_pressure.clone(),
         pending_txns,
     );
-    let commit_phase = CommitPhase::new(state_computer.clone(), commit_rx);
 
     let epoch_mgr = EpochManager::new(
         node_config,

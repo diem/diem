@@ -430,6 +430,9 @@ impl RoundManager {
     fn sync_only(&self) -> bool {
         let back_pressure = self.back_pressure.load(Ordering::SeqCst);
         let root_round = self.block_store.root().round();
+        counters::OP_COUNTERS
+            .gauge("sync_only")
+            .set((root_round - back_pressure) as i64);
         self.sync_only || root_round - back_pressure > 10
     }
 

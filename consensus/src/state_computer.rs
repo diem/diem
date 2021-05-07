@@ -9,8 +9,8 @@ use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
-use execution_correctness::ExecutionCorrectness;
-use executor_types::{Error as ExecutionError, StateComputeResult};
+use execution_correctness::{id_and_transactions_from_block, ExecutionCorrectness};
+use executor_types::{BlockExecutor, Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
 use state_sync::client::StateSyncClient;
 use std::boxed::Box;
@@ -18,17 +18,17 @@ use std::boxed::Box;
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
+    executor: Box<dyn BlockExecutor + Send + Sync>,
     synchronizer: StateSyncClient,
 }
 
 impl ExecutionProxy {
     pub fn new(
-        execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
+        executor: Box<dyn BlockExecutor + Send + Sync>,
         synchronizer: StateSyncClient,
     ) -> Self {
         Self {
-            execution_correctness_client: Mutex::new(execution_correctness_client),
+            executor,
             synchronizer,
         }
     }
@@ -53,13 +53,12 @@ impl StateComputer for ExecutionProxy {
             parent_id = block.parent_id(),
             "Executing block",
         );
+        let input = id_and_transactions_from_block(block);
 
         // TODO: figure out error handling for the prologue txn
         monitor!(
             "execute_block",
-            self.execution_correctness_client
-                .lock()
-                .execute_block(block.clone(), block.parent_id())
+            self.executor.execute_block(input, block.parent_id())
         )
     }
 
@@ -71,9 +70,7 @@ impl StateComputer for ExecutionProxy {
     ) -> Result<(), ExecutionError> {
         let (committed_txns, reconfig_events) = monitor!(
             "commit_block",
-            self.execution_correctness_client
-                .lock()
-                .commit_blocks(block_ids, finality_proof)?
+            self.executor.commit_blocks(block_ids, finality_proof)?
         );
         if let Err(e) = monitor!(
             "notify_state_sync",
@@ -99,7 +96,7 @@ impl StateComputer for ExecutionProxy {
         let res = monitor!("sync_to", self.synchronizer.sync_to(target).await);
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
-        self.execution_correctness_client.lock().reset()?;
+        self.executor.reset()?;
 
         res.map_err(|error| {
             let anyhow_error: anyhow::Error = error.into();
