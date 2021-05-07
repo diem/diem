@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use num::{BigUint, ToPrimitive, Zero};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+
+use diem_crypto::HashValue;
 
 use bytecode::{
     function_target::FunctionTarget,
@@ -202,6 +205,27 @@ impl<'env> FunctionContext<'env> {
                     }
                     Err(e) => Err(e),
                 }
+            }
+            (DIEM_CORE_ADDR, "Signer", "borrow_address") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_signer_borrow_address(dummy_state.del_value(0));
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "Hash", "sha2_256") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_hash_sha2_256(dummy_state.del_value(0));
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "Hash", "sha3_256") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_hash_sha3_256(dummy_state.del_value(0));
+                Ok(vec![res])
             }
             _ => unreachable!(),
         }
@@ -1545,6 +1569,49 @@ impl<'env> FunctionContext<'env> {
         vec_val
             .update_ref_vector_swap(lhs.into_u64() as usize, rhs.into_u64() as usize)
             .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+    }
+
+    fn native_signer_borrow_address(&self, signer_val: TypedValue) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+        }
+        let (addr, is_mut, _) = signer_val.into_ref_signer();
+        if cfg!(debug_assertions) {
+            assert!(!is_mut);
+        }
+        TypedValue::mk_address(addr)
+    }
+
+    fn native_hash_sha2_256(&self, bytes_val: TypedValue) -> TypedValue {
+        let elem_ty = BaseType::mk_u8();
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+            assert!(bytes_val.get_ty().is_vector_of(&elem_ty));
+        }
+        let bytes: Vec<_> = bytes_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let digest = Sha256::digest(&bytes).to_vec();
+        let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
+        TypedValue::mk_vector(elem_ty, hashed)
+    }
+
+    fn native_hash_sha3_256(&self, bytes_val: TypedValue) -> TypedValue {
+        let elem_ty = BaseType::mk_u8();
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+            assert!(bytes_val.get_ty().is_vector_of(&elem_ty));
+        }
+        let bytes: Vec<_> = bytes_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let digest = HashValue::sha3_256_of(&bytes).to_vec();
+        let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
+        TypedValue::mk_vector(elem_ty, hashed)
     }
 
     //

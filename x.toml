@@ -242,6 +242,7 @@ existing_deps = [
     ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
     ["invalid-mutations", "diem-proptest-helpers"],           # pick_slice_idxs
     ["bytecode-verifier-tests", "diem-framework-releases"],
+    ["bytecode-interpreter", "diem-crypto"],                  # implementation of native functions
     ["compiler", "diem-framework-releases"],
     ["move-vm-natives", "diem-crypto"],
     ["move-vm-runtime", "diem-logger"],

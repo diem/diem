@@ -596,6 +596,7 @@ dependencies = [
  "anyhow",
  "bytecode",
  "datatest-stable",
+ "diem-crypto",
  "diem-workspace-hack",
  "move-binary-format",
  "move-core-types",
@@ -603,6 +604,7 @@ dependencies = [
  "move-prover-test-utils",
  "num 0.4.0",
  "serde",
+ "sha2",
  "structopt 0.3.21",
 ]
 
