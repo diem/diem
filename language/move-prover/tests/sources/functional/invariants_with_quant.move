@@ -1,5 +1,3 @@
-// exclude_for: cvc4
-// TODO(cvc4): this leads to non-termination with cvc4.
 module 0x42::TestQuantInvariant {
     use 0x1::Vector;
     spec module {
@@ -19,6 +17,6 @@ module 0x42::TestQuantInvariant {
         ensures forall i in 0..len(result), j in 0..len(result) where result[i] == result[j] : i == j;
         ensures forall i : u64, j : u64 { result[i], result[j] }
             where result[i] == result[j] && i >= 0 && i < len(result) && j >= 0 && j < len(result) : i == j;
-        ensures forall i in 0..len(result) { result[i], result[i] } { result[i] }: {let i = result[i]; i > 0};
+        ensures forall i in 0..len(result) { result[i] }: {let i = result[i]; i > 0};
     }
 }
