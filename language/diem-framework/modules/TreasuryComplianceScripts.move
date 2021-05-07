@@ -670,17 +670,14 @@ module TreasuryComplianceScripts {
         /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
         /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
         /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-        ///
-        /// # Related Scripts
-        /// * `TreasuryComplianceScripts::update_exchange_rate`
-        /// * `TreasuryComplianceScripts::update_minting_ability`
+
 
         public(script) fun update_diem_id_domain (
-                tc_account: signer,
-                to_update_address: address,
-                domain: vector<u8>,
-                is_remove: bool,
-            ) {
+            tc_account: signer,
+            to_update_address: address,
+            domain: vector<u8>,
+            is_remove: bool,
+        ) {
             DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove);
         }
 }
