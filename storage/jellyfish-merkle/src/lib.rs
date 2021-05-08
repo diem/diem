@@ -95,6 +95,7 @@ use proptest::arbitrary::Arbitrary;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::{
     collections::{BTreeMap, BTreeSet},
     marker::PhantomData,
@@ -153,10 +154,10 @@ impl Value for diem_types::account_state_blob::AccountStateBlob {}
 impl TestValue for diem_types::account_state_blob::AccountStateBlob {}
 
 /// Node batch that will be written into db atomically with other batches.
-pub type NodeBatch<V> = BTreeMap<NodeKey, Node<V>>;
+pub type NodeBatch<V> = HashMap<NodeKey, Node<V>>;
 /// [`StaleNodeIndex`](struct.StaleNodeIndex.html) batch that will be written into db atomically
 /// with other batches.
-pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
+pub type StaleNodeIndexBatch = HashSet<StaleNodeIndex>;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct NodeStats {
@@ -268,18 +269,17 @@ where
     /// the batch is not reachable from public interfaces before being committed.
     pub fn put_value_sets(
         &self,
-        value_sets: Vec<Vec<(HashValue, V)>>,
+        value_sets: impl Iterator<Item = impl Iterator<Item = (HashValue, V)>>,
         first_version: Version,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch<V>)> {
         let mut tree_cache = TreeCache::new(self.reader, first_version)?;
-        for (idx, value_set) in value_sets.into_iter().enumerate() {
-            assert!(
-                !value_set.is_empty(),
-                "Transactions that output empty write set should not be included.",
-            );
+        for (idx, mut value_set) in value_sets.enumerate() {
+            // assert!(
+            //     !value_set.is_empty(),
+            //     "Transactions that output empty write set should not be included.",
+            // );
             let version = first_version + idx as u64;
             value_set
-                .into_iter()
                 .try_for_each(|(key, value)| Self::put(key, value, version, &mut tree_cache))?;
             // Freezes the current cache to make all contents in the current cache immutable.
             tree_cache.freeze();

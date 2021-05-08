@@ -41,7 +41,7 @@ pub(crate) struct SpeculationBlock {
     // The block id of which the output is computed from.
     id: HashValue,
     // The transactions in the block.
-    transactions: Vec<Transaction>,
+    transactions: Vec<Arc<Transaction>>,
     // The pointers to all the children blocks.
     children: Vec<Arc<Mutex<SpeculationBlock>>>,
     // The speculative execution result.
@@ -59,7 +59,7 @@ impl SpeculationBlock {
     ) -> Self {
         Self {
             id,
-            transactions,
+            transactions: transactions.into_iter().map(Arc::new).collect(),
             children: vec![],
             output,
             block_map,
@@ -70,7 +70,7 @@ impl SpeculationBlock {
         self.id
     }
 
-    pub fn transactions(&self) -> &Vec<Transaction> {
+    pub fn transactions(&self) -> &Vec<Arc<Transaction>> {
         &self.transactions
     }
 
@@ -83,7 +83,7 @@ impl SpeculationBlock {
     }
 
     pub fn replace(&mut self, transactions: Vec<Transaction>, output: ProcessedVMOutput) {
-        self.transactions = transactions;
+        self.transactions = transactions.into_iter().map(Arc::new).collect();
         self.output = output;
         self.children = vec![];
     }

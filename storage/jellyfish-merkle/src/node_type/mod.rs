@@ -63,7 +63,7 @@ impl NodeKey {
 
     /// A shortcut to generate a node key consisting of a version and an empty nibble path.
     pub fn new_empty_path(version: Version) -> Self {
-        Self::new(version, NibblePath::new(vec![]))
+        Self::new(version, NibblePath::new(Vec::with_capacity(32)))
     }
 
     /// Gets the version.
@@ -100,10 +100,11 @@ impl NodeKey {
 
     /// Serializes to bytes for physical storage enforcing the same order as that in memory.
     pub fn encode(&self) -> Result<Vec<u8>> {
-        let mut out = vec![];
+        let payload = self.nibble_path().bytes();
+        let mut out = Vec::with_capacity(9 + payload.len());
         out.write_u64::<BigEndian>(self.version())?;
         out.write_u8(self.nibble_path().num_nibbles() as u8)?;
-        out.write_all(self.nibble_path().bytes())?;
+        out.write_all(payload)?;
         Ok(out)
     }
 
@@ -605,23 +606,27 @@ where
 
     /// Serializes to bytes for physical storage.
     pub fn encode(&self) -> Result<Vec<u8>> {
-        let mut out = vec![];
-        match self {
+        Ok(match self {
             Node::Null => {
+                let mut out = Vec::with_capacity(1);
                 out.push(NodeTag::Null as u8);
+                out
             }
             Node::Internal(internal_node) => {
+                let mut out = Vec::with_capacity(600);
                 out.push(NodeTag::Internal as u8);
                 internal_node.serialize(&mut out)?;
                 DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES.inc_by(out.len() as u64);
+                out
             }
             Node::Leaf(leaf_node) => {
+                let mut out = Vec::with_capacity(1000);
                 out.push(NodeTag::Leaf as u8);
-                out.extend(bcs::to_bytes(&leaf_node)?);
+                bcs::serialize_into(&mut out, &leaf_node)?;
                 DIEM_JELLYFISH_LEAF_ENCODED_BYTES.inc_by(out.len() as u64);
+                out
             }
-        }
-        Ok(out)
+        })
     }
 
     /// Computes the hash of nodes.

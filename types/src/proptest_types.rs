@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::account_address::HashAccountAddress;
 use crate::{
     access_path::AccessPath,
     account_address::{self, AccountAddress},
@@ -42,6 +43,7 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use serde_json::Value;
+use std::sync::Arc;
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
@@ -815,17 +817,15 @@ impl TransactionToCommitGen {
             .account_state_gens
             .into_iter()
             .map(|(index, blob_gen)| {
-                (
-                    universe.get_account_info(index).address,
-                    blob_gen.materialize(index, universe),
-                )
+                let addr = universe.get_account_info(index).address;
+                (addr, (addr.hash(), blob_gen.materialize(index, universe)))
             })
             .collect();
 
         TransactionToCommit::new(
-            Transaction::UserTransaction(transaction),
-            account_states,
-            events,
+            Arc::new(Transaction::UserTransaction(transaction)),
+            Arc::new(account_states),
+            Arc::new(events),
             self.gas_used,
             self.status,
         )

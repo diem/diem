@@ -50,6 +50,7 @@ pub use script::{
 };
 
 use std::ops::Deref;
+use std::sync::Arc;
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
@@ -885,18 +886,18 @@ impl Display for TransactionInfo {
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionToCommit {
-    transaction: Transaction,
-    account_states: HashMap<AccountAddress, AccountStateBlob>,
-    events: Vec<ContractEvent>,
+    transaction: Arc<Transaction>,
+    account_states: Arc<HashMap<AccountAddress, (HashValue, AccountStateBlob)>>,
+    events: Arc<Vec<ContractEvent>>,
     gas_used: u64,
     status: KeptVMStatus,
 }
 
 impl TransactionToCommit {
     pub fn new(
-        transaction: Transaction,
-        account_states: HashMap<AccountAddress, AccountStateBlob>,
-        events: Vec<ContractEvent>,
+        transaction: Arc<Transaction>,
+        account_states: Arc<HashMap<AccountAddress, (HashValue, AccountStateBlob)>>,
+        events: Arc<Vec<ContractEvent>>,
         gas_used: u64,
         status: KeptVMStatus,
     ) -> Self {
@@ -913,12 +914,12 @@ impl TransactionToCommit {
         &self.transaction
     }
 
-    pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
-        &self.account_states
+    pub fn account_states(&self) -> &HashMap<AccountAddress, (HashValue, AccountStateBlob)> {
+        self.account_states.as_ref()
     }
 
     pub fn events(&self) -> &[ContractEvent] {
-        &self.events
+        self.events.as_ref()
     }
 
     pub fn gas_used(&self) -> u64 {

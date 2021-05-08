@@ -34,6 +34,8 @@ use std::{
     path::Path,
 };
 
+const DEFAULT_ALLOC: usize = 2000;
+
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
 
@@ -57,7 +59,7 @@ enum WriteOp {
 /// will be applied in the order in which they are added to the `SchemaBatch`.
 #[derive(Debug, Default)]
 pub struct SchemaBatch {
-    rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
+    rows: HashMap<ColumnFamilyName, Vec<(Vec<u8>, WriteOp)>>,
 }
 
 impl SchemaBatch {
@@ -72,8 +74,8 @@ impl SchemaBatch {
         let value = <S::Value as ValueCodec<S>>::encode_value(value)?;
         self.rows
             .entry(S::COLUMN_FAMILY_NAME)
-            .or_insert_with(BTreeMap::new)
-            .insert(key, WriteOp::Value(value));
+            .or_insert_with(|| Vec::with_capacity(DEFAULT_ALLOC))
+            .push((key, WriteOp::Value(value)));
 
         Ok(())
     }
@@ -83,8 +85,8 @@ impl SchemaBatch {
         let key = <S::Key as KeyCodec<S>>::encode_key(key)?;
         self.rows
             .entry(S::COLUMN_FAMILY_NAME)
-            .or_insert_with(BTreeMap::new)
-            .insert(key, WriteOp::Deletion);
+            .or_insert_with(|| Vec::with_capacity(DEFAULT_ALLOC))
+            .push((key, WriteOp::Deletion));
 
         Ok(())
     }

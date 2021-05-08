@@ -536,8 +536,7 @@ impl DiemDB {
         // Account state updates. Gather account state root hashes
         let account_state_sets = txns_to_commit
             .iter()
-            .map(|txn_to_commit| txn_to_commit.account_states().clone())
-            .collect::<Vec<_>>();
+            .map(|txn_to_commit| txn_to_commit.account_states());
         let state_root_hashes =
             self.state_store
                 .put_account_state_sets(account_state_sets, first_version, &mut cs)?;

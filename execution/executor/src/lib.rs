@@ -57,6 +57,7 @@ use executor_types::{
 };
 use fail::fail_point;
 use std::sync::RwLockReadGuard;
+use std::time::Instant;
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
@@ -300,7 +301,7 @@ where
                     .iter()
                     .map(|m| {
                         m.iter()
-                            .map(|(account, value)| (account.hash(), value))
+                            .map(|(_, (hash, value))| (*hash, value))
                             .collect::<Vec<_>>()
                     })
                     .collect(),
@@ -573,9 +574,9 @@ where
                 i, generated_txn_info, txn_info
             );
             txns_to_commit.push(TransactionToCommit::new(
-                txn,
-                txn_data.account_blobs().clone(),
-                txn_data.events().to_vec(),
+                Arc::new(txn),
+                txn_data.account_blobs(),
+                txn_data.events(),
                 txn_data.gas_used(),
                 recorded_status,
             ));
@@ -900,20 +901,21 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.
-        let mut txns_to_keep = vec![];
         let arc_blocks = block_ids
             .iter()
             .map(|id| read_lock.get_block(id))
             .collect::<Result<Vec<_>, Error>>()?;
         let blocks = arc_blocks.iter().map(|b| b.lock()).collect::<Vec<_>>();
+        let mut txns_to_keep =
+            Vec::with_capacity(blocks.iter().map(|b| b.transactions().len()).sum());
         for (txn, txn_data) in blocks.iter().flat_map(|block| {
             itertools::zip_eq(block.transactions(), block.output().transaction_data())
         }) {
             if let TransactionStatus::Keep(recorded_status) = txn_data.status() {
                 txns_to_keep.push(TransactionToCommit::new(
                     txn.clone(),
-                    txn_data.account_blobs().clone(),
-                    txn_data.events().to_vec(),
+                    txn_data.account_blobs(),
+                    txn_data.events(),
                     txn_data.gas_used(),
                     recorded_status.clone(),
                 ));
@@ -987,9 +989,9 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         }
 
         // Calculate committed transactions and reconfig events now that commit has succeeded
-        let mut committed_txns = vec![];
+        let mut committed_txns = Vec::with_capacity(txns_to_commit.len());
         let mut reconfig_events = vec![];
-        for txn in txns_to_commit.iter() {
+        for txn in txns_to_commit.into_iter() {
             committed_txns.push(txn.transaction().clone());
             reconfig_events.append(&mut Self::extract_reconfig_events(txn.events().to_vec()));
         }
@@ -1024,7 +1026,7 @@ pub fn process_write_set(
     transaction: &Transaction,
     account_to_state: &mut HashMap<AccountAddress, AccountState>,
     write_set: WriteSet,
-) -> Result<HashMap<AccountAddress, AccountStateBlob>> {
+) -> Result<HashMap<AccountAddress, (HashValue, AccountStateBlob)>> {
     let mut updated_blobs = HashMap::new();
 
     // Find all addresses this transaction touches while processing each write op.
@@ -1066,7 +1068,7 @@ pub fn process_write_set(
     for addr in addrs {
         let account_state = account_to_state.get(&addr).expect("Address should exist.");
         let account_blob = AccountStateBlob::try_from(account_state)?;
-        updated_blobs.insert(addr, account_blob);
+        updated_blobs.insert(addr, (addr.hash(), account_blob));
     }
 
     Ok(updated_blobs)

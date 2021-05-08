@@ -2293,7 +2293,6 @@ dependencies = [
  "aes-gcm",
  "anyhow",
  "bcs",
- "bytes",
  "chrono",
  "diem-crypto",
  "diem-crypto-derive",
