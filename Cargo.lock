@@ -4151,7 +4151,9 @@ dependencies = [
  "proptest-derive",
  "rand 0.8.3",
  "serde",
+ "structopt 0.3.21",
  "vm-genesis",
+ "walkdir",
 ]
 
 [[package]]

@@ -526,7 +526,7 @@ macro_rules! UPDATE_DUAL_ATTESTATION_LIMIT_BYTES {
     };
 }
 
-pub(crate) fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'static IdentStr)> {
+pub fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'static IdentStr)> {
     match script_bytes {
         // AccountAdministrationScripts
         ADD_CURRENCY_TO_ACCOUNT_BYTES!() => Some((

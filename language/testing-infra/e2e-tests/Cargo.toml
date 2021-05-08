@@ -35,3 +35,5 @@ diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-transaction-builder = { path = "../../../sdk/transaction-builder" }
 hex = "0.4.3"
+structopt = "0.3.21"
+walkdir = "2.3.1"
