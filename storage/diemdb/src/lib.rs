@@ -88,7 +88,7 @@ use std::{
 };
 use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 
-const MAX_LIMIT: u64 = 1000;
+const MAX_LIMIT: u64 = 10000;
 
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.

@@ -92,7 +92,7 @@ impl VMValidator for DiemVMValidator {
         let remote_cache = StateViewCache::new(state_view);
         let account_role = get_account_role(txn_sender, &remote_cache);
         let vm = CACHE_VM.with(|cell| {
-            let mut borrow= cell.borrow_mut();
+            let mut borrow = cell.borrow_mut();
             if let Some(ref vm) = *borrow {
                 vm.clone()
             } else {

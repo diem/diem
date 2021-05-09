@@ -32,10 +32,10 @@ pub struct StateSyncConfig {
 impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
-            chunk_limit: 1000,
+            chunk_limit: 3000,
             client_commit_timeout_ms: 5_000,
             long_poll_timeout_ms: 10_000,
-            max_chunk_limit: 1000,
+            max_chunk_limit: 3000,
             max_timeout_ms: 120_000,
             mempool_commit_timeout_ms: 5_000,
             multicast_timeout_ms: 30_000,

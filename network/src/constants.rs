@@ -17,6 +17,6 @@ pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
 // These are only used in tests
 // TODO: Fix this so the tests and the defaults in config are the same
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
-pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024; /* 8 MiB */
+pub const MAX_FRAME_SIZE: usize = 16 * 1024 * 1024; /* 8 MiB */
 pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;

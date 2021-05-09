@@ -203,7 +203,7 @@ where
     let start_storage_read = Instant::now();
     // Track latency: fetching seq number
     let seq_numbers = transactions
-        .par_iter()
+        .iter()
         .map(|t| {
             get_account_sequence_number(smp.db.as_ref(), t.sender()).map_err(|e| {
                 error!(LogSchema::new(LogEntry::DBError).error(&e));
@@ -253,8 +253,14 @@ where
         .with_label_values(&[counters::VM_VALIDATION_LABEL])
         .start_timer();
     let validation_results = transactions
-        .par_iter()
-        .map(|t| smp.validator.read().validate_transaction(t.0.clone()))
+        .par_chunks(100)
+        .map(|chunk| {
+            chunk
+                .iter()
+                .map(|t| smp.validator.read().validate_transaction(t.0.clone()))
+                .collect::<Vec<_>>()
+        })
+        .flatten()
         .collect::<Vec<_>>();
     vm_validation_timer.stop_and_record();
 

@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use diem_state_view::StateViewId;
+use diem_types::transaction::GovernanceRole;
 use diem_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
@@ -61,24 +62,29 @@ impl TransactionValidation for VMValidator {
                 "Injected error in vm_validator::validate_transaction"
             ))
         });
-        use diem_vm::VMValidator;
+        Ok(VMValidatorResult::new(
+            None,
+            0,
+            GovernanceRole::NonGovernanceRole,
+        ))
+        // use diem_vm::VMValidator;
+        //
+        // let (version, state_root) = self.db_reader.get_latest_state_root()?;
+        // let db_reader = Arc::clone(&self.db_reader);
+        // let vm = self.vm.clone();
+        //
+        // let smt = SparseMerkleTree::new(state_root);
+        // let state_view = VerifiedStateView::new(
+        //     StateViewId::TransactionValidation {
+        //         base_version: version,
+        //     },
+        //     db_reader,
+        //     Some(version),
+        //     state_root,
+        //     &smt,
+        // );
 
-        let (version, state_root) = self.db_reader.get_latest_state_root()?;
-        let db_reader = Arc::clone(&self.db_reader);
-        let vm = self.vm.clone();
-
-        let smt = SparseMerkleTree::new(state_root);
-        let state_view = VerifiedStateView::new(
-            StateViewId::TransactionValidation {
-                base_version: version,
-            },
-            db_reader,
-            Some(version),
-            state_root,
-            &smt,
-        );
-
-        Ok(vm.validate_transaction(txn, &state_view))
+        // Ok(vm.validate_transaction(txn, &state_view))
     }
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
