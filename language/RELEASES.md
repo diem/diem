@@ -5,9 +5,9 @@ Version 1.2 of Move (released along with Diem Core version 1.2) includes several
 ## Highlights
 
 * Move Language Enhancements: This version of Move adds support for three new language features. Each of these is described in more detail in separate change descriptions.
-    * Abilities: a generalization of the existing `resource`/`struct` distinction to enable more fine-grained control over the operations allowed on a record value.
-    * Script Functions: a new visibility modifier that allows a function to be called only from a transaction or another script function.
-    * Friend Visibility: a new visibility modifier that allows a function to be called only by a set of declared `friend` modules.
+    * [Friend Visibility](changes/1-friend-visibility.md): a new visibility modifier that allows a function to be called only by a set of declared `friend` modules.
+    * [Script Visibility](changes/2-script-visibility.md): a new visibility modifier that allows a function to be called only from a transaction or another script function.
+    * [Abilities](changes/3-abilities.md): a generalization of the existing `resource`/`struct` distinction to enable more fine-grained control over the operations allowed on a record value.
 * Version 2 of the Move bytecode format: The bytecode format has been changed to support the new features. The Move VM still reads and processes older versions of the Move bytecode, but new bytecode files will require the new Move VM version.
 * Move Prover: verification speed improvements of 2x and more via new internal architecture.
 
