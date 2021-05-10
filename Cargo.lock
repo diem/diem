@@ -6339,12 +6339,14 @@ name = "scratchpad"
 version = "0.1.0"
 dependencies = [
  "arc-swap",
+ "criterion",
  "diem-crypto",
  "diem-infallible",
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
+ "executor-types",
  "itertools 0.10.0",
  "proptest",
  "rand 0.8.3",
