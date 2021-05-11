@@ -1339,8 +1339,8 @@ module DiemAccount {
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
         Event::publish_generator(&new_account);
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
-        add_currencies_for_account<Token>(&new_account, add_all_currencies);
         DiemId::publish_diem_id_domains(&new_account);
+        add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
 
@@ -1359,6 +1359,7 @@ module DiemAccount {
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if VASP::is_vasp(new_account_address) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<DiemId::DiemIdDomains>(new_account_address) with Errors::ALREADY_PUBLISHED;
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
         include MakeAccountAbortsIf{addr: new_account_address};
     }

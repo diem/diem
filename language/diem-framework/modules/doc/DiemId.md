@@ -15,9 +15,10 @@ Module managing Diem ID.
 -  [Function `publish_diem_id_domains`](#0x1_DiemId_publish_diem_id_domains)
 -  [Function `has_diem_id_domains`](#0x1_DiemId_has_diem_id_domains)
 -  [Function `publish_diem_id_domain_manager`](#0x1_DiemId_publish_diem_id_domain_manager)
--  [Function `update_diem_id_domain`](#0x1_DiemId_update_diem_id_domain)
+-  [Function `update_diem_id_domains`](#0x1_DiemId_update_diem_id_domains)
 -  [Function `has_diem_id_domain`](#0x1_DiemId_has_diem_id_domain)
 -  [Function `tc_domain_manager_exists`](#0x1_DiemId_tc_domain_manager_exists)
+-  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
@@ -261,7 +262,7 @@ Before sending or receiving any payments using Diem IDs, the Treasury Compliance
 a transaction that invokes <code>add_domain_id</code> to set the <code>domains</code> field with a valid domain
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">publish_diem_id_domains</a>(created: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">publish_diem_id_domains</a>(vasp_account: &signer)
 </code></pre>
 
 
@@ -271,14 +272,14 @@ a transaction that invokes <code>add_domain_id</code> to set the <code>domains</
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">publish_diem_id_domains</a>(
-    created: &signer,
+    vasp_account: &signer,
 ) {
-    <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(created);
+    <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(vasp_account);
     <b>assert</b>(
-        !<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(created)),
+        !<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp_account)),
         <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">EDIEMIDDOMAIN</a>)
     );
-    move_to(created, <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
+    move_to(vasp_account, <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
         domains: <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_empty">Vector::empty</a>(),
     })
 }
@@ -293,8 +294,9 @@ a transaction that invokes <code>add_domain_id</code> to set the <code>domains</
 
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: created};
-<b>aborts_if</b> <a href="DiemId.md#0x1_DiemId_has_diem_id_domains">has_diem_id_domains</a>(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: vasp_account};
+<b>aborts_if</b> <a href="DiemId.md#0x1_DiemId_has_diem_id_domains">has_diem_id_domains</a>(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp_account)) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>aborts_if</b> <b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp_account)) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 </code></pre>
 
 
@@ -330,7 +332,7 @@ a transaction that invokes <code>add_domain_id</code> to set the <code>domains</
 ## Function `publish_diem_id_domain_manager`
 
 Publish a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a></code> resource under <code>tc_account</code> with an empty <code>diem_id_domain_events</code>.
-When Treasury Compliance account sends a transaction that invokes <code>update_diem_id_domain</code>,
+When Treasury Compliance account sends a transaction that invokes <code>update_diem_id_domains</code>,
 a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainEvent">DiemIdDomainEvent</a></code> is emitted and added to <code>diem_id_domain_events</code>.
 
 
@@ -377,16 +379,16 @@ a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainEvent">DiemIdDomainEvent</a></
 
 </details>
 
-<a name="0x1_DiemId_update_diem_id_domain"></a>
+<a name="0x1_DiemId_update_diem_id_domains"></a>
 
-## Function `update_diem_id_domain`
+## Function `update_diem_id_domains`
 
 When updating DiemIdDomains, a simple duplicate domain check is done.
 However, since domains are case insensitive, it is possible by error that two same domains in
 different lowercase and uppercase format gets added.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_update_diem_id_domain">update_diem_id_domain</a>(tc_account: &signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_update_diem_id_domains">update_diem_id_domains</a>(tc_account: &signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
 </code></pre>
 
 
@@ -395,7 +397,7 @@ different lowercase and uppercase format gets added.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_update_diem_id_domain">update_diem_id_domain</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_update_diem_id_domains">update_diem_id_domains</a>(
     tc_account: &signer,
     to_update_address: address,
     domain: vector&lt;u8&gt;,
@@ -501,6 +503,15 @@ different lowercase and uppercase format gets added.
 
 
 </details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
+</code></pre>
 
 
 [//]: # ("File containing references which can be used from documentation")

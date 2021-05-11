@@ -2890,7 +2890,7 @@ pub enum ScriptFunctionCall {
     /// | ----------------           | --------------                          | -------------                                                                              |
     /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-    UpdateDiemIdDomain {
+    UpdateDiemIdDomains {
         to_update_address: AccountAddress,
         domain: Bytes,
         is_remove: bool,
@@ -3518,11 +3518,13 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 config,
             } => encode_update_diem_consensus_config_script_function(sliding_nonce, config),
-            UpdateDiemIdDomain {
+            UpdateDiemIdDomains {
                 to_update_address,
                 domain,
                 is_remove,
-            } => encode_update_diem_id_domain_script_function(to_update_address, domain, is_remove),
+            } => {
+                encode_update_diem_id_domains_script_function(to_update_address, domain, is_remove)
+            }
             UpdateDiemVersion {
                 sliding_nonce,
                 major,
@@ -5472,7 +5474,7 @@ pub fn encode_update_diem_consensus_config_script_function(
 /// | ----------------           | --------------                          | -------------                                                                              |
 /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-pub fn encode_update_diem_id_domain_script_function(
+pub fn encode_update_diem_id_domains_script_function(
     to_update_address: AccountAddress,
     domain: Vec<u8>,
     is_remove: bool,
@@ -5482,7 +5484,7 @@ pub fn encode_update_diem_id_domain_script_function(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("TreasuryComplianceScripts").unwrap(),
         ),
-        Identifier::new("update_diem_id_domain").unwrap(),
+        Identifier::new("update_diem_id_domains").unwrap(),
         vec![],
         vec![
             bcs::to_bytes(&to_update_address).unwrap(),
@@ -7814,11 +7816,11 @@ fn decode_update_diem_consensus_config_script_function(
     }
 }
 
-fn decode_update_diem_id_domain_script_function(
+fn decode_update_diem_id_domains_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::UpdateDiemIdDomain {
+        Some(ScriptFunctionCall::UpdateDiemIdDomains {
             to_update_address: bcs::from_bytes(script.args().get(0)?).ok()?,
             domain: bcs::from_bytes(script.args().get(1)?).ok()?,
             is_remove: bcs::from_bytes(script.args().get(2)?).ok()?,
@@ -8421,8 +8423,8 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_update_diem_consensus_config_script_function),
         );
         map.insert(
-            "TreasuryComplianceScriptsupdate_diem_id_domain".to_string(),
-            Box::new(decode_update_diem_id_domain_script_function),
+            "TreasuryComplianceScriptsupdate_diem_id_domains".to_string(),
+            Box::new(decode_update_diem_id_domains_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsupdate_diem_version".to_string(),

@@ -66,35 +66,37 @@ Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 5, 0, 0, 0, 0, 0, 0, 0] as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
-  Changed 8 resource(s) under address 0000000000000000000000000000000A:
+  Changed 9 resource(s) under address 0000000000000000000000000000000A:
     Added type 0x1::AccountFreezing::FreezingBit: [0] (wrote 47 bytes)
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Added type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Added type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 24, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
+    Added type 0x1::DiemId::DiemIdDomains: [0] (wrote 40 bytes)
     Added type 0x1::DualAttestation::Credential: [6, 86, 65, 83, 80, 95, 65, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10] (wrote 128 bytes)
     Added type 0x1::Event::EventHandleGenerator: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10] (wrote 69 bytes)
     Added type 0x1::Roles::RoleId: [5, 0, 0, 0, 0, 0, 0, 0] (wrote 39 bytes)
     Added type 0x1::VASP::ParentVASP: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 42 bytes)
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 4, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
-Wrote 744 bytes of resource ID's and data
+Wrote 784 bytes of resource ID's and data
 Command `run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 5, 0, 0, 0, 0, 0, 0, 0] as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
-  Changed 8 resource(s) under address 0000000000000000000000000000000B:
+  Changed 9 resource(s) under address 0000000000000000000000000000000B:
     Added type 0x1::AccountFreezing::FreezingBit: [0] (wrote 47 bytes)
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Added type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Added type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 24, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
+    Added type 0x1::DiemId::DiemIdDomains: [0] (wrote 40 bytes)
     Added type 0x1::DualAttestation::Credential: [6, 86, 65, 83, 80, 95, 66, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11] (wrote 128 bytes)
     Added type 0x1::Event::EventHandleGenerator: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11] (wrote 69 bytes)
     Added type 0x1::Roles::RoleId: [5, 0, 0, 0, 0, 0, 0, 0] (wrote 39 bytes)
     Added type 0x1::VASP::ParentVASP: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 42 bytes)
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 5, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
-Wrote 744 bytes of resource ID's and data
+Wrote 784 bytes of resource ID's and data
 Command `run scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
 Compiling transaction script...
 Emitted 3 events:

@@ -4760,9 +4760,9 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 </details>
 
-<a name="0x1_TreasuryComplianceScripts_update_diem_id_domain"></a>
+<a name="0x1_TreasuryComplianceScripts_update_diem_id_domains"></a>
 
-##### Function `update_diem_id_domain`
+##### Function `update_diem_id_domains`
 
 
 <a name="@Summary_229"></a>
@@ -4804,7 +4804,7 @@ and set to <code><b>true</b></code> if removing a domain name.
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
 </code></pre>
 
 
@@ -4813,13 +4813,13 @@ and set to <code><b>true</b></code> if removing a domain name.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domain">update_diem_id_domain</a> (
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a> (
     tc_account: signer,
     to_update_address: address,
     domain: vector&lt;u8&gt;,
     is_remove: bool,
 ) {
-    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_update_diem_id_domain">DiemId::update_diem_id_domain</a>(&tc_account, to_update_address, domain, is_remove);
+    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_update_diem_id_domains">DiemId::update_diem_id_domains</a>(&tc_account, to_update_address, domain, is_remove);
 }
 </code></pre>
 

@@ -669,13 +669,13 @@ module TreasuryComplianceScripts {
     /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
 
-    public(script) fun update_diem_id_domain (
+    public(script) fun update_diem_id_domains (
         tc_account: signer,
         to_update_address: address,
         domain: vector<u8>,
         is_remove: bool,
     ) {
-        DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove);
+        DiemId::update_diem_id_domains(&tc_account, to_update_address, domain, is_remove);
     }
 }
 }

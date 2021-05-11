@@ -52,6 +52,10 @@ module DiemId {
     /// Invalid domain for DiemIdDomain
     const EINVALIDDIEMIDDOMAIN: u64 = 5;
 
+    spec module {
+        pragma verify = false;
+    }
+
     public fun create_diem_id_domain(domain: vector<u8>): DiemIdDomain {
         assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALIDDIEMIDDOMAIN));
         DiemIdDomain {domain}
@@ -61,20 +65,21 @@ module DiemId {
     /// Before sending or receiving any payments using Diem IDs, the Treasury Compliance account must send
     /// a transaction that invokes `add_domain_id` to set the `domains` field with a valid domain
     public fun publish_diem_id_domains(
-        created: &signer,
+        vasp_account: &signer,
     ) {
-        Roles::assert_parent_vasp_role(created);
+        Roles::assert_parent_vasp_role(vasp_account);
         assert(
-            !exists<DiemIdDomains>(Signer::address_of(created)),
+            !exists<DiemIdDomains>(Signer::address_of(vasp_account)),
             Errors::already_published(EDIEMIDDOMAIN)
         );
-        move_to(created, DiemIdDomains {
+        move_to(vasp_account, DiemIdDomains {
             domains: Vector::empty(),
         })
     }
     spec fun publish_diem_id_domains {
-        include Roles::AbortsIfNotParentVasp{account: created};
-        aborts_if has_diem_id_domains(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+        include Roles::AbortsIfNotParentVasp{account: vasp_account};
+        aborts_if has_diem_id_domains(Signer::spec_address_of(vasp_account)) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<DiemIdDomains>(Signer::address_of(vasp_account)) with Errors::ALREADY_PUBLISHED;
     }
 
     public fun has_diem_id_domains(addr: address): bool {
@@ -82,7 +87,7 @@ module DiemId {
     }
 
     /// Publish a `DiemIdDomainManager` resource under `tc_account` with an empty `diem_id_domain_events`.
-    /// When Treasury Compliance account sends a transaction that invokes `update_diem_id_domain`,
+    /// When Treasury Compliance account sends a transaction that invokes `update_diem_id_domains`,
     /// a `DiemIdDomainEvent` is emitted and added to `diem_id_domain_events`.
     public fun publish_diem_id_domain_manager(
         tc_account : &signer,
@@ -108,7 +113,7 @@ module DiemId {
     /// When updating DiemIdDomains, a simple duplicate domain check is done.
     /// However, since domains are case insensitive, it is possible by error that two same domains in
     /// different lowercase and uppercase format gets added.
-    public fun update_diem_id_domain(
+    public fun update_diem_id_domains(
         tc_account: &signer,
         to_update_address: address,
         domain: vector<u8>,
@@ -145,7 +150,7 @@ module DiemId {
         );
     }
 
-    spec fun update_diem_id_domain {
+    spec fun update_diem_id_domains {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
 
