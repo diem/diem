@@ -447,44 +447,41 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
         address, version, None,
     )];
     let callback: RequestCallback = |ctxt, subresponses| {
-        match subresponses {
-        [MethodResponse::GetAccountStateWithProof(ref account)] =>
-        {
-            let account_state_with_proof =
-                AccountStateWithProof::try_from(account).map_err(Error::decode)?;
-
-            let (address, version) = match ctxt.request {
-                MethodRequest::GetAccount(address, version) => (*address, *version),
-                request => panic!("programmer error: unexpected request: {:?}", request),
-            };
-            let latest_li = ctxt.state_proof.0.ledger_info();
-            let ledger_version = latest_li.version();
-            let version = version.unwrap_or(ledger_version);
-
-            account_state_with_proof
-                .verify(latest_li, version, address)
-                .map_err(Error::invalid_proof)?;
-
-            let maybe_account_view = account_state_with_proof
-                .blob
-                .map(|blob| {
-                    let account_state = AccountState::try_from(&blob)
-                        .map_err(Error::decode)?;
-                    AccountView::try_from_account_state(
-                        address,
-                        account_state,
-                        version,
-                    ).map_err(Error::decode)
-                })
-                .transpose()?;
-
-            Ok(MethodResponse::GetAccount(maybe_account_view))
-        }
-        subresponses => return Err(Error::rpc_response(format!(
-                    "expected [GetAccountStateWithProof, GetAccountStateWithProof] subresponses, received: {:?}",
+        let account = match subresponses {
+            [MethodResponse::GetAccountStateWithProof(ref account)] => account,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetEventsWithProofs] subresponses, received: {:?}",
                     subresponses,
-                    ))),
-    }
+                )))
+            }
+        };
+
+        let account_state_with_proof =
+            AccountStateWithProof::try_from(account).map_err(Error::decode)?;
+
+        let (address, version) = match ctxt.request {
+            MethodRequest::GetAccount(address, version) => (*address, *version),
+            request => panic!("programmer error: unexpected request: {:?}", request),
+        };
+        let latest_li = ctxt.state_proof.0.ledger_info();
+        let ledger_version = latest_li.version();
+        let version = version.unwrap_or(ledger_version);
+
+        account_state_with_proof
+            .verify(latest_li, version, address)
+            .map_err(Error::invalid_proof)?;
+
+        let maybe_account_view = account_state_with_proof
+            .blob
+            .map(|blob| {
+                let account_state = AccountState::try_from(&blob).map_err(Error::decode)?;
+                AccountView::try_from_account_state(address, account_state, version)
+                    .map_err(Error::decode)
+            })
+            .transpose()?;
+
+        Ok(MethodResponse::GetAccount(maybe_account_view))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }
