@@ -36,12 +36,12 @@ use std::{
 
 pub mod authenticator;
 mod change_set;
+pub mod diem_id_identifier;
 pub mod helpers;
 pub mod metadata;
 mod module;
 mod script;
 mod transaction_argument;
-pub mod diem_id_identifier;
 
 pub use change_set::ChangeSet;
 pub use module::Module;
