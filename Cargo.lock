@@ -6927,6 +6927,7 @@ dependencies = [
  "num 0.4.0",
  "num-traits",
  "once_cell",
+ "proptest",
  "rand 0.8.3",
  "regex",
  "rust_decimal",

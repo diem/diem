@@ -47,4 +47,7 @@ mod test_utils;
 mod transaction;
 
 #[cfg(test)]
+mod verifying_client;
+
+#[cfg(test)]
 mod workspace_builder;
