@@ -90,6 +90,11 @@ impl Experiment for StateSyncPerformance {
 
         // Read the validator synced version
         let validator_synced_version = self.read_validator_synced_version();
+        if validator_synced_version == 0.0 {
+            return Err(anyhow::format_err!(
+                "Validator synced zero transactions! Something has gone wrong!"
+            ));
+        }
         info!(
             "The validator is now synced at version: {}",
             validator_synced_version
@@ -120,8 +125,13 @@ impl Experiment for StateSyncPerformance {
         );
 
         // Calculate the state sync throughput
-        let time_to_state_sync = start_instant.elapsed();
-        let state_sync_throughput = validator_synced_version as u64 / time_to_state_sync.as_secs();
+        let time_to_state_sync = start_instant.elapsed().as_secs();
+        if time_to_state_sync == 0 {
+            return Err(anyhow::format_err!(
+                "The time taken to state sync was 0 seconds! Something has gone wrong!"
+            ));
+        }
+        let state_sync_throughput = validator_synced_version as u64 / time_to_state_sync;
         let state_sync_throughput_message =
             format!("State sync throughput : {} txn/sec", state_sync_throughput,);
         info!("Time to state sync {:?}", time_to_state_sync);
