@@ -83,6 +83,29 @@ impl StateComputer for ExecutionProxy {
         Ok(())
     }
 
+    async fn commit_with_callback(
+        &self,
+        block_ids: Vec<HashValue>,
+        finality_proof: LedgerInfoWithSignatures,
+        callback: Box<dyn FnOnce() -> () + Send + 'static>,
+    ) -> Result<(), ExecutionError> {
+        let (committed_txns, reconfig_events) = monitor!(
+            "commit_block",
+            self.executor.commit_blocks(block_ids, finality_proof)?
+        );
+        let client = self.synchronizer.clone();
+        tokio::spawn(async move {
+            if let Err(e) = monitor!(
+                "notify_state_sync",
+                client.commit(committed_txns, reconfig_events).await
+            ) {
+                error!(error = ?e, "Failed to notify state synchronizer");
+            }
+            callback();
+        });
+        Ok(())
+    }
+
     /// Synchronize to a commit that not present locally.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         fail_point!("consensus::sync_to", |_| {

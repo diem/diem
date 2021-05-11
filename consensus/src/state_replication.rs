@@ -55,6 +55,15 @@ pub trait StateComputer: Send + Sync {
         finality_proof: LedgerInfoWithSignatures,
     ) -> Result<(), ExecutionError>;
 
+    async fn commit_with_callback(
+        &self,
+        block_ids: Vec<HashValue>,
+        finality_proof: LedgerInfoWithSignatures,
+        callback: Box<dyn FnOnce() -> () + Send + 'static>,
+    ) -> Result<(), ExecutionError> {
+        unimplemented!();
+    }
+
     /// Best effort state synchronization to the given target LedgerInfo.
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator

@@ -86,10 +86,10 @@ impl CommitPhase {
             );
             let commit_round = commit_li.ledger_info().commit_info().round();
             let ids = executed_blocks.iter().map(|b| b.id()).collect();
-            self.committer.commit(ids, commit_li).await.unwrap();
             update_counters_for_committed_blocks(&executed_blocks);
-            {
-                let mut pending_txns = self.pending_txns.lock();
+            let pending_txns = self.pending_txns.clone();
+            let callback = Box::new(move || {
+                let mut pending_txns = pending_txns.lock();
                 for block in &executed_blocks {
                     if let Some(payload) = block.payload() {
                         for txn in payload {
@@ -100,7 +100,11 @@ impl CommitPhase {
                         }
                     }
                 }
-            }
+            });
+            self.committer
+                .commit_with_callback(ids, commit_li, callback)
+                .await
+                .unwrap();
             self.back_pressure.store(commit_round, Ordering::SeqCst);
         }
     }

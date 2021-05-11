@@ -37,6 +37,7 @@ pub enum CoordinatorMessage {
 }
 
 /// A client used for communicating with a StateSyncCoordinator.
+#[derive(Clone)]
 pub struct StateSyncClient {
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 
