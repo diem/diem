@@ -11,3 +11,4 @@ mod transaction_test;
 mod trusted_state_test;
 mod validator_set_test;
 mod write_set_test;
+mod diem_id_identifier_tests;
