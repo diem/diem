@@ -1,6 +1,6 @@
 [package]
 name = "diem-types"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem types"
 repository = "https://github.com/diem/diem"
@@ -28,9 +28,9 @@ thiserror = "1.0.24"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
 bcs = "0.1.2"
-diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
-diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.0.1" }
-move-core-types = { path = "../language/move-core/types", version = "0.0.1" }
+diem-crypto = { path = "../crypto/crypto", version = "0.0.2" }
+diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.0.2" }
+move-core-types = { path = "../language/move-core/types", version = "0.0.2" }
 
 [dev-dependencies]
 regex = "1.4.3"

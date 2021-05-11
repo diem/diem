@@ -1432,7 +1432,7 @@ dependencies = [
 
 [[package]]
 name = "diem-client"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "bcs",
@@ -1476,7 +1476,7 @@ dependencies = [
 
 [[package]]
 name = "diem-crypto"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1514,7 +1514,7 @@ dependencies = [
 
 [[package]]
 name = "diem-crypto-derive"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "diem-workspace-hack",
@@ -1828,7 +1828,7 @@ dependencies = [
 
 [[package]]
 name = "diem-json-rpc-types"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "bcs",
@@ -2124,7 +2124,7 @@ dependencies = [
 
 [[package]]
 name = "diem-sdk"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bcs",
  "diem-client",
@@ -2262,7 +2262,7 @@ dependencies = [
 
 [[package]]
 name = "diem-transaction-builder"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bcs",
  "diem-types",
@@ -2304,7 +2304,7 @@ dependencies = [
 
 [[package]]
 name = "diem-types"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4337,7 +4337,7 @@ dependencies = [
 
 [[package]]
 name = "move-core-types"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "bcs",
