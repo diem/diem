@@ -2,7 +2,7 @@
 name = "diem-sdk"
 version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Diem types"
+description = "The Official Diem SDK"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
