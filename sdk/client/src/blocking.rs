@@ -121,6 +121,12 @@ impl BlockingClient {
         self.send_batch(requests)
     }
 
+    pub fn request(&self, request: MethodRequest) -> Result<Response<MethodResponse>> {
+        let method = request.method();
+        let resp: Response<serde_json::Value> = self.send(request)?;
+        resp.and_then(|json| MethodResponse::from_json(method, json).map_err(Error::decode))
+    }
+
     pub fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>> {
         let request = JsonRpcRequest::new(MethodRequest::submit(txn).map_err(Error::request)?);
         self.send_without_retry(&request, true)

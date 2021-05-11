@@ -128,6 +128,12 @@ impl Client {
         self.send_batch(requests).await
     }
 
+    pub async fn request(&self, request: MethodRequest) -> Result<Response<MethodResponse>> {
+        let method = request.method();
+        let resp: Response<serde_json::Value> = self.send(request).await?;
+        resp.and_then(|json| MethodResponse::from_json(method, json).map_err(Error::decode))
+    }
+
     pub async fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>> {
         let request = JsonRpcRequest::new(MethodRequest::submit(txn).map_err(Error::request)?);
         self.send_without_retry(&request, true).await

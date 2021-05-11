@@ -147,7 +147,7 @@ impl<S: Storage> VerifyingClient<S> {
         &self,
         address: AccountAddress,
     ) -> Result<Response<Option<AccountView>>> {
-        self.send_via_batch(MethodRequest::get_account(address))
+        self.request(MethodRequest::get_account(address))
             .await?
             .and_then(MethodResponse::try_into_get_account)
     }
@@ -157,13 +157,13 @@ impl<S: Storage> VerifyingClient<S> {
         address: AccountAddress,
         version: Version,
     ) -> Result<Response<Option<AccountView>>> {
-        self.send_via_batch(MethodRequest::get_account_by_version(address, version))
+        self.request(MethodRequest::get_account_by_version(address, version))
             .await?
             .and_then(MethodResponse::try_into_get_account)
     }
 
     /// Send a single request via `VerifyingClient::batch`.
-    async fn send_via_batch(&self, request: MethodRequest) -> Result<Response<MethodResponse>> {
+    pub async fn request(&self, request: MethodRequest) -> Result<Response<MethodResponse>> {
         let mut responses = self.batch(vec![request]).await?.into_iter();
         let response = match responses.next() {
             Some(response) => response,
