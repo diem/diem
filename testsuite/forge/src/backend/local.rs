@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    AdminInfo, Coffer, Factory, FullNode, Node, NodeId, PublicInfo, Result, Swarm, Validator,
+    AdminInfo, ChainInfo, Coffer, Factory, FullNode, Node, NodeId, PublicInfo, Result, Swarm,
+    Validator,
 };
 use anyhow::ensure;
 use debug_interface::NodeDebugClient;
+use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
 use diem_genesis_tool::config_builder::FullnodeType;
 use diem_sdk::{
@@ -14,6 +16,8 @@ use diem_sdk::{
     types::{chain_id::ChainId, AccountKey, LocalAccount, PeerId},
 };
 use diem_swarm::swarm::{DiemNode, DiemSwarm, HealthStatus};
+use reqwest::Url;
+use std::str::FromStr;
 
 struct LocalSwarm {
     validator_swarm: DiemSwarm,
@@ -144,6 +148,16 @@ impl Swarm for LocalSwarm {
             },
         )
     }
+
+    fn chain_info(&mut self) -> ChainInfo<'_> {
+        ChainInfo::new(
+            &mut self.root_account,
+            &mut self.treasury_compliance_account,
+            &mut self.designated_dealer_account,
+            &self.url,
+            self.chain_id,
+        )
+    }
 }
 
 impl LocalSwarm {
@@ -203,8 +217,14 @@ impl Node for DiemNode {
         NodeId::new(self.node_id().parse::<usize>().unwrap())
     }
 
-    fn json_rpc_endpoint(&self) -> String {
-        self.config().json_rpc.address.to_string()
+    fn json_rpc_endpoint(&self) -> Url {
+        let ip = self.config().json_rpc.address.ip();
+        let port = self.config().json_rpc.address.port();
+        Url::from_str(&format!("http://{}:{}/v1", ip, port)).expect("Invalid URL.")
+    }
+
+    fn json_rpc_client(&self) -> JsonRpcClient {
+        JsonRpcClient::new(self.json_rpc_endpoint().to_string())
     }
 
     fn debug_client(&self) -> &NodeDebugClient {

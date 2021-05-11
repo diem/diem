@@ -3,8 +3,10 @@
 
 use crate::{HealthCheckError, Result};
 use debug_interface::NodeDebugClient;
+use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
 use diem_sdk::types::PeerId;
+use reqwest::Url;
 
 /// A NodeId is intended to be a unique identifier of a Node in a Swarm. Due to VFNs sharing the
 /// same PeerId as their Validator, another identifier is needed in order to distinguish between
@@ -31,7 +33,10 @@ pub trait Node {
     fn node_id(&self) -> NodeId;
 
     /// Return the URL for the JSON-RPC endpoint of this Node
-    fn json_rpc_endpoint(&self) -> String;
+    fn json_rpc_endpoint(&self) -> Url;
+
+    /// Return JSON-RPC client of this Node
+    fn json_rpc_client(&self) -> JsonRpcClient;
 
     /// Return a NodeDebugClient for this Node
     fn debug_client(&self) -> &NodeDebugClient;

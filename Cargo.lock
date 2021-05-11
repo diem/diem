@@ -3036,16 +3036,27 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "cluster-test",
  "debug-interface",
+ "diem-client",
  "diem-config",
  "diem-genesis-tool",
+ "diem-logger",
+ "diem-retrier",
  "diem-sdk",
  "diem-swarm",
+ "diem-types",
  "diem-workspace-hack",
+ "futures",
  "generate-key",
+ "itertools 0.10.0",
  "rand 0.8.3",
+ "rand_core 0.6.2",
+ "reqwest",
+ "serde_json",
  "structopt 0.3.21",
  "termcolor",
+ "tokio",
 ]
 
 [[package]]

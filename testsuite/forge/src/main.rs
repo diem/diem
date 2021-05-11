@@ -9,13 +9,16 @@ use diem_sdk::{
     transaction_builder::Currency,
 };
 use forge::{forge_main, ForgeConfig, Result, *};
+use itertools::Itertools;
+use rand::SeedableRng;
 use std::time::Duration;
+use tokio::runtime::Runtime;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
         public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
-        network_tests: &[&RestartValidator],
+        network_tests: &[&RestartValidator, &EmitTransaction],
     };
 
     forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()))
@@ -165,6 +168,35 @@ impl NetworkTest for RestartValidator {
         // wait node to recovery
         std::thread::sleep(Duration::from_millis(1000));
         node.health_check().expect("node health check failed");
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct EmitTransaction;
+
+impl Test for EmitTransaction {
+    fn name(&self) -> &'static str {
+        "emit_transaction"
+    }
+}
+
+impl NetworkTest for EmitTransaction {
+    fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
+        let duration = Duration::from_secs(10);
+        let rng = ::rand::rngs::StdRng::from_seed([0; 32]);
+        let validator_clients = ctx
+            .swarm()
+            .validators()
+            .into_iter()
+            .map(|n| n.json_rpc_client())
+            .collect_vec();
+        let mut emitter = TxEmitter::new(ctx.swarm().chain_info(), rng);
+        let rt = Runtime::new().unwrap();
+        let _stats = rt
+            .block_on(emitter.emit_txn_for(duration, EmitJobRequest::default(validator_clients)))
+            .unwrap();
 
         Ok(())
     }

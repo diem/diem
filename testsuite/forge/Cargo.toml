@@ -11,14 +11,25 @@ edition = "2018"
 
 [dependencies]
 anyhow = { version = "1.0", features = ["backtrace"] }
+futures = "0.3.12"
+itertools = "0.10.0"
 rand = "0.8.3"
 structopt = "0.3.21"
 termcolor = "1.1.2"
+tokio = { version = "1.3.0", features = ["full"] }
+reqwest = { version = "0.11.2", features = ["blocking", "json"] }
+rand_core = "0.6.2"
+serde_json = "1.0.64"
 
 diem-sdk = { path = "../../sdk" }
 diem-swarm = { path = "../diem-swarm"}
 debug-interface = { path = "../../common/debug-interface" }
+diem-logger = { path = "../../common/logger" }
 diem-config = { path = "../../config" }
 generate-key = { path = "../../config/generate-key" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
+diem-types = { path = "../../types", features = ["fuzzing"] }
+diem-retrier = { path = "../../common/retrier" }
+diem-client = { path = "../../sdk/client"}
+cluster-test = { path = "../cluster-test" }

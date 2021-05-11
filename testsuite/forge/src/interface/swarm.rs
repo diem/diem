@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{AdminInfo, FullNode, NodeId, PublicInfo, Result, Validator};
+use crate::{AdminInfo, ChainInfo, FullNode, NodeId, PublicInfo, Result, Validator};
 
 /// Trait used to represent a running network comprised of Validators and FullNodes
 pub trait Swarm {
@@ -50,4 +50,7 @@ pub trait Swarm {
 
     /// Construct a PublicInfo from this Swarm
     fn public_info(&mut self) -> PublicInfo<'_>;
+
+    /// Construct a NetworkInfo from this Swarm
+    fn chain_info(&mut self) -> ChainInfo<'_>;
 }
