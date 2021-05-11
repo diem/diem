@@ -9,6 +9,7 @@ use crate::{
     options::ProverOptions,
     usage_analysis,
 };
+use log::debug;
 use move_model::{
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, QualifiedId},
     pragmas::{DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA},
@@ -66,6 +67,8 @@ fn get_target_invariants(global_env: &GlobalEnv) -> BTreeSet<GlobalId> {
     global_env.get_global_invariants_by_module(module_id)
 }
 
+/// Return the set of all functions that have a pragma
+/// DISABLE_INVARIANTS_IN_BODY_PRAGMA
 fn compute_disabled_inv_fun_set(global_env: &GlobalEnv) -> BTreeSet<QualifiedId<FunId>> {
     let mut disabled_inv_fun_set: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
     for module_env in global_env.get_modules() {
@@ -79,9 +82,39 @@ fn compute_disabled_inv_fun_set(global_env: &GlobalEnv) -> BTreeSet<QualifiedId<
     disabled_inv_fun_set
 }
 
+/// Check whether function is callable from unknown sites (i.e., it is public or
+/// a script fun) and modifies some invariant in the target module.
+/// The second condition is an exception for functions that cannot invalidate
+/// any invariants.
+fn check_legal_disabled_invariants(
+    fun_env: &FunctionEnv,
+    disabled_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    non_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    funs_that_modify_some_inv: &BTreeSet<QualifiedId<FunId>>,
+) {
+    let global_env = fun_env.module_env.env;
+    let fun_id = fun_env.get_qualified_id();
+    if non_inv_fun_set.contains(&fun_id) && funs_that_modify_some_inv.contains(&fun_id) {
+        // function is public or script, which means we don't know whether invariants hold
+        // or not at the call site
+        if fun_env.has_unknown_callers() {
+            global_env.error(
+                &fun_env.get_loc(),
+                "Public or script functions must not be called when invariants are disabled \
+                 in a transitive caller or there is a pragma delegate_invariants_to_caller",
+            );
+        } else if disabled_inv_fun_set.contains(&fun_id) {
+            global_env.error(
+                &fun_env.get_loc(),
+                "Functions must not have a disable invariant pragma when invariants are disabled \
+                 in a transitive caller or there is a pragma delegate_invariants_to_caller",
+            );
+        }
+    }
+}
+
 // Find functions called from a context where invariant checking is disabled.
 // Whenever a function has this property, so do its callees.
-// TODO: Error checking
 fn compute_non_inv_fun_set(global_env: &GlobalEnv) -> BTreeSet<QualifiedId<FunId>> {
     let mut fun_set: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
     // invariant: If a function is in fun_set and not in worklist,
@@ -223,12 +256,12 @@ fn compute_friend_fun_ids(
 /// Debugging function to print a set of function id's using their
 /// symbolic function names.
 #[allow(dead_code)]
-fn print_fun_id_set(
+fn debug_print_fun_id_set(
     global_env: &GlobalEnv,
     fun_ids: &BTreeSet<QualifiedId<FunId>>,
     set_name: &str,
 ) {
-    println!(
+    debug!(
         "{}: {:?}",
         set_name,
         fun_ids
@@ -241,28 +274,31 @@ fn print_fun_id_set(
 /// Print sets and maps computed during verification analysis
 /// TODO: Complete this and write it properly as Display
 #[allow(dead_code)]
-fn print_invariant_analysis_data(global_env: &GlobalEnv, inv_ana_data: &InvariantAnalysisData) {
-    println!("target_invariants <can't print yet>");
-    print_fun_id_set(
+fn debug_print_invariant_analysis_data(
+    global_env: &GlobalEnv,
+    inv_ana_data: &InvariantAnalysisData,
+) {
+    debug!("target_invariants <can't print yet>");
+    debug_print_fun_id_set(
         global_env,
         &inv_ana_data.disabled_inv_fun_set,
         "disabled_inv_fun_set",
     );
-    print_fun_id_set(global_env, &inv_ana_data.non_inv_fun_set, "non_inv_fun_set");
-    print_fun_id_set(global_env, &inv_ana_data.target_fun_ids, "target_fun_ids");
-    //    print_fun_id_set(global_env, inv_ana_data.funs_that_modify_inv, "funs_that_modify_inv");
-    println!("funs_that_modify_inv <can't print yet>");
-    print_fun_id_set(
+    debug_print_fun_id_set(global_env, &inv_ana_data.non_inv_fun_set, "non_inv_fun_set");
+    debug_print_fun_id_set(global_env, &inv_ana_data.target_fun_ids, "target_fun_ids");
+    //    debug_print_fun_id_set(global_env, inv_ana_data.funs_that_modify_inv, "funs_that_modify_inv");
+    debug!("funs_that_modify_inv <can't print yet>");
+    debug_print_fun_id_set(
         global_env,
         &inv_ana_data.funs_that_modify_some_inv,
         "funs_that_modify_some_inv",
     );
-    print_fun_id_set(
+    debug_print_fun_id_set(
         global_env,
         &inv_ana_data.funs_that_delegate_to_caller,
         "funs_that_delegate_to_caller",
     );
-    print_fun_id_set(global_env, &inv_ana_data.friend_fun_ids, "friend_fun_ids");
+    debug_print_fun_id_set(global_env, &inv_ana_data.friend_fun_ids, "friend_fun_ids");
 }
 
 pub struct VerificationAnalysisProcessorV2();
@@ -317,13 +353,13 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
         let target_mod_env = global_env.get_target_module();
         let target_invariants = get_target_invariants(global_env);
         let disabled_inv_fun_set = compute_disabled_inv_fun_set(global_env);
-        let non_inv_fun_set = compute_non_inv_fun_set(global_env);
         let (funs_that_modify_inv, funs_that_modify_some_inv) = compute_funs_that_modify_inv(
             global_env,
             &target_invariants,
             targets,
             FunctionVariant::Baseline,
         );
+        let non_inv_fun_set = compute_non_inv_fun_set(global_env);
         let target_fun_ids: BTreeSet<QualifiedId<FunId>> = target_mod_env
             .get_functions()
             .map(|fun| fun.get_qualified_id())
@@ -339,6 +375,18 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
             &dep_fun_ids,
             &funs_that_delegate_to_caller,
         );
+        // Check for illegal combinations
+        for module_env in global_env.get_modules() {
+            for fun_env in module_env.get_functions() {
+                check_legal_disabled_invariants(
+                    &fun_env,
+                    &disabled_inv_fun_set,
+                    &non_inv_fun_set,
+                    &funs_that_modify_some_inv,
+                );
+            }
+        }
+
         let inv_ana_data = InvariantAnalysisData {
             target_invariants,
             disabled_inv_fun_set,
@@ -351,8 +399,8 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
             friend_fun_ids,
         };
 
-        // TODO: Print when debugging.
-        //        print_invariant_analysis_data(global_env, &inv_ana_data);
+        // print when -v debug is set
+        debug_print_invariant_analysis_data(global_env, &inv_ana_data);
 
         global_env.set_extension(inv_ana_data);
     }

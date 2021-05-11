@@ -1,3 +1,4 @@
+// exclude_for: inv_v2
 module 0x42::TestFriendError {
 
     struct R {

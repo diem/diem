@@ -98,6 +98,17 @@ fn get_features() -> &'static [Feature] {
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("cvc4")),
                 enabling_condition: |group, _| group == "unit",
             },
+            // Tests for new invariants
+            Feature {
+                name: "inv_v2",
+                flags: &["--inv_v2"],
+                inclusion_mode: InclusionMode::Implicit,
+                enable_in_ci: false, // Do not enable in CI until we have more data about stability
+                only_if_requested: false,
+                separate_baseline: false,
+                runner: |p| test_runner_for_feature(p, get_feature_by_name("inv_v2")),
+                enabling_condition: |_, _| true,
+            },
         ]
     })
 }

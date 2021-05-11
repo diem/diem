@@ -2740,6 +2740,15 @@ impl<'env> FunctionEnv<'env> {
             }
     }
 
+    /// Return whether this function is exposed outside of the module.
+    pub fn has_unknown_callers(&self) -> bool {
+        self.module_env.is_script_module()
+            || match self.definition_view().visibility() {
+                Visibility::Public | Visibility::Script => true,
+                Visibility::Private | Visibility::Friend => false,
+            }
+    }
+
     /// Returns true if the function is a script function
     pub fn is_script(&self) -> bool {
         // The main function of a scipt is a script function
