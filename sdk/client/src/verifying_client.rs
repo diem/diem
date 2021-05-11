@@ -32,8 +32,6 @@ use std::{
 // TODO(philiphayes): figure out retry strategy
 // TODO(philiphayes): real on-disk waypoint persistence
 // TODO(philiphayes): fill out rest of the methods
-// TODO(philiphayes): use real error types
-// TODO(philiphayes): non-verifying vs verifying client equivalence testing
 // TODO(philiphayes): all clients should validate chain id (allow users to trust-on-first-use or pre-configure)
 // TODO(philiphayes): we could abstract the async client so VerifyingClient takes a dyn Trait?
 
@@ -181,6 +179,11 @@ impl<S: Storage> VerifyingClient<S> {
             )));
         }
         response
+    }
+
+    pub fn actual_batch_size(requests: &[MethodRequest]) -> usize {
+        let actual_requests = VerifyingBatch::from_batch(requests.to_vec()).collect_requests();
+        actual_requests.len() + 1 /* get_state_proof */
     }
 
     pub async fn batch(

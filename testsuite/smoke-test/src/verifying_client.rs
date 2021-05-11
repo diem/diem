@@ -6,7 +6,9 @@ use crate::{
     test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy},
 };
 use cli::client_proxy::ClientProxy;
-use diem_client::{Client, InMemoryStorage, MethodRequest, VerifyingClient};
+use diem_client::{
+    Client, InMemoryStorage, MethodRequest, MethodResponse, Response, Result, VerifyingClient,
+};
 use diem_types::{
     account_address::AccountAddress,
     account_config::constants::addresses::{
@@ -15,11 +17,12 @@ use diem_types::{
     },
     trusted_state::TrustedState,
 };
-use proptest::{prelude::*, sample::select};
+use proptest::{collection::vec, prelude::*, sample::select};
 use tokio::runtime::Builder;
 
 struct Environment {
     _env: SmokeTestEnvironment,
+    pub max_batch_size: usize,
     pub client_proxy: ClientProxy,
     pub client: Client,
     pub verifying_client: VerifyingClient<InMemoryStorage>,
@@ -28,6 +31,14 @@ struct Environment {
 impl Environment {
     fn new() -> Self {
         let (env, client_proxy) = setup_swarm_and_client_proxy(1, 0);
+
+        let max_batch_size = env
+            .validator_swarm
+            .get_node(0)
+            .unwrap()
+            .config()
+            .json_rpc
+            .batch_size_limit as usize;
 
         let url = get_json_rpc_url(&env.validator_swarm, 0);
         let client = Client::new(url);
@@ -40,6 +51,7 @@ impl Environment {
 
         Self {
             _env: env,
+            max_batch_size,
             client_proxy,
             client,
             verifying_client,
@@ -55,37 +67,99 @@ impl Environment {
         account.address
     }
 
-    /// Running a request against a `VerifyingClient` and non-verifying `Client`
-    /// at the same state version should always return the same response.
-    async fn assert_requests_equal(&self, request: MethodRequest) {
+    /// Send a request using both verifying and non-verifying clients.
+    async fn request(
+        &self,
+        request: MethodRequest,
+    ) -> (
+        Result<Response<MethodResponse>>,
+        Result<Response<MethodResponse>>,
+    ) {
         let send_nv = self.client.request(request.clone());
         let send_v = self.verifying_client.request(request);
 
-        let (recv_nv, recv_v) = tokio::join!(send_nv, send_v);
+        tokio::join!(send_nv, send_v)
+    }
 
-        match (recv_nv, recv_v) {
-            (Ok(resp_nv), Ok(resp_v)) => {
-                let (inner_nv, state_nv) = resp_nv.into_parts();
-                let (inner_v, state_v) = resp_v.into_parts();
+    /// Send a request batch using both verifying and non-verifying clients.
+    async fn batch(
+        &self,
+        batch: Vec<MethodRequest>,
+    ) -> (
+        Result<Vec<Result<Response<MethodResponse>>>>,
+        Result<Vec<Result<Response<MethodResponse>>>>,
+    ) {
+        let send_nv = self.client.batch(batch.clone());
+        let send_v = self.verifying_client.batch(batch);
 
-                assert_eq!(state_nv.chain_id, state_v.chain_id);
-                assert_eq!(inner_nv, inner_v);
-            }
-            (Err(_), Err(_)) => (),
-            (recv_nv, recv_v) => {
-                panic!(
-                    "client handling mismatch:\n\
-                     1. non-verifying client returned: {:?}\n\
-                     2.     verifying client returned: {:?}",
-                    recv_nv, recv_v
-                );
-            }
+        tokio::join!(send_nv, send_v)
+    }
+}
+
+/// Running a request against a `VerifyingClient` and non-verifying `Client`
+/// at the same state version should always return the same response.
+fn assert_responses_equal(
+    recv_nv: Result<Response<MethodResponse>>,
+    recv_v: Result<Response<MethodResponse>>,
+) {
+    match (recv_nv, recv_v) {
+        (Ok(resp_nv), Ok(resp_v)) => {
+            let (inner_nv, state_nv) = resp_nv.into_parts();
+            let (inner_v, state_v) = resp_v.into_parts();
+
+            assert_eq!(state_nv.chain_id, state_v.chain_id);
+            assert_eq!(inner_nv, inner_v);
+        }
+        (Err(_), Err(_)) => (),
+        (recv_nv, recv_v) => {
+            panic!(
+                "client handling mismatch:\n\
+                 1. non-verifying client response: {:?}\n\
+                 2.     verifying client response: {:?}",
+                recv_nv, recv_v,
+            );
         }
     }
 }
 
-/// A `Strategy` for generating MethodRequest's at or before the given version and
-/// querying from the given set of accounts.
+/// Running a batch of requests against a `VerifyingClient` and non-verifying
+/// `Client` at the same state version should always return the same responses.
+fn assert_batches_equal(
+    recv_nv: Result<Vec<Result<Response<MethodResponse>>>>,
+    recv_v: Result<Vec<Result<Response<MethodResponse>>>>,
+) {
+    let (batch_nv, batch_v) = match (recv_nv, recv_v) {
+        (Ok(batch_nv), Ok(batch_v)) => (batch_nv, batch_v),
+        (Err(_), Err(_)) => return,
+        (recv_nv, recv_v) => {
+            panic!(
+                "client batch handling mismatch:\n\
+                 1. non-verifying client batch response: {:?}\n\
+                 2.     verifying client batch response: {:?}",
+                recv_nv, recv_v,
+            );
+        }
+    };
+
+    if batch_nv.len() != batch_v.len() {
+        panic!(
+            "clients returned different batch sizes: {} vs {}\n\
+             1. non-verifying client batch: {:?}\n\
+             2.     verifying client batch: {:?}",
+            batch_nv.len(),
+            batch_v.len(),
+            batch_nv,
+            batch_v,
+        );
+    }
+
+    for (resp_nv, resp_v) in batch_nv.into_iter().zip(batch_v.into_iter()) {
+        assert_responses_equal(resp_nv, resp_v);
+    }
+}
+
+/// A `Strategy` for generating a `MethodRequest` at or before the given version
+/// and querying from the given set of accounts.
 fn arb_request(
     accounts: &[AccountAddress],
     current_state_version: u64,
@@ -102,8 +176,30 @@ fn arb_request(
         .prop_map(|(address, version)| MethodRequest::get_account_by_version(address, version))
 }
 
+/// A `Strategy` for generating a batch of `MethodRequest`s with the added restriction
+/// that it will still be accepted by the JSON-RPC server after going through the
+/// VerifyingClient request transformation.
+fn arb_batch(
+    max_batch_size: usize,
+    accounts: &[AccountAddress],
+    current_state_version: u64,
+) -> impl Strategy<Value = Vec<MethodRequest>> {
+    vec(
+        arb_request(accounts, current_state_version),
+        1..max_batch_size,
+    )
+    .prop_filter(
+        "batch rejected: actual size too large; won't be accepted by the JSON-RPC server",
+        move |batch| {
+            let actual_batch_size =
+                VerifyingClient::<InMemoryStorage>::actual_batch_size(batch.as_slice());
+            actual_batch_size <= max_batch_size
+        },
+    )
+}
+
 #[test]
-fn test_client_equivalence_single_request() {
+fn test_client_equivalence() {
     let rt = Builder::new_current_thread().enable_all().build().unwrap();
     let mut env = Environment::new();
 
@@ -131,6 +227,13 @@ fn test_client_equivalence_single_request() {
     // Generate random requests and ensure that both verifying and non-verifying
     // clients handle each request identically.
     proptest!(|(request in arb_request(&accounts, current_version))| {
-        rt.block_on(env.assert_requests_equal(request));
+        let (recv_nv, recv_v) = rt.block_on(env.request(request));
+        assert_responses_equal(recv_nv, recv_v);
+    });
+
+    // Do the same but with random request batches instead of single requests.
+    proptest!(|(batch in arb_batch(env.max_batch_size, &accounts, current_version))| {
+        let (recv_nv, recv_v) = rt.block_on(env.batch(batch));
+        assert_batches_equal(recv_nv, recv_v);
     });
 }
