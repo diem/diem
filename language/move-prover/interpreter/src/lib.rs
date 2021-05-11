@@ -12,6 +12,7 @@ use bytecode::{
 use move_binary_format::errors::{Location, PartialVMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
+    effects::ChangeSet,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     parser::{parse_transaction_argument, parse_type_tag},
@@ -21,8 +22,8 @@ use move_core_types::{
 };
 use move_model::model::{FunctionEnv, GlobalEnv};
 
-mod concrete;
-mod shared;
+pub mod concrete;
+pub mod shared;
 
 use crate::concrete::{
     runtime::Runtime,
@@ -78,7 +79,7 @@ struct ExecutionResult {
 pub fn interpret_with_options(
     options: InterpreterOptions,
     env: &GlobalEnv,
-) -> VMResult<Vec<Vec<u8>>> {
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
     // consolidate arguments
     let args: Vec<_> = options
         .signers
@@ -103,6 +104,7 @@ pub fn interpret_with_options(
         &options.entrypoint.1,
         &options.ty_args,
         &args,
+        &GlobalState::default(),
         options.verbose,
     )
 }
@@ -113,15 +115,25 @@ pub fn interpret_with_default_pipeline(
     func_name: &IdentStr,
     ty_args: &[TypeTag],
     args: &[MoveValue],
+    global_state: &GlobalState,
     verbose: bool,
-) -> VMResult<Vec<Vec<u8>>> {
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
     let options = ProverOptions {
         for_interpretation: true,
         ..Default::default()
     };
     let pipeline = default_pipeline_with_options(&options);
     env.set_extension(options);
-    interpret(env, module_id, func_name, ty_args, args, pipeline, verbose)
+    interpret(
+        env,
+        module_id,
+        func_name,
+        ty_args,
+        args,
+        global_state,
+        pipeline,
+        verbose,
+    )
 }
 
 pub fn interpret(
@@ -130,16 +142,23 @@ pub fn interpret(
     func_name: &IdentStr,
     ty_args: &[TypeTag],
     args: &[MoveValue],
+    global_state: &GlobalState,
     pipeline: FunctionTargetPipeline,
     verbose: bool,
-) -> VMResult<Vec<Vec<u8>>> {
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
     // find the entrypoint
-    let entrypoint_env = env
+    let entrypoint_env = match env
         .find_module_by_language_storage_id(module_id)
         .and_then(|module_env| module_env.find_function(env.symbol_pool().make(func_name.as_str())))
-        .ok_or_else(|| {
-            PartialVMError::new(StatusCode::LOOKUP_FAILED).finish(Location::Undefined)
-        })?;
+    {
+        None => {
+            return (
+                Err(PartialVMError::new(StatusCode::LOOKUP_FAILED).finish(Location::Undefined)),
+                ChangeSet::new(),
+            )
+        }
+        Some(func_env) => func_env,
+    };
     if verbose {
         println!(
             "[compiled module]\n{:?}\n",
@@ -168,8 +187,16 @@ pub fn interpret(
     }
 
     // execute and convert results
-    let (vm_result, _) = interpret_internal(env, &targets, &entrypoint_env, ty_args, args, verbose);
-    vm_result.map(|rets| {
+    let (vm_result, new_global_state) = interpret_internal(
+        env,
+        &targets,
+        &entrypoint_env,
+        ty_args,
+        args,
+        global_state.clone(),
+        verbose,
+    );
+    let serialized_vm_result = vm_result.map(|rets| {
         rets.into_iter()
             .map(|v| {
                 let (ty, val, _) = v.decompose();
@@ -177,7 +204,9 @@ pub fn interpret(
                 move_val.simple_serialize().unwrap()
             })
             .collect::<Vec<_>>()
-    })
+    });
+
+    (serialized_vm_result, new_global_state.delta(global_state))
 }
 
 fn interpret_internal(
@@ -186,6 +215,7 @@ fn interpret_internal(
     fun_env: &FunctionEnv,
     ty_args: &[TypeTag],
     args: &[MoveValue],
+    global_state: GlobalState,
     verbose: bool,
 ) -> (VMResult<Vec<TypedValue>>, GlobalState) {
     // dump the bytecode if requested
@@ -204,7 +234,6 @@ fn interpret_internal(
 
     // invoke the runtime
     let vm = Runtime::new(env, targets);
-    let global_state = GlobalState::default();
     vm.execute(fun_env, ty_args, args, global_state)
 }
 

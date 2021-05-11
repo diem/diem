@@ -4,6 +4,10 @@
 use std::fmt;
 
 use bytecode::stackless_bytecode::Constant;
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
 use move_model::{
     model::{GlobalEnv, ModuleId, StructId},
     ty as MT,
@@ -121,6 +125,18 @@ impl fmt::Display for Type {
 //**************************************************************************************************
 // Implementation
 //**************************************************************************************************
+
+impl StructInstantiation {
+    pub fn to_move_struct_tag(&self) -> StructTag {
+        let type_args = self.insts.iter().map(|e| e.to_move_type_tag()).collect();
+        StructTag {
+            address: self.ident.module.address,
+            module: Identifier::new(self.ident.module.name.as_str()).unwrap(),
+            name: Identifier::new(self.ident.name.as_str()).unwrap(),
+            type_params: type_args,
+        }
+    }
+}
 
 impl BaseType {
     //
@@ -318,6 +334,24 @@ impl BaseType {
                 elem_ty.as_ref() == &BaseType::mk_u8()
             }
             _ => false,
+        }
+    }
+
+    //
+    // conversion
+    //
+
+    pub fn to_move_type_tag(&self) -> TypeTag {
+        match self {
+            BaseType::Primitive(PrimitiveType::Bool) => TypeTag::Bool,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => TypeTag::U8,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => TypeTag::U64,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => TypeTag::U128,
+            BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
+            BaseType::Primitive(PrimitiveType::Address) => TypeTag::Address,
+            BaseType::Primitive(PrimitiveType::Signer) => TypeTag::Signer,
+            BaseType::Vector(elem) => TypeTag::Vector(Box::new(elem.to_move_type_tag())),
+            BaseType::Struct(inst) => TypeTag::Struct(inst.to_move_struct_tag()),
         }
     }
 }

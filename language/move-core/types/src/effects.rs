@@ -10,7 +10,7 @@ use anyhow::{format_err, Error, Result};
 use std::collections::btree_map::{self, BTreeMap};
 
 /// A collection of changes to modules and resources under a Move account.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AccountChangeSet {
     modules: BTreeMap<Identifier, Option<Vec<u8>>>,
     resources: BTreeMap<StructTag, Option<Vec<u8>>>,
@@ -151,7 +151,7 @@ impl AccountChangeSet {
 
 /// A collection of changes to a Move state. Each AccountChangeSet in the domain of `accounts`
 /// is guaranteed to be nonempty
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ChangeSet {
     accounts: BTreeMap<AccountAddress, AccountChangeSet>,
 }

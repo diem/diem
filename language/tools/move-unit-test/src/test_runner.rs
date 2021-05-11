@@ -6,6 +6,7 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
 };
 use anyhow::Result;
+use bytecode_interpreter::concrete::value::GlobalState;
 use colored::*;
 use move_binary_format::{
     errors::{PartialVMError, VMResult},
@@ -197,22 +198,36 @@ impl SharedTestingConfig {
         )
     }
 
-    // TODO(mengxu): Add changeset return here
     fn execute_via_stackless_vm(
         &self,
         env: &GlobalEnv,
         test_plan: &ModuleTestPlan,
         function_name: &str,
         test_info: &TestCase,
-    ) -> VMResult<Vec<Vec<u8>>> {
-        bytecode_interpreter::interpret_with_default_pipeline(
+    ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
+        let now = Instant::now();
+
+        // NOTE: as of now, `self.starting_storage_state` contains modules only and no resources.
+        // The modules are captured by `env: &GlobalEnv` and the default GlobalState captures the
+        // empty-resource state.
+        let (return_result, change_set) = bytecode_interpreter::interpret_with_default_pipeline(
             env,
             &test_plan.module_id,
             &IdentStr::new(function_name).unwrap(),
             &[], // no ty args, at least for now
             &test_info.arguments,
+            &GlobalState::default(),
             self.verbose,
-        )
+        );
+
+        let test_run_info = TestRunInfo::new(
+            function_name.to_string(),
+            now.elapsed(),
+            // NOTE (mengxu) instruction counting on stackless VM might not be very useful because
+            // gas is not charged against stackless VM instruction.
+            0,
+        );
+        (Ok(change_set), return_result, test_run_info)
     }
 
     // The result returned by the stackless VM does not contain code offsets and indices. In order to
@@ -282,28 +297,28 @@ impl SharedTestingConfig {
         for (function_name, test_info) in &test_plan.tests {
             let (cs_result, exec_result, test_run_info) =
                 self.execute_via_move_vm(test_plan, function_name, test_info);
-            let save_session_state = || {
-                if self.save_storage_state_on_failure {
-                    cs_result.ok().and_then(|changeset| {
-                        print_resources(&changeset, &self.starting_storage_state).ok()
-                    })
-                } else {
-                    None
-                }
-            };
             if self.check_stackless_vm {
-                let stackless_vm_result = self.execute_via_stackless_vm(
-                    stackless_model.as_ref().unwrap(),
-                    test_plan,
-                    function_name,
-                    test_info,
-                );
+                let (stackless_vm_change_set, stackless_vm_result, _) = self
+                    .execute_via_stackless_vm(
+                        stackless_model.as_ref().unwrap(),
+                        test_plan,
+                        function_name,
+                        test_info,
+                    );
                 let move_vm_result = Self::adapt_move_vm_result(exec_result.clone());
-                if stackless_vm_result != move_vm_result {
+                let move_vm_change_set = cs_result.clone();
+                if stackless_vm_result != move_vm_result
+                    || stackless_vm_change_set != move_vm_change_set
+                {
                     fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
-                            FailureReason::mismatch(move_vm_result, stackless_vm_result),
+                            FailureReason::mismatch(
+                                move_vm_result,
+                                move_vm_change_set,
+                                stackless_vm_result,
+                                stackless_vm_change_set,
+                            ),
                             test_run_info,
                             None,
                             None,
@@ -311,6 +326,16 @@ impl SharedTestingConfig {
                         &test_plan,
                     );
                     continue;
+                }
+            };
+
+            let save_session_state = || {
+                if self.save_storage_state_on_failure {
+                    cs_result.ok().and_then(|changeset| {
+                        print_resources(&changeset, &self.starting_storage_state).ok()
+                    })
+                } else {
+                    None
                 }
             };
             match exec_result {

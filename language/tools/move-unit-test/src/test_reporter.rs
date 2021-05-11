@@ -4,7 +4,7 @@
 use crate::format_module_id;
 use colored::{control, Colorize};
 use move_binary_format::errors::{Location, VMError, VMResult};
-use move_core_types::language_storage::ModuleId;
+use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
 use move_lang::{
     errors,
     unit_test::{ModuleTestPlan, TestPlan},
@@ -28,8 +28,10 @@ pub enum FailureReason {
     Timeout(String),
     // The execution results of the Move VM and stackless VM does not match
     Mismatch {
-        move_vm: Box<VMResult<Vec<Vec<u8>>>>,
-        stackless_vm: Box<VMResult<Vec<Vec<u8>>>>,
+        move_vm_return_values: Box<VMResult<Vec<Vec<u8>>>>,
+        move_vm_change_set: Box<VMResult<ChangeSet>>,
+        stackless_vm_return_values: Box<VMResult<Vec<Vec<u8>>>>,
+        stackless_vm_change_set: Box<VMResult<ChangeSet>>,
     },
     // The test failed for some unknown reason. This shouldn't be encountered
     Unknown(String),
@@ -93,10 +95,17 @@ impl FailureReason {
         FailureReason::Timeout("Test timed out".to_string())
     }
 
-    pub fn mismatch(move_vm: VMResult<Vec<Vec<u8>>>, stackless_vm: VMResult<Vec<Vec<u8>>>) -> Self {
+    pub fn mismatch(
+        move_vm_return_values: VMResult<Vec<Vec<u8>>>,
+        move_vm_change_set: VMResult<ChangeSet>,
+        stackless_vm_return_values: VMResult<Vec<Vec<u8>>>,
+        stackless_vm_change_set: VMResult<ChangeSet>,
+    ) -> Self {
         FailureReason::Mismatch {
-            move_vm: Box::new(move_vm),
-            stackless_vm: Box::new(stackless_vm),
+            move_vm_return_values: Box::new(move_vm_return_values),
+            move_vm_change_set: Box::new(move_vm_change_set),
+            stackless_vm_return_values: Box::new(stackless_vm_return_values),
+            stackless_vm_change_set: Box::new(stackless_vm_change_set),
         }
     }
 
@@ -136,14 +145,22 @@ impl TestFailure {
                 Self::report_abort(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Mismatch {
-                move_vm,
-                stackless_vm,
+                move_vm_return_values,
+                move_vm_change_set,
+                stackless_vm_return_values,
+                stackless_vm_change_set,
             } => {
                 format!(
                     "Executions via Move VM [M] and stackless VM [S] yield different results.\n\
-                    [M]: {:?}\n\
-                    [S]: {:?}",
-                    move_vm, stackless_vm
+                    [M] - return values: {:?}\n\
+                    [S] - return values: {:?}\n\
+                    [M] - change set: {:?}\n\
+                    [S] - change set: {:?}\n\
+                    ",
+                    move_vm_return_values,
+                    stackless_vm_return_values,
+                    move_vm_change_set,
+                    stackless_vm_change_set
                 )
             }
             FailureReason::Unknown(message) => {

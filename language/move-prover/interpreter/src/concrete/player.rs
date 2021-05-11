@@ -953,9 +953,10 @@ impl<'env> FunctionContext<'env> {
         let env = self.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_signer.into_signer();
-        if !global_state.put_resource(addr, inst, op_struct) {
+        if global_state.has_resource(&addr, &inst) {
             return Err(AbortInfo::sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
         }
+        global_state.put_resource(addr, inst, op_struct);
         Ok(())
     }
 
@@ -1041,7 +1042,10 @@ impl<'env> FunctionContext<'env> {
             Pointer::Global(addr) => *addr,
             _ => unreachable!(),
         };
-        global_state.put_resource(addr, inst, op_struct.read_ref());
+        let old_resource = global_state.put_resource(addr, inst, op_struct.read_ref());
+        if cfg!(debug_assertions) {
+            assert!(old_resource.is_some());
+        }
     }
 
     fn handle_write_back_local(

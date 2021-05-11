@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 use move_core_types::{
     account_address::AccountAddress,
+    effects::ChangeSet,
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::TempIndex;
@@ -585,7 +586,7 @@ impl TypedValue {
             _ => unreachable!(),
         };
         let mut elems = vec_val.into_vector();
-        elems.insert(elem_num, elem_val);
+        *elems.get_mut(elem_num).unwrap() = elem_val;
         TypedValue {
             ty: Type::mk_ref_vector(elem, true),
             val: BaseValue::mk_vector(elems),
@@ -670,7 +671,7 @@ impl TypedValue {
             assert!(field_ty.is_ref_of(&inst.fields.get(field_num).unwrap().ty, Some(true)));
         }
         let mut fields = struct_val.into_struct();
-        fields.insert(field_num, field_val);
+        *fields.get_mut(field_num).unwrap() = field_val;
         TypedValue {
             ty: Type::mk_ref_struct(inst, true),
             val: BaseValue::mk_struct(fields),
@@ -832,8 +833,8 @@ impl AccountState {
     }
 
     /// Put a resource into the address, return the old resource if exists
-    fn put_resource(&mut self, key: StructInstantiation, object: BaseValue) -> Option<BaseValue> {
-        self.storage.insert(key, object)
+    fn put_resource(&mut self, key: &StructInstantiation, object: BaseValue) -> Option<BaseValue> {
+        self.storage.insert(key.clone(), object)
     }
 
     /// Check whether the address has a resource
@@ -886,21 +887,25 @@ impl GlobalState {
         })
     }
 
-    /// Put a resource into the address, return `true` if an old resource exists
+    /// Put a resource into the address, return the old resource (as struct) if exists
     pub fn put_resource(
         &mut self,
         addr: AccountAddress,
         key: StructInstantiation,
         object: TypedValue,
-    ) -> bool {
+    ) -> Option<TypedValue> {
         if cfg!(debug_assertions) {
             assert_eq!(key, object.ty.into_struct_inst());
         }
         self.accounts
             .entry(addr)
             .or_insert_with(AccountState::default)
-            .put_resource(key, object.val)
-            .is_none()
+            .put_resource(&key, object.val)
+            .map(|val| TypedValue {
+                ty: Type::mk_struct(key),
+                val,
+                ptr: Pointer::None,
+            })
     }
 
     /// Check whether the address has a resource
@@ -920,5 +925,59 @@ impl GlobalState {
         if cfg!(debug_assertions) {
             assert!(res.is_none());
         }
+    }
+
+    /// Calculate the delta (i.e., a ChangeSet) against the old state
+    pub fn delta(&self, old_state: &GlobalState) -> ChangeSet {
+        fn bcs_serialize_resource(key: &StructInstantiation, val: &BaseValue) -> Vec<u8> {
+            let typed_val = TypedValue {
+                ty: Type::mk_struct(key.clone()),
+                val: val.clone(),
+                ptr: Pointer::None,
+            };
+            typed_val.into_bcs_bytes().unwrap()
+        }
+
+        let mut change_set = ChangeSet::new();
+        let empty_account_state = AccountState::default();
+
+        // collect added / modified resources
+        for (addr, account_state) in &self.accounts {
+            let old_account_state = old_state.accounts.get(addr).unwrap_or(&empty_account_state);
+            for (key, val) in &account_state.storage {
+                match old_account_state.storage.get(key) {
+                    None => change_set
+                        .publish_resource(
+                            *addr,
+                            key.to_move_struct_tag(),
+                            bcs_serialize_resource(key, val),
+                        )
+                        .unwrap(),
+                    Some(old_val) => {
+                        if val != old_val {
+                            change_set.publish_or_overwrite_resource(
+                                *addr,
+                                key.to_move_struct_tag(),
+                                bcs_serialize_resource(key, val),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // collect deleted resources
+        for (old_addr, old_account_state) in &old_state.accounts {
+            let account_state = self.accounts.get(old_addr).unwrap_or(&empty_account_state);
+            for old_key in old_account_state.storage.keys() {
+                if !account_state.storage.contains_key(old_key) {
+                    change_set
+                        .unpublish_resource(*old_addr, old_key.to_move_struct_tag())
+                        .unwrap();
+                }
+            }
+        }
+
+        change_set
     }
 }
