@@ -66,12 +66,12 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Technical Description](#@Technical_Description_47)
     -  [Parameters](#@Parameters_48)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_49)
+    -  [Related Scripts](#@Related_Scripts_50)
 -  [Function `create_diem_id_domains`](#0x1_AccountAdministrationScripts_create_diem_id_domains)
-    -  [Summary](#@Summary_50)
-    -  [Technical Description](#@Technical_Description_51)
-    -  [Parameters](#@Parameters_52)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_53)
-    -  [Related Scripts](#@Related_Scripts_54)
+    -  [Summary](#@Summary_51)
+    -  [Technical Description](#@Technical_Description_52)
+    -  [Parameters](#@Parameters_53)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_54)
 
 
 <pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
@@ -1092,6 +1092,14 @@ may be used as a recovery account for those accounts.
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
+<a name="@Related_Scripts_50"></a>
+
+### Related Scripts
+
+* <code>Script::add_recovery_rotation_capability</code>
+* <code>Script::rotate_authentication_key_with_recovery_address</code>
+
+
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">create_recovery_address</a>(account: signer)
 </code></pre>
 
@@ -1142,29 +1150,23 @@ may be used as a recovery account for those accounts.
 ## Function `create_diem_id_domains`
 
 
-<a name="@Summary_50"></a>
+<a name="@Summary_51"></a>
 
 ### Summary
 
-Initializes the sending account as a recovery address that may be used by
-other accounts belonging to the same VASP as <code>account</code>.
-The sending account must be a VASP account, and can be either a child or parent VASP account.
-Multiple recovery addresses can exist for a single VASP, but accounts in
-each must be disjoint.
+Publishes a <code>DiemIdDomains</code> resource under a VASP account.
+The sending account must be a VASP account, and be a parent VASP account.
 
 
-<a name="@Technical_Description_51"></a>
+<a name="@Technical_Description_52"></a>
 
 ### Technical Description
 
-Publishes a <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource under <code>account</code>. It then
-extracts the <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for <code>account</code> and adds
-it to the resource. After the successful execution of this transaction
-other accounts may add their key rotation to this resource so that <code>account</code>
-may be used as a recovery account for those accounts.
+Publishes a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>. It then
+The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on initialization.
 
 
-<a name="@Parameters_52"></a>
+<a name="@Parameters_53"></a>
 
 ### Parameters
 
@@ -1173,24 +1175,13 @@ may be used as a recovery account for those accounts.
 | <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
-<a name="@Common_Abort_Conditions_53"></a>
+<a name="@Common_Abort_Conditions_54"></a>
 
 ### Common Abort Conditions
 
-| Error Category              | Error Reason                                               | Description                                                                                   |
-| ----------------            | --------------                                             | -------------                                                                                 |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.          |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ENOT_A_VASP">RecoveryAddress::ENOT_A_VASP</a></code>                             | <code>account</code> is not a VASP account.                                                              |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE</a></code>          | A key rotation recovery cycle would be created by adding <code>account</code>'s key rotation capability. |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
-
-
-<a name="@Related_Scripts_54"></a>
-
-### Related Scripts
-
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::rotate_authentication_key_with_recovery_address</code>
+| Error Category              | Error Reason                      | Description                                                                                   |
+| ----------------            | --------------                    | -------------                                                                                 |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">DiemId::EDIEMIDDOMAIN</a></code>           | A <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>.     |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
@@ -1203,8 +1194,6 @@ may be used as a recovery account for those accounts.
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer) {
-    <b>use</b> <a href="DiemId.md#0x1_DiemId">0x1::DiemId</a>;
-
     <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&account)
 }
 </code></pre>

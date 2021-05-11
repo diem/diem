@@ -47,6 +47,27 @@ script{
 
     fun main(tc_account: signer) {
         let addr: address = @{{bob}};
+        assert(DiemAccount::exists_at(addr), 455);
+        let tc_account = &tc_account;
+        let domain_name = b"diem";
+
+        /// add the same diem ID domain to the bob account, expect it to fail
+        DiemId::update_diem_id_domain(tc_account, addr, copy domain_name, false);
+
+        /// check if the previously added domain is still there
+        assert(DiemId::has_diem_id_domain(addr, domain_name), 389);
+    }
+}
+// check: "Keep(ABORTED { code: 775,"
+
+//! new-transaction
+//! sender: blessed
+script{
+    use 0x1::DiemAccount;
+    use 0x1::DiemId;
+
+    fun main(tc_account: signer) {
+        let addr: address = @{{bob}};
         assert(DiemAccount::exists_at(addr), 2);
         let tc_account = &tc_account;
         let domain_name = b"diem";
@@ -60,6 +81,27 @@ script{
 }
 // check: DiemIdDomainEvent
 // check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: blessed
+script{
+    use 0x1::DiemAccount;
+    use 0x1::DiemId;
+
+    fun main(tc_account: signer) {
+        let addr: address = @{{bob}};
+        assert(DiemAccount::exists_at(addr), 455);
+        let tc_account = &tc_account;
+        let domain_name = b"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggg";
+
+        /// Try adding a domain ID longer than 63 characters, expect to fail
+        DiemId::update_diem_id_domain(tc_account, addr, copy domain_name, false);
+
+        /// check that diem id domain is not added to DiemIdDomains
+        assert(!DiemId::has_diem_id_domain(addr, domain_name), 888);
+    }
+}
+// check: "Keep(ABORTED { code: 1287,"
 
 //! new-transaction
 //! sender: bob

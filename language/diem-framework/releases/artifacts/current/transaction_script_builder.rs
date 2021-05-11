@@ -1843,18 +1843,12 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
-    /// Initializes the sending account as a recovery address that may be used by
-    /// other accounts belonging to the same VASP as `account`.
-    /// The sending account must be a VASP account, and can be either a child or parent VASP account.
-    /// Multiple recovery addresses can exist for a single VASP, but accounts in
-    /// each must be disjoint.
+    /// Publishes a `DiemIdDomains` resource under a VASP account.
+    /// The sending account must be a VASP account, and be a parent VASP account.
     ///
     /// # Technical Description
-    /// Publishes a `RecoveryAddress::RecoveryAddress` resource under `account`. It then
-    /// extracts the `DiemAccount::KeyRotationCapability` for `account` and adds
-    /// it to the resource. After the successful execution of this transaction
-    /// other accounts may add their key rotation to this resource so that `account`
-    /// may be used as a recovery account for those accounts.
+    /// Publishes a `DiemId::DiemIdDomains` resource under `account`. It then
+    /// The `domains` field is a vector of DiemIdDomain, and will be empty on initialization.
     ///
     /// # Parameters
     /// | Name      | Type     | Description                                           |
@@ -1862,16 +1856,9 @@ pub enum ScriptFunctionCall {
     /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                                               | Description                                                                                   |
-    /// | ----------------            | --------------                                             | -------------                                                                                 |
-    /// | `Errors::INVALID_STATE`     | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.          |
-    /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
-    /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
-    /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
-    ///
-    /// # Related Scripts
-    /// * `Script::add_recovery_rotation_capability`
-    /// * `Script::rotate_authentication_key_with_recovery_address`
+    /// | Error Category              | Error Reason                      | Description                                                                                   |
+    /// | ----------------            | --------------                    | -------------                                                                                 |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
     CreateDiemIdDomains {},
 
     /// # Summary
@@ -1957,6 +1944,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
     /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
+    ///
+    /// # Related Scripts
+    /// * `Script::add_recovery_rotation_capability`
+    /// * `Script::rotate_authentication_key_with_recovery_address`
     CreateRecoveryAddress {},
 
     /// # Summary
@@ -2878,20 +2869,21 @@ pub enum ScriptFunctionCall {
     UpdateDiemConsensusConfig { sliding_nonce: u64, config: Bytes },
 
     /// # Summary
-    /// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
-    /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
-    /// payments over this limit must be checked for dual attestation.
+    /// Update the Diem ID domains of a parent VASP account. The transaction can
+    /// only be sent by the Treasury Compliance account. Domains can only be added or removed.
     ///
     /// # Technical Description
-    /// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
-    /// `0xA550C18`. The amount is set in micro-XDX.
+    /// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
+    /// and set to `true` if removing a domain name.
     ///
     /// # Parameters
     /// | Name                  | Type     | Description                                                                                     |
     /// | ------                | ------   | -------------                                                                                   |
     /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+    /// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    /// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -4083,18 +4075,12 @@ pub fn encode_create_designated_dealer_script_function(
 }
 
 /// # Summary
-/// Initializes the sending account as a recovery address that may be used by
-/// other accounts belonging to the same VASP as `account`.
-/// The sending account must be a VASP account, and can be either a child or parent VASP account.
-/// Multiple recovery addresses can exist for a single VASP, but accounts in
-/// each must be disjoint.
+/// Publishes a `DiemIdDomains` resource under a VASP account.
+/// The sending account must be a VASP account, and be a parent VASP account.
 ///
 /// # Technical Description
-/// Publishes a `RecoveryAddress::RecoveryAddress` resource under `account`. It then
-/// extracts the `DiemAccount::KeyRotationCapability` for `account` and adds
-/// it to the resource. After the successful execution of this transaction
-/// other accounts may add their key rotation to this resource so that `account`
-/// may be used as a recovery account for those accounts.
+/// Publishes a `DiemId::DiemIdDomains` resource under `account`. It then
+/// The `domains` field is a vector of DiemIdDomain, and will be empty on initialization.
 ///
 /// # Parameters
 /// | Name      | Type     | Description                                           |
@@ -4102,16 +4088,9 @@ pub fn encode_create_designated_dealer_script_function(
 /// | `account` | `signer` | The signer of the sending account of the transaction. |
 ///
 /// # Common Abort Conditions
-/// | Error Category              | Error Reason                                               | Description                                                                                   |
-/// | ----------------            | --------------                                             | -------------                                                                                 |
-/// | `Errors::INVALID_STATE`     | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.          |
-/// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
-/// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
-/// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
-///
-/// # Related Scripts
-/// * `Script::add_recovery_rotation_capability`
-/// * `Script::rotate_authentication_key_with_recovery_address`
+/// | Error Category              | Error Reason                      | Description                                                                                   |
+/// | ----------------            | --------------                    | -------------                                                                                 |
+/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
 pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -4223,6 +4202,10 @@ pub fn encode_create_parent_vasp_account_script_function(
 /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::ENOT_A_VASP`                             | `account` is not a VASP account.                                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE`          | A key rotation recovery cycle would be created by adding `account`'s key rotation capability. |
 /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
+///
+/// # Related Scripts
+/// * `Script::add_recovery_rotation_capability`
+/// * `Script::rotate_authentication_key_with_recovery_address`
 pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -5468,20 +5451,21 @@ pub fn encode_update_diem_consensus_config_script_function(
 }
 
 /// # Summary
-/// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
-/// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
-/// payments over this limit must be checked for dual attestation.
+/// Update the Diem ID domains of a parent VASP account. The transaction can
+/// only be sent by the Treasury Compliance account. Domains can only be added or removed.
 ///
 /// # Technical Description
-/// Updates the `micro_xdx_limit` field of the `DualAttestation::Limit` resource published under
-/// `0xA550C18`. The amount is set in micro-XDX.
+/// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
+/// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
+/// and set to `true` if removing a domain name.
 ///
 /// # Parameters
 /// | Name                  | Type     | Description                                                                                     |
 /// | ------                | ------   | -------------                                                                                   |
 /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-/// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
+/// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+/// | `domain` | `vector<u8>`    | The domain name.                                             |
+/// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |

@@ -2501,6 +2501,14 @@ may be used as a recovery account for those accounts.
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
+<a name="@Related_Scripts_128"></a>
+
+###### Related Scripts
+
+* <code>Script::add_recovery_rotation_capability</code>
+* <code>Script::rotate_authentication_key_with_recovery_address</code>
+
+
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_recovery_address">create_recovery_address</a>(account: signer)
 </code></pre>
 
@@ -2551,29 +2559,23 @@ may be used as a recovery account for those accounts.
 ##### Function `create_diem_id_domains`
 
 
-<a name="@Summary_128"></a>
+<a name="@Summary_129"></a>
 
 ###### Summary
 
-Initializes the sending account as a recovery address that may be used by
-other accounts belonging to the same VASP as <code>account</code>.
-The sending account must be a VASP account, and can be either a child or parent VASP account.
-Multiple recovery addresses can exist for a single VASP, but accounts in
-each must be disjoint.
+Publishes a <code>DiemIdDomains</code> resource under a VASP account.
+The sending account must be a VASP account, and be a parent VASP account.
 
 
-<a name="@Technical_Description_129"></a>
+<a name="@Technical_Description_130"></a>
 
 ###### Technical Description
 
-Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource under <code>account</code>. It then
-extracts the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for <code>account</code> and adds
-it to the resource. After the successful execution of this transaction
-other accounts may add their key rotation to this resource so that <code>account</code>
-may be used as a recovery account for those accounts.
+Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>. It then
+The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on initialization.
 
 
-<a name="@Parameters_130"></a>
+<a name="@Parameters_131"></a>
 
 ###### Parameters
 
@@ -2582,24 +2584,13 @@ may be used as a recovery account for those accounts.
 | <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
-<a name="@Common_Abort_Conditions_131"></a>
+<a name="@Common_Abort_Conditions_132"></a>
 
 ###### Common Abort Conditions
 
-| Error Category              | Error Reason                                               | Description                                                                                   |
-| ----------------            | --------------                                             | -------------                                                                                 |
-| <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.          |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_ENOT_A_VASP">RecoveryAddress::ENOT_A_VASP</a></code>                             | <code>account</code> is not a VASP account.                                                              |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE</a></code>          | A key rotation recovery cycle would be created by adding <code>account</code>'s key rotation capability. |
-| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
-
-
-<a name="@Related_Scripts_132"></a>
-
-###### Related Scripts
-
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::rotate_authentication_key_with_recovery_address</code>
+| Error Category              | Error Reason                      | Description                                                                                   |
+| ----------------            | --------------                    | -------------                                                                                 |
+| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">DiemId::EDIEMIDDOMAIN</a></code>           | A <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>.     |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
@@ -2612,8 +2603,6 @@ may be used as a recovery account for those accounts.
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer) {
-    <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId">0x1::DiemId</a>;
-
     <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&account)
 }
 </code></pre>
@@ -4780,17 +4769,17 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ###### Summary
 
-Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
-only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
-payments over this limit must be checked for dual attestation.
+Update the Diem ID domains of a parent VASP account. The transaction can
+only be sent by the Treasury Compliance account. Domains can only be added or removed.
 
 
 <a name="@Technical_Description_230"></a>
 
 ###### Technical Description
 
-Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
-<code>0xA550C18</code>. The amount is set in micro-XDX.
+Updates the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>to_update_address</code>. <code>is_remove</code> should be set to <code><b>false</b></code> if adding a domain name
+and set to <code><b>true</b></code> if removing a domain name.
 
 
 <a name="@Parameters_231"></a>
@@ -4800,8 +4789,9 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../../..
 | Name                  | Type     | Description                                                                                     |
 | ------                | ------   | -------------                                                                                   |
 | <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
+| <code>to_update_address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| <code>is_remove</code> | <code>bool</code>    | Whether to add or remove the <code>domain</code>                                             |
 
 
 <a name="@Common_Abort_Conditions_232"></a>

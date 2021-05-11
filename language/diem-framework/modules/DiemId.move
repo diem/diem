@@ -24,7 +24,7 @@ module DiemId {
     struct DiemIdDomainManager has key {
         /// Event handle for `domains` added or removed events. Emitted every time a domain is added
         /// or removed to `domains`
-        diem_id_domain_events: EventHandle<Self::DiemIdDomainEvent>,
+        diem_id_domain_events: EventHandle<DiemIdDomainEvent>,
     }
 
     struct DiemIdDomainEvent has drop, store {
@@ -36,13 +36,26 @@ module DiemId {
         address: address,
     }
 
-    const MAX_U64: u128 = 18446744073709551615;
+    const DOMAIN_LENGTH: u64 = 63;
 
     // Error codes
     /// DiemIdDomains resource is not or already published.
     const EDIEMIDDOMAIN: u64 = 0;
     /// DiemIdDomainManager resource is not or already published.
     const EDIEMIDDOMAINMANAGER: u64 = 1;
+    /// DiemID domain was not found
+    const EDOMAINNOTFOUND: u64 = 2;
+    /// DiemID domain already exists
+    const EDOMAINALREADYEXISTS: u64 = 3;
+    /// DiemIdDomains resource was not published for a VASP account
+    const EDIEMIDDOMAINSNOTPUBLISHED: u64 = 4;
+    /// Invalid domain for DiemIdDomain
+    const EINVALIDDIEMIDDOMAIN: u64 = 5;
+
+    public fun create_diem_id_domain(domain: vector<u8>): DiemIdDomain {
+        assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALIDDIEMIDDOMAIN));
+        DiemIdDomain {domain}
+    }
 
     /// Publish a `DiemIdDomains` resource under `created` with an empty `domains`.
     /// Before sending or receiving any payments using Diem IDs, the Treasury Compliance account must send
@@ -68,34 +81,33 @@ module DiemId {
         exists<DiemIdDomains>(addr)
     }
 
-    /// Publish a `DiemIdDomainManager` resource under `created` with an empty `diem_id_domain_events`.
+    /// Publish a `DiemIdDomainManager` resource under `tc_account` with an empty `diem_id_domain_events`.
     /// When Treasury Compliance account sends a transaction that invokes `update_diem_id_domain`,
     /// a `DiemIdDomainEvent` is emitted and added to `diem_id_domain_events`.
     public fun publish_diem_id_domain_manager(
-        created: &signer,
+        tc_account : &signer,
     ) {
-        Roles::assert_treasury_compliance(created);
+        Roles::assert_treasury_compliance(tc_account);
         assert(
-            !exists<DiemIdDomainManager>(Signer::address_of(created)),
+            !exists<DiemIdDomainManager>(Signer::address_of(tc_account)),
             Errors::already_published(EDIEMIDDOMAINMANAGER)
         );
         move_to(
-            created,
+            tc_account,
             DiemIdDomainManager {
-                diem_id_domain_events: Event::new_event_handle<DiemIdDomainEvent>(created),
+                diem_id_domain_events: Event::new_event_handle<DiemIdDomainEvent>(tc_account),
             }
         );
     }
 
-    spec define spec_has_diem_id_domain_manager(addr: address): bool {
-        exists<DiemIdDomainManager>(addr)
-    }
-
     spec fun publish_diem_id_domain_manager {
-        include Roles::AbortsIfNotTreasuryCompliance{account: created};
-        aborts_if spec_has_diem_id_domain_manager(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
 
+    /// When updating DiemIdDomains, a simple duplicate domain check is done.
+    /// However, since domains are case insensitive, it is possible by error that two same domains in
+    /// different lowercase and uppercase format gets added.
     public fun update_diem_id_domain(
         tc_account: &signer,
         to_update_address: address,
@@ -103,15 +115,24 @@ module DiemId {
         is_remove: bool
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
+        if (!exists<DiemIdDomains>(to_update_address)) {
+            abort(Errors::not_published(EDIEMIDDOMAINSNOTPUBLISHED))
+        };
         let account_domains = borrow_global_mut<DiemIdDomains>(to_update_address);
-        let diem_id_domain = DiemIdDomain {domain: domain};
+        let diem_id_domain = create_diem_id_domain(domain);
         if (is_remove) {
             let (has, index) = Vector::index_of(&account_domains.domains, &diem_id_domain);
             if (has) {
                 Vector::remove(&mut account_domains.domains, index);
+            } else {
+                abort(Errors::invalid_argument(EDOMAINNOTFOUND))
             };
         } else {
-            Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
+            if (!Vector::contains(&account_domains.domains, &diem_id_domain)) {
+                Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
+            } else {
+                abort(Errors::invalid_argument(EDOMAINALREADYEXISTS))
+            }
         };
 
         Event::emit_event(
@@ -129,10 +150,11 @@ module DiemId {
     }
 
     public fun has_diem_id_domain(addr: address, domain: vector<u8>): bool acquires DiemIdDomains {
-        let account_domains = borrow_global<DiemIdDomains>(addr);
-        let diem_id_domain = DiemIdDomain {
-            domain: domain
+        if (!exists<DiemIdDomains>(addr)) {
+            abort(Errors::not_published(EDIEMIDDOMAINSNOTPUBLISHED))
         };
+        let account_domains = borrow_global<DiemIdDomains>(addr);
+        let diem_id_domain = create_diem_id_domain(domain);
         Vector::contains(&account_domains.domains, &diem_id_domain)
     }
 

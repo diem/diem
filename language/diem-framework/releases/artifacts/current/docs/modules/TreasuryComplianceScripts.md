@@ -1200,17 +1200,17 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ### Summary
 
-Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
-only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
-payments over this limit must be checked for dual attestation.
+Update the Diem ID domains of a parent VASP account. The transaction can
+only be sent by the Treasury Compliance account. Domains can only be added or removed.
 
 
 <a name="@Technical_Description_58"></a>
 
 ### Technical Description
 
-Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
-<code>0xA550C18</code>. The amount is set in micro-XDX.
+Updates the <code>domains</code> field of the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>to_update_address</code>. <code>is_remove</code> should be set to <code><b>false</b></code> if adding a domain name
+and set to <code><b>true</b></code> if removing a domain name.
 
 
 <a name="@Parameters_59"></a>
@@ -1220,8 +1220,9 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttesta
 | Name                  | Type     | Description                                                                                     |
 | ------                | ------   | -------------                                                                                   |
 | <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
+| <code>to_update_address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| <code>is_remove</code> | <code>bool</code>    | Whether to add or remove the <code>domain</code>                                             |
 
 
 <a name="@Common_Abort_Conditions_60"></a>

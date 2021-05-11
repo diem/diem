@@ -6,6 +6,7 @@ module AccountAdministrationScripts {
     use 0x1::SharedEd25519PublicKey;
     use 0x1::SlidingNonce;
     use 0x1::DualAttestation;
+    use 0x1::DiemId;
 
     /// # Summary
     /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
@@ -613,8 +614,6 @@ module AccountAdministrationScripts {
     /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
 
     public(script) fun create_diem_id_domains(account: signer) {
-        use 0x1::DiemId;
-
         DiemId::publish_diem_id_domains(&account)
     }
 }

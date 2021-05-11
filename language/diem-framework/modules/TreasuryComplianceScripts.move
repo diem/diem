@@ -647,35 +647,35 @@ module TreasuryComplianceScripts {
     }
 
     /// # Summary
-        /// Update the Diem ID domains of a parent VASP account. The transaction can
-        /// only be sent by the Treasury Compliance account. Domains can only be added or removed.
-        ///
-        /// # Technical Description
-        /// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
-        /// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
-        /// and set to `true` if removing a domain name.
-        ///
-        /// # Parameters
-        /// | Name                  | Type     | Description                                                                                     |
-        /// | ------                | ------   | -------------                                                                                   |
-        /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-        /// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-        /// | `domain` | `vector<u8>`    | The domain name.                                             |
-        /// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
-        ///
-        /// # Common Abort Conditions
-        /// | Error Category             | Error Reason                            | Description                                                                                |
-        /// | ----------------           | --------------                          | -------------                                                                              |
-        /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-        /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    /// Update the Diem ID domains of a parent VASP account. The transaction can
+    /// only be sent by the Treasury Compliance account. Domains can only be added or removed.
+    ///
+    /// # Technical Description
+    /// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
+    /// and set to `true` if removing a domain name.
+    ///
+    /// # Parameters
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    /// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                            | Description                                                                                |
+    /// | ----------------           | --------------                          | -------------                                                                              |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
 
-        public(script) fun update_diem_id_domain (
-            tc_account: signer,
-            to_update_address: address,
-            domain: vector<u8>,
-            is_remove: bool,
-        ) {
-            DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove);
-        }
+    public(script) fun update_diem_id_domain (
+        tc_account: signer,
+        to_update_address: address,
+        domain: vector<u8>,
+        is_remove: bool,
+    ) {
+        DiemId::update_diem_id_domain(&tc_account, to_update_address, domain, is_remove);
+    }
 }
 }
