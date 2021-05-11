@@ -319,6 +319,7 @@ pub struct GetAccountStateWithProofParams {
 pub struct GetTransactionsWithProofsParams {
     pub start_version: u64,
     pub limit: u64,
+    pub include_events: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -775,16 +776,20 @@ mod test {
     #[test]
     fn get_transactions_with_proofs() {
         // Array with all params
-        let value = serde_json::json!([10, 11]);
+        let value = serde_json::json!([10, 11, true]);
         serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
 
         // Array with too many params
-        let value = serde_json::json!([10, 11, false]);
+        let value = serde_json::json!([10, 11, 42, false]);
         serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 11]);
+        let value = serde_json::json!(["foo", 11, false]);
         serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
+
+        // Array with too few params
+        let value = serde_json::json!([10, 11]);
+        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
 
         // Empty array without required params should fail
         let value = serde_json::json!([]);
@@ -798,6 +803,7 @@ mod test {
         let value = serde_json::json!({
             "start_version": 10,
             "limit": 11,
+            "include_events": true,
         });
         serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
 
@@ -805,7 +811,8 @@ mod test {
         let value = serde_json::json!({
             "start_version": 10,
             "limit": 11,
-            "foo": 11,
+            "include_events": true,
+            "foo": "bar",
         });
         serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
     }

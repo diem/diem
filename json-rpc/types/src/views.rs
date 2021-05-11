@@ -19,9 +19,9 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, SparseMerkleProof,
-        TransactionAccumulatorProof, TransactionInfoWithProof,
+        TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
-    transaction::TransactionInfo,
+    transaction::{Transaction, TransactionInfo, TransactionListWithProof},
 };
 use hex::FromHex;
 use move_core_types::{
@@ -661,16 +661,102 @@ pub struct TransactionView {
     pub vm_status: VMStatusView,
     pub gas_used: u64,
 }
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionsWithProofsView {
+    // TODO(philiphayes): just serialize as a giant BytesView instead of a Vec<_>?
     pub serialized_transactions: Vec<BytesView>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub serialized_events: Option<BytesView>,
     pub proofs: TransactionsProofsView,
+}
+
+impl TransactionsWithProofsView {
+    pub fn try_into_txn_list_with_proof(
+        &self,
+        start_version: u64,
+    ) -> Result<TransactionListWithProof> {
+        let transactions = self
+            .serialized_transactions
+            .iter()
+            .map(|tx| bcs::from_bytes::<Transaction>(tx.as_ref()))
+            .collect::<Result<Vec<_>, bcs::Error>>()?;
+
+        let events = self
+            .serialized_events
+            .as_ref()
+            .map(|events| bcs::from_bytes::<Vec<Vec<ContractEvent>>>(events.as_ref()))
+            .transpose()?;
+
+        let first_transaction_version = if !transactions.is_empty() {
+            Some(start_version)
+        } else {
+            None
+        };
+
+        Ok(TransactionListWithProof {
+            transactions,
+            events,
+            first_transaction_version,
+            proof: TransactionListProof::try_from(&self.proofs)?,
+        })
+    }
+}
+
+impl TryFrom<&TransactionListWithProof> for TransactionsWithProofsView {
+    type Error = Error;
+
+    fn try_from(txs: &TransactionListWithProof) -> Result<Self, Self::Error> {
+        let serialized_transactions = txs
+            .transactions
+            .iter()
+            .map(|tx| bcs::to_bytes(tx).map(BytesView::new))
+            .collect::<Result<Vec<_>, bcs::Error>>()?;
+
+        let serialized_events = txs
+            .events
+            .as_ref()
+            .map(|events| bcs::to_bytes(events).map(BytesView::new))
+            .transpose()?;
+
+        Ok(TransactionsWithProofsView {
+            serialized_transactions,
+            serialized_events,
+            proofs: TransactionsProofsView::try_from(&txs.proof)?,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TransactionsProofsView {
     pub ledger_info_to_transaction_infos_proof: BytesView,
     pub transaction_infos: BytesView,
+}
+
+impl TryFrom<&TransactionListProof> for TransactionsProofsView {
+    type Error = Error;
+
+    fn try_from(proof: &TransactionListProof) -> Result<Self, Self::Error> {
+        Ok(TransactionsProofsView {
+            ledger_info_to_transaction_infos_proof: BytesView::new(bcs::to_bytes(
+                &proof.ledger_info_to_transaction_infos_proof,
+            )?),
+            transaction_infos: BytesView::new(bcs::to_bytes(&proof.transaction_infos)?),
+        })
+    }
+}
+
+impl TryFrom<&TransactionsProofsView> for TransactionListProof {
+    type Error = Error;
+
+    fn try_from(view: &TransactionsProofsView) -> Result<Self, Self::Error> {
+        Ok(TransactionListProof {
+            ledger_info_to_transaction_infos_proof: bcs::from_bytes(
+                &view.ledger_info_to_transaction_infos_proof,
+            )?,
+            transaction_infos: bcs::from_bytes(&view.transaction_infos)?,
+        })
+    }
 }
 
 #[allow(clippy::large_enum_variant)]

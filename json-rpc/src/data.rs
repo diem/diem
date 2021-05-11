@@ -5,9 +5,8 @@ use crate::{
     errors::JsonRpcError,
     util::{transaction_data_view_from_transaction, vm_status_view_from_kept_vm_status},
     views::{
-        AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
-        EventWithProofView, MetadataView, StateProofView, TransactionView, TransactionsProofsView,
-        TransactionsWithProofsView,
+        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
+        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
     },
 };
 use anyhow::{format_err, Result};
@@ -162,29 +161,13 @@ pub fn get_transactions_with_proofs(
     ledger_version: u64,
     start_version: u64,
     limit: u64,
+    include_events: bool,
 ) -> Result<Option<TransactionsWithProofsView>, JsonRpcError> {
     if start_version > ledger_version {
         return Ok(None);
     }
-
-    // We do not fetch events since they don't come with proofs.
-    let txs = db.get_transactions(start_version, limit, ledger_version, false)?;
-
-    let mut blobs = vec![];
-    for t in txs.transactions.iter() {
-        let bv = bcs::to_bytes(t)?;
-        blobs.push(BytesView::from(bv));
-    }
-
-    let (proofs, tx_info) = txs.proof.unpack();
-
-    Ok(Some(TransactionsWithProofsView {
-        serialized_transactions: blobs,
-        proofs: TransactionsProofsView {
-            ledger_info_to_transaction_infos_proof: BytesView::from(bcs::to_bytes(&proofs)?),
-            transaction_infos: BytesView::from(bcs::to_bytes(&tx_info)?),
-        },
-    }))
+    let txs = db.get_transactions(start_version, limit, ledger_version, include_events)?;
+    Ok(Some(TransactionsWithProofsView::try_from(&txs)?))
 }
 
 /// Returns account transaction by account and sequence_number

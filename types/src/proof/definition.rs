@@ -678,10 +678,10 @@ impl EventProof {
 pub struct TransactionListProof {
     /// The accumulator range proof from ledger info root to leaves that authenticates the hashes
     /// of all `TransactionInfo` objects.
-    ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
+    pub ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
 
     /// The `TransactionInfo` objects that correspond to all the transactions.
-    transaction_infos: Vec<TransactionInfo>,
+    pub transaction_infos: Vec<TransactionInfo>,
 }
 
 impl TransactionListProof {

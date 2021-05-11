@@ -1095,6 +1095,7 @@ fn create_test_cases() -> Vec<Test> {
                 let resp = env.send("get_metadata", json!([]));
 
                 let limit = 10;
+                let include_events = false;
                 assert!(resp.diem_ledger_version > limit);
                 // We test 2 cases:
                 //      1. base_version + limit > resp.diem_ledger_version
@@ -1103,7 +1104,7 @@ fn create_test_cases() -> Vec<Test> {
                    // We use a batched call to ensure we get an answer using the same latest server ledger_info for both
                     let responses = env.send_request(json!([
                         {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
-                        {"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": json!([*base_version, limit]), "id": 2}
+                        {"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": json!([*base_version, limit, include_events]), "id": 2}
                     ]));
 
                     let f:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");

@@ -242,6 +242,7 @@ impl<'a> Handler<'a> {
         let GetTransactionsWithProofsParams {
             start_version,
             limit,
+            include_events,
         } = params;
 
         // Notice limit is a u16 normally, but some APIs require u64 below
@@ -251,6 +252,7 @@ impl<'a> Handler<'a> {
             self.version(),
             start_version,
             limit,
+            include_events,
         )
     }
 

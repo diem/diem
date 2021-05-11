@@ -479,7 +479,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_transactions_with_proofs: invalid start_version param",
-            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": ["helloworld", 1], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": ["helloworld", 1, true], "id": 1}),
             json!({
                 "error": {
                     "code": -32602,
@@ -495,7 +495,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_transactions_with_proofs: start_version is too big, returns empty array",
-            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [version+1, 1], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [version+1, 1, false], "id": 1}),
             json!({
                 "id": 1,
                 "jsonrpc": "2.0",
@@ -507,7 +507,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_transactions_with_proofs: invalid limit param",
-            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, false], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, false, false], "id": 1}),
             json!({
                 "error": {
                     "code": -32602,
@@ -523,7 +523,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_transactions_with_proofs: limit is too big",
-            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, 1001], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, 1001, false], "id": 1}),
             json!({
                 "error": {
                     "code": -32600,

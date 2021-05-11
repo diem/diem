@@ -27,7 +27,7 @@ pub enum MethodRequest {
     //
     GetStateProof((u64,)),
     GetAccountStateWithProof(AccountAddress, Option<u64>, Option<u64>),
-    GetTransactionsWithProofs(u64, u64),
+    GetTransactionsWithProofs(u64, u64, bool),
     GetEventsWithProofs(EventKey, u64, u64),
 }
 
@@ -101,8 +101,12 @@ impl MethodRequest {
         Self::GetAccountStateWithProof(address, version, ledger_version)
     }
 
-    pub fn get_transactions_with_proofs(start_version: u64, limit: u64) -> Self {
-        Self::GetTransactionsWithProofs(start_version, limit)
+    pub fn get_transactions_with_proofs(
+        start_version: u64,
+        limit: u64,
+        include_events: bool,
+    ) -> Self {
+        Self::GetTransactionsWithProofs(start_version, limit, include_events)
     }
 
     pub fn get_events_with_proofs(key: EventKey, start_seq: u64, limit: u64) -> Self {
@@ -122,7 +126,7 @@ impl MethodRequest {
             MethodRequest::GetNetworkStatus(_) => Method::GetNetworkStatus,
             MethodRequest::GetStateProof(_) => Method::GetStateProof,
             MethodRequest::GetAccountStateWithProof(_, _, _) => Method::GetAccountStateWithProof,
-            MethodRequest::GetTransactionsWithProofs(_, _) => Method::GetTransactionsWithProofs,
+            MethodRequest::GetTransactionsWithProofs(_, _, _) => Method::GetTransactionsWithProofs,
             MethodRequest::GetEventsWithProofs(_, _, _) => Method::GetEventsWithProofs,
         }
     }

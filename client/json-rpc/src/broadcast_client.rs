@@ -189,10 +189,11 @@ impl BroadcastingClient {
         &self,
         start_version: u64,
         limit: u64,
+        include_events: bool,
     ) -> Result<Response<Option<TransactionsWithProofsView>>> {
-        let futures = self
-            .random_clients()
-            .map(|client| client.get_transactions_with_proofs(start_version, limit));
+        let futures = self.random_clients().map(|client| {
+            client.get_transactions_with_proofs(start_version, limit, include_events)
+        });
         let results = join_all(futures).await;
         collect_results(results)
     }

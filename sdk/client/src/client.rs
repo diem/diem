@@ -253,10 +253,12 @@ impl Client {
         &self,
         start_version: u64,
         limit: u64,
+        include_events: bool,
     ) -> Result<Response<Option<TransactionsWithProofsView>>> {
         self.send(MethodRequest::get_transactions_with_proofs(
             start_version,
             limit,
+            include_events,
         ))
         .await
     }

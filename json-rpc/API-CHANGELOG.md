@@ -8,8 +8,8 @@ Please add the API change in the following format:
 
 ## <date> (add "breaking change" to title following the date if a change will break client
 
-- <describle one change of API>, please <PR link> if this log is added after the PR is merged.
-- <describle another change of the API>
+- <describe one change of API>, please <PR link> if this log is added after the PR is merged.
+- <describe another change of the API>
 
 ```
 ## 2021-05-07 Add support for secondary signers in `TransactionDataView`
@@ -18,6 +18,15 @@ With the introduction of multi-agent transactions, multiple accounts are now abl
 participate in and sign a transaction. Therefore, we have added four new fields,
 `secondary_signers`, `secondary_signature_schemes`, `secondary_signatures`,
 and `secondary_public_keys`, to support this new feature.
+
+## 2021-05-12 Add `include_events` parameter and `serialized_events` field to `get_transactions_with_proofs` method
+
+- Add an `include_events` parameter to the `get_transactions_with_proofs` method,
+  which optionally includes the `serialized_events` field in the response. This
+  field is a BCS-serialized list of each transaction's list of generated events.
+- Add a field `first_transaction_version` to the `get_transactions_with_proofs`
+  method response, which contains the version of the first transaction in the
+  response or `null` if there are no transactions.
 
 ## 2021-04-21 Add `bytes` field to `unknown` event
 
