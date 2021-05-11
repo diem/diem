@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ FAIL    ] 0x1::M::multi_signer_fail
 [ PASS    ] 0x1::M::multi_signer_pass
 [ PASS    ] 0x1::M::multi_signer_pass_expected_failure

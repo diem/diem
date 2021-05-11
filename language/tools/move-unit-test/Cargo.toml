@@ -15,6 +15,9 @@ structopt = "0.3.21"
 colored = "2.0.0"
 rayon = "1.5.0"
 
+regex = "1.1.9"
+
+move-stdlib = { path = "../../move-stdlib" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-lang = { path = "../../move-lang" }
@@ -29,7 +32,6 @@ bytecode-interpreter = { path = "../../move-prover/interpreter" }
 [dev-dependencies]
 datatest-stable = "0.1.1"
 difference = "2.0.0"
-move-stdlib = { path = "../../move-stdlib" }
 move-lang-test-utils = { path = "../../move-lang/test-utils" }
 
 [[bin]]

@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ FAIL    ] 0x1::M::fail
 [ FAIL    ] 0x1::M::fail_with_code
 

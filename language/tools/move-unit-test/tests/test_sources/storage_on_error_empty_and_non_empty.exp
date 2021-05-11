@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x1::A::a
 [ PASS    ] 0x1::A::b
 [ PASS    ] 0x1::A::c

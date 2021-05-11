@@ -368,7 +368,8 @@ impl TestResults {
         writeln!(writer.lock().unwrap())
     }
 
-    pub fn summarize<W: Write>(self, writer: &Mutex<W>) -> Result<()> {
+    /// Returns `true` if all tests passed, `false` if there was a test failure/timeout
+    pub fn summarize<W: Write>(self, writer: &Mutex<W>) -> Result<bool> {
         let num_failed_tests = self
             .final_statistics
             .failed
@@ -417,6 +418,6 @@ impl TestResults {
             num_passed_tests,
             num_failed_tests
         )?;
-        Ok(())
+        Ok(num_failed_tests == 0)
     }
 }

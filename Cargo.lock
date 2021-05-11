@@ -4688,6 +4688,7 @@ dependencies = [
  "docgen",
  "log",
  "move-prover",
+ "move-unit-test",
  "tempfile",
  "walkdir",
 ]
@@ -4712,6 +4713,7 @@ dependencies = [
  "move-vm-test-utils",
  "move-vm-types",
  "rayon",
+ "regex",
  "resource-viewer",
  "structopt 0.3.21",
 ]

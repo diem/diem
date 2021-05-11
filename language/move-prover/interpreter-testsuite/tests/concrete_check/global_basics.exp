@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x2::A::borrow_imm_err
 [ PASS    ] 0x2::A::borrow_imm_ok
 [ PASS    ] 0x2::A::borrow_mut_err

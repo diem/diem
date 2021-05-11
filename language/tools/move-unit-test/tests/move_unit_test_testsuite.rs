@@ -58,7 +58,7 @@ pub fn modify(mut base_config: UnitTestingConfig, modifier_str: &str) -> Option<
 fn run_test_with_modifiers(
     unit_test_config: UnitTestingConfig,
     path: &Path,
-) -> datatest_stable::Result<Vec<(Vec<u8>, PathBuf)>> {
+) -> datatest_stable::Result<Vec<((Vec<u8>, bool), PathBuf)>> {
     let mut results = Vec::new();
 
     for modifier in TEST_MODIFIER_STRS.iter() {
@@ -113,9 +113,10 @@ fn run_test(path: &Path) -> datatest_stable::Result<()> {
         verbose: false,
         report_statistics: false,
         report_storage_on_error: false,
+        list: false,
     };
 
-    for (buffer, exp_path) in run_test_with_modifiers(unit_test_config, path)? {
+    for ((buffer, _), exp_path) in run_test_with_modifiers(unit_test_config, path)? {
         if update_baseline {
             fs::write(&exp_path, &buffer)?
         }

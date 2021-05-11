@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x2::A::add_ok
 [ PASS    ] 0x2::A::add_overflow
 [ PASS    ] 0x2::A::div_by_zero

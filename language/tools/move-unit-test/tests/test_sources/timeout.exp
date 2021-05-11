@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x1::M::no_timeout
 [ FAIL    ] 0x1::M::no_timeout_fail
 [ PASS    ] 0x1::M::no_timeout_while_loop

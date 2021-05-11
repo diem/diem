@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x2::A::bitand
 [ PASS    ] 0x2::A::bitor
 [ PASS    ] 0x2::A::bitxor

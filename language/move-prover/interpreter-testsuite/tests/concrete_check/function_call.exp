@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x2::A::call_imm_ref
 [ PASS    ] 0x2::A::call_mut_ref
 [ PASS    ] 0x2::A::call_val

@@ -22,6 +22,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         check_stackless_vm: true,
         report_storage_on_error: false,
         report_statistics: false,
+        list: false,
         verbose: read_bool_env_var("VERBOSE"),
     };
 

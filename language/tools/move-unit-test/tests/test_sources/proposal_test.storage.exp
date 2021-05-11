@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x1::Module::other_module_aborts
 [ PASS    ] 0x1::Module::tests_a
 [ PASS    ] 0x1::Module::tests_aborts

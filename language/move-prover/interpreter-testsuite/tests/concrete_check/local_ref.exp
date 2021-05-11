@@ -1,4 +1,4 @@
-Running tests
+Running Move unit tests
 [ PASS    ] 0x2::A::local_imm_ref
 [ PASS    ] 0x2::A::local_mut_ref
 Test result: OK. Total tests: 2; passed: 2; failed: 0
