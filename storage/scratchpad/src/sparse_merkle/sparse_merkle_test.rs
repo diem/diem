@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::sparse_merkle::test_utils::NaiveSmt;
 use diem_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -699,6 +700,12 @@ fn test_update_consistency() {
             kvs.push((key, value));
         }
         let batch = kvs.iter().map(|(k, v)| (*k, v)).collect::<Vec<_>>();
+
+        let start = std::time::Instant::now();
+        let mut naive_smt = NaiveSmt::new(&batch);
+        naive_smt.get_root_hash();
+        println!("naive {}-th run: {}ms", i, start.elapsed().as_millis());
+
         let start = std::time::Instant::now();
         smt_serial = smt.update(batch.clone(), &proof_reader).unwrap();
         println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
@@ -708,6 +715,7 @@ fn test_update_consistency() {
         println!("batch {}-th run: {}ms", i, start.elapsed().as_millis());
         kvs.clear();
         assert_eq!(smt_serial.root_hash(), smt_batch.root_hash());
+        assert_eq!(smt_serial.root_hash(), naive_smt.get_root_hash());
     }
 }
 
@@ -772,6 +780,7 @@ proptest! {
         let mut serial_updated_tree = SparseMerkleTree::new(initial_state_root);
         let mut batch_updated_tree = SparseMerkleTree::new(initial_state_root);
         let mut batches_updated_tree = SparseMerkleTree::new(initial_state_root);
+        let mut naive_tree = NaiveSmt::new::<AccountStateBlob>(&[]);
 
         for (txns_to_commit, ledger_info_with_sigs) in input.iter() {
             let updates = txns_to_commit.iter()
@@ -791,9 +800,12 @@ proptest! {
                     if cur_ver == -1 {
                         SparseMerkleProof::<AccountStateBlob>::new(None, vec![])
                     } else {
-                        db.get_account_state_with_proof(*k, cur_ver as u64, cur_ver as u64)
+                        let from_db = db.get_account_state_with_proof(*k, cur_ver as u64, cur_ver as u64)
                             .map(|p| p.proof.transaction_info_to_account_proof().clone())
-                            .unwrap()
+                            .unwrap();
+                        let naive = naive_tree.get_proof(&k.hash());
+                        assert_eq!(from_db, naive);
+                        from_db
                     }
                 });
 
@@ -815,12 +827,9 @@ proptest! {
             let root_in_db = tree_state.account_state_root_hash;
             cur_ver = tree_state.num_transactions as i64 - 1;
 
-            batch_updated_tree = batch_updated_tree.batch_update(updates
-                                                                 .iter()
-                                                                 .flatten()
-                                                                 .map(|(k, v)| (*k, *v))
-                                                                 .collect::<Vec<_>>(),
-                                                                 &proof_reader)
+            let merged_batch = updates.iter().flatten().map(|(k, v)| (*k, *v)).collect::<Vec<_>>();
+            naive_tree = naive_tree.update(&merged_batch);
+            batch_updated_tree = batch_updated_tree.batch_update(merged_batch, &proof_reader)
                 .unwrap();
             serial_updated_tree = serial_updated_tree
                 .serial_update(updates.clone(), &proof_reader)
@@ -832,6 +841,7 @@ proptest! {
             prop_assert_eq!(batch_updated_tree.root_hash(), batches_updated_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), serial_updated_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), root_in_db);
+            prop_assert_eq!(batch_updated_tree.root_hash(), naive_tree.get_root_hash());
             batch_updated_tree.prune();
             serial_updated_tree.prune();
             batches_updated_tree.prune();

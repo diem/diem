@@ -6421,6 +6421,7 @@ name = "scratchpad"
 version = "0.1.0"
 dependencies = [
  "arc-swap",
+ "bitvec",
  "criterion",
  "diem-crypto",
  "diem-infallible",
