@@ -74,6 +74,8 @@ mod utils;
 
 #[cfg(test)]
 mod sparse_merkle_test;
+#[cfg(test)]
+mod test_utils;
 
 use crate::sparse_merkle::{
     node::{LeafValue, Node, SubTree},

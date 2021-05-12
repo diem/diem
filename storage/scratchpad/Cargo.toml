@@ -20,6 +20,7 @@ diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dev-dependencies]
+bitvec = "0.19.4"
 criterion = "0.3.4"
 rand = "0.8.3"
 proptest = "1.0.0"
