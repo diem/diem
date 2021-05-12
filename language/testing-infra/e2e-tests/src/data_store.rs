@@ -35,7 +35,7 @@ pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
 ///
 /// Tests use this to set up state, and pass in a reference to the cache whenever a `StateView` or
 /// `RemoteCache` is needed.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct FakeDataStore {
     data: HashMap<AccessPath, Vec<u8>>,
 }
@@ -86,6 +86,11 @@ impl FakeDataStore {
     pub fn add_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) {
         let access_path = AccessPath::from(module_id);
         self.set(access_path, blob);
+    }
+
+    /// Yields a reference to the internal data structure of the global state
+    pub fn inner(&self) -> &HashMap<AccessPath, Vec<u8>> {
+        &self.data
     }
 }
 
