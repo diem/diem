@@ -224,6 +224,7 @@ fn step_function_and_compare(
     args: &[Vec<u8>],
     mut move_vm_state: FakeDataStore,
     stackless_vm_state: GlobalState,
+    verbose: bool,
 ) -> (FakeDataStore, GlobalState) {
     // execute via move VM
     let move_vm = MoveVM::new();
@@ -247,7 +248,7 @@ fn step_function_and_compare(
             ty_args,
             args,
             &stackless_vm_state,
-            false,
+            verbose,
         );
 
     // compare
@@ -270,6 +271,7 @@ fn replay_txn_block_metadata(
     block_metadata: BlockMetadata,
     data_store: &FakeDataStore,
     expect_output: &TransactionOutput,
+    verbose: bool,
 ) {
     // args
     let signer = reserved_vm_address();
@@ -315,6 +317,7 @@ fn replay_txn_block_metadata(
         &args,
         move_vm_state,
         stackless_vm_state,
+        verbose,
     );
 }
 
@@ -657,7 +660,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                         }
                         return Ok(());
                     }
-                    replay_txn_block_metadata(env, block_metadata, &data, &res);
+                    replay_txn_block_metadata(env, block_metadata, &data, &res, verbose);
                     data.add_write_set(res.write_set());
                 }
                 Transaction::UserTransaction(signed_txn) => {
@@ -759,7 +762,12 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
     Ok(())
 }
 
-fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, verbose: bool) -> Result<()> {
+fn replay<P: AsRef<Path>>(
+    root: P,
+    env: &GlobalEnv,
+    filters: &[String],
+    verbose: bool,
+) -> Result<()> {
     let root = root.as_ref();
     for entry in WalkDir::new(root).into_iter() {
         let entry = entry?;
@@ -768,7 +776,20 @@ fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, verbose: bool) -> Result<()>
                 .path()
                 .parent()
                 .ok_or_else(|| anyhow!("Cannot traverse the root directory"))?;
-            replay_trace(wks, env, verbose)?;
+
+            let should_replay = if filters.is_empty() {
+                true
+            } else {
+                let wks_name = wks
+                    .file_name()
+                    .ok_or_else(|| anyhow!("Cannot get the trace directory name"))?
+                    .to_str()
+                    .unwrap();
+                filters.iter().any(|f| wks_name.contains(f))
+            };
+            if should_replay {
+                replay_trace(wks, env, verbose)?;
+            }
         }
     }
     Ok(())
@@ -784,6 +805,10 @@ struct ConverterArgs {
     #[structopt(short = "t", long = "trace")]
     trace_files: Vec<String>,
 
+    /// Filter
+    #[structopt(short = "f", long = "filter")]
+    filters: Vec<String>,
+
     /// Verbose mode
     #[structopt(short = "v", long = "verbose")]
     verbose: bool,
@@ -793,7 +818,7 @@ pub fn main() -> Result<()> {
     let args = ConverterArgs::from_args();
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
     for trace in args.trace_files {
-        replay(trace, &env, args.verbose)?;
+        replay(trace, &env, &args.filters, args.verbose)?;
     }
     Ok(())
 }
