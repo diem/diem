@@ -98,6 +98,15 @@ impl StorageWrapper {
             .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))
     }
 
+    pub fn x25519_private(&self, key_name: &'static str) -> Result<x25519::PrivateKey, Error> {
+        let key = self
+            .storage
+            .export_private_key(key_name)
+            .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))?;
+        x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
+            .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))
+    }
+
     /// Retrieves public key from the stored private key
     pub fn x25519_public_from_private(
         &self,

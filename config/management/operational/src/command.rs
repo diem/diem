@@ -5,10 +5,12 @@ use crate::{
     account_resource::SimplifiedAccountResource, validator_config::DecryptedValidatorConfig,
     validator_set::DecryptedValidatorInfo, TransactionContext,
 };
+use diem_config::config::Peer;
 use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
 use diem_management::{error::Error, execute_command};
-use diem_types::{account_address::AccountAddress, waypoint::Waypoint};
+use diem_types::{account_address::AccountAddress, waypoint::Waypoint, PeerId};
 use serde::Serialize;
+use std::collections::HashMap;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -26,10 +28,16 @@ pub enum Command {
     CreateValidator(crate::governance::CreateValidator),
     #[structopt(about = "Create a new validator operator account")]
     CreateValidatorOperator(crate::governance::CreateValidatorOperator),
+    #[structopt(about = "Extract peer information from an x25519 PrivateKey file")]
+    ExtractPeerFromFile(crate::keys::ExtractPeerFromFile),
+    #[structopt(about = "Extract peer information from storage")]
+    ExtractPeerFromStorage(crate::keys::ExtractPeerFromStorage),
     #[structopt(about = "Extract a private key from the validator storage")]
     ExtractPrivateKey(crate::keys::ExtractPrivateKey),
     #[structopt(about = "Extract a public key from the validator storage")]
     ExtractPublicKey(crate::keys::ExtractPublicKey),
+    #[structopt(about = "Generate a PrivateKey to a file")]
+    GenerateKey(crate::keys::GenerateKey),
     #[structopt(about = "Set the waypoint in the validator storage")]
     InsertWaypoint(diem_management::waypoint::InsertWaypoint),
     #[structopt(about = "Prints an account from the validator storage")]
@@ -72,8 +80,11 @@ pub enum CommandName {
     CheckValidatorSetEndpoints,
     CreateValidator,
     CreateValidatorOperator,
+    ExtractPeerFromFile,
+    ExtractPeerFromStorage,
     ExtractPrivateKey,
     ExtractPublicKey,
+    GenerateKey,
     InsertWaypoint,
     PrintAccount,
     PrintKey,
@@ -102,6 +113,9 @@ impl From<&Command> for CommandName {
             Command::CreateValidatorOperator(_) => CommandName::CreateValidatorOperator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
+            Command::ExtractPeerFromFile(_) => CommandName::ExtractPeerFromFile,
+            Command::ExtractPeerFromStorage(_) => CommandName::ExtractPeerFromStorage,
+            Command::GenerateKey(_) => CommandName::GenerateKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::PrintAccount(_) => CommandName::PrintAccount,
             Command::PrintKey(_) => CommandName::PrintKey,
@@ -132,6 +146,9 @@ impl std::fmt::Display for CommandName {
             CommandName::CreateValidatorOperator => "create-validator-operator",
             CommandName::ExtractPrivateKey => "extract-private-key",
             CommandName::ExtractPublicKey => "extract-public-key",
+            CommandName::ExtractPeerFromFile => "extract-peer-from-file",
+            CommandName::ExtractPeerFromStorage => "extract-peer-from-storage",
+            CommandName::GenerateKey => "generate-key",
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::PrintAccount => "print-account",
             CommandName::PrintKey => "print-key",
@@ -166,8 +183,11 @@ impl Command {
                 Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
             }
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
+            Command::ExtractPeerFromFile(cmd) => Self::pretty_print(cmd.execute()),
+            Command::ExtractPeerFromStorage(cmd) => Self::pretty_print(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
+            Command::GenerateKey(cmd) => Self::print_success(cmd.execute().map(|_| ())),
             Command::PrintAccount(cmd) => Self::pretty_print(cmd.execute()),
             Command::PrintKey(cmd) => Self::pretty_print(cmd.execute()),
             Command::PrintXKey(cmd) => Self::pretty_print(cmd.execute()),
@@ -273,6 +293,26 @@ impl Command {
             Command::ExtractPublicKey,
             CommandName::ExtractPublicKey
         )
+    }
+
+    pub fn extract_peer_from_storage(self) -> Result<HashMap<PeerId, Peer>, Error> {
+        execute_command!(
+            self,
+            Command::ExtractPeerFromStorage,
+            CommandName::ExtractPeerFromStorage
+        )
+    }
+
+    pub fn extract_peer_from_file(self) -> Result<HashMap<PeerId, Peer>, Error> {
+        execute_command!(
+            self,
+            Command::ExtractPeerFromFile,
+            CommandName::ExtractPeerFromFile
+        )
+    }
+
+    pub fn generate_key(self) -> Result<(), Error> {
+        execute_command!(self, Command::GenerateKey, CommandName::GenerateKey)
     }
 
     pub fn insert_waypoint(self) -> Result<(), Error> {
