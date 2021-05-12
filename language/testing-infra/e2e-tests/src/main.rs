@@ -136,43 +136,148 @@ fn compare_output(
     }
 }
 
-fn validate_and_convert_data_store_for_stackless_vm(
-    env: &GlobalEnv,
-    data_store: &FakeDataStore,
-) -> (FakeDataStore, GlobalState) {
-    let mut move_vm_state = data_store.clone();
-    let mut stackless_vm_state = GlobalState::default();
-    for (ap, blob) in data_store.inner() {
-        match ap.get_path() {
-            AP::Code(module_id) => {
-                let module_env = env.find_module_by_language_storage_id(&module_id).unwrap();
-                let mut code = vec![];
-                module_env
-                    .get_verified_module()
-                    .serialize(&mut code)
-                    .unwrap();
-                // update the module code to the same version as the one in the GlobalEnv
-                move_vm_state.add_module(&module_id, code);
-            }
-            AP::Resource(struct_tag) => {
-                let inst = convert_move_struct_tag(env, &struct_tag).unwrap();
-                let struct_ty = BaseType::mk_struct(inst);
-                let struct_val =
-                    MoveValue::simple_deserialize(blob, &struct_ty.to_move_type_layout()).unwrap();
-                let resource = convert_move_value(env, &struct_val, &struct_ty).unwrap();
-                let inst = struct_ty.into_struct_inst();
-                stackless_vm_state.put_resource(ap.address, inst, resource);
+//**************************************************************************************************
+// Cross-VM comparison
+//**************************************************************************************************
+
+struct CrossRunner<'env> {
+    env: &'env GlobalEnv,
+    move_vm_state: FakeDataStore,
+    stackless_vm_state: GlobalState,
+    verbose: bool,
+}
+
+impl<'env> CrossRunner<'env> {
+    pub fn new(env: &'env GlobalEnv, data_store: &FakeDataStore, verbose: bool) -> Self {
+        let mut move_vm_state = data_store.clone();
+        let mut stackless_vm_state = GlobalState::default();
+        for (ap, blob) in data_store.inner() {
+            match ap.get_path() {
+                AP::Code(module_id) => {
+                    let module_env = env.find_module_by_language_storage_id(&module_id).unwrap();
+                    let mut code = vec![];
+                    module_env
+                        .get_verified_module()
+                        .serialize(&mut code)
+                        .unwrap();
+                    // update the module code to the same version as the one in the GlobalEnv
+                    move_vm_state.add_module(&module_id, code);
+                }
+                AP::Resource(struct_tag) => {
+                    let inst = convert_move_struct_tag(env, &struct_tag).unwrap();
+                    let struct_ty = BaseType::mk_struct(inst);
+                    let struct_val =
+                        MoveValue::simple_deserialize(blob, &struct_ty.to_move_type_layout())
+                            .unwrap();
+                    let resource = convert_move_value(env, &struct_val, &struct_ty).unwrap();
+                    let inst = struct_ty.into_struct_inst();
+                    stackless_vm_state.put_resource(ap.address, inst, resource);
+                }
             }
         }
+        Self {
+            env,
+            move_vm_state,
+            stackless_vm_state,
+            verbose,
+        }
     }
-    (move_vm_state, stackless_vm_state)
+
+    pub fn step_function_and_compare(
+        &mut self,
+        module_id: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: &[TypeTag],
+        args: &[Vec<u8>],
+    ) {
+        // execute via move VM
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.move_vm_state);
+        let move_vm_return_values = execute_function_via_session(
+            &mut session,
+            module_id,
+            function_name,
+            ty_args.to_vec(),
+            args.to_vec(),
+        );
+        let (move_vm_change_set, move_events) = session.finish().unwrap();
+
+        // execute via stackless VM
+        let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
+            interpret_with_default_pipeline_and_bcs_arguments(
+                self.env,
+                module_id,
+                function_name,
+                ty_args,
+                args,
+                &self.stackless_vm_state,
+                self.verbose,
+            );
+
+        // compare
+        assert_eq!(move_vm_return_values, stackless_vm_return_values);
+        assert_eq!(move_vm_change_set, stackless_vm_change_set);
+
+        // update the states
+        let (move_write_set, _) =
+            convert_changeset_and_events(move_vm_change_set, move_events).unwrap();
+        self.move_vm_state.add_write_set(&move_write_set);
+        self.stackless_vm_state = new_stackless_vm_state;
+    }
+
+    pub fn step_script_function_and_compare(
+        &mut self,
+        module_id: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: &[TypeTag],
+        args: &[Vec<u8>],
+        senders: &[AccountAddress],
+    ) {
+        // execute via move VM
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.move_vm_state);
+        let move_vm_return_values = execute_script_function_via_session(
+            &mut session,
+            module_id,
+            function_name,
+            ty_args.to_vec(),
+            args.to_vec(),
+            senders.to_vec(),
+        );
+        let (move_vm_change_set, move_events) = session.finish().unwrap();
+
+        // execute via stackless VM
+        let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
+            interpret_with_default_pipeline_and_bcs_arguments(
+                self.env,
+                module_id,
+                function_name,
+                ty_args,
+                args,
+                &self.stackless_vm_state,
+                self.verbose,
+                // TODO (mengxu): add senders
+            );
+        let stackless_vm_return_values =
+            stackless_vm_return_values.map(|rets| assert!(rets.is_empty()));
+
+        // compare
+        assert_eq!(move_vm_return_values, stackless_vm_return_values);
+        assert_eq!(move_vm_change_set, stackless_vm_change_set);
+
+        // update the states
+        let (move_write_set, _) =
+            convert_changeset_and_events(move_vm_change_set, move_events).unwrap();
+        self.move_vm_state.add_write_set(&move_write_set);
+        self.stackless_vm_state = new_stackless_vm_state;
+    }
 }
 
 //**************************************************************************************************
 // Executors
 //**************************************************************************************************
 
-fn execute_function_via_move_vm(
+fn execute_function_via_session(
     session: &mut Session<FakeDataStore>,
     module_id: &ModuleId,
     function_name: &IdentStr,
@@ -191,7 +296,21 @@ fn execute_function_via_move_vm(
     )
 }
 
-fn execute_script_function_via_move_vm(
+fn execute_function_via_session_and_xrunner(
+    session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
+    module_id: &ModuleId,
+    function_name: &IdentStr,
+    ty_args: Vec<TypeTag>,
+    args: Vec<Vec<u8>>,
+) -> VMResult<Vec<Vec<u8>>> {
+    if let Some(runner) = xrunner {
+        runner.step_function_and_compare(module_id, function_name, &ty_args, &args);
+    }
+    execute_function_via_session(session, module_id, function_name, ty_args, args)
+}
+
+fn execute_script_function_via_session(
     session: &mut Session<FakeDataStore>,
     module_id: &ModuleId,
     function_name: &IdentStr,
@@ -212,117 +331,258 @@ fn execute_script_function_via_move_vm(
     )
 }
 
-//**************************************************************************************************
-// Cross-VM comparison
-//**************************************************************************************************
-
-fn step_function_and_compare(
-    env: &GlobalEnv,
+fn execute_script_function_via_session_and_xrunner(
+    session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
     module_id: &ModuleId,
     function_name: &IdentStr,
-    ty_args: &[TypeTag],
-    args: &[Vec<u8>],
-    mut move_vm_state: FakeDataStore,
-    stackless_vm_state: GlobalState,
-    verbose: bool,
-) -> (FakeDataStore, GlobalState) {
-    // execute via move VM
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(&move_vm_state);
-
-    let move_vm_return_values = execute_function_via_move_vm(
-        &mut session,
-        module_id,
-        function_name,
-        ty_args.to_vec(),
-        args.to_vec(),
-    );
-    let (move_vm_change_set, move_events) = session.finish().unwrap();
-
-    // execute via stackless VM
-    let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
-        interpret_with_default_pipeline_and_bcs_arguments(
-            env,
+    ty_args: Vec<TypeTag>,
+    args: Vec<Vec<u8>>,
+    senders: Vec<AccountAddress>,
+) -> VMResult<()> {
+    if let Some(runner) = xrunner {
+        runner.step_script_function_and_compare(
             module_id,
             function_name,
-            ty_args,
-            args,
-            &stackless_vm_state,
-            verbose,
+            &ty_args,
+            &args,
+            &senders,
         );
-
-    // compare
-    assert_eq!(move_vm_return_values, stackless_vm_return_values);
-    assert_eq!(move_vm_change_set, stackless_vm_change_set);
-
-    // update and return the states
-    let (move_write_set, _) =
-        convert_changeset_and_events(move_vm_change_set, move_events).unwrap();
-    move_vm_state.add_write_set(&move_write_set);
-    (move_vm_state, new_stackless_vm_state)
+    }
+    execute_script_function_via_session(session, module_id, function_name, ty_args, args, senders)
 }
 
 //**************************************************************************************************
 // Transaction replay
 //**************************************************************************************************
 
-fn replay_txn_block_metadata(
-    env: &GlobalEnv,
-    block_metadata: BlockMetadata,
-    data_store: &FakeDataStore,
-    expect_output: &TransactionOutput,
+struct TraceReplayer<'env> {
+    env: &'env GlobalEnv,
+    data_store: FakeDataStore,
+    check_stackless_vm: bool,
     verbose: bool,
-) {
-    // args
-    let signer = reserved_vm_address();
-    let (round, timestamp, previous_votes, proposer) = block_metadata.into_inner();
-    let args: Vec<_> = vec![
-        MoveValue::Signer(signer),
-        MoveValue::U64(round),
-        MoveValue::U64(timestamp),
-        MoveValue::Vector(previous_votes.into_iter().map(MoveValue::Address).collect()),
-        MoveValue::Address(proposer),
-    ]
-    .into_iter()
-    .map(|v| v.simple_serialize().unwrap())
-    .collect();
+}
 
-    // execute
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(data_store);
+impl<'env> TraceReplayer<'env> {
+    pub fn new(
+        env: &'env GlobalEnv,
+        data_store: FakeDataStore,
+        check_stackless_vm: bool,
+        verbose: bool,
+    ) -> Self {
+        Self {
+            env,
+            data_store,
+            check_stackless_vm,
+            verbose,
+        }
+    }
 
-    let result = execute_function_via_move_vm(
-        &mut session,
-        &*DIEM_BLOCK_MODULE,
-        &*BLOCK_PROLOGUE,
-        vec![],
-        args.clone(),
-    );
-    let actual_output = result.and_then(|rets| {
-        assert!(rets.is_empty());
-        session.finish()
-    });
+    pub fn replay_txn_block_metadata(
+        &self,
+        block_metadata: BlockMetadata,
+        expect_output: &TransactionOutput,
+    ) {
+        // args
+        let signer = reserved_vm_address();
+        let (round, timestamp, previous_votes, proposer) = block_metadata.into_inner();
+        let args: Vec<_> = vec![
+            MoveValue::Signer(signer),
+            MoveValue::U64(round),
+            MoveValue::U64(timestamp),
+            MoveValue::Vector(previous_votes.into_iter().map(MoveValue::Address).collect()),
+            MoveValue::Address(proposer),
+        ]
+        .into_iter()
+        .map(|v| v.simple_serialize().unwrap())
+        .collect();
 
-    // compare
-    compare_output(expect_output, actual_output);
+        // execute
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.data_store);
+        let mut xrunner = if self.check_stackless_vm {
+            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+        } else {
+            None
+        };
 
-    // run again with move vm and stackless vm
-    let (move_vm_state, stackless_vm_state) =
-        validate_and_convert_data_store_for_stackless_vm(env, data_store);
-    step_function_and_compare(
-        env,
-        &*DIEM_BLOCK_MODULE,
-        &*BLOCK_PROLOGUE,
-        &[],
-        &args,
-        move_vm_state,
-        stackless_vm_state,
-        verbose,
-    );
+        let result = execute_function_via_session_and_xrunner(
+            &mut session,
+            xrunner.as_mut(),
+            &*DIEM_BLOCK_MODULE,
+            &*BLOCK_PROLOGUE,
+            vec![],
+            args,
+        );
+        let actual_output = result.and_then(|rets| {
+            assert!(rets.is_empty());
+            session.finish()
+        });
+
+        // compare
+        compare_output(expect_output, actual_output);
+    }
+
+    fn replay_txn_user_script_function_internal(
+        &self,
+        senders: Vec<AccountAddress>,
+        txn_meta: TransactionMetadata,
+        script_fun: ScriptFunction,
+        gas_currency: &str,
+        gas_usage: u64,
+    ) -> VMResult<(ChangeSet, Vec<Event>)> {
+        let gas_currency_ty =
+            type_tag_for_currency_code(from_currency_code_string(gas_currency).unwrap());
+
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.data_store);
+        let mut xrunner = if self.check_stackless_vm {
+            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+        } else {
+            None
+        };
+
+        // prologue -> main -> epilogue
+        execute_txn_user_script_prologue(
+            &mut session,
+            xrunner.as_mut(),
+            &txn_meta,
+            &gas_currency_ty,
+        )?;
+
+        let result = execute_script_function_via_session_and_xrunner(
+            &mut session,
+            xrunner.as_mut(),
+            script_fun.module(),
+            script_fun.function(),
+            script_fun.ty_args().to_vec(),
+            script_fun.args().to_vec(),
+            senders,
+        );
+        match result {
+            Ok(_) => {
+                execute_txn_user_script_epilogue(
+                    &mut session,
+                    xrunner.as_mut(),
+                    &txn_meta,
+                    &gas_currency_ty,
+                    gas_usage,
+                )?;
+                session.finish()
+            }
+            Err(err) => {
+                let status = TransactionStatus::from(err.clone().into_vm_status());
+                if status.is_discarded() {
+                    return Err(err);
+                }
+                let mut new_session = move_vm.new_session(&self.data_store);
+                let mut new_xrunner = if self.check_stackless_vm {
+                    Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+                } else {
+                    None
+                };
+                execute_txn_user_script_epilogue(
+                    &mut new_session,
+                    new_xrunner.as_mut(),
+                    &txn_meta,
+                    &gas_currency_ty,
+                    gas_usage,
+                )?;
+                new_session.finish()
+            }
+        }
+    }
+
+    fn replay_txn_admin_script_function_internal(
+        &self,
+        senders: Vec<AccountAddress>,
+        txn_meta: TransactionMetadata,
+        script_fun: ScriptFunction,
+    ) -> VMResult<(ChangeSet, Vec<Event>)> {
+        let move_vm = MoveVM::new();
+        let mut session = move_vm.new_session(&self.data_store);
+        let mut xrunner = if self.check_stackless_vm {
+            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+        } else {
+            None
+        };
+
+        // prologue -> main -> epilogue
+        execute_txn_admin_script_prologue(&mut session, xrunner.as_mut(), &txn_meta)?;
+
+        let result = execute_script_function_via_session_and_xrunner(
+            &mut session,
+            xrunner.as_mut(),
+            script_fun.module(),
+            script_fun.function(),
+            script_fun.ty_args().to_vec(),
+            script_fun.args().to_vec(),
+            senders,
+        );
+        match result {
+            Ok(_) => {
+                execute_txn_admin_script_epilogue(&mut session, xrunner.as_mut(), &txn_meta)?;
+                session.finish()
+            }
+            Err(err) => {
+                let status = TransactionStatus::from(err.clone().into_vm_status());
+                if status.is_discarded() {
+                    return Err(err);
+                }
+                let mut new_session = move_vm.new_session(&self.data_store);
+                let mut new_xrunner = if self.check_stackless_vm {
+                    Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+                } else {
+                    None
+                };
+                execute_txn_admin_script_epilogue(
+                    &mut new_session,
+                    new_xrunner.as_mut(),
+                    &txn_meta,
+                )?;
+                new_session.finish()
+            }
+        }
+    }
+
+    pub fn replay_txn_script_function(
+        &self,
+        is_admin: bool,
+        senders: Vec<AccountAddress>,
+        txn_meta: TransactionMetadata,
+        script_fun: ScriptFunction,
+        gas_currency: &str,
+        expect_output: &TransactionOutput,
+    ) {
+        // ignore out-of-gas cases
+        if matches!(
+            expect_output.status(),
+            TransactionStatus::Keep(KeptVMStatus::OutOfGas)
+        ) {
+            return;
+        }
+
+        // execute
+        let actual_output = if is_admin {
+            self.replay_txn_admin_script_function_internal(senders, txn_meta, script_fun)
+        } else {
+            self.replay_txn_user_script_function_internal(
+                senders,
+                txn_meta,
+                script_fun,
+                gas_currency,
+                expect_output.gas_used(),
+            )
+        };
+
+        // compare
+        compare_output(expect_output, actual_output);
+    }
 }
 
 fn execute_txn_user_script_prologue(
     session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
     txn_meta: &TransactionMetadata,
     gas_currency_ty: &TypeTag,
 ) -> VMResult<()> {
@@ -351,18 +611,21 @@ fn execute_txn_user_script_prologue(
     .map(|v| v.simple_serialize().unwrap())
     .collect();
 
-    let result = execute_function_via_move_vm(
+    let rets = execute_function_via_session_and_xrunner(
         session,
+        xrunner,
         &*ACCOUNT_MODULE,
         &*SCRIPT_PROLOGUE_NAME,
         vec![gas_currency_ty.clone()],
         args,
-    );
-    result.map(|rets| assert!(rets.is_empty()))
+    )?;
+    assert!(rets.is_empty());
+    Ok(())
 }
 
 fn execute_txn_user_script_epilogue(
     session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
     txn_meta: &TransactionMetadata,
     gas_currency_ty: &TypeTag,
     gas_usage: u64,
@@ -386,18 +649,21 @@ fn execute_txn_user_script_epilogue(
     .map(|v| v.simple_serialize().unwrap())
     .collect();
 
-    let result = execute_function_via_move_vm(
+    let rets = execute_function_via_session_and_xrunner(
         session,
+        xrunner,
         &*ACCOUNT_MODULE,
         &*USER_EPILOGUE_NAME,
         vec![gas_currency_ty.clone()],
         args,
-    );
-    result.map(|rets| assert!(rets.is_empty()))
+    )?;
+    assert!(rets.is_empty());
+    Ok(())
 }
 
 fn execute_txn_admin_script_prologue(
     session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
     txn_meta: &TransactionMetadata,
 ) -> VMResult<()> {
     let TransactionMetadata {
@@ -419,18 +685,21 @@ fn execute_txn_admin_script_prologue(
     .map(|v| v.simple_serialize().unwrap())
     .collect();
 
-    let result = execute_function_via_move_vm(
+    let rets = execute_function_via_session_and_xrunner(
         session,
+        xrunner,
         &*ACCOUNT_MODULE,
         &*WRITESET_PROLOGUE_NAME,
         vec![],
         args,
-    );
-    result.map(|rets| assert!(rets.is_empty()))
+    )?;
+    assert!(rets.is_empty());
+    Ok(())
 }
 
 fn execute_txn_admin_script_epilogue(
     session: &mut Session<FakeDataStore>,
+    xrunner: Option<&mut CrossRunner>,
     txn_meta: &TransactionMetadata,
 ) -> VMResult<()> {
     let TransactionMetadata {
@@ -447,140 +716,28 @@ fn execute_txn_admin_script_epilogue(
     .map(|v| v.simple_serialize().unwrap())
     .collect();
 
-    let result = execute_function_via_move_vm(
+    let rets = execute_function_via_session_and_xrunner(
         session,
+        xrunner,
         &*ACCOUNT_MODULE,
         &*WRITESET_EPILOGUE_NAME,
         vec![],
         args,
-    );
-    result.map(|rets| assert!(rets.is_empty()))
-}
-
-fn replay_txn_user_script_function_internal(
-    senders: Vec<AccountAddress>,
-    txn_meta: TransactionMetadata,
-    script_fun: ScriptFunction,
-    gas_currency: &str,
-    gas_usage: u64,
-    data_store: &FakeDataStore,
-) -> VMResult<(ChangeSet, Vec<Event>)> {
-    let gas_currency_ty =
-        type_tag_for_currency_code(from_currency_code_string(gas_currency).unwrap());
-
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(data_store);
-
-    // prologue -> main -> epilogue
-    execute_txn_user_script_prologue(&mut session, &txn_meta, &gas_currency_ty)?;
-
-    let result = execute_script_function_via_move_vm(
-        &mut session,
-        script_fun.module(),
-        script_fun.function(),
-        script_fun.ty_args().to_vec(),
-        script_fun.args().to_vec(),
-        senders,
-    );
-    match result {
-        Ok(_) => {
-            execute_txn_user_script_epilogue(&mut session, &txn_meta, &gas_currency_ty, gas_usage)?;
-            session.finish()
-        }
-        Err(err) => {
-            let status = TransactionStatus::from(err.clone().into_vm_status());
-            if status.is_discarded() {
-                return Err(err);
-            }
-            let mut new_session = move_vm.new_session(data_store);
-            execute_txn_user_script_epilogue(
-                &mut new_session,
-                &txn_meta,
-                &gas_currency_ty,
-                gas_usage,
-            )?;
-            new_session.finish()
-        }
-    }
-}
-
-fn replay_txn_admin_script_function_internal(
-    senders: Vec<AccountAddress>,
-    txn_meta: TransactionMetadata,
-    script_fun: ScriptFunction,
-    data_store: &FakeDataStore,
-) -> VMResult<(ChangeSet, Vec<Event>)> {
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(data_store);
-
-    // prologue -> main -> epilogue
-    execute_txn_admin_script_prologue(&mut session, &txn_meta)?;
-
-    let result = execute_script_function_via_move_vm(
-        &mut session,
-        script_fun.module(),
-        script_fun.function(),
-        script_fun.ty_args().to_vec(),
-        script_fun.args().to_vec(),
-        senders,
-    );
-    match result {
-        Ok(_) => {
-            execute_txn_admin_script_epilogue(&mut session, &txn_meta)?;
-            session.finish()
-        }
-        Err(err) => {
-            let status = TransactionStatus::from(err.clone().into_vm_status());
-            if status.is_discarded() {
-                return Err(err);
-            }
-            let mut new_session = move_vm.new_session(data_store);
-            execute_txn_admin_script_epilogue(&mut new_session, &txn_meta)?;
-            new_session.finish()
-        }
-    }
-}
-
-fn replay_txn_script_function(
-    is_admin: bool,
-    senders: Vec<AccountAddress>,
-    txn_meta: TransactionMetadata,
-    script_fun: ScriptFunction,
-    gas_currency: &str,
-    data_store: &FakeDataStore,
-    expect_output: &TransactionOutput,
-) {
-    // ignore out-of-gas cases
-    if matches!(
-        expect_output.status(),
-        TransactionStatus::Keep(KeptVMStatus::OutOfGas)
-    ) {
-        return;
-    }
-
-    // execute
-    let actual_output = if is_admin {
-        replay_txn_admin_script_function_internal(senders, txn_meta, script_fun, data_store)
-    } else {
-        replay_txn_user_script_function_internal(
-            senders,
-            txn_meta,
-            script_fun,
-            gas_currency,
-            expect_output.gas_used(),
-            data_store,
-        )
-    };
-
-    // compare
-    compare_output(expect_output, actual_output);
+    )?;
+    assert!(rets.is_empty());
+    Ok(())
 }
 
 //**************************************************************************************************
 // Trace replay
 //**************************************************************************************************
 
-fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Result<()> {
+fn replay_trace<P: AsRef<Path>>(
+    wks: P,
+    env: &GlobalEnv,
+    check_stackless_vm: bool,
+    verbose: bool,
+) -> Result<()> {
     let wks = wks.as_ref();
 
     // sanity checks
@@ -610,7 +767,10 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
 
         // load the global state at the beginning of the block
         let file_data = dir_data.join(blk_id.to_string());
-        let mut data: FakeDataStore = bcs::from_bytes(&fs::read(file_data)?)?;
+        let data: FakeDataStore = bcs::from_bytes(&fs::read(file_data)?)?;
+
+        // construct the trace replayer
+        let mut replayer = TraceReplayer::new(env, data, check_stackless_vm, verbose);
 
         // iterate over transactions in the block
         for (txn_seq, res_seq) in txn_seqs.into_iter().zip(res_seqs.into_iter()) {
@@ -660,8 +820,8 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                         }
                         return Ok(());
                     }
-                    replay_txn_block_metadata(env, block_metadata, &data, &res, verbose);
-                    data.add_write_set(res.write_set());
+                    replayer.replay_txn_block_metadata(block_metadata, &res);
+                    replayer.data_store.add_write_set(res.write_set());
                 }
                 Transaction::UserTransaction(signed_txn) => {
                     let (senders, script_fun, is_admin) = match signed_txn.payload() {
@@ -670,7 +830,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                                 None => {
                                     // TODO: there is not much we can do as an unknown script is
                                     // written in IR, so just apply the write-set and continue
-                                    data.add_write_set(res.write_set());
+                                    replayer.data_store.add_write_set(res.write_set());
                                     continue;
                                 }
                                 Some(script_fun) => (vec![signed_txn.sender()], script_fun, false),
@@ -711,7 +871,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                                     AP::Resource(_) => (),
                                 }
                             }
-                            data.add_write_set(res.write_set());
+                            replayer.data_store.add_write_set(res.write_set());
                             continue;
                         }
                         TransactionPayload::WriteSet(WriteSetPayload::Script {
@@ -721,7 +881,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                             None => {
                                 // TODO: there is not much we can do as an unknown script is written
                                 // in IR, so just apply the write-set and continue
-                                data.add_write_set(res.write_set());
+                                replayer.data_store.add_write_set(res.write_set());
                                 continue;
                             }
                             Some(script_fun) => {
@@ -744,16 +904,15 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Resul
                             );
                         }
                         let txn_meta = TransactionMetadata::new(&signed_txn);
-                        replay_txn_script_function(
+                        replayer.replay_txn_script_function(
                             is_admin,
                             senders,
                             txn_meta,
                             script_fun,
                             signed_txn.gas_currency_code(),
-                            &data,
                             &res,
                         );
-                        data.add_write_set(res.write_set());
+                        replayer.data_store.add_write_set(res.write_set());
                     }
                 }
             }
@@ -766,6 +925,7 @@ fn replay<P: AsRef<Path>>(
     root: P,
     env: &GlobalEnv,
     filters: &[String],
+    check_stackless_vm: bool,
     verbose: bool,
 ) -> Result<()> {
     let root = root.as_ref();
@@ -788,7 +948,7 @@ fn replay<P: AsRef<Path>>(
                 filters.iter().any(|f| wks_name.contains(f))
             };
             if should_replay {
-                replay_trace(wks, env, verbose)?;
+                replay_trace(wks, env, check_stackless_vm, verbose)?;
             }
         }
     }
@@ -809,6 +969,10 @@ struct ConverterArgs {
     #[structopt(short = "f", long = "filter")]
     filters: Vec<String>,
 
+    /// Cross check the stackless VM against the Move VM
+    #[structopt(short = "s", long = "stackless")]
+    stackless: bool,
+
     /// Verbose mode
     #[structopt(short = "v", long = "verbose")]
     verbose: bool,
@@ -818,7 +982,7 @@ pub fn main() -> Result<()> {
     let args = ConverterArgs::from_args();
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
     for trace in args.trace_files {
-        replay(trace, &env, &args.filters, args.verbose)?;
+        replay(trace, &env, &args.filters, args.stackless, args.verbose)?;
     }
     Ok(())
 }
