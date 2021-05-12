@@ -30,6 +30,7 @@ use crate::{
 pub struct Runtime<'env> {
     env: &'env GlobalEnv,
     functions: &'env FunctionTargetsHolder,
+    verbose: bool,
 }
 
 impl<'env> Runtime<'env> {
@@ -38,8 +39,16 @@ impl<'env> Runtime<'env> {
     //
 
     /// Construct a runtime with all information pre-loaded.
-    pub fn new(env: &'env GlobalEnv, functions: &'env FunctionTargetsHolder) -> Self {
-        Self { env, functions }
+    pub fn new(
+        env: &'env GlobalEnv,
+        functions: &'env FunctionTargetsHolder,
+        verbose: bool,
+    ) -> Self {
+        Self {
+            env,
+            functions,
+            verbose,
+        }
     }
 
     /// Execute a function (identified by `fun_id`) with given type arguments, arguments, and a
@@ -154,6 +163,7 @@ impl<'env> Runtime<'env> {
             ty_args,
             args.to_vec(),
             global_state,
+            self.verbose,
         )
         .map_err(|err| err.finish(Location::Module(module_id)))
     }

@@ -59,6 +59,7 @@ struct FunctionContext<'env> {
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
     label_offsets: BTreeMap<Label, CodeOffset>,
+    verbose: bool,
 }
 
 impl<'env> FunctionContext<'env> {
@@ -66,6 +67,7 @@ impl<'env> FunctionContext<'env> {
         holder: &'env FunctionTargetsHolder,
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
+        verbose: bool,
     ) -> Self {
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
         Self {
@@ -73,6 +75,7 @@ impl<'env> FunctionContext<'env> {
             target,
             ty_args,
             label_offsets,
+            verbose,
         }
     }
 
@@ -137,20 +140,14 @@ impl<'env> FunctionContext<'env> {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 2);
                 }
-                self.native_vector_borrow(
-                    false,
-                    *srcs.get(0).unwrap(),
-                    dummy_state.del_value(0),
-                    dummy_state.del_value(1),
-                )
-                .map(|res| vec![res])
+                self.native_vector_borrow(dummy_state.del_value(0), dummy_state.del_value(1))
+                    .map(|res| vec![res])
             }
             (DIEM_CORE_ADDR, "Vector", "borrow_mut") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 2);
                 }
-                self.native_vector_borrow(
-                    true,
+                self.native_vector_borrow_mut(
                     *srcs.get(0).unwrap(),
                     dummy_state.del_value(0),
                     dummy_state.del_value(1),
@@ -259,6 +256,14 @@ impl<'env> FunctionContext<'env> {
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
     ) -> PartialVMResult<()> {
+        if self.verbose {
+            println!(
+                "{}: {}",
+                self.target.func_env.get_full_name_str(),
+                bytecode.display(&self.target, &self.label_offsets)
+            );
+        }
+
         match bytecode {
             Bytecode::Assign(_, dst, src, kind) => {
                 self.handle_assign(*dst, *src, kind, local_state)
@@ -1545,7 +1550,26 @@ impl<'env> FunctionContext<'env> {
 
     fn native_vector_borrow(
         &self,
-        is_mut: bool,
+        vec_val: TypedValue,
+        elem_val: TypedValue,
+    ) -> Result<TypedValue, AbortInfo> {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 1);
+            // NOTE: this function accepts a value instead of a reference!
+            // This is different from the Move native implementation.
+            assert_eq!(
+                vec_val.get_ty().get_vector_elem(),
+                self.ty_args.get(0).unwrap()
+            );
+        }
+        let elem_num = elem_val.into_u64() as usize;
+        vec_val
+            .get_vector_element(elem_num)
+            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+    }
+
+    fn native_vector_borrow_mut(
+        &self,
         vec_idx: TempIndex,
         vec_val: TypedValue,
         elem_val: TypedValue,
@@ -1553,13 +1577,13 @@ impl<'env> FunctionContext<'env> {
         if cfg!(debug_assertions) {
             assert_eq!(self.ty_args.len(), 1);
             assert_eq!(
-                vec_val.get_ty().get_ref_vector_elem(None),
+                vec_val.get_ty().get_ref_vector_elem(Some(true)),
                 self.ty_args.get(0).unwrap()
             );
         }
         let elem_num = elem_val.into_u64() as usize;
         vec_val
-            .borrow_ref_vector_element(elem_num, is_mut, vec_idx)
+            .borrow_ref_vector_element(elem_num, true, vec_idx)
             .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
     }
 
@@ -1731,7 +1755,7 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // build the context
-        FunctionContext::new(self.holder, callee_target, callee_ty_insts)
+        FunctionContext::new(self.holder, callee_target, callee_ty_insts, self.verbose)
     }
 
     fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
@@ -1793,8 +1817,9 @@ pub fn entrypoint(
     ty_args: &[BaseType],
     typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
+    verbose: bool,
 ) -> PartialVMResult<Vec<TypedValue>> {
-    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
+    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), verbose);
     let local_state = ctxt.exec_user_function(typed_args, global_state)?;
     let termination = local_state.into_termination_status();
     let return_vals = match termination {
