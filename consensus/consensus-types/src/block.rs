@@ -26,12 +26,12 @@ pub mod block_test_utils;
 #[path = "block_test.rs"]
 pub mod block_test;
 
-#[derive(Serialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct Block {
     /// This block's id as a hash value, it is generated at call time
-    #[serde(skip)]
+    // #[serde(skip)]
     id: HashValue,
     /// The container for the actual block
     block_data: BlockData,
@@ -284,30 +284,30 @@ impl Block {
     }
 }
 
-impl<'de> Deserialize<'de> for Block {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(rename = "Block")]
-        struct BlockWithoutId {
-            block_data: BlockData,
-            signature: Option<Ed25519Signature>,
-        }
-
-        let BlockWithoutId {
-            block_data,
-            signature,
-        } = BlockWithoutId::deserialize(deserializer)?;
-
-        Ok(Block {
-            id: block_data.hash(),
-            block_data,
-            signature,
-        })
-    }
-}
+// impl<'de> Deserialize<'de> for Block {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         #[derive(Deserialize)]
+//         #[serde(rename = "Block")]
+//         struct BlockWithoutId {
+//             block_data: BlockData,
+//             signature: Option<Ed25519Signature>,
+//         }
+//
+//         let BlockWithoutId {
+//             block_data,
+//             signature,
+//         } = BlockWithoutId::deserialize(deserializer)?;
+//
+//         Ok(Block {
+//             id: block_data.hash(),
+//             block_data,
+//             signature,
+//         })
+//     }
+// }
 
 impl From<&Block> for BlockMetadata {
     fn from(block: &Block) -> Self {
