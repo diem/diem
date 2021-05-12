@@ -21,7 +21,7 @@ jobs:
     env:
       AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
@@ -62,7 +62,7 @@ jobs:
       CODECOV_OUTPUT: codecov
       MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - uses: ./.github/actions/build-setup
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -107,7 +107,7 @@ jobs:
       SAS: ""
       CONFIG: .github/workflows/transaction-replay.toml
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - uses: ./.github/actions/build-setup
       - name: install azcopy
         run: |
@@ -149,7 +149,7 @@ jobs:
       matrix:
         release-branch: [release-1.1, release-1.2]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           ref: ${{ matrix.release-branch }}
       - uses: ./.github/actions/build-setup
@@ -180,7 +180,7 @@ jobs:
       matrix:
         target-branch: [main, release-1.1, release-1.2]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
@@ -207,7 +207,7 @@ jobs:
       name: Docker
       url: https://hub.docker.com/u/diem
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - name: sign in to DockerHub; install image signing cert
         uses: ./.github/actions/dockerhub_login
         with:

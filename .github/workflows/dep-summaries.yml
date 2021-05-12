@@ -26,7 +26,7 @@ jobs:
       dep-auditors-list: ${{ steps.dep-auditors.outputs.list }}
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -37,18 +37,18 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: checkout base ref
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           ref: ${{ steps.fetch-base-ref.outputs.ref }}
           path: libra-base
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
         if: ${{ github.event_name == 'push' }}
         with:
           ref: ${{ github.event.after }}
       - name: checkout base ref
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
         if: ${{ github.event_name == 'push' }}
         with:
           ref: ${{ github.event.before }}

@@ -14,7 +14,7 @@ jobs:
       name: Docker
       url: https://hub.docker.com/u/diem
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           fetch-depth: 0 #get all the history!!!
       - id: changes
