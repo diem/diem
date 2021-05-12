@@ -162,7 +162,7 @@ jobs:
         run: |
           echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.ENV_NOVI_ECR_AWS_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.ENV_NOVI_ECR_AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1.5.9
         with:
           aws-access-key-id: ${{ secrets.ENV_NOVI_ECR_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENV_NOVI_ECR_AWS_SECRET_ACCESS_KEY }}
