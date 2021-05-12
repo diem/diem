@@ -13,22 +13,29 @@ use crate::{
     },
 };
 use diem_client::views::VMStatusView;
-use diem_config::config::SecureBackend;
+use diem_config::{config::SecureBackend, network_id::NetworkId};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    HashValue, PrivateKey, Uniform,
+    x25519, HashValue, PrivateKey, Uniform, ValidCryptoMaterialStringExt,
 };
 use diem_global_constants::{
-    CONSENSUS_KEY, GENESIS_WAYPOINT, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
-    VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, GENESIS_WAYPOINT, OPERATOR_ACCOUNT, OPERATOR_KEY,
+    OWNER_ACCOUNT, OWNER_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use diem_key_manager::diem_interface::DiemInterface;
 use diem_management::storage::to_x25519;
-use diem_operational_tool::test_helper::OperationalTool;
+use diem_operational_tool::{
+    keys::{EncodingType, KeyType},
+    test_helper::OperationalTool,
+};
 use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_temppath::TempPath;
 use diem_types::{
-    account_address::AccountAddress, block_info::BlockInfo, ledger_info::LedgerInfo,
-    network_address::NetworkAddress, transaction::authenticator::AuthenticationKey,
+    account_address::{from_identity_public_key, AccountAddress},
+    block_info::BlockInfo,
+    ledger_info::LedgerInfo,
+    network_address::NetworkAddress,
+    transaction::authenticator::AuthenticationKey,
     waypoint::Waypoint,
 };
 use rand::rngs::OsRng;
@@ -229,7 +236,13 @@ fn test_extract_private_key() {
     let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
-        .extract_private_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
+        .extract_private_key(
+            OPERATOR_KEY,
+            key_file_path.to_str().unwrap(),
+            KeyType::Ed25519,
+            EncodingType::BCS,
+            &backend,
+        )
         .unwrap();
 
     // Verify the operator private key has been written correctly
@@ -247,7 +260,13 @@ fn test_extract_public_key() {
     let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
-        .extract_public_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
+        .extract_public_key(
+            OPERATOR_KEY,
+            key_file_path.to_str().unwrap(),
+            KeyType::Ed25519,
+            EncodingType::BCS,
+            &backend,
+        )
         .unwrap();
 
     // Verify the operator key has been written correctly
@@ -255,6 +274,101 @@ fn test_extract_public_key() {
     let key_from_file = bcs::from_bytes(&file_contents).unwrap();
     let key_from_storage = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
     assert_eq!(key_from_storage, key_from_file);
+}
+
+#[test]
+fn test_extract_peer_from_storage() {
+    let (mut env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+    env.setup_vfn_swarm();
+
+    // Check Validator
+    let (config, _) = load_node_config(&env.validator_swarm, 0);
+    let map = op_tool
+        .extract_peer_from_storage(VALIDATOR_NETWORK_KEY, &backend)
+        .unwrap();
+    let network_config = config.validator_network.unwrap();
+    let expected_peer_id = network_config.peer_id();
+    let expected_public_key = network_config.identity_key().public_key();
+    let (peer_id, peer) = map.iter().next().unwrap();
+    assert_eq!(expected_public_key, *peer.keys.iter().next().unwrap());
+    assert_eq!(expected_peer_id, *peer_id);
+
+    // Check VFN now
+    let (config, _) = load_node_config(&env.vfn_swarm().lock(), 0);
+    let map = op_tool
+        .extract_peer_from_storage(FULLNODE_NETWORK_KEY, &backend)
+        .unwrap();
+    let network_config = config
+        .full_node_networks
+        .iter()
+        .find(|network| network.network_id == NetworkId::Public)
+        .unwrap();
+    let expected_peer_id = network_config.peer_id();
+    let expected_public_key = network_config.identity_key().public_key();
+    let (peer_id, peer) = map.iter().next().unwrap();
+    assert_eq!(expected_public_key, *peer.keys.iter().next().unwrap());
+    assert_eq!(expected_peer_id, *peer_id);
+}
+
+#[test]
+fn test_extract_peer_from_file() {
+    let op_tool = OperationalTool::test();
+    let path = TempPath::new();
+    path.create_as_file().unwrap();
+    let key = op_tool
+        .generate_key(KeyType::X25519, path.as_ref(), EncodingType::Hex)
+        .unwrap();
+
+    let peer = op_tool
+        .extract_peer_from_file(path.as_ref(), EncodingType::Hex)
+        .unwrap();
+    assert_eq!(1, peer.len());
+    let (peer_id, peer) = peer.iter().next().unwrap();
+    let public_key = key.public_key();
+    assert_eq!(public_key, *peer.keys.iter().next().unwrap());
+    assert_eq!(from_identity_public_key(public_key), *peer_id);
+}
+
+#[test]
+fn test_generate_key() {
+    let op_tool = OperationalTool::test();
+    let path = TempPath::new();
+    path.create_as_file().unwrap();
+
+    // Base64
+    let expected_key = op_tool
+        .generate_key(KeyType::X25519, path.as_ref(), EncodingType::Base64)
+        .unwrap();
+    assert_eq!(
+        expected_key,
+        x25519::PrivateKey::try_from(
+            base64::decode(fs::read(path.as_ref()).unwrap())
+                .unwrap()
+                .as_slice()
+        )
+        .unwrap(),
+    );
+
+    // Hex
+    let expected_key = op_tool
+        .generate_key(KeyType::X25519, path.as_ref(), EncodingType::Hex)
+        .unwrap();
+    assert_eq!(
+        expected_key,
+        x25519::PrivateKey::from_encoded_string(
+            &String::from_utf8(fs::read(path.as_ref()).unwrap()).unwrap()
+        )
+        .unwrap()
+    );
+
+    // BCS
+    let expected_key = op_tool
+        .generate_key(KeyType::X25519, path.as_ref(), EncodingType::BCS)
+        .unwrap();
+    assert_eq!(
+        expected_key,
+        bcs::from_bytes(&fs::read(path.as_ref()).unwrap()).unwrap()
+    );
 }
 
 #[test]

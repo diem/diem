@@ -2110,6 +2110,7 @@ name = "diem-operational-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "bcs",
  "diem-client",
  "diem-config",
@@ -2128,6 +2129,7 @@ dependencies = [
  "hex",
  "netcore",
  "network",
+ "rand 0.8.3",
  "serde",
  "serde_json",
  "structopt 0.3.21",
@@ -6892,6 +6894,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "backup-cli",
+ "base64",
  "bcs",
  "cli",
  "debug-interface",
