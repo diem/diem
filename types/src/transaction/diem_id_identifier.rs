@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{de, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 /// This file implements length and character set limited string types needed
 /// for DiemID as defined by DIP-10: https://github.com/diem/dip/blob/main/dips/dip-10.md
@@ -27,6 +30,16 @@ impl DiemId {
         }
     }
 
+    pub fn new_from_raw(
+        user_identifier: &str,
+        vasp_domain_identifier: &str,
+    ) -> Result<Self, DiemIdParseError> {
+        Ok(DiemId::new(
+            DiemIdUserIdentifier::new(user_identifier)?,
+            DiemIdVaspDomainIdentifier::new(vasp_domain_identifier)?,
+        ))
+    }
+
     pub fn user_identifier(&self) -> &DiemIdUserIdentifier {
         &self.user_identifier
     }
@@ -34,13 +47,29 @@ impl DiemId {
     pub fn vasp_domain_identifier(&self) -> &DiemIdVaspDomainIdentifier {
         &self.vasp_domain_identifier
     }
+}
 
-    pub fn get_diem_id_identifier(&self) -> String {
-        format!(
+impl Display for DiemId {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
             "{}@{}",
             self.user_identifier.as_str(),
             self.vasp_domain_identifier.as_str()
         )
+    }
+}
+
+impl FromStr for DiemId {
+    type Err = DiemIdParseError;
+
+    fn from_str(s: &str) -> Result<Self, DiemIdParseError> {
+        if !s.contains('@') {
+            return Err(DiemIdParseError);
+        };
+        let split = s.split('@');
+        let vec = split.collect::<Vec<&str>>();
+        DiemId::new_from_raw(&vec[0], &vec[1])
     }
 }
 
@@ -178,10 +207,18 @@ fn test_invalid_vasp_domain_identifier() {
 }
 
 #[test]
-fn test_get_diem_id() {
+fn test_get_diem_id_string_from_components() {
     let user_identifier = DiemIdUserIdentifier::new(&"username").unwrap();
     let vasp_domain_identifier = DiemIdVaspDomainIdentifier::new(&"diem").unwrap();
     let diem_id = DiemId::new(user_identifier, vasp_domain_identifier);
-    let full_id = diem_id.get_diem_id_identifier();
+    let full_id = diem_id.to_string();
     assert_eq!(full_id, "username@diem");
+}
+
+#[test]
+fn test_get_diem_id_from_identifier_string() {
+    let diem_id_str = "username@diem";
+    let diem_id = DiemId::from_str(diem_id_str).unwrap();
+    assert_eq!(diem_id.user_identifier().as_str(), "username");
+    assert_eq!(diem_id.vasp_domain_identifier().as_str(), "diem");
 }
