@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 arc-swap = "1.2.0"
+bitvec = {version = "0.19.4", optional = true}
 itertools = "0.10.0"
 rayon = "1.5.0"
 
@@ -32,7 +33,9 @@ storage-interface = { path = "../storage-interface" }
 
 [features]
 fuzzing = ["diemdb/fuzzing", "diem-types/fuzzing"]
+bench = ["bitvec"]
 
 [[bench]]
 name = "sparse_merkle"
 harness = false
+required-features = ["bench"]

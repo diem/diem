@@ -100,7 +100,7 @@ impl<'a> NaiveSubTree<'a> {
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct NaiveSmt {
+pub struct NaiveSmt {
     leaves: Vec<(HashValue, HashValue)>,
     cache: Cache,
 }
