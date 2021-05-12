@@ -1181,7 +1181,7 @@ The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on
 
 | Error Category              | Error Reason                      | Description                                                                                   |
 | ----------------            | --------------                    | -------------                                                                                 |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">DiemId::EDIEMIDDOMAIN</a></code>           | A <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>.     |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code>           | A <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>.     |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)

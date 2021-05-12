@@ -40,24 +40,24 @@ module DiemId {
 
     // Error codes
     /// DiemIdDomains resource is not or already published.
-    const EDIEMIDDOMAIN: u64 = 0;
+    const EDIEM_ID_DOMAIN: u64 = 0;
     /// DiemIdDomainManager resource is not or already published.
-    const EDIEMIDDOMAINMANAGER: u64 = 1;
+    const EDIEM_ID_DOMAIN_MANAGER: u64 = 1;
     /// DiemID domain was not found
-    const EDOMAINNOTFOUND: u64 = 2;
+    const EDOMAIN_NOT_FOUND: u64 = 2;
     /// DiemID domain already exists
-    const EDOMAINALREADYEXISTS: u64 = 3;
+    const EDOMAIN_ALREADY_EXISTS: u64 = 3;
     /// DiemIdDomains resource was not published for a VASP account
-    const EDIEMIDDOMAINSNOTPUBLISHED: u64 = 4;
+    const EDIEM_ID_DOMAINS_NOT_PUBLISHED: u64 = 4;
     /// Invalid domain for DiemIdDomain
-    const EINVALIDDIEMIDDOMAIN: u64 = 5;
+    const EINVALID_DIEM_ID_DOMAIN: u64 = 5;
 
     spec module {
         pragma verify = false;
     }
 
-    public fun create_diem_id_domain(domain: vector<u8>): DiemIdDomain {
-        assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALIDDIEMIDDOMAIN));
+    fun create_diem_id_domain(domain: vector<u8>): DiemIdDomain {
+        assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALID_DIEM_ID_DOMAIN));
         DiemIdDomain {domain}
     }
 
@@ -70,12 +70,13 @@ module DiemId {
         Roles::assert_parent_vasp_role(vasp_account);
         assert(
             !exists<DiemIdDomains>(Signer::address_of(vasp_account)),
-            Errors::already_published(EDIEMIDDOMAIN)
+            Errors::already_published(EDIEM_ID_DOMAIN)
         );
         move_to(vasp_account, DiemIdDomains {
             domains: Vector::empty(),
         })
     }
+
     spec fun publish_diem_id_domains {
         include Roles::AbortsIfNotParentVasp{account: vasp_account};
         aborts_if has_diem_id_domains(Signer::spec_address_of(vasp_account)) with Errors::ALREADY_PUBLISHED;
@@ -95,7 +96,7 @@ module DiemId {
         Roles::assert_treasury_compliance(tc_account);
         assert(
             !exists<DiemIdDomainManager>(Signer::address_of(tc_account)),
-            Errors::already_published(EDIEMIDDOMAINMANAGER)
+            Errors::already_published(EDIEM_ID_DOMAIN_MANAGER)
         );
         move_to(
             tc_account,
@@ -121,7 +122,7 @@ module DiemId {
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
         if (!exists<DiemIdDomains>(to_update_address)) {
-            abort(Errors::not_published(EDIEMIDDOMAINSNOTPUBLISHED))
+            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
         };
         let account_domains = borrow_global_mut<DiemIdDomains>(to_update_address);
         let diem_id_domain = create_diem_id_domain(domain);
@@ -130,13 +131,13 @@ module DiemId {
             if (has) {
                 Vector::remove(&mut account_domains.domains, index);
             } else {
-                abort(Errors::invalid_argument(EDOMAINNOTFOUND))
+                abort(Errors::invalid_argument(EDOMAIN_NOT_FOUND))
             };
         } else {
             if (!Vector::contains(&account_domains.domains, &diem_id_domain)) {
                 Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
             } else {
-                abort(Errors::invalid_argument(EDOMAINALREADYEXISTS))
+                abort(Errors::invalid_argument(EDOMAIN_ALREADY_EXISTS))
             }
         };
 
@@ -156,7 +157,7 @@ module DiemId {
 
     public fun has_diem_id_domain(addr: address, domain: vector<u8>): bool acquires DiemIdDomains {
         if (!exists<DiemIdDomains>(addr)) {
-            abort(Errors::not_published(EDIEMIDDOMAINSNOTPUBLISHED))
+            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
         };
         let account_domains = borrow_global<DiemIdDomains>(addr);
         let diem_id_domain = create_diem_id_domain(domain);

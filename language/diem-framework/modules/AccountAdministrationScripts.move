@@ -611,7 +611,7 @@ module AccountAdministrationScripts {
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                      | Description                                                                                   |
     /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
 
     public(script) fun create_diem_id_domains(account: signer) {
         DiemId::publish_diem_id_domains(&account)

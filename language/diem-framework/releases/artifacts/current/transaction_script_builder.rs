@@ -1858,7 +1858,7 @@ pub enum ScriptFunctionCall {
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                      | Description                                                                                   |
     /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
     CreateDiemIdDomains {},
 
     /// # Summary
@@ -4092,7 +4092,7 @@ pub fn encode_create_designated_dealer_script_function(
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                      | Description                                                                                   |
 /// | ----------------            | --------------                    | -------------                                                                                 |
-/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEMIDDOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
 pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(

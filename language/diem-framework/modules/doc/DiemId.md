@@ -168,62 +168,62 @@ Struct to store the limit on-chain
 
 
 
-<a name="0x1_DiemId_EDIEMIDDOMAIN"></a>
+<a name="0x1_DiemId_EDIEM_ID_DOMAIN"></a>
 
 DiemIdDomains resource is not or already published.
 
 
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">EDIEMIDDOMAIN</a>: u64 = 0;
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">EDIEM_ID_DOMAIN</a>: u64 = 0;
 </code></pre>
 
 
 
-<a name="0x1_DiemId_EDIEMIDDOMAINMANAGER"></a>
-
-DiemIdDomainManager resource is not or already published.
-
-
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAINMANAGER">EDIEMIDDOMAINMANAGER</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_DiemId_EDIEMIDDOMAINSNOTPUBLISHED"></a>
+<a name="0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED"></a>
 
 DiemIdDomains resource was not published for a VASP account
 
 
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAINSNOTPUBLISHED">EDIEMIDDOMAINSNOTPUBLISHED</a>: u64 = 4;
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">EDIEM_ID_DOMAINS_NOT_PUBLISHED</a>: u64 = 4;
 </code></pre>
 
 
 
-<a name="0x1_DiemId_EDOMAINALREADYEXISTS"></a>
+<a name="0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER"></a>
+
+DiemIdDomainManager resource is not or already published.
+
+
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">EDIEM_ID_DOMAIN_MANAGER</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_DiemId_EDOMAIN_ALREADY_EXISTS"></a>
 
 DiemID domain already exists
 
 
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDOMAINALREADYEXISTS">EDOMAINALREADYEXISTS</a>: u64 = 3;
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDOMAIN_ALREADY_EXISTS">EDOMAIN_ALREADY_EXISTS</a>: u64 = 3;
 </code></pre>
 
 
 
-<a name="0x1_DiemId_EDOMAINNOTFOUND"></a>
+<a name="0x1_DiemId_EDOMAIN_NOT_FOUND"></a>
 
 DiemID domain was not found
 
 
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDOMAINNOTFOUND">EDOMAINNOTFOUND</a>: u64 = 2;
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EDOMAIN_NOT_FOUND">EDOMAIN_NOT_FOUND</a>: u64 = 2;
 </code></pre>
 
 
 
-<a name="0x1_DiemId_EINVALIDDIEMIDDOMAIN"></a>
+<a name="0x1_DiemId_EINVALID_DIEM_ID_DOMAIN"></a>
 
 Invalid domain for DiemIdDomain
 
 
-<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EINVALIDDIEMIDDOMAIN">EINVALIDDIEMIDDOMAIN</a>: u64 = 5;
+<pre><code><b>const</b> <a href="DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">EINVALID_DIEM_ID_DOMAIN</a>: u64 = 5;
 </code></pre>
 
 
@@ -234,7 +234,7 @@ Invalid domain for DiemIdDomain
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain: vector&lt;u8&gt;): <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a>
+<pre><code><b>fun</b> <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain: vector&lt;u8&gt;): <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a>
 </code></pre>
 
 
@@ -243,8 +243,8 @@ Invalid domain for DiemIdDomain
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain: vector&lt;u8&gt;): <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {
-    <b>assert</b>(<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&domain) &lt;= <a href="DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DOMAIN_LENGTH</a>, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EINVALIDDIEMIDDOMAIN">EINVALIDDIEMIDDOMAIN</a>));
+<pre><code><b>fun</b> <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain: vector&lt;u8&gt;): <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {
+    <b>assert</b>(<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&domain) &lt;= <a href="DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DOMAIN_LENGTH</a>, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">EINVALID_DIEM_ID_DOMAIN</a>));
     <a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemIdDomain</a> {domain}
 }
 </code></pre>
@@ -277,7 +277,7 @@ a transaction that invokes <code>add_domain_id</code> to set the <code>domains</
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(vasp_account);
     <b>assert</b>(
         !<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp_account)),
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAIN">EDIEMIDDOMAIN</a>)
+        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">EDIEM_ID_DOMAIN</a>)
     );
     move_to(vasp_account, <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
         domains: <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_empty">Vector::empty</a>(),
@@ -351,7 +351,7 @@ a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainEvent">DiemIdDomainEvent</a></
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>assert</b>(
         !<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account)),
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAINMANAGER">EDIEMIDDOMAINMANAGER</a>)
+        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">EDIEM_ID_DOMAIN_MANAGER</a>)
     );
     move_to(
         tc_account,
@@ -405,7 +405,7 @@ different lowercase and uppercase format gets added.
 ) <b>acquires</b> <a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemIdDomainManager</a>, <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>if</b> (!<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(to_update_address)) {
-        <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAINSNOTPUBLISHED">EDIEMIDDOMAINSNOTPUBLISHED</a>))
+        <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">EDIEM_ID_DOMAINS_NOT_PUBLISHED</a>))
     };
     <b>let</b> account_domains = borrow_global_mut&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(to_update_address);
     <b>let</b> diem_id_domain = <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain);
@@ -414,13 +414,13 @@ different lowercase and uppercase format gets added.
         <b>if</b> (has) {
             <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> account_domains.domains, index);
         } <b>else</b> {
-            <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EDOMAINNOTFOUND">EDOMAINNOTFOUND</a>))
+            <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EDOMAIN_NOT_FOUND">EDOMAIN_NOT_FOUND</a>))
         };
     } <b>else</b> {
         <b>if</b> (!<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_contains">Vector::contains</a>(&account_domains.domains, &diem_id_domain)) {
             <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> account_domains.domains, <b>copy</b> diem_id_domain);
         } <b>else</b> {
-            <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EDOMAINALREADYEXISTS">EDOMAINALREADYEXISTS</a>))
+            <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemId.md#0x1_DiemId_EDOMAIN_ALREADY_EXISTS">EDOMAIN_ALREADY_EXISTS</a>))
         }
     };
 
@@ -468,7 +468,7 @@ different lowercase and uppercase format gets added.
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemId.md#0x1_DiemId_has_diem_id_domain">has_diem_id_domain</a>(addr: address, domain: vector&lt;u8&gt;): bool <b>acquires</b> <a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a> {
     <b>if</b> (!<b>exists</b>&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(addr)) {
-        <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEMIDDOMAINSNOTPUBLISHED">EDIEMIDDOMAINSNOTPUBLISHED</a>))
+        <b>abort</b>(<a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">EDIEM_ID_DOMAINS_NOT_PUBLISHED</a>))
     };
     <b>let</b> account_domains = borrow_global&lt;<a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemIdDomains</a>&gt;(addr);
     <b>let</b> diem_id_domain = <a href="DiemId.md#0x1_DiemId_create_diem_id_domain">create_diem_id_domain</a>(domain);
