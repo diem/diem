@@ -30,7 +30,7 @@ use crate::{
 use bytecode::mono_analysis::MonoInfo;
 use codespan_reporting::diagnostic::Severity;
 use move_model::{
-    ast::{MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
+    ast::{MemoryLabel, QuantKind, RcExp, SpecFunDecl, SpecVarDecl, TempIndex},
     model::{QualifiedInstId, SpecVarId},
 };
 use std::cell::RefCell;
@@ -68,8 +68,8 @@ struct LiftedChoiceInfo {
     used_temps: Vec<(TempIndex, Type)>,
     used_memory: Vec<(QualifiedInstId<StructId>, Option<MemoryLabel>)>,
     var: Symbol,
-    range: Exp,
-    condition: Exp,
+    range: RcExp,
+    condition: RcExp,
 }
 
 impl<'env> SpecTranslator<'env> {
@@ -514,7 +514,7 @@ impl<'env> SpecTranslator<'env> {
 // ===========
 
 impl<'env> SpecTranslator<'env> {
-    pub(crate) fn translate(&self, exp: &Exp, type_inst: &[Type]) {
+    pub(crate) fn translate(&self, exp: &RcExp, type_inst: &[Type]) {
         *self.fresh_var_count.borrow_mut() = 0;
         if type_inst.is_empty() {
             self.translate_exp(exp)
@@ -542,8 +542,8 @@ impl<'env> SpecTranslator<'env> {
         self.inst_slice(&self.env.get_node_instantiation(id))
     }
 
-    fn translate_exp(&self, exp: &Exp) {
-        match exp {
+    fn translate_exp(&self, exp: &RcExp) {
+        match exp.as_ref() {
             Exp::Value(node_id, val) => {
                 self.set_writer_location(*node_id);
                 self.translate_value(*node_id, val);
@@ -604,7 +604,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_exp_parenthesised(&self, exp: &Exp) {
+    fn translate_exp_parenthesised(&self, exp: &RcExp) {
         emit!(self.writer, "(");
         self.translate_exp(exp);
         emit!(self.writer, ")");
@@ -635,7 +635,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_block(&self, node_id: NodeId, vars: &[LocalVarDecl], exp: &Exp) {
+    fn translate_block(&self, node_id: NodeId, vars: &[LocalVarDecl], exp: &RcExp) {
         if vars.is_empty() {
             return self.translate_exp(exp);
         }
@@ -652,7 +652,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_call(&self, node_id: NodeId, oper: &Operation, args: &[Exp]) {
+    fn translate_call(&self, node_id: NodeId, oper: &Operation, args: &[RcExp]) {
         let loc = self.env.get_node_loc(node_id);
         match oper {
             // Operators we introduced in the top level public entry `SpecTranslator::translate`,
@@ -755,7 +755,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_event_store_includes(&self, args: &[Exp]) {
+    fn translate_event_store_includes(&self, args: &[RcExp]) {
         emit!(
             self.writer,
             "(var actual := $EventStore__subtract($es, old($es)); "
@@ -765,7 +765,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "; $EventStore__is_subset(expected, actual)))");
     }
 
-    fn translate_event_store_included_in(&self, args: &[Exp]) {
+    fn translate_event_store_included_in(&self, args: &[RcExp]) {
         emit!(
             self.writer,
             "(var actual := $EventStore__subtract($es, old($es)); "
@@ -775,7 +775,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "; $EventStore__is_subset(actual, expected)))");
     }
 
-    fn translate_extend_event_store(&self, args: &[Exp]) {
+    fn translate_extend_event_store(&self, args: &[RcExp]) {
         let suffix = boogie_type_suffix(self.env, &self.get_node_type(args[1].node_id()));
         let with_cond = args.len() == 4;
         if with_cond {
@@ -798,7 +798,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_pack(&self, node_id: NodeId, mid: ModuleId, sid: StructId, args: &[Exp]) {
+    fn translate_pack(&self, node_id: NodeId, mid: ModuleId, sid: StructId, args: &[RcExp]) {
         let struct_env = &self.env.get_module(mid).into_struct(sid);
         let inst = &self.get_node_instantiation(node_id);
         emit!(self.writer, "{}(", boogie_struct_name(struct_env, inst));
@@ -816,7 +816,7 @@ impl<'env> SpecTranslator<'env> {
         node_id: NodeId,
         module_id: ModuleId,
         fun_id: SpecFunId,
-        args: &[Exp],
+        args: &[RcExp],
         memory_labels: &Option<Vec<MemoryLabel>>,
     ) {
         let inst = &self.get_node_instantiation(node_id);
@@ -876,7 +876,7 @@ impl<'env> SpecTranslator<'env> {
         module_id: ModuleId,
         struct_id: StructId,
         field_id: FieldId,
-        args: &[Exp],
+        args: &[RcExp],
     ) {
         let struct_env = self.env.get_module(module_id).into_struct(struct_id);
         if struct_env.is_native_or_intrinsic() {
@@ -899,7 +899,7 @@ impl<'env> SpecTranslator<'env> {
         module_id: ModuleId,
         struct_id: StructId,
         field_id: FieldId,
-        args: &[Exp],
+        args: &[RcExp],
     ) {
         let struct_env = &self.env.get_module(module_id).into_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
@@ -925,7 +925,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_access(
         &self,
         node_id: NodeId,
-        args: &[Exp],
+        args: &[RcExp],
         memory_label: &Option<MemoryLabel>,
     ) {
         let memory = &self.get_memory_inst_from_node(node_id);
@@ -947,7 +947,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_exists(
         &self,
         node_id: NodeId,
-        args: &[Exp],
+        args: &[RcExp],
         memory_label: &Option<MemoryLabel>,
     ) {
         let memory = &self.get_memory_inst_from_node(node_id);
@@ -960,7 +960,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {
+    fn translate_can_modify(&self, node_id: NodeId, args: &[RcExp]) {
         let memory = &self.get_memory_inst_from_node(node_id);
         let resource_name = boogie_modifies_memory_name(self.env, memory);
         emit!(self.writer, "{}[", resource_name);
@@ -970,7 +970,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn with_range_selector_assignments<F>(
         &self,
-        ranges: &[(LocalVarDecl, Exp)],
+        ranges: &[(LocalVarDecl, RcExp)],
         range_tmps: &HashMap<Symbol, String>,
         quant_vars: &HashMap<Symbol, String>,
         resource_vars: &HashMap<Symbol, String>,
@@ -1027,10 +1027,10 @@ impl<'env> SpecTranslator<'env> {
         &self,
         node_id: NodeId,
         kind: QuantKind,
-        ranges: &[(LocalVarDecl, Exp)],
-        triggers: &[Vec<Exp>],
-        condition: &Option<Box<Exp>>,
-        body: &Exp,
+        ranges: &[(LocalVarDecl, RcExp)],
+        triggers: &[Vec<RcExp>],
+        condition: &Option<RcExp>,
+        body: &RcExp,
     ) {
         assert!(!kind.is_choice());
         // Translate range expressions. While doing, check for currently unsupported
@@ -1210,8 +1210,8 @@ impl<'env> SpecTranslator<'env> {
         &self,
         node_id: NodeId,
         kind: QuantKind,
-        range: &(LocalVarDecl, Exp),
-        body: &Exp,
+        range: &(LocalVarDecl, RcExp),
+        body: &RcExp,
     ) {
         let mut choice_infos = self.lifted_choice_infos.borrow_mut();
         let choice_count = choice_infos.len();
@@ -1251,7 +1251,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "{}({})", fun_name, args);
     }
 
-    fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
+    fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[RcExp]) {
         let suffix = boogie_type_suffix(
             self.env,
             &self.get_node_type(args[0].node_id()).skip_reference(),
@@ -1263,12 +1263,12 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_identical(&self, args: &[Exp]) {
+    fn translate_identical(&self, args: &[RcExp]) {
         use Exp::*;
         // If both arguments are &mut temporaries, we just directly make them equal. This allows
         // a more efficient representation of equality between $Mutation objects. Otherwise
         // we translate it the default way with automatic reference removal.
-        match (&args[0], &args[1]) {
+        match (&args[0].as_ref(), &args[1].as_ref()) {
             (Temporary(id1, idx1), Temporary(id2, idx2))
                 if self.get_node_type(*id1).is_reference()
                     && self.get_node_type(*id2).is_reference() =>
@@ -1279,7 +1279,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_arith_op(&self, boogie_op: &str, args: &[Exp]) {
+    fn translate_arith_op(&self, boogie_op: &str, args: &[RcExp]) {
         emit!(self.writer, "(");
         self.translate_exp(&args[0]);
         emit!(self.writer, " {} ", boogie_op);
@@ -1287,7 +1287,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_rel_op(&self, boogie_op: &str, args: &[Exp]) {
+    fn translate_rel_op(&self, boogie_op: &str, args: &[RcExp]) {
         emit!(self.writer, "(");
         self.translate_exp(&args[0]);
         emit!(self.writer, " {} ", boogie_op);
@@ -1295,7 +1295,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_logical_op(&self, boogie_op: &str, args: &[Exp]) {
+    fn translate_logical_op(&self, boogie_op: &str, args: &[RcExp]) {
         emit!(self.writer, "(");
         self.translate_exp(&args[0]);
         emit!(self.writer, " {} ", boogie_op);
@@ -1303,27 +1303,27 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_logical_unary_op(&self, boogie_op: &str, args: &[Exp]) {
+    fn translate_logical_unary_op(&self, boogie_op: &str, args: &[RcExp]) {
         emit!(self.writer, "{}", boogie_op);
         self.translate_exp(&args[0]);
     }
 
-    fn translate_primitive_call(&self, fun: &str, args: &[Exp]) {
+    fn translate_primitive_call(&self, fun: &str, args: &[RcExp]) {
         emit!(self.writer, "{}(", fun);
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
         emit!(self.writer, ")");
     }
 
-    fn translate_primitive_inst_call(&self, node_id: NodeId, fun: &str, args: &[Exp]) {
+    fn translate_primitive_inst_call(&self, node_id: NodeId, fun: &str, args: &[RcExp]) {
         let suffix = boogie_inst_suffix(self.env, &self.get_node_instantiation(node_id));
         emit!(self.writer, "{}{}(", fun, suffix);
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
         emit!(self.writer, ")");
     }
 
-    fn translate_well_formed(&self, exp: &Exp) {
+    fn translate_well_formed(&self, exp: &RcExp) {
         let ty = self.get_node_type(exp.node_id());
-        match exp {
+        match exp.as_ref() {
             Exp::Temporary(_, idx) => {
                 // For the special case of a temporary which can represent a
                 // &mut, skip the normal translation of `exp` which would do automatic

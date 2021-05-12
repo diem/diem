@@ -29,9 +29,8 @@ use crate::{
     usage_analysis, verification_analysis, verification_analysis_v2,
 };
 use move_model::{
-    ast::QuantKind,
+    ast::{QuantKind, RcExp},
     exp_generator::ExpGenerator,
-    model::NodeId,
     spec_translator::{SpecTranslator, TranslatedSpec},
 };
 use std::{
@@ -768,7 +767,7 @@ impl<'a> Instrumenter<'a> {
             let loc = self.builder.global_env().get_node_loc(*node_id);
             self.builder.set_loc(loc);
             let exp = self.instantiate_exp(exp.to_owned(), targs);
-            let temp = if let Exp::Temporary(_, temp) = &exp {
+            let temp = if let Exp::Temporary(_, temp) = exp.as_ref() {
                 *temp
             } else {
                 self.builder.emit_let(exp).0
@@ -838,14 +837,14 @@ impl<'a> Instrumenter<'a> {
         is_partial: bool,
         spec: &TranslatedSpec,
         targs: &[Type],
-    ) -> (Option<TempIndex>, Option<Exp>) {
+    ) -> (Option<TempIndex>, Option<RcExp>) {
         let aborts_cond = if is_partial {
             None
         } else {
             spec.aborts_condition(&self.builder)
         };
         let aborts_cond_temp = if let Some(cond) = aborts_cond {
-            if matches!(cond, Exp::Value(_, Value::Bool(false))) {
+            if matches!(cond.as_ref(), Exp::Value(_, Value::Bool(false))) {
                 return (None, None);
             }
             // Introduce a temporary to hold the value of the aborts condition.
@@ -950,8 +949,8 @@ impl<'a> Instrumenter<'a> {
         loc: &Loc,
         targs: &[Type],
         resource_type: &Type,
-        original_exp: &Exp, // this contains the right node ids for tracing
-        addr: Exp,
+        original_exp: &RcExp, // this contains the right node ids for tracing
+        addr: RcExp,
     ) {
         let target = self.builder.get_target();
         let (mid, sid, _) = resource_type.require_struct();
@@ -964,7 +963,7 @@ impl<'a> Instrumenter<'a> {
             let env = self.builder.global_env();
             let node_id = env.new_node(loc.clone(), BOOL_TYPE.clone());
             env.set_node_instantiation(node_id, vec![resource_type.to_owned()]);
-            let can_modify = Exp::Call(node_id, ast::Operation::CanModify, vec![addr]);
+            let can_modify = Exp::Call(node_id, ast::Operation::CanModify, vec![addr]).into_rc();
             if kind == PropKind::Assert {
                 let (mid, sid, inst) = resource_type.require_struct();
                 self.builder.set_loc_and_vc_info(
@@ -979,18 +978,9 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    fn instantiate_exp(&self, exp: Exp, targs: &[Type]) -> Exp {
-        exp.rewrite_node_id(&mut |id| self.instantiate_node(id, targs))
-    }
-
-    fn instantiate_node(&self, id: NodeId, targs: &[Type]) -> NodeId {
+    fn instantiate_exp(&self, exp: RcExp, targs: &[Type]) -> RcExp {
         let env = self.builder.global_env();
-        let loc = env.get_node_loc(id);
-        let ty = env.get_node_type(id).instantiate(targs);
-        let targs = Type::instantiate_vec(env.get_node_instantiation(id), targs);
-        let new_id = env.new_node(loc, ty);
-        env.set_node_instantiation(new_id, targs);
-        new_id
+        Exp::rewrite_node_id(exp, &mut |id| Exp::instantiate_node(env, id, targs))
     }
 
     fn generate_opaque_call(

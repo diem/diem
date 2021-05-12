@@ -9,7 +9,7 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
 };
 use move_model::{
-    ast::{Exp, TempIndex},
+    ast::{RcExp, TempIndex},
     exp_generator::ExpGenerator,
     model::{FunctionEnv, Loc},
     ty::Type,
@@ -195,7 +195,7 @@ impl<'env> FunctionDataBuilder<'env> {
     /// is equal to the given expression. This can be used to abbreviate large expressions
     /// which are used multiple times, or get the value of an expression into a temporary for
     /// bytecode. Returns the temporary and a local expression referring to it.
-    pub fn emit_let(&mut self, def: Exp) -> (TempIndex, Exp) {
+    pub fn emit_let(&mut self, def: RcExp) -> (TempIndex, RcExp) {
         let ty = self.global_env().get_node_type(def.node_id());
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
@@ -205,7 +205,7 @@ impl<'env> FunctionDataBuilder<'env> {
     }
 
     /// Emits a new temporary with a havoced value of given type.
-    pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
+    pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, RcExp) {
         let havoc_kind = if ty.is_mutable_reference() {
             HavocKind::MutationAll
         } else {

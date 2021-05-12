@@ -70,6 +70,7 @@ use crate::{
 };
 
 // import and re-expose symbols
+use crate::ast::RcExp;
 pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 
 // =================================================================================================
@@ -2966,10 +2967,10 @@ impl<'env> FunctionEnv<'env> {
 
     /// Computes the modified targets of the spec clause, as a map from resource type names to
     /// resource indices (list of types and address).
-    pub fn get_modify_targets(&self) -> BTreeMap<QualifiedId<StructId>, Vec<Exp>> {
+    pub fn get_modify_targets(&self) -> BTreeMap<QualifiedId<StructId>, Vec<RcExp>> {
         // Compute the modify targets from `modifies` conditions.
         let modify_conditions = self.get_spec().filter_kind(ConditionKind::Modifies);
-        let mut modify_targets: BTreeMap<QualifiedId<StructId>, Vec<Exp>> = BTreeMap::new();
+        let mut modify_targets: BTreeMap<QualifiedId<StructId>, Vec<RcExp>> = BTreeMap::new();
         for cond in modify_conditions {
             cond.all_exps().for_each(|target| {
                 let node_id = target.node_id();

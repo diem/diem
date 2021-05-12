@@ -20,6 +20,7 @@ disassembler = { path = "../tools/disassembler" }
 # external dependencies
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
+im = "15.0.0"
 itertools = "0.10.0"
 log = "0.4.14"
 num = "0.4.0"

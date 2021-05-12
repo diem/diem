@@ -17,7 +17,7 @@ use crate::{
 
 use crate::options::ProverOptions;
 use move_model::{
-    ast::{ConditionKind, Exp},
+    ast::{ConditionKind, RcExp},
     exp_generator::ExpGenerator,
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, Loc, QualifiedId, QualifiedInstId, StructId},
     pragmas::CONDITION_ISOLATED_PROP,
@@ -472,7 +472,7 @@ impl<'a> Instrumenter<'a> {
     /// xlated_invariants that is also in inv_set at the current location,
     fn assert_or_assume_translated_invariants(
         &mut self,
-        xlated_invariants: &[(Loc, GlobalId, Exp)],
+        xlated_invariants: &[(Loc, GlobalId, RcExp)],
         inv_set: &BTreeSet<GlobalId>,
         prop_kind: PropKind,
     ) {
@@ -484,7 +484,7 @@ impl<'a> Instrumenter<'a> {
     }
 
     /// Emit an assert for one invariant, give location and expression for the property
-    fn emit_invariant(&mut self, loc: &Loc, cond: &Exp, prop_kind: PropKind) {
+    fn emit_invariant(&mut self, loc: &Loc, cond: &RcExp, prop_kind: PropKind) {
         self.builder.set_next_debug_comment(format!(
             "global invariant {}",
             loc.display(self.builder.global_env())

@@ -27,14 +27,14 @@ use move_lang::{
 use crate::{
     ast::{
         Condition, ConditionKind, Exp, GlobalInvariant, ModuleName, Operation, PropertyBag,
-        PropertyValue, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl,
+        PropertyValue, QualifiedSymbol, RcExp, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl,
         SpecVarDecl, Value,
     },
     builder::{
         exp_translator::ExpTranslator,
         model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
-    exp_rewriter::{ExpRewriter, RewriteTarget},
+    exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{
         AbilityConstraint, FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc,
         NamedConstantData, NamedConstantId, NodeId, QualifiedInstId, SchemaId, SpecFunId,
@@ -49,6 +49,7 @@ use crate::{
     ty::{PrimitiveType, Type, BOOL_TYPE},
 };
 use codespan_reporting::diagnostic::Severity;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
@@ -739,7 +740,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         mid.qualified(*fid),
                     );
                 });
-                self.spec_funs[self.spec_fun_index].body = Some(translated);
+                self.spec_funs[self.spec_fun_index].body = Some(translated.into_rc());
             }
         }
         self.spec_fun_index += 1;
@@ -945,7 +946,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 loc: loc.clone(),
                 kind,
                 properties: Default::default(),
-                exp: def,
+                exp: Rc::new(def),
                 additional_exps: vec![],
             })
         })
@@ -1383,16 +1384,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let mut replacer = |id: NodeId, target: RewriteTarget| {
                     if let RewriteTarget::LocalVar(name) = target {
                         if let Some(unique_name) = let_substitution.get(&name) {
-                            return Some(Exp::LocalVar(id, *unique_name));
+                            return Some(Rc::new(Exp::LocalVar(id, *unique_name)));
                         }
                     }
                     None
                 };
                 let mut rewriter = ExpRewriter::new(&self.parent.env, &mut replacer);
-                let exp = rewriter.rewrite(&exp);
+                let exp = rewriter.rewrite_exp(exp);
                 let additional_exps = additional_exps
                     .into_iter()
-                    .map(|e| rewriter.rewrite(&e))
+                    .map(|e| rewriter.rewrite_exp(e))
                     .collect_vec();
                 cond = Condition {
                     loc,
@@ -1529,17 +1530,21 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
         let (translated, translated_additional) = match kind {
             ConditionKind::AbortsIf => (
-                et.translate_exp(exp, &expected_type),
+                Rc::new(et.translate_exp(exp, &expected_type)),
                 additional_exps
                     .iter()
-                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .map(|code| {
+                        Rc::new(et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    })
                     .collect_vec(),
             ),
             ConditionKind::AbortsWith => {
                 // Parser has created a dummy exp, codes are all in additional_exps
                 let mut exps = additional_exps
                     .iter()
-                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .map(|code| {
+                        Rc::new(et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    })
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
@@ -1548,7 +1553,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // Parser has created a dummy exp, targets are all in additional_exps
                 let mut exps = additional_exps
                     .iter()
-                    .map(|target| et.translate_modify_target(target))
+                    .map(|target| Rc::new(et.translate_modify_target(target)))
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
@@ -1559,11 +1564,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 //       should have type T.
                 let (_, first) = et.translate_exp_free(exp);
                 let (_, second) = et.translate_exp_free(&additional_exps[0]);
-                let mut exps = vec![second];
+                let mut exps = vec![Rc::new(second)];
                 if additional_exps.len() > 1 {
-                    exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE));
+                    exps.push(Rc::new(et.translate_exp(&additional_exps[1], &BOOL_TYPE)));
                 }
-                (first, exps)
+                (Rc::new(first), exps)
             }
             _ => {
                 if !additional_exps.is_empty() {
@@ -1572,7 +1577,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
                    );
                 }
-                (et.translate_exp(exp, &expected_type), vec![])
+                (Rc::new(et.translate_exp(exp, &expected_type)), vec![])
             }
         };
         et.finalize_types();
@@ -1737,7 +1742,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             let translated = et.translate_seq(&loc, seq, &result_type);
             et.finalize_types();
-            self.spec_funs[self.spec_fun_index].body = Some(translated);
+            self.spec_funs[self.spec_fun_index].body = Some(translated.into_rc());
         }
         self.spec_fun_index += 1;
     }
@@ -1993,7 +1998,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
         spec: &mut Spec,
         allow_new_vars: bool,
-        path_cond: Option<Exp>,
+        path_cond: Option<RcExp>,
         properties: &PropertyBag,
         exp: &EA::Exp,
     ) {
@@ -2008,7 +2013,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 rhs,
             ) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
-                let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE);
+                let lhs_exp = Rc::new(et.translate_exp(lhs, &BOOL_TYPE));
                 et.finalize_types();
                 let path_cond = Some(self.extend_path_condition(&loc, path_cond, lhs_exp));
                 self.def_ana_schema_exp_oper(
@@ -2050,7 +2055,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             EA::Exp_::IfElse(c, t, e) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
-                let c_exp = et.translate_exp(c, &BOOL_TYPE);
+                let c_exp = Rc::new(et.translate_exp(c, &BOOL_TYPE));
                 et.finalize_types();
                 let t_path_cond =
                     Some(self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone()));
@@ -2064,7 +2069,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     t,
                 );
                 let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
-                let not_c_exp = Exp::Call(node_id, Operation::Not, vec![c_exp]);
+                let not_c_exp = Rc::new(Exp::Call(node_id, Operation::Not, vec![c_exp]));
                 let e_path_cond = Some(self.extend_path_condition(&loc, path_cond, not_c_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
@@ -2113,7 +2118,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
         spec: &mut Spec,
         allow_new_vars: bool,
-        path_cond: Option<Exp>,
+        path_cond: Option<RcExp>,
         schema_properties: &PropertyBag,
         loc: &Loc,
         maccess: &EA::ModuleAccess,
@@ -2160,7 +2165,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         // Translate schema arguments.
-        let mut argument_map: BTreeMap<Symbol, Exp> = args_opt
+        let mut argument_map: BTreeMap<Symbol, RcExp> = args_opt
             .map(|args| {
                 args.iter()
                     .map(|(var_loc, schema_var_, (_, exp))| {
@@ -2180,7 +2185,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         // Check the expression in the argument list.
                         // Note we currently only use the vars defined so far in this context. Variables
                         // which are introduced by schemas after the inclusion of this one are not in scope.
-                        let exp = et.translate_exp(exp, &schema_type);
+                        let exp = Rc::new(et.translate_exp(exp, &schema_type));
                         et.finalize_types();
                         (schema_sym, exp)
                     })
@@ -2216,7 +2221,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 } else {
                     Exp::LocalVar(node_id, *name)
                 };
-                argument_map.insert(*name, exp);
+                argument_map.insert(*name, Rc::new(exp));
             } else if allow_new_vars {
                 // Name does not yet exists in inclusion context, but is allowed to be introduced.
                 // This happens if we include a schema in another schema.
@@ -2264,7 +2269,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             };
             let mut rewriter =
                 ExpRewriter::new(self.parent.env, &mut replacer).set_type_args(type_arguments);
-            let mut exp = rewriter.rewrite(exp);
+            let mut exp = rewriter.rewrite_exp(exp.to_owned());
             let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
                 // There is a path condition to be added. This is only possible for proper
@@ -2319,11 +2324,17 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Make a path expression.
-    fn make_path_expr(&mut self, oper: Operation, node_id: NodeId, cond: Exp, exp: Exp) -> Exp {
+    fn make_path_expr(
+        &mut self,
+        oper: Operation,
+        node_id: NodeId,
+        cond: RcExp,
+        exp: RcExp,
+    ) -> RcExp {
         let env = &self.parent.env;
         let path_cond_loc = env.get_node_loc(node_id);
         let new_node_id = env.new_node(path_cond_loc, BOOL_TYPE.clone());
-        Exp::Call(new_node_id, oper, vec![cond, exp])
+        Rc::new(Exp::Call(new_node_id, oper, vec![cond, exp]))
     }
 
     /// Creates an expression translator for use in schema expression. This defines the context
@@ -2364,10 +2375,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Extends a path condition for schema expression analysis.
-    fn extend_path_condition(&mut self, loc: &Loc, path_cond: Option<Exp>, exp: Exp) -> Exp {
+    fn extend_path_condition(&mut self, loc: &Loc, path_cond: Option<RcExp>, exp: RcExp) -> RcExp {
         if let Some(cond) = path_cond {
             let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
-            Exp::Call(node_id, Operation::And, vec![cond, exp])
+            Rc::new(Exp::Call(node_id, Operation::And, vec![cond, exp]))
         } else {
             exp
         }

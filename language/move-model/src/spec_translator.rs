@@ -10,11 +10,12 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, Operation, Spec,
-        TempIndex,
+        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, Operation,
+        RcExp, Spec, TempIndex,
     },
     exp_generator::ExpGenerator,
-    model::{FunctionEnv, GlobalId, Loc, NodeId, QualifiedInstId, SpecVarId, StructId},
+    exp_rewriter::ExpRewriterFunctions,
+    model::{FunctionEnv, GlobalId, Loc, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
     pragmas::{
         ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
         CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
@@ -23,6 +24,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use codespan_reporting::diagnostic::Severity;
+use std::rc::Rc;
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
@@ -45,9 +47,11 @@ pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
     shadowed: Vec<BTreeSet<Symbol>>,
     /// A map from let symbols to temporaries allocated for them.
-    let_temps: BTreeMap<Symbol, TempIndex>,
+    let_locals: BTreeMap<Symbol, TempIndex>,
     /// The translated spec.
     result: TranslatedSpec,
+    /// Whether we are in "old" (pre-state) context
+    in_old: bool,
 }
 
 /// Represents a translated spec.
@@ -56,21 +60,21 @@ pub struct TranslatedSpec {
     pub saved_memory: BTreeMap<QualifiedInstId<StructId>, MemoryLabel>,
     pub saved_spec_vars: BTreeMap<QualifiedInstId<SpecVarId>, MemoryLabel>,
     pub saved_params: BTreeMap<TempIndex, TempIndex>,
-    pub debug_traces: Vec<(NodeId, Exp)>,
-    pub pre: Vec<(Loc, Exp)>,
-    pub post: Vec<(Loc, Exp)>,
-    pub aborts: Vec<(Loc, Exp, Option<Exp>)>,
-    pub aborts_with: Vec<(Loc, Vec<Exp>)>,
-    pub emits: Vec<(Loc, Exp, Exp, Option<Exp>)>,
-    pub modifies: Vec<(Loc, Exp)>,
-    pub invariants: Vec<(Loc, GlobalId, Exp)>,
-    pub lets: Vec<(Loc, bool, TempIndex, Exp)>,
+    pub debug_traces: Vec<(NodeId, RcExp)>,
+    pub pre: Vec<(Loc, RcExp)>,
+    pub post: Vec<(Loc, RcExp)>,
+    pub aborts: Vec<(Loc, RcExp, Option<RcExp>)>,
+    pub aborts_with: Vec<(Loc, Vec<RcExp>)>,
+    pub emits: Vec<(Loc, RcExp, RcExp, Option<RcExp>)>,
+    pub modifies: Vec<(Loc, RcExp)>,
+    pub invariants: Vec<(Loc, GlobalId, RcExp)>,
+    pub lets: Vec<(Loc, bool, TempIndex, RcExp)>,
 }
 
 impl TranslatedSpec {
     /// Creates a boolean expression which describes the overall abort condition. This is
     /// a disjunction of the individual abort conditions.
-    pub fn aborts_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Option<Exp> {
+    pub fn aborts_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Option<RcExp> {
         builder.mk_join_bool(Operation::Or, self.aborts.iter().map(|(_, e, _)| e.clone()))
     }
 
@@ -94,9 +98,9 @@ impl TranslatedSpec {
     pub fn aborts_code_condition<'a, T: ExpGenerator<'a>>(
         &self,
         builder: &T,
-        actual_code: &Exp,
-    ) -> Option<Exp> {
-        let eq_code = |e: &Exp| builder.mk_eq(e.clone(), actual_code.clone());
+        actual_code: &RcExp,
+    ) -> Option<RcExp> {
+        let eq_code = |e: &RcExp| builder.mk_eq(e.clone(), actual_code.clone());
         builder.mk_join_bool(
             Operation::Or,
             self.aborts
@@ -129,7 +133,7 @@ impl TranslatedSpec {
     pub fn pre_conditions<'a, T: ExpGenerator<'a>>(
         &self,
         _builder: &T,
-    ) -> impl Iterator<Item = (Loc, Exp)> + '_ {
+    ) -> impl Iterator<Item = (Loc, RcExp)> + '_ {
         self.pre.iter().cloned()
     }
 
@@ -138,7 +142,7 @@ impl TranslatedSpec {
     /// error reporting we construct incrementally multiple EventStoreIncludes expressions with some
     /// redundancy for each individual `emits, so we the see the exact failure at the right
     /// emit condition.
-    pub fn emits_conditions<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Vec<(Loc, Exp)> {
+    pub fn emits_conditions<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Vec<(Loc, RcExp)> {
         let es_ty = Type::Primitive(PrimitiveType::EventStore);
         let mut result = vec![];
         for i in 0..self.emits.len() {
@@ -156,7 +160,7 @@ impl TranslatedSpec {
         result
     }
 
-    pub fn emits_completeness_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Exp {
+    pub fn emits_completeness_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> RcExp {
         let es_ty = Type::Primitive(PrimitiveType::EventStore);
         let es = self.build_event_store(
             builder,
@@ -169,9 +173,9 @@ impl TranslatedSpec {
     fn build_event_store<'a, T: ExpGenerator<'a>>(
         &self,
         builder: &T,
-        es: Exp,
-        emits: &[(Loc, Exp, Exp, Option<Exp>)],
-    ) -> Exp {
+        es: RcExp,
+        emits: &[(Loc, RcExp, RcExp, Option<RcExp>)],
+    ) -> RcExp {
         if emits.is_empty() {
             es
         } else {
@@ -216,7 +220,8 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
-            let_temps: Default::default(),
+            let_locals: Default::default(),
+            in_old: false,
         };
         translator.translate_spec(for_call);
         translator.result
@@ -240,7 +245,8 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
-            let_temps: Default::default(),
+            let_locals: Default::default(),
+            in_old: false,
         };
         for inv in invariants {
             let exp = translator.translate_exp(&translator.auto_trace(&inv.loc, &inv.cond), false);
@@ -360,12 +366,12 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             self.in_post_state = false;
             for exp in cond.all_exps() {
                 // Auto trace the inner address expression.
-                let exp = match exp {
-                    Exp::Call(id, oper, args) if args.len() == 1 => Exp::Call(
+                let exp = match exp.as_ref() {
+                    Exp::Call(id, oper, args) if args.len() == 1 => Rc::new(Exp::Call(
                         *id,
                         oper.clone(),
                         vec![self.auto_trace(&cond.loc, &args[0])],
-                    ),
+                    )),
                     _ => cond.exp.to_owned(),
                 };
                 let exp = self.translate_exp(&exp, false);
@@ -413,130 +419,88 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             let exp = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
             let ty = self.builder.global_env().get_node_type(exp.node_id());
             let temp = self.builder.add_local(ty.skip_reference().clone());
-            self.let_temps.insert(*sym, temp);
+            self.let_locals.insert(*sym, temp);
             self.result
                 .lets
                 .push((cond.loc.clone(), post_state, temp, exp));
         }
     }
 
-    fn auto_trace(&self, loc: &Loc, exp: &Exp) -> Exp {
+    fn auto_trace(&self, loc: &Loc, exp: &RcExp) -> RcExp {
         if self.auto_trace {
             let env = self.builder.global_env();
             let id = exp.node_id();
             let ty = env.get_node_type(id);
             let new_id = env.new_node(loc.clone(), ty.clone());
             env.set_node_instantiation(new_id, vec![ty]);
-            Exp::Call(new_id, Operation::Trace, vec![exp.to_owned()])
+            Rc::new(Exp::Call(new_id, Operation::Trace, vec![exp.to_owned()]))
         } else {
             exp.to_owned()
         }
     }
 
-    fn auto_trace_no_loc(&self, exp: &Exp) -> Exp {
+    fn auto_trace_no_loc(&self, exp: &RcExp) -> RcExp {
         self.auto_trace(&self.builder.global_env().get_node_loc(exp.node_id()), exp)
     }
 
-    fn translate_exp(&mut self, exp: &Exp, in_old: bool) -> Exp {
-        use crate::ast::{Exp::*, Operation::*};
-        let env = self.fun_env.module_env.env;
-        match exp {
-            LocalVar(node_id, sym) => {
-                if !self.is_shadowed(*sym) {
-                    if let Some(temp) = self.let_temps.get(sym) {
-                        // Need to create new node id since the replacement `temp` may
-                        // differ w.r.t. references.
-                        let new_node_id = env.new_node(
-                            env.get_node_loc(*node_id),
-                            self.builder.get_local_type(*temp),
-                        );
-                        return Temporary(new_node_id, *temp);
-                    }
-                }
-                LocalVar(*node_id, *sym)
-            }
-            Temporary(node_id, idx) => {
-                // Compute the effective index.
-                let is_mut = self.fun_env.get_local_type(*idx).is_mutable_reference();
-                let effective_idx = if in_old || self.in_post_state && !is_mut {
-                    // We access a param inside of old context, or a value which might have been
-                    // mutated as we are in the post state. We need to create a temporary
-                    // to save their value at function entry, and deliver this temporary here.
-                    //
-                    // Notice that a redundant copy of a value (i.e. one which is not mutated)
-                    // is removed by copy propagation, so we do not need to
-                    // care about optimizing this here.
-                    self.save_param(self.apply_param_substitution(*idx))
-                } else {
-                    self.apply_param_substitution(*idx)
-                };
-                // The type of this temporary might be different than the node's type w.r.t.
-                // references. Create a new node id with the effective type.
-                let effective_type = self.builder.get_local_type(effective_idx);
-                let loc = self.builder.global_env().get_node_loc(*node_id);
-                let node_id = self.builder.global_env().new_node(loc, effective_type);
-                Temporary(self.instantiate(node_id), effective_idx)
-            }
-            SpecVar(node_id, mid, vid, None) if in_old => {
-                let node_id = self.instantiate(*node_id);
-                let inst = env.get_node_instantiation(node_id);
-                SpecVar(
-                    node_id,
-                    *mid,
-                    *vid,
-                    Some(self.save_spec_var(mid.qualified_inst(*vid, inst))),
-                )
-            }
-            Call(node_id, Global(None), args) if in_old => {
-                let args = self.translate_exp_vec(args, in_old);
-                let node_id = self.instantiate(*node_id);
-                Call(
-                    node_id,
-                    Global(Some(
-                        self.save_memory(self.builder.get_memory_of_node(node_id)),
-                    )),
-                    args,
-                )
-            }
-            Call(node_id, Exists(None), args) if in_old => {
-                let args = self.translate_exp_vec(args, in_old);
-                let node_id = self.instantiate(*node_id);
-                Call(
-                    node_id,
-                    Exists(Some(
-                        self.save_memory(self.builder.get_memory_of_node(node_id)),
-                    )),
-                    args,
-                )
-            }
-            Call(node_id, Function(mid, fid, None), args) if in_old => {
-                let (used_memory, used_spec_vars) = {
-                    let module_env = self.builder.global_env().get_module(*mid);
-                    let decl = module_env.get_spec_fun(*fid);
-                    // Unfortunately, the below clones are necessary, as we cannot borrow decl
-                    // and at the same time mutate self later.
-                    (decl.used_memory.clone(), decl.used_spec_vars.clone())
-                };
-                let inst = Type::instantiate_vec(
-                    self.builder.global_env().get_node_instantiation(*node_id),
-                    self.type_args,
-                );
-                let mut labels = vec![];
-                for mem in used_memory {
-                    let mem = mem.instantiate(&inst);
-                    labels.push(self.save_memory(mem));
-                }
-                for var in used_spec_vars {
-                    let var = var.instantiate(&inst);
-                    labels.push(self.save_spec_var(var));
-                }
-                Call(
-                    self.instantiate(*node_id),
-                    Function(*mid, *fid, Some(labels)),
-                    self.translate_exp_vec(args, in_old),
-                )
-            }
-            Call(id, Old, args) => {
+    fn translate_exp(&mut self, exp: &RcExp, in_old: bool) -> RcExp {
+        self.in_old = in_old;
+        self.rewrite_exp(exp.to_owned())
+    }
+
+    fn is_shadowed(&self, sym: Symbol) -> bool {
+        self.shadowed.iter().any(|bs| bs.contains(&sym))
+    }
+
+    /// Apply parameter substitution if present.
+    fn apply_param_substitution(&self, idx: TempIndex) -> TempIndex {
+        if let Some(map) = self.param_substitution {
+            map[idx]
+        } else {
+            idx
+        }
+    }
+
+    fn save_spec_var(&mut self, qid: QualifiedInstId<SpecVarId>) -> MemoryLabel {
+        let builder = &mut self.builder;
+        *self
+            .result
+            .saved_spec_vars
+            .entry(qid)
+            .or_insert_with(|| builder.global_env().new_global_id())
+    }
+
+    fn save_memory(&mut self, qid: QualifiedInstId<StructId>) -> MemoryLabel {
+        let builder = &mut self.builder;
+        *self
+            .result
+            .saved_memory
+            .entry(qid)
+            .or_insert_with(|| builder.global_env().new_global_id())
+    }
+
+    fn save_param(&mut self, idx: TempIndex) -> TempIndex {
+        if let Some(saved) = self.result.saved_params.get(&idx) {
+            *saved
+        } else {
+            let saved = self
+                .builder
+                .new_temp(self.builder.get_local_type(idx).skip_reference().clone());
+            self.result.saved_params.insert(idx, saved);
+            saved
+        }
+    }
+}
+
+impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b, T> {
+    fn rewrite_exp(&mut self, exp: RcExp) -> RcExp {
+        // Do some pre-processing of the expression before actual rewrite, reporting
+        // errors.
+        let env = self.builder.global_env();
+        let mut is_old = false;
+        match exp.as_ref() {
+            Exp::Call(id, Operation::Old, args) => {
+                is_old = true;
                 // Generate an error if an `old` function is applied to a pure expression.
                 let arg = &args[0];
                 if arg.is_pure(self.builder.global_env()) {
@@ -568,20 +532,15 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                         labels,
                     )
                 }
-                self.translate_exp(arg, true)
             }
-            Call(node_id, Result(n), _) => {
-                self.builder.set_loc_from_node(*node_id);
-                self.builder.mk_temporary(self.ret_locals[*n])
-            }
-            Call(id, Trace, args) => {
-                // Compute whether there are free LocalVar terms, excluding locals from lets.
+            Exp::Call(id, Operation::Trace, args) => {
+                // Generate an error if a TRACE is applied to an expression where it is not
+                // allowed, i.e. if there are free LocalVar terms, excluding locals from lets.
                 let loc = env.get_node_loc(*id);
                 let has_free_vars = args[0]
                     .free_vars(env)
                     .iter()
-                    .any(|(s, _)| !self.let_temps.contains_key(s));
-
+                    .any(|(s, _)| !self.let_locals.contains_key(s));
                 if has_free_vars {
                     env.error(
                         &loc,
@@ -589,173 +548,156 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                              on quantified variables or spec function parameters",
                     )
                 }
-                let exp = self.translate_exp(&args[0], in_old);
+            }
+            _ => {}
+        }
+        if is_old {
+            self.in_old = true;
+        }
+        let exp = self.rewrite_exp_descent(exp);
+        if is_old {
+            self.in_old = false;
+        }
+        exp
+    }
+
+    fn rewrite_local_var(&mut self, id: NodeId, sym: Symbol) -> Option<RcExp> {
+        if !self.is_shadowed(sym) {
+            if let Some(temp) = self.let_locals.get(&sym) {
+                // Need to create new node id since the replacement `temp` may
+                // differ w.r.t. references.
+                let env = self.builder.global_env();
+                let new_node_id =
+                    env.new_node(env.get_node_loc(id), self.builder.get_local_type(*temp));
+                return Some(Exp::Temporary(new_node_id, *temp).into_rc());
+            }
+        }
+        None
+    }
+
+    fn rewrite_temporary(&mut self, id: NodeId, idx: TempIndex) -> Option<RcExp> {
+        // Compute the effective index.
+        let is_mut = self.fun_env.get_local_type(idx).is_mutable_reference();
+        let effective_idx = if self.in_old || self.in_post_state && !is_mut {
+            // We access a param inside of old context, or a value which might have been
+            // mutated as we are in the post state. We need to create a temporary
+            // to save their value at function entry, and deliver this temporary here.
+            //
+            // Notice that a redundant copy of a value (i.e. one which is not mutated)
+            // is removed by copy propagation, so we do not need to
+            // care about optimizing this here.
+            self.save_param(self.apply_param_substitution(idx))
+        } else {
+            self.apply_param_substitution(idx)
+        };
+        if effective_idx != idx {
+            // The type of this temporary might be different than the node's type w.r.t.
+            // references. Create a new node id with the effective type.
+            let effective_type = self
+                .builder
+                .get_local_type(effective_idx)
+                .instantiate(self.type_args);
+            let loc = self.builder.global_env().get_node_loc(id);
+            let new_id = self.builder.global_env().new_node(loc, effective_type);
+            Some(Exp::Temporary(new_id, effective_idx).into_rc())
+        } else {
+            None
+        }
+    }
+
+    fn rewrite_spec_var(
+        &mut self,
+        id: NodeId,
+        mid: ModuleId,
+        vid: SpecVarId,
+        label: &Option<MemoryLabel>,
+    ) -> Option<RcExp> {
+        if self.in_old && label.is_none() {
+            let inst = self.builder.global_env().get_node_instantiation(id);
+            Some(
+                Exp::SpecVar(
+                    id,
+                    mid,
+                    vid,
+                    Some(self.save_spec_var(mid.qualified_inst(vid, inst))),
+                )
+                .into_rc(),
+            )
+        } else {
+            None
+        }
+    }
+
+    fn rewrite_call(&mut self, id: NodeId, oper: &Operation, args: &[RcExp]) -> Option<RcExp> {
+        use Exp::*;
+        use Operation::*;
+        match oper {
+            Global(None) if self.in_old => Some(
+                Call(
+                    id,
+                    Global(Some(self.save_memory(self.builder.get_memory_of_node(id)))),
+                    args.to_owned(),
+                )
+                .into_rc(),
+            ),
+            Exists(None) if self.in_old => Some(
+                Call(
+                    id,
+                    Exists(Some(self.save_memory(self.builder.get_memory_of_node(id)))),
+                    args.to_owned(),
+                )
+                .into_rc(),
+            ),
+            Function(mid, fid, None) if self.in_old => {
+                let (used_memory, used_spec_vars) = {
+                    let module_env = self.builder.global_env().get_module(*mid);
+                    let decl = module_env.get_spec_fun(*fid);
+                    // Unfortunately, the below clones are necessary, as we cannot borrow decl
+                    // and at the same time mutate self later.
+                    (decl.used_memory.clone(), decl.used_spec_vars.clone())
+                };
+                let inst = self.builder.global_env().get_node_instantiation(id);
+                let mut labels = vec![];
+                for mem in used_memory {
+                    let mem = mem.instantiate(&inst);
+                    labels.push(self.save_memory(mem));
+                }
+                for var in used_spec_vars {
+                    let var = var.instantiate(&inst);
+                    labels.push(self.save_spec_var(var));
+                }
+                Some(Call(id, Function(*mid, *fid, Some(labels)), args.to_owned()).into_rc())
+            }
+            Old => Some(args[0].to_owned()),
+            Result(n) => {
+                self.builder.set_loc_from_node(id);
+                Some(self.builder.mk_temporary(self.ret_locals[*n]))
+            }
+            Trace => {
+                let exp = args[0].to_owned();
+                let env = self.builder.global_env();
+                let loc = env.get_node_loc(id);
                 let trace_id = env.new_node(loc, env.get_node_type(exp.node_id()));
                 self.result.debug_traces.push((trace_id, exp.clone()));
-                exp
+                Some(exp)
             }
-            Call(node_id, oper, args) => Call(
-                self.instantiate(*node_id),
-                oper.clone(),
-                self.translate_exp_vec(args, in_old),
-            ),
-            Invoke(node_id, target, args) => {
-                let target = self.translate_exp(target, in_old);
-                Invoke(
-                    self.instantiate(*node_id),
-                    Box::new(target),
-                    self.translate_exp_vec(args, in_old),
-                )
-            }
-            Lambda(node_id, decls, body) => {
-                let decls = self.translate_exp_decls(decls, in_old);
-                self.shadowed.push(decls.iter().map(|d| d.name).collect());
-                let res = Lambda(
-                    self.instantiate(*node_id),
-                    decls,
-                    Box::new(self.translate_exp(body, in_old)),
-                );
-                self.shadowed.pop();
-                res
-            }
-            Block(node_id, decls, body) => {
-                let decls = self.translate_exp_decls(decls, in_old);
-                self.shadowed.push(decls.iter().map(|d| d.name).collect());
-                let res = Block(
-                    self.instantiate(*node_id),
-                    decls,
-                    Box::new(self.translate_exp(body, in_old)),
-                );
-                self.shadowed.pop();
-                res
-            }
-            Quant(node_id, kind, decls, triggers, where_opt, body) => {
-                let decls = self.translate_exp_quant_decls(decls, in_old);
-                self.shadowed
-                    .push(decls.iter().map(|(d, _)| d.name).collect());
-                let triggers = triggers
-                    .iter()
-                    .map(|tr| tr.iter().map(|e| self.translate_exp(e, in_old)).collect())
-                    .collect();
-                let where_opt = where_opt
-                    .as_ref()
-                    .map(|e| Box::new(self.translate_exp(e, in_old)));
-                let body = Box::new(self.translate_exp(body, in_old));
-                let res = Quant(
-                    self.instantiate(*node_id),
-                    *kind,
-                    decls,
-                    triggers,
-                    where_opt,
-                    body,
-                );
-                self.shadowed.pop();
-                res
-            }
-            IfElse(node_id, cond, if_true, if_false) => IfElse(
-                self.instantiate(*node_id),
-                Box::new(self.translate_exp(cond, in_old)),
-                Box::new(self.translate_exp(if_true, in_old)),
-                Box::new(self.translate_exp(if_false, in_old)),
-            ),
-            _ => exp.clone(),
+            _ => None,
         }
     }
 
-    fn is_shadowed(&self, sym: Symbol) -> bool {
-        self.shadowed.iter().any(|bs| bs.contains(&sym))
-    }
-
-    /// Apply parameter substitution if present.
-    fn apply_param_substitution(&self, idx: TempIndex) -> TempIndex {
-        if let Some(map) = self.param_substitution {
-            map[idx]
-        } else {
-            idx
-        }
-    }
-
-    /// Instantiate this expression node's type information with the provided type arguments.
-    /// This returns a new node id for the instantiation, if one is needed, otherwise the given
-    /// one.
-    fn instantiate(&self, node_id: NodeId) -> NodeId {
+    fn rewrite_node_id(&mut self, id: NodeId) -> Option<NodeId> {
         if self.type_args.is_empty() {
-            node_id
+            None
         } else {
-            let env = self.builder.global_env();
-            let ty = env.get_node_type(node_id).instantiate(self.type_args);
-            let inst = Type::instantiate_vec(env.get_node_instantiation(node_id), self.type_args);
-            let loc = env.get_node_loc(node_id);
-            let node_id = env.new_node(loc, ty);
-            env.set_node_instantiation(node_id, inst);
-            node_id
+            Exp::instantiate_node(self.builder.global_env(), id, self.type_args)
         }
     }
 
-    fn translate_exp_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {
-        exps.iter()
-            .map(|e| self.translate_exp(e, in_old))
-            .collect_vec()
+    fn rewrite_enter_scope<'c>(&mut self, decls: impl Iterator<Item = &'c LocalVarDecl>) {
+        self.shadowed.push(decls.map(|d| d.name).collect())
     }
 
-    fn translate_exp_decls(&mut self, decls: &[LocalVarDecl], in_old: bool) -> Vec<LocalVarDecl> {
-        decls
-            .iter()
-            .map(|LocalVarDecl { id, name, binding }| LocalVarDecl {
-                id: *id,
-                name: *name,
-                binding: binding.as_ref().map(|e| self.translate_exp(e, in_old)),
-            })
-            .collect_vec()
-    }
-
-    fn translate_exp_quant_decls(
-        &mut self,
-        decls: &[(LocalVarDecl, Exp)],
-        in_old: bool,
-    ) -> Vec<(LocalVarDecl, Exp)> {
-        decls
-            .iter()
-            .map(|(LocalVarDecl { id, name, .. }, exp)| {
-                (
-                    LocalVarDecl {
-                        id: *id,
-                        name: *name,
-                        binding: None,
-                    },
-                    self.translate_exp(exp, in_old),
-                )
-            })
-            .collect_vec()
-    }
-
-    fn save_spec_var(&mut self, qid: QualifiedInstId<SpecVarId>) -> MemoryLabel {
-        let builder = &mut self.builder;
-        *self
-            .result
-            .saved_spec_vars
-            .entry(qid)
-            .or_insert_with(|| builder.global_env().new_global_id())
-    }
-
-    fn save_memory(&mut self, qid: QualifiedInstId<StructId>) -> MemoryLabel {
-        let builder = &mut self.builder;
-        *self
-            .result
-            .saved_memory
-            .entry(qid)
-            .or_insert_with(|| builder.global_env().new_global_id())
-    }
-
-    fn save_param(&mut self, idx: TempIndex) -> TempIndex {
-        if let Some(saved) = self.result.saved_params.get(&idx) {
-            *saved
-        } else {
-            let saved = self
-                .builder
-                .new_temp(self.builder.get_local_type(idx).skip_reference().clone());
-            self.result.saved_params.insert(idx, saved);
-            saved
-        }
+    fn rewrite_exit_scope(&mut self) {
+        self.shadowed.pop();
     }
 }

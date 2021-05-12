@@ -32,7 +32,7 @@ const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invari
 /// is the union of loop targets per each natural loop that share the header.
 #[derive(Debug, Clone)]
 pub struct FatLoop {
-    pub invariants: BTreeMap<CodeOffset, (AttrId, ast::Exp)>,
+    pub invariants: BTreeMap<CodeOffset, (AttrId, ast::RcExp)>,
     pub val_targets: BTreeSet<TempIndex>,
     pub mut_targets: BTreeMap<TempIndex, bool>,
     pub back_edges: BTreeSet<CodeOffset>,
@@ -267,7 +267,7 @@ impl LoopAnalysisProcessor {
         code: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
         loop_header: BlockId,
-    ) -> BTreeMap<CodeOffset, (AttrId, ast::Exp)> {
+    ) -> BTreeMap<CodeOffset, (AttrId, ast::RcExp)> {
         let mut invariants = BTreeMap::new();
         for (index, code_offset) in cfg.instr_indexes(loop_header).unwrap().enumerate() {
             let bytecode = &code[code_offset as usize];

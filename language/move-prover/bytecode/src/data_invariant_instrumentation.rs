@@ -20,10 +20,9 @@ use crate::{
 
 use move_model::{
     ast,
-    ast::{ConditionKind, Exp, QuantKind, TempIndex},
+    ast::{ConditionKind, Exp, QuantKind, RcExp, TempIndex},
     exp_generator::ExpGenerator,
-    exp_rewriter::ExpRewriter,
-    model::{FunctionEnv, Loc, StructEnv},
+    model::{FunctionEnv, Loc, NodeId, StructEnv},
     ty::Type,
 };
 
@@ -123,8 +122,8 @@ impl<'a> Instrumenter<'a> {
             // We leave the old WellFormed check for the backend to process any type related
             // assumptions.
             Prop(id, PropKind::Assume, exp) => {
-                let mut rewriter = |e: Exp| {
-                    if let Exp::Call(_, ast::Operation::WellFormed, args) = &e {
+                let mut rewriter = |e: RcExp| {
+                    if let Exp::Call(_, ast::Operation::WellFormed, args) = e.as_ref() {
                         let inv = self.builder.mk_join_bool(
                             ast::Operation::And,
                             self.translate_invariant(true, args[0].clone())
@@ -135,12 +134,12 @@ impl<'a> Instrumenter<'a> {
                             .builder
                             .mk_join_opt_bool(ast::Operation::And, Some(e), inv)
                             .unwrap();
-                        (true, e)
+                        Ok(e)
                     } else {
-                        (false, e)
+                        Err(e)
                     }
                 };
-                let exp = exp.rewrite(&mut rewriter);
+                let exp = Exp::rewrite(exp, &mut rewriter);
                 self.builder.emit(Prop(id, PropKind::Assume, exp));
             }
             _ => self.builder.emit(bc),
@@ -163,7 +162,7 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    fn translate_invariant(&self, deep: bool, value: Exp) -> Vec<(Loc, Exp)> {
+    fn translate_invariant(&self, deep: bool, value: RcExp) -> Vec<(Loc, RcExp)> {
         let ty = self.builder.global_env().get_node_type(value.node_id());
         match ty.skip_reference() {
             Type::Struct(mid, sid, targs) => {
@@ -201,10 +200,10 @@ impl<'a> Instrumenter<'a> {
     fn translate_invariant_for_struct(
         &self,
         deep: bool,
-        value: Exp,
+        value: RcExp,
         struct_env: StructEnv<'_>,
         targs: &[Type],
-    ) -> Vec<(Loc, Exp)> {
+    ) -> Vec<(Loc, RcExp)> {
         use ast::Operation::*;
         use Exp::*;
 
@@ -215,17 +214,17 @@ impl<'a> Instrumenter<'a> {
             // By convention, selection from the target is represented as a `Select` operation with
             // an empty argument list. It is guaranteed that this uniquely identifies the
             // target, as any other `Select` will have exactly one argument.
-            let exp = cond.exp.clone().rewrite(&mut |e| match e {
+            let exp_rewriter = &mut |e: RcExp| match e.as_ref() {
                 Call(id, oper @ Select(..), args) if args.is_empty() => {
-                    (true, Call(id, oper, vec![value.clone()]))
+                    Ok(Call(*id, oper.to_owned(), vec![value.clone()]).into_rc())
                 }
-                _ => (false, e),
-            });
-            // Also need to instantiate any generics in the expression with targs.
-            let mut replacer = |_, _| None;
-            let mut rewriter =
-                ExpRewriter::new(self.builder.global_env(), &mut replacer).set_type_args(targs);
-            let exp = rewriter.rewrite(&exp);
+                _ => Err(e),
+            };
+            // Also instantiate types.
+            let env = self.builder.global_env();
+            let node_rewriter = &mut |id: NodeId| Exp::instantiate_node(env, id, targs);
+
+            let exp = Exp::rewrite_exp_and_node_id(cond.exp.clone(), exp_rewriter, node_rewriter);
             result.push((cond.loc.clone(), exp));
         }
 

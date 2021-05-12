@@ -5,8 +5,8 @@ use crate::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::{Exp, MemoryLabel, TempIndex},
-    exp_rewriter::{ExpRewriter, RewriteTarget},
+    ast::{Exp, MemoryLabel, RcExp, TempIndex},
+    exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{FunId, GlobalEnv, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
     ty::{Type, TypeDisplayContext},
 };
@@ -318,7 +318,7 @@ pub enum Bytecode {
 
     SaveMem(AttrId, MemoryLabel, QualifiedInstId<StructId>),
     SaveSpecVar(AttrId, MemoryLabel, QualifiedInstId<SpecVarId>),
-    Prop(AttrId, PropKind, Exp),
+    Prop(AttrId, PropKind, RcExp),
 }
 
 impl Bytecode {
@@ -508,18 +508,18 @@ impl Bytecode {
         }
     }
 
-    fn remap_exp<F>(func_target: &FunctionTarget<'_>, f: &mut F, exp: Exp) -> Exp
+    fn remap_exp<F>(func_target: &FunctionTarget<'_>, f: &mut F, exp: RcExp) -> RcExp
     where
         F: FnMut(TempIndex) -> TempIndex,
     {
         let mut replacer = |node_id: NodeId, target: RewriteTarget| {
             if let RewriteTarget::Temporary(idx) = target {
-                Some(Exp::Temporary(node_id, f(idx)))
+                Some(Exp::Temporary(node_id, f(idx)).into_rc())
             } else {
                 None
             }
         };
-        ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp)
+        ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite_exp(exp)
     }
 
     /// Return the temporaries this instruction modifies and how the temporaries are modified.

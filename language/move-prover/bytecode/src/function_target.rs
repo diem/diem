@@ -9,7 +9,7 @@ use crate::{
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::{Exp, Spec},
+    ast::Spec,
     model::{
         FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId,
         TypeParameter,
@@ -19,7 +19,10 @@ use move_model::{
 };
 
 use crate::function_target_pipeline::FunctionVariant;
-use move_model::{ast::TempIndex, model::QualifiedInstId};
+use move_model::{
+    ast::{RcExp, TempIndex},
+    model::QualifiedInstId,
+};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
@@ -79,7 +82,7 @@ pub struct FunctionData {
     /// A mapping from symbolic names to temporaries.
     pub name_to_index: BTreeMap<Symbol, usize>,
     /// A cache of targets modified by this function.
-    pub modify_targets: BTreeMap<QualifiedId<StructId>, Vec<Exp>>,
+    pub modify_targets: BTreeMap<QualifiedId<StructId>, Vec<RcExp>>,
 }
 
 impl<'env> FunctionTarget<'env> {
@@ -303,12 +306,12 @@ impl<'env> FunctionTarget<'env> {
     }
 
     /// Gets modify targets for a type
-    pub fn get_modify_targets_for_type(&self, ty: &QualifiedId<StructId>) -> Option<&Vec<Exp>> {
+    pub fn get_modify_targets_for_type(&self, ty: &QualifiedId<StructId>) -> Option<&Vec<RcExp>> {
         self.get_modify_targets().get(ty)
     }
 
     /// Gets all modify targets
-    pub fn get_modify_targets(&self) -> &BTreeMap<QualifiedId<StructId>, Vec<Exp>> {
+    pub fn get_modify_targets(&self) -> &BTreeMap<QualifiedId<StructId>, Vec<RcExp>> {
         &self.data.modify_targets
     }
 
@@ -329,7 +332,7 @@ impl<'env> FunctionTarget<'env> {
             .collect()
     }
 
-    pub fn get_modify_ids_and_exps(&self) -> BTreeMap<QualifiedInstId<StructId>, Vec<&Exp>> {
+    pub fn get_modify_ids_and_exps(&self) -> BTreeMap<QualifiedInstId<StructId>, Vec<&RcExp>> {
         // TODO: for now we compute this from the legacy representation, but if this
         //   viewpoint becomes the major use case, we should store it instead directly.
         let mut res = BTreeMap::new();

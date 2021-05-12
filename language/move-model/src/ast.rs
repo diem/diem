@@ -20,11 +20,13 @@ use std::{
 };
 
 use crate::{
+    exp_rewriter::ExpRewriterFunctions,
     model::{EnvDisplay, FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},
     ty::TypeDisplayContext,
 };
 use itertools::Itertools;
 use once_cell::sync::Lazy;
+use std::rc::Rc;
 
 // =================================================================================================
 /// # Declarations
@@ -50,7 +52,7 @@ pub struct SpecFunDecl {
     pub uninterpreted: bool,
     pub is_move_fun: bool,
     pub is_native: bool,
-    pub body: Option<Exp>,
+    pub body: Option<RcExp>,
 }
 
 // =================================================================================================
@@ -215,13 +217,13 @@ pub struct Condition {
     pub loc: Loc,
     pub kind: ConditionKind,
     pub properties: PropertyBag,
-    pub exp: Exp,
-    pub additional_exps: Vec<Exp>,
+    pub exp: RcExp,
+    pub additional_exps: Vec<RcExp>,
 }
 
 impl Condition {
     /// Return all expressions in the condition, the primary one and the additional ones.
-    pub fn all_exps(&self) -> impl Iterator<Item = &Exp> {
+    pub fn all_exps(&self) -> impl Iterator<Item = &RcExp> {
         std::iter::once(&self.exp).chain(self.additional_exps.iter())
     }
 }
@@ -315,7 +317,7 @@ pub struct GlobalInvariant {
     pub spec_var_usage: BTreeSet<QualifiedInstId<SpecVarId>>,
     pub declaring_module: ModuleId,
     pub properties: PropertyBag,
-    pub cond: Exp,
+    pub cond: RcExp,
 }
 
 // =================================================================================================
@@ -334,6 +336,8 @@ pub type TempIndex = usize;
 /// - Each expression has a unique node id assigned. This id allows to build attribute tables
 ///   for additional information, like expression type and source location. The id is globally
 ///   unique.
+/// - Sub-expressions are reference counted. This makes cloning of expressions on a shallow
+///   level cheaper which is important for the efficiency of expression rewriting.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Exp {
     /// Represents an invalid expression. This is used as a stub for algorithms which
@@ -352,28 +356,48 @@ pub enum Exp {
     SpecVar(NodeId, ModuleId, SpecVarId, Option<MemoryLabel>),
     /// Represents a call to an operation. The `Operation` enum covers all builtin functions
     /// (including operators, constants, ...) as well as user functions.
-    Call(NodeId, Operation, Vec<Exp>),
+    Call(NodeId, Operation, Vec<RcExp>),
     /// Represents an invocation of a function value, as a lambda.
-    Invoke(NodeId, Box<Exp>, Vec<Exp>),
+    Invoke(NodeId, RcExp, Vec<RcExp>),
     /// Represents a lambda.
-    Lambda(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    Lambda(NodeId, Vec<LocalVarDecl>, RcExp),
     /// Represents a quantified formula over multiple variables and ranges.
     Quant(
         NodeId,
         QuantKind,
-        Vec<(LocalVarDecl, Exp)>,
-        Vec<Vec<Exp>>,
-        Option<Box<Exp>>,
-        Box<Exp>,
+        /// Ranges
+        Vec<(LocalVarDecl, RcExp)>,
+        /// Triggers
+        Vec<Vec<RcExp>>,
+        /// Optional `where` clause
+        Option<RcExp>,
+        // Body
+        RcExp,
     ),
     /// Represents a block which contains a set of variable bindings and an expression
     /// for which those are defined.
-    Block(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    Block(NodeId, Vec<LocalVarDecl>, RcExp),
     /// Represents a conditional.
-    IfElse(NodeId, Box<Exp>, Box<Exp>, Box<Exp>),
+    IfElse(NodeId, RcExp, RcExp, RcExp),
+}
+
+/// A reference counted expression. Used for sub-expressions to avoid unnecessary copies on
+/// rewriting.
+pub type RcExp = Rc<Exp>;
+
+impl From<RcExp> for Exp {
+    /// Takes a reference counted expression and returns an owned expression. If the rc is
+    /// exclusive, this will move the underlying value, otherwise a copy will be created.
+    fn from(rce: RcExp) -> Exp {
+        Rc::try_unwrap(rce).unwrap_or_else(|rce| rce.as_ref().to_owned())
+    }
 }
 
 impl Exp {
+    pub fn into_rc(self) -> RcExp {
+        Rc::new(self)
+    }
+
     pub fn node_id(&self) -> NodeId {
         use Exp::*;
         match self {
@@ -391,7 +415,7 @@ impl Exp {
         }
     }
 
-    pub fn call_args(&self) -> &[Exp] {
+    pub fn call_args(&self) -> &[RcExp] {
         match self {
             Exp::Call(_, _, args) => args,
             _ => panic!("function must be called on Exp::Call(...)"),
@@ -567,124 +591,71 @@ impl Exp {
         visitor(true, self);
     }
 
-    /// Rewrites this expression based on the rewriter function. In
-    /// `let (is_rewritten, exp) = rewriter(exp)`, the function should return true if
-    /// the expression was rewritten, false and the original expression if not. In case the
-    /// expression is rewritten, the expression tree will not further be traversed and the
-    /// rewritten expression immediately returned. Otherwise, the function will recurse and
-    /// rewrite sub-expressions.
-    pub fn rewrite<F>(self, rewriter: &mut F) -> Exp
+    /// Rewrites this expression and sub-expression based on the rewriter function. The
+    /// function returns `Ok(e)` if the expression is rewritten, and passes back ownership
+    /// using `Err(e)` if the expression stays unchanged. This function stops traversing
+    ///on `Ok(e)` and descents into sub-expressions on `Err(e)`.
+    pub fn rewrite<F>(exp: RcExp, exp_rewriter: &mut F) -> RcExp
     where
-        F: FnMut(Exp) -> (bool, Exp),
+        F: FnMut(RcExp) -> Result<RcExp, RcExp>,
     {
-        self.internal_rewrite(rewriter, &mut |id| id)
-    }
-
-    pub fn rewrite_node_id<F>(self, rewriter: &mut F) -> Exp
-    where
-        F: FnMut(NodeId) -> NodeId,
-    {
-        self.internal_rewrite(&mut |e| (false, e), rewriter)
-    }
-
-    fn internal_rewrite<F, G>(self, rewriter: &mut F, node_rewriter: &mut G) -> Exp
-    where
-        F: FnMut(Exp) -> (bool, Exp),
-        G: FnMut(NodeId) -> NodeId,
-    {
-        use Exp::*;
-        let (is_rewritten, exp) = rewriter(self);
-        if is_rewritten {
-            return exp;
+        ExpRewriter {
+            exp_rewriter,
+            node_rewriter: &mut |_| None,
         }
+        .rewrite_exp(exp)
+    }
 
-        let rewrite_vec = |rewriter: &mut F, node_rewriter: &mut G, exps: Vec<Exp>| -> Vec<Exp> {
-            exps.into_iter()
-                .map(|e| e.internal_rewrite(rewriter, node_rewriter))
-                .collect()
-        };
-        let rewrite_box = |rewriter: &mut F, node_rewriter: &mut G, exp: Box<Exp>| -> Box<Exp> {
-            Box::new(exp.internal_rewrite(rewriter, node_rewriter))
-        };
-        let rewrite_decl =
-            |rewriter: &mut F, node_rewriter: &mut G, d: LocalVarDecl| LocalVarDecl {
-                id: node_rewriter(d.id),
-                name: d.name,
-                binding: d
-                    .binding
-                    .map(|e| e.internal_rewrite(rewriter, node_rewriter)),
-            };
-        let rewrite_decls = |rewriter: &mut F,
-                             node_rewriter: &mut G,
-                             decls: Vec<LocalVarDecl>|
-         -> Vec<LocalVarDecl> {
-            decls
-                .into_iter()
-                .map(|d| rewrite_decl(rewriter, node_rewriter, d))
-                .collect()
-        };
-        let rewrite_quant_decls = |rewriter: &mut F,
-                                   node_rewriter: &mut G,
-                                   decls: Vec<(LocalVarDecl, Exp)>|
-         -> Vec<(LocalVarDecl, Exp)> {
-            decls
-                .into_iter()
-                .map(|(d, r)| {
-                    (
-                        rewrite_decl(rewriter, node_rewriter, d),
-                        r.internal_rewrite(rewriter, node_rewriter),
-                    )
-                })
-                .collect()
-        };
+    /// Rewrites the node ids in the expression. This is used to rewrite types of
+    /// expressions.
+    pub fn rewrite_node_id<F>(exp: RcExp, node_rewriter: &mut F) -> RcExp
+    where
+        F: FnMut(NodeId) -> Option<NodeId>,
+    {
+        ExpRewriter {
+            exp_rewriter: &mut |e| Err(e),
+            node_rewriter,
+        }
+        .rewrite_exp(exp)
+    }
 
-        match exp {
-            LocalVar(id, sym) => LocalVar(node_rewriter(id), sym),
-            Temporary(id, idx) => Temporary(node_rewriter(id), idx),
-            Call(id, oper, args) => Call(
-                node_rewriter(id),
-                oper,
-                rewrite_vec(rewriter, node_rewriter, args),
-            ),
-            Invoke(id, target, args) => Invoke(
-                node_rewriter(id),
-                rewrite_box(rewriter, node_rewriter, target),
-                rewrite_vec(rewriter, node_rewriter, args),
-            ),
-            Lambda(id, decls, body) => Lambda(
-                node_rewriter(id),
-                rewrite_decls(rewriter, node_rewriter, decls),
-                rewrite_box(rewriter, node_rewriter, body),
-            ),
-            Quant(id, kind, decls, triggers, condition, body) => Quant(
-                node_rewriter(id),
-                kind,
-                rewrite_quant_decls(rewriter, node_rewriter, decls),
-                triggers
-                    .into_iter()
-                    .map(|t| {
-                        t.into_iter()
-                            .map(|e| e.internal_rewrite(rewriter, node_rewriter))
-                            .collect()
-                    })
-                    .collect(),
-                condition.map(|e| rewrite_box(rewriter, node_rewriter, e)),
-                rewrite_box(rewriter, node_rewriter, body),
-            ),
-            Block(id, decls, body) => Block(
-                node_rewriter(id),
-                rewrite_decls(rewriter, node_rewriter, decls),
-                rewrite_box(rewriter, node_rewriter, body),
-            ),
-            IfElse(id, c, t, e) => IfElse(
-                node_rewriter(id),
-                rewrite_box(rewriter, node_rewriter, c),
-                rewrite_box(rewriter, node_rewriter, t),
-                rewrite_box(rewriter, node_rewriter, e),
-            ),
-            Value(id, v) => Value(node_rewriter(id), v),
-            SpecVar(id, mid, vid, label) => SpecVar(node_rewriter(id), mid, vid, label),
-            Invalid(id) => Invalid(node_rewriter(id)),
+    /// Rewrites the expression and for unchanged sub-expressions, the node ids in the expression
+    pub fn rewrite_exp_and_node_id<F, G>(
+        exp: RcExp,
+        exp_rewriter: &mut F,
+        node_rewriter: &mut G,
+    ) -> RcExp
+    where
+        F: FnMut(RcExp) -> Result<RcExp, RcExp>,
+        G: FnMut(NodeId) -> Option<NodeId>,
+    {
+        ExpRewriter {
+            exp_rewriter,
+            node_rewriter,
+        }
+        .rewrite_exp(exp)
+    }
+
+    /// A function which can be used for `Exp::rewrite_node_id` to instantiate types in
+    /// an expression based on a type parameter instantiation.
+    pub fn instantiate_node(env: &GlobalEnv, id: NodeId, targs: &[Type]) -> Option<NodeId> {
+        if targs.is_empty() {
+            // shortcut
+            return None;
+        }
+        let node_ty = env.get_node_type(id);
+        let new_node_ty = node_ty.instantiate(targs);
+        let node_inst = env.get_node_instantiation_opt(id);
+        let new_node_inst = node_inst.clone().map(|i| Type::instantiate_vec(i, targs));
+        if node_ty != new_node_ty || node_inst != new_node_inst {
+            let loc = env.get_node_loc(id);
+            let new_id = env.new_node(loc, new_node_ty);
+            if let Some(inst) = new_node_inst {
+                env.set_node_instantiation(new_id, inst);
+            }
+            Some(new_id)
+        } else {
+            None
         }
     }
 
@@ -705,6 +676,24 @@ impl Exp {
             }
             _ => {}
         });
+    }
+}
+
+struct ExpRewriter<'a> {
+    exp_rewriter: &'a mut dyn FnMut(RcExp) -> Result<RcExp, RcExp>,
+    node_rewriter: &'a mut dyn FnMut(NodeId) -> Option<NodeId>,
+}
+
+impl<'a> ExpRewriterFunctions for ExpRewriter<'a> {
+    fn rewrite_exp(&mut self, exp: RcExp) -> RcExp {
+        match (*self.exp_rewriter)(exp) {
+            Ok(new_exp) => new_exp,
+            Err(old_exp) => self.rewrite_exp_descent(old_exp),
+        }
+    }
+
+    fn rewrite_node_id(&mut self, id: NodeId) -> Option<NodeId> {
+        (*self.node_rewriter)(id)
     }
 }
 
@@ -790,7 +779,7 @@ pub type MemoryLabel = GlobalId;
 pub struct LocalVarDecl {
     pub id: NodeId,
     pub name: Symbol,
-    pub binding: Option<Exp>,
+    pub binding: Option<RcExp>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -1134,7 +1123,7 @@ impl<'a> ExpDisplay<'a> {
             .join(", ")
     }
 
-    fn fmt_quant_decls(&self, decls: &[(LocalVarDecl, Exp)]) -> String {
+    fn fmt_quant_decls(&self, decls: &[(LocalVarDecl, RcExp)]) -> String {
         decls
             .iter()
             .map(|(decl, domain)| {
@@ -1147,7 +1136,7 @@ impl<'a> ExpDisplay<'a> {
             .join(", ")
     }
 
-    fn fmt_exps(&self, exps: &[Exp]) -> String {
+    fn fmt_exps(&self, exps: &[RcExp]) -> String {
         exps.iter()
             .map(|e| e.display(self.env).to_string())
             .join(", ")
