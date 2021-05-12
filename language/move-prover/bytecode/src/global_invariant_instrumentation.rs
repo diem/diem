@@ -128,10 +128,10 @@ impl<'a> Instrumenter<'a> {
         let env = self.builder.global_env();
         let mut invariants = BTreeSet::new();
         let mut invariants_for_modified_memory = BTreeSet::new();
-        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()) {
+        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()).iter() {
             invariants.extend(env.get_global_invariants_for_memory(mem));
         }
-        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()) {
+        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()).iter() {
             invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(mem));
         }
 

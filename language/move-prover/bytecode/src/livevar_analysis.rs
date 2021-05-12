@@ -5,7 +5,8 @@
 // computation of new Destroy instructions.
 
 use crate::{
-    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},

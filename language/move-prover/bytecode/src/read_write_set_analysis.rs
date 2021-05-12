@@ -13,7 +13,8 @@ use crate::{
     access_path::{AbsAddr, AccessPath, Addr, FootprintDomain, Offset, Root},
     access_path_trie::AccessPathTrie,
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
-    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Constant, Operation},
@@ -98,7 +99,7 @@ impl ReadWriteSetState {
                 formal_i.is_formal(),
                 "Arity mistmatch between caller and callee"
             );
-            if let Some(node) = new_callee_accesses.0.remove(&formal_i) {
+            if let Some(node) = new_callee_accesses.remove(&formal_i) {
                 let formal_ap = AccessPath::new(formal_i, vec![]);
                 for v in formal_ap.prepend_addrs(actual_v).iter() {
                     match v {
@@ -126,7 +127,7 @@ impl ReadWriteSetState {
         // (4) bind return values in caller locals
         for (i, ret) in returns.iter().enumerate() {
             let retvar_i = Root::Return(i);
-            if let Some(node) = new_callee_locals.0.remove(&retvar_i) {
+            if let Some(node) = new_callee_locals.remove(&retvar_i) {
                 self.locals.bind_local_node(*ret, node, caller_fun_env)
             }
         }

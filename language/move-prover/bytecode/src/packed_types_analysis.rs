@@ -3,9 +3,8 @@
 
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
-    dataflow_analysis::{
-        AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
-    },
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult, SetDomain},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
@@ -45,14 +44,14 @@ pub fn get_packed_types(
                         "Invariant violation: usage analysis should be run before calling this",
                     );
 
-                packed_types.extend(annotation.closed_types.0.clone());
+                packed_types.extend(annotation.closed_types.clone());
                 // instantiate the tx script open types with XUS, XDX
                 if is_script {
                     let num_type_parameters = func_env.get_type_parameters().len();
                     assert!(num_type_parameters <= 1, "Assuming that transaction scripts have <= 1 type parameters for simplicity. If there can be >1 type parameter, the code here must account for all permutations of type params");
 
                     if num_type_parameters == 1 {
-                        for open_ty in &annotation.open_types.0 {
+                        for open_ty in annotation.open_types.iter() {
                             for coin_ty in &coin_types {
                                 match open_ty.instantiate(vec![coin_ty.clone()].as_slice()).into_type_tag(env) {
                                     Some(TypeTag::Struct(s)) =>     {
@@ -126,11 +125,11 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
                         .get::<PackedTypesState>(mid.qualified(*fid), &FunctionVariant::Baseline)
                     {
                         // add closed types
-                        for ty in &summary.closed_types.0 {
+                        for ty in summary.closed_types.iter() {
                             state.closed_types.insert(ty.clone());
                         }
                         // instantiate open types with the type parameters at this call site
-                        for open_ty in &summary.open_types.0 {
+                        for open_ty in summary.open_types.iter() {
                             let specialized_ty = open_ty.instantiate(types);
                             if specialized_ty.is_open() {
                                 state.open_types.insert(specialized_ty);

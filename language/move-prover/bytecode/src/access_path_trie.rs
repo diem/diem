@@ -8,11 +8,11 @@
 
 use crate::{
     access_path::{AbsAddr, AccessPath, AccessPathMap, FootprintDomain, Offset, Root},
-    dataflow_analysis::{AbstractDomain, JoinResult, MapDomain},
+    dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
 };
+use im::ordmap::Entry;
 use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 use std::{
-    collections::btree_map::Entry,
     fmt,
     fmt::Formatter,
     ops::{Deref, DerefMut},
@@ -99,12 +99,12 @@ impl<T: FootprintDomain> TrieNode<T> {
             None => (),
         }
         let mut acc = Self::new_opt(self.data);
-        for (mut k, v) in self.children.0.into_iter() {
+        for (mut k, v) in self.children.into_iter() {
             k.substitute_footprint(type_actuals);
             acc.children.insert_join(
                 k,
                 v.substitute_footprint(actuals, type_actuals, sub_map, sub_data),
-            )
+            );
         }
         acc
     }
@@ -114,9 +114,7 @@ impl<T: FootprintDomain> TrieNode<T> {
     where
         F: FnMut(&mut TrieNode<T>) + Copy,
     {
-        for (_k, v) in self.children.iter_mut() {
-            v.iter_values(f)
-        }
+        self.children.update_values(f);
     }
 
     /// Apply `f` to all (access path, Option<data>) pairs encoded in `self`
@@ -147,7 +145,7 @@ impl<T: FootprintDomain> AbstractDomain for TrieNode<T> {
     }
 }
 
-impl<T: FootprintDomain> AbstractDomain for AccessPathTrie<T> {
+impl<T: FootprintDomain + PartialEq> AbstractDomain for AccessPathTrie<T> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             return JoinResult::Unchanged;
@@ -323,10 +321,10 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
         F: FnMut(&mut T, &[AbsAddr], &[Type], &dyn AccessPathMap<AbsAddr>) + Copy,
     {
         let mut acc = Self::default();
-        for (mut k, v) in self.0 .0.into_iter() {
+        for (mut k, v) in self.0.into_iter() {
             k.substitute_footprint(actuals, type_actuals, sub_map);
             let new_v = v.substitute_footprint(actuals, type_actuals, sub_map, sub_data);
-            acc.0.insert_join(k, new_v)
+            acc.insert_join(k, new_v);
         }
         acc
     }
@@ -348,10 +346,10 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     where
         F: FnMut(&mut TrieNode<T>) + Copy,
     {
-        for (_, mut node) in self.0.iter_mut() {
-            f(&mut node);
-            node.iter_values(f)
-        }
+        self.update_values(|node| {
+            f(node);
+            node.iter_values(f);
+        });
     }
 
     /// Apply `f` to each (access path, Option(data)) pair encoded in `self`
@@ -359,7 +357,7 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     where
         F: FnMut(&AccessPath, &Option<&T>),
     {
-        for (root, node) in self.0.iter() {
+        for (root, node) in self.iter() {
             let ap = AccessPath::new_root(root.clone());
             f = node.iter_paths_opt(&ap, f)
         }

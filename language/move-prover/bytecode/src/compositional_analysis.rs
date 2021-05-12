@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    dataflow_analysis::{AbstractDomain, DataflowAnalysis},
+    dataflow_analysis::DataflowAnalysis,
+    dataflow_domains::AbstractDomain,
     function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,

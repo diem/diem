@@ -4,7 +4,7 @@
 // Final phase of cleanup and optimization.
 
 use crate::{
-    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
@@ -16,6 +16,7 @@ use move_model::{
     native::{EVENT_EMIT_EVENT, VECTOR_BORROW_MUT},
 };
 
+use crate::dataflow_domains::{AbstractDomain, JoinResult};
 use std::collections::BTreeSet;
 
 pub struct CleanAndOptimizeProcessor();

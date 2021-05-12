@@ -45,6 +45,7 @@ petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
+rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
@@ -99,6 +100,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
+rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
@@ -152,6 +154,7 @@ petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
+rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
@@ -206,6 +209,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
+rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }

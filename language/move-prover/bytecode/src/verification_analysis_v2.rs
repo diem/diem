@@ -4,6 +4,7 @@
 //! Analysis which computes an annotation for each function whether
 
 use crate::{
+    dataflow_domains::SetDomain,
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     options::ProverOptions,
@@ -192,11 +193,13 @@ fn compute_funs_that_modify_inv(
     let mut funs_that_modify_some_inv: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
     for inv_id in target_invariants {
         // Collect the global state used by inv_id (this is computed in usage_analysis.rs)
-        let inv_mem_use = global_env
+        let inv_mem_use: SetDomain<_> = global_env
             .get_global_invariant(*inv_id)
             .unwrap()
             .mem_usage
-            .clone();
+            .iter()
+            .cloned()
+            .collect();
         // set of functions that modify state in inv_id that we are building
         let mut fun_id_set: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
         // Iterate over all functions in the module cluster

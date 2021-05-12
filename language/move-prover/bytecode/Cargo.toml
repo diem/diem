@@ -21,6 +21,7 @@ move-core-types = { path = "../../move-core/types" }
 codespan = "0.8.0"
 codespan-reporting = { version = "0.8.0", features = ["serde", "serialization"] }
 num = "0.4.0"
+im = "15.0.0"
 itertools = "0.10.0"
 log = "0.4.14"
 serde = { version = "1.0.124", features = ["derive"] }

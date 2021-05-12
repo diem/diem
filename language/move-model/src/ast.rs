@@ -327,7 +327,7 @@ pub struct GlobalInvariant {
 /// A type alias for temporaries. Those are locals used in bytecode.
 pub type TempIndex = usize;
 
-/// The type of expressions.
+/// The type of expression data.
 ///
 /// Expression layout follows the following design principles:
 ///
@@ -337,8 +337,6 @@ pub type TempIndex = usize;
 /// - Each expression has a unique node id assigned. This id allows to build attribute tables
 ///   for additional information, like expression type and source location. The id is globally
 ///   unique.
-/// - Sub-expressions are reference counted. This makes cloning of expressions on a shallow
-///   level cheaper which is important for the efficiency of expression rewriting.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExpData {
     /// Represents an invalid expression. This is used as a stub for algorithms which

@@ -3,9 +3,8 @@
 
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
-    dataflow_analysis::{
-        AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
-    },
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult, SetDomain},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
@@ -40,7 +39,7 @@ pub fn get_directly_modified_memory(target: &FunctionTarget) -> BTreeSet<Qualifi
 
 pub fn get_used_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedInstId<StructId>> {
+) -> &'env SetDomain<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -50,7 +49,7 @@ pub fn get_used_memory_inst<'env>(
 
 pub fn get_modified_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedInstId<StructId>> {
+) -> &'env SetDomain<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -60,7 +59,7 @@ pub fn get_modified_memory_inst<'env>(
 
 pub fn get_directly_modified_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedInstId<StructId>> {
+) -> &'env SetDomain<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -206,14 +205,12 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                         state.modified_memory.extend(
                             summary
                                 .modified_memory
-                                .0
                                 .iter()
                                 .map(|qid| qid.instantiate_ref(inst)),
                         );
                         state.used_memory.extend(
                             summary
                                 .used_memory
-                                .0
                                 .iter()
                                 .map(|qid| qid.instantiate_ref(inst)),
                         );

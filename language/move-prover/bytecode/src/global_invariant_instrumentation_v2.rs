@@ -166,12 +166,12 @@ impl<'a> Instrumenter<'a> {
         let mut invariants_for_modified_memory = BTreeSet::new();
         // get memory (list of structs) read or written by the function target, then find all invariants in loaded
         // modules that refer to that memory.
-        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()) {
+        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()).iter() {
             invariants_for_used_memory.extend(env.get_global_invariants_for_memory(mem));
         }
         // get memory (list of structs) written by function, find the invariants referring to that memory.
         // Also called "invariants updated by the function"
-        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()) {
+        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()).iter() {
             invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(mem));
         }
         let module_env = &self.builder.fun_env.module_env;

@@ -4,9 +4,8 @@
 //! Data flow analysis computing borrow information for preparation of memory_instrumentation.
 
 use crate::{
-    dataflow_analysis::{
-        AbstractDomain, DataflowAnalysis, JoinResult, MapDomain, SetDomain, TransferFunctions,
-    },
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult, MapDomain, SetDomain},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnnotation,
@@ -207,6 +206,7 @@ impl BorrowInfo {
             .entry(parent)
             .or_default()
             .insert((child, weight))
+            .is_none()
     }
 
     fn consolidate(&mut self) {
@@ -502,21 +502,18 @@ impl<'a> BorrowAnalysis<'a> {
             .into_iter()
             .map(remap)
             .collect();
-        state.borrowed_by = MapDomain(
-            std::mem::take(&mut state.borrowed_by)
-                .0
-                .into_iter()
-                .map(|(src, dests)| {
-                    (
-                        remap(src),
-                        dests
-                            .into_iter()
-                            .map(|(node, edges)| (remap(node), edges))
-                            .collect(),
-                    )
-                })
-                .collect(),
-        );
+        state.borrowed_by = std::mem::take(&mut state.borrowed_by)
+            .into_iter()
+            .map(|(src, dests)| {
+                (
+                    remap(src),
+                    dests
+                        .into_iter()
+                        .map(|(node, edges)| (remap(node), edges))
+                        .collect(),
+                )
+            })
+            .collect()
     }
 }
 

@@ -21,7 +21,7 @@
 //!```
 //!, the value of `a` will be `{ 0x1, Footprint(x/f) }` at program point 1.
 
-use crate::dataflow_analysis::{AbstractDomain, SetDomain};
+use crate::dataflow_domains::{AbstractDomain, SetDomain};
 use move_core_types::language_storage::StructTag;
 use move_model::{
     ast::TempIndex,
@@ -29,7 +29,10 @@ use move_model::{
     ty::{PrimitiveType, Type, TypeDisplayContext},
 };
 use num::BigUint;
-use std::{fmt, fmt::Formatter};
+use std::{
+    fmt,
+    fmt::{Debug, Formatter},
+};
 
 type Address = BigUint;
 
@@ -107,7 +110,7 @@ pub trait AccessPathMap<T: AbstractDomain> {
 }
 
 /// Trait for an abstract domain that can represent footprint values
-pub trait FootprintDomain: AbstractDomain {
+pub trait FootprintDomain: AbstractDomain + Clone + Debug + PartialEq + Sized {
     /// Create a footprint value for access path `ap`
     fn make_footprint(ap: AccessPath) -> Option<Self>;
 }
@@ -180,7 +183,7 @@ impl AbsAddr {
 
     /// Return `true` if `self` is a constant
     pub fn is_constant(&self) -> bool {
-        self.0.iter().all(|a| a.is_constant())
+        self.iter().all(|a| a.is_constant())
     }
 
     /// Substitute all occurences of Footprint(ap) in `self` by resolving the accesss path
@@ -192,7 +195,7 @@ impl AbsAddr {
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) {
         let mut acc = SetDomain::default();
-        for a in self.0.iter() {
+        for a in self.iter() {
             match a {
                 Addr::Footprint(ap) => {
                     acc.join(&ap.substitute_footprint(actuals, type_actuals, sub_map));
@@ -209,7 +212,7 @@ impl AbsAddr {
     /// of `self`
     pub fn add_struct_offset(self, mid: &ModuleId, sid: StructId, types: Vec<Type>) -> Self {
         let mut acc = Self::default();
-        for v in self.0.into_iter() {
+        for v in self.into_iter() {
             acc.insert(Addr::Footprint(v.add_struct_offset(
                 mid,
                 sid,
@@ -241,7 +244,7 @@ impl AbsAddr {
     /// value
     pub fn prepend(self, prefix: AccessPath) -> Self {
         let mut acc = Self::default();
-        for v in self.0.into_iter() {
+        for v in self.into_iter() {
             match v {
                 Addr::Footprint(ap) => {
                     let mut new_ap = ap.clone();

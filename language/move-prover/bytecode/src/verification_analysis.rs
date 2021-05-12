@@ -4,6 +4,7 @@
 //! Analysis which computes an annotation for each function whether it is verified or inlined.
 
 use crate::{
+    dataflow_domains::SetDomain,
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     options::ProverOptions,
@@ -157,12 +158,12 @@ fn check_friend_relation(fun_env: &FunctionEnv<'_>) {
 
 /// Compute the set of resources which are used in invariants which are target of
 /// verification.
-fn get_target_invariant_memory(env: &GlobalEnv) -> BTreeSet<QualifiedInstId<StructId>> {
-    let mut target_resources = BTreeSet::new();
+fn get_target_invariant_memory(env: &GlobalEnv) -> SetDomain<QualifiedInstId<StructId>> {
+    let mut target_resources = SetDomain::default();
     for module_env in env.get_modules() {
         if module_env.is_target() {
             let module_id = module_env.get_id();
-            let mentioned_resources: BTreeSet<QualifiedInstId<StructId>> = env
+            let mentioned_resources: SetDomain<QualifiedInstId<StructId>> = env
                 .get_global_invariants_by_module(module_id)
                 .iter()
                 .flat_map(|id| env.get_global_invariant(*id).unwrap().mem_usage.clone())
