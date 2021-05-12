@@ -123,10 +123,8 @@ pub enum Pointer {
     None,
     Global(AccountAddress),
     Local(TempIndex),
-    #[allow(dead_code)]
     RefWhole(TempIndex),
     RefField(TempIndex, usize),
-    #[allow(dead_code)]
     RefElement(TempIndex, usize),
 }
 
@@ -489,6 +487,24 @@ impl TypedValue {
             val: self.val,
             ptr: self.ptr,
         }
+    }
+
+    pub fn get_vector_element(self, elem_num: usize) -> Option<TypedValue> {
+        let elem_ty = self.ty.into_vector_elem();
+        let val = match self.val {
+            BaseValue::Vector(mut v) => {
+                if elem_num >= v.len() {
+                    return None;
+                }
+                v.remove(elem_num)
+            }
+            _ => unreachable!(),
+        };
+        Some(TypedValue {
+            ty: Type::Base(elem_ty),
+            val,
+            ptr: Pointer::None,
+        })
     }
 
     pub fn borrow_ref_vector_element(

@@ -254,7 +254,7 @@ pub fn interpret(
     }
 
     // execute and convert results
-    let vm = Runtime::new(env, &targets);
+    let vm = Runtime::new(env, &targets, verbose);
     let (vm_result, new_global_state) = vm.execute(fun_env, ty_args, args, global_state.clone());
     let serialized_vm_result = vm_result.map(|rets| {
         rets.into_iter()
