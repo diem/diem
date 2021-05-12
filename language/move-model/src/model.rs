@@ -58,7 +58,7 @@ use move_core_types::{
 
 use crate::{
     ast::{
-        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
+        ConditionKind, ExpData, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
         SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
     pragmas::{
@@ -70,6 +70,7 @@ use crate::{
 };
 
 // import and re-expose symbols
+use crate::ast::Exp;
 pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 
 // =================================================================================================
@@ -1597,7 +1598,7 @@ impl<'env> ModuleEnv<'env> {
             .collect();
         if include_specs {
             // Add any usage in specs.
-            let add_usage_of_exp = |usage: &mut BTreeSet<ModuleId>, exp: &Exp| {
+            let add_usage_of_exp = |usage: &mut BTreeSet<ModuleId>, exp: &ExpData| {
                 exp.module_usage(usage);
                 for node_id in exp.node_ids() {
                     self.env.get_node_type(node_id).module_usage(usage);

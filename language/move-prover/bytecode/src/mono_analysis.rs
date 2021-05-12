@@ -18,7 +18,7 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{Condition, ConditionKind, Exp, LocalVarDecl, MemoryLabel, QuantKind},
+    ast::{Condition, ConditionKind, Exp, ExpData, LocalVarDecl, MemoryLabel, QuantKind},
     exp_generator::ExpGenerator,
     model::{
         FunId, GlobalEnv, ModuleId, NodeId, QualifiedId, QualifiedInstId, SpecFunId, SpecVarId,
@@ -429,7 +429,7 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    fn analyze_exp(&mut self, exp: &Exp) {
+    fn analyze_exp(&mut self, exp: &ExpData) {
         exp.visit(&mut |e| {
             let node_id = e.node_id();
             self.add_type_root(&self.env.get_node_type(node_id));
@@ -437,7 +437,7 @@ impl<'a> Analyzer<'a> {
                 self.add_type_root(ty);
             }
             match e {
-                Exp::Call(node_id, ast::Operation::Function(mid, fid, _), _) => {
+                ExpData::Call(node_id, ast::Operation::Function(mid, fid, _), _) => {
                     let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
                     // Only if this call has not been processed yet, queue it for future processing.
                     let module = self.env.get_module(*mid);
@@ -456,7 +456,7 @@ impl<'a> Analyzer<'a> {
                         }
                     }
                 }
-                Exp::SpecVar(node_id, mid, sid, _) => {
+                ExpData::SpecVar(node_id, mid, sid, _) => {
                     let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
                     let qid = mid.qualified(*sid);
                     self.info.spec_vars.entry(qid).or_default().insert(actuals);
@@ -542,8 +542,8 @@ where
 impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
     fn rewrite_type_quant(&mut self, exp: Exp) -> Exp {
         let env = self.generator.global_env();
-        exp.rewrite(&mut |e| {
-            if let Exp::Quant(node_id, kind, ranges, triggers, condition, body) = &e {
+        ExpData::rewrite(exp, &mut |e| {
+            if let ExpData::Quant(node_id, kind, ranges, triggers, condition, body) = e.as_ref() {
                 for (i, (var, range)) in ranges.iter().enumerate() {
                     let ty = env.get_node_type(range.node_id());
                     if let Type::TypeDomain(bt) = ty.skip_reference() {
@@ -554,33 +554,30 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                                     &env.get_node_loc(*node_id),
                                     "Cannot have triggers with type value ranges",
                                 );
-                                return (false, e);
+                                return Err(e);
                             }
                             if kind.is_choice() {
                                 env.error(
                                     &env.get_node_loc(*node_id),
                                     "Type quantification cannot be used with a choice operator",
                                 );
-                                return (false, e);
+                                return Err(e);
                             }
                             let mut remaining_ranges = ranges.clone();
                             remaining_ranges.remove(i);
-                            return (
-                                true,
-                                self.eliminate_type_quant(
-                                    *node_id,
-                                    *kind,
-                                    var.name,
-                                    remaining_ranges,
-                                    condition.clone(),
-                                    body.clone(),
-                                ),
-                            );
+                            return Ok(self.eliminate_type_quant(
+                                *node_id,
+                                *kind,
+                                var.name,
+                                remaining_ranges,
+                                condition.clone(),
+                                body.clone(),
+                            ));
                         }
                     }
                 }
             }
-            (false, e)
+            Err(e)
         })
     }
 
@@ -590,30 +587,26 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
         kind: QuantKind,
         name: Symbol,
         ranges: Vec<(LocalVarDecl, Exp)>,
-        condition: Option<Box<Exp>>,
-        body: Box<Exp>,
+        condition: Option<Exp>,
+        body: Exp,
     ) -> Exp {
         let env = self.generator.global_env();
 
         // Create the effective condition of the eliminated quantifier.
         let body = if !ranges.is_empty() {
-            Exp::Quant(node_id, kind, ranges, vec![], condition, body)
+            ExpData::Quant(node_id, kind, ranges, vec![], condition, body).into_exp()
         } else {
             match condition {
                 Some(c) => match kind {
-                    QuantKind::Forall => Exp::Call(
-                        node_id,
-                        ast::Operation::Implies,
-                        vec![c.as_ref().clone(), *body],
-                    ),
-                    QuantKind::Exists => Exp::Call(
-                        node_id,
-                        ast::Operation::And,
-                        vec![c.as_ref().clone(), *body],
-                    ),
+                    QuantKind::Forall => {
+                        ExpData::Call(node_id, ast::Operation::Implies, vec![c, body]).into_exp()
+                    }
+                    QuantKind::Exists => {
+                        ExpData::Call(node_id, ast::Operation::And, vec![c, body]).into_exp()
+                    }
                     _ => unreachable!(),
                 },
-                _ => *body,
+                _ => body,
             }
         };
 
@@ -634,7 +627,7 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                 self.collect_type_local_insts(mono_info.as_ref(), &mut collected, name, ty);
             }
             match e {
-                Exp::LocalVar(_, n) => {
+                ExpData::LocalVar(_, n) => {
                     if *n == name {
                         env.error(
                             &env.get_node_loc(node_id),
@@ -645,7 +638,7 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                         )
                     }
                 }
-                Exp::Call(_, ast::Operation::Function(mid, fid, _), ..) => {
+                ExpData::Call(_, ast::Operation::Function(mid, fid, _), ..) => {
                     // Collect instantiations of this function for `name`.
                     self.collect_instances(
                         &mut collected,
@@ -666,23 +659,31 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
             .into_iter()
             .map(|ty| {
                 let mut node_rewriter = |id: NodeId| {
-                    let loc = env.get_node_loc(id);
-                    let new_ty = env.get_node_type(id).replace_type_local(name, ty.clone());
-                    let new_inst = env
-                        .get_node_instantiation(id)
-                        .into_iter()
-                        .map(|t| t.replace_type_local(name, ty.clone()))
-                        .collect_vec();
-                    let new_id = env.new_node(loc, new_ty);
-                    env.set_node_instantiation(new_id, new_inst);
-                    new_id
+                    let node_ty = env.get_node_type(id);
+                    let new_node_ty = node_ty.replace_type_local(name, ty.clone());
+                    let node_inst = env.get_node_instantiation_opt(id);
+                    let new_node_inst = node_inst.clone().map(|i| {
+                        i.iter()
+                            .map(|t| t.replace_type_local(name, ty.clone()))
+                            .collect_vec()
+                    });
+                    if node_ty != new_node_ty || node_inst != new_node_inst {
+                        let loc = env.get_node_loc(id);
+                        let new_id = env.new_node(loc, new_node_ty);
+                        if let Some(inst) = new_node_inst {
+                            env.set_node_instantiation(new_id, inst);
+                        }
+                        Some(new_id)
+                    } else {
+                        None
+                    }
                 };
-                let body = body.clone().rewrite_node_id(&mut node_rewriter);
+                let body = ExpData::rewrite_node_id(body.clone(), &mut node_rewriter);
                 // Collect memory used by the expanded body. We need to rewrite SaveMem
                 // instructions to point to the instantiated memory.
                 body.visit(&mut |e| {
                     use ast::Operation::*;
-                    use Exp::*;
+                    use ExpData::*;
                     match e {
                         Call(id, Global(Some(label)), _) | Call(id, Exists(Some(label)), _) => {
                             let inst = env.get_node_instantiation(*id);

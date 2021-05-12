@@ -9,7 +9,7 @@ use crate::{
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::{Exp, Spec},
+    ast::Spec,
     model::{
         FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId,
         TypeParameter,
@@ -19,7 +19,10 @@ use move_model::{
 };
 
 use crate::function_target_pipeline::FunctionVariant;
-use move_model::{ast::TempIndex, model::QualifiedInstId};
+use move_model::{
+    ast::{Exp, TempIndex},
+    model::QualifiedInstId,
+};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},

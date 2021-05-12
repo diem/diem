@@ -10,7 +10,7 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 
 use move_model::{
-    ast::{Exp, LocalVarDecl, Operation, Value},
+    ast::{ExpData, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
     emit, emitln,
     model::{FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructId},
@@ -30,7 +30,7 @@ use crate::{
 use bytecode::mono_analysis::MonoInfo;
 use codespan_reporting::diagnostic::Severity;
 use move_model::{
-    ast::{MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
+    ast::{Exp, MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
     model::{QualifiedInstId, SpecVarId},
 };
 use std::cell::RefCell;
@@ -543,20 +543,20 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_exp(&self, exp: &Exp) {
-        match exp {
-            Exp::Value(node_id, val) => {
+        match exp.as_ref() {
+            ExpData::Value(node_id, val) => {
                 self.set_writer_location(*node_id);
                 self.translate_value(*node_id, val);
             }
-            Exp::LocalVar(node_id, name) => {
+            ExpData::LocalVar(node_id, name) => {
                 self.set_writer_location(*node_id);
                 self.translate_local_var(*node_id, *name);
             }
-            Exp::Temporary(node_id, idx) => {
+            ExpData::Temporary(node_id, idx) => {
                 self.set_writer_location(*node_id);
                 self.translate_temporary(*node_id, *idx);
             }
-            Exp::SpecVar(node_id, module_id, var_id, mem_label) => {
+            ExpData::SpecVar(node_id, module_id, var_id, mem_label) => {
                 let inst = &self.get_node_instantiation(*node_id);
                 self.set_writer_location(*node_id);
                 let module_env = self.env.get_module(*module_id);
@@ -566,32 +566,32 @@ impl<'env> SpecTranslator<'env> {
                     &boogie_spec_var_name(&module_env, spec_var.name, inst, mem_label)
                 );
             }
-            Exp::Call(node_id, oper, args) => {
+            ExpData::Call(node_id, oper, args) => {
                 self.set_writer_location(*node_id);
                 self.translate_call(*node_id, oper, args);
             }
-            Exp::Invoke(node_id, ..) => {
+            ExpData::Invoke(node_id, ..) => {
                 self.error(&self.env.get_node_loc(*node_id), "Invoke not yet supported")
             }
-            Exp::Lambda(node_id, ..) => self.error(
+            ExpData::Lambda(node_id, ..) => self.error(
                 &self.env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
-            Exp::Quant(node_id, kind, ranges, _, _, exp) if kind.is_choice() => {
+            ExpData::Quant(node_id, kind, ranges, _, _, exp) if kind.is_choice() => {
                 // The parser ensures that len(ranges) = 1 and triggers and condition are
                 // not present.
                 self.set_writer_location(*node_id);
                 self.translate_choice(*node_id, *kind, &ranges[0], exp)
             }
-            Exp::Quant(node_id, kind, ranges, triggers, condition, exp) => {
+            ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
                 self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
             }
-            Exp::Block(node_id, vars, scope) => {
+            ExpData::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
                 self.translate_block(*node_id, vars, scope)
             }
-            Exp::IfElse(node_id, cond, on_true, on_false) => {
+            ExpData::IfElse(node_id, cond, on_true, on_false) => {
                 self.set_writer_location(*node_id);
                 emit!(self.writer, "if (");
                 self.translate_exp(cond);
@@ -600,7 +600,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, " else ");
                 self.translate_exp_parenthesised(on_false);
             }
-            Exp::Invalid(_) => panic!("unexpected error expression"),
+            ExpData::Invalid(_) => panic!("unexpected error expression"),
         }
     }
 
@@ -1029,7 +1029,7 @@ impl<'env> SpecTranslator<'env> {
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
         triggers: &[Vec<Exp>],
-        condition: &Option<Box<Exp>>,
+        condition: &Option<Exp>,
         body: &Exp,
     ) {
         assert!(!kind.is_choice());
@@ -1264,11 +1264,11 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_identical(&self, args: &[Exp]) {
-        use Exp::*;
+        use ExpData::*;
         // If both arguments are &mut temporaries, we just directly make them equal. This allows
         // a more efficient representation of equality between $Mutation objects. Otherwise
         // we translate it the default way with automatic reference removal.
-        match (&args[0], &args[1]) {
+        match (&args[0].as_ref(), &args[1].as_ref()) {
             (Temporary(id1, idx1), Temporary(id2, idx2))
                 if self.get_node_type(*id1).is_reference()
                     && self.get_node_type(*id2).is_reference() =>
@@ -1323,8 +1323,8 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_well_formed(&self, exp: &Exp) {
         let ty = self.get_node_type(exp.node_id());
-        match exp {
-            Exp::Temporary(_, idx) => {
+        match exp.as_ref() {
+            ExpData::Temporary(_, idx) => {
                 // For the special case of a temporary which can represent a
                 // &mut, skip the normal translation of `exp` which would do automatic
                 // dereferencing. Instead let boogie_well_formed_expr handle the
@@ -1336,7 +1336,7 @@ impl<'env> SpecTranslator<'env> {
                     emit!(self.writer, "true");
                 }
             }
-            Exp::LocalVar(_, sym) => {
+            ExpData::LocalVar(_, sym) => {
                 // For specification locals (which never can be references) directly emit them.
                 let check = boogie_well_formed_expr(
                     self.env,

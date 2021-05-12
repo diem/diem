@@ -26,15 +26,15 @@ use move_lang::{
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, GlobalInvariant, ModuleName, Operation, PropertyBag,
-        PropertyValue, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl,
-        SpecVarDecl, Value,
+        Condition, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, Operation,
+        PropertyBag, PropertyValue, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget,
+        SpecFunDecl, SpecVarDecl, Value,
     },
     builder::{
         exp_translator::ExpTranslator,
         model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
-    exp_rewriter::{ExpRewriter, RewriteTarget},
+    exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{
         AbilityConstraint, FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc,
         NamedConstantData, NamedConstantId, NodeId, QualifiedInstId, SchemaId, SpecFunId,
@@ -739,7 +739,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         mid.qualified(*fid),
                     );
                 });
-                self.spec_funs[self.spec_fun_index].body = Some(translated);
+                self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
             }
         }
         self.spec_fun_index += 1;
@@ -777,8 +777,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             return self.spec_funs[spec_fun_idx].is_native && no_mut_ref_param;
         };
         let mut is_pure = true;
-        body.visit(&mut |e: &Exp| {
-            if let Exp::Call(_, Operation::Function(mid, fid, _), _) = e {
+        body.visit(&mut |e: &ExpData| {
+            if let ExpData::Call(_, Operation::Function(mid, fid, _), _) = e {
                 if mid.to_usize() < self.module_id.to_usize() {
                     // This is calling a function from another module we already have
                     // translated. In this case, the impurity has already been propagated
@@ -945,7 +945,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 loc: loc.clone(),
                 kind,
                 properties: Default::default(),
-                exp: def,
+                exp: def.into_exp(),
                 additional_exps: vec![],
             })
         })
@@ -1315,9 +1315,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
 
             // Next check for old(..) and Operation::Result
-            let mut visitor = |e: &Exp| {
-                if let Exp::Call(id, Operation::Old, ..)
-                | Exp::Call(id, Operation::Result(..), ..) = e
+            let mut visitor = |e: &ExpData| {
+                if let ExpData::Call(id, Operation::Old, ..)
+                | ExpData::Call(id, Operation::Result(..), ..) = e
                 {
                     let label_cond = (
                         cond.loc.clone(),
@@ -1383,16 +1383,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let mut replacer = |id: NodeId, target: RewriteTarget| {
                     if let RewriteTarget::LocalVar(name) = target {
                         if let Some(unique_name) = let_substitution.get(&name) {
-                            return Some(Exp::LocalVar(id, *unique_name));
+                            return Some(ExpData::LocalVar(id, *unique_name).into_exp());
                         }
                     }
                     None
                 };
                 let mut rewriter = ExpRewriter::new(&self.parent.env, &mut replacer);
-                let exp = rewriter.rewrite(&exp);
+                let exp = rewriter.rewrite_exp(exp);
                 let additional_exps = additional_exps
                     .into_iter()
-                    .map(|e| rewriter.rewrite(&e))
+                    .map(|e| rewriter.rewrite_exp(e))
                     .collect_vec();
                 cond = Condition {
                     loc,
@@ -1529,17 +1529,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
         let (translated, translated_additional) = match kind {
             ConditionKind::AbortsIf => (
-                et.translate_exp(exp, &expected_type),
+                et.translate_exp(exp, &expected_type).into_exp(),
                 additional_exps
                     .iter()
-                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .map(|code| {
+                        et.translate_exp(code, &Type::Primitive(PrimitiveType::Num))
+                            .into_exp()
+                    })
                     .collect_vec(),
             ),
             ConditionKind::AbortsWith => {
                 // Parser has created a dummy exp, codes are all in additional_exps
                 let mut exps = additional_exps
                     .iter()
-                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .map(|code| {
+                        et.translate_exp(code, &Type::Primitive(PrimitiveType::Num))
+                            .into_exp()
+                    })
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
@@ -1548,7 +1554,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // Parser has created a dummy exp, targets are all in additional_exps
                 let mut exps = additional_exps
                     .iter()
-                    .map(|target| et.translate_modify_target(target))
+                    .map(|target| et.translate_modify_target(target).into_exp())
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
@@ -1559,11 +1565,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 //       should have type T.
                 let (_, first) = et.translate_exp_free(exp);
                 let (_, second) = et.translate_exp_free(&additional_exps[0]);
-                let mut exps = vec![second];
+                let mut exps = vec![second.into_exp()];
                 if additional_exps.len() > 1 {
-                    exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE));
+                    exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE).into_exp());
                 }
-                (first, exps)
+                (first.into_exp(), exps)
             }
             _ => {
                 if !additional_exps.is_empty() {
@@ -1572,7 +1578,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
                    );
                 }
-                (et.translate_exp(exp, &expected_type), vec![])
+                (et.translate_exp(exp, &expected_type).into_exp(), vec![])
             }
         };
         et.finalize_types();
@@ -1737,7 +1743,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             let translated = et.translate_seq(&loc, seq, &result_type);
             et.finalize_types();
-            self.spec_funs[self.spec_fun_index].body = Some(translated);
+            self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
         }
         self.spec_fun_index += 1;
     }
@@ -2008,7 +2014,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 rhs,
             ) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
-                let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE);
+                let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE).into_exp();
                 et.finalize_types();
                 let path_cond = Some(self.extend_path_condition(&loc, path_cond, lhs_exp));
                 self.def_ana_schema_exp_oper(
@@ -2050,7 +2056,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             EA::Exp_::IfElse(c, t, e) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
-                let c_exp = et.translate_exp(c, &BOOL_TYPE);
+                let c_exp = et.translate_exp(c, &BOOL_TYPE).into_exp();
                 et.finalize_types();
                 let t_path_cond =
                     Some(self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone()));
@@ -2064,7 +2070,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     t,
                 );
                 let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
-                let not_c_exp = Exp::Call(node_id, Operation::Not, vec![c_exp]);
+                let not_c_exp = ExpData::Call(node_id, Operation::Not, vec![c_exp]).into_exp();
                 let e_path_cond = Some(self.extend_path_condition(&loc, path_cond, not_c_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
@@ -2180,7 +2186,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         // Check the expression in the argument list.
                         // Note we currently only use the vars defined so far in this context. Variables
                         // which are introduced by schemas after the inclusion of this one are not in scope.
-                        let exp = et.translate_exp(exp, &schema_type);
+                        let exp = et.translate_exp(exp, &schema_type).into_exp();
                         et.finalize_types();
                         (schema_sym, exp)
                     })
@@ -2210,13 +2216,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // Put into argument map.
                 let node_id = et.new_node_id_with_type_loc(&entry.type_, loc);
                 let exp = if let Some(oper) = &entry.operation {
-                    Exp::Call(node_id, oper.clone(), vec![])
+                    ExpData::Call(node_id, oper.clone(), vec![])
                 } else if let Some(index) = &entry.temp_index {
-                    Exp::Temporary(node_id, *index)
+                    ExpData::Temporary(node_id, *index)
                 } else {
-                    Exp::LocalVar(node_id, *name)
+                    ExpData::LocalVar(node_id, *name)
                 };
-                argument_map.insert(*name, exp);
+                argument_map.insert(*name, exp.into_exp());
             } else if allow_new_vars {
                 // Name does not yet exists in inclusion context, but is allowed to be introduced.
                 // This happens if we include a schema in another schema.
@@ -2264,7 +2270,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             };
             let mut rewriter =
                 ExpRewriter::new(self.parent.env, &mut replacer).set_type_args(type_arguments);
-            let mut exp = rewriter.rewrite(exp);
+            let mut exp = rewriter.rewrite_exp(exp.to_owned());
             let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
                 // There is a path condition to be added. This is only possible for proper
@@ -2323,7 +2329,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let env = &self.parent.env;
         let path_cond_loc = env.get_node_loc(node_id);
         let new_node_id = env.new_node(path_cond_loc, BOOL_TYPE.clone());
-        Exp::Call(new_node_id, oper, vec![cond, exp])
+        ExpData::Call(new_node_id, oper, vec![cond, exp]).into_exp()
     }
 
     /// Creates an expression translator for use in schema expression. This defines the context
@@ -2367,7 +2373,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn extend_path_condition(&mut self, loc: &Loc, path_cond: Option<Exp>, exp: Exp) -> Exp {
         if let Some(cond) = path_cond {
             let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
-            Exp::Call(node_id, Operation::And, vec![cond, exp])
+            ExpData::Call(node_id, Operation::And, vec![cond, exp]).into_exp()
         } else {
             exp
         }
@@ -2622,20 +2628,20 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn compute_state_usage_for_exp(
         &mut self,
         mut visited_opt: Option<&mut BTreeSet<usize>>,
-        exp: &Exp,
+        exp: &ExpData,
     ) -> (
         BTreeSet<QualifiedInstId<SpecVarId>>,
         BTreeSet<QualifiedInstId<StructId>>,
     ) {
         let mut used_spec_vars = BTreeSet::new();
         let mut used_memory = BTreeSet::new();
-        exp.visit(&mut |e: &Exp| {
+        exp.visit(&mut |e: &ExpData| {
             match e {
-                Exp::SpecVar(id, mid, vid, _) => {
+                ExpData::SpecVar(id, mid, vid, _) => {
                     let inst = self.parent.env.get_node_instantiation(*id);
                     used_spec_vars.insert(mid.qualified_inst(*vid, inst));
                 }
-                Exp::Call(id, Operation::Function(mid, fid, _), _) => {
+                ExpData::Call(id, Operation::Function(mid, fid, _), _) => {
                     let inst = self.parent.env.get_node_instantiation(*id);
                     // Extend used memory with that of called functions, after applying type
                     // instantiation of this call.
@@ -2679,8 +2685,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         );
                     }
                 }
-                Exp::Call(node_id, Operation::Global(_), _)
-                | Exp::Call(node_id, Operation::Exists(_), _) => {
+                ExpData::Call(node_id, Operation::Global(_), _)
+                | ExpData::Call(node_id, Operation::Exists(_), _) => {
                     if !self.parent.env.has_errors() {
                         // We would crash if the type is not valid, so only do this if no errors
                         // have been reported so far.

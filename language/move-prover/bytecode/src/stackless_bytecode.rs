@@ -5,8 +5,8 @@ use crate::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::{Exp, MemoryLabel, TempIndex},
-    exp_rewriter::{ExpRewriter, RewriteTarget},
+    ast::{Exp, ExpData, MemoryLabel, TempIndex},
+    exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{FunId, GlobalEnv, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
     ty::{Type, TypeDisplayContext},
 };
@@ -514,12 +514,12 @@ impl Bytecode {
     {
         let mut replacer = |node_id: NodeId, target: RewriteTarget| {
             if let RewriteTarget::Temporary(idx) = target {
-                Some(Exp::Temporary(node_id, f(idx)))
+                Some(ExpData::Temporary(node_id, f(idx)).into_exp())
             } else {
                 None
             }
         };
-        ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp)
+        ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite_exp(exp)
     }
 
     /// Return the temporaries this instruction modifies and how the temporaries are modified.

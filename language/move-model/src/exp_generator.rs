@@ -4,7 +4,7 @@
 use itertools::Itertools;
 
 use crate::{
-    ast::{Exp, LocalVarDecl, Operation, QuantKind, TempIndex, Value},
+    ast::{Exp, ExpData, LocalVarDecl, Operation, QuantKind, TempIndex, Value},
     model::{
         FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, QualifiedInstId, StructId,
     },
@@ -58,13 +58,13 @@ pub trait ExpGenerator<'env> {
     /// Make a boolean constant expression.
     fn mk_bool_const(&self, value: bool) -> Exp {
         let node_id = self.new_node(BOOL_TYPE.clone(), None);
-        Exp::Value(node_id, Value::Bool(value))
+        ExpData::Value(node_id, Value::Bool(value)).into_exp()
     }
 
     /// Makes a Call expression.
     fn mk_call(&self, ty: &Type, oper: Operation, args: Vec<Exp>) -> Exp {
         let node_id = self.new_node(ty.clone(), None);
-        Exp::Call(node_id, oper, args)
+        ExpData::Call(node_id, oper, args).into_exp()
     }
 
     /// Makes a Call expression with type instantiation.
@@ -76,18 +76,19 @@ pub trait ExpGenerator<'env> {
         args: Vec<Exp>,
     ) -> Exp {
         let node_id = self.new_node(ty.clone(), Some(inst));
-        Exp::Call(node_id, oper, args)
+        ExpData::Call(node_id, oper, args).into_exp()
     }
 
     /// Makes an if-then-else expression.
-    fn mk_ite(&self, cond: Exp, if_true: Exp, if_false: Exp) -> Exp {
+    fn mk_ite(&self, cond: ExpData, if_true: ExpData, if_false: ExpData) -> Exp {
         let node_id = self.new_node(self.global_env().get_node_type(if_true.node_id()), None);
-        Exp::IfElse(
+        ExpData::IfElse(
             node_id,
-            Box::new(cond),
-            Box::new(if_true),
-            Box::new(if_false),
+            cond.into_exp(),
+            if_true.into_exp(),
+            if_false.into_exp(),
         )
+        .into_exp()
     }
 
     /// Makes a Call expression with boolean result type.
@@ -173,14 +174,17 @@ pub trait ExpGenerator<'env> {
         if let Some(body) = f(elem) {
             let range_decl = self.mk_decl(self.mk_symbol("$elem"), elem_ty.clone(), None);
             let node_id = self.new_node(BOOL_TYPE.clone(), None);
-            Some(Exp::Quant(
-                node_id,
-                kind,
-                vec![(range_decl, vector)],
-                vec![],
-                None,
-                Box::new(body),
-            ))
+            Some(
+                ExpData::Quant(
+                    node_id,
+                    kind,
+                    vec![(range_decl, vector)],
+                    vec![],
+                    None,
+                    body,
+                )
+                .into_exp(),
+            )
         } else {
             None
         }
@@ -194,7 +198,7 @@ pub trait ExpGenerator<'env> {
         kind: QuantKind,
         mem: QualifiedId<StructId>,
         f: &mut F,
-    ) -> Option<Exp>
+    ) -> Option<ExpData>
     where
         F: FnMut(Exp) -> Option<Exp>,
     {
@@ -216,16 +220,17 @@ pub trait ExpGenerator<'env> {
             let resource_domain_node_id =
                 self.new_node(resource_domain_ty, Some(vec![struct_ty.clone()]));
             let resource_domain =
-                Exp::Call(resource_domain_node_id, Operation::ResourceDomain, vec![]);
+                ExpData::Call(resource_domain_node_id, Operation::ResourceDomain, vec![])
+                    .into_exp();
             let resource_decl = self.mk_decl(self.mk_symbol("$rsc"), struct_ty, None);
             let quant_node_id = self.new_node(BOOL_TYPE.clone(), None);
-            Some(Exp::Quant(
+            Some(ExpData::Quant(
                 quant_node_id,
                 kind,
                 vec![(resource_decl, resource_domain)],
                 vec![],
                 None,
-                Box::new(body),
+                body,
             ))
         } else {
             None
@@ -256,17 +261,21 @@ pub trait ExpGenerator<'env> {
             let resource_domain_node_id =
                 self.new_node(resource_domain_ty, Some(vec![struct_ty.clone()]));
             let resource_domain =
-                Exp::Call(resource_domain_node_id, Operation::ResourceDomain, vec![]);
+                ExpData::Call(resource_domain_node_id, Operation::ResourceDomain, vec![])
+                    .into_exp();
             let resource_decl = self.mk_decl(self.mk_symbol("$rsc"), struct_ty, None);
             let quant_node_id = self.new_node(BOOL_TYPE.clone(), None);
-            Some(Exp::Quant(
-                quant_node_id,
-                kind,
-                vec![(resource_decl, resource_domain)],
-                vec![],
-                None,
-                Box::new(body),
-            ))
+            Some(
+                ExpData::Quant(
+                    quant_node_id,
+                    kind,
+                    vec![(resource_decl, resource_domain)],
+                    vec![],
+                    None,
+                    body,
+                )
+                .into_exp(),
+            )
         } else {
             None
         }
@@ -291,14 +300,14 @@ pub trait ExpGenerator<'env> {
     fn mk_type_domain(&self, ty: Type) -> Exp {
         let domain_ty = Type::TypeDomain(Box::new(ty.clone()));
         let node_id = self.new_node(domain_ty, Some(vec![ty]));
-        Exp::Call(node_id, Operation::TypeDomain, vec![])
+        ExpData::Call(node_id, Operation::TypeDomain, vec![]).into_exp()
     }
 
     /// Makes an expression which selects a field from a struct.
     fn mk_field_select(&self, field_env: &FieldEnv<'_>, targs: &[Type], exp: Exp) -> Exp {
         let ty = field_env.get_type().instantiate(targs);
         let node_id = self.new_node(ty, None);
-        Exp::Call(
+        ExpData::Call(
             node_id,
             Operation::Select(
                 field_env.struct_env.module_env.get_id(),
@@ -307,20 +316,21 @@ pub trait ExpGenerator<'env> {
             ),
             vec![exp],
         )
+        .into_exp()
     }
 
     /// Makes an expression for a temporary.
     fn mk_temporary(&self, temp: TempIndex) -> Exp {
         let ty = self.get_local_type(temp);
         let node_id = self.new_node(ty, None);
-        Exp::Temporary(node_id, temp)
+        ExpData::Temporary(node_id, temp).into_exp()
     }
 
     /// Makes an expression for a named local.
     fn mk_local(&self, name: &str, ty: Type) -> Exp {
         let node_id = self.new_node(ty, None);
         let sym = self.mk_symbol(name);
-        Exp::LocalVar(node_id, sym)
+        ExpData::LocalVar(node_id, sym).into_exp()
     }
 
     /// Get's the memory associated with a Call(Global,..) or Call(Exists, ..) node. Crashes
