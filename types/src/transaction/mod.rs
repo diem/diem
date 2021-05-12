@@ -36,7 +36,6 @@ use std::{
 
 pub mod authenticator;
 mod change_set;
-pub mod diem_id_identifier;
 pub mod helpers;
 pub mod metadata;
 mod module;

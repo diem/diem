@@ -30,7 +30,7 @@ impl DiemId {
         }
     }
 
-    pub fn new_from_raw(
+    fn new_from_raw(
         user_identifier: &str,
         vasp_domain_identifier: &str,
     ) -> Result<Self, DiemIdParseError> {
@@ -64,14 +64,14 @@ impl FromStr for DiemId {
     type Err = DiemIdParseError;
 
     fn from_str(s: &str) -> Result<Self, DiemIdParseError> {
-        if !s.contains('@') {
-            return Err(DiemIdParseError);
-        };
-        let split = s.split('@');
-        let vec = split.collect::<Vec<&str>>();
-        DiemId::new_from_raw(&vec[0], &vec[1])
+        let index = s.find('@').ok_or_else(|| DiemIdParseError::new("DiemId does not have @".to_string()))?;
+        let split = s.split_at(index);
+        // let vec = split.collect::<Vec<&str>>();
+        DiemId::new_from_raw(split.0, split.1)
     }
 }
+
+impl std::error::Error for DiemIdParseError {}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct DiemIdUserIdentifier(Box<str>);
@@ -79,18 +79,29 @@ pub struct DiemIdUserIdentifier(Box<str>);
 impl DiemIdUserIdentifier {
     pub fn new(s: &str) -> Result<Self, DiemIdParseError> {
         if s.len() > 64 || s.is_empty() {
-            return Err(DiemIdParseError);
+            return Err(DiemIdParseError::new(
+                "Invalid length for user identifier".to_string(),
+            ));
         }
+
         let mut chars = s.chars();
         match chars.next() {
             Some('a'..='z') | Some('A'..='Z') | Some('0'..='9') => {}
-            Some(_) => return Err(DiemIdParseError),
-            None => return Err(DiemIdParseError),
+            Some(_) => {
+                return Err(DiemIdParseError::new(
+                    "Invalid user identifier input".to_string(),
+                ))
+            }
+            None => {
+                return Err(DiemIdParseError::new(
+                    "Invalid user identifier input".to_string(),
+                ))
+            }
         }
         for c in chars {
             match c {
                 'a'..='z' | 'A'..='Z' | '0'..='9' | '.' => {}
-                _ => return Err(DiemIdParseError),
+                _ => return Err(DiemIdParseError::new(format!("Invalid character {}", c))),
             }
         }
         Ok(DiemIdUserIdentifier(s.into()))
@@ -119,18 +130,29 @@ pub struct DiemIdVaspDomainIdentifier(Box<str>);
 impl DiemIdVaspDomainIdentifier {
     pub fn new(s: &str) -> Result<Self, DiemIdParseError> {
         if s.len() > 63 || s.is_empty() {
-            return Err(DiemIdParseError);
+            return Err(DiemIdParseError::new(
+                "Invalid length for vasp domain identifier".to_string(),
+            ));
         }
+
         let mut chars = s.chars();
         match chars.next() {
             Some('a'..='z') | Some('A'..='Z') | Some('0'..='9') => {}
-            Some(_) => return Err(DiemIdParseError),
-            None => return Err(DiemIdParseError),
+            Some(_) => {
+                return Err(DiemIdParseError::new(
+                    "Invalid vasp domain input".to_string(),
+                ))
+            }
+            None => {
+                return Err(DiemIdParseError::new(
+                    "Invalid vasp domain input".to_string(),
+                ))
+            }
         }
         for c in chars {
             match c {
                 'a'..='z' | 'A'..='Z' | '0'..='9' | '.' => {}
-                _ => return Err(DiemIdParseError),
+                _ => return Err(DiemIdParseError::new(format!("Invalid character {}", c))),
             }
         }
         Ok(DiemIdVaspDomainIdentifier(s.into()))
@@ -154,11 +176,19 @@ impl<'de> de::Deserialize<'de> for DiemIdVaspDomainIdentifier {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DiemIdParseError;
+pub struct DiemIdParseError {
+    message: String,
+}
+
+impl DiemIdParseError {
+    fn new(message: String) -> DiemIdParseError {
+        DiemIdParseError { message }
+    }
+}
 
 impl Display for DiemIdParseError {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "Unable to parse DiemId")
+        write!(f, "Unable to parse DiemId: {}", self.message)
     }
 }
 
@@ -177,11 +207,21 @@ fn test_invalid_user_identifier() {
     // Test using "-" character is invalid
     let raw_identifier = "abcd!!!1234";
     let identifier = DiemIdUserIdentifier::new(&raw_identifier);
-    assert_eq!(identifier.unwrap_err(), DiemIdParseError,);
+    assert_eq!(
+        identifier.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid character !".to_string()
+        },
+    );
     // Test having 64 characters is invalid
     let raw_identifier = "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffff12345";
     let identifier = DiemIdUserIdentifier::new(&raw_identifier);
-    assert_eq!(identifier.unwrap_err(), DiemIdParseError,);
+    assert_eq!(
+        identifier.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid length for user identifier".to_string()
+        },
+    );
 }
 
 #[test]
@@ -199,11 +239,21 @@ fn test_invalid_vasp_domain_identifier() {
     // Test using "-" character is invalid
     let raw_identifier = "diem-domain";
     let identifier = DiemIdVaspDomainIdentifier::new(&raw_identifier);
-    assert_eq!(identifier.unwrap_err(), DiemIdParseError,);
+    assert_eq!(
+        identifier.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid character -".to_string()
+        },
+    );
     // Test having 64 characters is invalid
     let raw_identifier = "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggg";
     let identifier = DiemIdVaspDomainIdentifier::new(&raw_identifier);
-    assert_eq!(identifier.unwrap_err(), DiemIdParseError,);
+    assert_eq!(
+        identifier.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid length for vasp domain identifier".to_string()
+        },
+    );
 }
 
 #[test]

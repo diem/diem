@@ -12,6 +12,7 @@ pub mod block_info;
 pub mod block_metadata;
 pub mod chain_id;
 pub mod contract_event;
+pub mod diem_id_identifier;
 pub mod diem_timestamp;
 pub mod epoch_change;
 pub mod epoch_state;
