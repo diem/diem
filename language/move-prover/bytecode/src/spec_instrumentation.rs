@@ -492,12 +492,7 @@ impl<'a> Instrumenter<'a> {
                 .to_string();
             self.builder
                 .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
-            // create a function call if we are instrumenting for the interpreter, nop otherwise
-            if self.options.for_interpretation {
-                self.builder.emit(bc);
-            } else {
-                self.builder.emit_with(Nop);
-            }
+            self.builder.emit_with(Nop);
             Some(bc_display)
         } else {
             None
@@ -551,7 +546,7 @@ impl<'a> Instrumenter<'a> {
         }
 
         // From here on code differs depending on whether the callee is opaque or not.
-        if !callee_env.is_opaque() {
+        if !callee_env.is_opaque() || self.options.for_interpretation {
             self.builder.emit(Call(
                 id,
                 dests,
@@ -561,9 +556,8 @@ impl<'a> Instrumenter<'a> {
             ));
             self.can_abort = true;
         } else {
-            let options = ProverOptions::get(self.builder.global_env());
             // Generates OpaqueCallBegin if invariant_v2 flag is set.
-            if options.invariants_v2 {
+            if self.options.invariants_v2 {
                 self.generate_opaque_call(
                     dests.clone(),
                     mid,
@@ -701,7 +695,7 @@ impl<'a> Instrumenter<'a> {
                     .emit(Call(id, vec![], Operation::EventStoreDiverge, vec![], None));
             }
 
-            if !options.invariants_v2 {
+            if !self.options.invariants_v2 {
                 // If enabled, mark end of opaque function call.
                 if let Some(bc_display) = opaque_display {
                     self.builder
