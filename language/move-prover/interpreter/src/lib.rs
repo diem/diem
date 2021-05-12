@@ -9,7 +9,7 @@ use bytecode::{
     options::ProverOptions,
     pipeline_factory::default_pipeline_with_options,
 };
-use move_binary_format::errors::{Location, PartialVMError, VMResult};
+use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
@@ -26,7 +26,7 @@ pub mod concrete;
 pub mod shared;
 
 use crate::concrete::{
-    runtime::Runtime,
+    runtime::{convert_move_type_tag, Runtime},
     ty::{BaseType, IntType, PrimitiveType},
     value::{BaseValue, GlobalState, TypedValue},
 };
@@ -79,7 +79,7 @@ struct ExecutionResult {
 pub fn interpret_with_options(
     options: InterpreterOptions,
     env: &GlobalEnv,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
     // consolidate arguments
     let args: Vec<_> = options
         .signers
@@ -117,52 +117,105 @@ pub fn interpret_with_default_pipeline(
     args: &[MoveValue],
     global_state: &GlobalState,
     verbose: bool,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+    // find the entrypoint
+    let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
+        Ok(func_env) => func_env,
+        Err(err) => {
+            return (
+                Err(err.finish(Location::Undefined)),
+                ChangeSet::new(),
+                global_state.clone(),
+            )
+        }
+    };
+
+    // setup the pipeline
     let options = ProverOptions {
         for_interpretation: true,
         ..Default::default()
     };
     let pipeline = default_pipeline_with_options(&options);
     env.set_extension(options);
+
+    // run the interpreter
     interpret(
         env,
-        module_id,
-        func_name,
+        pipeline,
+        &entrypoint_env,
         ty_args,
         args,
         global_state,
+        verbose,
+    )
+}
+
+pub fn interpret_with_default_pipeline_and_bcs_arguments(
+    env: &GlobalEnv,
+    module_id: &ModuleId,
+    func_name: &IdentStr,
+    ty_args: &[TypeTag],
+    bcs_args: &[Vec<u8>],
+    global_state: &GlobalState,
+    verbose: bool,
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+    // find the entrypoint
+    let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
+        Ok(func_env) => func_env,
+        Err(err) => {
+            return (
+                Err(err.finish(Location::Undefined)),
+                ChangeSet::new(),
+                global_state.clone(),
+            )
+        }
+    };
+
+    // convert the args
+    let args = match convert_bcs_arguments_to_move_value_arguments(&entrypoint_env, bcs_args) {
+        Ok(args) => args,
+        Err(err) => {
+            return (
+                Err(err.finish(Location::Undefined)),
+                ChangeSet::new(),
+                global_state.clone(),
+            )
+        }
+    };
+
+    // setup the pipeline
+    let options = ProverOptions {
+        for_interpretation: true,
+        ..Default::default()
+    };
+    let pipeline = default_pipeline_with_options(&options);
+    env.set_extension(options);
+
+    // run the interpreter
+    interpret(
+        env,
         pipeline,
+        &entrypoint_env,
+        ty_args,
+        &args,
+        global_state,
         verbose,
     )
 }
 
 pub fn interpret(
     env: &GlobalEnv,
-    module_id: &ModuleId,
-    func_name: &IdentStr,
+    pipeline: FunctionTargetPipeline,
+    fun_env: &FunctionEnv,
     ty_args: &[TypeTag],
     args: &[MoveValue],
     global_state: &GlobalState,
-    pipeline: FunctionTargetPipeline,
     verbose: bool,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet) {
-    // find the entrypoint
-    let entrypoint_env = match env
-        .find_module_by_language_storage_id(module_id)
-        .and_then(|module_env| module_env.find_function(env.symbol_pool().make(func_name.as_str())))
-    {
-        None => {
-            return (
-                Err(PartialVMError::new(StatusCode::LOOKUP_FAILED).finish(Location::Undefined)),
-                ChangeSet::new(),
-            )
-        }
-        Some(func_env) => func_env,
-    };
+) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
     if verbose {
         println!(
             "[compiled module]\n{:?}\n",
-            entrypoint_env.module_env.get_verified_module()
+            fun_env.module_env.get_verified_module()
         );
     }
 
@@ -186,38 +239,6 @@ pub fn interpret(
         pipeline.run(env, &mut targets);
     }
 
-    // execute and convert results
-    let (vm_result, new_global_state) = interpret_internal(
-        env,
-        &targets,
-        &entrypoint_env,
-        ty_args,
-        args,
-        global_state.clone(),
-        verbose,
-    );
-    let serialized_vm_result = vm_result.map(|rets| {
-        rets.into_iter()
-            .map(|v| {
-                let (ty, val, _) = v.decompose();
-                let move_val = convert_typed_value_to_move_value(ty.get_base_type(), val);
-                move_val.simple_serialize().unwrap()
-            })
-            .collect::<Vec<_>>()
-    });
-
-    (serialized_vm_result, new_global_state.delta(global_state))
-}
-
-fn interpret_internal(
-    env: &GlobalEnv,
-    targets: &FunctionTargetsHolder,
-    fun_env: &FunctionEnv,
-    ty_args: &[TypeTag],
-    args: &[MoveValue],
-    global_state: GlobalState,
-    verbose: bool,
-) -> (VMResult<Vec<TypedValue>>, GlobalState) {
     // dump the bytecode if requested
     if verbose {
         let mut text = String::new();
@@ -232,9 +253,24 @@ fn interpret_internal(
         println!("{}", text);
     }
 
-    // invoke the runtime
-    let vm = Runtime::new(env, targets);
-    vm.execute(fun_env, ty_args, args, global_state)
+    // execute and convert results
+    let vm = Runtime::new(env, &targets);
+    let (vm_result, new_global_state) = vm.execute(fun_env, ty_args, args, global_state.clone());
+    let serialized_vm_result = vm_result.map(|rets| {
+        rets.into_iter()
+            .map(|v| {
+                let (ty, val, _) = v.decompose();
+                let move_val = convert_typed_value_to_move_value(ty.get_base_type(), val);
+                move_val.simple_serialize().unwrap()
+            })
+            .collect::<Vec<_>>()
+    });
+
+    (
+        serialized_vm_result,
+        new_global_state.delta(global_state),
+        new_global_state,
+    )
 }
 
 fn verbose_stepwise_processing(
@@ -259,6 +295,16 @@ fn verbose_stepwise_processing(
         }
     }
     println!("{}", text);
+}
+
+fn derive_entrypoint_env<'env>(
+    env: &'env GlobalEnv,
+    module_id: &ModuleId,
+    func_name: &IdentStr,
+) -> PartialVMResult<FunctionEnv<'env>> {
+    env.find_module_by_language_storage_id(module_id)
+        .and_then(|module_env| module_env.find_function(env.symbol_pool().make(func_name.as_str())))
+        .ok_or_else(|| PartialVMError::new(StatusCode::LOOKUP_FAILED))
 }
 
 fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue {
@@ -286,4 +332,33 @@ fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue
                 .collect(),
         )),
     }
+}
+
+fn convert_bcs_arguments_to_move_value_arguments(
+    func_env: &FunctionEnv,
+    bcs_args: &[Vec<u8>],
+) -> PartialVMResult<Vec<MoveValue>> {
+    let params = func_env.get_parameters();
+    if bcs_args.len() != params.len() {
+        return Err(PartialVMError::new(
+            StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
+        ));
+    }
+
+    let env = func_env.module_env.env;
+    let mut move_vals = vec![];
+    for (arg_bcs, param) in bcs_args.iter().zip(params.into_iter()) {
+        match param.1.into_type_tag(env) {
+            None => {
+                return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
+            }
+            Some(type_tag) => {
+                let ty = convert_move_type_tag(env, &type_tag)?;
+                let val = MoveValue::simple_deserialize(arg_bcs, &ty.to_move_type_layout())
+                    .map_err(|_| PartialVMError::new(StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT))?;
+                move_vals.push(val);
+            }
+        }
+    }
+    Ok(move_vals)
 }

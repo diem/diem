@@ -3,7 +3,11 @@
 
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
-use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::StatusCode};
+use move_core_types::{
+    language_storage::{StructTag, TypeTag},
+    value::MoveValue,
+    vm_status::StatusCode,
+};
 use move_model::{
     model::{AbilitySet, FunctionEnv, GlobalEnv, TypeParameter},
     ty as MT,
@@ -62,7 +66,7 @@ impl<'env> Runtime<'env> {
         };
         let mut converted_ty_args = vec![];
         for ty_arg in ty_args {
-            match convert_type_tag(self.env, ty_arg) {
+            match convert_move_type_tag(self.env, ty_arg) {
                 Ok(converted) => converted_ty_args.push(converted),
                 Err(err) => {
                     return (Err(err.finish(Location::Undefined)), global_state);
@@ -159,7 +163,7 @@ impl<'env> Runtime<'env> {
 // Utilities
 //**************************************************************************************************
 
-fn convert_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<BaseType> {
+pub fn convert_move_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<BaseType> {
     let converted = match tag {
         TypeTag::Bool => BaseType::mk_bool(),
         TypeTag::U8 => BaseType::mk_u8(),
@@ -167,57 +171,63 @@ fn convert_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<BaseType>
         TypeTag::U128 => BaseType::mk_u128(),
         TypeTag::Address => BaseType::mk_address(),
         TypeTag::Signer => BaseType::mk_signer(),
-        TypeTag::Vector(elem_tag) => BaseType::mk_vector(convert_type_tag(env, elem_tag)?),
+        TypeTag::Vector(elem_tag) => BaseType::mk_vector(convert_move_type_tag(env, elem_tag)?),
         TypeTag::Struct(struct_tag) => {
-            // get env
-            let struct_id = env.find_struct_by_tag(struct_tag).ok_or_else(|| {
-                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
-                    "Cannot find struct `{}::{}::{}`",
-                    struct_tag.address.short_str_lossless(),
-                    struct_tag.module,
-                    struct_tag.name,
-                ))
-            })?;
-            let struct_env = env.get_struct(struct_id);
-            let ident = StructIdent::new(&struct_env);
-
-            // check and convert type args
-            check_type_instantiation(
-                env,
-                &struct_env.get_type_parameters(),
-                &struct_tag.type_params,
-            )?;
-            let insts = struct_tag
-                .type_params
-                .iter()
-                .map(|ty_arg| convert_type_tag(env, ty_arg))
-                .collect::<PartialVMResult<Vec<_>>>()?;
-
-            // collect fields
-            let fields = struct_env
-                .get_fields()
-                .map(|field_env| {
-                    let field_name = env.symbol_pool().string(field_env.get_name()).to_string();
-                    let field_ty = convert_model_base_type(env, &field_env.get_type(), &insts);
-                    StructField {
-                        name: field_name,
-                        ty: field_ty,
-                    }
-                })
-                .collect();
-
-            // return the information for constructing the struct type
-            BaseType::mk_struct(StructInstantiation {
-                ident,
-                insts,
-                fields,
-            })
+            BaseType::mk_struct(convert_move_struct_tag(env, struct_tag)?)
         }
     };
     Ok(converted)
 }
 
-fn convert_move_value(
+pub fn convert_move_struct_tag(
+    env: &GlobalEnv,
+    struct_tag: &StructTag,
+) -> PartialVMResult<StructInstantiation> {
+    // get struct env
+    let struct_id = env.find_struct_by_tag(struct_tag).ok_or_else(|| {
+        PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
+            "Cannot find struct `{}::{}::{}`",
+            struct_tag.address.short_str_lossless(),
+            struct_tag.module,
+            struct_tag.name,
+        ))
+    })?;
+    let struct_env = env.get_struct(struct_id);
+    let ident = StructIdent::new(&struct_env);
+
+    // check and convert type args
+    check_type_instantiation(
+        env,
+        &struct_env.get_type_parameters(),
+        &struct_tag.type_params,
+    )?;
+    let insts = struct_tag
+        .type_params
+        .iter()
+        .map(|ty_arg| convert_move_type_tag(env, ty_arg))
+        .collect::<PartialVMResult<Vec<_>>>()?;
+
+    // collect fields
+    let fields = struct_env
+        .get_fields()
+        .map(|field_env| {
+            let field_name = env.symbol_pool().string(field_env.get_name()).to_string();
+            let field_ty = convert_model_base_type(env, &field_env.get_type(), &insts);
+            StructField {
+                name: field_name,
+                ty: field_ty,
+            }
+        })
+        .collect();
+
+    Ok(StructInstantiation {
+        ident,
+        insts,
+        fields,
+    })
+}
+
+pub fn convert_move_value(
     env: &GlobalEnv,
     val: &MoveValue,
     ty: &BaseType,

@@ -6,6 +6,15 @@ use std::{fs, path::Path};
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
+use bytecode_interpreter::{
+    concrete::{
+        runtime::{convert_move_struct_tag, convert_move_value},
+        ty::BaseType,
+        value::GlobalState,
+    },
+    interpret_with_default_pipeline_and_bcs_arguments,
+};
+use diem_framework::diem_stdlib_files;
 use diem_types::{
     access_path::Path as AP,
     account_address::AccountAddress,
@@ -43,6 +52,7 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{KeptVMStatus, VMStatus},
 };
+use move_model::{model::GlobalEnv, run_model_builder};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -126,6 +136,38 @@ fn compare_output(
     }
 }
 
+fn validate_and_convert_data_store_for_stackless_vm(
+    env: &GlobalEnv,
+    data_store: &FakeDataStore,
+) -> (FakeDataStore, GlobalState) {
+    let mut move_vm_state = data_store.clone();
+    let mut stackless_vm_state = GlobalState::default();
+    for (ap, blob) in data_store.inner() {
+        match ap.get_path() {
+            AP::Code(module_id) => {
+                let module_env = env.find_module_by_language_storage_id(&module_id).unwrap();
+                let mut code = vec![];
+                module_env
+                    .get_verified_module()
+                    .serialize(&mut code)
+                    .unwrap();
+                // update the module code to the same version as the one in the GlobalEnv
+                move_vm_state.add_module(&module_id, code);
+            }
+            AP::Resource(struct_tag) => {
+                let inst = convert_move_struct_tag(env, &struct_tag).unwrap();
+                let struct_ty = BaseType::mk_struct(inst);
+                let struct_val =
+                    MoveValue::simple_deserialize(blob, &struct_ty.to_move_type_layout()).unwrap();
+                let resource = convert_move_value(env, &struct_val, &struct_ty).unwrap();
+                let inst = struct_ty.into_struct_inst();
+                stackless_vm_state.put_resource(ap.address, inst, resource);
+            }
+        }
+    }
+    (move_vm_state, stackless_vm_state)
+}
+
 //**************************************************************************************************
 // Executors
 //**************************************************************************************************
@@ -171,21 +213,68 @@ fn execute_script_function_via_move_vm(
 }
 
 //**************************************************************************************************
+// Cross-VM comparison
+//**************************************************************************************************
+
+fn step_function_and_compare(
+    env: &GlobalEnv,
+    module_id: &ModuleId,
+    function_name: &IdentStr,
+    ty_args: &[TypeTag],
+    args: &[Vec<u8>],
+    mut move_vm_state: FakeDataStore,
+    stackless_vm_state: GlobalState,
+) -> (FakeDataStore, GlobalState) {
+    // execute via move VM
+    let move_vm = MoveVM::new();
+    let mut session = move_vm.new_session(&move_vm_state);
+
+    let move_vm_return_values = execute_function_via_move_vm(
+        &mut session,
+        module_id,
+        function_name,
+        ty_args.to_vec(),
+        args.to_vec(),
+    );
+    let (move_vm_change_set, move_events) = session.finish().unwrap();
+
+    // execute via stackless VM
+    let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
+        interpret_with_default_pipeline_and_bcs_arguments(
+            env,
+            module_id,
+            function_name,
+            ty_args,
+            args,
+            &stackless_vm_state,
+            false,
+        );
+
+    // compare
+    assert_eq!(move_vm_return_values, stackless_vm_return_values);
+    assert_eq!(move_vm_change_set, stackless_vm_change_set);
+
+    // update and return the states
+    let (move_write_set, _) =
+        convert_changeset_and_events(move_vm_change_set, move_events).unwrap();
+    move_vm_state.add_write_set(&move_write_set);
+    (move_vm_state, new_stackless_vm_state)
+}
+
+//**************************************************************************************************
 // Transaction replay
 //**************************************************************************************************
 
 fn replay_txn_block_metadata(
+    env: &GlobalEnv,
     block_metadata: BlockMetadata,
     data_store: &FakeDataStore,
     expect_output: &TransactionOutput,
 ) {
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(data_store);
-
     // args
     let signer = reserved_vm_address();
     let (round, timestamp, previous_votes, proposer) = block_metadata.into_inner();
-    let args = vec![
+    let args: Vec<_> = vec![
         MoveValue::Signer(signer),
         MoveValue::U64(round),
         MoveValue::U64(timestamp),
@@ -197,12 +286,15 @@ fn replay_txn_block_metadata(
     .collect();
 
     // execute
+    let move_vm = MoveVM::new();
+    let mut session = move_vm.new_session(data_store);
+
     let result = execute_function_via_move_vm(
         &mut session,
         &*DIEM_BLOCK_MODULE,
         &*BLOCK_PROLOGUE,
         vec![],
-        args,
+        args.clone(),
     );
     let actual_output = result.and_then(|rets| {
         assert!(rets.is_empty());
@@ -211,6 +303,19 @@ fn replay_txn_block_metadata(
 
     // compare
     compare_output(expect_output, actual_output);
+
+    // run again with move vm and stackless vm
+    let (move_vm_state, stackless_vm_state) =
+        validate_and_convert_data_store_for_stackless_vm(env, data_store);
+    step_function_and_compare(
+        env,
+        &*DIEM_BLOCK_MODULE,
+        &*BLOCK_PROLOGUE,
+        &[],
+        &args,
+        move_vm_state,
+        stackless_vm_state,
+    );
 }
 
 fn execute_txn_user_script_prologue(
@@ -472,7 +577,7 @@ fn replay_txn_script_function(
 // Trace replay
 //**************************************************************************************************
 
-fn replay_trace<P: AsRef<Path>>(wks: P, verbose: bool) -> Result<()> {
+fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, verbose: bool) -> Result<()> {
     let wks = wks.as_ref();
 
     // sanity checks
@@ -552,7 +657,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, verbose: bool) -> Result<()> {
                         }
                         return Ok(());
                     }
-                    replay_txn_block_metadata(block_metadata, &data, &res);
+                    replay_txn_block_metadata(env, block_metadata, &data, &res);
                     data.add_write_set(res.write_set());
                 }
                 Transaction::UserTransaction(signed_txn) => {
@@ -654,7 +759,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-fn replay<P: AsRef<Path>>(root: P, verbose: bool) -> Result<()> {
+fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, verbose: bool) -> Result<()> {
     let root = root.as_ref();
     for entry in WalkDir::new(root).into_iter() {
         let entry = entry?;
@@ -663,7 +768,7 @@ fn replay<P: AsRef<Path>>(root: P, verbose: bool) -> Result<()> {
                 .path()
                 .parent()
                 .ok_or_else(|| anyhow!("Cannot traverse the root directory"))?;
-            replay_trace(wks, verbose)?;
+            replay_trace(wks, env, verbose)?;
         }
     }
     Ok(())
@@ -686,8 +791,9 @@ struct ConverterArgs {
 
 pub fn main() -> Result<()> {
     let args = ConverterArgs::from_args();
+    let env = run_model_builder(&diem_stdlib_files(), &[])?;
     for trace in args.trace_files {
-        replay(trace, args.verbose)?;
+        replay(trace, &env, args.verbose)?;
     }
     Ok(())
 }

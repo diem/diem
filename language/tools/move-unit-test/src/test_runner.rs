@@ -210,7 +210,7 @@ impl SharedTestingConfig {
         // NOTE: as of now, `self.starting_storage_state` contains modules only and no resources.
         // The modules are captured by `env: &GlobalEnv` and the default GlobalState captures the
         // empty-resource state.
-        let (return_result, change_set) = bytecode_interpreter::interpret_with_default_pipeline(
+        let (return_result, change_set, _) = bytecode_interpreter::interpret_with_default_pipeline(
             env,
             &test_plan.module_id,
             &IdentStr::new(function_name).unwrap(),

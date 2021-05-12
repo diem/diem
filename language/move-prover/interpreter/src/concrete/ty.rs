@@ -7,6 +7,7 @@ use bytecode::stackless_bytecode::Constant;
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    value::{MoveStructLayout, MoveTypeLayout},
 };
 use move_model::{
     model::{GlobalEnv, ModuleId, StructId},
@@ -135,6 +136,15 @@ impl StructInstantiation {
             name: Identifier::new(self.ident.name.as_str()).unwrap(),
             type_params: type_args,
         }
+    }
+
+    pub fn to_move_struct_layout(&self) -> MoveStructLayout {
+        MoveStructLayout::new(
+            self.fields
+                .iter()
+                .map(|e| e.ty.to_move_type_layout())
+                .collect(),
+        )
     }
 }
 
@@ -352,6 +362,20 @@ impl BaseType {
             BaseType::Primitive(PrimitiveType::Signer) => TypeTag::Signer,
             BaseType::Vector(elem) => TypeTag::Vector(Box::new(elem.to_move_type_tag())),
             BaseType::Struct(inst) => TypeTag::Struct(inst.to_move_struct_tag()),
+        }
+    }
+
+    pub fn to_move_type_layout(&self) -> MoveTypeLayout {
+        match self {
+            BaseType::Primitive(PrimitiveType::Bool) => MoveTypeLayout::Bool,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => MoveTypeLayout::U8,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => MoveTypeLayout::U64,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => MoveTypeLayout::U128,
+            BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
+            BaseType::Primitive(PrimitiveType::Address) => MoveTypeLayout::Address,
+            BaseType::Primitive(PrimitiveType::Signer) => MoveTypeLayout::Signer,
+            BaseType::Vector(elem) => MoveTypeLayout::Vector(Box::new(elem.to_move_type_layout())),
+            BaseType::Struct(inst) => MoveTypeLayout::Struct(inst.to_move_struct_layout()),
         }
     }
 }
