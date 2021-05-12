@@ -64,10 +64,11 @@ impl FromStr for DiemId {
     type Err = DiemIdParseError;
 
     fn from_str(s: &str) -> Result<Self, DiemIdParseError> {
-        let index = s.find('@').ok_or_else(|| DiemIdParseError::new("DiemId does not have @".to_string()))?;
+        let index = s
+            .find('@')
+            .ok_or_else(|| DiemIdParseError::new("DiemId does not have @".to_string()))?;
         let split = s.split_at(index);
-        // let vec = split.collect::<Vec<&str>>();
-        DiemId::new_from_raw(split.0, split.1)
+        DiemId::new_from_raw(split.0, (split.1).trim_start_matches('@'))
     }
 }
 
@@ -271,4 +272,18 @@ fn test_get_diem_id_from_identifier_string() {
     let diem_id = DiemId::from_str(diem_id_str).unwrap();
     assert_eq!(diem_id.user_identifier().as_str(), "username");
     assert_eq!(diem_id.vasp_domain_identifier().as_str(), "diem");
+
+    let diem_id_str = "username@diem.com";
+    let diem_id = DiemId::from_str(diem_id_str).unwrap();
+    assert_eq!(diem_id.user_identifier().as_str(), "username");
+    assert_eq!(diem_id.vasp_domain_identifier().as_str(), "diem.com");
+
+    let diem_id_str = "username@diem@com";
+    let diem_id = DiemId::from_str(diem_id_str);
+    assert_eq!(
+        diem_id.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid character @".to_string()
+        },
+    );
 }
