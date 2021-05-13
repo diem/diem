@@ -1884,6 +1884,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "diem-crypto",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "hex",

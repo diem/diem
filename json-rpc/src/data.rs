@@ -3,10 +3,10 @@
 
 use crate::{
     errors::JsonRpcError,
-    util::{transaction_data_view_from_transaction, vm_status_view_from_kept_vm_status},
     views::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
+        MetadataView, StateProofView, TransactionDataView, TransactionView,
+        TransactionsWithProofsView, VMStatusView,
     },
 };
 use anyhow::{format_err, Result};
@@ -146,9 +146,9 @@ pub fn get_transactions(
             version: start_version + v as u64,
             hash: tx.hash(),
             bytes: bcs::to_bytes(&tx)?.into(),
-            transaction: transaction_data_view_from_transaction(tx),
+            transaction: TransactionDataView::from(tx),
             events,
-            vm_status: vm_status_view_from_kept_vm_status(info.status()),
+            vm_status: VMStatusView::from(info.status()),
             gas_used: info.gas_used(),
         });
     }
@@ -199,9 +199,9 @@ pub fn get_account_transaction(
             version: tx_version,
             hash: tx.transaction.hash(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: transaction_data_view_from_transaction(tx.transaction),
+            transaction: TransactionDataView::from(tx.transaction),
             events,
-            vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
+            vm_status: VMStatusView::from(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),
         }))
     } else {
@@ -263,9 +263,9 @@ pub fn get_account_transactions(
             version: tx.version,
             hash: tx.transaction.hash(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: transaction_data_view_from_transaction(tx.transaction),
+            transaction: TransactionDataView::from(tx.transaction),
             events,
-            vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
+            vm_status: VMStatusView::from(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),
         });
     }

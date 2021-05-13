@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
-use diem_crypto::HashValue;
+use diem_crypto::hash::HashValue;
+use diem_transaction_builder::{error_explain, stdlib::ScriptCall};
 use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
@@ -21,12 +22,19 @@ use diem_types::{
         AccountStateProof, AccumulatorConsistencyProof, SparseMerkleProof,
         TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
-    transaction::{Transaction, TransactionInfo, TransactionListWithProof},
+    transaction::{
+        Script, ScriptFunction, Transaction, TransactionArgument, TransactionInfo,
+        TransactionListWithProof, TransactionPayload,
+    },
+    vm_status::KeptVMStatus,
 };
 use hex::FromHex;
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag,
+    account_address::AccountAddress,
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
     move_resource::MoveStructType,
+    vm_status::AbortLocation,
 };
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -651,6 +659,45 @@ impl std::fmt::Display for VMStatusView {
     }
 }
 
+impl From<&KeptVMStatus> for VMStatusView {
+    fn from(status: &KeptVMStatus) -> Self {
+        match status {
+            KeptVMStatus::Executed => VMStatusView::Executed,
+            KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
+            KeptVMStatus::MoveAbort(loc, abort_code) => {
+                let explanation = if let AbortLocation::Module(module_id) = loc {
+                    error_explain::get_explanation(module_id, *abort_code).map(|context| {
+                        MoveAbortExplanationView {
+                            category: context.category.code_name,
+                            category_description: context.category.code_description,
+                            reason: context.reason.code_name,
+                            reason_description: context.reason.code_description,
+                        }
+                    })
+                } else {
+                    None
+                };
+
+                VMStatusView::MoveAbort {
+                    explanation,
+                    location: loc.to_string(),
+                    abort_code: *abort_code,
+                }
+            }
+            KeptVMStatus::ExecutionFailure {
+                location,
+                function,
+                code_offset,
+            } => VMStatusView::ExecutionFailure {
+                location: location.to_string(),
+                function_index: *function,
+                code_offset: *code_offset,
+            },
+            KeptVMStatus::MiscellaneousError => VMStatusView::MiscellaneousError,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionView {
     pub version: u64,
@@ -795,6 +842,74 @@ pub enum TransactionDataView {
     UnknownTransaction {},
 }
 
+impl From<Transaction> for TransactionDataView {
+    fn from(tx: Transaction) -> Self {
+        match tx {
+            Transaction::BlockMetadata(t) => TransactionDataView::BlockMetadata {
+                timestamp_usecs: t.timestamp_usec(),
+            },
+            Transaction::GenesisTransaction(_) => TransactionDataView::WriteSet {},
+            Transaction::UserTransaction(t) => {
+                let script_hash = match t.payload() {
+                    TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
+                    _ => HashValue::zero(),
+                };
+
+                let script_bytes: BytesView = match t.payload() {
+                    TransactionPayload::Script(s) => bcs::to_bytes(s).unwrap_or_default(),
+                    TransactionPayload::ScriptFunction(s) => bcs::to_bytes(s).unwrap_or_default(),
+                    _ => vec![],
+                }
+                .into();
+
+                let script: ScriptView = match t.payload() {
+                    TransactionPayload::Script(s) => ScriptView::from(s),
+                    TransactionPayload::ScriptFunction(s) => ScriptView::from(s),
+                    _ => ScriptView::unknown(),
+                };
+
+                TransactionDataView::UserTransaction {
+                    sender: t.sender(),
+                    signature_scheme: t.authenticator().sender().scheme().to_string(),
+                    signature: t.authenticator().sender().signature_bytes().into(),
+                    public_key: t.authenticator().sender().public_key_bytes().into(),
+                    secondary_signers: Some(t.authenticator().secondary_signer_addreses()),
+                    secondary_signature_schemes: Some(
+                        t.authenticator()
+                            .secondary_signers()
+                            .iter()
+                            .map(|account_auth| account_auth.scheme().to_string())
+                            .collect(),
+                    ),
+                    secondary_signatures: Some(
+                        t.authenticator()
+                            .secondary_signers()
+                            .iter()
+                            .map(|account_auth| account_auth.signature_bytes().into())
+                            .collect(),
+                    ),
+                    secondary_public_keys: Some(
+                        t.authenticator()
+                            .secondary_signers()
+                            .iter()
+                            .map(|account_auth| account_auth.public_key_bytes().into())
+                            .collect(),
+                    ),
+                    sequence_number: t.sequence_number(),
+                    chain_id: t.chain_id().id(),
+                    max_gas_amount: t.max_gas_amount(),
+                    gas_unit_price: t.gas_unit_price(),
+                    gas_currency: t.gas_currency_code().to_string(),
+                    expiration_timestamp_secs: t.expiration_timestamp_secs(),
+                    script_hash,
+                    script_bytes,
+                    script,
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct ScriptView {
     // script name / type
@@ -848,6 +963,83 @@ impl ScriptView {
     pub fn unknown() -> Self {
         ScriptView {
             r#type: "unknown".to_string(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&Script> for ScriptView {
+    fn from(script: &Script) -> Self {
+        let name = ScriptCall::decode(script)
+            .map(|script_call| script_call.name().to_owned())
+            .unwrap_or_else(|| "unknown".to_owned());
+        let ty_args: Vec<String> = script
+            .ty_args()
+            .iter()
+            .map(|type_tag| match type_tag {
+                TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
+                tag => format!("{}", tag),
+            })
+            .collect();
+        let mut view = ScriptView {
+            r#type: name.clone(),
+            code: Some(script.code().into()),
+            arguments: Some(
+                script
+                    .args()
+                    .iter()
+                    .map(|arg| format!("{:?}", &arg))
+                    .collect(),
+            ),
+            type_arguments: Some(ty_args.clone()),
+            ..Default::default()
+        };
+
+        // handle legacy fields, backward compatible
+        if name == "peer_to_peer_with_metadata" {
+            if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
+                script.args()
+            {
+                view.receiver = Some(*receiver);
+                view.amount = Some(*amount);
+                view.currency = Some(
+                    ty_args
+                        .get(0)
+                        .unwrap_or(&"unknown_currency".to_string())
+                        .to_string(),
+                );
+                view.metadata = Some(BytesView::new(metadata.as_ref()));
+                view.metadata_signature = Some(BytesView::new(metadata_signature.as_ref()));
+            }
+        }
+
+        view
+    }
+}
+
+impl From<&ScriptFunction> for ScriptView {
+    fn from(script: &ScriptFunction) -> Self {
+        let ty_args: Vec<String> = script
+            .ty_args()
+            .iter()
+            .map(|type_tag| match type_tag {
+                TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
+                tag => format!("{}", tag),
+            })
+            .collect();
+        ScriptView {
+            r#type: "script_function".to_string(),
+            module_address: Some(*script.module().address()),
+            module_name: Some(script.module().name().to_string()),
+            function_name: Some(script.function().to_string()),
+            arguments_bcs: Some(
+                script
+                    .args()
+                    .iter()
+                    .map(|arg| BytesView::from(arg.as_ref()))
+                    .collect(),
+            ),
+            type_arguments: Some(ty_args),
             ..Default::default()
         }
     }

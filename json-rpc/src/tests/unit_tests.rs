@@ -8,9 +8,8 @@ use crate::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockDiemDB},
     },
-    util::{
-        sdk_info_from_user_agent, vm_status_view_from_kept_vm_status, SdkInfo, SdkLang, SdkVersion,
-    },
+    util::{sdk_info_from_user_agent, SdkInfo, SdkLang, SdkVersion},
+    views::VMStatusView,
 };
 use diem_client::{views::TransactionDataView, BlockingClient, MethodRequest};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
@@ -1310,7 +1309,7 @@ fn test_get_transactions() {
                 .collect::<Vec<_>>();
 
             assert_eq!(expected_events.len(), view.events.len());
-            assert_eq!(vm_status_view_from_kept_vm_status(status), view.vm_status);
+            assert_eq!(VMStatusView::from(status), view.vm_status);
 
             for (i, event_view) in view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
@@ -1390,10 +1389,7 @@ fn test_get_account_transaction() {
             assert_eq!(tx_view.events.len(), expected_events.len());
 
             // check VM status
-            assert_eq!(
-                tx_view.vm_status,
-                vm_status_view_from_kept_vm_status(expected_status)
-            );
+            assert_eq!(tx_view.vm_status, VMStatusView::from(expected_status));
 
             for (i, event_view) in tx_view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
