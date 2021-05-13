@@ -74,12 +74,19 @@ impl<'a> BoundsChecker<'a> {
         {
             bounds_check.check_function_def(function_def_idx, function_def)?
         }
-        Ok(())
+        bounds_check.check_self_module_handle()
     }
 
     fn check_module_handle(&self, module_handle: &ModuleHandle) -> PartialVMResult<()> {
         check_bounds_impl(&self.module.address_identifiers, module_handle.address)?;
         check_bounds_impl(&self.module.identifiers, module_handle.name)
+    }
+
+    fn check_self_module_handle(&self) -> PartialVMResult<()> {
+        check_bounds_impl(
+            &self.module.module_handles,
+            self.module.self_module_handle_idx,
+        )
     }
 
     fn check_struct_handle(&self, struct_handle: &StructHandle) -> PartialVMResult<()> {

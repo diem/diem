@@ -6,7 +6,8 @@ use invalid_mutations::bounds::{
     OutOfBoundsMutation,
 };
 use move_binary_format::{
-    check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen,
+    check_bounds::BoundsChecker, file_format::*, file_format_common,
+    proptest_types::CompiledModuleStrategyGen,
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
@@ -16,6 +17,22 @@ use proptest::{collection::vec, prelude::*};
 #[test]
 fn empty_module_no_errors() {
     basic_test_module().freeze().unwrap();
+}
+
+#[test]
+fn invalid_default_module() {
+    let m = CompiledModuleMut {
+        version: file_format_common::VERSION_MAX,
+        ..Default::default()
+    };
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_self_module_handle_index() {
+    let mut m = basic_test_module();
+    m.self_module_handle_idx = ModuleHandleIndex(12);
+    m.freeze().unwrap_err();
 }
 
 #[test]
