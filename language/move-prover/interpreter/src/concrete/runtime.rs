@@ -147,7 +147,6 @@ impl<'env> Runtime<'env> {
         args: &[TypedValue],
         global_state: &mut GlobalState,
     ) -> VMResult<Vec<TypedValue>> {
-        let module_id = fun_target.module_env().get_verified_module().self_id();
         player::entrypoint(
             self.functions,
             fun_target,
@@ -155,7 +154,7 @@ impl<'env> Runtime<'env> {
             args.to_vec(),
             global_state,
         )
-        .map_err(|err| err.finish(Location::Module(module_id)))
+        .map_err(|abort_info| abort_info.into_err())
     }
 }
 
