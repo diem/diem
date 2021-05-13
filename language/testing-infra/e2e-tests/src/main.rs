@@ -44,7 +44,10 @@ use language_e2e_tests::{
         TRACE_FILE_ERROR, TRACE_FILE_NAME,
     },
 };
-use move_binary_format::{errors::VMResult, CompiledModule};
+use move_binary_format::{
+    errors::{PartialVMError, VMResult},
+    CompiledModule,
+};
 use move_core_types::{
     effects::{ChangeSet, Event},
     gas_schedule::GasAlgebra,
@@ -135,6 +138,18 @@ fn compare_output(
             }
         }
     }
+}
+
+fn adapt_move_vm_result<T>(result: VMResult<T>) -> VMResult<T> {
+    result.map_err(|err| {
+        let (status_code, sub_status, _, location, _, _) = err.all_data();
+        let adapted = PartialVMError::new(status_code);
+        let adapted = match sub_status {
+            None => adapted,
+            Some(status_code) => adapted.with_sub_status(status_code),
+        };
+        adapted.finish(location)
+    })
 }
 
 //**************************************************************************************************
@@ -256,6 +271,7 @@ impl<'env> CrossRunner<'env> {
             );
 
         // compare
+        let move_vm_return_values = adapt_move_vm_result(move_vm_return_values);
         assert_eq!(move_vm_return_values, stackless_vm_return_values);
         assert_eq!(move_vm_change_set, stackless_vm_change_set);
 
@@ -317,6 +333,7 @@ impl<'env> CrossRunner<'env> {
             stackless_vm_return_values.map(|rets| assert!(rets.is_empty()));
 
         // compare
+        let move_vm_return_values = adapt_move_vm_result(move_vm_return_values);
         assert_eq!(move_vm_return_values, stackless_vm_return_values);
         assert_eq!(move_vm_change_set, stackless_vm_change_set);
 
