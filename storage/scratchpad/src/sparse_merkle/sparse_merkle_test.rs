@@ -2,22 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::sparse_merkle::test_utils::NaiveSmt;
+use crate::test_utils::{
+    proof_reader::ProofReader,
+    proptest_helpers::{arb_smt_correctness_case, test_smt_correctness_impl},
+};
 use diem_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_temppath::TempPath;
 use diem_types::{
-    account_address::HashAccountAddress,
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleLeafNode, SparseMerkleProof},
 };
-use diemdb::{test_helper::arb_blocks_to_commit, DiemDB};
 use proptest::prelude::*;
-use rand::{rngs::StdRng, SeedableRng};
-use std::collections::HashMap;
-use storage_interface::{DbReader, DbWriter};
 
 fn update_byte(original_key: &HashValue, n: usize, byte: u8) -> HashValue {
     let mut key = original_key.to_vec();
@@ -31,26 +28,6 @@ fn hash_internal(left_child: HashValue, right_child: HashValue) -> HashValue {
 
 fn hash_leaf(key: HashValue, value_hash: HashValue) -> HashValue {
     SparseMerkleLeafNode::new(key, value_hash).hash()
-}
-
-struct ProofReader<V>(HashMap<HashValue, SparseMerkleProof<V>>);
-
-impl<V: Sync> ProofReader<V> {
-    fn new(key_with_proof: Vec<(HashValue, SparseMerkleProof<V>)>) -> Self {
-        ProofReader(key_with_proof.into_iter().collect())
-    }
-}
-
-impl<V: Sync> Default for ProofReader<V> {
-    fn default() -> Self {
-        Self(HashMap::new())
-    }
-}
-
-impl<V: Sync> ProofRead<V> for ProofReader<V> {
-    fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof<V>> {
-        self.0.get(&key)
-    }
 }
 
 type SparseMerkleTree = super::SparseMerkleTree<AccountStateBlob>;
@@ -680,182 +657,9 @@ fn test_batch_update_construct_subtree_from_proofs() {
 
     assert_eq!(smt_serial.root_hash(), smt_batch.root_hash());
 }
-
-#[test]
-fn test_update_consistency() {
-    let seed: &[_] = &[1, 2, 3, 4];
-    let mut actual_seed = [0u8; 32];
-    actual_seed[..seed.len()].copy_from_slice(&seed);
-    let mut rng: StdRng = StdRng::from_seed(actual_seed);
-
-    let mut kvs = vec![];
-    let smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
-    let proof_reader = ProofReader::default();
-    for i in 1..=5 {
-        for _ in 0..1000 {
-            let key = HashValue::random_with_rng(&mut rng);
-            let value = AccountStateBlob::from(HashValue::random_with_rng(&mut rng).to_vec());
-            kvs.push((key, value));
-        }
-        let batch = kvs.iter().map(|(k, v)| (*k, v)).collect::<Vec<_>>();
-
-        let start = std::time::Instant::now();
-        let mut naive_smt = NaiveSmt::new(&batch);
-        naive_smt.get_root_hash();
-        println!("naive {}-th run: {}ms", i, start.elapsed().as_millis());
-
-        let start = std::time::Instant::now();
-        let smt_serial = smt.update(batch.clone(), &proof_reader).unwrap();
-        println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
-
-        let start = std::time::Instant::now();
-        let smt_batch = smt.batch_update(batch.clone(), &proof_reader).unwrap();
-        println!("batch {}-th run: {}ms", i, start.elapsed().as_millis());
-
-        let start = std::time::Instant::now();
-        let smt_updater = smt
-            .batch_update_by_updater(batch.clone(), &proof_reader)
-            .unwrap();
-        println!("updater{}-th run: {}ms", i, start.elapsed().as_millis());
-
-        kvs.clear();
-        assert_eq!(smt_serial.root_hash(), smt_batch.root_hash());
-        assert_eq!(smt_serial.root_hash(), naive_smt.get_root_hash());
-        assert_eq!(smt_serial.root_hash(), smt_updater.root_hash());
-    }
-}
-
-#[test]
-fn test_update_consistency_batches() {
-    let seed: &[_] = &[1, 2, 3, 4];
-    let mut actual_seed = [0u8; 32];
-    actual_seed[..seed.len()].copy_from_slice(&seed);
-    let mut rng: StdRng = StdRng::from_seed(actual_seed);
-
-    let mut kvs = vec![];
-    let smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
-    let proof_reader = ProofReader::default();
-    let mut smt_serial;
-    let mut smt_batches;
-    for i in 1..=5 {
-        for _ in 0..1000 {
-            let key = HashValue::random_with_rng(&mut rng);
-            let value = AccountStateBlob::from(HashValue::random_with_rng(&mut rng).to_vec());
-            kvs.push((key, value));
-        }
-
-        let mut batches = vec![];
-        for j in 0..500 {
-            batches.push(
-                kvs.iter()
-                    .skip(j * 2)
-                    .take(2)
-                    .map(|(k, v)| (*k, v))
-                    .collect::<Vec<_>>(),
-            );
-        }
-
-        let start = std::time::Instant::now();
-        smt_serial = smt.serial_update(batches.clone(), &proof_reader).unwrap();
-        println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
-
-        let start = std::time::Instant::now();
-        smt_batches = smt.batches_update(batches.clone(), &proof_reader).unwrap();
-        println!("batches {}-th run: {}ms", i, start.elapsed().as_millis());
-
-        assert_eq!(smt_serial.0, smt_batches.0);
-        assert_eq!(smt_serial.1.root_hash(), smt_batches.1.root_hash());
-
-        kvs.clear();
-    }
-}
-
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(50))]
     #[test]
-    fn test_read_partial_tree_from_storage(input in arb_blocks_to_commit().no_shrink()) {
-        let tmp_dir = TempPath::new();
-        let db = DiemDB::new_for_test(&tmp_dir);
-        // Insert a transaction to ensure a non-empty ledger;
-
-        let tree_state = db.get_latest_tree_state().unwrap();
-        let initial_state_root = tree_state.account_state_root_hash;
-        let mut cur_ver = -1i64;
-
-        prop_assert_eq!(initial_state_root, *SPARSE_MERKLE_PLACEHOLDER_HASH);
-        let mut serial_updated_tree = SparseMerkleTree::new(initial_state_root);
-        let mut batch_updated_tree = SparseMerkleTree::new(initial_state_root);
-        let mut batches_updated_tree = SparseMerkleTree::new(initial_state_root);
-        let mut naive_tree = NaiveSmt::new::<AccountStateBlob>(&[]);
-        let mut updater_tree = SparseMerkleTree::new(initial_state_root);
-
-        for (txns_to_commit, ledger_info_with_sigs) in input.iter() {
-            let updates = txns_to_commit.iter()
-                .map(|txn_to_commit| txn_to_commit
-                     .account_states()
-                     .iter()
-                     .map(|(a, b)|(a.hash(), b))
-                     .collect::<Vec<_>>())
-                .collect::<Vec<_>>();
-            let account_state_proofs = txns_to_commit.iter()
-                .map(|txn_to_commit| txn_to_commit
-                     .account_states()
-                     .iter()
-                     .collect::<Vec<_>>())
-                .flatten()
-                .map(|(k, _)| {
-                    if cur_ver == -1 {
-                        SparseMerkleProof::<AccountStateBlob>::new(None, vec![])
-                    } else {
-                        let from_db = db.get_account_state_with_proof(*k, cur_ver as u64, cur_ver as u64)
-                            .map(|p| p.proof.transaction_info_to_account_proof().clone())
-                            .unwrap();
-                        let naive = naive_tree.get_proof(&k.hash());
-                        assert_eq!(from_db, naive);
-                        from_db
-                    }
-                });
-
-            let proof_reader = ProofReader::new(
-                itertools::zip_eq(
-                    updates.iter().flatten().map(|(k, _)| *k),
-                    account_state_proofs,
-                ).collect::<Vec<_>>(),
-            );
-
-            db.save_transactions(
-                &txns_to_commit,
-                (cur_ver + 1) as u64, /* first_version */
-                Some(ledger_info_with_sigs),
-            )
-                .unwrap();
-
-            let tree_state = db.get_latest_tree_state().unwrap();
-            let root_in_db = tree_state.account_state_root_hash;
-            cur_ver = tree_state.num_transactions as i64 - 1;
-
-            let merged_batch = updates.iter().flatten().map(|(k, v)| (*k, *v)).collect::<Vec<_>>();
-            naive_tree = naive_tree.update(&merged_batch);
-            batch_updated_tree = batch_updated_tree.batch_update(merged_batch, &proof_reader)
-                .unwrap();
-            updater_tree = updater_tree.batch_update_by_updater(
-                updates.iter().flatten().map(|(k, v)| (*k, *v)).collect::<Vec<_>>(), &proof_reader
-            ).unwrap();
-            serial_updated_tree = serial_updated_tree
-                .serial_update(updates.clone(), &proof_reader)
-                .unwrap().1;
-            batches_updated_tree = batches_updated_tree
-                .batches_update(updates, &proof_reader)
-                .unwrap().1;
-
-            prop_assert_eq!(batch_updated_tree.root_hash(), batches_updated_tree.root_hash());
-            prop_assert_eq!(batch_updated_tree.root_hash(), serial_updated_tree.root_hash());
-            prop_assert_eq!(batch_updated_tree.root_hash(), updater_tree.root_hash());
-            prop_assert_eq!(batch_updated_tree.root_hash(), root_in_db);
-            prop_assert_eq!(batch_updated_tree.root_hash(), naive_tree.get_root_hash());
-            batch_updated_tree.prune();
-            serial_updated_tree.prune();
-            batches_updated_tree.prune();
-        }
+    fn test_correctness( input in arb_smt_correctness_case() ) {
+        test_smt_correctness_impl(input)
     }
 }

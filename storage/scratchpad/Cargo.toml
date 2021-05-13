@@ -13,6 +13,7 @@ edition = "2018"
 arc-swap = "1.2.0"
 bitvec = {version = "0.19.4", optional = true}
 itertools = "0.10.0"
+proptest = { version = "1.0.0", optional = true }
 rayon = "1.5.0"
 
 diem-crypto = { path = "../../crypto/crypto" }
@@ -20,20 +21,19 @@ diem-infallible = { path = "../../common/infallible" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
+
 [dev-dependencies]
 bitvec = "0.19.4"
 criterion = "0.3.4"
 rand = "0.8.3"
 proptest = "1.0.0"
 
-diem-temppath = { path = "../../common/temppath" }
-diemdb = { path = "../diemdb", features = ["fuzzing"]}
-executor-types = { path = "../../execution/executor-types"}
+diem-types = { path = "../../types", features = ["fuzzing"] }
 storage-interface = { path = "../storage-interface" }
 
 [features]
-fuzzing = ["diemdb/fuzzing", "diem-types/fuzzing"]
-bench = ["bitvec"]
+fuzzing = ["bitvec", "diem-types/fuzzing", "proptest"]
+bench = ["bitvec", "proptest"]
 
 [[bench]]
 name = "sparse_merkle"

@@ -18,6 +18,9 @@ use diemdb::{
     schema::fuzzing::fuzz_decode, test_helper::arb_blocks_to_commit, test_save_blocks_impl,
 };
 use proptest::{collection::vec, prelude::*};
+use scratchpad::test_utils::proptest_helpers::{
+    arb_smt_correctness_case, test_smt_correctness_impl,
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct StorageSaveBlocks;
@@ -140,6 +143,26 @@ impl FuzzTargetImpl for AccumulatorFrozenSubtreeHashes {
     fn fuzz(&self, data: &[u8]) {
         let input = fuzz_data_to_value(data, arb_hash_batch(1000));
         test_get_frozen_subtree_hashes_impl(input);
+    }
+}
+
+//============== Scratchpad =============
+
+#[derive(Clone, Debug, Default)]
+pub struct SparseMerkleCorrectness;
+
+impl FuzzTargetImpl for SparseMerkleCorrectness {
+    fn description(&self) -> &'static str {
+        "Scratchpad SMT correctness."
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_smt_correctness_case()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let input = fuzz_data_to_value(data, arb_smt_correctness_case());
+        test_smt_correctness_impl(input)
     }
 }
 

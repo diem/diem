@@ -46,6 +46,7 @@ move-vm-types = { path = "../../language/move-vm/types", features = ["fuzzing"] 
 move-core-types = { path = "../../language/move-core/types", features = ["fuzzing"] }
 network = { path = "../../network", features = ["fuzzing"] }
 safety-rules = { path = "../../consensus/safety-rules", features = ["fuzzing", "testing"]  }
+scratchpad = { path = "../../storage/scratchpad", features = ["fuzzing"]}
 state-sync = { path = "../../state-sync", features = ["fuzzing", "diemdb"]  }
 storage-interface = { path = "../../storage/storage-interface" }
 move-binary-format = { path = "../../language/move-binary-format", features = ["fuzzing"] }

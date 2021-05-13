@@ -75,7 +75,7 @@ mod utils;
 
 #[cfg(test)]
 mod sparse_merkle_test;
-#[cfg(any(test, feature = "bench"))]
+#[cfg(any(test, feature = "bench", feature = "fuzzing"))]
 pub mod test_utils;
 
 use crate::sparse_merkle::{

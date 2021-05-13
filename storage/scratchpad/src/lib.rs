@@ -7,5 +7,5 @@ mod sparse_merkle;
 
 pub use crate::sparse_merkle::{AccountStatus, ProofRead, SparseMerkleTree};
 
-#[cfg(any(test, feature = "bench"))]
+#[cfg(any(test, feature = "bench", feature = "fuzzing"))]
 pub use crate::sparse_merkle::test_utils;
