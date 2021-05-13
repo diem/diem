@@ -3,9 +3,9 @@
 
 use num::{BigUint, ToPrimitive, Zero};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::BTreeMap, convert::TryFrom, rc::Rc};
 
-use diem_crypto::HashValue;
+use diem_crypto::{ed25519, HashValue, Signature};
 
 use bytecode::{
     function_target::FunctionTarget,
@@ -262,6 +262,31 @@ impl<'env> FunctionContext<'env> {
                     global_state,
                 );
                 Ok(vec![])
+            }
+            (DIEM_CORE_ADDR, "Signature", "ed25519_validate_pubkey") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_signature_ed25519_validate_pubkey(dummy_state.del_value(0));
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "Signature", "ed25519_verify") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 3);
+                }
+                let res = self.native_signature_ed25519_signature_verification(
+                    dummy_state.del_value(0),
+                    dummy_state.del_value(1),
+                    dummy_state.del_value(2),
+                );
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "DiemAccount", "create_signer") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_diem_account_create_signer(dummy_state.del_value(0));
+                Ok(vec![res])
             }
             _ => unreachable!(),
         }
@@ -1734,6 +1759,65 @@ impl<'env> FunctionContext<'env> {
             .collect();
         let seq = seq_val.into_u64();
         global_state.emit_event(guid, seq, msg_val);
+    }
+
+    fn native_signature_ed25519_validate_pubkey(&self, key: TypedValue) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+        }
+        let bytes: Vec<_> = key.into_vector().into_iter().map(|e| e.into_u8()).collect();
+        let valid = ed25519::Ed25519PublicKey::try_from(bytes.as_slice()).is_ok();
+        TypedValue::mk_bool(valid)
+    }
+
+    fn native_signature_ed25519_signature_verification(
+        &self,
+        sig_val: TypedValue,
+        key_val: TypedValue,
+        msg_val: TypedValue,
+    ) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+        }
+
+        let sig_bytes: Vec<_> = sig_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let sig = match ed25519::Ed25519Signature::try_from(sig_bytes.as_slice()) {
+            Ok(sig) => sig,
+            Err(_) => {
+                return TypedValue::mk_bool(false);
+            }
+        };
+
+        let key_bytes: Vec<_> = key_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let key = match ed25519::Ed25519PublicKey::try_from(key_bytes.as_slice()) {
+            Ok(key) => key,
+            Err(_) => {
+                return TypedValue::mk_bool(false);
+            }
+        };
+
+        let msg_bytes: Vec<_> = msg_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let verified = sig.verify_arbitrary_msg(&msg_bytes, &key).is_ok();
+        TypedValue::mk_bool(verified)
+    }
+
+    fn native_diem_account_create_signer(&self, addr: TypedValue) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+        }
+        TypedValue::mk_signer(addr.into_address())
     }
 
     //
