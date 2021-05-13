@@ -4,5 +4,6 @@
 pub mod local_state;
 pub mod player;
 pub mod runtime;
+pub mod settings;
 pub mod ty;
 pub mod value;

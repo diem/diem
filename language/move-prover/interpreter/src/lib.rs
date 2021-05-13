@@ -27,6 +27,7 @@ pub mod shared;
 
 use crate::concrete::{
     runtime::{convert_move_type_tag, Runtime},
+    settings::InterpreterSettings,
     ty::{BaseType, IntType, PrimitiveType},
     value::{BaseValue, GlobalState, TypedValue},
 };
@@ -49,9 +50,9 @@ pub struct InterpreterOptions {
     #[structopt(long = "ty-args", parse(try_from_str = parse_type_tag))]
     pub ty_args: Vec<TypeTag>,
 
-    /// Print verbose debug information
+    /// Level of verbosity
     #[structopt(short = "v", long = "verbose")]
-    pub verbose: bool,
+    pub verbose: Option<u64>,
 }
 
 fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
@@ -97,6 +98,12 @@ pub fn interpret_with_options(
         }))
         .collect();
 
+    // collect settings
+    let settings = InterpreterSettings {
+        verbose_stepwise: options.verbose.map_or(false, |level| level > 0),
+        verbose_bytecode: options.verbose.map_or(false, |level| level > 1),
+    };
+
     // run the actual interpreter
     interpret_with_default_pipeline(
         env,
@@ -105,7 +112,7 @@ pub fn interpret_with_options(
         &options.ty_args,
         &args,
         &GlobalState::default(),
-        options.verbose,
+        settings,
     )
 }
 
@@ -116,7 +123,7 @@ pub fn interpret_with_default_pipeline(
     ty_args: &[TypeTag],
     args: &[MoveValue],
     global_state: &GlobalState,
-    verbose: bool,
+    settings: InterpreterSettings,
 ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
     // find the entrypoint
     let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
@@ -146,7 +153,7 @@ pub fn interpret_with_default_pipeline(
         ty_args,
         args,
         global_state,
-        verbose,
+        settings,
     )
 }
 
@@ -157,7 +164,7 @@ pub fn interpret_with_default_pipeline_and_bcs_arguments(
     ty_args: &[TypeTag],
     bcs_args: &[Vec<u8>],
     global_state: &GlobalState,
-    verbose: bool,
+    settings: InterpreterSettings,
 ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
     // find the entrypoint
     let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
@@ -199,7 +206,7 @@ pub fn interpret_with_default_pipeline_and_bcs_arguments(
         ty_args,
         &args,
         global_state,
-        verbose,
+        settings,
     )
 }
 
@@ -210,9 +217,9 @@ pub fn interpret(
     ty_args: &[TypeTag],
     args: &[MoveValue],
     global_state: &GlobalState,
-    verbose: bool,
+    settings: InterpreterSettings,
 ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
-    if verbose {
+    if settings.verbose_stepwise {
         println!(
             "[compiled module]\n{:?}\n",
             fun_env.module_env.get_verified_module()
@@ -226,7 +233,7 @@ pub fn interpret(
             targets.add_target(&func_env)
         }
     }
-    if verbose {
+    if settings.verbose_stepwise {
         pipeline.run_with_hook(
             env,
             &mut targets,
@@ -240,7 +247,7 @@ pub fn interpret(
     }
 
     // dump the bytecode if requested
-    if verbose {
+    if settings.verbose_stepwise {
         let mut text = String::new();
         for module_env in env.get_modules() {
             for func_env in module_env.get_functions() {
@@ -253,8 +260,11 @@ pub fn interpret(
         println!("{}", text);
     }
 
+    // register settings with the global env
+    env.set_extension(settings);
+
     // execute and convert results
-    let vm = Runtime::new(env, &targets, verbose);
+    let vm = Runtime::new(env, &targets);
     let (vm_result, new_global_state) = vm.execute(fun_env, ty_args, args, global_state.clone());
     let serialized_vm_result = vm_result.map(|rets| {
         rets.into_iter()
