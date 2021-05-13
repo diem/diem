@@ -3,7 +3,7 @@
 
 use num::{BigUint, ToPrimitive, Zero};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 
 use diem_crypto::HashValue;
 
@@ -29,6 +29,7 @@ use move_model::{
 use crate::{
     concrete::{
         local_state::{AbortInfo, LocalState, TerminationStatus},
+        settings::InterpreterSettings,
         ty::{
             convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
             Type,
@@ -59,7 +60,6 @@ struct FunctionContext<'env> {
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
     label_offsets: BTreeMap<Label, CodeOffset>,
-    verbose: bool,
 }
 
 impl<'env> FunctionContext<'env> {
@@ -67,7 +67,6 @@ impl<'env> FunctionContext<'env> {
         holder: &'env FunctionTargetsHolder,
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
-        verbose: bool,
     ) -> Self {
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
         Self {
@@ -75,8 +74,18 @@ impl<'env> FunctionContext<'env> {
             target,
             ty_args,
             label_offsets,
-            verbose,
         }
+    }
+
+    //
+    // settings
+    //
+
+    fn get_settings(&self) -> Rc<InterpreterSettings> {
+        self.target
+            .global_env()
+            .get_extension::<InterpreterSettings>()
+            .unwrap_or_default()
     }
 
     //
@@ -89,11 +98,19 @@ impl<'env> FunctionContext<'env> {
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
     ) -> PartialVMResult<LocalState> {
-        let mut local_state = self.prepare_local_state(typed_args);
         let instructions = self.target.get_bytecode();
+        let debug_bytecode = self.get_settings().verbose_bytecode;
+        let mut local_state = self.prepare_local_state(typed_args);
         while !local_state.is_terminated() {
             let pc = local_state.get_pc() as usize;
             let bytecode = instructions.get(pc).unwrap();
+            if debug_bytecode {
+                println!(
+                    "{}: {}",
+                    self.target.func_env.get_full_name_str(),
+                    bytecode.display(&self.target, &self.label_offsets)
+                );
+            }
             self.exec_bytecode(bytecode, &mut local_state, global_state)?;
         }
         Ok(local_state)
@@ -256,14 +273,6 @@ impl<'env> FunctionContext<'env> {
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
     ) -> PartialVMResult<()> {
-        if self.verbose {
-            println!(
-                "{}: {}",
-                self.target.func_env.get_full_name_str(),
-                bytecode.display(&self.target, &self.label_offsets)
-            );
-        }
-
         match bytecode {
             Bytecode::Assign(_, dst, src, kind) => {
                 self.handle_assign(*dst, *src, kind, local_state)
@@ -1755,7 +1764,7 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // build the context
-        FunctionContext::new(self.holder, callee_target, callee_ty_insts, self.verbose)
+        FunctionContext::new(self.holder, callee_target, callee_ty_insts)
     }
 
     fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
@@ -1817,9 +1826,8 @@ pub fn entrypoint(
     ty_args: &[BaseType],
     typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
-    verbose: bool,
 ) -> PartialVMResult<Vec<TypedValue>> {
-    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), verbose);
+    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
     let local_state = ctxt.exec_user_function(typed_args, global_state)?;
     let termination = local_state.into_termination_status();
     let return_vals = match termination {

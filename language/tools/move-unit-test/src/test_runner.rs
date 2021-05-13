@@ -6,7 +6,7 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
 };
 use anyhow::Result;
-use bytecode_interpreter::concrete::value::GlobalState;
+use bytecode_interpreter::concrete::{settings::InterpreterSettings, value::GlobalState};
 use colored::*;
 use move_binary_format::{
     errors::{PartialVMError, VMResult},
@@ -217,7 +217,7 @@ impl SharedTestingConfig {
             &[], // no ty args, at least for now
             &test_info.arguments,
             &GlobalState::default(),
-            self.verbose,
+            InterpreterSettings::default(),
         );
 
         let test_run_info = TestRunInfo::new(
