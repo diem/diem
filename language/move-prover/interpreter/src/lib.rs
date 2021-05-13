@@ -20,7 +20,10 @@ use move_core_types::{
     value::{MoveStruct, MoveValue},
     vm_status::StatusCode,
 };
-use move_model::model::{FunctionEnv, GlobalEnv};
+use move_model::{
+    model::{FunctionEnv, GlobalEnv},
+    ty::{PrimitiveType as ModelPrimitiveType, Type as ModelType},
+};
 
 pub mod concrete;
 pub mod shared;
@@ -163,6 +166,7 @@ pub fn interpret_with_default_pipeline_and_bcs_arguments(
     func_name: &IdentStr,
     ty_args: &[TypeTag],
     bcs_args: &[Vec<u8>],
+    senders_opt: Option<&[AccountAddress]>,
     global_state: &GlobalState,
     settings: InterpreterSettings,
 ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
@@ -179,16 +183,18 @@ pub fn interpret_with_default_pipeline_and_bcs_arguments(
     };
 
     // convert the args
-    let args = match convert_bcs_arguments_to_move_value_arguments(&entrypoint_env, bcs_args) {
-        Ok(args) => args,
-        Err(err) => {
-            return (
-                Err(err.finish(Location::Undefined)),
-                ChangeSet::new(),
-                global_state.clone(),
-            )
-        }
-    };
+    let args =
+        match convert_bcs_arguments_to_move_value_arguments(&entrypoint_env, bcs_args, senders_opt)
+        {
+            Ok(args) => args,
+            Err(err) => {
+                return (
+                    Err(err.finish(Location::Undefined)),
+                    ChangeSet::new(),
+                    global_state.clone(),
+                )
+            }
+        };
 
     // setup the pipeline
     let options = ProverOptions {
@@ -347,18 +353,46 @@ fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue
 fn convert_bcs_arguments_to_move_value_arguments(
     func_env: &FunctionEnv,
     bcs_args: &[Vec<u8>],
+    senders_opt: Option<&[AccountAddress]>,
 ) -> PartialVMResult<Vec<MoveValue>> {
+    let env = func_env.module_env.env;
+    let mut move_vals = vec![];
+
     let params = func_env.get_parameters();
-    if bcs_args.len() != params.len() {
+    let num_signer_args = match senders_opt {
+        None => 0,
+        Some(senders) => {
+            for (i, param) in params.iter().enumerate() {
+                match &param.1 {
+                    ModelType::Primitive(ModelPrimitiveType::Signer) => {
+                        if i >= senders.len() {
+                            return Err(PartialVMError::new(
+                                StatusCode::NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH,
+                            ));
+                        }
+                        move_vals.push(MoveValue::Signer(senders[i]))
+                    }
+                    _ => {
+                        if i != 0 && i != senders.len() {
+                            return Err(PartialVMError::new(
+                                StatusCode::NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH,
+                            ));
+                        }
+                        break;
+                    }
+                }
+            }
+            move_vals.len()
+        }
+    };
+
+    if (num_signer_args + bcs_args.len()) != params.len() {
         return Err(PartialVMError::new(
             StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
         ));
     }
-
-    let env = func_env.module_env.env;
-    let mut move_vals = vec![];
-    for (arg_bcs, param) in bcs_args.iter().zip(params.into_iter()) {
-        match param.1.into_type_tag(env) {
+    for (arg_bcs, param) in bcs_args.iter().zip(&params[num_signer_args..]) {
+        match param.1.clone().into_type_tag(env) {
             None => {
                 return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
             }
