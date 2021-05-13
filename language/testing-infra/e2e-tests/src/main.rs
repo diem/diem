@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
-use std::{fs, path::Path};
+use std::{collections::BTreeSet, fs, path::Path};
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
@@ -44,7 +44,7 @@ use language_e2e_tests::{
         TRACE_FILE_ERROR, TRACE_FILE_NAME,
     },
 };
-use move_binary_format::errors::VMResult;
+use move_binary_format::{errors::VMResult, CompiledModule};
 use move_core_types::{
     effects::{ChangeSet, Event},
     gas_schedule::GasAlgebra,
@@ -146,23 +146,31 @@ struct CrossRunner<'env> {
     move_vm_state: FakeDataStore,
     stackless_vm_state: GlobalState,
     stackless_vm_settings: InterpreterSettings,
+    flags: &'env ReplayFlags,
 }
 
 impl<'env> CrossRunner<'env> {
     pub fn new(env: &'env GlobalEnv, data_store: &FakeDataStore, flags: &'env ReplayFlags) -> Self {
+        fn serialize_module(module: &CompiledModule) -> Vec<u8> {
+            let mut code = vec![];
+            module.serialize(&mut code).unwrap();
+            code
+        }
+
         let mut move_vm_state = data_store.clone();
         let mut stackless_vm_state = GlobalState::default();
+        let mut included_modules = BTreeSet::new();
         for (ap, blob) in data_store.inner() {
             match ap.get_path() {
                 AP::Code(module_id) => {
                     let module_env = env.find_module_by_language_storage_id(&module_id).unwrap();
-                    let mut code = vec![];
-                    module_env
-                        .get_verified_module()
-                        .serialize(&mut code)
-                        .unwrap();
                     // update the module code to the same version as the one in the GlobalEnv
-                    move_vm_state.add_module(&module_id, code);
+                    move_vm_state.add_module(
+                        &module_id,
+                        serialize_module(module_env.get_verified_module()),
+                    );
+                    // mark this module as included
+                    included_modules.insert(module_id);
                 }
                 AP::Resource(struct_tag) => {
                     let inst = convert_move_struct_tag(env, &struct_tag).unwrap();
@@ -176,6 +184,15 @@ impl<'env> CrossRunner<'env> {
                 }
             }
         }
+        for module_env in env.get_modules() {
+            let verified_module = module_env.get_verified_module();
+            let module_id = verified_module.self_id();
+            if included_modules.contains(&module_id) {
+                continue;
+            }
+            // add new modules in the environment
+            move_vm_state.add_module(&module_id, serialize_module(verified_module));
+        }
 
         let settings = if flags.verbose_stackless_vm {
             InterpreterSettings::verbose_default()
@@ -188,6 +205,7 @@ impl<'env> CrossRunner<'env> {
             move_vm_state,
             stackless_vm_state,
             stackless_vm_settings: settings,
+            flags,
         }
     }
 
@@ -198,6 +216,20 @@ impl<'env> CrossRunner<'env> {
         ty_args: &[TypeTag],
         args: &[Vec<u8>],
     ) {
+        if self.flags.verbose_trace_xrun {
+            eprintln!(
+                "[-] xrun: 0x{}::{}::{}<{}>",
+                module_id.address().short_str_lossless(),
+                module_id.name(),
+                function_name,
+                ty_args
+                    .iter()
+                    .map(|tag| tag.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+
         // execute via move VM
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.move_vm_state);
@@ -241,6 +273,20 @@ impl<'env> CrossRunner<'env> {
         args: &[Vec<u8>],
         senders: &[AccountAddress],
     ) {
+        if self.flags.verbose_trace_xrun {
+            eprintln!(
+                "[-] xrun: 0x{}::{}::{}<{}>",
+                module_id.address().short_str_lossless(),
+                module_id.name(),
+                function_name,
+                ty_args
+                    .iter()
+                    .map(|tag| tag.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+
         // execute via move VM
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.move_vm_state);
@@ -995,6 +1041,8 @@ struct ReplayFlags {
     verbose_trace_meta: bool,
     /// Print information per-step in the trace
     verbose_trace_step: bool,
+    /// Print information per cross-VM function invocation
+    verbose_trace_xrun: bool,
     /// Enable the verbose mode in stackless VM
     verbose_stackless_vm: bool,
     /// Print warnings
@@ -1006,7 +1054,8 @@ pub fn main() -> Result<()> {
     let flags = ReplayFlags {
         verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
         verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
-        verbose_stackless_vm: args.verbose.map_or(false, |level| level > 2),
+        verbose_trace_xrun: args.verbose.map_or(false, |level| level > 2),
+        verbose_stackless_vm: args.verbose.map_or(false, |level| level > 3),
         warning: args.warning.map_or(false, |level| level > 0),
     };
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
