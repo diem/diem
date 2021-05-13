@@ -1,8 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
-use std::{collections::BTreeSet, fs, path::Path};
+use anyhow::{anyhow, bail, Result};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+};
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
@@ -431,21 +435,14 @@ fn execute_script_function_via_session_and_xrunner(
 struct TraceReplayer<'env> {
     env: &'env GlobalEnv,
     data_store: FakeDataStore,
-    check_stackless_vm: bool,
     flags: &'env ReplayFlags,
 }
 
 impl<'env> TraceReplayer<'env> {
-    pub fn new(
-        env: &'env GlobalEnv,
-        data_store: FakeDataStore,
-        check_stackless_vm: bool,
-        flags: &'env ReplayFlags,
-    ) -> Self {
+    pub fn new(env: &'env GlobalEnv, data_store: FakeDataStore, flags: &'env ReplayFlags) -> Self {
         Self {
             env,
             data_store,
-            check_stackless_vm,
             flags,
         }
     }
@@ -472,7 +469,7 @@ impl<'env> TraceReplayer<'env> {
         // execute
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
-        let mut xrunner = if self.check_stackless_vm {
+        let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
@@ -508,7 +505,7 @@ impl<'env> TraceReplayer<'env> {
 
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
-        let mut xrunner = if self.check_stackless_vm {
+        let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
@@ -548,7 +545,7 @@ impl<'env> TraceReplayer<'env> {
                     return Err(err);
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
-                let mut new_xrunner = if self.check_stackless_vm {
+                let mut new_xrunner = if self.flags.xrun {
                     Some(CrossRunner::new(self.env, &self.data_store, self.flags))
                 } else {
                     None
@@ -573,7 +570,7 @@ impl<'env> TraceReplayer<'env> {
     ) -> VMResult<(ChangeSet, Vec<Event>)> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
-        let mut xrunner = if self.check_stackless_vm {
+        let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
@@ -602,7 +599,7 @@ impl<'env> TraceReplayer<'env> {
                     return Err(err);
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
-                let mut new_xrunner = if self.check_stackless_vm {
+                let mut new_xrunner = if self.flags.xrun {
                     Some(CrossRunner::new(self.env, &self.data_store, self.flags))
                 } else {
                     None
@@ -804,21 +801,19 @@ fn execute_txn_admin_script_epilogue(
 // Trace replay
 //**************************************************************************************************
 
-fn replay_trace<P: AsRef<Path>>(
-    wks: P,
-    env: &GlobalEnv,
-    check_stackless_vm: bool,
-    flags: &ReplayFlags,
-) -> Result<()> {
+fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, flags: &ReplayFlags) -> Result<()> {
     let wks = wks.as_ref();
 
-    // sanity checks
     let test_name = fs::read_to_string(wks.join(TRACE_FILE_NAME))?;
+    if !flags.should_replay_trace(&test_name, None) {
+        return Ok(());
+    }
     if flags.verbose_trace_meta {
         eprintln!("[-] Replaying trace: {}", test_name);
     }
-    assert!(!wks.join(TRACE_FILE_ERROR).exists());
 
+    // sanity checks
+    assert!(!wks.join(TRACE_FILE_ERROR).exists());
     let dir_meta = wks.join(TRACE_DIR_META);
     let dir_data = wks.join(TRACE_DIR_DATA);
     let num_blks = fs::read_dir(&dir_meta)?.count();
@@ -831,6 +826,11 @@ fn replay_trace<P: AsRef<Path>>(
 
     // iterate over each transaction blocks
     for blk_seq in 0..num_blks {
+        if !flags.should_replay_trace(&test_name, Some(blk_seq)) {
+            continue;
+        }
+
+        // collect info
         let file_meta = dir_meta.join(blk_seq.to_string());
         let meta: TraceSeqMapping = bcs::from_bytes(&fs::read(file_meta)?)?;
         let (blk_id, txn_seqs, res_seqs) = meta;
@@ -842,7 +842,7 @@ fn replay_trace<P: AsRef<Path>>(
         let data: FakeDataStore = bcs::from_bytes(&fs::read(file_data)?)?;
 
         // construct the trace replayer
-        let mut replayer = TraceReplayer::new(env, data, check_stackless_vm, flags);
+        let mut replayer = TraceReplayer::new(env, data, flags);
 
         // iterate over transactions in the block
         for (txn_seq, res_seq) in txn_seqs.into_iter().zip(res_seqs.into_iter()) {
@@ -993,13 +993,7 @@ fn replay_trace<P: AsRef<Path>>(
     Ok(())
 }
 
-fn replay<P: AsRef<Path>>(
-    root: P,
-    env: &GlobalEnv,
-    filters: &[String],
-    check_stackless_vm: bool,
-    flags: &ReplayFlags,
-) -> Result<()> {
+fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, flags: &ReplayFlags) -> Result<()> {
     let root = root.as_ref();
     for entry in WalkDir::new(root).into_iter() {
         let entry = entry?;
@@ -1008,20 +1002,7 @@ fn replay<P: AsRef<Path>>(
                 .path()
                 .parent()
                 .ok_or_else(|| anyhow!("Cannot traverse the root directory"))?;
-
-            let should_replay = if filters.is_empty() {
-                true
-            } else {
-                let wks_name = wks
-                    .file_name()
-                    .ok_or_else(|| anyhow!("Cannot get the trace directory name"))?
-                    .to_str()
-                    .unwrap();
-                filters.iter().any(|f| wks_name.contains(f))
-            };
-            if should_replay {
-                replay_trace(wks, env, check_stackless_vm, flags)?;
-            }
+            replay_trace(wks, env, flags)?;
         }
     }
     Ok(())
@@ -1042,8 +1023,8 @@ struct ReplayArgs {
     filters: Vec<String>,
 
     /// Cross check the stackless VM against the Move VM
-    #[structopt(short = "s", long = "stackless")]
-    stackless: bool,
+    #[structopt(short = "x", long = "xrun")]
+    xrun: bool,
 
     /// Verbose mode
     #[structopt(short = "v", long = "verbose")]
@@ -1055,6 +1036,10 @@ struct ReplayArgs {
 }
 
 struct ReplayFlags {
+    /// Filters on which trace (and steps) to run
+    filters: BTreeMap<String, BTreeSet<usize>>,
+    /// Cross-run and check the stackless VM
+    xrun: bool,
     /// Print information per trace
     verbose_trace_meta: bool,
     /// Print information per-step in the trace
@@ -1067,9 +1052,46 @@ struct ReplayFlags {
     warning: bool,
 }
 
+impl ReplayFlags {
+    pub fn should_replay_trace(&self, test: &str, step: Option<usize>) -> bool {
+        if self.filters.is_empty() {
+            return true;
+        }
+        for (k, v) in &self.filters {
+            if test.contains(k) {
+                if v.is_empty() {
+                    return true;
+                }
+                return step.map_or(true, |s| v.contains(&s));
+            }
+        }
+        false
+    }
+}
+
 pub fn main() -> Result<()> {
     let args = ReplayArgs::from_args();
+    let mut filters = BTreeMap::new();
+    for item in args.filters {
+        let tokens: Vec<&str> = item.split("::").collect();
+        if tokens.len() == 1 {
+            filters
+                .entry(tokens[0].to_string())
+                .or_insert_with(BTreeSet::new);
+        } else if tokens.len() == 2 {
+            let step: usize = tokens[1].parse()?;
+            filters
+                .entry(tokens[0].to_string())
+                .or_insert_with(BTreeSet::new)
+                .insert(step);
+        } else {
+            bail!("Invalid filter: {}", item);
+        }
+    }
+
     let flags = ReplayFlags {
+        filters,
+        xrun: args.xrun,
         verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
         verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
         verbose_trace_xrun: args.verbose.map_or(false, |level| level > 2),
@@ -1078,7 +1100,7 @@ pub fn main() -> Result<()> {
     };
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
     for trace in args.trace_files {
-        replay(trace, &env, &args.filters, args.stackless, &flags)?;
+        replay(trace, &env, &flags)?;
     }
     Ok(())
 }
