@@ -13,7 +13,10 @@ use crate::{
     },
 };
 use diem_client::views::VMStatusView;
-use diem_config::{config::SecureBackend, network_id::NetworkId};
+use diem_config::{
+    config::{PeerRole, SecureBackend},
+    network_id::NetworkId,
+};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519, HashValue, PrivateKey, Uniform, ValidCryptoMaterialStringExt,
@@ -40,6 +43,7 @@ use diem_types::{
 };
 use rand::rngs::OsRng;
 use std::{
+    collections::HashSet,
     convert::{TryFrom, TryInto},
     fs,
     path::PathBuf,
@@ -327,6 +331,39 @@ fn test_extract_peer_from_file() {
     let public_key = key.public_key();
     assert_eq!(public_key, *peer.keys.iter().next().unwrap());
     assert_eq!(from_identity_public_key(public_key), *peer_id);
+}
+
+#[test]
+fn test_extract_peers_from_keys() {
+    let op_tool = OperationalTool::test();
+    let output_path = TempPath::new();
+    output_path.create_as_file().unwrap();
+
+    let mut keys = HashSet::new();
+    for _ in 1..10 {
+        let key_path = TempPath::new();
+        key_path.create_as_file().unwrap();
+        keys.insert(
+            op_tool
+                .generate_key(KeyType::X25519, key_path.as_ref(), EncodingType::Hex)
+                .unwrap()
+                .public_key(),
+        );
+    }
+    let peers = op_tool
+        .extract_peers_from_keys(keys.clone(), output_path.as_ref())
+        .unwrap();
+    assert_eq!(keys.len(), peers.len());
+    for key in keys {
+        let address = from_identity_public_key(key);
+        let peer = peers.get(&address).unwrap();
+        let keys = &peer.keys;
+
+        assert_eq!(1, keys.len());
+        assert!(keys.contains(&key));
+        assert_eq!(PeerRole::Downstream, peer.role);
+        assert!(peer.addresses.is_empty());
+    }
 }
 
 #[test]

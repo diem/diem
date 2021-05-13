@@ -4,7 +4,8 @@
 use diem_client::AccountAddress;
 use diem_config::config::{Peer, PeerRole};
 use diem_crypto::{
-    ed25519::Ed25519PrivateKey, x25519, Uniform, ValidCryptoMaterial, ValidCryptoMaterialStringExt,
+    ed25519::Ed25519PrivateKey, x25519, x25519::PUBLIC_KEY_SIZE, Uniform, ValidCryptoMaterial,
+    ValidCryptoMaterialStringExt,
 };
 use diem_global_constants::OWNER_ACCOUNT;
 use diem_management::{
@@ -12,6 +13,7 @@ use diem_management::{
 };
 use diem_types::{account_address::from_identity_public_key, PeerId};
 use rand::SeedableRng;
+use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
     fs::{read, File},
@@ -95,10 +97,58 @@ impl GenerateKey {
 }
 
 #[derive(Debug, StructOpt)]
+pub struct ExtractPeersFromKeys {
+    #[structopt(long, parse(try_from_str = parse_public_keys_hex))]
+    keys: HashSet<x25519::PublicKey>,
+    #[structopt(long)]
+    output_file: Option<PathBuf>,
+}
+
+fn parse_public_key_hex(src: &str) -> Result<x25519::PublicKey, Error> {
+    let input = src.trim();
+    static HEX_SIZE: usize = PUBLIC_KEY_SIZE * 2;
+    if input.len() != HEX_SIZE {
+        return Err(Error::CommandArgumentError(
+            "Invalid public key length, must be 64 hex characters".to_string(),
+        ));
+    }
+    x25519::PublicKey::from_encoded_string(input)
+        .map_err(|err| Error::UnableToParse("Key", err.to_string()))
+}
+
+fn parse_public_keys_hex(src: &str) -> Result<HashSet<x25519::PublicKey>, Error> {
+    let input = src.trim();
+
+    let strings: Vec<_> = input.split(',').collect();
+    let mut keys: HashSet<_> = HashSet::new();
+    for str in strings {
+        keys.insert(parse_public_key_hex(str)?);
+    }
+
+    Ok(keys)
+}
+
+impl ExtractPeersFromKeys {
+    pub fn execute(&self) -> Result<HashMap<PeerId, Peer>, Error> {
+        let map = self
+            .keys
+            .iter()
+            .map(|key| peer_from_public_key(*key))
+            .collect();
+        if let Some(output_file) = self.output_file.as_ref() {
+            save_to_yaml(output_file, "Peers", &map)?;
+        }
+        Ok(map)
+    }
+}
+
+#[derive(Debug, StructOpt)]
 pub struct ExtractPeerFromFile {
     /// Location to read the key
     #[structopt(long)]
     key_file: PathBuf,
+    #[structopt(long)]
+    output_file: Option<PathBuf>,
     #[structopt(long)]
     encoding: EncodingType,
 }
@@ -109,6 +159,10 @@ impl ExtractPeerFromFile {
         let (peer_id, peer) = peer_from_public_key(private_key.public_key());
         let mut map = HashMap::new();
         map.insert(peer_id, peer);
+
+        if let Some(output_file) = self.output_file.as_ref() {
+            save_to_yaml(output_file, "Peer", &map)?;
+        }
         Ok(map)
     }
 }
@@ -122,6 +176,8 @@ pub struct ExtractPeerFromStorage {
     key_name: String,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
+    #[structopt(long)]
+    output_file: Option<PathBuf>,
 }
 
 impl ExtractPeerFromStorage {
@@ -137,6 +193,10 @@ impl ExtractPeerFromStorage {
         let (_, peer) = peer_from_public_key(public_key);
         let mut map = HashMap::new();
         map.insert(peer_id, peer);
+
+        if let Some(output_file) = self.output_file.as_ref() {
+            save_to_yaml(output_file, "Peer", &map)?;
+        }
         Ok(map)
     }
 }
@@ -145,7 +205,10 @@ fn peer_from_public_key(public_key: x25519::PublicKey) -> (AccountAddress, Peer)
     let peer_id = from_identity_public_key(public_key);
     let mut public_keys = HashSet::new();
     public_keys.insert(public_key);
-    (peer_id, Peer::new(Vec::new(), public_keys, PeerRole::Known))
+    (
+        peer_id,
+        Peer::new(Vec::new(), public_keys, PeerRole::Downstream),
+    )
 }
 
 fn generate_ed25519_key() -> Ed25519PrivateKey {
@@ -273,8 +336,18 @@ pub fn save_key<Key: ValidCryptoMaterial>(
         EncodingType::Base64 => base64::encode(key.to_bytes()).into_bytes(),
     };
 
-    let mut file = File::create(path).map_err(|e| Error::IO(key_name.to_string(), e))?;
-    file.write_all(encoded.as_slice())
-        .map_err(|e| Error::IO(key_name.to_string(), e))?;
+    write_file(path, key_name, encoded.as_slice())
+}
+
+fn save_to_yaml<T: Serialize>(path: &Path, input_name: &str, item: &T) -> Result<(), Error> {
+    let yaml =
+        serde_yaml::to_string(item).map_err(|err| Error::UnexpectedError(err.to_string()))?;
+    write_file(path, input_name, yaml.as_bytes())
+}
+
+fn write_file(path: &Path, input_name: &str, contents: &[u8]) -> Result<(), Error> {
+    let mut file = File::create(path).map_err(|e| Error::IO(input_name.to_string(), e))?;
+    file.write_all(contents)
+        .map_err(|e| Error::IO(input_name.to_string(), e))?;
     Ok(())
 }

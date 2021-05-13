@@ -28,10 +28,12 @@ pub enum Command {
     CreateValidator(crate::governance::CreateValidator),
     #[structopt(about = "Create a new validator operator account")]
     CreateValidatorOperator(crate::governance::CreateValidatorOperator),
-    #[structopt(about = "Extract peer information from an x25519 PrivateKey file")]
+    #[structopt(about = "Extract a trusted peer identity from an x25519 PrivateKey file")]
     ExtractPeerFromFile(crate::keys::ExtractPeerFromFile),
-    #[structopt(about = "Extract peer information from storage")]
+    #[structopt(about = "Extract a trusted peer identity from storage")]
     ExtractPeerFromStorage(crate::keys::ExtractPeerFromStorage),
+    #[structopt(about = "Extract trusted peer identities from a list of Public Keys")]
+    ExtractPeersFromKeys(crate::keys::ExtractPeersFromKeys),
     #[structopt(about = "Extract a private key from the validator storage")]
     ExtractPrivateKey(crate::keys::ExtractPrivateKey),
     #[structopt(about = "Extract a public key from the validator storage")]
@@ -82,6 +84,7 @@ pub enum CommandName {
     CreateValidatorOperator,
     ExtractPeerFromFile,
     ExtractPeerFromStorage,
+    ExtractPeersFromKeys,
     ExtractPrivateKey,
     ExtractPublicKey,
     GenerateKey,
@@ -115,6 +118,7 @@ impl From<&Command> for CommandName {
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
             Command::ExtractPeerFromFile(_) => CommandName::ExtractPeerFromFile,
             Command::ExtractPeerFromStorage(_) => CommandName::ExtractPeerFromStorage,
+            Command::ExtractPeersFromKeys(_) => CommandName::ExtractPeersFromKeys,
             Command::GenerateKey(_) => CommandName::GenerateKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::PrintAccount(_) => CommandName::PrintAccount,
@@ -148,6 +152,7 @@ impl std::fmt::Display for CommandName {
             CommandName::ExtractPublicKey => "extract-public-key",
             CommandName::ExtractPeerFromFile => "extract-peer-from-file",
             CommandName::ExtractPeerFromStorage => "extract-peer-from-storage",
+            CommandName::ExtractPeersFromKeys => "extract-peers-from-keys",
             CommandName::GenerateKey => "generate-key",
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::PrintAccount => "print-account",
@@ -185,6 +190,7 @@ impl Command {
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPeerFromFile(cmd) => Self::pretty_print(cmd.execute()),
             Command::ExtractPeerFromStorage(cmd) => Self::pretty_print(cmd.execute()),
+            Command::ExtractPeersFromKeys(cmd) => Self::pretty_print(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
             Command::GenerateKey(cmd) => Self::print_success(cmd.execute().map(|_| ())),
@@ -308,6 +314,14 @@ impl Command {
             self,
             Command::ExtractPeerFromFile,
             CommandName::ExtractPeerFromFile
+        )
+    }
+
+    pub fn extract_peers_from_keys(self) -> Result<HashMap<PeerId, Peer>, Error> {
+        execute_command!(
+            self,
+            Command::ExtractPeersFromKeys,
+            CommandName::ExtractPeersFromKeys
         )
     }
 
