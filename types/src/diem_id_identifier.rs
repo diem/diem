@@ -1,14 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements length and character set limited string types needed
+//! for DiemID as defined by DIP-10: https://github.com/diem/dip/blob/main/dips/dip-10.md
+
 use serde::{de, Serialize};
 use std::{
     fmt::{Display, Formatter},
     str::FromStr,
 };
-
-/// This file implements length and character set limited string types needed
-/// for DiemID as defined by DIP-10: https://github.com/diem/dip/blob/main/dips/dip-10.md
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DiemId {
@@ -68,11 +68,9 @@ impl FromStr for DiemId {
             .find('@')
             .ok_or_else(|| DiemIdParseError::new("DiemId does not have @".to_string()))?;
         let split = s.split_at(index);
-        DiemId::new_from_raw(split.0, (split.1).trim_start_matches('@'))
+        DiemId::new_from_raw(split.0, &(split.1)[1..])
     }
 }
-
-impl std::error::Error for DiemIdParseError {}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct DiemIdUserIdentifier(Box<str>);
@@ -193,6 +191,8 @@ impl Display for DiemIdParseError {
     }
 }
 
+impl std::error::Error for DiemIdParseError {}
+
 #[test]
 fn test_invalid_user_identifier() {
     // Test valid domain
@@ -284,6 +284,15 @@ fn test_get_diem_id_from_identifier_string() {
         diem_id.unwrap_err(),
         DiemIdParseError {
             message: "Invalid character @".to_string()
+        },
+    );
+
+    let diem_id_str = "username@@diem.com";
+    let diem_id = DiemId::from_str(diem_id_str);
+    assert_eq!(
+        diem_id.unwrap_err(),
+        DiemIdParseError {
+            message: "Invalid vasp domain input".to_string()
         },
     );
 }
