@@ -3,7 +3,10 @@
 
 use std::collections::BTreeMap;
 
-use move_binary_format::{errors::PartialVMError, file_format::CodeOffset};
+use move_binary_format::{
+    errors::{Location, PartialVMError, VMError},
+    file_format::CodeOffset,
+};
 use move_core_types::vm_status::StatusCode;
 use move_model::ast::TempIndex;
 
@@ -15,32 +18,27 @@ use crate::concrete::{
 #[derive(Clone, Debug)]
 pub enum AbortInfo {
     /// User-specific abort
-    User(u64),
+    User(u64, Location),
     /// Internal abort (e.g., integer overflow or resource does not exist in global storage)
-    Internal(StatusCode),
+    Internal(StatusCode, Location),
 }
 
 impl AbortInfo {
-    pub fn usr_abort(status_code: u64) -> Self {
-        AbortInfo::User(status_code)
-    }
-    pub fn sys_abort(status_code: StatusCode) -> Self {
-        AbortInfo::Internal(status_code)
-    }
-
-    pub fn into_err(self) -> PartialVMError {
+    pub fn into_err(self) -> VMError {
         match self {
-            Self::User(status_code) => {
-                PartialVMError::new(StatusCode::ABORTED).with_sub_status(status_code)
+            Self::User(status_code, location) => PartialVMError::new(StatusCode::ABORTED)
+                .with_sub_status(status_code)
+                .finish(location),
+            Self::Internal(status_code, location) => {
+                PartialVMError::new(status_code).finish(location)
             }
-            Self::Internal(status_code) => PartialVMError::new(status_code),
         }
     }
 
     pub fn get_status_code(&self) -> u64 {
         match self {
-            Self::User(status_code) => *status_code,
-            Self::Internal(status_code) => *status_code as u64,
+            Self::User(status_code, _) => *status_code,
+            Self::Internal(status_code, _) => *status_code as u64,
         }
     }
 }
@@ -160,19 +158,22 @@ impl LocalState {
         )
     }
     /// Mark that the current function terminated with an abort
-    pub fn terminate_with_abort(&mut self, abort_code: u64) {
+    pub fn terminate_with_abort(&mut self, abort_info: AbortInfo) {
         if cfg!(debug_assertions) {
             assert!(!self.is_terminated());
         }
         let info = match &self.termination {
             TerminationStatus::None => {
                 // no prior aborts has been seen, and no abort action attached
-                AbortInfo::usr_abort(abort_code)
+                abort_info
             }
             TerminationStatus::PostAbort(original_info) => {
                 // re-abort, make sure we are aborting with the same status code
                 if cfg!(debug_assertions) {
-                    assert_eq!(original_info.get_status_code(), abort_code);
+                    assert_eq!(
+                        original_info.get_status_code(),
+                        abort_info.get_status_code()
+                    );
                 }
                 original_info.clone()
             }

@@ -15,7 +15,7 @@ use bytecode::{
         Operation,
     },
 };
-use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
+use move_binary_format::{errors::Location, file_format::CodeOffset};
 use move_core_types::{
     account_address::AccountAddress,
     vm_status::{sub_status, StatusCode},
@@ -38,6 +38,12 @@ use crate::{
     },
     shared::variant::choose_variant,
 };
+
+//**************************************************************************************************
+// Types
+//**************************************************************************************************
+
+pub type ExecResult<T> = ::std::result::Result<T, AbortInfo>;
 
 //**************************************************************************************************
 // Constants
@@ -97,7 +103,7 @@ impl<'env> FunctionContext<'env> {
         &self,
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
-    ) -> PartialVMResult<LocalState> {
+    ) -> ExecResult<LocalState> {
         let instructions = self.target.get_bytecode();
         let debug_bytecode = self.get_settings().verbose_bytecode;
         let mut local_state = self.prepare_local_state(typed_args);
@@ -123,7 +129,7 @@ impl<'env> FunctionContext<'env> {
         typed_args: Vec<TypedValue>,
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
-    ) -> Result<Vec<TypedValue>, AbortInfo> {
+    ) -> ExecResult<Vec<TypedValue>> {
         let mut dummy_state = self.prepare_local_state(typed_args);
         if cfg!(debug_assertions) {
             assert_eq!(dummy_state.num_slots(), srcs.len());
@@ -297,7 +303,7 @@ impl<'env> FunctionContext<'env> {
         bytecode: &Bytecode,
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
-    ) -> PartialVMResult<()> {
+    ) -> ExecResult<()> {
         match bytecode {
             Bytecode::Assign(_, dst, src, kind) => {
                 self.handle_assign(*dst, *src, kind, local_state)
@@ -373,7 +379,7 @@ impl<'env> FunctionContext<'env> {
         on_abort: Option<&AbortAction>,
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
-    ) -> PartialVMResult<()> {
+    ) -> ExecResult<()> {
         // check abort handler
         if cfg!(debug_assertions) {
             match on_abort {
@@ -459,7 +465,7 @@ impl<'env> FunctionContext<'env> {
                 srcs,
                 local_state,
                 global_state,
-            )?,
+            ),
             // opaque
             Operation::OpaqueCallBegin(module_id, fun_id, ty_args) => self.handle_call_function(
                 *module_id,
@@ -469,7 +475,7 @@ impl<'env> FunctionContext<'env> {
                 srcs,
                 local_state,
                 global_state,
-            )?,
+            ),
             Operation::OpaqueCallEnd(module_id, fun_id, ty_args) => {
                 self.handle_opaque_call_end(*module_id, *fun_id, ty_args, typed_args);
                 Ok(vec![])
@@ -812,7 +818,7 @@ impl<'env> FunctionContext<'env> {
             }
             Err(abort_info) => match on_abort {
                 None => {
-                    return Err(abort_info.into_err());
+                    return Err(abort_info);
                 }
                 Some(action) => {
                     let abort_idx = action.1;
@@ -839,7 +845,7 @@ impl<'env> FunctionContext<'env> {
         srcs: &[TempIndex],
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
-    ) -> PartialVMResult<Result<Vec<TypedValue>, AbortInfo>> {
+    ) -> ExecResult<Vec<TypedValue>> {
         let env = self.target.global_env();
         let callee_env = env.get_function(module_id.qualified(fun_id));
         let callee_ctxt = self.derive_callee_ctxt(&callee_env, ty_args);
@@ -851,12 +857,7 @@ impl<'env> FunctionContext<'env> {
 
         // short-circuit the execution if this is a native function
         if callee_env.is_native() {
-            return Ok(callee_ctxt.exec_native_function(
-                srcs,
-                typed_args,
-                local_state,
-                global_state,
-            ));
+            return callee_ctxt.exec_native_function(srcs, typed_args, local_state, global_state);
         }
 
         // collect mutable arguments
@@ -886,12 +887,11 @@ impl<'env> FunctionContext<'env> {
 
         // check callee termination status
         let termination = callee_state.into_termination_status();
-        let ok_or_abort = match termination {
+        match termination {
             TerminationStatus::Abort(abort_info) => Err(abort_info),
             TerminationStatus::Return(return_vals) => Ok(return_vals),
             TerminationStatus::None | TerminationStatus::PostAbort(_) => unreachable!(),
-        };
-        Ok(ok_or_abort)
+        }
     }
 
     fn handle_opaque_call_end(
@@ -993,7 +993,7 @@ impl<'env> FunctionContext<'env> {
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_signer.into_signer();
         if global_state.has_resource(&addr, &inst) {
-            return Err(AbortInfo::sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
+            return Err(self.sys_abort(StatusCode::RESOURCE_ALREADY_EXISTS));
         }
         global_state.put_resource(addr, inst, op_struct);
         Ok(())
@@ -1011,7 +1011,7 @@ impl<'env> FunctionContext<'env> {
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_addr.into_address();
         match global_state.del_resource(addr, inst) {
-            None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
+            None => Err(self.sys_abort(StatusCode::MISSING_DATA)),
             Some(object) => Ok(object),
         }
     }
@@ -1028,7 +1028,7 @@ impl<'env> FunctionContext<'env> {
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_addr.into_address();
         match global_state.get_resource(None, addr, inst) {
-            None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
+            None => Err(self.sys_abort(StatusCode::MISSING_DATA)),
             Some(object) => Ok(object),
         }
     }
@@ -1046,7 +1046,7 @@ impl<'env> FunctionContext<'env> {
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_addr.into_address();
         match global_state.get_resource(Some(is_mut), addr, inst) {
-            None => Err(AbortInfo::sys_abort(StatusCode::MISSING_DATA)),
+            None => Err(self.sys_abort(StatusCode::MISSING_DATA)),
             Some(object) => Ok(object),
         }
     }
@@ -1229,20 +1229,20 @@ impl<'env> FunctionContext<'env> {
         } else if ty.is_u64() {
             let v = val.into_u64();
             if v > (u8::MAX as u64) {
-                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             v as u8
         } else if ty.is_u128() {
             let v = val.into_u128();
             if v > (u8::MAX as u128) {
-                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             v as u8
         } else {
             let n = val.into_num();
             match n.to_u8() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => v,
             }
@@ -1259,14 +1259,14 @@ impl<'env> FunctionContext<'env> {
         } else if ty.is_u128() {
             let v = val.into_u128();
             if v > (u64::MAX as u128) {
-                return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
             }
             v as u64
         } else {
             let n = val.into_num();
             match n.to_u64() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => v,
             }
@@ -1286,7 +1286,7 @@ impl<'env> FunctionContext<'env> {
             let n = val.into_num();
             match n.to_u128() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => v,
             }
@@ -1311,20 +1311,20 @@ impl<'env> FunctionContext<'env> {
             Operation::Add => lval + rval,
             Operation::Sub => {
                 if lval < rval {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 lval - rval
             }
             Operation::Mul => lval * rval,
             Operation::Div => {
                 if rval.is_zero() {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 lval / rval
             }
             Operation::Mod => {
                 if rval.is_zero() {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 lval % rval
             }
@@ -1334,21 +1334,21 @@ impl<'env> FunctionContext<'env> {
         let res_val = if res.is_u8() {
             match result.to_u8() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => TypedValue::mk_u8(v),
             }
         } else if res.is_u64() {
             match result.to_u64() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => TypedValue::mk_u64(v),
             }
         } else if res.is_u128() {
             match result.to_u128() {
                 None => {
-                    return Err(AbortInfo::sys_abort(StatusCode::ARITHMETIC_ERROR));
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
                 }
                 Some(v) => TypedValue::mk_u128(v),
             }
@@ -1538,7 +1538,7 @@ impl<'env> FunctionContext<'env> {
         } else {
             val.into_num().to_u64().unwrap()
         };
-        local_state.terminate_with_abort(abort_code);
+        local_state.terminate_with_abort(self.usr_abort(abort_code));
     }
 
     fn handle_return(&self, rets: &[TempIndex], local_state: &mut LocalState) {
@@ -1599,7 +1599,7 @@ impl<'env> FunctionContext<'env> {
         let elem_num = elem_val.into_u64() as usize;
         vec_val
             .get_vector_element(elem_num)
-            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+            .ok_or_else(|| self.usr_abort(INDEX_OUT_OF_BOUNDS))
     }
 
     fn native_vector_borrow_mut(
@@ -1618,7 +1618,7 @@ impl<'env> FunctionContext<'env> {
         let elem_num = elem_val.into_u64() as usize;
         vec_val
             .borrow_ref_vector_element(elem_num, true, vec_idx)
-            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+            .ok_or_else(|| self.usr_abort(INDEX_OUT_OF_BOUNDS))
     }
 
     fn native_vector_push_back(&self, vec_val: TypedValue, elem_val: TypedValue) -> TypedValue {
@@ -1645,7 +1645,7 @@ impl<'env> FunctionContext<'env> {
         }
         vec_val
             .update_ref_vector_pop_back()
-            .ok_or_else(|| AbortInfo::usr_abort(POP_EMPTY_VEC))
+            .ok_or_else(|| self.usr_abort(POP_EMPTY_VEC))
     }
 
     fn native_vector_destroy_empty(&self, vec_val: TypedValue) -> Result<(), AbortInfo> {
@@ -1657,7 +1657,7 @@ impl<'env> FunctionContext<'env> {
             );
         }
         if !vec_val.into_vector().is_empty() {
-            return Err(AbortInfo::usr_abort(DESTROY_NON_EMPTY_VEC));
+            return Err(self.usr_abort(DESTROY_NON_EMPTY_VEC));
         }
         Ok(())
     }
@@ -1677,7 +1677,7 @@ impl<'env> FunctionContext<'env> {
         }
         vec_val
             .update_ref_vector_swap(lhs.into_u64() as usize, rhs.into_u64() as usize)
-            .ok_or_else(|| AbortInfo::usr_abort(INDEX_OUT_OF_BOUNDS))
+            .ok_or_else(|| self.usr_abort(INDEX_OUT_OF_BOUNDS))
     }
 
     fn native_signer_borrow_address(&self, signer_val: TypedValue) -> TypedValue {
@@ -1735,7 +1735,7 @@ impl<'env> FunctionContext<'env> {
                 let bcs_val = bytes.into_iter().map(TypedValue::mk_u8).collect();
                 TypedValue::mk_vector(BaseType::mk_u8(), bcs_val)
             })
-            .ok_or_else(|| AbortInfo::usr_abort(sub_status::NFE_BCS_SERIALIZATION_FAILURE))
+            .ok_or_else(|| self.usr_abort(sub_status::NFE_BCS_SERIALIZATION_FAILURE))
     }
 
     fn native_event_write_to_event_store(
@@ -1828,6 +1828,19 @@ impl<'env> FunctionContext<'env> {
         return *self.label_offsets.get(&label).unwrap();
     }
 
+    fn module_location(&self) -> Location {
+        let module_id = self.target.module_env().get_verified_module().self_id();
+        Location::Module(module_id)
+    }
+
+    fn usr_abort(&self, status_code: u64) -> AbortInfo {
+        AbortInfo::User(status_code, self.module_location())
+    }
+
+    fn sys_abort(&self, status_code: StatusCode) -> AbortInfo {
+        AbortInfo::Internal(status_code, self.module_location())
+    }
+
     fn derive_callee_ctxt(
         &self,
         callee_env: &'env FunctionEnv<'env>,
@@ -1910,16 +1923,13 @@ pub fn entrypoint(
     ty_args: &[BaseType],
     typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
-) -> PartialVMResult<Vec<TypedValue>> {
+) -> ExecResult<Vec<TypedValue>> {
     let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
     let local_state = ctxt.exec_user_function(typed_args, global_state)?;
     let termination = local_state.into_termination_status();
-    let return_vals = match termination {
-        TerminationStatus::Abort(abort_info) => {
-            return Err(abort_info.into_err());
-        }
-        TerminationStatus::Return(return_vals) => return_vals,
+    match termination {
+        TerminationStatus::Abort(abort_info) => Err(abort_info),
+        TerminationStatus::Return(return_vals) => Ok(return_vals),
         TerminationStatus::None | TerminationStatus::PostAbort(_) => unreachable!(),
-    };
-    Ok(return_vals)
+    }
 }
