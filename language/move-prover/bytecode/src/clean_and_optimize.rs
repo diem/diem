@@ -7,6 +7,7 @@ use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
+    options::ProverOptions,
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
@@ -40,8 +41,10 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         }
 
         // Run optimizer
+        let options = ProverOptions::get(func_env.module_env.env);
         let instrs = std::mem::take(&mut data.code);
         let new_instrs = Optimizer {
+            options: &*options,
             target: &FunctionTarget::new(func_env, &data),
         }
         .run(instrs);
@@ -77,6 +80,7 @@ impl AbstractDomain for AnalysisState {
 }
 
 struct Optimizer<'a> {
+    options: &'a ProverOptions,
     target: &'a FunctionTarget<'a>,
 }
 
@@ -103,7 +107,9 @@ impl<'a> TransferFunctions for Optimizer<'a> {
                         .target
                         .global_env()
                         .get_function_qid(mid.qualified(*fid));
-                    let has_effect = if callee_env.is_native_or_intrinsic() {
+                    let has_effect = if !self.options.for_interpretation
+                        && callee_env.is_native_or_intrinsic()
+                    {
                         // Exploit knowledge about builtin functions
                         let pool = callee_env.symbol_pool();
                         !matches!(
