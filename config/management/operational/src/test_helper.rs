@@ -16,7 +16,11 @@ use diem_types::{
     account_address::AccountAddress, chain_id::ChainId, network_address::NetworkAddress,
     waypoint::Waypoint, PeerId,
 };
-use std::{collections::HashMap, path::Path};
+use itertools::Itertools;
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "diem-operational-tool";
@@ -244,6 +248,26 @@ impl OperationalTool {
 
         let command = Command::from_iter(args.split_whitespace());
         command.extract_peer_from_storage()
+    }
+
+    pub fn extract_peers_from_keys(
+        &self,
+        keys: HashSet<x25519::PublicKey>,
+        output_file: &Path,
+    ) -> Result<HashMap<PeerId, Peer>, Error> {
+        let args = format!(
+            "
+                {command}
+                --keys {keys}
+                --output-file {output_file}
+            ",
+            command = command(TOOL_NAME, CommandName::ExtractPeersFromKeys),
+            keys = keys.iter().join(","),
+            output_file = output_file.to_str().unwrap(),
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.extract_peers_from_keys()
     }
 
     pub fn generate_key(
