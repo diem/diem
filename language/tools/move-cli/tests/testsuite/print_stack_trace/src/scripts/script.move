@@ -1,6 +1,6 @@
 script {
-use 0x1::Debug;
-use 0x1::Vector;
+use Std::Debug;
+use Std::Vector;
 use 0x2::N;
 
 fun main() {

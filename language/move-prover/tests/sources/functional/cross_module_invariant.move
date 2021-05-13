@@ -1,7 +1,7 @@
 module 0x42::TestCrossModuleInv {
-    use 0x1::DiemAccount;
-    use 0x1::XUS;
-    use 0x1::Signer;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS;
+    use Std::Signer;
 
     public fun add_XUS_balance(account: &signer) {
         assert(Signer::address_of(account) == @0x1, 1);

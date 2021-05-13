@@ -1,5 +1,5 @@
 module 0x8675309::A {
-    use 0x1::Signer;
+    use Std::Signer;
     struct T has key {v: u64}
     struct U has key {v: u64}
 

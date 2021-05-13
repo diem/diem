@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct R has key {
         f1: bool,

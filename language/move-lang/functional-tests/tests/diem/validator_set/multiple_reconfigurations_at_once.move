@@ -23,7 +23,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set bob to be alice's operator
@@ -36,7 +36,7 @@ script {
 //! new-transaction
 //! sender: viola
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set dave to be viola's operator
@@ -49,7 +49,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
     fun main(account: signer) {
@@ -76,8 +76,8 @@ script{
 //! new-transaction
 //! sender: dave
 script{
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     // Two reconfigurations cannot happen in the same block
     fun main(account: signer) {
     let account = &account;
@@ -105,7 +105,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::update_config_and_reconfigure(account, @{{viola}});
@@ -118,8 +118,8 @@ script{
 //! sender: blessed
 // freezing does not cause changes to the set
 script {
-    use 0x1::DiemSystem;
-    use 0x1::AccountFreezing;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::AccountFreezing;
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
         assert(DiemSystem::is_validator(@{{alice}}) == true, 101);

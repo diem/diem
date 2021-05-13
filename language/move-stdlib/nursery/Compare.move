@@ -1,8 +1,6 @@
-address 0x1 {
-
 /// Utilities for comparing Move values based on their representation in BCS.
-module Compare {
-    use 0x1::Vector;
+module Std::Compare {
+    use Std::Vector;
 
     // Move does not have signed integers, so we cannot use the usual 0, -1, 1 convention to
     // represent EQUAL, LESS_THAN, and GREATER_THAN. Instead, we fun a new convention using u8
@@ -72,7 +70,5 @@ module Compare {
         else if (i1 < i2) LESS_THAN
         else GREATER_THAN
     }
-
-}
 
 }

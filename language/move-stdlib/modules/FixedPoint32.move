@@ -1,11 +1,9 @@
-address 0x1 {
-
 /// Defines a fixed-point numeric type with a 32-bit integer part and
 /// a 32-bit fractional part.
 
-module FixedPoint32 {
+module Std::FixedPoint32 {
 
-    use 0x1::Errors;
+    use Std::Errors;
 
     /// Define a fixed-point numeric type with 32 fractional bits.
     /// This is just a u64 integer but it is wrapped in a struct to
@@ -242,7 +240,5 @@ module FixedPoint32 {
     spec module {
         pragma aborts_if_is_strict;
     }
-
-}
 
 }

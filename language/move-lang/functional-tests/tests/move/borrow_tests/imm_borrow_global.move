@@ -28,7 +28,7 @@ module {{alice}}::A {
 
 module {{bob}}::Tester {
     use {{alice}}::A;
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct Pair has key { x: A::Coin, y: A::Coin }
 

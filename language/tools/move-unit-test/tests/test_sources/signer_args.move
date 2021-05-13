@@ -21,7 +21,7 @@ module M {
     }
 
     #[test_only]
-    use 0x1::Signer;
+    use Std::Signer;
 
     #[test(a=@0x1, b=@0x2)]
     fun test_correct_signer_arg_addrs(a: signer, b: signer) {

@@ -150,7 +150,7 @@ After time has started, all invariants guarded by <code><a href="DiemTimestamp.m
 will become activated and need to hold.
 
 
-<pre><code><b>pragma</b> <b>friend</b> = <a href="Genesis.md#0x1_Genesis_initialize">0x1::Genesis::initialize</a>;
+<pre><code><b>pragma</b> <b>friend</b> = DiemFramework::Genesis::initialize;
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>ensures</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>();
@@ -185,9 +185,9 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
     // Can only be invoked by DiemVM signer.
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_vm">CoreAddresses::assert_vm</a>(account);
 
-    <b>let</b> global_timer = borrow_global_mut&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+    <b>let</b> global_timer = borrow_global_mut&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot);
     <b>let</b> now = global_timer.microseconds;
-    <b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
+    <b>if</b> (proposer == @VMReserved) {
         // NIL block <b>with</b> null address <b>as</b> proposer. Timestamp must be equal.
         <b>assert</b>(now == timestamp, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemTimestamp.md#0x1_DiemTimestamp_ETIMESTAMP">ETIMESTAMP</a>));
     } <b>else</b> {
@@ -208,7 +208,7 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
 
 
 <pre><code><b>pragma</b> opaque;
-<b>modifies</b> <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>modifies</b> <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot);
 <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 <b>let</b> post post_now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
@@ -227,7 +227,7 @@ Conditions we only check for the implementation, but do not pass to the caller.
 
 
 <pre><code><b>aborts_if</b> [concrete]
-    (<b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
+    (<b>if</b> (proposer == @VMReserved) {
         now != timestamp
      } <b>else</b>  {
         now &gt;= timestamp
@@ -258,7 +258,7 @@ Gets the current time in microseconds.
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">now_microseconds</a>(): u64 <b>acquires</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_operating">assert_operating</a>();
-    borrow_global&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).microseconds
+    borrow_global&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot).microseconds
 }
 </code></pre>
 
@@ -283,7 +283,7 @@ Gets the current time in microseconds.
 
 
 <pre><code><b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
-   <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).microseconds
+   <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot).microseconds
 }
 </code></pre>
 
@@ -333,7 +333,7 @@ Gets the current time in seconds.
 
 
 <pre><code><b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">spec_now_seconds</a>(): u64 {
-   <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).microseconds / <a href="DiemTimestamp.md#0x1_DiemTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
+   <b>global</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot).microseconds / <a href="DiemTimestamp.md#0x1_DiemTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
 }
 </code></pre>
 
@@ -358,7 +358,7 @@ Helper function to determine if Diem is in genesis state.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">is_genesis</a>(): bool {
-    !<b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
+    !<b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot)
 }
 </code></pre>
 
@@ -434,7 +434,7 @@ for convenience. Testing <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_is_op
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>(): bool {
-    <b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
+    <b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot)
 }
 </code></pre>
 
@@ -501,7 +501,7 @@ Helper schema to specify that a function aborts if not operating.
 After genesis, <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a></code> is published forever
 
 
-<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>() ==&gt; <b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>() ==&gt; <b>exists</b>&lt;<a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(@DiemRoot);
 </code></pre>
 
 

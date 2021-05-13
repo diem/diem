@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct R1<T: store> has key { f: T }
 

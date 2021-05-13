@@ -1,13 +1,11 @@
-address 0x1 {
-
 /// Module providing functionality for designated dealers.
-module DesignatedDealer {
-    use 0x1::Errors;
-    use 0x1::Diem;
-    use 0x1::Event;
-    use 0x1::Roles;
-    use 0x1::Signer;
-    use 0x1::XUS::XUS;
+module DiemFramework::DesignatedDealer {
+    use DiemFramework::Diem;
+    use DiemFramework::Roles;
+    use DiemFramework::XUS::XUS;
+    use Std::Errors;
+    use Std::Event;
+    use Std::Signer;
 
     /// A `DesignatedDealer` always holds this `Dealer` resource regardless of the
     /// currencies it can hold. All `ReceivedMintEvent` events for all
@@ -157,18 +155,17 @@ module DesignatedDealer {
         Diem::mint<CoinType>(tc_account, amount)
     }
     spec tiered_mint {
-        use 0x1::CoreAddresses;
         pragma opaque;
 
         include TieredMintAbortsIf<CoinType>;
 
         modifies global<Dealer>(dd_addr);
-        modifies global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures exists<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
+        ensures exists<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
         modifies global<TierInfo<CoinType>>(dd_addr);
         ensures !exists<TierInfo<CoinType>>(dd_addr);
-        let currency_info = global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let post post_currency_info = global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
+        let post post_currency_info = global<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures result.value == amount;
         ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + amount);
     }
@@ -202,5 +199,4 @@ module DesignatedDealer {
         invariant update forall addr: address where old(exists<Dealer>(addr)): exists<Dealer>(addr);
     }
 
-}
 }

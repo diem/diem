@@ -1,21 +1,18 @@
-address 0x1 {
-
 /// Maintains information about the set of validators used during consensus.
 /// Provides functions to add, remove, and update validators in the
 /// validator set.
 ///
 /// > Note: When trying to understand this code, it's important to know that "config"
 /// and "configuration" are used for several distinct concepts.
-module DiemSystem {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::DiemConfig::{Self, ModifyConfigCapability};
-    use 0x1::Option::{Self, Option};
-    use 0x1::Signer;
-    use 0x1::ValidatorConfig;
-    use 0x1::Vector;
-    use 0x1::Roles;
-    use 0x1::DiemTimestamp;
+module DiemFramework::DiemSystem {
+    use DiemFramework::DiemConfig::{Self, ModifyConfigCapability};
+    use DiemFramework::ValidatorConfig;
+    use DiemFramework::Roles;
+    use DiemFramework::DiemTimestamp;
+    use Std::Errors;
+    use Std::Option::{Self, Option};
+    use Std::Signer;
+    use Std::Vector;
 
     /// Information about a Validator Owner.
     struct ValidatorInfo has copy, drop, store {
@@ -108,13 +105,13 @@ module DiemSystem {
             },
         );
         assert(
-            !exists<CapabilityHolder>(CoreAddresses::DIEM_ROOT_ADDRESS()),
+            !exists<CapabilityHolder>(@DiemRoot),
             Errors::already_published(ECAPABILITY_HOLDER)
         );
         move_to(dr_account, CapabilityHolder { cap })
     }
     spec initialize_validator_set {
-        modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
         include DiemTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         let dr_addr = Signer::spec_address_of(dr_account);
@@ -132,23 +129,23 @@ module DiemSystem {
     fun set_diem_system_config(value: DiemSystem) acquires CapabilityHolder {
         DiemTimestamp::assert_operating();
         assert(
-            exists<CapabilityHolder>(CoreAddresses::DIEM_ROOT_ADDRESS()),
+            exists<CapabilityHolder>(@DiemRoot),
             Errors::not_published(ECAPABILITY_HOLDER)
         );
         // Updates the DiemConfig<DiemSystem> and emits a reconfigure event.
         DiemConfig::set_with_capability_and_reconfigure<DiemSystem>(
-            &borrow_global<CapabilityHolder>(CoreAddresses::DIEM_ROOT_ADDRESS()).cap,
+            &borrow_global<CapabilityHolder>(@DiemRoot).cap,
             value
         )
     }
     spec set_diem_system_config {
         pragma opaque;
-        modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        modifies global<DiemConfig::Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
+        modifies global<DiemConfig::Configuration>(@DiemRoot);
         include DiemTimestamp::AbortsIfNotOperating;
         include DiemConfig::ReconfigureAbortsIf;
         /// `payload` is the only field of DiemConfig, so next completely specifies it.
-        ensures global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS()).payload == value;
+        ensures global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot).payload == value;
         include DiemConfig::ReconfigureEmits;
     }
 
@@ -193,7 +190,7 @@ module DiemSystem {
         set_diem_system_config(diem_system_config);
     }
     spec add_validator {
-        modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
         include AddValidatorAbortsIf;
         include AddValidatorEnsures;
         include DiemConfig::ReconfigureEmits;
@@ -249,7 +246,7 @@ module DiemSystem {
         set_diem_system_config(diem_system_config);
     }
     spec remove_validator {
-        modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
         include RemoveValidatorAbortsIf;
         include RemoveValidatorEnsures;
         include DiemConfig::ReconfigureEmits;
@@ -304,8 +301,8 @@ module DiemSystem {
         pragma opaque;
         // TODO(timeout): this started timing out after recent refactoring. Investigate.
         pragma verify = false;
-        modifies global<DiemConfig::Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig::Configuration>(@DiemRoot);
+        modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
         include ValidatorConfig::AbortsIfGetOperator{addr: validator_addr};
         include UpdateConfigAndReconfigureAbortsIf;
         include UpdateConfigAndReconfigureEnsures;
@@ -561,7 +558,7 @@ module DiemSystem {
         /// which grants the right to modify it to certain functions in this module.
         invariant DiemTimestamp::is_operating() ==>
             DiemConfig::spec_is_published<DiemSystem>() &&
-            exists<CapabilityHolder>(CoreAddresses::DIEM_ROOT_ADDRESS());
+            exists<CapabilityHolder>(@DiemRoot);
     }
 
     /// # Access Control
@@ -630,5 +627,4 @@ module DiemSystem {
            spec_get_validators()[i1].consensus_voting_power == 1;
 
     }
-}
 }

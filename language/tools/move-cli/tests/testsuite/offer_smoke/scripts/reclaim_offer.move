@@ -1,7 +1,7 @@
 // script 4, sender: bob
 script {
 use 0x1::M;
-use 0x1::Offer;
+use Std::Offer;
 
 // Bob should be able to reclaim his own offer for Carl
 fun main(account: signer) {

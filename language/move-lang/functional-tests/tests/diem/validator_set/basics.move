@@ -5,7 +5,7 @@
 
 //! new-transaction
 script {
-use 0x1::DiemSystem;
+use DiemFramework::DiemSystem;
 fun main(account: signer) {
     let account = &account;
     DiemSystem::initialize_validator_set(account);
@@ -15,7 +15,7 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::DiemSystem;
+use DiemFramework::DiemSystem;
 fun main() {
     let len = DiemSystem::validator_set_size();
     DiemSystem::get_ith_validator_address(len);
@@ -25,7 +25,7 @@ fun main() {
 
 //! new-transaction
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
         let account = &account;
         DiemSystem::update_config_and_reconfigure(account, @{{bob}});
@@ -43,7 +43,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_operator(account, @0x0);
@@ -54,8 +54,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::Signer;
-    use 0x1::ValidatorConfig;
+    use Std::Signer;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_operator(account, Signer::address_of(account))
@@ -66,7 +66,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::remove_operator(account)
@@ -77,7 +77,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main() {
         ValidatorConfig::get_human_name(@{{alice}});
     }
@@ -87,8 +87,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::Signer;
-    use 0x1::ValidatorConfig;
+    use Std::Signer;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_operator(account, Signer::address_of(account))
@@ -99,7 +99,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     // delegate to alice
     fun main(account: signer) {
         let account = &account;
@@ -112,7 +112,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_config(account, @{{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
@@ -123,7 +123,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_config(account, @{{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
@@ -133,7 +133,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::publish(account, account, x"")
@@ -144,7 +144,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         ValidatorConfig::set_config(account, @{{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"");
@@ -155,7 +155,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main() {
         let _ = ValidatorConfig::get_config(@{{alice}});
     }
@@ -165,7 +165,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main() {
         let config = ValidatorConfig::get_config(@{{bob}});
         let _ = ValidatorConfig::get_validator_network_addresses(&config);
@@ -183,7 +183,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! sender: diemroot
 //! execute-as: alex
 script {
-use 0x1::ValidatorOperatorConfig;
+use DiemFramework::ValidatorOperatorConfig;
 fun main(dr_account: signer, alex_signer: signer) {
     let dr_account = &dr_account;
     let alex_signer = &alex_signer;

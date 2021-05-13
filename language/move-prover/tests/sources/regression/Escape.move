@@ -1,7 +1,7 @@
 address 0x1 {
 
 module Escape {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct IndoorThing has key, store { }
 

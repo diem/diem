@@ -2,7 +2,7 @@
 //! new-transaction
 
 script{
-use 0x1::DiemBlock;
+use DiemFramework::DiemBlock;
 fun main() {
     // check that the height of the initial block is zero
     assert(DiemBlock::get_current_block_height() == 0, 77);
@@ -15,8 +15,8 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DiemBlock;
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemBlock;
+use DiemFramework::DiemTimestamp;
 
 fun main() {
     assert(DiemBlock::get_current_block_height() == 1, 76);
@@ -30,8 +30,8 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DiemBlock;
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemBlock;
+use DiemFramework::DiemTimestamp;
 
 fun main() {
     assert(DiemBlock::get_current_block_height() == 2, 76);

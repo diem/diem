@@ -1,15 +1,12 @@
-address 0x1 {
-
 /// A VASP is one type of balance-holding account on the blockchain. VASPs from a two-layer
 /// hierarchy.  The main account, called a "parent VASP" and a collection of "child VASP"s.
 /// This module provides functions to manage VASP accounts.
-
-module VASP {
-    use 0x1::Errors;
-    use 0x1::DiemTimestamp;
-    use 0x1::Signer;
-    use 0x1::Roles;
-    use 0x1::AccountLimits;
+module DiemFramework::VASP {
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use DiemFramework::AccountLimits;
+    use Std::Errors;
+    use Std::Signer;
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -267,7 +264,5 @@ module VASP {
         invariant update
             forall a: address where old(is_child(a)): spec_parent_address(a) == old(spec_parent_address(a));
     }
-
-}
 
 }

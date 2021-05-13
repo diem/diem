@@ -1,6 +1,6 @@
 address 0x2 {
 module M {
-    use 0x1::Debug;
+    use Std::Debug;
 
     fun f() {
         Debug::print(&7);

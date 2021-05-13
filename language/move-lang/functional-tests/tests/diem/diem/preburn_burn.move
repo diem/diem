@@ -5,8 +5,8 @@
 // register blessed as a preburn entity
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 
 fun main(account: signer) {
     let account = &account;
@@ -32,9 +32,9 @@ fun main(account: signer) {
 //! sender: dd
 //! gas-currency: XUS
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
@@ -56,8 +56,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer)  {
     let account = &account;
     DiemAccount::cancel_burn<XUS>(account, @{{dd}}, 56);
@@ -69,8 +69,8 @@ fun main(account: signer)  {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since the amount is 0
@@ -83,8 +83,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer)  {
     let account = &account;
     DiemAccount::cancel_burn<XUS>(account, @{{dd}}, 55);
@@ -100,9 +100,9 @@ fun main(account: signer)  {
 //! sender: dd
 //! gas-currency: XUS
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
@@ -123,8 +123,8 @@ fun main(account: signer) {
 //! sender: dd
 //! gas-currency: XUS
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -140,8 +140,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since there isn't a preburn with a value of 300
@@ -154,8 +154,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since the amount is 0
@@ -168,8 +168,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
@@ -189,9 +189,9 @@ fun main(account: signer) {
 //! sender: dd
 //! gas-currency: XUS
 script {
-    use 0x1::XUS::XUS;
-    // use 0x1::Diem;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    // use DiemFramework::Diem;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -205,8 +205,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     Diem::burn<XUS>(account, @{{default}}, 0);
@@ -217,8 +217,8 @@ fun main(account: signer) {
 // Try to burn on an account that doesn't have a burn capability
 //! new-transaction
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     Diem::burn<XUS>(account, @{{default}}, 0);
@@ -229,8 +229,8 @@ fun main(account: signer) {
 // Try to cancel burn on an account that doesn't have a burn capability
 //! new-transaction
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     Diem::destroy_zero(Diem::cancel_burn<XUS>(account, @{{dd}}, 0));
@@ -241,8 +241,8 @@ fun main(account: signer) {
 // Try to preburn to an account that doesn't have a preburn resource
 //! new-transaction
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -255,8 +255,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XDX::XDX;
+use DiemFramework::DiemAccount;
+use DiemFramework::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_designated_dealer<XDX>(
@@ -291,8 +291,8 @@ module {{default}}::Holder {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -309,8 +309,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: dd
 script {
-use 0x1::Diem::{Self, Diem};
-use 0x1::XUS::XUS;
+use DiemFramework::Diem::{Self, Diem};
+use DiemFramework::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -324,8 +324,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: dd
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -339,8 +339,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     Diem::burn<XUS>(account, @{{dd}}, 1);
@@ -350,8 +350,8 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     Diem::publish_burn_capability(
@@ -365,8 +365,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: dd
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -388,8 +388,8 @@ fun main(account: signer) {
 //! sender: dd
 //! gas-currency: XUS
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);

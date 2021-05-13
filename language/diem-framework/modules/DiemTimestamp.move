@@ -1,5 +1,3 @@
-address 0x1 {
-
 /// This module keeps a global wall clock that stores the current Unix time in microseconds.
 /// It interacts with the other modules in the following ways:
 ///
@@ -13,9 +11,9 @@ address 0x1 {
 /// genesis (`Self::assert_operating`). These are essentially distinct states of the system. Specifically,
 /// if `Self::assert_operating` succeeds, assumptions about invariants over the global state can be made
 /// which reflect that the system has been successfully initialized.
-module DiemTimestamp {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
+module DiemFramework::DiemTimestamp {
+    use DiemFramework::CoreAddresses;
+    use Std::Errors;
 
     /// A singleton resource holding the current Unix time in microseconds
     struct CurrentTimeMicroseconds has key {
@@ -46,7 +44,7 @@ module DiemTimestamp {
         /// context of Genesis execution.
         /// After time has started, all invariants guarded by `DiemTimestamp::is_operating`
         /// will become activated and need to hold.
-        pragma friend = 0x1::Genesis::initialize;
+        pragma friend = DiemFramework::Genesis::initialize;
         include AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         ensures is_operating();
@@ -62,9 +60,9 @@ module DiemTimestamp {
         // Can only be invoked by DiemVM signer.
         CoreAddresses::assert_vm(account);
 
-        let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(@DiemRoot);
         let now = global_timer.microseconds;
-        if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
+        if (proposer == @VMReserved) {
             // NIL block with null address as proposer. Timestamp must be equal.
             assert(now == timestamp, Errors::invalid_argument(ETIMESTAMP));
         } else {
@@ -75,7 +73,7 @@ module DiemTimestamp {
     }
     spec update_global_time {
         pragma opaque;
-        modifies global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<CurrentTimeMicroseconds>(@DiemRoot);
 
         let now = spec_now_microseconds();
         let post post_now = spec_now_microseconds();
@@ -87,7 +85,7 @@ module DiemTimestamp {
 
         /// Conditions we only check for the implementation, but do not pass to the caller.
         aborts_if [concrete]
-            (if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
+            (if (proposer == @VMReserved) {
                 now != timestamp
              } else  {
                 now >= timestamp
@@ -99,7 +97,7 @@ module DiemTimestamp {
     /// Gets the current time in microseconds.
     public fun now_microseconds(): u64 acquires CurrentTimeMicroseconds {
         assert_operating();
-        borrow_global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds
+        borrow_global<CurrentTimeMicroseconds>(@DiemRoot).microseconds
     }
     spec now_microseconds {
         pragma opaque;
@@ -107,7 +105,7 @@ module DiemTimestamp {
         ensures result == spec_now_microseconds();
     }
     spec fun spec_now_microseconds(): u64 {
-        global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds
+        global<CurrentTimeMicroseconds>(@DiemRoot).microseconds
     }
 
     /// Gets the current time in seconds.
@@ -120,12 +118,12 @@ module DiemTimestamp {
         ensures result == spec_now_microseconds() /  MICRO_CONVERSION_FACTOR;
     }
     spec fun spec_now_seconds(): u64 {
-        global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds / MICRO_CONVERSION_FACTOR
+        global<CurrentTimeMicroseconds>(@DiemRoot).microseconds / MICRO_CONVERSION_FACTOR
     }
 
     /// Helper function to determine if Diem is in genesis state.
     public fun is_genesis(): bool {
-        !exists<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        !exists<CurrentTimeMicroseconds>(@DiemRoot)
     }
 
     /// Helper function to assert genesis state.
@@ -145,7 +143,7 @@ module DiemTimestamp {
     /// Helper function to determine if Diem is operating. This is the same as `!is_genesis()` and is provided
     /// for convenience. Testing `is_operating()` is more frequent than `is_genesis()`.
     public fun is_operating(): bool {
-        exists<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        exists<CurrentTimeMicroseconds>(@DiemRoot)
     }
 
     /// Helper function to assert operating (!genesis) state.
@@ -168,7 +166,7 @@ module DiemTimestamp {
 
     spec module {
         /// After genesis, `CurrentTimeMicroseconds` is published forever
-        invariant is_operating() ==> exists<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant is_operating() ==> exists<CurrentTimeMicroseconds>(@DiemRoot);
 
         /// After genesis, time progresses monotonically.
         invariant update
@@ -181,6 +179,4 @@ module DiemTimestamp {
         pragma aborts_if_is_strict;
     }
 
-
-}
 }

@@ -1,9 +1,9 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
+use Std::FixedPoint32;
 fun main(account: signer) {
     let account = &account;
     assert(Diem::approx_xdx_for_value<XUS>(10) == 10, 1);

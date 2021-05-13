@@ -1,8 +1,9 @@
 // dep: ../../move-stdlib/modules/Vector.move
+// dep: ../../move-stdlib/modules/addresses.move
 
 module 0x1::Borrow {
     // ensure that borrows get counted as reads when appropriate
-    use 0x1::Vector;
+    use Std::Vector;
 
     struct S has key { }
 

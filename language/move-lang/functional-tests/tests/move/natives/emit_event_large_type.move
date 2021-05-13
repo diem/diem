@@ -1,7 +1,7 @@
 
 module {{default}}::M {
-    use 0x1::Event::{EventHandle, emit_event, new_event_handle};
-    use 0x1::Signer::address_of;
+    use Std::Event::{EventHandle, emit_event, new_event_handle};
+    use Std::Signer::address_of;
 
     struct Box<T> has copy, drop, store { x: T }
     struct Box3<T> has copy, drop, store { x: Box<Box<T>> }

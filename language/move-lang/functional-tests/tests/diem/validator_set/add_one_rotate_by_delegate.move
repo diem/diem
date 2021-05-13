@@ -14,7 +14,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // register alice as bob's delegate
@@ -27,7 +27,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     // test alice can rotate bob's consensus public key
     fun main(account: signer) {
     let account = &account;
@@ -45,7 +45,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     // test bob can not rotate his public key because it delegated
     fun main(account: signer) {
     let account = &account;
@@ -68,8 +68,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         ValidatorConfig::set_config(account, @{{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");

@@ -1,5 +1,5 @@
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 
 /// # Summary
 /// Transfers a given number of coins in a specified currency from one account to another.

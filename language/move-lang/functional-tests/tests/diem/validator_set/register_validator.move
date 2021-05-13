@@ -4,8 +4,8 @@
 
 // check that the validator account config works
 script{
-    use 0x1::DiemSystem;
-    use 0x1::Signer;
+    use DiemFramework::DiemSystem;
+    use Std::Signer;
 
     fun main(account: signer) {
     let account = &account;
@@ -26,8 +26,8 @@ script{
 //! new-transaction
 //! sender: vivian
 script{
-    use 0x1::DiemSystem;
-    use 0x1::Signer;
+    use DiemFramework::DiemSystem;
+    use Std::Signer;
 
     // check that sending from validator accounts works
     fun main(account: signer) {
@@ -42,7 +42,7 @@ script{
 //! new-transaction
 //! sender: diemroot
 script{
-    use 0x1::DiemAccount;
+    use DiemFramework::DiemAccount;
 
     // register Alice as a validator candidate
     fun main(creator: signer) {

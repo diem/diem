@@ -1,13 +1,11 @@
-address 0x1 {
-
 /// Module for registering currencies in Diem. Basically, this means adding a
 /// string (vector<u8>) for the currency name to vector of names in DiemConfig.
-module RegisteredCurrencies {
-    use 0x1::Errors;
-    use 0x1::DiemConfig;
-    use 0x1::DiemTimestamp;
-    use 0x1::Roles;
-    use 0x1::Vector;
+module DiemFramework::RegisteredCurrencies {
+    use DiemFramework::DiemConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use Std::Errors;
+    use Std::Vector;
 
     /// A DiemConfig config holding all of the currency codes for registered
     /// currencies. The inner vector<u8>'s are string representations of
@@ -101,5 +99,4 @@ module RegisteredCurrencies {
             DiemConfig::get<RegisteredCurrencies>().currency_codes
         }
     }
-}
 }

@@ -6,7 +6,7 @@
 
 //! new-transaction
 script {
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemTimestamp;
 
 fun main() {
     assert(!DiemTimestamp::is_genesis(), 10)

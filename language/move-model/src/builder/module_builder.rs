@@ -1571,7 +1571,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             ConditionKind::Emits => {
                 // TODO: `first` is the "message" part, and `second` is the "handle" part.
-                //       `second` should have type 0x1::Event::EventHandle<T>, and `first`
+                //       `second` should have type Std::Event::EventHandle<T>, and `first`
                 //       should have type T.
                 let (_, first) = et.translate_exp_free(exp);
                 let (_, second) = et.translate_exp_free(&additional_exps[0]);

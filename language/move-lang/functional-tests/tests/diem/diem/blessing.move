@@ -1,8 +1,8 @@
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 // Make sure that XUS is registered. Make sure that the rules
 // relating to SCS and synthetic currencies are consistent
 fun main() {
@@ -17,8 +17,8 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::Diem;
-use 0x1::XDX::XDX;
+use DiemFramework::Diem;
+use DiemFramework::XDX::XDX;
 fun main() {
     Diem::assert_is_SCS_currency<XDX>();
 }
@@ -27,7 +27,7 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::Diem;
+use DiemFramework::Diem;
 fun main() {
     Diem::assert_is_currency<u64>();
 }
@@ -36,9 +36,9 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
+use Std::FixedPoint32;
 fun main(account: signer) {
     let account = &account;
     Diem::update_xdx_exchange_rate<XUS>(account, FixedPoint32::create_from_rational(1, 3));
@@ -48,8 +48,8 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     Diem::update_minting_ability<XUS>(account, false);
@@ -75,9 +75,9 @@ module {{default}}::Holder {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
+use Std::FixedPoint32;
 use {{default}}::Holder;
 fun main(dr_account: signer) {
     let dr_account = &dr_account;
@@ -99,8 +99,8 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use Std::FixedPoint32;
 use {{default}}::Holder;
 fun main(dr_account: signer) {
     let dr_account = &dr_account;
@@ -121,8 +121,8 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use Std::FixedPoint32;
 use {{default}}::Holder;
 fun main(dr_account: signer) {
     let dr_account = &dr_account;

@@ -1,36 +1,34 @@
-address 0x1 {
-
 /// The `DiemAccount` module manages accounts. It defines the `DiemAccount` resource and
 /// numerous auxiliary data structures. It also defines the prolog and epilog that run
 /// before and after every transaction.
 
-module DiemAccount {
-    use 0x1::AccountFreezing;
-    use 0x1::CoreAddresses;
-    use 0x1::ChainId;
-    use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
-    use 0x1::XUS::XUS;
-    use 0x1::DualAttestation;
-    use 0x1::Errors;
-    use 0x1::Event::{Self, EventHandle};
-    use 0x1::Hash;
-    use 0x1::XDX::XDX;
-    use 0x1::BCS;
-    use 0x1::DiemConfig;
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemTransactionPublishingOption;
-    use 0x1::Signer;
-    use 0x1::SlidingNonce;
-    use 0x1::TransactionFee;
-    use 0x1::ValidatorConfig;
-    use 0x1::ValidatorOperatorConfig;
-    use 0x1::VASP;
-    use 0x1::Vector;
-    use 0x1::DesignatedDealer;
-    use 0x1::Diem::{Self, Diem};
-    use 0x1::Option::{Self, Option};
-    use 0x1::Roles;
-    use 0x1::VASPDomain;
+module DiemFramework::DiemAccount {
+    use DiemFramework::AccountFreezing;
+    use DiemFramework::CoreAddresses;
+    use DiemFramework::ChainId;
+    use DiemFramework::AccountLimits::{Self, AccountLimitMutationCapability};
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DualAttestation;
+    use DiemFramework::XDX::XDX;
+    use DiemFramework::DiemConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemTransactionPublishingOption;
+    use DiemFramework::SlidingNonce;
+    use DiemFramework::TransactionFee;
+    use DiemFramework::ValidatorConfig;
+    use DiemFramework::ValidatorOperatorConfig;
+    use DiemFramework::VASP;
+    use DiemFramework::DesignatedDealer;
+    use DiemFramework::Diem::{Self, Diem};
+    use DiemFramework::Roles;
+    use DiemFramework::VASPDomain;
+    use Std::BCS;
+    use Std::Event::{Self, EventHandle};
+    use Std::Errors;
+    use Std::Hash;
+    use Std::Option::{Self, Option};
+    use Std::Signer;
+    use Std::Vector;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
     struct DiemAccount has key {
@@ -222,7 +220,7 @@ module DiemAccount {
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         include CreateDiemRootAccountAbortsIf{auth_key_prefix: dummy_auth_key_prefix};
         include CreateTreasuryComplianceAccountAbortsIf{auth_key_prefix: dummy_auth_key_prefix};
-        aborts_if exists<AccountFreezing::FreezingBit>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
+        aborts_if exists<AccountFreezing::FreezingBit>(@TreasuryCompliance)
             with Errors::ALREADY_PUBLISHED;
 
         // modifies and ensures needed to make this function opaque.
@@ -319,7 +317,7 @@ module DiemAccount {
                 AccountLimits::update_deposit_limits<Token>(
                     deposit_value,
                     VASP::parent_address(payee),
-                    &borrow_global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).limits_cap
+                    &borrow_global<AccountOperationsCapability>(@DiemRoot).limits_cap
                 ),
                 Errors::limit_exceeded(EDEPOSIT_EXCEEDS_LIMITS)
             )
@@ -430,7 +428,7 @@ module DiemAccount {
         );
         // Use the reserved address as the payer because the funds did not come from an existing
         // balance
-        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"", false)
+        deposit(@VMReserved, designated_dealer_address, coin, x"", x"", false)
     }
 
     spec tiered_mint {
@@ -440,7 +438,7 @@ module DiemAccount {
         modifies global<DesignatedDealer::TierInfo<Token>>(designated_dealer_address);
         modifies global<Balance<Token>>(designated_dealer_address);
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(designated_dealer_address));
-        modifies global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<Diem::CurrencyInfo<Token>>(@CurrencyInfo);
         include TieredMintAbortsIf<Token>;
         include TieredMintEnsures<Token>;
         include TieredMintEmits<Token>;
@@ -451,7 +449,7 @@ module DiemAccount {
         mint_amount: u64;
         tier_index: u64;
         include DesignatedDealer::TieredMintAbortsIf<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
-        include DepositAbortsIf<Token>{payer: CoreAddresses::VM_RESERVED_ADDRESS(),
+        include DepositAbortsIf<Token>{payer: @VMReserved,
             payee: designated_dealer_address, amount: mint_amount, metadata: x""};
         include DepositOverflowAbortsIf<Token>{payee: designated_dealer_address, amount: mint_amount};
     }
@@ -460,8 +458,8 @@ module DiemAccount {
         mint_amount: u64;
         let dealer_balance = global<Balance<Token>>(designated_dealer_address).coin.value;
         let post post_dealer_balance = global<Balance<Token>>(designated_dealer_address).coin.value;
-        let currency_info = global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let post post_currency_info = global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<Diem::CurrencyInfo<Token>>(@CurrencyInfo);
+        let post post_currency_info = global<Diem::CurrencyInfo<Token>>(@CurrencyInfo);
         /// Total value of the currency increases by `amount`.
         ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + mint_amount);
         /// The balance of designated dealer increases by `amount`.
@@ -473,7 +471,7 @@ module DiemAccount {
         mint_amount: u64;
         tier_index: u64;
         include DepositEmits<Token>{
-            payer: CoreAddresses::VM_RESERVED_ADDRESS(),
+            payer: @VMReserved,
             payee: designated_dealer_address,
             amount: mint_amount,
             metadata: x""
@@ -533,7 +531,7 @@ module DiemAccount {
             let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
                     amount,
                     VASP::parent_address(payer),
-                    &borrow_global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).limits_cap
+                    &borrow_global<AccountOperationsCapability>(@DiemRoot).limits_cap
             );
             assert(can_withdraw, Errors::limit_exceeded(EWITHDRAWAL_EXCEEDS_LIMITS));
         };
@@ -1057,11 +1055,11 @@ module DiemAccount {
         let new_account_addr = Signer::address_of(new_account);
         // cannot create an account at the reserved address 0x0
         assert(
-            new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(),
+            new_account_addr != @VMReserved,
             Errors::invalid_argument(ECANNOT_CREATE_AT_VM_RESERVED)
         );
         assert(
-            new_account_addr != CoreAddresses::CORE_CODE_ADDRESS(),
+            new_account_addr != @DiemFramework,
             Errors::invalid_argument(ECANNOT_CREATE_AT_CORE_CODE)
         );
 
@@ -1073,12 +1071,12 @@ module DiemAccount {
         // The AccountOperationsCapability is published during Genesis, so it should
         // always exist.  This is a sanity check.
         assert(
-            exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()),
+            exists<AccountOperationsCapability>(@DiemRoot),
             Errors::not_published(EACCOUNT_OPERATIONS_CAPABILITY)
         );
         // Emit the CreateAccountEvent
         Event::emit_event(
-            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events,
+            &mut borrow_global_mut<AccountOperationsCapability>(@DiemRoot).creation_events,
             CreateAccountEvent { created: new_account_addr, role_id: Roles::get_role_id(new_account_addr) },
         );
         // Publishing the account resource last makes it possible to prove invariants that simplify
@@ -1107,15 +1105,15 @@ module DiemAccount {
         modifies global<DiemAccount>(new_account_addr);
         modifies global<Event::EventHandleGenerator>(new_account_addr);
         modifies global<AccountFreezing::FreezingBit>(new_account_addr);
-        modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<AccountOperationsCapability>(@DiemRoot);
+        ensures exists<AccountOperationsCapability>(@DiemRoot);
         // Next requires is needed to prove invariant
         requires exists<Roles::RoleId>(new_account_addr);
         include MakeAccountAbortsIf{addr: new_account_addr};
         ensures exists_at(new_account_addr);
         ensures AccountFreezing::spec_account_is_not_frozen(new_account_addr);
-        let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let account_ops_cap = global<AccountOperationsCapability>(@DiemRoot);
+        let post post_account_ops_cap = global<AccountOperationsCapability>(@DiemRoot);
         ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
         ensures spec_holds_own_key_rotation_cap(new_account_addr);
         ensures spec_holds_own_withdraw_cap(new_account_addr);
@@ -1124,13 +1122,13 @@ module DiemAccount {
     spec schema MakeAccountAbortsIf {
         addr: address;
         auth_key_prefix: vector<u8>;
-        aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
-        aborts_if addr == CoreAddresses::CORE_CODE_ADDRESS() with Errors::INVALID_ARGUMENT;
+        aborts_if addr == @VMReserved with Errors::INVALID_ARGUMENT;
+        aborts_if addr == @DiemFramework with Errors::INVALID_ARGUMENT;
         aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
         // There is an invariant below that says that there is always an AccountOperationsCapability
         // after Genesis, so this can only abort during Genesis.
         aborts_if DiemTimestamp::is_genesis()
-            && !exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS())
+            && !exists<AccountOperationsCapability>(@DiemRoot)
             with Errors::NOT_PUBLISHED;
         include CreateAuthenticationKeyAbortsIf;
         // We do not need to specify aborts_if if account already exists, because make_account will
@@ -1138,7 +1136,7 @@ module DiemAccount {
     }
     spec schema MakeAccountEmits {
         new_account_address: address;
-        let post handle = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events;
+        let post handle = global<AccountOperationsCapability>(@DiemRoot).creation_events;
         let post msg = CreateAccountEvent {
             created: new_account_address,
             role_id: Roles::spec_get_role_id(new_account_address)
@@ -1185,14 +1183,14 @@ module DiemAccount {
         auth_key_prefix: vector<u8>,
     ) acquires AccountOperationsCapability {
         DiemTimestamp::assert_genesis();
-        let dr_account = create_signer(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let dr_account = create_signer(@DiemRoot);
         CoreAddresses::assert_diem_root(&dr_account);
         Roles::grant_diem_root_role(&dr_account);
         SlidingNonce::publish(&dr_account);
         Event::publish_generator(&dr_account);
 
         assert(
-            !exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()),
+            !exists<AccountOperationsCapability>(@DiemRoot),
             Errors::already_published(EACCOUNT_OPERATIONS_CAPABILITY)
         );
         move_to(
@@ -1203,7 +1201,7 @@ module DiemAccount {
             }
         );
         assert(
-            !exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()),
+            !exists<DiemWriteSetManager>(@DiemRoot),
             Errors::already_published(EWRITESET_MANAGER)
         );
         move_to(
@@ -1220,11 +1218,11 @@ module DiemAccount {
         include CreateDiemRootAccountModifies;
         include CreateDiemRootAccountAbortsIf;
         include CreateDiemRootAccountEnsures;
-        include MakeAccountEmits{new_account_address: CoreAddresses::DIEM_ROOT_ADDRESS()};
+        include MakeAccountEmits{new_account_address: @DiemRoot};
     }
 
     spec schema CreateDiemRootAccountModifies {
-        let dr_addr = CoreAddresses::DIEM_ROOT_ADDRESS();
+        let dr_addr = @DiemRoot;
         modifies global<Event::EventHandleGenerator>(dr_addr);
         modifies global<DiemAccount>(dr_addr);
         modifies global<AccountOperationsCapability>(dr_addr);
@@ -1236,19 +1234,19 @@ module DiemAccount {
     spec schema CreateDiemRootAccountAbortsIf {
         auth_key_prefix: vector<u8>;
         include DiemTimestamp::AbortsIfNotGenesis;
-        include Roles::GrantRole{addr: CoreAddresses::DIEM_ROOT_ADDRESS(), role_id: Roles::DIEM_ROOT_ROLE_ID};
-        aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        include Roles::GrantRole{addr: @DiemRoot, role_id: Roles::DIEM_ROOT_ROLE_ID};
+        aborts_if exists<SlidingNonce::SlidingNonce>(@DiemRoot)
             with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        aborts_if exists<AccountOperationsCapability>(@DiemRoot)
             with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        aborts_if exists<DiemWriteSetManager>(@DiemRoot)
             with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<AccountFreezing::FreezingBit>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        aborts_if exists<AccountFreezing::FreezingBit>(@DiemRoot)
             with Errors::ALREADY_PUBLISHED;
         include CreateAuthenticationKeyAbortsIf;
     }
     spec schema CreateDiemRootAccountEnsures {
-        let dr_addr = CoreAddresses::DIEM_ROOT_ADDRESS();
+        let dr_addr = @DiemRoot;
         ensures exists<AccountOperationsCapability>(dr_addr);
         ensures exists<DiemWriteSetManager>(dr_addr);
         ensures exists<SlidingNonce::SlidingNonce>(dr_addr);
@@ -1269,7 +1267,7 @@ module DiemAccount {
     ) acquires AccountOperationsCapability {
         DiemTimestamp::assert_genesis();
         Roles::assert_diem_root(dr_account);
-        let new_account_address = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        let new_account_address = @TreasuryCompliance;
         let new_account = create_signer(new_account_address);
         Roles::grant_treasury_compliance_role(&new_account, dr_account);
         SlidingNonce::publish(&new_account);
@@ -1279,40 +1277,40 @@ module DiemAccount {
     }
     spec create_treasury_compliance_account {
         pragma opaque;
-        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        let tc_addr = @TreasuryCompliance;
         include CreateTreasuryComplianceAccountModifies;
         include CreateTreasuryComplianceAccountAbortsIf;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
-        include MakeAccountAbortsIf{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
+        include MakeAccountAbortsIf{addr: @TreasuryCompliance};
         include CreateTreasuryComplianceAccountEnsures;
-        let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let account_ops_cap = global<AccountOperationsCapability>(@DiemRoot);
+        let post post_account_ops_cap = global<AccountOperationsCapability>(@DiemRoot);
         ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
-        include MakeAccountEmits{new_account_address: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
+        include MakeAccountEmits{new_account_address: @TreasuryCompliance};
         aborts_if VASPDomain::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountModifies {
-        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        let tc_addr = @TreasuryCompliance;
         modifies global<DiemAccount>(tc_addr);
         modifies global<SlidingNonce::SlidingNonce>(tc_addr);
         modifies global<Roles::RoleId>(tc_addr);
         modifies global<AccountFreezing::FreezingBit>(tc_addr);
-        modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        modifies global<Event::EventHandleGenerator>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+        modifies global<AccountOperationsCapability>(@DiemRoot);
+        ensures exists<AccountOperationsCapability>(@DiemRoot);
+        modifies global<Event::EventHandleGenerator>(@TreasuryCompliance);
         modifies global<VASPDomain::VASPDomainManager>(tc_addr);
     }
     spec schema CreateTreasuryComplianceAccountAbortsIf {
         dr_account: signer;
         auth_key_prefix: vector<u8>;
         include DiemTimestamp::AbortsIfNotGenesis;
-        include Roles::GrantRole{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), role_id: Roles::TREASURY_COMPLIANCE_ROLE_ID};
-        aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
+        include Roles::GrantRole{addr: @TreasuryCompliance, role_id: Roles::TREASURY_COMPLIANCE_ROLE_ID};
+        aborts_if exists<SlidingNonce::SlidingNonce>(@TreasuryCompliance)
             with Errors::ALREADY_PUBLISHED;
         aborts_if VASPDomain::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountEnsures {
-        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        let tc_addr = @TreasuryCompliance;
         ensures Roles::spec_has_treasury_compliance_role_addr(tc_addr);
         ensures exists_at(tc_addr);
         ensures exists<SlidingNonce::SlidingNonce>(tc_addr);
@@ -1716,7 +1714,7 @@ module DiemAccount {
         chain_id: u8,
     ) acquires DiemAccount, Balance {
         assert(
-            Signer::address_of(&sender) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Signer::address_of(&sender) == @DiemRoot,
             Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER)
         );
         assert(Roles::has_diem_root_role(&sender), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
@@ -1747,7 +1745,7 @@ module DiemAccount {
         chain_id: u8;
         let transaction_sender = Signer::spec_address_of(sender);
         /// Covered: L146 (Match 0)
-        aborts_if transaction_sender != CoreAddresses::DIEM_ROOT_ADDRESS() with Errors::INVALID_ARGUMENT;
+        aborts_if transaction_sender != @DiemRoot with Errors::INVALID_ARGUMENT;
         /// Must abort if the signer does not have the DiemRoot role [[H9]][PERMISSION].
         /// Covered: L146 (Match 0)
         aborts_if !Roles::spec_has_diem_root_role_addr(transaction_sender) with Errors::INVALID_ARGUMENT;
@@ -2075,15 +2073,15 @@ module DiemAccount {
         should_trigger_reconfiguration: bool,
     ) acquires DiemWriteSetManager, DiemAccount, Balance {
         let dr_account = &dr_account;
-        let writeset_events_ref = borrow_global_mut<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let writeset_events_ref = borrow_global_mut<DiemWriteSetManager>(@DiemRoot);
         Event::emit_event<AdminTransactionEvent>(
             &mut writeset_events_ref.upgrade_events,
             AdminTransactionEvent { committed_timestamp_secs: DiemTimestamp::now_seconds() },
         );
 
-        // Double check that the sender is the DiemRoot account at the `CoreAddresses::DIEM_ROOT_ADDRESS`
+        // Double check that the sender is the DiemRoot account at the `@DiemRoot`
         assert(
-            Signer::address_of(dr_account) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Signer::address_of(dr_account) == @DiemRoot,
             Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER)
         );
         assert(Roles::has_diem_root_role(dr_account), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
@@ -2096,7 +2094,7 @@ module DiemAccount {
         include WritesetEpiloguEmits;
     }
     spec schema WritesetEpiloguEmits {
-        let handle = global<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()).upgrade_events;
+        let handle = global<DiemWriteSetManager>(@DiemRoot).upgrade_events;
         let msg = AdminTransactionEvent {
             committed_timestamp_secs: DiemTimestamp::spec_now_seconds()
         };
@@ -2281,12 +2279,10 @@ module DiemAccount {
         invariant update forall addr: address where old(exists_at(addr)): exists_at(addr);
 
         /// After genesis, the `AccountOperationsCapability` exists.
-        invariant
-            DiemTimestamp::is_operating() ==> exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant DiemTimestamp::is_operating() ==> exists<AccountOperationsCapability>(@DiemRoot);
 
         /// After genesis, the `DiemWriteSetManager` exists.
-        invariant
-            DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(@DiemRoot);
 
         /// resource struct `Balance<CoinType>` is persistent
         invariant update forall coin_type: type, addr: address
@@ -2294,13 +2290,12 @@ module DiemAccount {
                 exists<Balance<coin_type>>(addr);
 
         /// resource struct `AccountOperationsCapability` is persistent
-        invariant update old(exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()))
-                ==> exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant update old(exists<AccountOperationsCapability>(@DiemRoot))
+                ==> exists<AccountOperationsCapability>(@DiemRoot);
 
         /// resource struct `AccountOperationsCapability` is persistent
         invariant update
-            old(exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()))
-                ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
+            old(exists<DiemWriteSetManager>(@DiemRoot)) ==> exists<DiemWriteSetManager>(@DiemRoot);
     }
 
     /// # Other invariants
@@ -2362,7 +2357,7 @@ module DiemAccount {
 
         /// Returns true if `AccountOperationsCapability` is published.
         fun spec_has_account_operations_cap(): bool {
-            exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS())
+            exists<AccountOperationsCapability>(@DiemRoot)
         }
 
         /// Returns field `withdraw_capability` of DiemAccount under `addr`.
@@ -2405,5 +2400,4 @@ module DiemAccount {
         sender: signer;
         requires prologue_guarantees(sender);
     }
-}
 }

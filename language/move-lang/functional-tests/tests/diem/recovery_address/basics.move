@@ -13,8 +13,8 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(tc_account: signer) {
     let tc_account = &tc_account;
     let add_all_currencies = false;
@@ -43,8 +43,8 @@ fun main(tc_account: signer) {
 //! new-transaction
 //! sender: parent1
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_child_vasp_account<XUS>(account, @{{child1}}, {{child1::auth_key}}, false);
@@ -59,8 +59,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: child1
 script {
-use 0x1::DiemAccount;
-use 0x1::RecoveryAddress;
+use DiemFramework::DiemAccount;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::publish(account, DiemAccount::extract_key_rotation_capability(account))
@@ -72,8 +72,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent1
 script {
-use 0x1::DiemAccount;
-use 0x1::RecoveryAddress;
+use DiemFramework::DiemAccount;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
@@ -89,8 +89,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent2
 script {
-use 0x1::DiemAccount;
-use 0x1::RecoveryAddress;
+use DiemFramework::DiemAccount;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
@@ -104,8 +104,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent2
 script {
-use 0x1::DiemAccount;
-use 0x1::RecoveryAddress;
+use DiemFramework::DiemAccount;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
@@ -120,7 +120,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: child2
 script {
-use 0x1::RecoveryAddress;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
@@ -133,7 +133,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: child1
 script {
-use 0x1::RecoveryAddress;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
@@ -147,7 +147,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent1
 script {
-use 0x1::RecoveryAddress;
+use DiemFramework::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
@@ -160,8 +160,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::RecoveryAddress;
-use 0x1::DiemAccount;
+use DiemFramework::RecoveryAddress;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::publish(account, DiemAccount::extract_key_rotation_capability(account))
@@ -201,7 +201,7 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 //! sender: vasp1
 script {
 use {{default}}::Holder;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     Holder::hold(account, DiemAccount::extract_key_rotation_capability(account));
@@ -213,9 +213,9 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: vasp2
 script {
-use 0x1::RecoveryAddress;
+use DiemFramework::RecoveryAddress;
 use {{default}}::Holder;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let cap = Holder::get<DiemAccount::KeyRotationCapability>(@{{vasp1}});

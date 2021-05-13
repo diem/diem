@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Vector;
+    use Std::Vector;
 
     struct X has copy, drop { value: u64 }
     struct Y has copy, drop { value: u64 }

@@ -129,7 +129,7 @@ Initializes the <code><a href="XDX.md#0x1_XDX">XDX</a></code> module. This sets 
 reserve components, and creates the mint, preburn, and burn
 capabilities for <code><a href="XDX.md#0x1_XDX">XDX</a></code> coins. The <code><a href="XDX.md#0x1_XDX">XDX</a></code> currency must not already be
 registered in order for this to succeed. The sender must both be the
-correct address (<code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a></code>) and have the
+correct address (<code>@CurrencyInfo</code>) and have the
 correct permissions (<code>&Capability&lt;RegisterNewCurrency&gt;</code>). Both of these
 restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_currency">Diem::register_currency</a></code> function, but also enforced here.
 
@@ -151,7 +151,7 @@ restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_curren
     // Operational constraint
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_currency_info">CoreAddresses::assert_currency_info</a>(dr_account);
     // <a href="XDX.md#0x1_XDX_Reserve">Reserve</a> must not exist.
-    <b>assert</b>(!<b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="XDX.md#0x1_XDX_ERESERVE">ERESERVE</a>));
+    <b>assert</b>(!<b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(@DiemRoot), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="XDX.md#0x1_XDX_ERESERVE">ERESERVE</a>));
     <b>let</b> (mint_cap, burn_cap) = <a href="Diem.md#0x1_Diem_register_currency">Diem::register_currency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;(
         dr_account,
         <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="XDX.md#0x1_XDX">XDX</a>
@@ -178,7 +178,7 @@ restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_curren
 
 
 <pre><code><b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">CoreAddresses::AbortsIfNotCurrencyInfo</a>{account: dr_account};
-<b>aborts_if</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>aborts_if</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(@DiemRoot) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>include</b> <a href="Diem.md#0x1_Diem_RegisterCurrencyAbortsIf">Diem::RegisterCurrencyAbortsIf</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;{
     currency_code: b"<a href="XDX.md#0x1_XDX">XDX</a>",
     scaling_factor: 1000000
@@ -187,7 +187,7 @@ restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_curren
 <b>include</b> <a href="Diem.md#0x1_Diem_RegisterCurrencyEnsures">Diem::RegisterCurrencyEnsures</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;;
 <b>include</b> <a href="Diem.md#0x1_Diem_UpdateMintingAbilityEnsures">Diem::UpdateMintingAbilityEnsures</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;{can_mint: <b>false</b>};
 <b>include</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsEnsures">AccountLimits::PublishUnrestrictedLimitsEnsures</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;{publish_account: dr_account};
-<b>ensures</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>ensures</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(@DiemRoot);
 </code></pre>
 
 
@@ -285,7 +285,7 @@ Return the account address where the globally unique XDX::Reserve resource is st
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="XDX.md#0x1_XDX_reserve_address">reserve_address</a>(): address {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
+    @CurrencyInfo
 }
 </code></pre>
 
@@ -331,7 +331,7 @@ Checks whether the Reserve resource exists.
 
 
 <pre><code><b>fun</b> <a href="XDX.md#0x1_XDX_reserve_exists">reserve_exists</a>(): bool {
-   <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
+   <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(@CurrencyInfo)
 }
 </code></pre>
 
@@ -342,7 +342,7 @@ it does not hold for all types (but does hold for XDX).
 
 
 <pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>()
-    ==&gt; <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+    ==&gt; <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;&gt;(@DiemRoot);
 </code></pre>
 
 
@@ -350,7 +350,7 @@ it does not hold for all types (but does hold for XDX).
 
 
 <pre><code><b>invariant</b> <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;&gt;(addr):
-    addr == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
+    addr == @DiemRoot;
 </code></pre>
 
 

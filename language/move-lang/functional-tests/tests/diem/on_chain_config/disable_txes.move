@@ -8,7 +8,7 @@
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(account: signer) {
     let account = &account;
     DiemTransactionPublishingOption::halt_all_transactions(account);
@@ -38,7 +38,7 @@ stdlib_script::AccountAdministrationScripts::rotate_authentication_key
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(account: signer) {
     let account = &account;
     DiemTransactionPublishingOption::resume_transactions(account);
@@ -55,7 +55,7 @@ stdlib_script::AccountAdministrationScripts::rotate_authentication_key
 // A normal account has insufficient privs to halt transactions
 //! new-transaction
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(account: signer) {
     let account = &account;
     DiemTransactionPublishingOption::halt_all_transactions(account);

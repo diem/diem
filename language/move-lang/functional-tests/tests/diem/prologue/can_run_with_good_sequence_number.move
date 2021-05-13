@@ -3,7 +3,7 @@
 //! sequence-number: 10
 //! sender: alice
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 
 fun main() {
     assert(DiemAccount::sequence_number(@{{alice}}) == 10, 72);

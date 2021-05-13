@@ -1,12 +1,10 @@
-address 0x1 {
 /// Maintains the version number for the Diem blockchain. The version is stored in a
 /// DiemConfig, and may be updated by Diem root.
-module DiemVersion {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::DiemConfig::{Self, DiemConfig};
-    use 0x1::DiemTimestamp;
-    use 0x1::Roles;
+module DiemFramework::DiemVersion {
+    use DiemFramework::DiemConfig::{Self, DiemConfig};
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use Std::Errors;
 
     struct DiemVersion has copy, drop, store {
         major: u64,
@@ -77,8 +75,8 @@ module DiemVersion {
     /// Only "set" can modify the DiemVersion config [[H10]][PERMISSION]
     spec schema DiemVersionRemainsSame {
         ensures old(DiemConfig::spec_is_published<DiemVersion>()) ==>
-            global<DiemConfig<DiemVersion>>(CoreAddresses::DIEM_ROOT_ADDRESS()) ==
-                old(global<DiemConfig<DiemVersion>>(CoreAddresses::DIEM_ROOT_ADDRESS()));
+            global<DiemConfig<DiemVersion>>(@DiemRoot) ==
+                old(global<DiemConfig<DiemVersion>>(@DiemRoot));
     }
     spec module {
         apply DiemVersionRemainsSame to * except set;
@@ -87,7 +85,7 @@ module DiemVersion {
     spec module {
         /// The permission "UpdateDiemProtocolVersion" is granted to DiemRoot [[H10]][PERMISSION].
         invariant [global, isolated] forall addr: address where exists<DiemConfig<DiemVersion>>(addr):
-            addr == CoreAddresses::DIEM_ROOT_ADDRESS();
+            addr == @DiemRoot;
     }
 
     /// # Other Invariants
@@ -97,5 +95,4 @@ module DiemVersion {
             old(DiemConfig::get<DiemVersion>().major) <= DiemConfig::get<DiemVersion>().major;
     }
 
-}
 }

@@ -1,5 +1,3 @@
-address 0x1 {
-
 /// Provides a way to transfer structs from one account to another in two transactions.
 /// Unlike many languages, Move cannot move data from one account to another with
 /// single-signer transactions. As of this writing, ordinary transactions can only have
@@ -15,10 +13,9 @@ address 0x1 {
 /// which aborts unless the `for` field is B's address (preventing other addresses from
 /// accessing the `T` that is intended only for B). A can also redeem the `T` value if B hasn't
 /// redeemed it.
-
-module Offer {
-  use 0x1::Signer;
-  use 0x1::Errors;
+module Std::Offer {
+  use Std::Signer;
+  use Std::Errors;
 
   /// A wrapper around value `offered` that can be claimed by the address stored in `for`.
   struct Offer<Offered> has key { offered: Offered, for: address }
@@ -138,5 +135,4 @@ module Offer {
 
 
 
-}
 }

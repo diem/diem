@@ -1,14 +1,12 @@
-address 0x1 {
-
 /// Each address that holds a `SharedEd25519PublicKey` resource can rotate the public key stored in
 /// this resource, but the account's authentication key will be updated in lockstep. This ensures
 /// that the two keys always stay in sync.
-module SharedEd25519PublicKey {
-    use 0x1::Authenticator;
-    use 0x1::Errors;
-    use 0x1::DiemAccount;
-    use 0x1::Signature;
-    use 0x1::Signer;
+module DiemFramework::SharedEd25519PublicKey {
+    use DiemFramework::Authenticator;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::Signature;
+    use Std::Errors;
+    use Std::Signer;
 
     /// A resource that forces the account associated with `rotation_cap` to use a ed25519
     /// authentication key derived from `key`
@@ -148,5 +146,4 @@ module SharedEd25519PublicKey {
             exists<SharedEd25519PublicKey>(addr);
     }
 
-}
 }

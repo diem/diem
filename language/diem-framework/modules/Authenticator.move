@@ -1,12 +1,10 @@
-address 0x1 {
-
 /// Move representation of the authenticator types used in Diem. The supported types are Ed25519 (single-sig)
 /// and MultiEd25519 (K-of-N multisig).
-module Authenticator {
-    use 0x1::Errors;
-    use 0x1::Hash;
-    use 0x1::BCS;
-    use 0x1::Vector;
+module DiemFramework::Authenticator {
+    use Std::Errors;
+    use Std::Hash;
+    use Std::BCS;
+    use Std::Vector;
 
     /// A multi-ed25519 public key
     struct MultiEd25519PublicKey has copy, drop, store {
@@ -107,5 +105,4 @@ module Authenticator {
         *&k.threshold
     }
 
-}
 }

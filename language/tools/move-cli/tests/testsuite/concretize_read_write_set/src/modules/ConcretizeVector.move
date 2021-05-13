@@ -1,6 +1,6 @@
 module 0x1::ConcretizeVector {
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Signer;
+    use Std::Vector;
 
     struct S has key { v: vector<address> }
     struct T has key { f: u64 }

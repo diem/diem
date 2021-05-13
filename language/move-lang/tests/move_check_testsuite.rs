@@ -49,7 +49,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
 fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyhow::Result<()> {
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let mut deps = move_stdlib::move_stdlib_files();
-    deps.push(move_stdlib::unit_testing_module_file());
+    deps.extend(move_stdlib::unit_testing_files());
 
     let (files, comments_and_compiler_res) = Compiler::new(&targets, &deps)
         .set_flags(flags)

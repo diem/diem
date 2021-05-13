@@ -4,7 +4,7 @@
 //! account: doris, 0XUS, 0
 
 module {{default}}::Holder {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct Hold<T> has key {
         x: T
@@ -23,7 +23,7 @@ module {{default}}::Holder {
 
 //! new-transaction
 script {
-    use 0x1::DiemAccount;
+    use DiemFramework::DiemAccount;
     fun main(sender: signer) {
         let sender = &sender;
         DiemAccount::initialize(sender, x"00000000000000000000000000000000");
@@ -34,8 +34,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::XDX::XDX;
-    use 0x1::DiemAccount;
+    use DiemFramework::XDX::XDX;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
         let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -48,8 +48,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::XDX::XDX;
-    use 0x1::DiemAccount;
+    use DiemFramework::XDX::XDX;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -62,8 +62,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -76,8 +76,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::XDX::XDX;
-    use 0x1::DiemAccount;
+    use DiemFramework::XDX::XDX;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -90,7 +90,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let rot_cap = DiemAccount::extract_key_rotation_capability(account);
@@ -102,7 +102,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::DiemAccount;
+    use DiemFramework::DiemAccount;
     use {{default}}::Holder;
     fun main(account: signer) {
     let account = &account;
@@ -120,8 +120,8 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::DiemAccount;
-    use 0x1::Signer;
+    use DiemFramework::DiemAccount;
+    use Std::Signer;
     fun main(sender: signer) {
     let sender = &sender;
         let cap = DiemAccount::extract_key_rotation_capability(sender);
@@ -143,8 +143,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XDX::XDX;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XDX::XDX;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -171,7 +171,7 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 
 //! new-transaction
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main() {
     DiemAccount::sequence_number(@0x1);
 }
@@ -180,7 +180,7 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main() {
     DiemAccount::authentication_key(@0x1);
 }
@@ -189,7 +189,7 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main() {
     DiemAccount::delegated_key_rotation_capability(@0x1);
 }
@@ -198,7 +198,7 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main() {
     DiemAccount::delegated_withdraw_capability(@0x1);
 }

@@ -4,8 +4,8 @@
 
 //! sender: alice
 module {{alice}}::AlicePays {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
 
     struct T has key {
         cap: DiemAccount::WithdrawCapability,
@@ -47,8 +47,8 @@ fun main(sender: signer) {
 //! sender: bob
 script {
 use {{alice}}::AlicePays;
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 fun main() {
     let carol_prev_balance = DiemAccount::balance<XUS>(@{{carol}});

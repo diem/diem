@@ -1,5 +1,3 @@
-address 0x1 {
-
 /// A variable-sized container that can hold any type. Indexing is 0-based, and
 /// vectors are growable. This module has many native functions.
 /// Verification of modules that use this one uses model functions that are implemented
@@ -10,7 +8,7 @@ address 0x1 {
 /// >Note: We did not verify most of the
 /// Move functions here because many have loops, requiring loop invariants to prove, and
 /// the return on investment didn't seem worth it for these simple functions.
-module Vector {
+module Std::Vector {
 
     /// The index into the vector is out of bounds
     const EINDEX_OUT_OF_BOUNDS: u64 = 0;
@@ -188,5 +186,4 @@ module Vector {
         }
     }
 
-}
 }

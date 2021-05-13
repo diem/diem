@@ -5,7 +5,7 @@
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 // not frozen
 fun main() {
     assert(!AccountFreezing::account_is_frozen(@{{bob}}), 0);
@@ -16,7 +16,7 @@ fun main() {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 // A special association privilege is needed for freezing an account
 fun main(account: signer) {
     let account = &account;
@@ -28,7 +28,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 // Make sure we can freeze and unfreeze accounts.
 fun main(account: signer) {
     let account = &account;
@@ -55,7 +55,7 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing::{Self};
+use DiemFramework::AccountFreezing::{Self};
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::unfreeze_account(account, @{{bob}});
@@ -73,7 +73,7 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing::{Self};
+use DiemFramework::AccountFreezing::{Self};
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::freeze_account(account, @{{diemroot}});
@@ -86,8 +86,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(dr_account: signer) {
     let dr_account = &dr_account;
     DiemAccount::create_parent_vasp_account<XUS>(
@@ -105,8 +105,8 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: vasp
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(parent_vasp: signer) {
     let parent_vasp = &parent_vasp;
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
@@ -118,7 +118,7 @@ fun main(parent_vasp: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
 fun main(account: signer) {
@@ -143,7 +143,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::freeze_account(account, @{{vasp}});
@@ -154,7 +154,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::unfreeze_account(account, @{{vasp}});
@@ -165,7 +165,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::freeze_account(account, @{{diemroot}});
@@ -176,7 +176,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::freeze_account(account, @{{blessed}});
@@ -187,7 +187,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::initialize(account);
@@ -198,7 +198,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main() {
         assert(!AccountFreezing::account_is_frozen(@{{alice}}), 0);
     }
@@ -223,7 +223,7 @@ module {{default}}::Holder {
 //! new-transaction
 //! sender: vasp
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -236,7 +236,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::freeze_account(account, @{{vasp}});
@@ -248,7 +248,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountFreezing;
+    use DiemFramework::AccountFreezing;
     fun main(account: signer) {
         let account = &account;
         AccountFreezing::freeze_account(account, @{{vasp}});
@@ -268,8 +268,8 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 //! sender: blessed
 script {
     use {{default}}::Holder;
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
         let account = &account;
         let cap = Holder::get<DiemAccount::WithdrawCapability>(@{{vasp}});
@@ -282,8 +282,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
         let account = &account;
         let cap = DiemAccount::extract_withdraw_capability(account);
@@ -296,8 +296,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
         let account = &account;
         let cap = DiemAccount::extract_withdraw_capability(account);
@@ -310,7 +310,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::create(account);
@@ -321,7 +321,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::freeze_account(account, @0x0);
@@ -332,7 +332,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountFreezing;
+use DiemFramework::AccountFreezing;
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::unfreeze_account(account, @0x0);

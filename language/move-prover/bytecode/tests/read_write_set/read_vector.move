@@ -1,7 +1,8 @@
 // dep: ../../move-stdlib/modules/Vector.move
+// dep: ../../move-stdlib/modules/addresses.move
 
 module 0x2::ReadVector {
-    use 0x1::Vector;
+    use Std::Vector;
 
     struct S has drop { a: vector<address> }
     struct Glob has key { b: bool }

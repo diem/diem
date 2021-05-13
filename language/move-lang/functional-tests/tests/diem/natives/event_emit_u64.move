@@ -1,5 +1,5 @@
 script {
-use 0x1::Event;
+use Std::Event;
 
 fun main(account: signer) {
     let account = &account;

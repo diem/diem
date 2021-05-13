@@ -2,7 +2,7 @@ address 0x1 {
 
 module DiemTransactionTimeout {
   use 0x1::Transaction;
-  use 0x1::DiemTimestamp;
+  use DiemFramework::DiemTimestamp;
 
   resource struct TTL {
     // Only transactions with timestamp in between block time and block time + duration would be accepted.

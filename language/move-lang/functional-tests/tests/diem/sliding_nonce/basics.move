@@ -8,7 +8,7 @@
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
 
     fun main(account: signer) {
     let account = &account;
@@ -20,7 +20,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
 
     fun main(account: signer) {
     let account = &account;
@@ -31,7 +31,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
 
     fun main(account: signer) {
     let account = &account;
@@ -41,7 +41,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(account: signer) {
     let account = &account;
         SlidingNonce::try_record_nonce(account, 1);
@@ -50,7 +50,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(account: signer) {
     let account = &account;
         SlidingNonce::publish(account);
@@ -59,7 +59,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(account: signer) {
     let account = &account;
         SlidingNonce::publish(account);
@@ -68,7 +68,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(default_account: signer) {
     let default_account = &default_account;
         SlidingNonce::publish(default_account);
@@ -77,7 +77,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(account: signer) {
     let account = &account;
         SlidingNonce::publish(account);
@@ -86,7 +86,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(account: signer) {
     let account = &account;
         SlidingNonce::publish(account);
@@ -95,7 +95,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
     fun main(default_account: signer) {
     let default_account = &default_account;
         SlidingNonce::publish(default_account);

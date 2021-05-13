@@ -5,9 +5,9 @@
 //! secondary-signers: bob
 //! args: 10
 script {
-use 0x1::DiemAccount;
-use 0x1::Signer;
-use 0x1::XUS;
+use DiemFramework::DiemAccount;
+use Std::Signer;
+use DiemFramework::XUS;
 
 fun main(alice: signer, bob: signer, amount: u64) {
     let alice_withdrawal_cap = DiemAccount::extract_withdraw_capability(&alice);

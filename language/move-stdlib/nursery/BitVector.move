@@ -1,5 +1,5 @@
-module 0x1::BitVector {
-    use 0x1::Vector;
+module Std::BitVector {
+    use Std::Vector;
 
     /// The provided index is out of bounds
     const EINDEX: u64 = 0;

@@ -1,14 +1,12 @@
-address 0x1 {
-
 /// The Event module defines an `EventHandleGenerator` that is used to create
 /// `EventHandle`s with unique GUIDs. It contains a counter for the number
 /// of `EventHandle`s it generates. An `EventHandle` is used to count the number of
 /// events emitted to a handle and emit events to the event store.
-module Event {
-    use 0x1::Errors;
-    use 0x1::BCS;
-    use 0x1::Signer;
-    use 0x1::Vector;
+module Std::Event {
+    use Std::Errors;
+    use Std::BCS;
+    use Std::Signer;
+    use Std::Vector;
 
     /// A resource representing the counter used to generate uniqueness under each account. There won't be destructor for
     /// this resource to guarantee the uniqueness of the generated handle.
@@ -98,6 +96,4 @@ module Event {
             h1 == h2
         }
     }
-}
-
 }

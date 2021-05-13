@@ -11,8 +11,8 @@ module {{default}}::Holder {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -39,8 +39,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     Diem::destroy_zero(Diem::mint<XUS>(account, 1));
@@ -52,8 +52,8 @@ fun main(account: signer) {
 //! sender: bob
 //! gas-currency: XUS
 script {
-    use 0x1::Diem;
-    use 0x1::XUS::XUS;
+    use DiemFramework::Diem;
+    use DiemFramework::XUS::XUS;
     fun main()  {
         let coins = Diem::zero<XUS>();
         Diem::approx_xdx_for_coin<XUS>(&coins);
@@ -64,7 +64,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::Diem;
+    use DiemFramework::Diem;
     fun main()  {
         Diem::destroy_zero(
             Diem::zero<u64>()
@@ -75,9 +75,9 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::Diem;
-    use 0x1::XDX::XDX;
-    use 0x1::XUS::XUS;
+    use DiemFramework::Diem;
+    use DiemFramework::XDX::XDX;
+    use DiemFramework::XUS::XUS;
     fun main()  {
         assert(!Diem::is_synthetic_currency<XUS>(), 9);
         assert(Diem::is_synthetic_currency<XDX>(), 10);
@@ -89,8 +89,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::Diem;
-    use 0x1::XUS::XUS;
+    use DiemFramework::Diem;
+    use DiemFramework::XUS::XUS;
     use {{default}}::Holder;
     fun main(account: signer)  {
     let account = &account;
@@ -105,8 +105,8 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use Std::FixedPoint32;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -122,8 +122,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use Std::FixedPoint32;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -139,8 +139,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::FixedPoint32;
+use DiemFramework::Diem;
+use Std::FixedPoint32;
 fun main(account: signer) {
     let account = &account;
     Diem::register_SCS_currency<u64>(
@@ -153,8 +153,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -166,8 +166,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::XDX::XDX;
+use DiemFramework::Diem;
+use DiemFramework::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     Diem::publish_preburn_queue_to_account<XDX>(account, account);
@@ -178,8 +178,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     Diem::publish_preburn_queue_to_account<XUS>(account, account);
@@ -190,8 +190,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let xus = Diem::mint<XUS>(account, 1);
@@ -204,9 +204,9 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
-use 0x1::XDX::XDX;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::XDX::XDX;
 fun main() {
     assert(Diem::is_SCS_currency<XUS>(), 99);
     assert(!Diem::is_SCS_currency<XDX>(), 98);
@@ -219,7 +219,7 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::CoreAddresses;
+use DiemFramework::CoreAddresses;
 fun main(account: signer) {
     let account = &account;
     CoreAddresses::assert_currency_info(account)
@@ -230,8 +230,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 fun main(tc_account: signer) {
     let tc_account = &tc_account;
     let max_u64 = 18446744073709551615;

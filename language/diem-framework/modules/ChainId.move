@@ -1,12 +1,11 @@
-address 0x1 {
 /// The chain id distinguishes between different chains (e.g., testnet and the main Diem network).
 /// One important role is to prevent transactions intended for one chain from being executed on another.
 /// This code provides a container for storing a chain id and functions to initialize and get it.
-module ChainId {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::DiemTimestamp;
-    use 0x1::Signer;
+module DiemFramework::ChainId {
+    use DiemFramework::CoreAddresses;
+    use DiemFramework::DiemTimestamp;
+    use Std::Errors;
+    use Std::Signer;
 
     struct ChainId has key {
         id: u8
@@ -36,7 +35,7 @@ module ChainId {
     /// Return the chain ID of this Diem instance
     public fun get(): u8 acquires ChainId {
         DiemTimestamp::assert_operating();
-        borrow_global<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS()).id
+        borrow_global<ChainId>(@DiemRoot).id
     }
 
     // =================================================================
@@ -48,7 +47,7 @@ module ChainId {
 
     spec module {
         /// When Diem is operating, the chain id is always available.
-        invariant DiemTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant DiemTimestamp::is_operating() ==> exists<ChainId>(@DiemRoot);
 
         // Could also specify that ChainId is not stored on any other address, but it doesn't matter.
     }
@@ -56,7 +55,6 @@ module ChainId {
     /// # Helper Functions
 
     spec fun spec_get_chain_id(): u8 {
-        global<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS()).id
+        global<ChainId>(@DiemRoot).id
     }
-}
 }

@@ -12,7 +12,7 @@
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{alice}});
@@ -30,7 +30,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{bob}});

@@ -1,12 +1,9 @@
-address 0x1 {
-
 /// Stores the string name of a ValidatorOperator account.
-
-module ValidatorOperatorConfig {
-    use 0x1::Errors;
-    use 0x1::Signer;
-    use 0x1::Roles;
-    use 0x1::DiemTimestamp;
+module DiemFramework::ValidatorOperatorConfig {
+    use Std::Errors;
+    use Std::Signer;
+    use DiemFramework::Roles;
+    use DiemFramework::DiemTimestamp;
 
     struct ValidatorOperatorConfig has key {
         /// The human readable name of this entity. Immutable.
@@ -84,5 +81,4 @@ module ValidatorOperatorConfig {
             exists<ValidatorOperatorConfig>(addr);
     }
 
-}
 }

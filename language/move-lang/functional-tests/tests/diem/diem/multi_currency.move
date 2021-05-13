@@ -10,7 +10,7 @@
 //! sender: diemroot
 // Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(config: signer) {
     let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
@@ -27,8 +27,8 @@ fun main(config: signer) {
 //! sender: diemroot
 address 0x1 {
 module COIN {
-    use 0x1::FixedPoint32;
-    use 0x1::Diem;
+    use Std::FixedPoint32;
+    use DiemFramework::Diem;
 
     struct COIN has store { }
 
@@ -55,7 +55,7 @@ module COIN {
 //! sender: diemroot
 //! execute-as: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::{Self, COIN};
 fun main(dr_account: signer, tc_account: signer) {
     let dr_account = &dr_account;
@@ -79,7 +79,7 @@ stdlib_script::AccountCreationScripts::create_designated_dealer
 //! sender: blessed
 script {
 use 0x1::COIN::COIN;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::tiered_mint<COIN>(account, @{{sally}}, 10, 3);
@@ -90,9 +90,9 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
+use DiemFramework::XUS::XUS;
 use 0x1::COIN::COIN;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(tc_account: signer) {
     let tc_account = &tc_account;
     let add_all_currencies = false;
@@ -120,8 +120,8 @@ fun main(tc_account: signer) {
 //! new-transaction
 //! sender: richie
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -135,7 +135,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: sally
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
@@ -149,7 +149,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
@@ -161,8 +161,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);
@@ -174,7 +174,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<u64>(account);
@@ -186,8 +186,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);
@@ -198,8 +198,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -214,9 +214,9 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
-use 0x1::XUS::XUS;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);

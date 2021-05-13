@@ -1,6 +1,8 @@
+address Std;
+
 #[test_only]
 /// Module providing testing functionality. Only included for tests.
-module 0x1::UnitTest {
+module Std::UnitTest {
     /// Return a `num_signers` number of unique signer values. No ordering or
     /// starting value guarantees are made, only that the order and values of
     /// the signers in the returned vector is deterministic.

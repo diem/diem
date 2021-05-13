@@ -70,7 +70,7 @@ module Token {
 address 0x3 {
 
 module OneToOneMarket {
-    use 0x1::Signer;
+    use Std::Signer;
     use 0x2::Map;
     use 0x2::Token;
 
@@ -213,7 +213,7 @@ address 0x70DD {
 
 module ToddNickels {
     use 0x2::Token;
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct T has copy, drop, store {}
 

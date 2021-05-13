@@ -6,7 +6,7 @@ module {{default}}::Nop{
 //! max-gas: 700
 script {
 use {{default}}::Nop;
-use 0x1::Vector;
+use Std::Vector;
 fun main() {
     Nop::nop();
     let v = Vector::empty();

@@ -1,8 +1,8 @@
 // 1
 script {
 use 0x1::M;
-use 0x1::Offer;
-use 0x1::Signer;
+use Std::Offer;
+use Std::Signer;
 
 // Alice creates an offer for Bob that contains an M::T resource
 fun main(account: signer) {

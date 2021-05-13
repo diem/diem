@@ -1,7 +1,7 @@
 address 0x2 {
 module Events {
-    use 0x1::Event;
-    use 0x1::Signer;
+    use Std::Event;
+    use Std::Signer;
 
     struct AnEvent has copy, drop, store { i: u64 }
     struct Handle has key{ h: Event::EventHandle<AnEvent> }

@@ -1,26 +1,24 @@
-address 0x1 {
-
 /// The `Diem` module describes the concept of a coin in the Diem framework. It introduces the
 /// resource `Diem::Diem<CoinType>`, representing a coin of given coin type.
 /// The module defines functions operating on coins as well as functionality like
 /// minting and burning of coins.
-module Diem {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::Event::{Self, EventHandle};
-    use 0x1::FixedPoint32::{Self, FixedPoint32};
-    use 0x1::RegisteredCurrencies;
-    use 0x1::Signer;
-    use 0x1::Roles;
-    use 0x1::DiemTimestamp;
-    use 0x1::Vector;
+module DiemFramework::Diem {
+    use DiemFramework::CoreAddresses;
+    use DiemFramework::RegisteredCurrencies;
+    use DiemFramework::Roles;
+    use DiemFramework::DiemTimestamp;
+    use Std::Errors;
+    use Std::Event::{Self, EventHandle};
+    use Std::FixedPoint32::{Self, FixedPoint32};
+    use Std::Signer;
+    use Std::Vector;
 
     /// The `Diem` resource defines the Diem coin for each currency in
     /// Diem. Each "coin" is coupled with a type `CoinType` specifying the
     /// currency of the coin, and a `value` field specifying the value
     /// of the coin (in the base units of the currency `CoinType`
     /// and specified in the `CurrencyInfo` resource for that `CoinType`
-    /// published under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` account address).
+    /// published under the `@CurrencyInfo` account address).
     struct Diem<CoinType> has store {
         /// The value of this coin in the base units for `CoinType`
         value: u64
@@ -28,8 +26,8 @@ module Diem {
 
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
-    /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`
-    /// account or the `0x1::XDX` module (and `CoreAddresses::DIEM_ROOT_ADDRESS()` in testnet).
+    /// This capability is held only either by the `@TreasuryCompliance`
+    /// account or the `DiemFramework::XDX` module (and `@DiemRoot` in testnet).
     struct MintCapability<CoinType> has key, store { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
@@ -103,7 +101,7 @@ module Diem {
     /// The `CurrencyInfo<CoinType>` resource stores the various
     /// pieces of information needed for a currency (`CoinType`) that is
     /// registered on-chain. This resource _must_ be published under the
-    /// address given by `CoreAddresses::CURRENCY_INFO_ADDRESS()` in order for the registration of
+    /// address given by `@CurrencyInfo` in order for the registration of
     /// `CoinType` as a recognized currency on-chain to be successful. At
     /// the time of registration, the `MintCapability<CoinType>` and
     /// `BurnCapability<CoinType>` capabilities are returned to the caller.
@@ -242,9 +240,9 @@ module Diem {
     const MAX_OUTSTANDING_PREBURNS: u64 = 256;
 
     /// Initialization of the `Diem` module. Initializes the set of
-    /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
+    /// registered currencies in the `DiemFramework::RegisteredCurrencies` on-chain
     /// config, and publishes the `CurrencyRegistrationCapability` under the
-    /// `CoreAddresses::DIEM_ROOT_ADDRESS()`. This can only be called from genesis.
+    /// `@DiemRoot`. This can only be called from genesis.
     public fun initialize(
         dr_account: &signer,
     ) {
@@ -303,8 +301,8 @@ module Diem {
         )
     }
     spec mint {
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         /// Must abort if the account does not have the MintCapability [[H1]][PERMISSION].
         aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
 
@@ -375,14 +373,14 @@ module Diem {
         )
     }
     spec cancel_burn {
-        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let post post_currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        let post post_currency_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         modifies global<PreburnQueue<CoinType>>(preburn_address);
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include CancelBurnAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
         include CancelBurnWithCapEmits<CoinType>;
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures exists<PreburnQueue<CoinType>>(preburn_address);
         ensures post_currency_info == update_field(
             currency_info,
@@ -405,7 +403,7 @@ module Diem {
 
     /// Mint a new `Diem` coin of `CoinType` currency worth `value`. The
     /// caller must have a reference to a `MintCapability<CoinType>`. Only
-    /// the treasury compliance account or the `0x1::XDX` module can acquire such a
+    /// the treasury compliance account or the `DiemFramework::XDX` module can acquire such a
     /// reference.
     public fun mint_with_capability<CoinType: store>(
         value: u64,
@@ -414,7 +412,7 @@ module Diem {
         assert_is_currency<CoinType>();
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
         assert(info.can_mint, Errors::invalid_state(EMINTING_NOT_ALLOWED));
         assert(MAX_U128 - info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
         info.total_value = info.total_value + (value as u128);
@@ -434,8 +432,8 @@ module Diem {
     }
     spec mint_with_capability {
         pragma opaque;
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
         include MintEmits<CoinType>;
@@ -449,15 +447,15 @@ module Diem {
     spec schema MintEnsures<CoinType> {
         value: u64;
         result: Diem<CoinType>;
-        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let post post_currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        let post post_currency_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures post_currency_info == update_field(currency_info, total_value, currency_info.total_value + value);
         ensures result.value == value;
     }
     spec schema MintEmits<CoinType> {
         value: u64;
-        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         let handle = currency_info.mint_events;
         let msg = MintEvent{
             amount: value,
@@ -483,7 +481,7 @@ module Diem {
         assert(value(&preburn.to_burn) == 0, Errors::invalid_state(EPREBURN_OCCUPIED));
         deposit(&mut preburn.to_burn, coin);
         let currency_code = currency_code<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
         assert(MAX_U64 - info.preburn_value >= coin_value, Errors::limit_exceeded(ECOIN));
         info.preburn_value = info.preburn_value + coin_value;
         // don't emit preburn events for synthetic currenices as this does not
@@ -502,8 +500,8 @@ module Diem {
         };
     }
     spec preburn_with_resource {
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
         include PreburnEnsures<CoinType>{amount: coin.value};
         include PreburnWithResourceEmits<CoinType>{amount: coin.value};
@@ -613,7 +611,7 @@ module Diem {
 
     /// Publish a `Preburn` resource under `account`. This function is
     /// used for bootstrapping the designated dealer at account-creation
-    /// time, and the association TC account `tc_account` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
+    /// time, and the association TC account `tc_account` (at `@TreasuryCompliance`) is creating
     /// this resource for the designated dealer `account`.
     public fun publish_preburn_queue_to_account<CoinType: store>(
         account: &signer,
@@ -793,7 +791,7 @@ module Diem {
         modifies global<PreburnQueue<CoinType>>(account_addr);
         ensures exists<PreburnQueue<CoinType>>(account_addr);
         // The preburn amount in the currency info can be updated.
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include PreburnEnsures<CoinType>{preburn: spec_make_preburn(amount)};
     }
 
@@ -919,7 +917,7 @@ module Diem {
         let Diem { value } = withdraw_all<CoinType>(&mut preburn.to_burn);
         // update the market cap
         assert_is_currency<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
         assert(info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
         info.total_value = info.total_value - (value as u128);
         assert(info.preburn_value >= value, Errors::limit_exceeded(EPREBURN));
@@ -989,7 +987,7 @@ module Diem {
 
         // update the market cap
         let currency_code = currency_code<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
         assert(info.preburn_value >= amount, Errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - amount;
         // Don't emit cancel burn events for synthetic currencies. cancel_burn
@@ -1009,18 +1007,18 @@ module Diem {
     }
     spec cancel_burn_with_capability {
         modifies global<PreburnQueue<CoinType>>(preburn_address);
-        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include CancelBurnWithCapAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
         include CancelBurnWithCapEmits<CoinType>;
-        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures result.value == amount;
         ensures result.value > 0;
     }
     spec schema CancelBurnWithCapAbortsIf<CoinType> {
         preburn_address: address;
         amount: u64;
-        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include AbortsIfNoCurrency<CoinType>;
         include RemovePreburnFromQueueAbortsIf<CoinType>;
         aborts_if info.preburn_value < amount with Errors::LIMIT_EXCEEDED;
@@ -1029,8 +1027,8 @@ module Diem {
         preburn_address: address;
         amount: u64;
         include RemovePreburnFromQueueEnsures<CoinType>;
-        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let post post_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
+        let post post_info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures post_info == update_field(info, preburn_value, info.preburn_value - amount);
     }
     spec schema CancelBurnWithCapEmits<CoinType> {
@@ -1101,7 +1099,7 @@ module Diem {
     /// currency).
     public fun preburn_value<CoinType: store>(): u64 acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value
+        borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).preburn_value
     }
 
     /// Create a new `Diem<CoinType>` with a value of `0`. Anyone can call
@@ -1218,13 +1216,13 @@ module Diem {
 
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Diem.
-    /// The passed-in `dr_account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
+    /// The passed-in `dr_account` must be a specific address (`@CurrencyInfo`) and
     /// `dr_account` must also have the correct `DiemRoot` account role.
     /// After the first registration of `CoinType` as a
     /// currency, additional attempts to register `CoinType` as a currency
     /// will abort.
     /// When the `CoinType` is registered it publishes the
-    /// `CurrencyInfo<CoinType>` resource under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` and
+    /// `CurrencyInfo<CoinType>` resource under the `@CurrencyInfo` and
     /// adds the currency to the set of `RegisteredCurrencies`. It returns
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
     public fun register_currency<CoinType: store>(
@@ -1351,11 +1349,11 @@ module Diem {
     public fun market_cap<CoinType: store>(): u128
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
+        borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).total_value
     }
     /// Returns the market cap of CoinType.
     spec fun spec_market_cap<CoinType>(): u128 {
-        global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
+        global<CurrencyInfo<CoinType>>(@CurrencyInfo).total_value
     }
 
     /// Returns the value of the coin in the `FromCoinType` currency in XDX.
@@ -1390,12 +1388,12 @@ module Diem {
     /// Returns `true` if the type `CoinType` is a registered currency.
     /// Returns `false` otherwise.
     public fun is_currency<CoinType: store>(): bool {
-        exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
+        exists<CurrencyInfo<CoinType>>(@CurrencyInfo)
     }
 
     public fun is_SCS_currency<CoinType: store>(): bool acquires CurrencyInfo {
         is_currency<CoinType>() &&
-        !borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).is_synthetic
+        !borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).is_synthetic
     }
 
 
@@ -1403,7 +1401,7 @@ module Diem {
     /// its `CurrencyInfo`. Returns `false` otherwise.
     public fun is_synthetic_currency<CoinType: store>(): bool
     acquires CurrencyInfo {
-        let addr = CoreAddresses::CURRENCY_INFO_ADDRESS();
+        let addr = @CurrencyInfo;
         exists<CurrencyInfo<CoinType>>(addr) &&
             borrow_global<CurrencyInfo<CoinType>>(addr).is_synthetic
     }
@@ -1413,10 +1411,10 @@ module Diem {
     public fun scaling_factor<CoinType: store>(): u64
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
+        borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).scaling_factor
     }
     spec fun spec_scaling_factor<CoinType>(): u64 {
-        global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
+        global<CurrencyInfo<CoinType>>(@CurrencyInfo).scaling_factor
     }
 
     /// Returns the representable (i.e. real-world) fractional part for the
@@ -1424,7 +1422,7 @@ module Diem {
     public fun fractional_part<CoinType: store>(): u64
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).fractional_part
+        borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).fractional_part
     }
 
     /// Returns the currency code for the registered currency as defined in
@@ -1432,7 +1430,7 @@ module Diem {
     public fun currency_code<CoinType: store>(): vector<u8>
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code
+        *&borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).currency_code
     }
     spec currency_code {
         pragma opaque;
@@ -1451,7 +1449,7 @@ module Diem {
     ) acquires CurrencyInfo {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<FromCoinType>();
-        let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(@CurrencyInfo);
         currency_info.to_xdx_exchange_rate = xdx_exchange_rate;
         Event::emit_event(
             &mut currency_info.exchange_rate_update_events,
@@ -1481,9 +1479,9 @@ module Diem {
 
     spec schema UpdateXDXExchangeRateEmits<FromCoinType> {
         xdx_exchange_rate: FixedPoint32;
-        let handle = global<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).exchange_rate_update_events;
+        let handle = global<CurrencyInfo<FromCoinType>>(@CurrencyInfo).exchange_rate_update_events;
         let msg = ToXDXExchangeRateUpdateEvent {
-            currency_code: global<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code,
+            currency_code: global<CurrencyInfo<FromCoinType>>(@CurrencyInfo).currency_code,
             new_to_xdx_exchange_rate: FixedPoint32::get_raw_value(xdx_exchange_rate)
         };
         emits msg to handle;
@@ -1493,12 +1491,12 @@ module Diem {
     public fun xdx_exchange_rate<CoinType: store>(): FixedPoint32
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
+        *&borrow_global<CurrencyInfo<CoinType>>(@CurrencyInfo).to_xdx_exchange_rate
     }
     spec xdx_exchange_rate {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
-        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures result == info.to_xdx_exchange_rate;
     }
 
@@ -1516,7 +1514,7 @@ module Diem {
     acquires CurrencyInfo {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<CoinType>();
-        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
         currency_info.can_mint = can_mint;
     }
     spec update_minting_ability {
@@ -1801,12 +1799,12 @@ module Diem {
     spec module {
         /// Checks whether currency is registered. Mirrors `Self::is_currency<CoinType>`.
         fun spec_is_currency<CoinType>(): bool {
-            exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
+            exists<CurrencyInfo<CoinType>>(@CurrencyInfo)
         }
 
         /// Returns currency information.
         fun spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
-            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
+            global<CurrencyInfo<CoinType>>(@CurrencyInfo)
         }
 
         /// Specification version of `Self::approx_xdx_for_value`.
@@ -1815,7 +1813,7 @@ module Diem {
         }
 
         fun spec_xdx_exchange_rate<CoinType>(): FixedPoint32 {
-            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
+            global<CurrencyInfo<CoinType>>(@CurrencyInfo).to_xdx_exchange_rate
         }
 
         /// Checks whether the currency has a mint capability.  This is only relevant for
@@ -1835,5 +1833,4 @@ module Diem {
         }
     }
 
-}
 }

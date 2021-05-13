@@ -12,7 +12,7 @@ module 0x42::TestModule {
 }
 
 spec 0x42::TestModule {
-    use 0x1::Signer;
+    use Std::Signer;
 
     invariant forall addr: address where exists<R>(addr): global<R>(addr).value > 0;
 

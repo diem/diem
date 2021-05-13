@@ -18,7 +18,7 @@ module {{default}}::FooConfig {
 // initially, any script is allowed
 //! new-transaction
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(account: signer) {
     let account = &account;
     assert(DiemTransactionPublishingOption::is_script_allowed(account, &x""), 0);
@@ -29,7 +29,7 @@ fun main(account: signer) {
 // turning off open scripts is a privileged operation
 //! new-transaction
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(account: signer) {
     let account = &account;
     DiemTransactionPublishingOption::set_open_script(account)
@@ -45,7 +45,7 @@ fun main(account: signer) {
 //! sender: diemroot
 // Step 2: Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 
 fun main(config: signer) {
     let config = &config;

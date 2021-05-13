@@ -19,7 +19,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set bob to change alice's key
@@ -32,7 +32,7 @@ script {
 //! new-transaction
 //! sender: vivian
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set dave to change vivian's key
@@ -45,7 +45,7 @@ script {
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     // rotate alice's pubkey
     fun main(account: signer) {
     let account = &account;
@@ -66,8 +66,8 @@ script{
 //! new-transaction
 //! sender: dave
 script{
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
     fun main(account: signer) {
     let account = &account;
@@ -93,8 +93,8 @@ script{
 //! new-transaction
 //! sender: dave
 script{
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     // rotate vivian's pubkey to the same value does not trigger the reconfiguration.
     fun main(account: signer) {
     let account = &account;

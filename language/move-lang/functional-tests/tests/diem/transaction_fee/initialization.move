@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 fun main(account: signer) {
     let account = &account;
     TransactionFee::initialize(account);

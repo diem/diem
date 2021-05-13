@@ -1,5 +1,3 @@
-address 0x1 {
-
 /// Module defining error codes used in Move aborts throughout the framework.
 ///
 /// A `u64` error code is constructed from two values:
@@ -14,7 +12,7 @@ address 0x1 {
 ///     framework evolves.
 ///
 /// >TODO: determine what kind of stability guarantees we give about reasons/associated module.
-module Errors {
+module Std::Errors {
     /// A function to create an error from from a category and a reason.
     fun make(category: u8, reason: u64): u64 {
         (category as u64) + (reason << 8)
@@ -130,6 +128,4 @@ module Errors {
         aborts_if false;
         ensures result == CUSTOM;
     }
-}
-
 }

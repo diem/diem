@@ -123,7 +123,7 @@ impl UnitTestingConfig {
     pub fn build_test_plan(&self) -> Option<TestPlan> {
         let mut deps = self.dep_files.clone();
 
-        deps.push(move_stdlib::unit_testing_module_file());
+        deps.extend(move_stdlib::unit_testing_files());
 
         let TestPlan {
             files, module_info, ..

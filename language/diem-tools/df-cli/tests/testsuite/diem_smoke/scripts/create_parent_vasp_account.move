@@ -1,6 +1,6 @@
 script {
-use 0x1::DiemAccount;
-use 0x1::SlidingNonce;
+use DiemFramework::DiemAccount;
+use DiemFramework::SlidingNonce;
 
 /// # Summary
 /// Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.

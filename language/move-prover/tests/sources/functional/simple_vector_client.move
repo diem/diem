@@ -1,7 +1,7 @@
 // This file consists of a series of test cases which are client functions
 // using the standard vector module.
 module 0x42::TestVector {
-    use 0x1::Vector;
+    use Std::Vector;
 
     spec module {
         pragma verify = true;

@@ -4,10 +4,10 @@
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::DualAttestation;
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
-    use 0x1::XDX::XDX;
+    use DiemFramework::DualAttestation;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::XDX::XDX;
     fun main(account: signer) {
     let account = &account;
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";

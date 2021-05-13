@@ -12,7 +12,7 @@
 //! sender: diemroot
 // remove_validator cannot be called on a non-validator
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{alice}});
@@ -25,7 +25,7 @@ script{
 //! new-transaction
 //! sender: alice
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{vivian}});
@@ -38,7 +38,7 @@ script{
 //! sender: diemroot
 // should work because Vivian is a validator
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{vivian}});
@@ -52,7 +52,7 @@ script{
 //! sender: diemroot
 // double-removing Vivian should fail
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{vivian}});

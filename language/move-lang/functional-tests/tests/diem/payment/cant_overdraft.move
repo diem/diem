@@ -1,9 +1,9 @@
 //! account: alice, 0, 0, 0XUS
 
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
-use 0x1::Signer;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
+use Std::Signer;
 
 fun main(account: signer) {
     let account = &account;

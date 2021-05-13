@@ -1,19 +1,17 @@
-address 0x1 {
-
 /// Module managing dual attestation.
-module DualAttestation {
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::XDX::XDX;
-    use 0x1::BCS;
-    use 0x1::Diem;
-    use 0x1::DiemTimestamp;
-    use 0x1::Roles;
-    use 0x1::Signature;
-    use 0x1::Signer;
-    use 0x1::VASP;
-    use 0x1::Vector;
-    use 0x1::Event::{Self, EventHandle};
+module DiemFramework::DualAttestation {
+    use DiemFramework::CoreAddresses;
+    use DiemFramework::XDX::XDX;
+    use Std::BCS;
+    use DiemFramework::Diem;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use DiemFramework::Signature;
+    use DiemFramework::VASP;
+    use Std::Errors;
+    use Std::Event::{Self, EventHandle};
+    use Std::Signer;
+    use Std::Vector;
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
     /// participate in off-chain protocols.
@@ -484,7 +482,7 @@ module DualAttestation {
     public fun initialize(dr_account: &signer) {
         DiemTimestamp::assert_genesis();
         CoreAddresses::assert_diem_root(dr_account); // operational constraint.
-        assert(!exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()), Errors::already_published(ELIMIT));
+        assert(!exists<Limit>(@DiemRoot), Errors::already_published(ELIMIT));
         let initial_limit = (INITIAL_DUAL_ATTESTATION_LIMIT as u128) * (Diem::scaling_factor<XDX>() as u128);
         assert(initial_limit <= MAX_U64, Errors::limit_exceeded(ELIMIT));
         move_to(
@@ -497,7 +495,7 @@ module DualAttestation {
     spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
-        aborts_if exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Limit>(@DiemRoot) with Errors::ALREADY_PUBLISHED;
         let initial_limit = INITIAL_DUAL_ATTESTATION_LIMIT * Diem::spec_scaling_factor<XDX>();
         aborts_if initial_limit > MAX_U64 with Errors::LIMIT_EXCEEDED;
         include Diem::AbortsIfNoCurrency<XDX>; // for scaling_factor.
@@ -505,8 +503,8 @@ module DualAttestation {
 
     /// Return the current dual attestation limit in microdiem
     public fun get_cur_microdiem_limit(): u64 acquires Limit {
-        assert(exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
-        borrow_global<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit
+        assert(exists<Limit>(@DiemRoot), Errors::not_published(ELIMIT));
+        borrow_global<Limit>(@DiemRoot).micro_xdx_limit
     }
     spec get_cur_microdiem_limit {
         pragma opaque;
@@ -518,8 +516,8 @@ module DualAttestation {
     /// Aborts if `tc_account` does not have the TreasuryCompliance role
     public fun set_microdiem_limit(tc_account: &signer, micro_xdx_limit: u64) acquires Limit {
         Roles::assert_treasury_compliance(tc_account);
-        assert(exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
-        borrow_global_mut<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit = micro_xdx_limit;
+        assert(exists<Limit>(@DiemRoot), Errors::not_published(ELIMIT));
+        borrow_global_mut<Limit>(@DiemRoot).micro_xdx_limit = micro_xdx_limit;
     }
     spec set_microdiem_limit {
         /// Must abort if the signer does not have the TreasuryCompliance role [[H6]][PERMISSION].
@@ -527,7 +525,7 @@ module DualAttestation {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
-        ensures global<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit == micro_xdx_limit;
+        ensures global<Limit>(@DiemRoot).micro_xdx_limit == micro_xdx_limit;
     }
 
     // **************************** SPECIFICATION ********************************
@@ -544,12 +542,12 @@ module DualAttestation {
     spec module {
         /// Helper function to determine whether the Limit is published.
         fun spec_is_published(): bool {
-            exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS())
+            exists<Limit>(@DiemRoot)
         }
 
         /// Mirrors `Self::get_cur_microdiem_limit`.
         fun spec_get_cur_microdiem_limit(): u64 {
-            global<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit
+            global<Limit>(@DiemRoot).micro_xdx_limit
         }
     }
 
@@ -610,5 +608,4 @@ module DualAttestation {
     spec module {
         apply BaseURLRemainsSame to * except rotate_base_url;
     }
-}
 }

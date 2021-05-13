@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-use 0x1::ValidatorOperatorConfig;
+use DiemFramework::ValidatorOperatorConfig;
 fun main() {
     ValidatorOperatorConfig::get_human_name(@{{default}});
 }
@@ -10,7 +10,7 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::ValidatorOperatorConfig;
+use DiemFramework::ValidatorOperatorConfig;
 fun main(account: signer) {
     let account = &account;
     ValidatorOperatorConfig::publish(account, account, x"");

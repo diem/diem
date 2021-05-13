@@ -1,7 +1,7 @@
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::Diem;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     Diem::initialize(account);

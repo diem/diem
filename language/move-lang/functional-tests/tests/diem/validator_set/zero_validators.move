@@ -7,7 +7,7 @@
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main() {
         DiemSystem::get_validator_config(@{{vivian}});
     }
@@ -17,7 +17,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         let num_validators = DiemSystem::validator_set_size();
@@ -35,7 +35,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main() {
         DiemSystem::get_validator_config(@{{vivian}});
     }

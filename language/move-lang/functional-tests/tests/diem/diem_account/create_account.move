@@ -1,8 +1,8 @@
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
-use 0x1::BCS;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
+use Std::BCS;
 fun main(account: signer) {
     let account = &account;
     let addr: address = @0x111101;
@@ -13,8 +13,8 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let addr: address = @0x111101;

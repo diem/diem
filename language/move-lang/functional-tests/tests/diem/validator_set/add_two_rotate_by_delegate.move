@@ -18,7 +18,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set alice to change bob's key
@@ -32,7 +32,7 @@ script {
 //! sender: bob
 // check bob can not rotate his consensus key
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         ValidatorConfig::set_config(account, @{{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
@@ -45,7 +45,7 @@ script {
 //! sender: bob
 // check bob can not rotate alice's consensus key
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         ValidatorConfig::set_config(account, @{{alice}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
@@ -58,7 +58,7 @@ script {
 //! sender: alice
 // check alice can rotate bob's consensus key
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         ValidatorConfig::set_config(account, @{{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");

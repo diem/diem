@@ -5,7 +5,7 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::SystemAdministrationScripts;
+use DiemFramework::SystemAdministrationScripts;
 fun main(dr_account: signer) {
     SystemAdministrationScripts::set_gas_constants(
         dr_account,
@@ -30,7 +30,7 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::SystemAdministrationScripts;
+use DiemFramework::SystemAdministrationScripts;
 fun main(dr_account: signer) {
     SystemAdministrationScripts::set_gas_constants(
         dr_account,
@@ -55,7 +55,7 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::SystemAdministrationScripts;
+use DiemFramework::SystemAdministrationScripts;
 fun main(dr_account: signer) {
     SystemAdministrationScripts::set_gas_constants(
         dr_account,
@@ -91,7 +91,7 @@ fun main() {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::SystemAdministrationScripts;
+use DiemFramework::SystemAdministrationScripts;
 fun main(dr_account: signer) {
     SystemAdministrationScripts::set_gas_constants(
         dr_account,
@@ -126,8 +126,8 @@ fun main() {
 //! gas-price: 1
 //! gas-currency: XUS
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main() {
     // Alice processed before the bump in min transaction gas units so should have more money left
     assert(DiemAccount::balance<XUS>(@{{bob}}) < DiemAccount::balance<XUS>(@{{alice}}), 42);

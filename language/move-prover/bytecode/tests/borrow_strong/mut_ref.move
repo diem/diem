@@ -1,6 +1,8 @@
 // dep: ../../move-stdlib/modules/Vector.move
+// dep: ../../move-stdlib/modules/addresses.move
+
 module 0x1::TestMutRef {
-    use 0x1::Vector;
+    use Std::Vector;
 
     struct T has copy, drop { value: u64 }
     struct R has copy, drop { value: u64 }

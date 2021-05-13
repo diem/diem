@@ -13,8 +13,8 @@
 //! gas-currency: XUS
 //! args: 1000000
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 
 fun main(account: signer, amount: u64) {
     let account = &account;
@@ -35,8 +35,8 @@ fun main(account: signer, amount: u64) {
 //! gas-currency: XUS
 //! args: 1000
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 
 fun main(account: signer, amount: u64) {
     let account = &account;
@@ -54,8 +54,8 @@ fun main(account: signer, amount: u64) {
 
 //! new-transaction
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 
 fun main() {
     assert(DiemAccount::balance<XUS>(@{{carol}}) == 1000, 42);

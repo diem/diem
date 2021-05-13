@@ -1,6 +1,6 @@
 script {
-use 0x1::DiemAccount;
-use 0x1::SlidingNonce;
+use DiemFramework::DiemAccount;
+use DiemFramework::SlidingNonce;
 
 /// # Summary
 /// Mints a specified number of coins in a currency to a Designated Dealer. The sending account

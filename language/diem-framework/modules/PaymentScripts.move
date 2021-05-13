@@ -1,10 +1,9 @@
-address 0x1 {
 /// This module holds all payment related script entrypoints in the Diem Framework.
 /// Any account that can hold a balance can use the transaction scripts within this module.
-module PaymentScripts {
-    use 0x1::DiemAccount;
-    use 0x1::DualAttestation;
-    use 0x1::Signer;
+module DiemFramework::PaymentScripts {
+    use DiemFramework::DiemAccount;
+    use DiemFramework::DualAttestation;
+    use Std::Signer;
 
     /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
@@ -152,7 +151,7 @@ module PaymentScripts {
     }
 
     spec schema PeerToPeer<Currency> {
-        use 0x1::Errors;
+        use Std::Errors;
 
         payer: signer;
         payee: address;
@@ -191,5 +190,4 @@ module PaymentScripts {
         aborts_if !exists<DiemAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
     }
 
-}
 }

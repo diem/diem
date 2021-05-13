@@ -28,7 +28,7 @@ module A {
 
 module B {
     use 0x0::A;
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct T has key {
         x: u64

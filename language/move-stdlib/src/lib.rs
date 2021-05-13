@@ -20,11 +20,14 @@ const ERRMAP_FILE: &str = "error_description.errmap";
 const REFERENCES_TEMPLATE: &str = "templates/references.md";
 const OVERVIEW_TEMPLATE: &str = "templates/overview.md";
 
-pub fn unit_testing_module_file() -> String {
-    path_in_crate("nursery/UnitTest.move")
-        .into_os_string()
-        .into_string()
-        .unwrap()
+pub fn unit_testing_files() -> Vec<String> {
+    vec![
+        path_in_crate("nursery/UnitTest.move"),
+        path_in_crate("modules/addresses.move"),
+    ]
+    .into_iter()
+    .map(|p| p.into_os_string().into_string().unwrap())
+    .collect()
 }
 
 pub fn path_in_crate<S>(relative: S) -> PathBuf

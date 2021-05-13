@@ -1,7 +1,7 @@
 // Script 1, seder: alice
 script {
-use 0x1::Offer;
-use 0x1::Signer;
+use Std::Offer;
+use Std::Signer;
 
 // Create a self offer containing a u64
 fun main(account: signer) {

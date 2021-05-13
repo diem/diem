@@ -14,8 +14,8 @@ module {{default}}::Holder {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -36,8 +36,8 @@ fun main(account: signer) {
 //! new-transaction
 // Minting from a non-privileged account should not work
 script {
-use 0x1::XUS::XUS;
-use 0x1::Diem;
+use DiemFramework::XUS::XUS;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     let coin = Diem::mint<XUS>(account, 100);

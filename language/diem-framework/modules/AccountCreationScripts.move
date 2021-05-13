@@ -1,7 +1,6 @@
-address 0x1 {
-module AccountCreationScripts {
-    use 0x1::DiemAccount;
-    use 0x1::SlidingNonce;
+module DiemFramework::AccountCreationScripts {
+    use DiemFramework::DiemAccount;
+    use DiemFramework::SlidingNonce;
 
     /// # Summary
     /// Creates a Child VASP account with its parent being the sending account of the transaction.
@@ -86,9 +85,9 @@ module AccountCreationScripts {
     }
 
     spec create_child_vasp_account {
-        use 0x1::Signer;
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Signer;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: parent_vasp}; // properties checked by the prologue.
         let parent_addr = Signer::spec_address_of(parent_vasp);
@@ -209,8 +208,8 @@ module AccountCreationScripts {
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_operator_account {
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
@@ -305,8 +304,8 @@ module AccountCreationScripts {
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_account {
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
@@ -395,8 +394,8 @@ module AccountCreationScripts {
     }
 
     spec create_parent_vasp_account {
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
@@ -487,8 +486,8 @@ module AccountCreationScripts {
     }
 
     spec create_designated_dealer {
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
@@ -509,5 +508,4 @@ module AccountCreationScripts {
         /// Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
-}
 }

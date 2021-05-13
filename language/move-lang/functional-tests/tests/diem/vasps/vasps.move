@@ -5,11 +5,11 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DualAttestation;
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
-use 0x1::DiemTimestamp;
-use 0x1::VASP;
+use DiemFramework::DualAttestation;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::DiemTimestamp;
+use DiemFramework::VASP;
 fun main(dr_account: signer) {
     let dr_account = &dr_account;
     let add_all_currencies = false;
@@ -44,9 +44,9 @@ fun main(dr_account: signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
-use 0x1::VASP;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::VASP;
 fun main(parent_vasp: signer) {
     let parent_vasp = &parent_vasp;
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
@@ -70,7 +70,7 @@ fun main(parent_vasp: signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main(parent_vasp: signer) {
     let parent_vasp = &parent_vasp;
     let old_pubkey = DualAttestation::compliance_public_key(@{{parent}});
@@ -87,7 +87,7 @@ fun main(parent_vasp: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main() {
     assert(VASP::parent_address(@{{bob}}) == @{{parent}}, 2016);
 }
@@ -97,7 +97,7 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main(account: signer) {
     let account = &account;
     VASP::publish_parent_vasp_credential(account, account);
@@ -109,7 +109,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main(account: signer) {
     let account = &account;
     VASP::publish_parent_vasp_credential(account, account);
@@ -120,7 +120,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main(account: signer) {
     let account = &account;
     VASP::publish_child_vasp_credential(account, account);
@@ -131,7 +131,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main(account: signer) {
     let account = &account;
     VASP::publish_child_vasp_credential(account, account);
@@ -142,7 +142,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main(account: signer) {
     let account = &account;
     VASP::publish_child_vasp_credential(account, account);
@@ -153,7 +153,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main() {
     assert(!VASP::is_same_vasp(@{{parent}}, @{{blessed}}), 42);
 }
@@ -163,7 +163,7 @@ fun main() {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::VASP;
+use DiemFramework::VASP;
 fun main() {
     assert(!VASP::is_same_vasp(@{{blessed}}, @{{parent}}), 42);
 }

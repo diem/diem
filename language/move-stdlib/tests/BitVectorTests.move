@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::BitVectorTests {
-    use 0x1::BitVector;
+module Std::BitVectorTests {
+    use Std::BitVector;
 
     #[test_only]
     fun test_bitvector_set_unset_of_size(k: u64) {

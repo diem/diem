@@ -11,7 +11,7 @@ module {{default}}::Holder {
 
 //! new-transaction
 script {
-use 0x1::AccountLimits;
+use DiemFramework::AccountLimits;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
@@ -26,8 +26,8 @@ fun main(account: signer) {
 //! sender: diemroot
 //! execute-as: bob
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;
@@ -40,8 +40,8 @@ fun main(dr: signer, bob_account: signer) {
 //! sender: diemroot
 //! execute-as: bob
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;
@@ -52,8 +52,8 @@ fun main(dr: signer, bob_account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(bob_account: signer) {
     let bob_account = &bob_account;
     AccountLimits::publish_window<XUS>(bob_account, bob_account, @{{bob}});
@@ -63,8 +63,8 @@ fun main(bob_account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(bob_account: signer) {
     let bob_account = &bob_account;
     AccountLimits::publish_unrestricted_limits<XUS>(bob_account);
@@ -74,8 +74,8 @@ fun main(bob_account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
@@ -92,8 +92,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
@@ -110,8 +110,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
@@ -128,8 +128,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
@@ -146,8 +146,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
@@ -164,8 +164,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
@@ -180,8 +180,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
@@ -196,8 +196,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
@@ -212,8 +212,8 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(dr: signer) {
     let dr = &dr;
     AccountLimits::update_window_info<XUS>(
@@ -228,8 +228,8 @@ fun main(dr: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main() {
     assert(AccountLimits::limits_definition_address<XUS>(@{{bob}}) == @{{bob}}, 0);
 }
@@ -238,8 +238,8 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main() {
     assert(AccountLimits::has_limits_published<XUS>(@{{bob}}), 1);
 
@@ -251,8 +251,8 @@ fun main() {
 //! sender: diemroot
 //! execute-as: bob
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS::XUS;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS::XUS;
 fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;

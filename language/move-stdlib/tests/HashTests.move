@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::HashTests {
-    use 0x1::Hash;
+module Std::HashTests {
+    use Std::Hash;
 
     #[test]
     fun sha2_256_expected_hash() {

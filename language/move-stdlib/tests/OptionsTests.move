@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::OptionTests {
-    use 0x1::Option;
+module Std::OptionTests {
+    use Std::Option;
 
 
     #[test]

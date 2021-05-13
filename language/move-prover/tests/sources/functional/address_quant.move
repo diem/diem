@@ -1,7 +1,7 @@
 // Tests of quantification over addresses.
 module 0x42::AddressQuant {
 
-    use 0x1::Signer;
+    use Std::Signer;
     struct R has key {
         x: u64
     }

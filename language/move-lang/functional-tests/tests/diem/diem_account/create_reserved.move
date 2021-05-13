@@ -4,8 +4,8 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
@@ -17,8 +17,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
@@ -30,8 +30,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XDX::XDX;
+use DiemFramework::DiemAccount;
+use DiemFramework::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(
@@ -43,8 +43,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemAccount;
-use 0x1::XDX::XDX;
+use DiemFramework::DiemAccount;
+use DiemFramework::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(

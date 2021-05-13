@@ -10,7 +10,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to invalid key
@@ -22,7 +22,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to invalid key
@@ -36,7 +36,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to a valid key

@@ -1,9 +1,9 @@
 address 0x1 {
 module ValidatorAdministrationScripts {
-    use 0x1::DiemSystem;
-    use 0x1::SlidingNonce;
-    use 0x1::ValidatorConfig;
-    use 0x1::ValidatorOperatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::SlidingNonce;
+    use DiemFramework::ValidatorConfig;
+    use DiemFramework::ValidatorOperatorConfig;
 
     /// # Summary
     /// Adds a validator account to the validator set, and triggers a
@@ -65,10 +65,10 @@ module ValidatorAdministrationScripts {
 
 
     spec add_validator_and_reconfigure {
-        use 0x1::DiemAccount;
-        use 0x1::Errors;
-        use 0x1::Roles;
-        use 0x1::DiemConfig;
+        use DiemFramework::DiemAccount;
+        use Std::Errors;
+        use DiemFramework::Roles;
+        use DiemFramework::DiemConfig;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
@@ -157,9 +157,9 @@ module ValidatorAdministrationScripts {
     /// Access control rule is that only the validator operator for a validator may set
     /// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
     spec register_validator_config {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
-        use 0x1::Signer;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
+        use Std::Signer;
 
         include DiemAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
         include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
@@ -233,10 +233,10 @@ module ValidatorAdministrationScripts {
     }
 
     spec remove_validator_and_reconfigure {
-        use 0x1::DiemAccount;
-        use 0x1::Errors;
-        use 0x1::Roles;
-        use 0x1::DiemConfig;
+        use DiemFramework::DiemAccount;
+        use Std::Errors;
+        use DiemFramework::Roles;
+        use DiemFramework::DiemConfig;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
@@ -323,11 +323,11 @@ module ValidatorAdministrationScripts {
      }
 
     spec set_validator_config_and_reconfigure {
-        use 0x1::DiemAccount;
-        use 0x1::DiemConfig;
-        use 0x1::DiemSystem;
-        use 0x1::Errors;
-        use 0x1::Signer;
+        use DiemFramework::DiemAccount;
+        use DiemFramework::DiemConfig;
+        use DiemFramework::DiemSystem;
+        use Std::Errors;
+        use Std::Signer;
 
          // properties checked by the prologue.
        include DiemAccount::TransactionChecks{sender: validator_operator_account};
@@ -430,10 +430,10 @@ module ValidatorAdministrationScripts {
     }
 
     spec set_validator_operator {
-        use 0x1::DiemAccount;
-        use 0x1::Signer;
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use DiemFramework::DiemAccount;
+        use Std::Signer;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         let account_addr = Signer::address_of(account);
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -516,10 +516,10 @@ module ValidatorAdministrationScripts {
     }
 
     spec set_validator_operator_with_nonce_admin {
-        use 0x1::DiemAccount;
-        use 0x1::Signer;
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use DiemFramework::DiemAccount;
+        use Std::Signer;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         let account_addr = Signer::address_of(account);
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.

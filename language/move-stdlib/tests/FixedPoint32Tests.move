@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::FixedPoint32Tests {
-    use 0x1::FixedPoint32;
+module Std::FixedPoint32Tests {
+    use Std::FixedPoint32;
 
     #[test]
     #[expected_failure(abort_code = 7)]

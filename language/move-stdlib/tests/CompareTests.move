@@ -1,8 +1,8 @@
 // Tests for polymorphic comparison in Move
 #[test_only]
-module 0x1::CompareTests {
-    use 0x1::Compare;
-    use 0x1::BCS;
+module Std::CompareTests {
+    use Std::Compare;
+    use Std::BCS;
 
     const EQUAL: u8 = 0;
     const LESS_THAN: u8 = 1;

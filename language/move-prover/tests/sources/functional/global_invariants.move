@@ -1,6 +1,6 @@
 module 0x42::TestGlobalInvariants {
 
-    use 0x1::Signer;
+    use Std::Signer;
     spec module {
         pragma verify = true;
     }

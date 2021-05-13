@@ -4,7 +4,7 @@
 address 0x1 {
 
 module M1 {
-    use 0x1::Signer;
+    use Std::Signer;
     use 0x1::M2;
     use 0x1::M3;
 
@@ -30,7 +30,7 @@ module M1 {
 }
 
 module M2 {
-    use 0x1::Signer;
+    use Std::Signer;
     friend 0x1::M1;
     friend 0x1::M4;
 
@@ -48,7 +48,7 @@ module M2 {
 }
 
 module M3 {
-    use 0x1::Signer;
+    use Std::Signer;
     friend 0x1::M1;
     friend 0x1::M4;
 
@@ -66,7 +66,7 @@ module M3 {
 }
 
 module M4 {
-    use 0x1::Signer;
+    use Std::Signer;
     use 0x1::M2;
     use 0x1::M3;
 

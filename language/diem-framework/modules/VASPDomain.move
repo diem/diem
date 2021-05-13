@@ -1,14 +1,10 @@
-address 0x1 {
-
 /// Module managing VASP domains.
-module VASPDomain {
-
-    use 0x1::Event::{Self, EventHandle};
-    use 0x1::Vector;
-    use 0x1::CoreAddresses;
-    use 0x1::Roles;
-    use 0x1::Errors;
-    use 0x1::Signer;
+module DiemFramework::VASPDomain {
+    use DiemFramework::Roles;
+    use Std::Errors;
+    use Std::Event::{Self, EventHandle};
+    use Std::Signer;
+    use Std::Vector;
 
     /// This resource holds an entity's domain names.
     struct VASPDomains has key {
@@ -167,7 +163,7 @@ module VASPDomain {
         Vector::push_back(&mut account_domains.domains, copy vasp_domain);
 
         Event::emit_event(
-            &mut borrow_global_mut<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).vasp_domain_events,
+            &mut borrow_global_mut<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events,
             VASPDomainEvent {
                 removed: false,
                 domain: vasp_domain,
@@ -200,7 +196,7 @@ module VASPDomain {
     spec schema AddVASPDomainEmits {
         address: address;
         domain: vector<u8>;
-        let handle = global<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).vasp_domain_events;
+        let handle = global<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events;
         let msg = VASPDomainEvent {
             removed: false,
             domain: VASPDomain { domain },
@@ -233,7 +229,7 @@ module VASPDomain {
         };
 
         Event::emit_event(
-            &mut borrow_global_mut<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).vasp_domain_events,
+            &mut borrow_global_mut<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events,
             VASPDomainEvent {
                 removed: true,
                 domain: vasp_domain,
@@ -267,7 +263,7 @@ module VASPDomain {
         tc_account: signer;
         address: address;
         domain: vector<u8>;
-        let handle = global<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).vasp_domain_events;
+        let handle = global<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events;
         let msg = VASPDomainEvent {
             removed: true,
             domain: VASPDomain { domain },
@@ -298,11 +294,10 @@ module VASPDomain {
     }
 
     public fun tc_domain_manager_exists(): bool {
-        exists<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
+        exists<VASPDomainManager>(@TreasuryCompliance)
     }
     spec tc_domain_manager_exists {
         aborts_if false;
-        ensures result == exists<VASPDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+        ensures result == exists<VASPDomainManager>(@TreasuryCompliance);
     }
-}
 }

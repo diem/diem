@@ -1,6 +1,6 @@
 module 0x42::TestReferences {
 
-    use 0x1::Vector;
+    use Std::Vector;
 
     spec module {
         pragma verify = true;

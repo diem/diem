@@ -1,8 +1,8 @@
 address 0x2 {
 module SimpleSortedLinkedList {
-    use 0x1::Compare;
-    use 0x1::BCS;
-    use 0x1::Signer;
+    use Std::Compare;
+    use Std::BCS;
+    use Std::Signer;
 
     struct Node<T> has key {
         prev: address, //account address where the previous node is stored (head if no previous node exists)

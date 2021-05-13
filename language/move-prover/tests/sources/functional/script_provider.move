@@ -3,7 +3,7 @@ address 0x1 {
 
 
 module ScriptProvider {
-    use 0x1::Signer;
+    use Std::Signer;
 
     spec module {
         // TODO: This file gets errors for reasons I do not understand.

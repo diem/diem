@@ -6,7 +6,7 @@
 //! sender: diemroot
 // Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(config: signer) {
     let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
@@ -24,8 +24,8 @@ fun main(config: signer) {
 //! sender: diemroot
 address 0x1 {
 module COIN {
-    use 0x1::FixedPoint32;
-    use 0x1::Diem;
+    use Std::FixedPoint32;
+    use DiemFramework::Diem;
 
     struct COIN has store { }
 
@@ -64,8 +64,8 @@ fun main(dr_account: signer, tc_account: signer) {
 
 //! new-transaction
 script {
-use 0x1::TransactionFee;
-use 0x1::Diem;
+use DiemFramework::TransactionFee;
+use DiemFramework::Diem;
 use 0x1::COIN::COIN;
 fun main() {
     TransactionFee::pay_fee(Diem::zero<COIN>());
@@ -76,7 +76,7 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::COIN;
 fun main(tc: signer) {
     let tc = &tc;
@@ -88,7 +88,7 @@ fun main(tc: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::COIN;
 fun main(tc_account: signer) {
     let tc_account = &tc_account;
@@ -103,7 +103,7 @@ fun main(tc_account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::COIN;
 fun main(tc_account: signer) {
     let tc_account = &tc_account;
@@ -115,8 +115,8 @@ fun main(tc_account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::TransactionFee;
-use 0x1::XDX::XDX;
+use DiemFramework::TransactionFee;
+use DiemFramework::XDX::XDX;
 fun main(tc: signer) {
     let tc = &tc;
     TransactionFee::add_txn_fee_currency<XDX>(tc);

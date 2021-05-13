@@ -1,5 +1,5 @@
 module {{default}}::ApprovalGroup {
-    use 0x1::Signature;
+    use DiemFramework::Signature;
 
     struct ApprovalGroup has store {
         // we do not have collection support in Move now, so illustrate
@@ -59,12 +59,12 @@ module {{default}}::ApprovalGroup {
 
 //! new-transaction
 module {{default}}::ColdWallet {
-    use 0x1::XUS::XUS;
-    use 0x1::Hash;
-    use 0x1::BCS;
-    use 0x1::Diem;
-    use 0x1::Vector;
-    use 0x1::Signer;
+    use DiemFramework::XUS::XUS;
+    use Std::Hash;
+    use Std::BCS;
+    use DiemFramework::Diem;
+    use Std::Vector;
+    use Std::Signer;
     use {{default}}::ApprovalGroup;
 
     struct ColdWallet has key {

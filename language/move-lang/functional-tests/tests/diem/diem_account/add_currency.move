@@ -11,7 +11,7 @@
 //! sender: diemroot
 // Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(config: signer) {
     let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
@@ -28,8 +28,8 @@ fun main(config: signer) {
 //! sender: diemroot
 address 0x1 {
 module COIN {
-    use 0x1::FixedPoint32;
-    use 0x1::Diem;
+    use Std::FixedPoint32;
+    use DiemFramework::Diem;
 
     struct COIN has store { }
 
@@ -56,7 +56,7 @@ module COIN {
 //! sender: diemroot
 //! execute-as: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::{Self, COIN};
 fun main(dr_account: signer, tc_account: signer) {
     let dr_account = &dr_account;
@@ -73,8 +73,8 @@ fun main(dr_account: signer, tc_account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);
@@ -86,8 +86,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);
@@ -100,7 +100,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_validator_account(account, @{{vivian}}, {{vivian::auth_key}}, b"owner_name");
@@ -114,8 +114,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: vivian
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);
@@ -127,8 +127,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: otto
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::add_currency<XUS>(account);

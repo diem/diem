@@ -14,8 +14,8 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
-    use 0x1::DiemSystem;
+    use DiemFramework::ValidatorConfig;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // register alice as bob's delegate
@@ -39,8 +39,8 @@ script {
 //! sender: alice
 // rotate bob's key
 script {
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // assert bob is a validator

@@ -17,7 +17,7 @@ module M1 {
 }
 
 module M2 {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct X has key, store { y: vector<Y> }
     struct Y has key, store { x: vector<X> }

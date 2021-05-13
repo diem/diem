@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::VectorTests {
-    use 0x1::Vector as V;
+module Std::VectorTests {
+    use Std::Vector as V;
 
     struct R has store { }
     struct Droppable has drop {}

@@ -2,7 +2,7 @@
 address 0x0 {
 /// Example for resources.
 module Trafo {
-  use 0x1::Signer;
+  use Std::Signer;
 
   resource struct R { x: u64 }
 

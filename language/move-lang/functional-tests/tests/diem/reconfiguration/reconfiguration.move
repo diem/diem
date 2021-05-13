@@ -9,7 +9,7 @@
 //! new-transaction
 // Reconfiguration can only be invoked by the diem root.
 script {
-use 0x1::DiemConfig;
+use DiemFramework::DiemConfig;
 
 fun main(account: signer) {
     let account = &account;
@@ -22,7 +22,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemConfig;
+use DiemFramework::DiemConfig;
 
 fun main(account: signer) {
     let account = &account;
@@ -42,7 +42,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script {
-use 0x1::DiemConfig;
+use DiemFramework::DiemConfig;
 
 fun main(account: signer) {
     let account = &account;

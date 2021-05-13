@@ -1,5 +1,5 @@
 script {
-use 0x1::XUS;
+use DiemFramework::XUS;
 
 fun main(account: signer) {
     let account = &account;

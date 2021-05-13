@@ -14,7 +14,7 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // register alice as bob's delegate
@@ -27,7 +27,7 @@ script {
 //! sender: diemroot
 // remove_validator cannot be called on a non-validator
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{bob}});
@@ -45,7 +45,7 @@ script{
 //! sender: alice
 //! expiration-time: 3
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::update_config_and_reconfigure(account, @{{bob}});

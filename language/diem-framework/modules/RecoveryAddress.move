@@ -1,12 +1,10 @@
-address 0x1 {
-
 /// This module defines an account recovery mechanism that can be used by VASPs.
-module RecoveryAddress {
-    use 0x1::Errors;
-    use 0x1::DiemAccount::{Self, KeyRotationCapability};
-    use 0x1::Signer;
-    use 0x1::VASP;
-    use 0x1::Vector;
+module DiemFramework::RecoveryAddress {
+    use DiemFramework::DiemAccount::{Self, KeyRotationCapability};
+    use DiemFramework::VASP;
+    use Std::Errors;
+    use Std::Signer;
+    use Std::Vector;
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to
@@ -267,5 +265,4 @@ module RecoveryAddress {
         }
     }
 
-}
 }

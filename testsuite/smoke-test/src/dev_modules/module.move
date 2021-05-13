@@ -9,7 +9,7 @@
 address {{sender}} {
 
 module MyModule {
-    use 0x1::Diem::Diem;
+    use DiemFramework::Diem::Diem;
 
     // The identity function for coins: takes a Diem<T> as input and hands it back
     public fun id<T>(c: Diem<T>): Diem<T> {

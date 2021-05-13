@@ -1,9 +1,7 @@
-address 0x1 {
-
 /// This module defines the Option type and its methods to represent and handle an optional value.
-module Option {
-    use 0x1::Errors;
-    use 0x1::Vector;
+module Std::Option {
+    use Std::Errors;
+    use Std::Vector;
 
     /// Abstraction of a value that may or may not be present. Implemented with a vector of size
     /// zero or one because Move bytecode does not have ADTs.
@@ -231,5 +229,4 @@ module Option {
         t: Option<Element>;
         aborts_if is_none(t) with Errors::INVALID_ARGUMENT;
     }
-}
 }

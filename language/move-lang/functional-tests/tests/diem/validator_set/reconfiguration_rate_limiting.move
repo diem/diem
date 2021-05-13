@@ -16,8 +16,8 @@ stdlib_script::AccountCreationScripts::create_validator_operator_account
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         assert(DiemTimestamp::now_microseconds() == 0, 999);
@@ -31,7 +31,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::ValidatorConfig;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // set a new config locally
@@ -46,7 +46,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // update is too soon, will fail
@@ -65,8 +65,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // update is too soon, will not trigger the reconfiguration
@@ -86,8 +86,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // update is in exactly 5 minutes and 1 microsecond, so will succeed
@@ -108,8 +108,8 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // too soon to reconfig, but validator have not changed, should succeed but not reconfigure
@@ -130,9 +130,9 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // good to reconfig
@@ -156,7 +156,7 @@ script {
 //! new-transaction
 //! sender: diemroot
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{bob}});
@@ -177,8 +177,8 @@ script{
 //! new-transaction
 //! sender: diemroot
 script{
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         // add validator back
@@ -200,9 +200,9 @@ script{
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // update too soon
@@ -225,9 +225,9 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::DiemTimestamp;
-    use 0x1::DiemSystem;
-    use 0x1::ValidatorConfig;
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::DiemSystem;
+    use DiemFramework::ValidatorConfig;
     fun main(account: signer) {
     let account = &account;
         // good to reconfigure

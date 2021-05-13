@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Signer;
+    use Std::Signer;
 
     #[test(s=@0x2)]
     public fun check_signer_spec_address_of(s: &signer) {

@@ -103,7 +103,7 @@ Let's first start out with a simple script that prints its `signer`:
 
 ```rust
 script {
-use 0x1::Debug;
+use Std::Debug;
 fun main(account: signer) {
     Debug::print(&account)
 }
@@ -145,7 +145,7 @@ Try saving this code in `src/Test.move`:
 ```rust
 address 0x2 {
 module Test {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct Resource has key { i: u64 }
 
@@ -496,7 +496,7 @@ are the following:
 
 	   ┌── scripts/debug_script.move:2:5 ───
 	   │
-	 2 │ use 0x1::Debug;
+	 2 │ use Std::Debug;
 	   │     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Debug'
 	   │
 

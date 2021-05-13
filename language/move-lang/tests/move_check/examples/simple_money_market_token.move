@@ -50,7 +50,7 @@ module Token {
 address 0xB055 {
 
 module OneToOneMarket {
-    use 0x1::Signer;
+    use Std::Signer;
     use 0x2::Token;
 
     struct Pool<AssetType: copy + drop> has key {
@@ -177,7 +177,7 @@ address 0x70DD {
 
 module ToddNickels {
     use 0x2::Token;
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct T has copy, drop, store {}
 

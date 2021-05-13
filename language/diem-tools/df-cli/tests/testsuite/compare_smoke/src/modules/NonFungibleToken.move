@@ -5,9 +5,9 @@ address 0x2 {
 // the account address of each list node is actually the owner of the token
 module NonFungibleToken {
     use 0x2::SimpleSortedLinkedList;
-    use 0x1::Option::{Self, Option};
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Option::{Self, Option};
+    use Std::Signer;
+    use Std::Vector;
 
     const NFT_PUBLISHER: address = @0x2;
 
@@ -115,7 +115,7 @@ module TestNft {
 module MoveNft {
     use {{nftservice}}::NonFungibleToken::{Self, NonFungibleToken};
     use {{nftservice}}::TestNft::TestNft;
-    use 0x1::Signer;
+    use Std::Signer;
 
     resource struct MoveNft {
         nft: NonFungibleToken<TestNft>
@@ -151,7 +151,7 @@ fun main(account: signer) {
 script {
 use {{nftservice}}::NonFungibleToken;
 use {{nftservice}}::TestNft::{Self, TestNft};
-use 0x1::Hash;
+use Std::Hash;
 fun main(account: signer) {
     let input = b"input";
     let token_id = Hash::sha2_256(input);
@@ -190,7 +190,7 @@ fun main(account: signer) {
 script {
 use {{nftservice}}::NonFungibleToken;
 use {{nftservice}}::TestNft::TestNft;
-use 0x1::Hash;
+use Std::Hash;
 fun main(account: signer) {
     let input = b"input";
     let token_id = Hash::sha2_256(input);
@@ -216,7 +216,7 @@ fun main(account: signer) {
 script {
 use {{nftservice}}::NonFungibleToken;
 use {{nftservice}}::TestNft::TestNft;
-use 0x1::Hash;
+use Std::Hash;
 fun main(account: signer) {
     let input = b"input";
     let token_id = Hash::sha2_256(input);

@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Event;
+    use Std::Event;
 
     struct MyEvent<T> has copy, drop, store { b: bool }
 

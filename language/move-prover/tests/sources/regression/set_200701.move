@@ -1,5 +1,5 @@
 module 0x42::TestSet {
-    use 0x1::Vector;
+    use Std::Vector;
 
     // Issue #4872.
     public fun remove_everything(v: &mut vector<u64>) {

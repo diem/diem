@@ -1,14 +1,11 @@
-address 0x1 {
-
 /// This module defines a struct storing the publishing policies for the VM.
-module DiemTransactionPublishingOption {
-    use 0x1::Errors;
-    use 0x1::Vector;
-    use 0x1::DiemConfig::{Self, DiemConfig};
-    use 0x1::DiemTimestamp;
-    use 0x1::CoreAddresses;
-    use 0x1::Roles;
-    use 0x1::Signer;
+module DiemFramework::DiemTransactionPublishingOption {
+    use DiemFramework::DiemConfig::{Self, DiemConfig};
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use Std::Errors;
+    use Std::Signer;
+    use Std::Vector;
 
     const SCRIPT_HASH_LENGTH: u64 = 32;
 
@@ -155,7 +152,7 @@ module DiemTransactionPublishingOption {
 
     /// Return true if all non-administrative transactions are currently halted
     fun transactions_halted(): bool {
-        exists<HaltAllTransactions>(CoreAddresses::DIEM_ROOT_ADDRESS())
+        exists<HaltAllTransactions>(@DiemRoot)
     }
 
     spec module { } // Switch documentation context to module level.
@@ -172,8 +169,8 @@ module DiemTransactionPublishingOption {
     /// DiemTransactionPublishingOption config [[H11]][PERMISSION]
     spec schema DiemVersionRemainsSame {
         ensures old(DiemConfig::spec_is_published<DiemTransactionPublishingOption>()) ==>
-            global<DiemConfig<DiemTransactionPublishingOption>>(CoreAddresses::DIEM_ROOT_ADDRESS()) ==
-                old(global<DiemConfig<DiemTransactionPublishingOption>>(CoreAddresses::DIEM_ROOT_ADDRESS()));
+            global<DiemConfig<DiemTransactionPublishingOption>>(@DiemRoot) ==
+                old(global<DiemConfig<DiemTransactionPublishingOption>>(@DiemRoot));
     }
     spec module {
         apply DiemVersionRemainsSame to * except set_open_script, set_open_module;
@@ -195,5 +192,4 @@ module DiemTransactionPublishingOption {
             publish_option.module_publishing_allowed || Roles::has_diem_root_role(account)
         }
     }
-}
 }

@@ -1,6 +1,6 @@
 //! new-transaction
 script{
-use 0x1::DiemVersion;
+use DiemFramework::DiemVersion;
 fun main(account: signer) {
     let account = &account;
     DiemVersion::initialize(account, 1);
@@ -10,7 +10,7 @@ fun main(account: signer) {
 
 //! new-transaction
 script{
-use 0x1::DiemVersion;
+use DiemFramework::DiemVersion;
 fun main(account: signer) {
     let account = &account;
     DiemVersion::set(account, 0);
@@ -21,7 +21,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: diemroot
 script{
-use 0x1::DiemVersion;
+use DiemFramework::DiemVersion;
 fun main(account: signer) {
     let account = &account;
     DiemVersion::set(account, 0);

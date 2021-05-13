@@ -1,5 +1,5 @@
 module {{default}}::Swapper {
-    use 0x1::Vector;
+    use Std::Vector;
     public fun swap_it_up(vec_len: u64) {
         let v = Vector::empty();
 

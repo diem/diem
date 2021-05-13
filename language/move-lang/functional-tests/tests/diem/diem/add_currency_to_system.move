@@ -18,7 +18,7 @@ fun main() {}
 //! sender: diemroot
 // Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 
 fun main(config: signer) {
     let config = &config;
@@ -37,8 +37,8 @@ fun main(config: signer) {
 //! sender: diemroot
 address 0x1 {
 module COIN {
-    use 0x1::FixedPoint32;
-    use 0x1::Diem;
+    use Std::FixedPoint32;
+    use DiemFramework::Diem;
 
     struct COIN has store { }
 
@@ -65,7 +65,7 @@ module COIN {
 //! sender: diemroot
 //! execute-as: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::{Self, COIN};
 fun main(dr_account: signer, tc_account: signer) {
     let dr_account = &dr_account;
@@ -82,9 +82,9 @@ fun main(dr_account: signer, tc_account: signer) {
 //! sender: blessed
 //! gas-currency: COIN
 script {
-use 0x1::Diem;
+use DiemFramework::Diem;
 use 0x1::COIN::COIN;
-use 0x1::FixedPoint32;
+use Std::FixedPoint32;
 fun main(account: signer) {
     let account = &account;
     assert(Diem::approx_xdx_for_value<COIN>(10) == 5, 1);
@@ -100,9 +100,9 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
-use 0x1::Diem;
+use DiemFramework::Diem;
 fun main(account: signer) {
     let account = &account;
     let prev_mcap3 = Diem::market_cap<COIN>();
@@ -127,7 +127,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
@@ -139,7 +139,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: dd
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;

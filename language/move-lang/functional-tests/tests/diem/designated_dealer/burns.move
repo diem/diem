@@ -6,9 +6,9 @@
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::DesignatedDealer;
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DesignatedDealer;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
@@ -28,8 +28,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
         let designated_dealer_address = @0xDEADBEEF;

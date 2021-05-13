@@ -1,5 +1,5 @@
 module 0x8675309::Tester {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct Initializer has key { x: u64, y: u64 }
     struct Point has copy, drop { x: u64, y: u64 }

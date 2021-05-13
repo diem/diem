@@ -8,7 +8,7 @@
 //! sender: diemroot
 // Change option to CustomModule
 script {
-use 0x1::DiemTransactionPublishingOption;
+use DiemFramework::DiemTransactionPublishingOption;
 fun main(config: signer) {
     let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
@@ -25,8 +25,8 @@ fun main(config: signer) {
 //! sender: diemroot
 address 0x1 {
 module COIN {
-    use 0x1::FixedPoint32;
-    use 0x1::Diem;
+    use Std::FixedPoint32;
+    use DiemFramework::Diem;
 
     struct COIN has store { }
 
@@ -53,7 +53,7 @@ module COIN {
 //! sender: diemroot
 //! execute-as: blessed
 script {
-use 0x1::TransactionFee;
+use DiemFramework::TransactionFee;
 use 0x1::COIN::{Self, COIN};
 fun main(dr_account: signer, tc_account: signer) {
     let dr_account = &dr_account;
@@ -69,10 +69,10 @@ fun main(dr_account: signer, tc_account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 use 0x1::COIN::COIN;
-use 0x1::Diem;
+use DiemFramework::Diem;
 
 // register dd(1|2) as a preburner
 fun main(account: signer) {
@@ -114,8 +114,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: dd1
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 // do some preburning
 fun main(account: signer) {
@@ -131,7 +131,7 @@ fun main(account: signer) {
 //! sender: dd2
 script {
 use 0x1::COIN::COIN;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 
 // do some preburning
 fun main(account: signer) {
@@ -148,8 +148,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 use 0x1::COIN::COIN;
 
 fun main(account: signer) {
@@ -168,8 +168,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::Diem;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::XUS::XUS;
 
 fun main(account: signer) {
     let account = &account;

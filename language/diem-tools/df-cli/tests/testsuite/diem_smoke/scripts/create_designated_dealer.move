@@ -1,6 +1,6 @@
 script {
-use 0x1::DiemAccount;
-use 0x1::SlidingNonce;
+use DiemFramework::DiemAccount;
+use DiemFramework::SlidingNonce;
 
 /// # Summary
 /// Creates a Designated Dealer account with the provided information, and initializes it with

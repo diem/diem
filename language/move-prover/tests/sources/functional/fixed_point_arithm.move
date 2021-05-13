@@ -1,6 +1,6 @@
 module 0x42::FixedPointArithmetic {
 
-    use 0x1::FixedPoint32::{Self, FixedPoint32};
+    use Std::FixedPoint32::{Self, FixedPoint32};
     spec module {
         pragma verify = false;
     }

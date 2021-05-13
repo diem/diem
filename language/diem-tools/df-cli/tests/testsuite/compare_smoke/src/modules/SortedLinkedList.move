@@ -1,9 +1,9 @@
 address 0x2 {
 module SortedLinkedList {
-    use 0x1::Compare;
-    use 0x1::BCS;
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Compare;
+    use Std::BCS;
+    use Std::Signer;
+    use Std::Vector;
 
     struct EntryHandle has copy, drop, store {
         //address where the Node is stored

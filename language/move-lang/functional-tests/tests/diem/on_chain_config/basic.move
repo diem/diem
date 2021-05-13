@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-    use 0x1::DiemConfig::{Self};
+    use DiemFramework::DiemConfig::{Self};
     fun main(account: signer) {
     let account = &account;
         DiemConfig::initialize(account);
@@ -10,7 +10,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::DiemConfig;
+    use DiemFramework::DiemConfig;
     fun main() {
         let _x = DiemConfig::get<u64>();
     }
@@ -19,7 +19,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::DiemConfig;
+    use DiemFramework::DiemConfig;
     fun main(account: signer) {
     let account = &account;
         DiemConfig::set(account, 0);
@@ -29,7 +29,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::DiemConfig::{Self};
+    use DiemFramework::DiemConfig::{Self};
     fun main(account: signer) {
     let account = &account;
         DiemConfig::publish_new_config(account, 0);

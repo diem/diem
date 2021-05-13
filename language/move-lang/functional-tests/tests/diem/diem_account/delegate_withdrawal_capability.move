@@ -4,10 +4,10 @@
 
 //! sender: alice
 module {{alice}}::SillyColdWallet {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
-    use 0x1::Diem;
-    use 0x1::Signer;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::Diem;
+    use Std::Signer;
 
     struct T has key {
         cap: DiemAccount::WithdrawCapability,
@@ -31,7 +31,7 @@ module {{alice}}::SillyColdWallet {
 //! sender: alice
 script {
 use {{alice}}::SillyColdWallet;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 
 // create a cold wallet for Bob that withdraws from Alice's account
 fun main(sender: signer) {
@@ -45,8 +45,8 @@ fun main(sender: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 // check that Alice can no longer withdraw from her account
 fun main(account: signer) {
@@ -62,8 +62,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 // check that Bob can still withdraw from his normal account
 fun main(account: signer) {
@@ -77,8 +77,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: carol
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 // check that other users can still pay into Alice's account in the normal way
 fun main(account: signer) {

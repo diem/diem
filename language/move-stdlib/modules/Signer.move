@@ -1,5 +1,4 @@
-address 0x1 {
-module Signer {
+module Std::Signer {
     // Borrows the address of the signer
     // Conceptually, you can think of the `signer` as being a struct wrapper arround an
     // address
@@ -22,5 +21,4 @@ module Signer {
     /// Specification version of `Self::address_of`.
     spec native fun spec_address_of(account: signer): address;
 
-}
 }

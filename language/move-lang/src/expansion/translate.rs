@@ -309,13 +309,13 @@ fn module(
 
 fn set_sender_address(
     context: &mut Context,
-    loc: Loc,
     module_name: &ModuleName,
     sender: Option<Spanned<Address>>,
 ) {
     context.address = Some(match sender {
         Some(sp!(_, addr)) => addr,
         None => {
+            let loc = module_name.loc();
             let msg = format!(
                 "Invalid module declaration. The module does not have a specified address. Either \
                  declare it inside of an 'address <address> {{' block or declare it with an \
@@ -346,7 +346,7 @@ fn module_(
     let attributes = flatten_attributes(context, attributes);
     assert!(context.address == None);
     assert!(address == None);
-    set_sender_address(context, loc, &name, module_address);
+    set_sender_address(context, &name, module_address);
     let _ = check_restricted_self_name(context, "module", &name.0);
     if name.value().starts_with(|c| c == '_') {
         let msg = format!(

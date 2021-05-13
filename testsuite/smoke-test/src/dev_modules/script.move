@@ -7,9 +7,9 @@
 // the compiled stdlib.
 
 script {
-use 0x1::Diem;
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::Diem;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 use {{sender}}::MyModule;
 
 fun main(account: signer, recipient: address, amount: u64) {

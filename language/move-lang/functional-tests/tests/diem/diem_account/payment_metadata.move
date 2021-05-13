@@ -3,8 +3,8 @@
 
 //! sender: alice
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 // send a transaction with metadata and make sure we see it in the PaymentReceivedEvent
 fun main(account: signer) {
     let account = &account;
@@ -23,8 +23,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::DiemAccount;
-use 0x1::XUS::XUS;
+use DiemFramework::DiemAccount;
+use DiemFramework::XUS::XUS;
 // same thing, but using "deposit_with_metadata" API
 fun main(account: signer) {
     let account = &account;

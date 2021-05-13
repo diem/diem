@@ -1,6 +1,6 @@
 // This file is created to verify the native function in the standard BCS module.
 module 0x42::VerifySignature {
-    use 0x1::Signature;
+    use DiemFramework::Signature;
 
 
     public fun verify_ed25519_validate_pubkey(public_key: vector<u8>): bool {

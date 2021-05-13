@@ -1,5 +1,3 @@
-address 0x1 {
-
 /// This module defines role-based access control for the Diem framework.
 ///
 /// Roles are associated with accounts and govern what operations are permitted by those accounts. A role
@@ -7,11 +5,11 @@ address 0x1 {
 /// module provides multiple assertion functions like this one, as well as the functions to setup roles.
 ///
 /// For a conceptual discussion of roles, see the [DIP-2 document][ACCESS_CONTROL].
-module Roles {
-    use 0x1::Signer;
-    use 0x1::CoreAddresses;
-    use 0x1::Errors;
-    use 0x1::DiemTimestamp;
+module DiemFramework::Roles {
+    use DiemFramework::CoreAddresses;
+    use DiemFramework::DiemTimestamp;
+    use Std::Errors;
+    use Std::Signer;
 
     /// A `RoleId` resource was in an unexpected state
     const EROLE_ID: u64 = 0;
@@ -170,8 +168,8 @@ module Roles {
         include GrantRole{addr: Signer::address_of(account)};
         let addr = Signer::spec_address_of(account);
         // Requires to satisfy global invariants.
-        requires role_id == DIEM_ROOT_ROLE_ID ==> addr == CoreAddresses::DIEM_ROOT_ADDRESS();
-        requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        requires role_id == DIEM_ROOT_ROLE_ID ==> addr == @DiemRoot;
+        requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == @TreasuryCompliance;
     }
     spec schema GrantRole {
         addr: address;
@@ -428,17 +426,17 @@ module Roles {
         /// The DiemRoot role is globally unique [[B1]][ROLE], and is published at DIEM_ROOT_ADDRESS [[C1]][ROLE].
         /// In other words, a `RoleId` with `DIEM_ROOT_ROLE_ID` uniquely exists at `DIEM_ROOT_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_diem_root_role_addr(addr):
-          addr == CoreAddresses::DIEM_ROOT_ADDRESS();
+          addr == @DiemRoot;
         invariant [global, isolated]
-            DiemTimestamp::is_operating() ==> spec_has_diem_root_role_addr(CoreAddresses::DIEM_ROOT_ADDRESS());
+            DiemTimestamp::is_operating() ==> spec_has_diem_root_role_addr(@DiemRoot);
 
         /// The TreasuryCompliance role is globally unique [[B2]][ROLE], and is published at TREASURY_COMPLIANCE_ADDRESS [[C2]][ROLE].
         /// In other words, a `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` uniquely exists at `TREASURY_COMPLIANCE_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
-          addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+          addr == @TreasuryCompliance;
         invariant [global, isolated]
             DiemTimestamp::is_operating() ==>
-                spec_has_treasury_compliance_role_addr(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+                spec_has_treasury_compliance_role_addr(@TreasuryCompliance);
 
         /// DiemRoot cannot have balances [[D1]][ROLE].
         invariant [global, isolated] forall addr: address where spec_has_diem_root_role_addr(addr):
@@ -587,5 +585,4 @@ module Roles {
         aborts_if global<RoleId>(validator_operator_addr).role_id != VALIDATOR_OPERATOR_ROLE_ID
             with Errors::REQUIRES_ROLE;
     }
-}
 }

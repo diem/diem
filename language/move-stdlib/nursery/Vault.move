@@ -78,13 +78,13 @@
 /// explicit release function, which makes little sense as they are pure values. We expect the Move
 /// language to have 'phantom type parameters' or similar features added, which will allows us to have
 /// `ReadCap<Content>` droppable and copyable without `Content` needing the same.
-module 0x1::Vault {
+module Std::Vault {
 
-    use 0x1::Errors;
-    use 0x1::Event;
-    use 0x1::Option;
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Errors;
+    use Std::Event;
+    use Std::Option;
+    use Std::Signer;
+    use Std::Vector;
 
     // ================================================================================================================
     // Error reasons

@@ -1,13 +1,10 @@
-address 0x1 {
-
 /// This module defines structs and methods to initialize VM configurations,
 /// including different costs of running the VM.
-module DiemVMConfig {
-    use 0x1::DiemConfig::{Self, DiemConfig};
-    use 0x1::DiemTimestamp;
-    use 0x1::CoreAddresses;
-    use 0x1::Roles;
-    use 0x1::Errors;
+module DiemFramework::DiemVMConfig {
+    use DiemFramework::DiemConfig::{Self, DiemConfig};
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use Std::Errors;
 
     /// The provided gas constants were inconsistent.
     const EGAS_CONSTANT_INCONSISTENCY: u64 = 0;
@@ -224,11 +221,10 @@ module DiemVMConfig {
     /// No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSION].
     spec schema DiemVMConfigRemainsSame {
         ensures old(DiemConfig::spec_is_published<DiemVMConfig>()) ==>
-            global<DiemConfig<DiemVMConfig>>(CoreAddresses::DIEM_ROOT_ADDRESS()) ==
-                old(global<DiemConfig<DiemVMConfig>>(CoreAddresses::DIEM_ROOT_ADDRESS()));
+            global<DiemConfig<DiemVMConfig>>(@DiemRoot) ==
+                old(global<DiemConfig<DiemVMConfig>>(@DiemRoot));
     }
     spec module {
         apply DiemVMConfigRemainsSame to * except set_gas_constants;
     }
-}
 }

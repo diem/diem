@@ -1,5 +1,5 @@
 module 0x42::TestVector {
-    use 0x1::Vector;
+    use Std::Vector;
     struct T {
         x: u64,
     }

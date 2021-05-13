@@ -10,8 +10,8 @@
 
 //! new-transaction
 script{
-use 0x1::DiemTimestamp;
-use 0x1::DiemBlock;
+use DiemFramework::DiemTimestamp;
+use DiemFramework::DiemBlock;
 
 fun main() {
     assert(DiemBlock::get_current_block_height() == 1, 73);
@@ -21,7 +21,7 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemTimestamp;
 
 fun main() {
     assert(DiemTimestamp::now_microseconds() != 2000000, 77);
@@ -31,7 +31,7 @@ fun main() {
 //! new-transaction
 //! sender: vivian
 script{
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemTimestamp;
 
 fun main(account: signer) {
     let account = &account;

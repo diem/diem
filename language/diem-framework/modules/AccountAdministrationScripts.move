@@ -1,12 +1,11 @@
-address 0x1 {
 /// This module holds transactions that can be used to administer accounts in the Diem Framework.
-module AccountAdministrationScripts {
-    use 0x1::DiemAccount;
-    use 0x1::RecoveryAddress;
-    use 0x1::SharedEd25519PublicKey;
-    use 0x1::SlidingNonce;
-    use 0x1::DualAttestation;
-    use 0x1::VASPDomain;
+module DiemFramework::AccountAdministrationScripts {
+    use DiemFramework::DiemAccount;
+    use DiemFramework::RecoveryAddress;
+    use DiemFramework::SharedEd25519PublicKey;
+    use DiemFramework::SlidingNonce;
+    use DiemFramework::DualAttestation;
+    use DiemFramework::VASPDomain;
 
     /// # Summary
     /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
@@ -42,9 +41,9 @@ module AccountAdministrationScripts {
         DiemAccount::add_currency<Currency>(&account);
     }
     spec add_currency_to_account {
-        use 0x1::Errors;
-        use 0x1::Signer;
-        use 0x1::Roles;
+        use Std::Errors;
+        use Std::Signer;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include DiemAccount::AddCurrencyAbortsIf<Currency>;
@@ -108,8 +107,8 @@ module AccountAdministrationScripts {
         )
     }
     spec add_recovery_rotation_capability {
-        use 0x1::Signer;
-        use 0x1::Errors;
+        use Std::Signer;
+        use Std::Errors;
 
         include DiemAccount::TransactionChecks{sender: to_recover_account}; // properties checked by the prologue.
         include DiemAccount::ExtractKeyRotationCapabilityAbortsIf{account: to_recover_account};
@@ -164,8 +163,8 @@ module AccountAdministrationScripts {
         SharedEd25519PublicKey::publish(&account, public_key)
     }
     spec publish_shared_ed25519_public_key {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include SharedEd25519PublicKey::PublishAbortsIf{key: public_key};
@@ -209,8 +208,8 @@ module AccountAdministrationScripts {
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
     spec rotate_authentication_key {
-        use 0x1::Signer;
-        use 0x1::Errors;
+        use Std::Signer;
+        use Std::Errors;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         let account_addr = Signer::spec_address_of(account);
@@ -271,8 +270,8 @@ module AccountAdministrationScripts {
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
     spec rotate_authentication_key_with_nonce {
-        use 0x1::Signer;
-        use 0x1::Errors;
+        use Std::Signer;
+        use Std::Errors;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         let account_addr = Signer::spec_address_of(account);
@@ -335,9 +334,9 @@ module AccountAdministrationScripts {
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
     spec rotate_authentication_key_with_nonce_admin {
-        use 0x1::Signer;
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Signer;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         let account_addr = Signer::spec_address_of(account);
@@ -405,9 +404,9 @@ module AccountAdministrationScripts {
         RecoveryAddress::rotate_authentication_key(&account, recovery_address, to_recover, new_key)
     }
     spec rotate_authentication_key_with_recovery_address {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
-        use 0x1::Signer;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
+        use Std::Signer;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
@@ -468,9 +467,9 @@ module AccountAdministrationScripts {
         DualAttestation::rotate_compliance_public_key(&account, new_key)
     }
     spec rotate_dual_attestation_info {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
-        use 0x1::Signer;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
+        use Std::Signer;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include DualAttestation::RotateBaseUrlAbortsIf;
@@ -522,8 +521,8 @@ module AccountAdministrationScripts {
         SharedEd25519PublicKey::rotate_key(&account, public_key)
     }
     spec rotate_shared_ed25519_public_key {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include SharedEd25519PublicKey::RotateKeyAbortsIf{new_public_key: public_key};
@@ -570,8 +569,8 @@ module AccountAdministrationScripts {
     }
 
     spec create_recovery_address {
-        use 0x1::Signer;
-        use 0x1::Errors;
+        use Std::Signer;
+        use Std::Errors;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include DiemAccount::ExtractKeyRotationCapabilityAbortsIf;
@@ -618,9 +617,9 @@ module AccountAdministrationScripts {
         VASPDomain::publish_vasp_domains(&account)
     }
     spec create_vasp_domains {
-        use 0x1::Signer;
-        use 0x1::Roles;
-        use 0x1::Errors;
+        use DiemFramework::Roles;
+        use Std::Errors;
+        use Std::Signer;
 
         let vasp_addr = Signer::spec_address_of(account);
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -632,5 +631,4 @@ module AccountAdministrationScripts {
             Errors::ALREADY_PUBLISHED,
             Errors::REQUIRES_ROLE;
     }
-}
 }

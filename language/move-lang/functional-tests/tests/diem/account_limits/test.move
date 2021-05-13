@@ -9,8 +9,8 @@
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -25,8 +25,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -43,12 +43,11 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountLimits;
-    use 0x1::CoreAddresses;
-    use 0x1::XDX::XDX;
+    use DiemFramework::AccountLimits;
+    use DiemFramework::XDX::XDX;
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
-        AccountLimits::update_limits_definition<XDX>(tc_account, CoreAddresses::DIEM_ROOT_ADDRESS(), 2, 2, 0, 0);
+        AccountLimits::update_limits_definition<XDX>(tc_account, @DiemRoot, 2, 2, 0, 0);
     }
 }
 
@@ -59,8 +58,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -78,20 +77,19 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::AccountLimits;
-    use 0x1::CoreAddresses;
-    use 0x1::XDX::XDX;
+    use DiemFramework::AccountLimits;
+    use DiemFramework::XDX::XDX;
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
-        AccountLimits::update_limits_definition<XDX>(tc_account, CoreAddresses::DIEM_ROOT_ADDRESS(), 1000, 1000, 1000, 0);
+        AccountLimits::update_limits_definition<XDX>(tc_account, @DiemRoot, 1000, 1000, 1000, 0);
     }
 }
 
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     // Since we directly wrote into this account using fake data store, we
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
@@ -107,8 +105,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -121,8 +119,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: otherblessed
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -135,8 +133,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -149,8 +147,8 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -163,8 +161,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -183,8 +181,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -197,8 +195,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -213,8 +211,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -228,8 +226,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::XUS::XUS;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
@@ -244,8 +242,8 @@ script {
 //! new-transaction
 //! sender: moneybags
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);

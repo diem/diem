@@ -1,6 +1,6 @@
 #[test_only]
-module 0x1::BCSTests {
-    use 0x1::BCS;
+module Std::BCSTests {
+    use Std::BCS;
 
     struct Box<T> has copy, drop, store { x: T }
     struct Box3<T> has copy, drop, store { x: Box<Box<T>> }

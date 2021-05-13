@@ -1,7 +1,7 @@
 // separate_baseline: cvc4
 // TODO(cvc4): cvc4 currently produces false positives for most of the verification problems here.
 module 0x42::TestEmits {
-    use 0x1::Event::{Self, EventHandle};
+    use Std::Event::{Self, EventHandle};
 
     struct DummyEvent has copy, drop, store { msg: u64 }
 

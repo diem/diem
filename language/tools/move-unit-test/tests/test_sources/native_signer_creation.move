@@ -1,7 +1,7 @@
 module 0x1::M {
-    use 0x1::UnitTest;
-    use 0x1::Vector;
-    use 0x1::Signer;
+    use Std::UnitTest;
+    use Std::Vector;
+    use Std::Signer;
 
     struct A has key {}
 

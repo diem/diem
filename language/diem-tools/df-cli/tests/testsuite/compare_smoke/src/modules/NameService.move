@@ -5,9 +5,9 @@ address 0x2 {
 // the account address of each list node is actually the address bound to the key(name)
 module NameService {
     use 0x2::SortedLinkedList::{Self, EntryHandle};
-    use 0x1::DiemBlock;
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use DiemFramework::DiemBlock;
+    use Std::Signer;
+    use Std::Vector;
 
     //TODO use constants when Move support constants, '5' is used for example
     public fun EXPIRE_AFTER() : u64{5}

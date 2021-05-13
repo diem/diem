@@ -6,8 +6,8 @@
 //! account: bob
 
 script {
-use 0x1::DiemAccount;
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::DiemAccount;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer) {
     let account = &account;
     let old_auth_key = DiemAccount::authentication_key(@{{default}});
@@ -40,7 +40,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer) {
     let account = &account;
     let invalid_pubkey = x"0000";
@@ -53,7 +53,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main() {
     SharedEd25519PublicKey::key(@{{alice}});
 }
@@ -64,7 +64,7 @@ fun main() {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer) {
     let account = &account;
     let invalid_pubkey = x"10003d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
@@ -77,7 +77,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer) {
     let account = &account;
     // from RFC 8032
@@ -94,7 +94,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer) {
     let account = &account;
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
@@ -110,7 +110,7 @@ fun main(account: signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x1::SharedEd25519PublicKey;
+use DiemFramework::SharedEd25519PublicKey;
 fun main(account: signer)  {
     let account = &account;
     let invalid_pubkey = x"";

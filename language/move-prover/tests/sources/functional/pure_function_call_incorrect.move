@@ -1,8 +1,7 @@
 module 0x42::TestPureFun {
 
-    use 0x1::CoreAddresses;
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Signer;
+    use Std::Vector;
     struct T has key {
         x: u64,
     }
@@ -64,7 +63,7 @@ module 0x42::TestPureFun {
         }
 
         fun dr_x(): u64 {
-            get_x(CoreAddresses::DIEM_ROOT_ADDRESS())
+            get_x(@DiemRoot)
         }
     }
 

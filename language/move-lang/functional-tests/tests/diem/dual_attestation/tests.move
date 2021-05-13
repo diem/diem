@@ -4,7 +4,7 @@
 //! new-transaction
 //! sender: freddymac
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main() {
         DualAttestation::get_cur_microdiem_limit();
     }
@@ -13,7 +13,7 @@ script{
 
 //! new-transaction
 script{
-    use 0x1::DualAttestation::{Self};
+    use DiemFramework::DualAttestation::{Self};
     fun main(not_blessed: signer) {
     let not_blessed = &not_blessed;
         DualAttestation::set_microdiem_limit(not_blessed, 99);
@@ -24,7 +24,7 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DualAttestation::{Self};
+    use DiemFramework::DualAttestation::{Self};
     fun main(not_blessed: signer) {
     let not_blessed = &not_blessed;
         DualAttestation::set_microdiem_limit(not_blessed, 1001);
@@ -35,7 +35,7 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::publish_credential(account, account, x"");
@@ -46,7 +46,7 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::publish_credential(account, account, x"");
@@ -64,7 +64,7 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::publish_credential(account, account, x"");
@@ -75,7 +75,7 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::rotate_base_url(account, x"");
@@ -86,7 +86,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::rotate_base_url(account, x"");
@@ -99,7 +99,7 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::rotate_compliance_public_key(account, x"");
@@ -110,7 +110,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::rotate_compliance_public_key(account, x"");
@@ -121,7 +121,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::initialize(account);
@@ -132,7 +132,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::DualAttestation;
+    use DiemFramework::DualAttestation;
     fun main(account: signer) {
     let account = &account;
         DualAttestation::initialize(account);
@@ -144,7 +144,7 @@ script{
 //! sender: diemroot
 //! execute-as: freddymac
 script{
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main(dr_account: signer, freddy: signer) {
     let dr_account = &dr_account;
     let freddy = &freddy;
@@ -156,7 +156,7 @@ fun main(dr_account: signer, freddy: signer) {
 
 //! new-transaction
 script{
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main() {
     DualAttestation::human_name(@{{freddymac}});
 }
@@ -165,7 +165,7 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main() {
     DualAttestation::base_url(@{{freddymac}});
 }
@@ -174,7 +174,7 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main() {
     DualAttestation::compliance_public_key(@{{freddymac}});
 }
@@ -183,7 +183,7 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x1::DualAttestation;
+use DiemFramework::DualAttestation;
 fun main() {
     DualAttestation::expiration_date(@{{freddymac}});
 }

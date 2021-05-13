@@ -1,7 +1,7 @@
 // Test fot public key validation
 
 script {
-use 0x1::Signature;
+use DiemFramework::Signature;
 
 fun main() {
 

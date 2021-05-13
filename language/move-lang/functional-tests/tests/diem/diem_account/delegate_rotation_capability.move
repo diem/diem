@@ -6,8 +6,8 @@
 // allows a different address `master_key_address` to rotate the auth key. This is useful for
 // implementing (e.g.) a hot wallet with a cold recovery key.
 module {{alice}}::SharedKeyRotation {
-    use 0x1::DiemAccount;
-    use 0x1::Signer;
+    use DiemFramework::DiemAccount;
+    use Std::Signer;
 
     struct T has key {
         // cap.address can rotate the auth key for cap.address
@@ -37,7 +37,7 @@ module {{alice}}::SharedKeyRotation {
 //! sender: alice
 script {
 use {{alice}}::SharedKeyRotation;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 // create a SharedKeyRotation for Alice's account with Bob's account key as the master key
 fun main(account: signer) {
     let account = &account;
@@ -50,7 +50,7 @@ fun main(account: signer) {
 //! sender: alice
 script {
 use {{alice}}::SharedKeyRotation;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 // Alice can rotate her key. Here, she rotates it to its original value
 fun main(account: signer) {
     let account = &account;
@@ -67,7 +67,7 @@ fun main(account: signer) {
 //! sender: bob
 script {
 use {{alice}}::SharedKeyRotation;
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 // Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
 fun main(account: signer) {
     let account = &account;
@@ -93,9 +93,9 @@ fun main() {
 //! sender: bob
 script {
 use {{alice}}::SharedKeyRotation;
-use 0x1::BCS;
-use 0x1::DiemAccount;
-use 0x1::Vector;
+use Std::BCS;
+use DiemFramework::DiemAccount;
+use Std::Vector;
 // Bob now rotates the key back to its old value
 fun main(account: signer) {
     let account = &account;
@@ -113,7 +113,7 @@ fun main(account: signer) {
 //! sender: alice
 // And then Alice should be able to send a tx once again
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 fun main() {
     assert(DiemAccount::sequence_number(@{{alice}}) == 3, 79);
 }

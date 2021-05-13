@@ -3,8 +3,8 @@
 
 //! sender: alice
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 fun main(account: signer) {
     let account = &account;
@@ -19,8 +19,8 @@ fun main(account: signer) {
 
 //! new-transaction
 script {
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
 
 fun main() {
     assert(DiemAccount::balance<XUS>(@{{bob}}) == 1000000, 43);

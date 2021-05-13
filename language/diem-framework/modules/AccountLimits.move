@@ -1,21 +1,18 @@
-address 0x1 {
-
 /// Module which manages account limits, like the amount of currency which can flow in or out over
 /// a given time period.
-module AccountLimits {
-    use 0x1::Errors;
-    use 0x1::DiemTimestamp;
-    use 0x1::Roles;
-    use 0x1::Signer;
+module DiemFramework::AccountLimits {
+    use DiemFramework::DiemTimestamp;
+    use DiemFramework::Roles;
+    use Std::Errors;
+    use Std::Signer;
 
     /// An operations capability that restricts callers of this module since
     /// the operations can mutate account states.
     struct AccountLimitMutationCapability has store { }
 
     /// A resource specifying the account limits per-currency. There is a default
-    /// "unlimited" `LimitsDefinition` resource for accounts published at
-    /// `CoreAddresses::DIEM_ROOT_ADDRESS()`, but other accounts may have
-    /// different account limit definitons. In such cases, they will have a
+    /// "unlimited" `LimitsDefinition` resource for accounts published at`@DiemRoot`, but other
+    /// accounts may have different account limit definitons. In such cases, they will have a
     /// `LimitsDefinition` published under their (root) account.
     struct LimitsDefinition<CoinType> has key {
         /// The maximum inflow allowed during the specified time period.
@@ -556,5 +553,4 @@ module AccountLimits {
                     global<Roles::RoleId>(addr).role_id == Roles::CHILD_VASP_ROLE_ID);
     }
 
-}
 }

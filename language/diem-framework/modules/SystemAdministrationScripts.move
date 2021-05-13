@@ -1,11 +1,10 @@
-address 0x1 {
 /// This module contains Diem Framework script functions to administer the
 /// network outside of validators and validator operators.
-module SystemAdministrationScripts {
-    use 0x1::DiemConsensusConfig;
-    use 0x1::DiemVersion;
-    use 0x1::DiemVMConfig;
-    use 0x1::SlidingNonce;
+module DiemFramework::SystemAdministrationScripts {
+    use DiemFramework::DiemConsensusConfig;
+    use DiemFramework::DiemVersion;
+    use DiemFramework::DiemVMConfig;
+    use DiemFramework::SlidingNonce;
 
     ///  # Summary
     /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
@@ -161,5 +160,4 @@ module SystemAdministrationScripts {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         DiemConsensusConfig::set(&account, config)
     }
-}
 }

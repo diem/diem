@@ -2,9 +2,9 @@
 
 //! sender: blessed
 script {
-    use 0x1::XUS::XUS;
-    use 0x1::DiemAccount;
-    use 0x1::VASPDomain;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::VASPDomain;
 
     fun main(account: signer) {
         let tc_account = &account;
@@ -19,8 +19,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DiemAccount;
-    use 0x1::VASPDomain;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::VASPDomain;
 
     fun main(tc_account: signer) {
         let addr: address = @{{bob}};
@@ -41,8 +41,8 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DiemAccount;
-    use 0x1::VASPDomain;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::VASPDomain;
 
     fun main(tc_account: signer) {
         let addr: address = @{{bob}};
@@ -62,8 +62,8 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DiemAccount;
-    use 0x1::VASPDomain;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::VASPDomain;
 
     fun main(tc_account: signer) {
         let addr: address = @{{bob}};
@@ -84,8 +84,8 @@ script{
 //! new-transaction
 //! sender: blessed
 script{
-    use 0x1::DiemAccount;
-    use 0x1::VASPDomain;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::VASPDomain;
 
     fun main(tc_account: signer) {
         let addr: address = @{{bob}};
@@ -105,7 +105,7 @@ script{
 //! new-transaction
 //! sender: bob
 script{
-    use 0x1::VASPDomain;
+    use DiemFramework::VASPDomain;
 
     fun main(account: signer) {
         /// check if vasp account tries to add domain id, it fails

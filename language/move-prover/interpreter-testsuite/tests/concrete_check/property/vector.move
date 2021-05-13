@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::Vector;
+    use Std::Vector;
 
     #[test]
     public fun check_vector() {

@@ -1,9 +1,9 @@
 //! account: default, 100000
 
 module {{default}}::M {
-    use 0x1::XUS::XUS;
-    use 0x1::Diem;
-    use 0x1::Signer;
+    use DiemFramework::XUS::XUS;
+    use DiemFramework::Diem;
+    use Std::Signer;
 
     struct R<T> has key { x: T }
     struct FakeCoin has store { value: u64 }
@@ -32,9 +32,9 @@ module {{default}}::M {
 //! new-transaction
 script {
 use {{default}}::M;
-use 0x1::XUS::XUS;
-use 0x1::DiemAccount;
-use 0x1::Signer;
+use DiemFramework::XUS::XUS;
+use DiemFramework::DiemAccount;
+use Std::Signer;
 
 fun main(account: signer) {
     let account = &account;

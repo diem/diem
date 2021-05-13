@@ -1,19 +1,16 @@
-address 0x1 {
-
 /// The ValidatorConfig resource holds information about a validator. Information
 /// is published and updated by Diem root in a `Self::ValidatorConfig` in preparation for
 /// later inclusion (by functions in DiemConfig) in a `DiemConfig::DiemConfig<DiemSystem>`
 /// struct (the `Self::ValidatorConfig` in a `DiemConfig::ValidatorInfo` which is a member
 /// of the `DiemSystem::DiemSystem.validators` vector).
-
-module ValidatorConfig {
-    use 0x1::DiemTimestamp;
-    use 0x1::Errors;
-    use 0x1::Option::{Self, Option};
-    use 0x1::Signature;
-    use 0x1::Signer;
-    use 0x1::Roles;
-    use 0x1::ValidatorOperatorConfig;
+module DiemFramework::ValidatorConfig {
+    use DiemFramework::DiemTimestamp;
+    use Std::Errors;
+    use DiemFramework::Signature;
+    use DiemFramework::Roles;
+    use DiemFramework::ValidatorOperatorConfig;
+    use Std::Option::{Self, Option};
+    use Std::Signer;
 
     struct Config has copy, drop, store {
         consensus_pubkey: vector<u8>,
@@ -364,5 +361,4 @@ module ValidatorConfig {
     spec fun spec_has_operator(addr: address): bool {
         Option::is_some(global<ValidatorConfig>(addr).operator_account)
     }
-}
 }

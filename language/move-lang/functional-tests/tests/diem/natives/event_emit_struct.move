@@ -1,5 +1,5 @@
 module {{default}}::M {
-    use 0x1::Event;
+    use Std::Event;
 
     struct MyEvent has copy, drop, store { b: bool }
 

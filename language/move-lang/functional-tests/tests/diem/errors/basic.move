@@ -1,5 +1,5 @@
 script {
-use 0x1::Errors;
+use Std::Errors;
 fun main() {
     assert(Errors::invalid_state(0) == 1, 0);
     assert(Errors::requires_address(0) == 2, 1);

@@ -1,9 +1,8 @@
-address 0x1 {
+address Std;
 
 /// Module providing debug functionality.
-module Debug {
+module Std::Debug {
     native public fun print<T>(x: &T);
 
     native public fun print_stack_trace();
-}
 }

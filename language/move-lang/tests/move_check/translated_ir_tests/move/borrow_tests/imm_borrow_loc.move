@@ -1,5 +1,5 @@
 module 0x8675309::Tester {
-    use 0x1::Signer;
+    use Std::Signer;
 
     struct Data has key { v1: u64, v2: u64 }
     struct Box has key { f: u64 }

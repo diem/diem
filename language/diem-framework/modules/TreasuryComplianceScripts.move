@@ -1,4 +1,3 @@
-address 0x1 {
 /// This module holds scripts relating to treasury and compliance-related
 /// activities in the Diem Framework.
 ///
@@ -6,15 +5,15 @@ address 0x1 {
 /// `Roles::DESIGNATED_DEALER` can (successfully) use the scripts in this
 /// module. The exact role required for a transaction is determined on a
 /// per-transaction basis.
-module TreasuryComplianceScripts {
-    use 0x1::DiemAccount;
-    use 0x1::Diem;
-    use 0x1::SlidingNonce;
-    use 0x1::TransactionFee;
-    use 0x1::AccountFreezing;
-    use 0x1::DualAttestation;
-    use 0x1::FixedPoint32;
-    use 0x1::VASPDomain;
+module DiemFramework::TreasuryComplianceScripts {
+    use DiemFramework::DiemAccount;
+    use DiemFramework::Diem;
+    use DiemFramework::SlidingNonce;
+    use DiemFramework::TransactionFee;
+    use DiemFramework::AccountFreezing;
+    use DiemFramework::DualAttestation;
+    use DiemFramework::VASPDomain;
+    use Std::FixedPoint32;
 
     /// # Summary
     /// Cancels and returns the coins held in the preburn area under
@@ -70,9 +69,8 @@ module TreasuryComplianceScripts {
     }
 
     spec cancel_burn_with_amount {
-        use 0x1::CoreAddresses;
-        use 0x1::Errors;
-        use 0x1::Diem;
+        use Std::Errors;
+        use DiemFramework::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include DiemAccount::CancelBurnAbortsIf<Token>;
@@ -80,10 +78,10 @@ module TreasuryComplianceScripts {
         include DiemAccount::DepositEnsures<Token>{payee: preburn_address};
 
         let total_preburn_value = global<Diem::CurrencyInfo<Token>>(
-            CoreAddresses::CURRENCY_INFO_ADDRESS()
+            @CurrencyInfo
         ).preburn_value;
         let post post_total_preburn_value = global<Diem::CurrencyInfo<Token>>(
-            CoreAddresses::CURRENCY_INFO_ADDRESS()
+            @CurrencyInfo
         ).preburn_value;
 
         let balance_at_addr = DiemAccount::balance<Token>(preburn_address);
@@ -174,8 +172,8 @@ module TreasuryComplianceScripts {
         Diem::burn<Token>(&account, preburn_address, amount)
     }
     spec burn_with_amount {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
@@ -247,9 +245,9 @@ module TreasuryComplianceScripts {
     }
 
     spec preburn {
-        use 0x1::Errors;
-        use 0x1::Signer;
-        use 0x1::Diem;
+        use Std::Errors;
+        use Std::Signer;
+        use DiemFramework::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         let account_addr = Signer::spec_address_of(account);
@@ -381,8 +379,8 @@ module TreasuryComplianceScripts {
     }
 
     spec tiered_mint {
-        use 0x1::Errors;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
@@ -581,9 +579,9 @@ module TreasuryComplianceScripts {
         Diem::update_xdx_exchange_rate<Currency>(&tc_account, rate);
     }
     spec update_exchange_rate {
-        use 0x1::Errors;
-        use 0x1::DiemAccount;
-        use 0x1::Roles;
+        use Std::Errors;
+        use DiemFramework::DiemAccount;
+        use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
@@ -678,7 +676,7 @@ module TreasuryComplianceScripts {
         VASPDomain::add_vasp_domain(&tc_account, address, domain);
     }
     spec add_vasp_domain {
-        use 0x1::Errors;
+        use Std::Errors;
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include VASPDomain::AddVASPDomainAbortsIf;
         include VASPDomain::AddVASPDomainEnsures;
@@ -722,12 +720,11 @@ module TreasuryComplianceScripts {
         VASPDomain::remove_vasp_domain(&tc_account, address, domain);
     }
     spec remove_vasp_domain {
-        use 0x1::Errors;
+        use Std::Errors;
         aborts_with [check]
             Errors::REQUIRES_ROLE,
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_ARGUMENT;
     }
-}
 }

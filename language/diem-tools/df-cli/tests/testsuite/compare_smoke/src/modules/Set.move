@@ -3,9 +3,9 @@
 // singificantly more testing/thought about the API!
 address 0x2 {
 module Set {
-    use 0x1::Compare;
-    use 0x1::BCS;
-    use 0x1::Vector;
+    use Std::Compare;
+    use Std::BCS;
+    use Std::Vector;
 
     struct T<Elem> has copy, drop, store { v: vector<Elem> }
 

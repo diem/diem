@@ -12,7 +12,7 @@
 //! new-transaction
 //! sender: diemroot
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main(account: signer) {
     let account = &account;
         DiemSystem::remove_validator(account, @{{vivian}});
@@ -30,7 +30,7 @@ script{
 // check that Vivian is no longer a validator, Alice is not, but Viola is still a
 // validator
 script{
-    use 0x1::DiemSystem;
+    use DiemFramework::DiemSystem;
     fun main() {
         assert(!DiemSystem::is_validator(@{{vivian}}), 70);
         assert(!DiemSystem::is_validator(@{{alice}}), 71);

@@ -1,5 +1,5 @@
 module 0x2::A {
-    use 0x1::BCS;
+    use Std::BCS;
 
     #[test]
     public fun bcs_ops() {

@@ -11,9 +11,9 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 //! sender: diemroot
 //! execute-as: alice
 script {
-use 0x1::AccountLimits;
-use 0x1::XUS;
-use 0x1::Signer;
+use DiemFramework::AccountLimits;
+use DiemFramework::XUS;
+use Std::Signer;
 fun main(dr_account: signer, vasp: signer) {
     let dr_account = &dr_account;
     let vasp = &vasp;

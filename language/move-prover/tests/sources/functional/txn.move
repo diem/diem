@@ -1,9 +1,9 @@
 address 0x1 {
 
 module TestTransaction {
-    use 0x1::Signer;
-    use 0x1::DiemAccount;
-    use 0x1::DiemTimestamp;
+    use Std::Signer;
+    use DiemFramework::DiemAccount;
+    use DiemFramework::DiemTimestamp;
 
     spec module {
         pragma verify = true;

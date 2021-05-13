@@ -1,5 +1,5 @@
 module 0x42::TestQuantInvariant {
-    use 0x1::Vector;
+    use Std::Vector;
     spec module {
         pragma verify = true;
     }

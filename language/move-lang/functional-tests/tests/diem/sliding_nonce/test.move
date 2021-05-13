@@ -8,7 +8,7 @@
 //! new-transaction
 //! sender: bob
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
 
     fun main(account: signer) {
     let account = &account;
@@ -41,7 +41,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x1::SlidingNonce;
+    use DiemFramework::SlidingNonce;
 
     fun main(account: signer) {
     let account = &account;

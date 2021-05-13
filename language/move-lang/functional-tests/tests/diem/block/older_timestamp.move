@@ -6,8 +6,8 @@
 
 //! new-transaction
 script{
-use 0x1::DiemBlock;
-use 0x1::DiemTimestamp;
+use DiemFramework::DiemBlock;
+use DiemFramework::DiemTimestamp;
 
 fun main() {
     assert(DiemBlock::get_current_block_height() == 1, 76);

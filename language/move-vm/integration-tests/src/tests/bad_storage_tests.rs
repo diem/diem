@@ -22,7 +22,7 @@ fn test_malformed_resource() {
     // Compile the modules and scripts.
     // TODO: find a better way to include the Signer module.
     let code = r#"
-        address 0x1 {
+        address Std = 0x1 {
             module Signer {
                 native public fun borrow_address(s: &signer): &address;
 
@@ -33,7 +33,7 @@ fn test_malformed_resource() {
         }
 
         module {{ADDR}}::M {
-            use 0x1::Signer;
+            use Std::Signer;
 
             struct Foo has key { x: u64, y: bool }
 
@@ -507,7 +507,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
     let mut gas_status = GasStatus::new_unmetered();
 
     let code = r#"
-        address 0x1 {
+        address Std = 0x1 {
             module Signer {
                 native public fun borrow_address(s: &signer): &address;
 
@@ -518,7 +518,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         }
 
         module {{ADDR}}::M {
-            use 0x1::Signer;
+            use Std::Signer;
 
             struct R has key {}
 

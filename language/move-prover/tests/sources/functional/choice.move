@@ -1,8 +1,8 @@
 // separate_baseline: cvc4
 // TODO(cvc4): this test requires a separate baseline because cvc4 produces false positives for some of choices
 module 0x42::TestSome {
-    use 0x1::Signer;
-    use 0x1::Vector;
+    use Std::Signer;
+    use Std::Vector;
 
     // Basic tests
     // ===========

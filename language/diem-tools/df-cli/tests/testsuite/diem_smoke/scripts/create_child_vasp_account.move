@@ -1,5 +1,5 @@
 script {
-use 0x1::DiemAccount;
+use DiemFramework::DiemAccount;
 
 /// # Summary
 /// Creates a Child VASP account with its parent being the sending account of the transaction.
