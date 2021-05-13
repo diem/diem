@@ -157,7 +157,12 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper
             //   seems to access information about it, which it should not in fact.
-            data.code = vec![];
+            // NOTE(mengxu): do not clear the code if we are instrumenting for the interpreter.
+            // For functions whose verification is turned off with `pragma verify=false` or due to
+            // other reasons, we still want to keep a copy of the code in baseline.
+            if !options.for_interpretation {
+                data.code = vec![];
+            }
             data
         }
     }
