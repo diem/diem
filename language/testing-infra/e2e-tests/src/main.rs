@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 use bytecode_interpreter::{
     concrete::{
         runtime::{convert_move_struct_tag, convert_move_value},
+        settings::InterpreterSettings,
         ty::BaseType,
         value::GlobalState,
     },
@@ -144,11 +145,11 @@ struct CrossRunner<'env> {
     env: &'env GlobalEnv,
     move_vm_state: FakeDataStore,
     stackless_vm_state: GlobalState,
-    verbose: bool,
+    stackless_vm_settings: InterpreterSettings,
 }
 
 impl<'env> CrossRunner<'env> {
-    pub fn new(env: &'env GlobalEnv, data_store: &FakeDataStore, verbose: bool) -> Self {
+    pub fn new(env: &'env GlobalEnv, data_store: &FakeDataStore, flags: &'env ReplayFlags) -> Self {
         let mut move_vm_state = data_store.clone();
         let mut stackless_vm_state = GlobalState::default();
         for (ap, blob) in data_store.inner() {
@@ -175,11 +176,18 @@ impl<'env> CrossRunner<'env> {
                 }
             }
         }
+
+        let settings = if flags.verbose_stackless_vm {
+            InterpreterSettings::verbose_default()
+        } else {
+            InterpreterSettings::default()
+        };
+
         Self {
             env,
             move_vm_state,
             stackless_vm_state,
-            verbose,
+            stackless_vm_settings: settings,
         }
     }
 
@@ -211,7 +219,7 @@ impl<'env> CrossRunner<'env> {
                 ty_args,
                 args,
                 &self.stackless_vm_state,
-                self.verbose,
+                self.stackless_vm_settings.clone(),
             );
 
         // compare
@@ -255,7 +263,7 @@ impl<'env> CrossRunner<'env> {
                 ty_args,
                 args,
                 &self.stackless_vm_state,
-                self.verbose,
+                self.stackless_vm_settings.clone(),
                 // TODO (mengxu): add senders
             );
         let stackless_vm_return_values =
@@ -360,7 +368,7 @@ struct TraceReplayer<'env> {
     env: &'env GlobalEnv,
     data_store: FakeDataStore,
     check_stackless_vm: bool,
-    verbose: bool,
+    flags: &'env ReplayFlags,
 }
 
 impl<'env> TraceReplayer<'env> {
@@ -368,13 +376,13 @@ impl<'env> TraceReplayer<'env> {
         env: &'env GlobalEnv,
         data_store: FakeDataStore,
         check_stackless_vm: bool,
-        verbose: bool,
+        flags: &'env ReplayFlags,
     ) -> Self {
         Self {
             env,
             data_store,
             check_stackless_vm,
-            verbose,
+            flags,
         }
     }
 
@@ -401,7 +409,7 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.check_stackless_vm {
-            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
         };
@@ -437,7 +445,7 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.check_stackless_vm {
-            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
         };
@@ -477,7 +485,7 @@ impl<'env> TraceReplayer<'env> {
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
                 let mut new_xrunner = if self.check_stackless_vm {
-                    Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+                    Some(CrossRunner::new(self.env, &self.data_store, self.flags))
                 } else {
                     None
                 };
@@ -502,7 +510,7 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.check_stackless_vm {
-            Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
         } else {
             None
         };
@@ -531,7 +539,7 @@ impl<'env> TraceReplayer<'env> {
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
                 let mut new_xrunner = if self.check_stackless_vm {
-                    Some(CrossRunner::new(self.env, &self.data_store, self.verbose))
+                    Some(CrossRunner::new(self.env, &self.data_store, self.flags))
                 } else {
                     None
                 };
@@ -736,13 +744,13 @@ fn replay_trace<P: AsRef<Path>>(
     wks: P,
     env: &GlobalEnv,
     check_stackless_vm: bool,
-    verbose: bool,
+    flags: &ReplayFlags,
 ) -> Result<()> {
     let wks = wks.as_ref();
 
     // sanity checks
     let test_name = fs::read_to_string(wks.join(TRACE_FILE_NAME))?;
-    if verbose {
+    if flags.verbose_trace_meta {
         eprintln!("[-] Replaying trace: {}", test_name);
     }
     assert!(!wks.join(TRACE_FILE_ERROR).exists());
@@ -770,13 +778,13 @@ fn replay_trace<P: AsRef<Path>>(
         let data: FakeDataStore = bcs::from_bytes(&fs::read(file_data)?)?;
 
         // construct the trace replayer
-        let mut replayer = TraceReplayer::new(env, data, check_stackless_vm, verbose);
+        let mut replayer = TraceReplayer::new(env, data, check_stackless_vm, flags);
 
         // iterate over transactions in the block
         for (txn_seq, res_seq) in txn_seqs.into_iter().zip(res_seqs.into_iter()) {
             let file_input = dir_input.join(txn_seq.to_string());
             let txn: Transaction = bcs::from_bytes(&fs::read(file_input)?)?;
-            if verbose {
+            if flags.verbose_trace_step {
                 eprintln!(
                     "[-] {}: {} - {}: txn: {:?}",
                     test_name, blk_seq, txn_seq, txn
@@ -785,7 +793,7 @@ fn replay_trace<P: AsRef<Path>>(
 
             let file_output = dir_output.join(res_seq.to_string());
             let res: TransactionOutput = bcs::from_bytes(&fs::read(file_output)?)?;
-            if verbose {
+            if flags.verbose_trace_step {
                 eprintln!(
                     "[-] {}: {} - {}: res: {:?}",
                     test_name, blk_seq, res_seq, res
@@ -798,7 +806,7 @@ fn replay_trace<P: AsRef<Path>>(
                         res.status(),
                         TransactionStatus::Keep(KeptVMStatus::Executed)
                     ) {
-                        if verbose {
+                        if flags.warning {
                             eprintln!(
                                 "[!] Replay stopped due to failures in genesis transaction: {}",
                                 test_name
@@ -812,7 +820,7 @@ fn replay_trace<P: AsRef<Path>>(
                         res.status(),
                         TransactionStatus::Keep(KeptVMStatus::Executed)
                     ) {
-                        if verbose {
+                        if flags.warning {
                             eprintln!(
                                 "[!] Replay stopped due to failures in block metadata transaction: {}",
                                 test_name
@@ -845,7 +853,7 @@ fn replay_trace<P: AsRef<Path>>(
                         TransactionPayload::Module(_) => {
                             // TODO: there is not much we can do as the module is written in IR,
                             // hence, exit the test and call it successful
-                            if verbose {
+                            if flags.warning {
                                 eprintln!(
                                     "[!] Replay stopped due to non-Diem module compilation: {}",
                                     test_name
@@ -859,7 +867,7 @@ fn replay_trace<P: AsRef<Path>>(
                                     AP::Code(_) => {
                                         // NOTE: a direct write-set can modify the code arbitrarily,
                                         // which we do not model for now
-                                        if verbose {
+                                        if flags.warning {
                                             eprintln!(
                                                 "[!] Replay stopped due to code modification from \
                                                 direct write-set: {}",
@@ -892,7 +900,7 @@ fn replay_trace<P: AsRef<Path>>(
 
                     // only execute scripts that has not been discarded
                     if !res.status().is_discarded() {
-                        if verbose {
+                        if flags.verbose_trace_step {
                             eprintln!(
                                 "[-] {}: {} - {}: entrypoint: {}::{}::{}",
                                 test_name,
@@ -926,7 +934,7 @@ fn replay<P: AsRef<Path>>(
     env: &GlobalEnv,
     filters: &[String],
     check_stackless_vm: bool,
-    verbose: bool,
+    flags: &ReplayFlags,
 ) -> Result<()> {
     let root = root.as_ref();
     for entry in WalkDir::new(root).into_iter() {
@@ -948,7 +956,7 @@ fn replay<P: AsRef<Path>>(
                 filters.iter().any(|f| wks_name.contains(f))
             };
             if should_replay {
-                replay_trace(wks, env, check_stackless_vm, verbose)?;
+                replay_trace(wks, env, check_stackless_vm, flags)?;
             }
         }
     }
@@ -960,7 +968,7 @@ fn replay<P: AsRef<Path>>(
 //**************************************************************************************************
 
 #[derive(StructOpt)]
-struct ConverterArgs {
+struct ReplayArgs {
     /// Trace files
     #[structopt(short = "t", long = "trace")]
     trace_files: Vec<String>,
@@ -975,14 +983,35 @@ struct ConverterArgs {
 
     /// Verbose mode
     #[structopt(short = "v", long = "verbose")]
-    verbose: bool,
+    verbose: Option<u64>,
+
+    /// Warning mode
+    #[structopt(short = "w", long = "warning")]
+    warning: Option<u64>,
+}
+
+struct ReplayFlags {
+    /// Print information per trace
+    verbose_trace_meta: bool,
+    /// Print information per-step in the trace
+    verbose_trace_step: bool,
+    /// Enable the verbose mode in stackless VM
+    verbose_stackless_vm: bool,
+    /// Print warnings
+    warning: bool,
 }
 
 pub fn main() -> Result<()> {
-    let args = ConverterArgs::from_args();
+    let args = ReplayArgs::from_args();
+    let flags = ReplayFlags {
+        verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
+        verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
+        verbose_stackless_vm: args.verbose.map_or(false, |level| level > 2),
+        warning: args.warning.map_or(false, |level| level > 0),
+    };
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
     for trace in args.trace_files {
-        replay(trace, &env, &args.filters, args.stackless, args.verbose)?;
+        replay(trace, &env, &args.filters, args.stackless, &flags)?;
     }
     Ok(())
 }
