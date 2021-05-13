@@ -15,11 +15,11 @@ edition = "2018"
 fail = "0.4.0"
 mirai-annotations = "1.10.1"
 once_cell = "1.7.2"
+parking_lot = "0.11.1"
 
 bytecode-verifier = { path = "../../bytecode-verifier" }
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-logger = { path = "../../../common/logger" }
-diem-infallible = { path = "../../../common/infallible" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-natives = { path = "../natives" }

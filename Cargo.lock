@@ -4747,7 +4747,6 @@ dependencies = [
  "bytecode-verifier",
  "compiler",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-workspace-hack",
  "fail",
@@ -4759,6 +4758,7 @@ dependencies = [
  "move-vm-natives",
  "move-vm-types",
  "once_cell",
+ "parking_lot",
  "proptest",
 ]
 
