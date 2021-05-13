@@ -10,7 +10,9 @@ use crate::{
         StructDefInstantiation, StructDefInstantiationIndex, StructDefinition,
         StructDefinitionIndex, StructHandle, TableIndex, Visibility,
     },
+    internals::ModuleIndex,
     proptest_types::{
+        prop_index_avoid,
         signature::{AbilitySetGen, SignatureGen, SignatureTokenGen},
         TableSize,
     },
@@ -124,6 +126,7 @@ where
 /// Represents state required to materialize final data structures for function definitions.
 #[derive(Debug)]
 pub struct FnHandleMaterializeState<'a> {
+    self_module_handle_idx: ModuleHandleIndex,
     module_handles_len: usize,
     identifiers_len: usize,
     struct_handles: &'a [StructHandle],
@@ -133,11 +136,13 @@ pub struct FnHandleMaterializeState<'a> {
 
 impl<'a> FnHandleMaterializeState<'a> {
     pub fn new(
+        self_module_handle_idx: ModuleHandleIndex,
         module_handles_len: usize,
         identifiers_len: usize,
         struct_handles: &'a [StructHandle],
     ) -> Self {
         Self {
+            self_module_handle_idx,
             module_handles_len,
             identifiers_len,
             struct_handles,
@@ -191,12 +196,12 @@ impl FunctionHandleGen {
     }
 
     pub fn materialize(self, state: &mut FnHandleMaterializeState) -> Option<FunctionHandle> {
-        let mod_ = ModuleHandleIndex(self.module.index(state.module_handles_len) as TableIndex);
-        let mod_idx = if mod_.0 == 0 {
-            ModuleHandleIndex(1)
-        } else {
-            mod_
-        };
+        let idx = prop_index_avoid(
+            self.module,
+            state.self_module_handle_idx.into_index(),
+            state.module_handles_len,
+        );
+        let mod_idx = ModuleHandleIndex(idx as TableIndex);
         let iden_idx = IdentifierIndex(self.name.index(state.identifiers_len) as TableIndex);
         if state.function_handles.contains(&(mod_idx, iden_idx)) {
             return None;
@@ -224,6 +229,7 @@ impl FunctionHandleGen {
 /// Represents state required to materialize final data structures for function definitions.
 #[derive(Debug)]
 pub struct FnDefnMaterializeState<'a> {
+    self_module_handle_idx: ModuleHandleIndex,
     identifiers_len: usize,
     constant_pool_len: usize,
     struct_handles: &'a [StructHandle],
@@ -240,6 +246,7 @@ pub struct FnDefnMaterializeState<'a> {
 
 impl<'a> FnDefnMaterializeState<'a> {
     pub fn new(
+        self_module_handle_idx: ModuleHandleIndex,
         identifiers_len: usize,
         constant_pool_len: usize,
         struct_handles: &'a [StructHandle],
@@ -249,6 +256,7 @@ impl<'a> FnDefnMaterializeState<'a> {
         struct_def_to_field_count: HashMap<usize, usize>,
     ) -> Self {
         Self {
+            self_module_handle_idx,
             identifiers_len,
             constant_pool_len,
             struct_handles,
@@ -381,20 +389,20 @@ impl FunctionDefinitionGen {
         let iden_idx = IdentifierIndex(self.name.index(state.identifiers_len) as TableIndex);
         if state
             .def_function_handles
-            .contains(&(ModuleHandleIndex(0), iden_idx))
+            .contains(&(state.self_module_handle_idx, iden_idx))
         {
             return None;
         }
         state
             .def_function_handles
-            .insert((ModuleHandleIndex(0), iden_idx));
+            .insert((state.self_module_handle_idx, iden_idx));
 
         let parameters = self.parameters.materialize(state.struct_handles);
         let params_idx = state.add_signature(parameters);
         let return_ = self.return_.materialize(state.struct_handles);
         let return_idx = state.add_signature(return_);
         let handle = FunctionHandle {
-            module: ModuleHandleIndex(0),
+            module: state.self_module_handle_idx,
             name: iden_idx,
             parameters: params_idx,
             return_: return_idx,

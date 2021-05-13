@@ -118,6 +118,7 @@ impl CompiledModuleStrategyGen {
         //
         // leaf pool generator
         //
+        let self_idx_strat = any::<PropIndex>();
         let address_pool_strat = btree_set(any::<AccountAddress>(), 1..=self.size);
         let identifiers_strat = btree_set(any::<Identifier>(), 5..=self.size + 5);
         let constant_pool_strat = ConstantPoolGen::strategy(0..=self.size, 0..=self.size);
@@ -178,6 +179,7 @@ impl CompiledModuleStrategyGen {
 
         // Note that prop_test only allows a tuple of length up to 10
         (
+            self_idx_strat,
             (address_pool_strat, identifiers_strat, constant_pool_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
@@ -186,6 +188,7 @@ impl CompiledModuleStrategyGen {
         )
             .prop_map(
                 |(
+                    self_idx_gen,
                     (address_identifier_gens, identifier_gens, constant_pool_gen),
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
@@ -219,6 +222,11 @@ impl CompiledModuleStrategyGen {
                     let module_handles_len = module_handles.len();
 
                     //
+                    // self module handle index
+                    let self_module_handle_idx =
+                        ModuleHandleIndex(self_idx_gen.index(module_handles_len) as TableIndex);
+
+                    //
                     // Friend Declarations
                     let friend_decl_set: BTreeSet<_> = friend_decl_gens
                         .into_iter()
@@ -237,8 +245,11 @@ impl CompiledModuleStrategyGen {
                     if module_handles_len > 1 {
                         let mut struct_handles_set = BTreeSet::new();
                         for struct_handle_gen in struct_handle_gens.into_iter() {
-                            let sh =
-                                struct_handle_gen.materialize(module_handles_len, identifiers_len);
+                            let sh = struct_handle_gen.materialize(
+                                self_module_handle_idx,
+                                module_handles_len,
+                                identifiers_len,
+                            );
                             if struct_handles_set.insert((sh.module, sh.name)) {
                                 struct_handles.push(sh);
                             }
@@ -248,7 +259,11 @@ impl CompiledModuleStrategyGen {
                     //
                     // Struct definitions.
                     // Struct handles for the definitions are generated in this step
-                    let mut state = StDefnMaterializeState::new(identifiers_len, struct_handles);
+                    let mut state = StDefnMaterializeState::new(
+                        self_module_handle_idx,
+                        identifiers_len,
+                        struct_handles,
+                    );
                     let mut struct_def_to_field_count: HashMap<usize, usize> = HashMap::new();
                     let mut struct_defs: Vec<StructDefinition> = vec![];
                     for struct_def_gen in struct_def_gens {
@@ -267,6 +282,7 @@ impl CompiledModuleStrategyGen {
                     let mut function_handles: Vec<FunctionHandle> = vec![];
                     if module_handles_len > 1 {
                         let mut state = FnHandleMaterializeState::new(
+                            self_module_handle_idx,
                             module_handles_len,
                             identifiers_len,
                             &struct_handles,
@@ -286,6 +302,7 @@ impl CompiledModuleStrategyGen {
                     // Here we need pretty much everything if we are going to emit instructions.
                     // signatures and function handles
                     let mut state = FnDefnMaterializeState::new(
+                        self_module_handle_idx,
                         identifiers_len,
                         constant_pool_len,
                         &struct_handles,
@@ -313,7 +330,7 @@ impl CompiledModuleStrategyGen {
                     let module = CompiledModuleMut {
                         version: crate::file_format_common::VERSION_MAX,
                         module_handles,
-                        self_module_handle_idx: ModuleHandleIndex(0),
+                        self_module_handle_idx,
                         struct_handles,
                         function_handles,
                         field_handles,
@@ -338,4 +355,21 @@ impl CompiledModuleStrategyGen {
                 },
             )
     }
+}
+
+/// A utility function that produces a prop_index but also avoiding the given index. If the random
+/// index at the first choice collides with the avoidance, then try +/- 1 from the chosen value and
+/// pick the one that does not over/under-flow.
+pub(crate) fn prop_index_avoid(gen: PropIndex, avoid: usize, pool_size: usize) -> usize {
+    assert!(pool_size > 1);
+    assert!(pool_size > avoid);
+    let rand = gen.index(pool_size);
+    if rand != avoid {
+        return rand;
+    }
+    let rand_inc = rand.checked_add(1).unwrap();
+    if rand_inc != pool_size {
+        return rand_inc;
+    }
+    rand.checked_sub(1).unwrap()
 }

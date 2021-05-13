@@ -7,7 +7,11 @@ use crate::{
         StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
         TypeSignature,
     },
-    proptest_types::signature::{AbilitySetGen, SignatureTokenGen},
+    internals::ModuleIndex,
+    proptest_types::{
+        prop_index_avoid,
+        signature::{AbilitySetGen, SignatureTokenGen},
+    },
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -16,21 +20,27 @@ use proptest::{
     sample::Index as PropIndex,
     std_facade::hash_set::HashSet,
 };
-use std::{cmp::max, collections::BTreeSet};
+use std::collections::BTreeSet;
 
 #[derive(Debug)]
 struct TypeSignatureIndex(u16);
 
 #[derive(Debug)]
 pub struct StDefnMaterializeState {
+    pub self_module_handle_idx: ModuleHandleIndex,
     pub identifiers_len: usize,
     pub struct_handles: Vec<StructHandle>,
     pub new_handles: BTreeSet<(ModuleHandleIndex, IdentifierIndex)>,
 }
 
 impl StDefnMaterializeState {
-    pub fn new(identifiers_len: usize, struct_handles: Vec<StructHandle>) -> Self {
+    pub fn new(
+        self_module_handle_idx: ModuleHandleIndex,
+        identifiers_len: usize,
+        struct_handles: Vec<StructHandle>,
+    ) -> Self {
         Self {
+            self_module_handle_idx,
             identifiers_len,
             struct_handles,
             new_handles: BTreeSet::new(),
@@ -100,8 +110,17 @@ impl StructHandleGen {
             })
     }
 
-    pub fn materialize(self, module_len: usize, identifiers_len: usize) -> StructHandle {
-        let idx = max(self.module_idx.index(module_len) as TableIndex, 1);
+    pub fn materialize(
+        self,
+        self_module_handle_idx: ModuleHandleIndex,
+        module_len: usize,
+        identifiers_len: usize,
+    ) -> StructHandle {
+        let idx = prop_index_avoid(
+            self.module_idx,
+            self_module_handle_idx.into_index(),
+            module_len,
+        );
         let mut type_parameters = vec![];
         for type_param in self.type_parameters {
             type_parameters.push(type_param.materialize());
@@ -170,8 +189,7 @@ impl StructDefinitionGen {
                 acc.intersect(state.potential_abilities(&field.signature.0))
             });
         let handle = StructHandle {
-            // 0 represents the current module
-            module: ModuleHandleIndex(0),
+            module: state.self_module_handle_idx,
             name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
             abilities,
             type_parameters: self
