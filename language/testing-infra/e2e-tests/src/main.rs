@@ -250,6 +250,7 @@ impl<'env> CrossRunner<'env> {
                 function_name,
                 ty_args,
                 args,
+                None,
                 &self.stackless_vm_state,
                 self.stackless_vm_settings.clone(),
             );
@@ -308,9 +309,9 @@ impl<'env> CrossRunner<'env> {
                 function_name,
                 ty_args,
                 args,
+                Some(senders),
                 &self.stackless_vm_state,
                 self.stackless_vm_settings.clone(),
-                // TODO (mengxu): add senders
             );
         let stackless_vm_return_values =
             stackless_vm_return_values.map(|rets| assert!(rets.is_empty()));
