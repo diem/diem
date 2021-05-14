@@ -38,13 +38,13 @@ Command `publish -v --no-republish`:
 Compiling Move modules...
 error: 
 
-   ┌── src/M.move:2:8 ───
+   ┌── build/mv_interfaces/00000000000000000000000000000042/M.move:2:8 ───
    │
  2 │ module M {
    │        ^ Duplicate definition for module '0x42::M'
    │
 
-   ┌── build/mv_interfaces/00000000000000000000000000000042/M.move:2:8 ───
+   ┌── src/M.move:2:8 ───
    │
  2 │ module M {
    │        - Previously defined here
@@ -52,13 +52,13 @@ error:
 
 error: 
 
-   ┌── src/N.move:2:8 ───
+   ┌── build/mv_interfaces/00000000000000000000000000000043/N.move:2:8 ───
    │
  2 │ module N {
    │        ^ Duplicate definition for module '0x43::N'
    │
 
-   ┌── build/mv_interfaces/00000000000000000000000000000043/N.move:2:8 ───
+   ┌── src/N.move:2:8 ───
    │
  2 │ module N {
    │        - Previously defined here
@@ -68,13 +68,13 @@ Command `publish -v --no-republish src/M.move`:
 Compiling Move modules...
 error: 
 
-   ┌── src/M.move:2:8 ───
+   ┌── build/mv_interfaces/00000000000000000000000000000042/M.move:2:8 ───
    │
  2 │ module M {
    │        ^ Duplicate definition for module '0x42::M'
    │
 
-   ┌── build/mv_interfaces/00000000000000000000000000000042/M.move:2:8 ───
+   ┌── src/M.move:2:8 ───
    │
  2 │ module M {
    │        - Previously defined here

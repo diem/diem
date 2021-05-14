@@ -227,7 +227,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn resolve_address(&mut self, loc: Loc, addr: Address, case: &str) -> Option<AddressBytes> {
-        match addr.to_addr_bytes(self.addresses, loc, case) {
+        match addr.into_addr_bytes(self.addresses, loc, case) {
             Ok(addr) => Some(addr),
             Err(e) => {
                 self.env.add_error(e);
@@ -250,11 +250,11 @@ impl<'a> Context<'a> {
         addresses: &UniqueMap<Name, AddressBytes>,
         sp!(loc, ModuleIdent_ { address, module }): ModuleIdent,
     ) -> Result<IR::ModuleIdent, Error> {
-        let address_bytes = address.to_addr_bytes(addresses, loc, "module identifier")?;
+        let address_bytes = address.into_addr_bytes(addresses, loc, "module identifier")?;
         let name = Self::translate_module_name_(module.0.value);
         Ok(IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
-            MoveAddress::new(address_bytes.to_bytes()),
+            MoveAddress::new(address_bytes.into_bytes()),
         )))
     }
 

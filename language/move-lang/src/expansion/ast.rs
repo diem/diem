@@ -4,7 +4,7 @@
 use crate::{
     errors::Error,
     parser::ast::{
-        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleIdent, QuantKind,
+        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName, QuantKind,
         SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, unique_set::UniqueSet, *},
@@ -22,8 +22,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    // Map of known named address values. Not all addresses will be present
-    pub addresses: UniqueMap<Name, AddressBytes>,
+    // Map of declared named addresses, and their values if specified
+    pub addresses: UniqueMap<Name, Option<Spanned<AddressBytes>>>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
 }
@@ -42,7 +42,7 @@ pub type AttributeValue = Spanned<AttributeValue_>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Attribute_ {
     Name(Name),
-    Assigned(Name, AttributeValue),
+    Assigned(Name, Box<AttributeValue>),
     Parameterized(Name, Vec<Attribute>),
 }
 pub type Attribute = Spanned<Attribute_>;
@@ -432,7 +432,7 @@ impl Address {
         Self::Anonymous(sp(loc, AddressBytes::new(address)))
     }
 
-    pub fn to_addr_bytes_opt(
+    pub fn into_addr_bytes_opt(
         self,
         addresses: &UniqueMap<Name, AddressBytes>,
     ) -> Option<AddressBytes> {
@@ -442,7 +442,7 @@ impl Address {
         }
     }
 
-    pub fn to_addr_bytes(
+    pub fn into_addr_bytes(
         self,
         addresses: &UniqueMap<Name, AddressBytes>,
         loc: Loc,
@@ -454,7 +454,7 @@ impl Address {
                 Some(a) => Ok(*a),
                 None => {
                     let unable_msg = format!("Unable to fully compile and resolve {}", case);
-                    let addr_msg = format!(" No value specified for address '{}'", n);
+                    let addr_msg = format!("No value specified for address '{}'", n);
                     Err(vec![(loc, unable_msg), (n.loc, addr_msg)])
                 }
             },
@@ -703,7 +703,11 @@ impl AstDebug for Program {
             scripts,
         } = self;
         for (_, addr, bytes) in addresses {
-            w.writeln(&format!("address {} = {};", addr, bytes));
+            w.write(&format!("address {}", addr));
+            if let Some(bytes) = bytes {
+                w.write(&format!(" = {}", bytes))
+            }
+            w.writeln(";");
         }
 
         for (m, mdef) in modules.key_cloned_iter() {

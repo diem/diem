@@ -4,17 +4,14 @@
 use anyhow::Result;
 use criterion::{measurement::Measurement, Criterion};
 use diem_state_view::StateView;
-use diem_types::{access_path::AccessPath, account_address::AccountAddress};
+use diem_types::access_path::AccessPath;
 use diem_vm::data_cache::StateViewCache;
 use move_binary_format::CompiledModule;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, CORE_CODE_ADDRESS},
 };
-use move_lang::{
-    compiled_unit::CompiledUnit,
-    shared::{AddressBytes, Flags},
-};
+use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -71,7 +68,7 @@ fn execute<M: Measurement + 'static>(
     fun: &str,
 ) {
     // establish running context
-    let sender = AccountAddress::new(AddressBytes::DEFAULT_ERROR_BYTES.to_bytes());
+    let sender = CORE_CODE_ADDRESS;
     let state = EmptyStateView;
     let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();

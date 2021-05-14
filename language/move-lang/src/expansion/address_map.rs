@@ -60,27 +60,19 @@ fn definition(context: &mut Context, def: &P::Definition) {
     let addr_value_opt = &addr_def.addr_value;
     match (context.map.get(&name), addr_value_opt) {
         // If address name is not bound, add it to the map
-        (None, _) => context
-            .map
-            .add(name.clone(), addr_value_opt.clone())
-            .unwrap(),
+        (None, _) => context.map.add(name.clone(), *addr_value_opt).unwrap(),
 
         // If the address was previously just a name, bind the declaration, whatever it is
         (Some(None), addr_value_opt) => {
             context.map.remove(name);
-            context
-                .map
-                .add(name.clone(), addr_value_opt.clone())
-                .unwrap()
+            context.map.add(name.clone(), *addr_value_opt).unwrap()
         }
 
         // If the address was assigned a value, and now there is just a name, keep the value
         (Some(Some(_)), None) => (),
 
         // No error on previous value if equal
-        (Some(Some(prev_value)), Some(addr_value)) if prev_value.value == addr_value.value => {
-            return
-        }
+        (Some(Some(prev_value)), Some(addr_value)) if prev_value.value == addr_value.value => (),
 
         // Otherwise, error on previous value
         (Some(Some(prev_value)), Some(addr_value)) => {

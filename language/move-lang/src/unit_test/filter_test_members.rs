@@ -70,9 +70,9 @@ fn filter_tests_from_definition(
                     .filter_map(|m| filter_tests_from_module(context, m))
                     .collect();
                 Some(P::Definition::Address(P::AddressDefinition {
-                    addr,
                     attributes,
                     loc,
+                    addr,
                     addr_value,
                     modules,
                 }))

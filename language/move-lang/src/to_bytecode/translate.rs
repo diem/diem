@@ -236,7 +236,7 @@ fn module(
         synthetics: vec![],
     };
     let deps: Vec<&F::CompiledModule> = vec![];
-    let addr = MoveAddress::new(addr_bytes.to_bytes());
+    let addr = MoveAddress::new(addr_bytes.into_bytes());
     let (module, source_map) = match ir_to_bytecode::compiler::compile_module(addr, ir_module, deps)
     {
         Ok(res) => res,
@@ -917,7 +917,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
                         let addr_bytes = context
                             .resolve_address(loc, a, "address value")
                             .unwrap_or(AddressBytes::DEFAULT_ERROR_BYTES);
-                        B::LdAddr(MoveAddress::new(addr_bytes.to_bytes()))
+                        B::LdAddr(MoveAddress::new(addr_bytes.into_bytes()))
                     }
                     V::Bytearray(bytes) => B::LdByteArray(bytes),
                     V::U8(u) => B::LdU8(u),

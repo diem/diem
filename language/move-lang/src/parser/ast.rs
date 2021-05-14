@@ -107,7 +107,7 @@ pub type AttributeValue = Spanned<AttributeValue_>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Attribute_ {
     Name(Name),
-    Assigned(Name, AttributeValue),
+    Assigned(Name, Box<AttributeValue>),
     Parameterized(Name, Attributes),
 }
 pub type Attribute = Spanned<Attribute_>;
@@ -392,7 +392,7 @@ pub enum NameAccessChain_ {
     // (<Name>|<Num>)::<Name>
     Two(LeadingNameAccess, Name),
     // (<Name>|<Num>)::<Name>::<Name>
-    Three(LeadingNameAccess, Name, Name),
+    Three(Spanned<(LeadingNameAccess, Name)>, Name),
 }
 pub type NameAccessChain = Spanned<NameAccessChain_>;
 
@@ -435,7 +435,7 @@ pub enum Bind_ {
     Var(Var),
     // T { f1: b1, ... fn: bn }
     // T<t1, ... , tn> { f1: b1, ... fn: bn }
-    Unpack(NameAccessChain, Option<Vec<Type>>, Vec<(Field, Bind)>),
+    Unpack(Box<NameAccessChain>, Option<Vec<Type>>, Vec<(Field, Bind)>),
 }
 pub type Bind = Spanned<Bind_>;
 // b1, ..., bn
@@ -877,7 +877,7 @@ impl fmt::Display for NameAccessChain_ {
         match self {
             NameAccessChain_::One(n) => write!(f, "{}", n),
             NameAccessChain_::Two(ln, n2) => write!(f, "{}::{}", ln, n2),
-            NameAccessChain_::Three(ln, n2, n3) => write!(f, "{}::{}::{}", ln, n2, n3),
+            NameAccessChain_::Three(sp!(_, (ln, n2)), n3) => write!(f, "{}::{}::{}", ln, n2, n3),
         }
     }
 }

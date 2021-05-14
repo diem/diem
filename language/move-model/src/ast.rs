@@ -904,6 +904,13 @@ impl ModuleName {
         ModuleName(addr, name)
     }
 
+    pub fn from_address_bytes_and_name(
+        addr: move_lang::shared::AddressBytes,
+        name: Symbol,
+    ) -> ModuleName {
+        ModuleName(BigUint::from_bytes_be(&addr.into_bytes()), name)
+    }
+
     pub fn from_str(mut addr: &str, name: Symbol) -> ModuleName {
         if addr.starts_with("0x") {
             addr = &addr[2..];

@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 /// Verifies that modules remain unique, even after substituting named addresses for their values
 pub fn verify(
     compilation_env: &mut CompilationEnv,
-    addresses: &UniqueMap<Name, AddressBytes>,
+    addresses: &UniqueMap<Name, Option<Spanned<AddressBytes>>>,
     modules: &UniqueMap<ModuleIdent, E::ModuleDefinition>,
 ) {
     let mut decl_locs: BTreeMap<(AddressBytes, String), CompiledModuleIdent> = BTreeMap::new();
@@ -27,15 +27,29 @@ pub fn verify(
             Address::Anonymous(_) => None,
             Address::Named(n) => Some(n.clone()),
         };
-        let addr_bytes = match address.to_addr_bytes_opt(addresses) {
-            None => continue,
-            Some(addr_bytes) => addr_bytes,
+        let addr_bytes = match &address {
+            Address::Anonymous(sp!(_, addr_bytes)) => *addr_bytes,
+            Address::Named(n) => match addresses.get(n) {
+                // undeclared or no value bound, so can skip
+                None | Some(None) => continue,
+                // copy the assigned value
+                Some(Some(sp!(_, addr_bytes))) => *addr_bytes,
+            },
         };
         let mident_ = (addr_bytes, n_.clone());
         let compiled_mident =
             CompiledModuleIdent::new(loc, addr_name, addr_bytes, ModuleName(sp(nloc, n_)));
         if let Some(prev) = decl_locs.insert(mident_.clone(), compiled_mident) {
+            let prev = &prev;
             let cur = &decl_locs[&mident_];
+            let (orig, duplicate) = if cur.loc.file() == prev.loc.file()
+                && cur.loc.span().start() > prev.loc.span().start()
+            {
+                (prev, cur)
+            } else {
+                (cur, prev)
+            };
+
             // Formatting here is a bit weird, but it is guaranteed that at least one of the
             // declarations (prev or cur) will have an address_name of Some(_)
             let format_name = |m: &CompiledModuleIdent| match &m.address_name {
@@ -47,9 +61,9 @@ pub fn verify(
                     mname = &m.module_name
                 ),
             };
-            let msg = format!("Duplicate definition of {}", format_name(&cur));
-            let prev_msg = format!("Previously defined here as {}", format_name(&prev));
-            compilation_env.add_error(vec![(cur.loc, msg), (prev.loc, prev_msg)]);
+            let msg = format!("Duplicate definition of {}", format_name(duplicate));
+            let prev_msg = format!("Previously defined here as {}", format_name(orig));
+            compilation_env.add_error(vec![(duplicate.loc, msg), (orig.loc, prev_msg)]);
         }
     }
 }

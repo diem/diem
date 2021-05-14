@@ -70,7 +70,7 @@ error:
    ┌── tests/move_check/expansion/unbound_named_address.move:9:12 ───
    │
  9 │         x: E::M::S,
-   │            ^^^^^^^ Unbound module 'E::M'
+   │            ^^^^ Unbound module 'E::M'
    │
 
 error: 
@@ -86,7 +86,7 @@ error:
     ┌── tests/move_check/expansion/unbound_named_address.move:13:17 ───
     │
  13 │         let x = F::M::S {};
-    │                 ^^^^^^^ Unbound module 'F::M'
+    │                 ^^^^ Unbound module 'F::M'
     │
 
 error: 
@@ -102,7 +102,7 @@ error:
     ┌── tests/move_check/expansion/unbound_named_address.move:14:9 ───
     │
  14 │         G::M::foo();
-    │         ^^^^^^^^^ Unbound module 'G::M'
+    │         ^^^^ Unbound module 'G::M'
     │
 
 error: 
@@ -118,7 +118,7 @@ error:
     ┌── tests/move_check/expansion/unbound_named_address.move:15:17 ───
     │
  15 │         let c = H::M::C;
-    │                 ^^^^^^^ Unbound module 'H::M'
+    │                 ^^^^ Unbound module 'H::M'
     │
 
 error: 

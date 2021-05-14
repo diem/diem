@@ -7,7 +7,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use num::{BigInt, BigUint, FromPrimitive, Num};
+use num::{BigInt, BigUint, FromPrimitive};
 
 use move_core_types::value::MoveValue;
 use move_ir_types::location::Spanned;
@@ -529,8 +529,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         Bool => Type::new_prim(PrimitiveType::Bool),
                     },
                     ModuleType(m, n) => {
-                        let module_name = ModuleName::from_str(
-                            &m.value.address.to_string(),
+                        let addr_bytes = self.parent.parent.resolve_address(&loc, &m.value.address);
+                        let module_name = ModuleName::from_address_bytes_and_name(
+                            addr_bytes,
                             self.symbol_pool().make(m.value.module.0.value.as_str()),
                         );
                         let symbol = self.symbol_pool().make(n.0.value.as_str());
@@ -818,19 +819,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let loc = self.to_loc(&v.loc);
         match &v.value {
             EA::Value_::Address(addr) => {
-                let addr_str = &format!("{}", addr);
-                if &addr_str[..2] == "0x" {
-                    let digits_only = &addr_str[2..];
-                    Some((
-                        Value::Address(
-                            BigUint::from_str_radix(digits_only, 16).expect("valid address"),
-                        ),
-                        Type::new_prim(PrimitiveType::Address),
-                    ))
-                } else {
-                    self.error(&loc, "address string does not begin with '0x'");
-                    None
-                }
+                let addr_bytes = self.parent.parent.resolve_address(&loc, addr);
+                let value = Value::Address(BigUint::from_bytes_be(&addr_bytes.into_bytes()));
+                Some((value, Type::new_prim(PrimitiveType::Address)))
             }
             EA::Value_::U8(x) => Some((
                 Value::Number(BigInt::from_u8(*x).unwrap()),

@@ -358,8 +358,8 @@ fn move_value_from_value(context: &mut Context, sp!(loc, v_): Value) -> Option<M
     use Value_ as V;
     Some(match v_ {
         V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
-        V::Address(a) => match a.to_addr_bytes(&context.addresses, loc, "address value") {
-            Ok(bytes) => MV::Address(MoveAddress::new(bytes.to_bytes())),
+        V::Address(a) => match a.into_addr_bytes(&context.addresses, loc, "address value") {
+            Ok(bytes) => MV::Address(MoveAddress::new(bytes.into_bytes())),
             Err(err) => {
                 context.env.add_error(err);
                 return None;

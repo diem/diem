@@ -11,7 +11,7 @@
 //! are for specs or not, and allow the older to resolve only in spec contexts.
 
 use crate::{
-    parser::ast::{Definition, ModuleDefinition, ModuleMember, Program},
+    parser::ast::{Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, Program},
     shared::*,
 };
 use std::collections::BTreeMap;
@@ -25,8 +25,8 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
     // Phase 1: extract all spec modules.
     let mut spec_modules = BTreeMap::new();
-    let mut source_definitions = extract_spec_modules(source_definitions, &mut spec_modules);
-    let mut lib_definitions = extract_spec_modules(lib_definitions, &mut spec_modules);
+    let mut source_definitions = extract_spec_modules(&mut spec_modules, source_definitions);
+    let mut lib_definitions = extract_spec_modules(&mut spec_modules, lib_definitions);
 
     // Report errors for misplaced members
     for m in spec_modules.values() {
@@ -55,8 +55,8 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
     }
 
     // Phase 2: Go over remaining proper modules and merge spec modules.
-    merge_spec_modules(&mut source_definitions, &mut spec_modules);
-    merge_spec_modules(&mut lib_definitions, &mut spec_modules);
+    merge_spec_modules(&mut spec_modules, &mut source_definitions);
+    merge_spec_modules(&mut spec_modules, &mut lib_definitions);
 
     // Remaining spec modules could not be merged, report errors.
     for (_, m) in spec_modules {
@@ -74,20 +74,21 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 }
 
 fn extract_spec_modules(
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
     defs: Vec<Definition>,
-    spec_modules: &mut BTreeMap<(Address, String), ModuleDefinition>,
 ) -> Vec<Definition> {
     use Definition::*;
     defs.into_iter()
         .filter_map(|def| match def {
-            Module(m) => extract_spec_module(&None, m, spec_modules).map(Module),
-            Address(attrs, loc, addr, module_defs) => {
-                let addr_opt = Some(addr);
-                let module_defs = module_defs
+            Module(m) => extract_spec_module(spec_modules, None, m).map(Module),
+            Address(mut a) => {
+                let addr_ = Some(&a.addr.value);
+                a.modules = a
+                    .modules
                     .into_iter()
-                    .filter_map(|m| extract_spec_module(&addr_opt, m, spec_modules))
+                    .filter_map(|m| extract_spec_module(spec_modules, addr_, m))
                     .collect::<Vec<_>>();
-                Some(Address(attrs, loc, addr_opt.unwrap(), module_defs))
+                Some(Address(a))
             }
             Definition::Script(s) => Some(Script(s)),
         })
@@ -95,9 +96,9 @@ fn extract_spec_modules(
 }
 
 fn extract_spec_module(
-    address_opt: &Option<Address>,
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
+    address_opt: Option<&LeadingNameAccess_>,
     m: ModuleDefinition,
-    spec_modules: &mut BTreeMap<(Address, String), ModuleDefinition>,
 ) -> Option<ModuleDefinition> {
     if m.is_spec_module {
         spec_modules.insert(module_key(address_opt, &m), m);
@@ -108,47 +109,51 @@ fn extract_spec_module(
 }
 
 fn merge_spec_modules(
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
     defs: &mut Vec<Definition>,
-    spec_modules: &mut BTreeMap<(Address, String), ModuleDefinition>,
 ) {
     use Definition::*;
     for def in defs.iter_mut() {
         match def {
-            Module(m) => merge_spec_module(&None, m, spec_modules),
-            Address(_attrs, _loc, addr, module_defs) => {
-                let addr_opt = Some(*addr);
-                for m in module_defs.iter_mut() {
-                    merge_spec_module(&addr_opt, m, spec_modules)
+            Module(m) => merge_spec_module(spec_modules, None, m),
+            Address(a) => {
+                let addr_ = Some(&a.addr.value);
+                for m in &mut a.modules {
+                    merge_spec_module(spec_modules, addr_, m)
                 }
             }
-            Script(..) => {}
+            Script(_) => {}
         }
     }
 }
 
 fn merge_spec_module(
-    address_opt: &Option<Address>,
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
+    address_opt: Option<&LeadingNameAccess_>,
     m: &mut ModuleDefinition,
-    spec_modules: &mut BTreeMap<(Address, String), ModuleDefinition>,
 ) {
     if let Some(spec_module) = spec_modules.remove(&module_key(address_opt, m)) {
         let ModuleDefinition {
             attributes,
             members,
-            ..
+            loc: _,
+            address: _,
+            name: _,
+            is_spec_module,
         } = spec_module;
+        assert!(is_spec_module);
         m.attributes.extend(attributes.into_iter());
         m.members.extend(members.into_iter());
     }
 }
 
-fn module_key(address_opt: &Option<Address>, def: &ModuleDefinition) -> (Address, String) {
-    let name = def.name.0.value.clone();
-    if let Some(sp!(_, a)) = def.address {
-        (a, name)
-    } else {
-        // Having no context or defined address should not happen, but be robust about it
-        // and always deliver an address here. An error will be reported elsewhere.
-        (address_opt.clone().unwrap_or_else(Address::default), name)
-    }
+fn module_key(
+    address_opt: Option<&LeadingNameAccess_>,
+    m: &ModuleDefinition,
+) -> (Option<LeadingNameAccess_>, String) {
+    let addr_ = match &m.address {
+        a @ Some(_) => a.as_ref().map(|sp!(_, a_)| a_.clone()),
+        None => address_opt.cloned(),
+    };
+    (addr_, m.name.value().to_owned())
 }

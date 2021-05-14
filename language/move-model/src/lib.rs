@@ -129,6 +129,12 @@ pub fn run_model_builder_with_compilation_flags(
     // Extract the module/script closure
     let mut visited_modules = BTreeSet::new();
     let mut selective_files = BTreeSet::new();
+    for (loc, _name, _value_opt) in &expansion_ast.addresses {
+        let src_file = loc.file();
+        if !dep_sources.contains(src_file) {
+            selective_files.insert(src_file.to_owned());
+        }
+    }
     for (mident, mdef) in expansion_ast.modules.key_cloned_iter() {
         let src_file = mdef.loc.file();
         if !dep_sources.contains(src_file) {
@@ -290,7 +296,12 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 
 #[allow(deprecated)]
 fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Program) {
-    let mut builder = ModelBuilder::new(env);
+    let named_address_mapping = eprog
+        .addresses
+        .iter()
+        .filter_map(|(_, n, addr_bytes_opt)| addr_bytes_opt.map(|ab| (n.clone(), ab.value)))
+        .collect();
+    let mut builder = ModelBuilder::new(env, named_address_mapping);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
     let modules = units
@@ -303,7 +314,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                     source_map,
                     function_infos,
                 } => {
-                    let module_ident = ident.to_module_ident();
+                    let module_ident = ident.into_module_ident();
                     let expanded_module = match eprog.modules.remove(&module_ident) {
                         Some(m) => m,
                         None => {
@@ -382,8 +393,9 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
         modules
     {
         let loc = builder.to_loc(&expanded_module.loc);
-        let module_name = ModuleName::from_str(
-            &module_id.value.address.to_string(),
+        let addr_bytes = builder.resolve_address(&loc, &module_id.value.address);
+        let module_name = ModuleName::from_address_bytes_and_name(
+            addr_bytes,
             builder
                 .env
                 .symbol_pool()

@@ -193,7 +193,7 @@ pub fn run(
                         println!(
                             "Warning: Found module '{}' in file specified for the script. This \
                              module will not be published.",
-                            ident.to_module_ident()
+                            ident.into_module_ident()
                         )
                     }
                 }

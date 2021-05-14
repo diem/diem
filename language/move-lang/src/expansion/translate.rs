@@ -190,13 +190,10 @@ pub fn program(
         keyed
     };
 
-    let addresses = context
-        .address_mapping
-        .filter_map(|_name, mapping| mapping.map(|sp!(_, addr)| addr));
-    super::unique_modules_after_mapping::verify(context.env, &addresses, &module_map);
+    super::unique_modules_after_mapping::verify(context.env, &context.address_mapping, &module_map);
     super::dependency_ordering::verify(context.env, &mut module_map, &mut scripts);
     E::Program {
-        addresses,
+        addresses: context.address_mapping,
         modules: module_map,
         scripts,
     }
@@ -508,7 +505,7 @@ fn attribute(context: &mut Context, sp!(loc, attribute_): P::Attribute) -> Optio
         loc,
         match attribute_ {
             PA::Name(n) => EA::Name(n),
-            PA::Assigned(n, v) => EA::Assigned(n, attribute_value(context, v)?),
+            PA::Assigned(n, v) => EA::Assigned(n, Box::new(attribute_value(context, *v)?)),
             PA::Parameterized(n, sp!(_, attrs_)) => EA::Parameterized(
                 n,
                 attrs_
@@ -1368,9 +1365,7 @@ fn name_access_chain(
             }
             Some(mident) => EN::ModuleAccess(mident.clone(), n2),
         },
-        (_, PN::Three(ln, n2, n3)) => {
-            // TODO improve location, between ln.loc and n2.loc
-            let ident_loc = ln.loc;
+        (_, PN::Three(sp!(ident_loc, (ln, n2)), n3)) => {
             let addr = address(context, /* suggest_declaration */ false, ln);
             let mident = sp(ident_loc, ModuleIdent_::new(addr, ModuleName(n2)));
             EN::ModuleAccess(mident, n3)
@@ -1401,13 +1396,13 @@ fn name_access_chain_to_module_ident(
             };
             Some(module_ident(context, sp(loc, pmident_)))
         }
-        PN::Three(ln, n, mem) => {
+        PN::Three(sp!(ident_loc, (ln, n)), mem) => {
             // Process the module ident just for errors
             let pmident_ = P::ModuleIdent_ {
                 address: ln,
                 module: ModuleName(n),
             };
-            let _ = module_ident(context, sp(loc, pmident_));
+            let _ = module_ident(context, sp(ident_loc, pmident_));
             context.env.add_error(vec![(
                 mem.loc,
                 "Unexpected module member access. Expected a module identifier only",
@@ -1846,7 +1841,7 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::LValue> {
             EL::Var(sp(loc, E::ModuleAccess_::Name(v.0)), None)
         }
         PB::Unpack(ptn, ptys_opt, pfields) => {
-            let tn = name_access_chain(context, Access::ApplyNamed, ptn)?;
+            let tn = name_access_chain(context, Access::ApplyNamed, *ptn)?;
             let tys_opt = optional_types(context, ptys_opt);
             let vfields: Option<Vec<(Field, E::LValue)>> = pfields
                 .into_iter()
@@ -1893,7 +1888,7 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
     use P::Exp_ as PE;
     let a_ = match e_ {
         PE::Name(n @ sp!(_, P::NameAccessChain_::Two(_, _)), _)
-        | PE::Name(n @ sp!(_, P::NameAccessChain_::Three(_, _, _)), _)
+        | PE::Name(n @ sp!(_, P::NameAccessChain_::Three(_, _)), _)
             if !context.in_spec_context =>
         {
             let msg = format!(

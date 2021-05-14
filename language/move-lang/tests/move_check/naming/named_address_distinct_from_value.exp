@@ -22,7 +22,7 @@ error:
     ┌── tests/move_check/naming/named_address_distinct_from_value.move:15:22 ───
     │
  15 │     public fun ex(): 0x42::M::S {
-    │                      ^^^^^^^^^^ Unbound module '0x42::M'
+    │                      ^^^^^^^ Unbound module '0x42::M'
     │
 
 error: 
@@ -30,7 +30,7 @@ error:
     ┌── tests/move_check/naming/named_address_distinct_from_value.move:16:9 ───
     │
  16 │         0x42::M::C;
-    │         ^^^^^^^^^^ Unbound module '0x42::M'
+    │         ^^^^^^^ Unbound module '0x42::M'
     │
 
 error: 
@@ -38,6 +38,6 @@ error:
     ┌── tests/move_check/naming/named_address_distinct_from_value.move:17:9 ───
     │
  17 │         0x42::M::s()
-    │         ^^^^^^^^^^ Unbound module '0x42::M'
+    │         ^^^^^^^ Unbound module '0x42::M'
     │
 

@@ -185,8 +185,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         match &access.value {
             EA::ModuleAccess_::Name(n) => (None, self.symbol_pool().make(n.value.as_str())),
             EA::ModuleAccess_::ModuleAccess(m, n) => {
-                let module_name = ModuleName::from_str(
-                    &m.value.address.to_string(),
+                let loc = self.parent.to_loc(&m.loc);
+                let addr_bytes = self.parent.resolve_address(&loc, &m.value.address);
+                let module_name = ModuleName::from_address_bytes_and_name(
+                    addr_bytes,
                     self.symbol_pool().make(m.value.module.0.value.as_str()),
                 );
                 (Some(module_name), self.symbol_pool().make(n.value.as_str()))

@@ -35,7 +35,7 @@ impl<'env> Context<'env> {
         addr: &Address,
         case: impl FnOnce() -> String,
     ) -> Option<AddressBytes> {
-        let resolved = addr.clone().to_addr_bytes_opt(self.addresses);
+        let resolved = addr.clone().into_addr_bytes_opt(self.addresses);
         if resolved.is_none() {
             let msg = format!("{}. No value specified for address '{}'", case(), addr);
             self.env.add_error(vec![(loc, msg)]);
@@ -227,7 +227,8 @@ fn parse_test_attribute(
             );
             BTreeMap::new()
         }
-        EA::Assigned(nm, sp!(assign_loc, attr_value)) => {
+        EA::Assigned(nm, attr_value) => {
+            let sp!(assign_loc, attr_value) = &**attr_value;
             let value = match convert_attribute_value_to_move_value(context, attr_value) {
                 Some(move_value) => move_value,
                 None => {
@@ -269,14 +270,15 @@ fn parse_failure_attribute(
             );
             Some(ExpectedFailure::Expected)
         }
-        EA::Assigned(_, sp!(assign_loc, _)) => {
+        EA::Assigned(_, value) => {
+            let assign_loc = value.loc;
             let invalid_assignment_msg = "Invalid expected failure code assignment";
             let expected_msg = format!(
                 "Expect an #[expected_failure({}=...)] attribute for abort code assignment",
                 known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
             );
             context.env.add_error(vec![
-                (*assign_loc, invalid_assignment_msg.into()),
+                (assign_loc, invalid_assignment_msg.into()),
                 (*aloc, expected_msg),
             ]);
             None
@@ -298,7 +300,7 @@ fn parse_failure_attribute(
                 sp!(assign_loc, EA::Assigned(sp!(_, nm), value))
                     if nm == known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME =>
                 {
-                    match value {
+                    match &**value {
                         sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))
                             if *u <= std::u64::MAX as u128 =>
                         {
@@ -360,7 +362,7 @@ fn convert_attribute_value_to_move_value(
         EAV::Value(sp!(loc, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(
             context
                 .resolve_address(*loc, a, || "Unable to convert attribute value".to_owned())?
-                .to_bytes(),
+                .into_bytes(),
         ))),
         _ => None,
     }

@@ -117,14 +117,14 @@ impl<'env> Context<'env> {
         }
     }
 
-    fn resolve_module(&mut self, loc: Loc, m: &ModuleIdent) -> bool {
+    fn resolve_module(&mut self, m: &ModuleIdent) -> bool {
         // NOTE: piggybacking on `scoped_functions` to provide a set of modules in the context。
         // TODO: a better solution would be to have a single `BTreeMap<ModuleIdent, ModuleInfo>`
         // in the context that can be used to resolve modules, types, and functions.
         let resolved = self.scoped_functions.contains_key(m);
         if !resolved {
             self.env
-                .add_error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
         }
         resolved
     }
@@ -138,7 +138,7 @@ impl<'env> Context<'env> {
         let types = match self.scoped_types.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
@@ -169,7 +169,7 @@ impl<'env> Context<'env> {
         let functions = match self.scoped_functions.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
@@ -198,7 +198,7 @@ impl<'env> Context<'env> {
         let constants = match self.scoped_constants.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(loc, format!("Unbound module '{}'", m,))]);
+                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
@@ -331,6 +331,7 @@ pub fn program(
         modules: emodules,
         scripts: escripts,
     } = prog;
+    let addresses = addresses.filter_map(|_name, mapping| mapping.map(|sp!(_, addr)| addr));
     let modules = modules(&mut context, emodules);
     let scripts = scripts(&mut context, escripts);
     N::Program {
@@ -438,7 +439,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
 
 fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Option<E::Friend> {
     let current_mident = context.current_module.as_ref().unwrap();
-    if &mident.value.address != &current_mident.value.address {
+    if mident.value.address != current_mident.value.address {
         // NOTE: in alignment with the bytecode verifier, this constraint is a policy decision
         // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
         // rely on the assumption that friend modules must reside within the same account address.
@@ -454,7 +455,7 @@ fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Opti
             (mident.loc, "Cannot declare the module itself as a friend"),
         ]);
         None
-    } else if context.resolve_module(friend.loc, &mident) {
+    } else if context.resolve_module(&mident) {
         Some(friend)
     } else {
         assert!(context.env.has_errors());

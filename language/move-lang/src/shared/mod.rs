@@ -67,7 +67,7 @@ impl AddressBytes {
         Self(bytes)
     }
 
-    pub fn to_bytes(self) -> [u8; ADDRESS_LENGTH] {
+    pub fn into_bytes(self) -> [u8; ADDRESS_LENGTH] {
         self.0
     }
 

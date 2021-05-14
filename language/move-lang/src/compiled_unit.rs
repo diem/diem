@@ -76,7 +76,7 @@ impl CompiledModuleIdent {
         }
     }
 
-    pub fn to_module_ident(self) -> ModuleIdent {
+    pub fn into_module_ident(self) -> ModuleIdent {
         use crate::expansion::ast::Address;
 
         let Self {

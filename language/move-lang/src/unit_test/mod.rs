@@ -51,7 +51,7 @@ impl ModuleTestPlan {
         module_name: &str,
         tests: BTreeMap<TestName, TestCase>,
     ) -> Self {
-        let addr = AccountAddress::new((*addr).to_bytes());
+        let addr = AccountAddress::new((*addr).into_bytes());
         let name = Identifier::new(module_name.to_owned()).unwrap();
         let module_id = ModuleId::new(addr, name);
         ModuleTestPlan { module_id, tests }

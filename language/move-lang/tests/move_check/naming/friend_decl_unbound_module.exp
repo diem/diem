@@ -1,8 +1,8 @@
 error: 
 
-   ┌── tests/move_check/naming/friend_decl_unbound_module.move:3:5 ───
+   ┌── tests/move_check/naming/friend_decl_unbound_module.move:3:12 ───
    │
  3 │     friend 0x42::Nonexistent;
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^^ Unbound module '0x42::Nonexistent'
+   │            ^^^^^^^^^^^^^^^^^ Unbound module '0x42::Nonexistent'
    │
 

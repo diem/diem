@@ -6,7 +6,7 @@ error:
    │        ^^ Unable to fully compile and resolve module declaration
    ·
  6 │ address A {
-   │         -  No value specified for address 'A'
+   │         - No value specified for address 'A'
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
     │           ^ Unable to fully compile and resolve module declaration
     ·
  10 │ module A::M {
-    │        -  No value specified for address 'A'
+    │        - No value specified for address 'A'
     │
 
 error: 
@@ -28,7 +28,7 @@ error:
     │            ^^^^ Unable to fully compile and resolve module identifier
     ·
  12 │     friend A::N;
-    │            -  No value specified for address 'A'
+    │            - No value specified for address 'A'
     │
 
 error: 
@@ -39,7 +39,7 @@ error:
     │           ^ Unable to fully compile and resolve module declaration
     ·
  16 │ module A::N {
-    │        -  No value specified for address 'A'
+    │        - No value specified for address 'A'
     │
 
 error: 
@@ -50,6 +50,6 @@ error:
     │                   ^^ Unable to fully compile and resolve address value
     ·
  18 │         A::M::foo(@A)
-    │                    -  No value specified for address 'A'
+    │                    - No value specified for address 'A'
     │
 

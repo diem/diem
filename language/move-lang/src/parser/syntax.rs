@@ -28,11 +28,24 @@ fn current_token_error_string(tokens: &Lexer) -> String {
 }
 
 fn unexpected_token_error(tokens: &Lexer, expected: &str) -> Error {
-    let loc = current_token_loc(tokens);
+    unexpected_token_error_(tokens, tokens.start_loc(), expected)
+}
+
+fn unexpected_token_error_(tokens: &Lexer, expected_start_loc: usize, expected: &str) -> Error {
+    let unexpected_loc = current_token_loc(tokens);
     let unexpected = current_token_error_string(tokens);
+    let expected_loc = if expected_start_loc < tokens.start_loc() {
+        make_loc(
+            tokens.file_name(),
+            expected_start_loc,
+            tokens.previous_end_loc(),
+        )
+    } else {
+        unexpected_loc
+    };
     vec![
-        (loc, format!("Unexpected {}", unexpected)),
-        (loc, format!("Expected {}", expected)),
+        (unexpected_loc, format!("Unexpected {}", unexpected)),
+        (expected_loc, format!("Expected {}", expected)),
     ]
 }
 
@@ -76,13 +89,35 @@ fn match_token(tokens: &mut Lexer, tok: Tok) -> Result<bool, Error> {
 
 // Check for the specified token and return an error if it does not match.
 fn consume_token(tokens: &mut Lexer, tok: Tok) -> Result<(), Error> {
-    if tokens.peek() != tok {
-        let expected = format!("'{}'", &tok.to_string());
-        return Err(unexpected_token_error(tokens, &expected));
-    }
-    tokens.advance()?;
-    Ok(())
+    consume_token_(tokens, tok, tokens.start_loc(), "")
 }
+
+fn consume_token_(
+    tokens: &mut Lexer,
+    tok: Tok,
+    expected_start_loc: usize,
+    expected_case: &str,
+) -> Result<(), Error> {
+    if tokens.peek() == tok {
+        tokens.advance()?;
+        Ok(())
+    } else {
+        let expected = format!("'{}'{}", tok, expected_case);
+        Err(unexpected_token_error_(
+            tokens,
+            expected_start_loc,
+            &expected,
+        ))
+    }
+}
+
+// let unexp_loc = current_token_loc(tokens);
+// let unexp_msg = format!("Unexpected {}", current_token_error_string(tokens));
+
+// let end_loc = tokens.previous_end_loc();
+// let addr_loc = make_loc(tokens.file_name(), start_loc, end_loc);
+// let exp_msg = format!("Expected '::' {}", case);
+// Err(vec![(unexp_loc, unexp_msg), (addr_loc, exp_msg)])
 
 // Check for the identifier token with specified value and return an error if it does not match.
 fn consume_identifier(tokens: &mut Lexer, value: &str) -> Result<(), Error> {
@@ -235,14 +270,14 @@ fn parse_address_bytes(tokens: &mut Lexer) -> Result<Spanned<AddressBytes>, Erro
     }
 }
 
-// Helper for parse_leading_name_access_with_description with default description
+// Parse the beginning of an access, either an address or an identifier:
+//      LeadingNameAccess = <AddressBytes> | <Identifier>
 fn parse_leading_name_access(tokens: &mut Lexer) -> Result<LeadingNameAccess, Error> {
-    parse_leading_name_access_with_description(tokens, || "an address or an identifier")
+    parse_leading_name_access_(tokens, || "an address or an identifier")
 }
 
-// Parse an the beginning of an acces, either an address or an identifier:
-//      LeadingNameAccess = <AddressBytes> | <Identifier>
-fn parse_leading_name_access_with_description<'a, F: FnOnce() -> &'a str>(
+// Parse the beginning of an access, either an address or an identifier with a specific description
+fn parse_leading_name_access_<'a, F: FnOnce() -> &'a str>(
     tokens: &mut Lexer,
     item_description: F,
 ) -> Result<LeadingNameAccess, Error> {
@@ -279,12 +314,17 @@ fn parse_module_name(tokens: &mut Lexer) -> Result<ModuleName, Error> {
 }
 
 // Parse a module identifier:
-//      ModuleIdent = <Address> "::" <ModuleName>
+//      ModuleIdent = <LeadingNameAccess> "::" <ModuleName>
 fn parse_module_ident(tokens: &mut Lexer) -> Result<ModuleIdent, Error> {
     let start_loc = tokens.start_loc();
     let address = parse_leading_name_access(tokens)?;
 
-    consume_access_colon_colon(tokens, start_loc, "after an address in a module identifier")?;
+    consume_token_(
+        tokens,
+        Tok::ColonColon,
+        start_loc,
+        " after an address in a module identifier",
+    )?;
     let module = parse_module_name(tokens)?;
     let end_loc = tokens.previous_end_loc();
     let loc = make_loc(tokens.file_name(), start_loc, end_loc);
@@ -292,10 +332,7 @@ fn parse_module_ident(tokens: &mut Lexer) -> Result<ModuleIdent, Error> {
 }
 
 // Parse a module access (a variable, struct type, or function):
-//      ModuleAccess =
-//          <Identifier>
-//          | <LeadingNameAccess> "::" <Identifier>
-//          | <LeadingNameAccess> "::" <Identifier> "::" <Identifier>
+//      NameAccessChain = <LeadingNameAccess> ( "::" <Identifier> ( "::" <Identifier> )? )?
 fn parse_name_access_chain<'a, F: FnOnce() -> &'a str>(
     tokens: &mut Lexer,
     item_description: F,
@@ -306,13 +343,13 @@ fn parse_name_access_chain<'a, F: FnOnce() -> &'a str>(
     Ok(spanned(tokens.file_name(), start_loc, end_loc, access))
 }
 
-// Helper for parse_name_access_chain
+// Parse a module access with a specific description
 fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
     tokens: &mut Lexer,
     item_description: F,
 ) -> Result<NameAccessChain_, Error> {
     let start_loc = tokens.start_loc();
-    let ln = parse_leading_name_access_with_description(tokens, item_description)?;
+    let ln = parse_leading_name_access_(tokens, item_description)?;
     let ln = match ln {
         // A name by itself is a valid access chain
         sp!(_, LeadingNameAccess_::Name(n1)) if tokens.peek() != Tok::ColonColon => {
@@ -321,41 +358,20 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
         ln => ln,
     };
 
-    consume_access_colon_colon(
+    consume_token_(
         tokens,
+        Tok::ColonColon,
         start_loc,
-        "after an address in a module access chain",
+        " after an address in a module access chain",
     )?;
     let n2 = parse_identifier(tokens)?;
     if tokens.peek() != Tok::ColonColon {
         return Ok(NameAccessChain_::Two(ln, n2));
     }
-
+    let ln_n2_loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     consume_token(tokens, Tok::ColonColon)?;
     let n3 = parse_identifier(tokens)?;
-    Ok(NameAccessChain_::Three(ln, n2, n3))
-}
-
-fn consume_access_colon_colon(
-    tokens: &mut Lexer,
-    start_loc: usize,
-    case: &str,
-) -> Result<(), Error> {
-    match tokens.peek() {
-        Tok::ColonColon => {
-            tokens.advance()?;
-            Ok(())
-        }
-        _ => {
-            let unexp_loc = current_token_loc(tokens);
-            let unexp_msg = format!("Unexpected {}", current_token_error_string(tokens));
-
-            let end_loc = tokens.previous_end_loc();
-            let addr_loc = make_loc(tokens.file_name(), start_loc, end_loc);
-            let exp_msg = format!("Expected '::' {}", case);
-            Err(vec![(unexp_loc, unexp_msg), (addr_loc, exp_msg)])
-        }
-    }
+    Ok(NameAccessChain_::Three(sp(ln_n2_loc, (ln, n2)), n3))
 }
 
 //**************************************************************************************************
@@ -451,7 +467,7 @@ fn parse_visibility(tokens: &mut Lexer) -> Result<Visibility, Error> {
 // Parse an attribute value. Either a value literal or a module access
 //      AttributeValue =
 //          <Value>
-//          | <ModuleAccess>
+//          | <NameAccessChain>
 fn parse_attribute_value(tokens: &mut Lexer) -> Result<AttributeValue, Error> {
     if let Some(v) = maybe_parse_value(tokens)? {
         return Ok(sp(v.loc, AttributeValue_::Value(v)));
@@ -472,7 +488,7 @@ fn parse_attribute(tokens: &mut Lexer) -> Result<Attribute, Error> {
     let attr_ = match tokens.peek() {
         Tok::Equal => {
             tokens.advance()?;
-            Attribute_::Assigned(n, parse_attribute_value(tokens)?)
+            Attribute_::Assigned(n, Box::new(parse_attribute_value(tokens)?))
         }
         Tok::LParen => {
             let args_ = parse_comma_list(
@@ -549,7 +565,7 @@ fn parse_bind_field(tokens: &mut Lexer) -> Result<(Field, Bind), Error> {
 // Parse a binding:
 //      Bind =
 //          <Var>
-//          | <ModuleAccess> <OptionalTypeArgs> "{" Comma<BindField> "}"
+//          | <NameAccessChain> <OptionalTypeArgs> "{" Comma<BindField> "}"
 fn parse_bind(tokens: &mut Lexer) -> Result<Bind, Error> {
     let start_loc = tokens.start_loc();
     if tokens.peek() == Tok::IdentifierValue {
@@ -573,7 +589,7 @@ fn parse_bind(tokens: &mut Lexer) -> Result<Bind, Error> {
         "a field binding",
     )?;
     let end_loc = tokens.previous_end_loc();
-    let unpack = Bind_::Unpack(ty, ty_args, args);
+    let unpack = Bind_::Unpack(Box::new(ty), ty_args, args);
     Ok(spanned(tokens.file_name(), start_loc, end_loc, unpack))
 }
 
@@ -641,7 +657,7 @@ fn parse_byte_string(tokens: &mut Lexer) -> Result<Value_, Error> {
 
 // Parse a value:
 //      Value =
-//          "@" <Address>
+//          "@" <LeadingAccessName>
 //          | "true"
 //          | "false"
 //          | <Number>
@@ -740,13 +756,14 @@ fn parse_sequence(tokens: &mut Lexer) -> Result<Sequence, Error> {
             // If the sequence ends with an expression that is not
             // followed by a semicolon, split out that expression
             // from the rest of the SequenceItems.
-            if let SequenceItem_::Seq(e) = item.value {
-                eopt = Some(Spanned {
-                    loc: item.loc,
-                    value: e.value,
-                });
-            } else {
-                return Err(unexpected_token_error(tokens, "';'"));
+            match item.value {
+                SequenceItem_::Seq(e) => {
+                    eopt = Some(Spanned {
+                        loc: item.loc,
+                        value: e.value,
+                    });
+                }
+                _ => return Err(unexpected_token_error(tokens, "';'")),
             }
             break;
         }
@@ -863,9 +880,9 @@ fn parse_term(tokens: &mut Lexer) -> Result<Exp, Error> {
 
 // Parse a pack, call, or other reference to a name:
 //      NameExp =
-//          <ModuleAccess> <OptionalTypeArgs> "{" Comma<ExpField> "}"
-//          | <ModuleAccess> <OptionalTypeArgs> "(" Comma<Exp> ")"
-//          | <ModuleAccess> <OptionalTypeArgs>
+//          <NameAccessChain> <OptionalTypeArgs> "{" Comma<ExpField> "}"
+//          | <NameAccessChain> <OptionalTypeArgs> "(" Comma<Exp> ")"
+//          | <NameAccessChain> <OptionalTypeArgs>
 fn parse_name_exp(tokens: &mut Lexer) -> Result<Exp_, Error> {
     let n = parse_name_access_chain(tokens, || {
         panic!("parse_name_exp with something other than a ModuleAccess")
@@ -1380,7 +1397,7 @@ fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: V
 
 // Parse a Type:
 //      Type =
-//          <ModuleAccess> ("<" Comma<Type> ">")?
+//          <NameAccessChain> ("<" Comma<Type> ">")?
 //          | "&" <Type>
 //          | "&mut" <Type>
 //          | "|" Comma<Type> "|" Type   (spec only)
@@ -1540,7 +1557,7 @@ fn parse_optional_type_parameters(tokens: &mut Lexer) -> Result<Vec<(Name, Vec<A
 //          "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
-//          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
+//          ("acquires" <NameAccessChain> ("," <NameAccessChain>)*)?
 //          ("{" <Sequence> "}" | ";")
 //
 fn parse_function_decl(
@@ -1572,7 +1589,7 @@ fn parse_function_decl(
         sp(name.loc(), Type_::Unit)
     };
 
-    // ("acquires" (<ModuleAccess> ",")* <ModuleAccess> ","?
+    // ("acquires" (<NameAccessChain> ",")* <NameAccessChain> ","?
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
         let follows_acquire = |tok| matches!(tok, Tok::Semicolon | Tok::LBrace);
@@ -1782,9 +1799,8 @@ fn parse_constant_decl(
 
 // Parse an address block:
 //      AddressBlock =
-//          "address" <Address> "{"
-//              (<Attributes> <Module>)*
-//          "}"
+//          "address" <LeadingNameAccess> (= <AddressBytes>)?
+//              ("{" (<Attributes> <Module>)* "}" | ";")
 //
 // Note that "address" is not a token.
 fn parse_address_block(
@@ -1858,7 +1874,7 @@ fn parse_address_block(
 
 // Parse a friend declaration:
 //      FriendDecl =
-//          "friend" <ModuleName> | <ModuleIdent> ";"
+//          "friend" <NameAccessChain> ";"
 fn parse_friend_decl(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<FriendDecl, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Friend)?;
@@ -1927,7 +1943,7 @@ fn parse_use_alias(tokens: &mut Lexer) -> Result<Option<Name>, Error> {
 
 // Parse a module:
 //      Module =
-//          <DocComments> ( "spec" | "module") (<Address>::)?<ModuleName> "{"
+//          <DocComments> ( "spec" | "module") (<LeadingNameAccess>::)?<ModuleName> "{"
 //              ( <Attributes>
 //                  ( <UseDecl> | <FriendDecl> | <SpecBlock> |
 //                    <DocComments> <ModuleMemberModifiers>
@@ -2216,29 +2232,30 @@ fn parse_spec_target_signature_opt(
     loc: &Loc,
     tokens: &mut Lexer,
 ) -> Result<Option<Box<FunctionSignature>>, Error> {
-    if matches!(tokens.peek(), Tok::Less | Tok::LParen) {
-        let type_parameters = parse_optional_type_parameters(tokens)?;
-        // "(" Comma<Parameter> ")"
-        let parameters = parse_comma_list(
-            tokens,
-            Tok::LParen,
-            Tok::RParen,
-            parse_parameter,
-            "a function parameter",
-        )?;
-        // (":" <Type>)?
-        let return_type = if match_token(tokens, Tok::Colon)? {
-            parse_type(tokens)?
-        } else {
-            sp(*loc, Type_::Unit)
-        };
-        Ok(Some(Box::new(FunctionSignature {
-            type_parameters,
-            parameters,
-            return_type,
-        })))
-    } else {
-        Ok(None)
+    match tokens.peek() {
+        Tok::Less | Tok::LParen => {
+            let type_parameters = parse_optional_type_parameters(tokens)?;
+            // "(" Comma<Parameter> ")"
+            let parameters = parse_comma_list(
+                tokens,
+                Tok::LParen,
+                Tok::RParen,
+                parse_parameter,
+                "a function parameter",
+            )?;
+            // (":" <Type>)?
+            let return_type = if match_token(tokens, Tok::Colon)? {
+                parse_type(tokens)?
+            } else {
+                sp(*loc, Type_::Unit)
+            };
+            Ok(Some(Box::new(FunctionSignature {
+                type_parameters,
+                parameters,
+                return_type,
+            })))
+        }
+        _ => Ok(None),
     }
 }
 
@@ -2657,7 +2674,7 @@ fn parse_spec_pragma(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
 }
 
 // Parse a specification pragma property:
-//    SpecPragmaProperty = <Identifier> ( "=" Value | ModuleAccess )?
+//    SpecPragmaProperty = <Identifier> ( "=" <Value> | <NameAccessChain> )?
 fn parse_spec_property(tokens: &mut Lexer) -> Result<PragmaProperty, Error> {
     let start_loc = tokens.start_loc();
     let name = match consume_optional_token_with_loc(tokens, Tok::Friend)? {

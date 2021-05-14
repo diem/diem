@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/named_address_assigned_multiple_times_invalid.move:3:13 ───
+   │
+ 3 │ address A = 2;
+   │             ^ Invalid address assignment. Multiple values were given for address 'A'
+   ·
+ 2 │ address A = 0x1;
+   │             --- Previously assigned here
+   │
+

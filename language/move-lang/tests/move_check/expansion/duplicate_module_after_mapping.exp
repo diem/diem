@@ -22,12 +22,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/expansion/duplicate_module_after_mapping.move:16:16 ───
+    ┌── tests/move_check/expansion/duplicate_module_after_mapping.move:17:13 ───
     │
- 16 │ module ThreeA::M {}
-    │                ^ Duplicate definition of 'ThreeA::M', with 'ThreeA' = 0x3
-    ·
  17 │ module 0x3::M {}
-    │             - Previously defined here as '0x3::M'
+    │             ^ Duplicate definition of '0x3::M'
+    ·
+ 16 │ module ThreeA::M {}
+    │                - Previously defined here as 'ThreeA::M', with 'ThreeA' = 0x3
     │
 
