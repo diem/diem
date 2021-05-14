@@ -1093,6 +1093,9 @@ impl ReplayFlags {
         }
         for (k, v) in &self.filters {
             if test.contains(k) {
+                if v.is_empty() {
+                    return true;
+                }
                 return step.map_or(true, |s| v.contains(&s));
             }
         }
