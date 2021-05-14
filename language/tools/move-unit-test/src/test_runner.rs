@@ -6,7 +6,10 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
 };
 use anyhow::Result;
-use bytecode_interpreter::concrete::{settings::InterpreterSettings, value::GlobalState};
+use bytecode_interpreter::{
+    concrete::{settings::InterpreterSettings, value::GlobalState},
+    StacklessBytecodeInterpreter,
+};
 use colored::*;
 use move_binary_format::{
     errors::{PartialVMError, VMResult},
@@ -210,14 +213,14 @@ impl SharedTestingConfig {
         // NOTE: as of now, `self.starting_storage_state` contains modules only and no resources.
         // The modules are captured by `env: &GlobalEnv` and the default GlobalState captures the
         // empty-resource state.
-        let (return_result, change_set, _) = bytecode_interpreter::interpret_with_default_pipeline(
-            env,
+        let interpreter =
+            StacklessBytecodeInterpreter::new(env, None, InterpreterSettings::default());
+        let (return_result, change_set, _) = interpreter.interpret(
             &test_plan.module_id,
             &IdentStr::new(function_name).unwrap(),
             &[], // no ty args, at least for now
             &test_info.arguments,
             &GlobalState::default(),
-            InterpreterSettings::default(),
         );
 
         let test_run_info = TestRunInfo::new(

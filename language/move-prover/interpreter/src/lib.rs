@@ -5,8 +5,7 @@ use anyhow::{bail, Result};
 use structopt::StructOpt;
 
 use bytecode::{
-    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
-    options::ProverOptions,
+    function_target_pipeline::FunctionTargetsHolder, options::ProverOptions,
     pipeline_factory::default_pipeline_with_options,
 };
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
@@ -80,6 +79,7 @@ struct ExecutionResult {
 //**************************************************************************************************
 // Entry
 //**************************************************************************************************
+
 pub fn interpret_with_options(
     options: InterpreterOptions,
     env: &GlobalEnv,
@@ -108,84 +108,150 @@ pub fn interpret_with_options(
     };
 
     // run the actual interpreter
-    interpret_with_default_pipeline(
-        env,
+    let interpreter = StacklessBytecodeInterpreter::new(env, None, settings);
+    interpreter.interpret(
         &options.entrypoint.0,
         &options.entrypoint.1,
         &options.ty_args,
         &args,
         &GlobalState::default(),
-        settings,
     )
 }
 
-pub fn interpret_with_default_pipeline(
-    env: &GlobalEnv,
-    module_id: &ModuleId,
-    func_name: &IdentStr,
-    ty_args: &[TypeTag],
-    args: &[MoveValue],
-    global_state: &GlobalState,
-    settings: InterpreterSettings,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
-    // find the entrypoint
-    let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
-        Ok(func_env) => func_env,
-        Err(err) => {
-            return (
-                Err(err.finish(Location::Undefined)),
-                ChangeSet::new(),
-                global_state.clone(),
-            )
-        }
-    };
-
-    // setup the pipeline
-    let options = ProverOptions {
-        for_interpretation: true,
-        ..Default::default()
-    };
-    let pipeline = default_pipeline_with_options(&options);
-    env.set_extension(options);
-
-    // run the interpreter
-    interpret(
-        env,
-        pipeline,
-        &entrypoint_env,
-        ty_args,
-        args,
-        global_state,
-        settings,
-    )
+pub struct StacklessBytecodeInterpreter<'env> {
+    pub env: &'env GlobalEnv,
+    targets: FunctionTargetsHolder,
 }
 
-pub fn interpret_with_default_pipeline_and_bcs_arguments(
-    env: &GlobalEnv,
-    module_id: &ModuleId,
-    func_name: &IdentStr,
-    ty_args: &[TypeTag],
-    bcs_args: &[Vec<u8>],
-    senders_opt: Option<&[AccountAddress]>,
-    global_state: &GlobalState,
-    settings: InterpreterSettings,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
-    // find the entrypoint
-    let entrypoint_env = match derive_entrypoint_env(env, module_id, func_name) {
-        Ok(func_env) => func_env,
-        Err(err) => {
-            return (
-                Err(err.finish(Location::Undefined)),
-                ChangeSet::new(),
-                global_state.clone(),
-            )
-        }
-    };
+impl<'env> StacklessBytecodeInterpreter<'env> {
+    pub fn new(
+        env: &'env GlobalEnv,
+        options_opt: Option<ProverOptions>,
+        settings: InterpreterSettings,
+    ) -> Self {
+        // create the pipeline
+        let options = options_opt.unwrap_or_else(|| ProverOptions {
+            for_interpretation: true,
+            ..Default::default()
+        });
+        let pipeline = default_pipeline_with_options(&options);
+        env.set_extension(options);
 
-    // convert the args
-    let args =
-        match convert_bcs_arguments_to_move_value_arguments(&entrypoint_env, bcs_args, senders_opt)
-        {
+        // collect and transform function targets
+        let mut targets = FunctionTargetsHolder::default();
+        for module_env in env.get_modules() {
+            for func_env in module_env.get_functions() {
+                targets.add_target(&func_env)
+            }
+        }
+        if settings.verbose_stepwise {
+            pipeline.run_with_hook(
+                env,
+                &mut targets,
+                |holder| verbose_stepwise_processing(env, 0, "stackless", holder),
+                |step, processor, holders| {
+                    verbose_stepwise_processing(env, step, &processor.name(), holders)
+                },
+            )
+        } else {
+            pipeline.run(env, &mut targets);
+        }
+
+        // dump the bytecode if requested
+        if settings.verbose_stepwise {
+            let mut text = String::new();
+            for module_env in env.get_modules() {
+                for func_env in module_env.get_functions() {
+                    for (variant, target) in targets.get_targets(&func_env) {
+                        target.register_annotation_formatters_for_test();
+                        text += &format!("[variant {}]\n{}\n", variant, target);
+                    }
+                }
+            }
+            println!("{}", text);
+        }
+
+        // register settings with the env before returning
+        env.set_extension(settings);
+        Self { env, targets }
+    }
+
+    fn interpret_internal(
+        &self,
+        fun_env: &FunctionEnv,
+        ty_args: &[TypeTag],
+        args: &[MoveValue],
+        global_state: &GlobalState,
+    ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+        // execute and convert results
+        let vm = Runtime::new(self.env, &self.targets);
+        let (vm_result, new_global_state) =
+            vm.execute(fun_env, ty_args, args, global_state.clone());
+        let serialized_vm_result = vm_result.map(|rets| {
+            rets.into_iter()
+                .map(|v| {
+                    let (ty, val, _) = v.decompose();
+                    let move_val = convert_typed_value_to_move_value(ty.get_base_type(), val);
+                    move_val.simple_serialize().unwrap()
+                })
+                .collect::<Vec<_>>()
+        });
+
+        let (change_set, fresh_global_state) = new_global_state.delta(global_state);
+        (serialized_vm_result, change_set, fresh_global_state)
+    }
+
+    pub fn interpret(
+        &self,
+        module_id: &ModuleId,
+        func_name: &IdentStr,
+        ty_args: &[TypeTag],
+        args: &[MoveValue],
+        global_state: &GlobalState,
+    ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+        // find the entrypoint
+        let entrypoint_env = match derive_entrypoint_env(self.env, module_id, func_name) {
+            Ok(func_env) => func_env,
+            Err(err) => {
+                return (
+                    Err(err.finish(Location::Undefined)),
+                    ChangeSet::new(),
+                    global_state.clone(),
+                )
+            }
+        };
+
+        // run the actual interpretation
+        self.interpret_internal(&entrypoint_env, ty_args, args, global_state)
+    }
+
+    pub fn interpret_with_bcs_arguments(
+        &self,
+        module_id: &ModuleId,
+        func_name: &IdentStr,
+        ty_args: &[TypeTag],
+        bcs_args: &[Vec<u8>],
+        senders_opt: Option<&[AccountAddress]>,
+        global_state: &GlobalState,
+    ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+        // find the entrypoint
+        let entrypoint_env = match derive_entrypoint_env(self.env, module_id, func_name) {
+            Ok(func_env) => func_env,
+            Err(err) => {
+                return (
+                    Err(err.finish(Location::Undefined)),
+                    ChangeSet::new(),
+                    global_state.clone(),
+                )
+            }
+        };
+
+        // convert the args
+        let args = match convert_bcs_arguments_to_move_value_arguments(
+            &entrypoint_env,
+            bcs_args,
+            senders_opt,
+        ) {
             Ok(args) => args,
             Err(err) => {
                 return (
@@ -196,94 +262,9 @@ pub fn interpret_with_default_pipeline_and_bcs_arguments(
             }
         };
 
-    // setup the pipeline
-    let options = ProverOptions {
-        for_interpretation: true,
-        ..Default::default()
-    };
-    let pipeline = default_pipeline_with_options(&options);
-    env.set_extension(options);
-
-    // run the interpreter
-    interpret(
-        env,
-        pipeline,
-        &entrypoint_env,
-        ty_args,
-        &args,
-        global_state,
-        settings,
-    )
-}
-
-pub fn interpret(
-    env: &GlobalEnv,
-    pipeline: FunctionTargetPipeline,
-    fun_env: &FunctionEnv,
-    ty_args: &[TypeTag],
-    args: &[MoveValue],
-    global_state: &GlobalState,
-    settings: InterpreterSettings,
-) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
-    if settings.verbose_stepwise {
-        println!(
-            "[compiled module]\n{:?}\n",
-            fun_env.module_env.get_verified_module()
-        );
+        // run the actual interpretation
+        self.interpret_internal(&entrypoint_env, ty_args, &args, global_state)
     }
-
-    // collect and transform function targets
-    let mut targets = FunctionTargetsHolder::default();
-    for module_env in env.get_modules() {
-        for func_env in module_env.get_functions() {
-            targets.add_target(&func_env)
-        }
-    }
-    if settings.verbose_stepwise {
-        pipeline.run_with_hook(
-            env,
-            &mut targets,
-            |holder| verbose_stepwise_processing(env, 0, "stackless", holder),
-            |step, processor, holders| {
-                verbose_stepwise_processing(env, step, &processor.name(), holders)
-            },
-        )
-    } else {
-        pipeline.run(env, &mut targets);
-    }
-
-    // dump the bytecode if requested
-    if settings.verbose_stepwise {
-        let mut text = String::new();
-        for module_env in env.get_modules() {
-            for func_env in module_env.get_functions() {
-                for (variant, target) in targets.get_targets(&func_env) {
-                    target.register_annotation_formatters_for_test();
-                    text += &format!("[variant {}]\n{}\n", variant, target);
-                }
-            }
-        }
-        println!("{}", text);
-    }
-
-    // register settings with the global env
-    env.set_extension(settings);
-
-    // execute and convert results
-    let vm = Runtime::new(env, &targets);
-    let (vm_result, new_global_state) = vm.execute(fun_env, ty_args, args, global_state.clone());
-    let serialized_vm_result = vm_result.map(|rets| {
-        rets.into_iter()
-            .map(|v| {
-                let (ty, val, _) = v.decompose();
-                let move_val = convert_typed_value_to_move_value(ty.get_base_type(), val);
-                move_val.simple_serialize().unwrap()
-            })
-            .collect::<Vec<_>>()
-    });
-
-    let (change_set, fresh_global_state) = new_global_state.delta(global_state);
-    (serialized_vm_result, change_set, fresh_global_state)
 }
 
 fn verbose_stepwise_processing(
