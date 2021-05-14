@@ -199,7 +199,7 @@ impl<'env> CrossRunner<'env> {
                             .unwrap();
                     let resource = convert_move_value(env, &struct_val, &struct_ty).unwrap();
                     let inst = struct_ty.into_struct_inst();
-                    stackless_vm_state.put_resource(ap.address, inst, resource);
+                    stackless_vm_state.init_resource(ap.address, inst, resource);
                 }
             }
         }

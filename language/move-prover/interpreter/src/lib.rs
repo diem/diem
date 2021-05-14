@@ -282,11 +282,8 @@ pub fn interpret(
             .collect::<Vec<_>>()
     });
 
-    (
-        serialized_vm_result,
-        new_global_state.delta(global_state),
-        new_global_state,
-    )
+    let (change_set, fresh_global_state) = new_global_state.delta(global_state);
+    (serialized_vm_result, change_set, fresh_global_state)
 }
 
 fn verbose_stepwise_processing(
