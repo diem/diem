@@ -621,6 +621,7 @@ dependencies = [
  "move-core-types",
  "move-model",
  "move-prover-test-utils",
+ "move-vm-runtime",
  "num 0.4.0",
  "serde",
  "sha2",

@@ -197,8 +197,8 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
                 .collect::<Vec<_>>()
         });
 
-        let (change_set, fresh_global_state) = new_global_state.delta(global_state);
-        (serialized_vm_result, change_set, fresh_global_state)
+        let change_set = new_global_state.delta(global_state);
+        (serialized_vm_result, change_set, new_global_state)
     }
 
     pub fn interpret(

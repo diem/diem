@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use num::{BigUint, ToPrimitive};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use move_core_types::{
     account_address::AccountAddress,
@@ -835,7 +835,6 @@ impl LocalSlot {
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 struct AccountState {
     storage: BTreeMap<StructInstantiation, BaseValue>,
-    updates: BTreeSet<StructInstantiation>,
 }
 
 impl AccountState {
@@ -846,24 +845,17 @@ impl AccountState {
 
     /// Remove a resource from the address, return the old resource if exists
     fn del_resource(&mut self, key: &StructInstantiation) -> Option<BaseValue> {
-        self.updates.insert(key.clone());
         self.storage.remove(key)
     }
 
     /// Put a resource into the address, return the old resource if exists
     fn put_resource(&mut self, key: &StructInstantiation, object: BaseValue) -> Option<BaseValue> {
-        self.updates.insert(key.clone());
         self.storage.insert(key.clone(), object)
     }
 
     /// Check whether the address has a resource
     fn has_resource(&self, key: &StructInstantiation) -> bool {
         self.storage.contains_key(key)
-    }
-
-    /// Initialize a resource into the address, do not mark the resource as updated
-    fn init_resource(&mut self, key: StructInstantiation, object: BaseValue) {
-        self.storage.insert(key, object);
     }
 }
 
@@ -939,22 +931,6 @@ impl GlobalState {
             .map_or(false, |account| account.has_resource(key))
     }
 
-    /// Initialize a resource into the address, do not mark the resource as updated
-    pub fn init_resource(
-        &mut self,
-        addr: AccountAddress,
-        key: StructInstantiation,
-        object: TypedValue,
-    ) {
-        if cfg!(debug_assertions) {
-            assert_eq!(key, object.ty.into_struct_inst());
-        }
-        self.accounts
-            .entry(addr)
-            .or_insert_with(AccountState::default)
-            .init_resource(key, object.val);
-    }
-
     /// Emit an event to the event store
     pub fn emit_event(&mut self, guid: Vec<u8>, seq: u64, msg: TypedValue) {
         let res = self
@@ -967,8 +943,8 @@ impl GlobalState {
         }
     }
 
-    /// Calculate the delta (i.e., a ChangeSet) against the old state and also refresh the state
-    pub fn delta(self, old_state: &GlobalState) -> (ChangeSet, Self) {
+    /// Calculate the delta (i.e., a ChangeSet) against the old state
+    pub fn delta(&self, old_state: &GlobalState) -> ChangeSet {
         fn bcs_serialize_resource(key: &StructInstantiation, val: &BaseValue) -> Vec<u8> {
             let typed_val = TypedValue {
                 ty: Type::mk_struct(key.clone()),
@@ -993,8 +969,8 @@ impl GlobalState {
                             bcs_serialize_resource(key, val),
                         )
                         .unwrap(),
-                    Some(_) => {
-                        if account_state.updates.contains(key) {
+                    Some(old_val) => {
+                        if val != old_val {
                             change_set.publish_or_overwrite_resource(
                                 *addr,
                                 key.to_move_struct_tag(),
@@ -1018,25 +994,6 @@ impl GlobalState {
             }
         }
 
-        // refresh the state
-        let refreshed_accounts = self
-            .accounts
-            .into_iter()
-            .map(|(addr, state)| {
-                (
-                    addr,
-                    AccountState {
-                        storage: state.storage,
-                        updates: BTreeSet::new(),
-                    },
-                )
-            })
-            .collect();
-        let refreshed_state = GlobalState {
-            accounts: refreshed_accounts,
-            events: BTreeMap::new(),
-        };
-
-        (change_set, refreshed_state)
+        change_set
     }
 }
