@@ -846,6 +846,11 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, flags: &ReplayFlags) ->
 
         // iterate over transactions in the block
         for (txn_seq, res_seq) in txn_seqs.into_iter().zip(res_seqs.into_iter()) {
+            // do not replay beyond the step limit
+            if txn_seq > flags.step_limit {
+                return Ok(());
+            }
+
             let file_input = dir_input.join(txn_seq.to_string());
             let txn: Transaction = bcs::from_bytes(&fs::read(file_input)?)?;
             if flags.verbose_trace_step {
@@ -1018,9 +1023,13 @@ struct ReplayArgs {
     #[structopt(short = "t", long = "trace")]
     trace_files: Vec<String>,
 
-    /// Filter
+    /// Trace filters, if specified, only replay traces that passes the filter
     #[structopt(short = "f", long = "filter")]
     filters: Vec<String>,
+
+    /// Maximum number of steps per trace to replay
+    #[structopt(short = "l", long = "limit", default_value = "100")]
+    step_limit: usize,
 
     /// Cross check the stackless VM against the Move VM
     #[structopt(short = "x", long = "xrun")]
@@ -1038,6 +1047,8 @@ struct ReplayArgs {
 struct ReplayFlags {
     /// Filters on which trace (and steps) to run
     filters: BTreeMap<String, BTreeSet<usize>>,
+    /// Maximum number of steps per trace to replay
+    step_limit: usize,
     /// Cross-run and check the stackless VM
     xrun: bool,
     /// Print information per trace
@@ -1091,6 +1102,7 @@ pub fn main() -> Result<()> {
 
     let flags = ReplayFlags {
         filters,
+        step_limit: args.step_limit,
         xrun: args.xrun,
         verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
         verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
