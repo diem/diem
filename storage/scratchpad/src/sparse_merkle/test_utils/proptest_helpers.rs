@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    sparse_merkle::node::{Node, NodeHandle, SubTree},
     test_utils::{naive_smt::NaiveSmt, proof_reader::ProofReader},
     SparseMerkleTree,
 };
@@ -12,6 +13,7 @@ use proptest::{
     prelude::*,
     sample::Index,
 };
+use std::{borrow::Borrow, sync::Arc};
 
 type TxnOutput = Vec<(HashValue, AccountStateBlob)>;
 type BlockOutput = Vec<TxnOutput>;
@@ -78,22 +80,33 @@ pub fn test_smt_correctness_impl(input: Vec<(BlockOutput, bool)>) {
             .map(|(k, _)| (*k, persisted_smt.get_proof(k)))
             .collect();
         let proof_reader = ProofReader::new(proofs);
-
         naive_smt = naive_smt.update(&updates_flat_batch);
-        serial_smt = serial_smt
+
+        let upd_serial_smt = serial_smt
             .serial_update(updates.clone(), &proof_reader)
             .unwrap()
             .1;
-        batches_smt = batches_smt
+        serial_smt.assert_no_external_strong_ref();
+        serial_smt = upd_serial_smt;
+
+        let upd_batches_smt = batches_smt
             .batches_update(updates, &proof_reader)
             .unwrap()
             .1;
-        batch_smt = batch_smt
+        batches_smt.assert_no_external_strong_ref();
+        batches_smt = upd_batches_smt;
+
+        let upd_batch_smt = batch_smt
             .batch_update(updates_flat_batch.clone(), &proof_reader)
             .unwrap();
-        updater_smt = updater_smt
+        batch_smt.assert_no_external_strong_ref();
+        batch_smt = upd_batch_smt;
+
+        let upd_updater_smt = updater_smt
             .batch_update_by_updater(updates_flat_batch, &proof_reader)
             .unwrap();
+        updater_smt.assert_no_external_strong_ref();
+        updater_smt = upd_updater_smt;
 
         assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
         assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
@@ -106,6 +119,30 @@ pub fn test_smt_correctness_impl(input: Vec<(BlockOutput, bool)>) {
             batches_smt.prune();
             batch_smt.prune();
             updater_smt.prune();
+        }
+    }
+}
+
+trait AssertNoExternalStrongRef {
+    fn assert_no_external_strong_ref(&self);
+}
+
+impl<V> AssertNoExternalStrongRef for SparseMerkleTree<V> {
+    fn assert_no_external_strong_ref(&self) {
+        assert_subtree_sole_strong_ref(&self.inner.root.load());
+    }
+}
+
+fn assert_subtree_sole_strong_ref<V>(subtree: &SubTree<V>) {
+    if let SubTree::NonEmpty {
+        root: NodeHandle::Shared(arc),
+        ..
+    } = subtree
+    {
+        assert_eq!(Arc::strong_count(arc), 1);
+        if let Node::Internal(internal_node) = arc.borrow() {
+            assert_subtree_sole_strong_ref(&internal_node.left);
+            assert_subtree_sole_strong_ref(&internal_node.right);
         }
     }
 }
