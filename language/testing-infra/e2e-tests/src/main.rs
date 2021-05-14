@@ -17,7 +17,7 @@ use bytecode_interpreter::{
         ty::BaseType,
         value::GlobalState,
     },
-    interpret_with_default_pipeline_and_bcs_arguments,
+    StacklessBytecodeInterpreter,
 };
 use diem_framework::diem_stdlib_files;
 use diem_types::{
@@ -60,7 +60,7 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{KeptVMStatus, VMStatus},
 };
-use move_model::{model::GlobalEnv, run_model_builder};
+use move_model::run_model_builder;
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -161,21 +161,25 @@ fn adapt_move_vm_result<T>(result: VMResult<T>) -> VMResult<T> {
 //**************************************************************************************************
 
 struct CrossRunner<'env> {
-    env: &'env GlobalEnv,
+    interpreter: &'env StacklessBytecodeInterpreter<'env>,
     move_vm_state: FakeDataStore,
     stackless_vm_state: GlobalState,
-    stackless_vm_settings: InterpreterSettings,
     flags: &'env ReplayFlags,
 }
 
 impl<'env> CrossRunner<'env> {
-    pub fn new(env: &'env GlobalEnv, data_store: &FakeDataStore, flags: &'env ReplayFlags) -> Self {
+    pub fn new(
+        interpreter: &'env StacklessBytecodeInterpreter<'env>,
+        data_store: &FakeDataStore,
+        flags: &'env ReplayFlags,
+    ) -> Self {
         fn serialize_module(module: &CompiledModule) -> Vec<u8> {
             let mut code = vec![];
             module.serialize(&mut code).unwrap();
             code
         }
 
+        let env = interpreter.env;
         let mut move_vm_state = data_store.clone();
         let mut stackless_vm_state = GlobalState::default();
         let mut included_modules = BTreeSet::new();
@@ -213,17 +217,10 @@ impl<'env> CrossRunner<'env> {
             move_vm_state.add_module(&module_id, serialize_module(verified_module));
         }
 
-        let settings = if flags.verbose_stackless_vm {
-            InterpreterSettings::verbose_default()
-        } else {
-            InterpreterSettings::default()
-        };
-
         Self {
-            env,
+            interpreter,
             move_vm_state,
             stackless_vm_state,
-            stackless_vm_settings: settings,
             flags,
         }
     }
@@ -263,15 +260,13 @@ impl<'env> CrossRunner<'env> {
 
         // execute via stackless VM
         let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
-            interpret_with_default_pipeline_and_bcs_arguments(
-                self.env,
+            self.interpreter.interpret_with_bcs_arguments(
                 module_id,
                 function_name,
                 ty_args,
                 args,
                 None,
                 &self.stackless_vm_state,
-                self.stackless_vm_settings.clone(),
             );
 
         // compare
@@ -323,15 +318,13 @@ impl<'env> CrossRunner<'env> {
 
         // execute via stackless VM
         let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
-            interpret_with_default_pipeline_and_bcs_arguments(
-                self.env,
+            self.interpreter.interpret_with_bcs_arguments(
                 module_id,
                 function_name,
                 ty_args,
                 args,
                 Some(senders),
                 &self.stackless_vm_state,
-                self.stackless_vm_settings.clone(),
             );
         let stackless_vm_return_values =
             stackless_vm_return_values.map(|rets| assert!(rets.is_empty()));
@@ -433,15 +426,19 @@ fn execute_script_function_via_session_and_xrunner(
 //**************************************************************************************************
 
 struct TraceReplayer<'env> {
-    env: &'env GlobalEnv,
+    interpreter: &'env StacklessBytecodeInterpreter<'env>,
     data_store: FakeDataStore,
     flags: &'env ReplayFlags,
 }
 
 impl<'env> TraceReplayer<'env> {
-    pub fn new(env: &'env GlobalEnv, data_store: FakeDataStore, flags: &'env ReplayFlags) -> Self {
+    pub fn new(
+        interpreter: &'env StacklessBytecodeInterpreter<'env>,
+        data_store: FakeDataStore,
+        flags: &'env ReplayFlags,
+    ) -> Self {
         Self {
-            env,
+            interpreter,
             data_store,
             flags,
         }
@@ -470,7 +467,11 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
-            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
+            Some(CrossRunner::new(
+                self.interpreter,
+                &self.data_store,
+                self.flags,
+            ))
         } else {
             None
         };
@@ -506,7 +507,11 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
-            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
+            Some(CrossRunner::new(
+                self.interpreter,
+                &self.data_store,
+                self.flags,
+            ))
         } else {
             None
         };
@@ -546,7 +551,11 @@ impl<'env> TraceReplayer<'env> {
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
                 let mut new_xrunner = if self.flags.xrun {
-                    Some(CrossRunner::new(self.env, &self.data_store, self.flags))
+                    Some(CrossRunner::new(
+                        self.interpreter,
+                        &self.data_store,
+                        self.flags,
+                    ))
                 } else {
                     None
                 };
@@ -571,7 +580,11 @@ impl<'env> TraceReplayer<'env> {
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
-            Some(CrossRunner::new(self.env, &self.data_store, self.flags))
+            Some(CrossRunner::new(
+                self.interpreter,
+                &self.data_store,
+                self.flags,
+            ))
         } else {
             None
         };
@@ -600,7 +613,11 @@ impl<'env> TraceReplayer<'env> {
                 }
                 let mut new_session = move_vm.new_session(&self.data_store);
                 let mut new_xrunner = if self.flags.xrun {
-                    Some(CrossRunner::new(self.env, &self.data_store, self.flags))
+                    Some(CrossRunner::new(
+                        self.interpreter,
+                        &self.data_store,
+                        self.flags,
+                    ))
                 } else {
                     None
                 };
@@ -801,7 +818,11 @@ fn execute_txn_admin_script_epilogue(
 // Trace replay
 //**************************************************************************************************
 
-fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, flags: &ReplayFlags) -> Result<()> {
+fn replay_trace<P: AsRef<Path>>(
+    wks: P,
+    interpreter: &StacklessBytecodeInterpreter,
+    flags: &ReplayFlags,
+) -> Result<()> {
     let wks = wks.as_ref();
 
     let test_name = fs::read_to_string(wks.join(TRACE_FILE_NAME))?;
@@ -842,7 +863,7 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, flags: &ReplayFlags) ->
         let data: FakeDataStore = bcs::from_bytes(&fs::read(file_data)?)?;
 
         // construct the trace replayer
-        let mut replayer = TraceReplayer::new(env, data, flags);
+        let mut replayer = TraceReplayer::new(interpreter, data, flags);
 
         // iterate over transactions in the block
         for (txn_seq, res_seq) in txn_seqs.into_iter().zip(res_seqs.into_iter()) {
@@ -998,7 +1019,11 @@ fn replay_trace<P: AsRef<Path>>(wks: P, env: &GlobalEnv, flags: &ReplayFlags) ->
     Ok(())
 }
 
-fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, flags: &ReplayFlags) -> Result<()> {
+fn replay<P: AsRef<Path>>(
+    root: P,
+    interpreter: &StacklessBytecodeInterpreter,
+    flags: &ReplayFlags,
+) -> Result<()> {
     let root = root.as_ref();
     for entry in WalkDir::new(root).into_iter() {
         let entry = entry?;
@@ -1007,7 +1032,7 @@ fn replay<P: AsRef<Path>>(root: P, env: &GlobalEnv, flags: &ReplayFlags) -> Resu
                 .path()
                 .parent()
                 .ok_or_else(|| anyhow!("Cannot traverse the root directory"))?;
-            replay_trace(wks, env, flags)?;
+            replay_trace(wks, interpreter, flags)?;
         }
     }
     Ok(())
@@ -1057,8 +1082,6 @@ struct ReplayFlags {
     verbose_trace_step: bool,
     /// Print information per cross-VM function invocation
     verbose_trace_xrun: bool,
-    /// Enable the verbose mode in stackless VM
-    verbose_stackless_vm: bool,
     /// Print warnings
     warning: bool,
 }
@@ -1107,12 +1130,19 @@ pub fn main() -> Result<()> {
         verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
         verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
         verbose_trace_xrun: args.verbose.map_or(false, |level| level > 2),
-        verbose_stackless_vm: args.verbose.map_or(false, |level| level > 3),
         warning: args.warning.map_or(false, |level| level > 0),
     };
+
+    let verbose_stackless_vm = args.verbose.map_or(false, |level| level > 3);
+    let settings = if verbose_stackless_vm {
+        InterpreterSettings::verbose_default()
+    } else {
+        InterpreterSettings::default()
+    };
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
+    let interpreter = StacklessBytecodeInterpreter::new(&env, None, settings);
     for trace in args.trace_files {
-        replay(trace, &env, &flags)?;
+        replay(trace, &interpreter, &flags)?;
     }
     Ok(())
 }
