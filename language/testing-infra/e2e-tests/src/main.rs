@@ -4,7 +4,7 @@
 use anyhow::{anyhow, bail, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fs,
+    env, fs,
     path::Path,
 };
 use structopt::StructOpt;
@@ -63,6 +63,9 @@ use move_core_types::{
 use move_model::run_model_builder;
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
+
+const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
+const MOVE_VM_TRACING_LOG_FILENAME: &str = "move_vm_trace.log";
 
 //**************************************************************************************************
 // Utilities
@@ -247,6 +250,9 @@ impl<'env> CrossRunner<'env> {
         }
 
         // execute via move VM
+        if self.flags.verbose_vm {
+            env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, MOVE_VM_TRACING_LOG_FILENAME);
+        }
         let move_vm = MoveVM::new();
         let mut session = move_vm.new_session(&self.move_vm_state);
         let move_vm_return_values = execute_function_via_session(
@@ -257,6 +263,9 @@ impl<'env> CrossRunner<'env> {
             args.to_vec(),
         );
         let (move_vm_change_set, move_events) = session.finish().unwrap();
+        if self.flags.verbose_vm {
+            env::remove_var(MOVE_VM_TRACING_ENV_VAR_NAME);
+        }
 
         // execute via stackless VM
         let (stackless_vm_return_values, stackless_vm_change_set, new_stackless_vm_state) =
@@ -1082,6 +1091,8 @@ struct ReplayFlags {
     verbose_trace_step: bool,
     /// Print information per cross-VM function invocation
     verbose_trace_xrun: bool,
+    /// Enable verbose mode in the xrun VMs
+    verbose_vm: bool,
     /// Print warnings
     warning: bool,
 }
@@ -1130,11 +1141,11 @@ pub fn main() -> Result<()> {
         verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
         verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
         verbose_trace_xrun: args.verbose.map_or(false, |level| level > 2),
+        verbose_vm: args.verbose.map_or(false, |level| level > 3),
         warning: args.warning.map_or(false, |level| level > 0),
     };
 
-    let verbose_stackless_vm = args.verbose.map_or(false, |level| level > 3);
-    let settings = if verbose_stackless_vm {
+    let settings = if flags.verbose_vm {
         InterpreterSettings::verbose_default()
     } else {
         InterpreterSettings::default()
