@@ -472,33 +472,38 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                 }
                 BorrowGlobal(mid, sid, types) => {
                     // borrow_global<T>(a). bind ret to a/T
-                    let addrs = state
-                        .locals
-                        .get_local(args[0], func_env)
-                        .expect("Unbound address local")
-                        .clone();
-                    let offset = Offset::global(mid, *sid, types.clone());
-                    let mut extended_aps: AbsAddr = AbsAddr::default();
-                    for p in addrs.iter() {
-                        match p {
-                            Addr::Footprint(ap) => {
-                                let mut extended_ap = ap.clone();
-                                extended_ap.add_offset(offset.clone());
-                                extended_aps.insert(Addr::Footprint(extended_ap.clone()));
-                                state.locals.update_access_path(extended_ap.clone(), None);
-                            }
-                            Addr::Constant(c) => {
-                                let extended_ap = AccessPath::new_address_constant(
-                                    c.clone(),
-                                    mid,
-                                    *sid,
-                                    types.clone(),
-                                );
-                                extended_aps.insert(Addr::footprint(extended_ap));
+                    // TODO: this crashes on the expect below, apparently with address
+                    // locals introduced by Unpack. For now we ignore it if the local
+                    // is not bound.
+                    if state.locals.local_exists(args[0], func_env) {
+                        let addrs = state
+                            .locals
+                            .get_local(args[0], func_env)
+                            .expect("Unbound address local")
+                            .clone();
+                        let offset = Offset::global(mid, *sid, types.clone());
+                        let mut extended_aps: AbsAddr = AbsAddr::default();
+                        for p in addrs.iter() {
+                            match p {
+                                Addr::Footprint(ap) => {
+                                    let mut extended_ap = ap.clone();
+                                    extended_ap.add_offset(offset.clone());
+                                    extended_aps.insert(Addr::Footprint(extended_ap.clone()));
+                                    state.locals.update_access_path(extended_ap.clone(), None);
+                                }
+                                Addr::Constant(c) => {
+                                    let extended_ap = AccessPath::new_address_constant(
+                                        c.clone(),
+                                        mid,
+                                        *sid,
+                                        types.clone(),
+                                    );
+                                    extended_aps.insert(Addr::footprint(extended_ap));
+                                }
                             }
                         }
+                        state.locals.bind_local(rets[0], extended_aps, func_env)
                     }
-                    state.locals.bind_local(rets[0], extended_aps, func_env)
                 }
                 MoveFrom(mid, sid, types) => {
                     state.add_global_access(args[0], mid, *sid, types, Access::Write, func_env);
