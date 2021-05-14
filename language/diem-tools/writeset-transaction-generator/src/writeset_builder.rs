@@ -19,8 +19,9 @@ use move_vm_runtime::{
     data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM, session::Session,
 };
 use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::natives::function::DummyNative;
 
-pub struct GenesisSession<'r, 'l, S>(Session<'r, 'l, S>);
+pub struct GenesisSession<'r, 'l, S>(Session<'r, 'l, S, DummyNative>);
 
 impl<'r, 'l, S: MoveStorage> GenesisSession<'r, 'l, S> {
     pub fn exec_func(
@@ -99,7 +100,7 @@ pub fn build_changeset<S: StateView, F>(state_view: &S, procedure: F) -> ChangeS
 where
     F: FnOnce(&mut GenesisSession<RemoteStorage<S>>),
 {
-    let move_vm = MoveVM::new();
+    let move_vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
     let (changeset, events) = {
         let state_view_storage = RemoteStorage::new(state_view);
         let mut session = GenesisSession(move_vm.new_session(&state_view_storage));

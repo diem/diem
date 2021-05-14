@@ -4,6 +4,7 @@
 use log::LevelFilter;
 use std::path::PathBuf;
 
+pub mod natives;
 #[cfg(test)]
 mod tests;
 pub mod utils;

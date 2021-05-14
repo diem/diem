@@ -2,15 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{data_cache::MoveStorage, runtime::VMRuntime, session::Session};
+use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_vm_types::natives::function::NativeFunction;
 
-pub struct MoveVM {
-    runtime: VMRuntime,
+pub struct MoveVM<N> {
+    runtime: VMRuntime<N>,
 }
 
-impl MoveVM {
-    pub fn new() -> Self {
+impl<N: NativeFunction> MoveVM<N> {
+    pub fn new<I>(natives: I) -> Self
+    where
+        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, N)>,
+    {
         Self {
-            runtime: VMRuntime::new(),
+            runtime: VMRuntime::new(natives),
         }
     }
 
@@ -28,7 +33,7 @@ impl MoveVM {
     ///     cases where this may not be necessary, with the most notable one being the common module
     ///     publishing flow: you can keep using the same Move VM if you publish some modules in a Session
     ///     and apply the effects to the storage when the Session ends.
-    pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S> {
+    pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S, N> {
         self.runtime.new_session(remote)
     }
 }

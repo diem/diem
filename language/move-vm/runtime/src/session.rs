@@ -13,14 +13,14 @@ use move_core_types::{
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::{gas_schedule::GasStatus, natives::function::NativeFunction};
 
-pub struct Session<'r, 'l, S> {
-    pub(crate) runtime: &'l VMRuntime,
-    pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
+pub struct Session<'r, 'l, S, N> {
+    pub(crate) runtime: &'l VMRuntime<N>,
+    pub(crate) data_cache: TransactionDataCache<'r, 'l, S, N>,
 }
 
-impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
+impl<'r, 'l, S: MoveStorage, N: NativeFunction> Session<'r, 'l, S, N> {
     /// Execute a Move function with the given arguments. This is mainly designed for an external
     /// environment to invoke system logic written in Move.
     ///

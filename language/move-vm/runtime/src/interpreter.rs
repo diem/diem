@@ -23,6 +23,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::GasStatus,
     loaded_data::runtime_types::Type,
+    natives::function::NativeFunction,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
@@ -58,25 +59,25 @@ macro_rules! set_err_info {
 ///
 /// An `Interpreter` instance is a stand alone execution context for a function.
 /// It mimics execution on a single thread, with an call stack and an operand stack.
-pub(crate) struct Interpreter<L: LogContext> {
+pub(crate) struct Interpreter<L: LogContext, N> {
     /// Operand stack, where Move `Value`s are stored for stack operations.
     operand_stack: Stack,
     /// The stack of active functions.
-    call_stack: CallStack,
+    call_stack: CallStack<N>,
     // Logger to report information to clients
     log_context: L,
 }
 
-impl<L: LogContext> Interpreter<L> {
+impl<L: LogContext, N: NativeFunction> Interpreter<L, N> {
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
-        function: Arc<Function>,
+        function: Arc<Function<N>>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        loader: &Loader,
+        loader: &Loader<N>,
         log_context: &L,
     ) -> VMResult<Vec<Value>> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
@@ -98,10 +99,10 @@ impl<L: LogContext> Interpreter<L> {
     /// Internal execution entry point.
     fn execute(
         &mut self,
-        loader: &Loader,
+        loader: &Loader<N>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        function: Arc<Function>,
+        function: Arc<Function<N>>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<Vec<Value>> {
@@ -120,10 +121,10 @@ impl<L: LogContext> Interpreter<L> {
     // we can simplify this code quite a bit.
     fn execute_main(
         &mut self,
-        loader: &Loader,
+        loader: &Loader<N>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        function: Arc<Function>,
+        function: Arc<Function<N>>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<Vec<Value>> {
@@ -217,7 +218,11 @@ impl<L: LogContext> Interpreter<L> {
     ///
     /// Native functions do not push a frame at the moment and as such errors from a native
     /// function are incorrectly attributed to the caller.
-    fn make_call_frame(&mut self, func: Arc<Function>, ty_args: Vec<Type>) -> VMResult<Frame> {
+    fn make_call_frame(
+        &mut self,
+        func: Arc<Function<N>>,
+        ty_args: Vec<Type>,
+    ) -> VMResult<Frame<N>> {
         let mut locals = Locals::new(func.local_count());
         let arg_count = func.arg_count();
         for i in 0..arg_count {
@@ -234,10 +239,10 @@ impl<L: LogContext> Interpreter<L> {
     /// Call a native functions.
     fn call_native(
         &mut self,
-        resolver: &Resolver,
+        resolver: &Resolver<N>,
         data_store: &mut dyn DataStore,
         gas_status: &mut GasStatus,
-        function: Arc<Function>,
+        function: Arc<Function<N>>,
         ty_args: Vec<Type>,
     ) -> VMResult<()> {
         // Note: refactor if native functions push a frame on the stack
@@ -258,10 +263,10 @@ impl<L: LogContext> Interpreter<L> {
 
     fn call_native_impl(
         &mut self,
-        resolver: &Resolver,
+        resolver: &Resolver<N>,
         data_store: &mut dyn DataStore,
         gas_status: &mut GasStatus,
-        function: Arc<Function>,
+        function: Arc<Function<N>>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<()> {
         let mut arguments = VecDeque::new();
@@ -271,7 +276,7 @@ impl<L: LogContext> Interpreter<L> {
         }
         let mut native_context = FunctionContext::new(self, data_store, gas_status, resolver);
         let native_function = function.get_native()?;
-        let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
+        let result = native_function.run(&mut native_context, ty_args, arguments)?;
         gas_status.deduct_gas(result.cost)?;
         let return_values = result
             .result
@@ -395,7 +400,7 @@ impl<L: LogContext> Interpreter<L> {
     //
 
     /// Given an `VMStatus` generate a core dump if the error is an `InvariantViolation`.
-    fn maybe_core_dump(&self, mut err: VMError, current_frame: &Frame) -> VMError {
+    fn maybe_core_dump(&self, mut err: VMError, current_frame: &Frame<N>) -> VMError {
         // a verification error cannot happen at runtime so change it into an invariant violation.
         if err.status_type() == StatusType::Verification {
             self.log_context.alert();
@@ -425,9 +430,9 @@ impl<L: LogContext> Interpreter<L> {
     fn debug_print_frame<B: Write>(
         &self,
         buf: &mut B,
-        loader: &Loader,
+        loader: &Loader<N>,
         idx: usize,
-        frame: &Frame,
+        frame: &Frame<N>,
     ) -> PartialVMResult<()> {
         // Print out the function name with type arguments.
         let func = &frame.function;
@@ -489,7 +494,7 @@ impl<L: LogContext> Interpreter<L> {
     pub(crate) fn debug_print_stack_trace<B: Write>(
         &self,
         buf: &mut B,
-        loader: &Loader,
+        loader: &Loader<N>,
     ) -> PartialVMResult<()> {
         debug_writeln!(buf, "Call Stack:")?;
         for (i, frame) in self.call_stack.0.iter().enumerate() {
@@ -512,7 +517,7 @@ impl<L: LogContext> Interpreter<L> {
     /// It is used when generating a core dump but can be used for debugging of the interpreter.
     /// It will be exposed via a debug module to give developers a way to print the internals
     /// of an execution.
-    fn get_internal_state(&self, current_frame: &Frame) -> String {
+    fn get_internal_state(&self, current_frame: &Frame<N>) -> String {
         let mut internal_state = "Call stack:\n".to_string();
         for (i, frame) in self.call_stack.0.iter().enumerate() {
             internal_state.push_str(
@@ -611,16 +616,16 @@ impl Stack {
 
 /// A call stack.
 #[derive(Debug)]
-struct CallStack(Vec<Frame>);
+struct CallStack<N>(Vec<Frame<N>>);
 
-impl CallStack {
+impl<N: NativeFunction> CallStack<N> {
     /// Create a new empty call stack.
     fn new() -> Self {
         CallStack(vec![])
     }
 
     /// Push a `Frame` on the call stack.
-    fn push(&mut self, frame: Frame) -> ::std::result::Result<(), Frame> {
+    fn push(&mut self, frame: Frame<N>) -> ::std::result::Result<(), Frame<N>> {
         if self.0.len() < CALL_STACK_SIZE_LIMIT {
             self.0.push(frame);
             Ok(())
@@ -630,7 +635,7 @@ impl CallStack {
     }
 
     /// Pop a `Frame` off the call stack.
-    fn pop(&mut self) -> Option<Frame> {
+    fn pop(&mut self) -> Option<Frame<N>> {
         self.0.pop()
     }
 
@@ -643,10 +648,10 @@ impl CallStack {
 /// A `Frame` is the execution context for a function. It holds the locals of the function and
 /// the function itself.
 #[derive(Debug)]
-struct Frame {
+struct Frame<N> {
     pc: u16,
     locals: Locals,
-    function: Arc<Function>,
+    function: Arc<Function<N>>,
     ty_args: Vec<Type>,
 }
 
@@ -658,11 +663,11 @@ enum ExitCode {
     CallGeneric(FunctionInstantiationIndex),
 }
 
-impl Frame {
+impl<N: NativeFunction> Frame<N> {
     /// Create a new `Frame` given a `Function` and the function `Locals`.
     ///
     /// The locals must be loaded before calling this.
-    fn new(function: Arc<Function>, ty_args: Vec<Type>, locals: Locals) -> Self {
+    fn new(function: Arc<Function<N>>, ty_args: Vec<Type>, locals: Locals) -> Self {
         Frame {
             pc: 0,
             locals,
@@ -674,8 +679,8 @@ impl Frame {
     /// Execute a Move function until a return or a call opcode is found.
     fn execute_code(
         &mut self,
-        resolver: &Resolver,
-        interpreter: &mut Interpreter<impl LogContext>,
+        resolver: &Resolver<N>,
+        interpreter: &mut Interpreter<impl LogContext, N>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
     ) -> VMResult<ExitCode> {
@@ -688,8 +693,8 @@ impl Frame {
 
     fn execute_code_impl(
         &mut self,
-        resolver: &Resolver,
-        interpreter: &mut Interpreter<impl LogContext>,
+        resolver: &Resolver<N>,
+        interpreter: &mut Interpreter<impl LogContext, N>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
     ) -> PartialVMResult<ExitCode> {
@@ -1129,7 +1134,7 @@ impl Frame {
         &self.ty_args
     }
 
-    fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
+    fn resolver<'a>(&self, loader: &'a Loader<N>) -> Resolver<'a, N> {
         self.function.get_resolver(loader)
     }
 

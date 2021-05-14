@@ -1,10 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    logging::{expect_no_verification_errors, LogContext},
-    native_functions::NativeFunction,
-};
+use crate::logging::{expect_no_verification_errors, LogContext};
+use crate::native_functions::NativeFunctions;
 use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
@@ -30,6 +28,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::{StructType, Type},
+    natives::function::NativeFunction,
 };
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 
@@ -71,24 +70,24 @@ where
 // A script cache is a map from the hash value of a script and the `Script` itself.
 // Script are added in the cache once verified and so getting a script out the cache
 // does not require further verification (except for parameters and type parameters)
-struct ScriptCache {
-    scripts: BinaryCache<HashValue, Script>,
+struct ScriptCache<N> {
+    scripts: BinaryCache<HashValue, Script<N>>,
 }
 
-impl ScriptCache {
+impl<N: NativeFunction> ScriptCache<N> {
     fn new() -> Self {
         Self {
             scripts: BinaryCache::new(),
         }
     }
 
-    fn get(&self, hash: &HashValue) -> Option<(Arc<Function>, Vec<Type>)> {
+    fn get(&self, hash: &HashValue) -> Option<(Arc<Function<N>>, Vec<Type>)> {
         self.scripts
             .get(hash)
             .map(|script| (script.entry_point(), script.parameter_tys.clone()))
     }
 
-    fn insert(&mut self, hash: HashValue, script: Script) -> (Arc<Function>, Vec<Type>) {
+    fn insert(&mut self, hash: HashValue, script: Script<N>) -> (Arc<Function<N>>, Vec<Type>) {
         match self.get(&hash) {
             Some(cached) => cached,
             None => {
@@ -103,13 +102,13 @@ impl ScriptCache {
 // It holds all Modules, Types and Functions loaded.
 // Types and Functions are pushed globally to the ModuleCache.
 // All accesses to the ModuleCache are under lock (exclusive).
-pub struct ModuleCache {
+pub struct ModuleCache<N> {
     modules: BinaryCache<ModuleId, Module>,
     structs: Vec<Arc<StructType>>,
-    functions: Vec<Arc<Function>>,
+    functions: Vec<Arc<Function<N>>>,
 }
 
-impl ModuleCache {
+impl<N: NativeFunction> ModuleCache<N> {
     fn new() -> Self {
         Self {
             modules: BinaryCache::new(),
@@ -129,7 +128,7 @@ impl ModuleCache {
     }
 
     // Retrieve a function by index
-    fn function_at(&self, idx: usize) -> Arc<Function> {
+    fn function_at(&self, idx: usize) -> Arc<Function<N>> {
         Arc::clone(&self.functions[idx])
     }
 
@@ -145,6 +144,7 @@ impl ModuleCache {
 
     fn insert(
         &mut self,
+        natives: &NativeFunctions<N>,
         id: ModuleId,
         module: CompiledModule,
         log_context: &impl LogContext,
@@ -155,7 +155,7 @@ impl ModuleCache {
 
         // we need this operation to be transactional, if an error occurs we must
         // leave a clean state
-        self.add_module(&module, log_context)?;
+        self.add_module(natives, &module, log_context)?;
         match Module::new(module, self) {
             Ok(module) => Ok(Arc::clone(self.modules.insert(id, module))),
             Err((err, module)) => {
@@ -172,6 +172,7 @@ impl ModuleCache {
 
     fn add_module(
         &mut self,
+        natives: &NativeFunctions<N>,
         module: &CompiledModule,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
@@ -188,7 +189,7 @@ impl ModuleCache {
             })?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
-            let function = Function::new(findex, func, module);
+            let function = Function::new(natives, findex, func, module);
             self.functions.push(Arc::new(function));
         }
         Ok(())
@@ -415,19 +416,21 @@ impl ModuleCache {
 // entities. Each cache is protected by a `Mutex`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
 // The `pub(crate)` API is what a Loader offers to the runtime.
-pub(crate) struct Loader {
-    scripts: Mutex<ScriptCache>,
-    module_cache: Mutex<ModuleCache>,
+pub(crate) struct Loader<N> {
+    scripts: Mutex<ScriptCache<N>>,
+    module_cache: Mutex<ModuleCache<N>>,
     type_cache: Mutex<TypeCache>,
+    natives: NativeFunctions<N>,
 }
 
-impl Loader {
-    pub(crate) fn new() -> Self {
+impl<N: NativeFunction> Loader<N> {
+    pub(crate) fn new(natives: NativeFunctions<N>) -> Self {
         //println!("new loader");
         Self {
             scripts: Mutex::new(ScriptCache::new()),
             module_cache: Mutex::new(ModuleCache::new()),
             type_cache: Mutex::new(TypeCache::new()),
+            natives,
         }
     }
 
@@ -449,7 +452,7 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Function<N>>, Vec<Type>, Vec<Type>)> {
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
 
@@ -556,7 +559,7 @@ impl Loader {
         is_script_execution: bool,
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Function<N>>, Vec<Type>, Vec<Type>, Vec<Type>)> {
         let module = self.load_module_verify_not_missing(module_id, data_store, log_context)?;
         let idx = self
             .module_cache
@@ -669,7 +672,7 @@ impl Loader {
         log_context: &impl LogContext,
     ) -> VMResult<()> {
         bytecode_verifier::verify_module(&module)?;
-        Self::check_natives(&module)?;
+        self.check_natives(&module)?;
 
         let deps = module.immediate_dependencies();
         let loaded_imm_deps = if verify_no_missing_modules {
@@ -714,8 +717,11 @@ impl Loader {
     }
 
     // All native functions must be known to the loader
-    fn check_natives(module: &CompiledModule) -> VMResult<()> {
-        fn check_natives_impl(module: &CompiledModule) -> PartialVMResult<()> {
+    fn check_natives(&self, module: &CompiledModule) -> VMResult<()> {
+        fn check_natives_impl<N>(
+            loader: &Loader<N>,
+            module: &CompiledModule,
+        ) -> PartialVMResult<()> {
             for (idx, native_function) in module
                 .function_defs()
                 .iter()
@@ -724,18 +730,20 @@ impl Loader {
             {
                 let fh = module.function_handle_at(native_function.function);
                 let mh = module.module_handle_at(fh.module);
-                NativeFunction::resolve(
-                    module.address_identifier_at(mh.address),
-                    module.identifier_at(mh.name).as_str(),
-                    module.identifier_at(fh.name).as_str(),
-                )
-                .ok_or_else(|| {
-                    verification_error(
-                        StatusCode::MISSING_DEPENDENCY,
-                        IndexKind::FunctionHandle,
-                        idx as TableIndex,
+                loader
+                    .natives
+                    .resolve(
+                        module.address_identifier_at(mh.address),
+                        module.identifier_at(mh.name).as_str(),
+                        module.identifier_at(fh.name).as_str(),
                     )
-                })?;
+                    .ok_or_else(|| {
+                        verification_error(
+                            StatusCode::MISSING_DEPENDENCY,
+                            IndexKind::FunctionHandle,
+                            idx as TableIndex,
+                        )
+                    })?;
             }
             // TODO: fix check and error code if we leave something around for native structs.
             // For now this generates the only error test cases care about...
@@ -750,7 +758,7 @@ impl Loader {
             }
             Ok(())
         }
-        check_natives_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+        check_natives_impl(self, module).map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
     //
@@ -819,8 +827,8 @@ impl Loader {
     ) -> VMResult<Arc<Module>> {
         // kept private to `load_module` to prevent verification errors from leaking
         // and not being marked as invariant violations
-        fn deserialize_and_verify_module(
-            loader: &Loader,
+        fn deserialize_and_verify_module<N: NativeFunction>(
+            loader: &Loader<N>,
             bytes: Vec<u8>,
             data_store: &mut impl DataStore,
             log_context: &impl LogContext,
@@ -853,10 +861,10 @@ impl Loader {
 
         let module = deserialize_and_verify_module(self, bytes, data_store, log_context)
             .map_err(|err| expect_no_verification_errors(err, log_context))?;
-        let module_ref = self
-            .module_cache
-            .lock()
-            .insert(id.clone(), module, log_context)?;
+        let module_ref =
+            self.module_cache
+                .lock()
+                .insert(&self.natives, id.clone(), module, log_context)?;
 
         // friendship is an upward edge in the dependencies DAG, so it has to be checked after the
         // module is put into cache, otherwise it is a chicken-and-egg problem.
@@ -932,7 +940,7 @@ impl Loader {
     // Internal helpers
     //
 
-    fn function_at(&self, idx: usize) -> Arc<Function> {
+    fn function_at(&self, idx: usize) -> Arc<Function<N>> {
         self.module_cache.lock().function_at(idx)
     }
 
@@ -946,7 +954,7 @@ impl Loader {
         )
     }
 
-    fn get_script(&self, hash: &HashValue) -> Arc<Script> {
+    fn get_script(&self, hash: &HashValue) -> Arc<Script<N>> {
         Arc::clone(
             self.scripts
                 .lock()
@@ -995,26 +1003,26 @@ impl Loader {
 //
 
 // A simple wrapper for a `Module` or a `Script` in the `Resolver`
-enum BinaryType {
+enum BinaryType<N> {
     Module(Arc<Module>),
-    Script(Arc<Script>),
+    Script(Arc<Script<N>>),
 }
 
 // A Resolver is a simple and small structure allocated on the stack and used by the
 // interpreter. It's the only API known to the interpreter and it's tailored to the interpreter
 // needs.
-pub(crate) struct Resolver<'a> {
-    loader: &'a Loader,
-    binary: BinaryType,
+pub(crate) struct Resolver<'a, N> {
+    loader: &'a Loader<N>,
+    binary: BinaryType<N>,
 }
 
-impl<'a> Resolver<'a> {
-    fn for_module(loader: &'a Loader, module: Arc<Module>) -> Self {
+impl<'a, N: NativeFunction> Resolver<'a, N> {
+    fn for_module(loader: &'a Loader<N>, module: Arc<Module>) -> Self {
         let binary = BinaryType::Module(module);
         Self { loader, binary }
     }
 
-    fn for_script(loader: &'a Loader, script: Arc<Script>) -> Self {
+    fn for_script(loader: &'a Loader<N>, script: Arc<Script<N>>) -> Self {
         let binary = BinaryType::Script(script);
         Self { loader, binary }
     }
@@ -1034,7 +1042,7 @@ impl<'a> Resolver<'a> {
     // Function resolution
     //
 
-    pub(crate) fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function> {
+    pub(crate) fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function<N>> {
         let idx = match &self.binary {
             BinaryType::Module(module) => module.function_at(idx.0),
             BinaryType::Script(script) => script.function_at(idx.0),
@@ -1045,7 +1053,7 @@ impl<'a> Resolver<'a> {
     pub(crate) fn function_from_instantiation(
         &self,
         idx: FunctionInstantiationIndex,
-    ) -> Arc<Function> {
+    ) -> Arc<Function<N>> {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
@@ -1144,7 +1152,7 @@ impl<'a> Resolver<'a> {
         self.loader.type_to_type_layout(ty)
     }
 
-    pub(crate) fn loader(&self) -> &Loader {
+    pub(crate) fn loader(&self) -> &Loader<N> {
         &self.loader
     }
 }
@@ -1195,9 +1203,9 @@ pub(crate) struct Module {
 }
 
 impl Module {
-    fn new(
+    fn new<N: NativeFunction>(
         module: CompiledModule,
-        cache: &ModuleCache,
+        cache: &ModuleCache<N>,
     ) -> Result<Self, (PartialVMError, CompiledModule)> {
         let id = module.self_id();
 
@@ -1385,7 +1393,7 @@ impl Module {
 // When code executes, indexes in instructions are resolved against runtime structures
 // (rather then "compiled") to make available data needed for execution
 #[derive(Debug)]
-struct Script {
+struct Script<N> {
     // primitive pools
     script: CompiledScript,
 
@@ -1398,14 +1406,18 @@ struct Script {
     function_instantiations: Vec<FunctionInstantiation>,
 
     // entry point
-    main: Arc<Function>,
+    main: Arc<Function<N>>,
 
     // parameters of main
     parameter_tys: Vec<Type>,
 }
 
-impl Script {
-    fn new(script: CompiledScript, script_hash: &HashValue, cache: &ModuleCache) -> VMResult<Self> {
+impl<N: NativeFunction> Script<N> {
+    fn new(
+        script: CompiledScript,
+        script_hash: &HashValue,
+        cache: &ModuleCache<N>,
+    ) -> VMResult<Self> {
         let mut struct_refs = vec![];
         for struct_handle in script.struct_handles() {
             let struct_name = script.identifier_at(struct_handle.name);
@@ -1479,7 +1491,7 @@ impl Script {
         // TODO: main does not have a name. Revisit.
         let name = Identifier::new("main").unwrap();
         let native = None; // Script entries cannot be native
-        let main: Arc<Function> = Arc::new(Function {
+        let main: Arc<Function<N>> = Arc::new(Function {
             file_format_version: script.version(),
             index: FunctionDefinitionIndex(0),
             code,
@@ -1502,7 +1514,7 @@ impl Script {
         })
     }
 
-    fn entry_point(&self) -> Arc<Function> {
+    fn entry_point(&self) -> Arc<Function<N>> {
         self.main.clone()
     }
 
@@ -1524,7 +1536,7 @@ enum Scope {
 
 // A runtime function
 #[derive(Debug)]
-pub(crate) struct Function {
+pub(crate) struct Function<N> {
     file_format_version: u32,
     index: FunctionDefinitionIndex,
     code: Vec<Bytecode>,
@@ -1532,13 +1544,14 @@ pub(crate) struct Function {
     return_: Signature,
     locals: Signature,
     type_parameters: Vec<AbilitySet>,
-    native: Option<NativeFunction>,
+    native: Option<N>,
     scope: Scope,
     name: Identifier,
 }
 
-impl Function {
+impl<N: NativeFunction> Function<N> {
     fn new(
+        natives: &NativeFunctions<N>,
         index: FunctionDefinitionIndex,
         def: &FunctionDefinition,
         module: &CompiledModule,
@@ -1547,11 +1560,13 @@ impl Function {
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
         let native = if def.is_native() {
-            NativeFunction::resolve(
-                module_id.address(),
-                module_id.name().as_str(),
-                name.as_str(),
-            )
+            natives
+                .resolve(
+                    module_id.address(),
+                    module_id.name().as_str(),
+                    name.as_str(),
+                )
+                .cloned()
         } else {
             None
         };
@@ -1603,7 +1618,7 @@ impl Function {
         self.index
     }
 
-    pub(crate) fn get_resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
+    pub(crate) fn get_resolver<'a>(&self, loader: &'a Loader<N>) -> Resolver<'a, N> {
         match &self.scope {
             Scope::Module(module_id) => {
                 let module = loader.get_module(module_id);
@@ -1657,7 +1672,7 @@ impl Function {
         self.native.is_some()
     }
 
-    pub(crate) fn get_native(&self) -> PartialVMResult<NativeFunction> {
+    pub(crate) fn get_native(&self) -> PartialVMResult<N> {
         self.native.ok_or_else(|| {
             PartialVMError::new(StatusCode::UNREACHABLE)
                 .with_message("Missing Native Function".to_string())
@@ -1746,7 +1761,7 @@ impl TypeCache {
 
 const VALUE_DEPTH_MAX: usize = 256;
 
-impl Loader {
+impl<N: NativeFunction> Loader<N> {
     fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<StructTag> {
         if let Some(struct_map) = self.type_cache.lock().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {

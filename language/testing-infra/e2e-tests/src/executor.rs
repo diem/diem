@@ -27,8 +27,10 @@ use diem_types::{
     write_set::WriteSet,
 };
 use diem_vm::{
-    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, DiemVMValidator, VMExecutor,
-    VMValidator,
+    convert_changeset_and_events,
+    data_cache::RemoteStorage,
+    natives::{diem_natives, DiemNative},
+    DiemVM, DiemVMValidator, VMExecutor, VMValidator,
 };
 use move_core_types::{
     identifier::Identifier,
@@ -353,7 +355,7 @@ impl FakeExecutor {
     ) {
         let write_set = {
             let mut gas_status = GasStatus::new_unmetered();
-            let vm = MoveVM::new();
+            let vm: MoveVM<DiemNative> = MoveVM::new(diem_natives());
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
             let log_context = NoContextLog::new();
@@ -390,7 +392,7 @@ impl FakeExecutor {
         args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
         let mut gas_status = GasStatus::new_unmetered();
-        let vm = MoveVM::new();
+        let vm: MoveVM<DiemNative> = MoveVM::new(diem_natives());
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
         let log_context = NoContextLog::new();

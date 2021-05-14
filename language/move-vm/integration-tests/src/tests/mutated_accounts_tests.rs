@@ -11,6 +11,7 @@ use move_core_types::{
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::natives::function::DummyNative;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -42,7 +43,7 @@ fn mutated_accounts() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     storage.publish_or_overwrite_module(module_id.clone(), blob);
 
-    let vm = MoveVM::new();
+    let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
     let mut sess = vm.new_session(&storage);
 
     let mut gas_status = GasStatus::new_unmetered();

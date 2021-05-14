@@ -3,7 +3,7 @@
 
 use crate::{
     counters::*, create_access_path, data_cache::StateViewCache, diem_vm::DiemVMImpl,
-    transaction_metadata::TransactionMetadata, VMValidator,
+    natives::DiemNative, transaction_metadata::TransactionMetadata, VMValidator,
 };
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
@@ -124,7 +124,7 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
 
 pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     vm: &DiemVMImpl,
-    mut session: &mut Session<S>,
+    mut session: &mut Session<S, DiemNative>,
     transaction: &SignatureCheckedTransaction,
     remote_cache: &S,
     allow_too_new: bool,

@@ -23,6 +23,7 @@ use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::natives::function::DummyNative;
 use resource_viewer::{AnnotatedAccountStateBlob, AnnotatedMoveStruct, MoveValueAnnotator};
 use std::path::{Path, PathBuf};
 
@@ -307,9 +308,11 @@ impl DiemDebugger {
         f: F,
     ) -> Result<ChangeSet>
     where
-        F: FnOnce(&mut Session<DeltaStorage<RemoteStorage<DebuggerStateView>>>) -> VMResult<()>,
+        F: FnOnce(
+            &mut Session<DeltaStorage<RemoteStorage<DebuggerStateView>>, DummyNative>,
+        ) -> VMResult<()>,
     {
-        let move_vm = MoveVM::new();
+        let move_vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let state_view_storage = RemoteStorage::new(&state_view);
         let move_changes = override_changeset.unwrap_or_else(MoveChanges::new);

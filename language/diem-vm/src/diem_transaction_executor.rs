@@ -11,6 +11,7 @@ use crate::{
     },
     errors::expect_only_successful_execution,
     logging::AdapterLogSchema,
+    natives::DiemNative,
     script_to_script_function,
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
@@ -124,7 +125,7 @@ impl DiemVM {
 
     fn success_transaction_cleanup<S: MoveStorage>(
         &self,
-        mut session: Session<S>,
+        mut session: Session<S, DiemNative>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
@@ -153,7 +154,7 @@ impl DiemVM {
 
     fn execute_script_or_script_function<S: MoveStorage>(
         &self,
-        mut session: Session<S>,
+        mut session: Session<S, DiemNative>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         payload: &TransactionPayload,
@@ -232,7 +233,7 @@ impl DiemVM {
 
     fn execute_module<S: MoveStorage>(
         &self,
-        mut session: Session<S>,
+        mut session: Session<S, DiemNative>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         module: &Module,

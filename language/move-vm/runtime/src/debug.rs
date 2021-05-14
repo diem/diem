@@ -7,6 +7,7 @@ use crate::{
     logging::LogContext,
 };
 use move_binary_format::file_format::Bytecode;
+use move_vm_types::natives::function::NativeFunction;
 use move_vm_types::values::{self, Locals};
 use std::{
     collections::BTreeSet,
@@ -97,14 +98,14 @@ impl DebugContext {
         }
     }
 
-    pub(crate) fn debug_loop(
+    pub(crate) fn debug_loop<N: NativeFunction>(
         &mut self,
-        function_desc: &Function,
+        function_desc: &Function<N>,
         locals: &Locals,
         pc: u16,
         instr: &Bytecode,
-        resolver: &Loader,
-        interp: &Interpreter<impl LogContext>,
+        resolver: &Loader<N>,
+        interp: &Interpreter<impl LogContext, N>,
     ) {
         let instr_string = format!("{:?}", instr);
         let function_string = function_desc.pretty_string();

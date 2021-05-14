@@ -6,6 +6,8 @@ use crate::{
     counters::*,
     data_cache::RemoteStorage,
     errors::{convert_epilogue_error, convert_prologue_error, expect_only_successful_execution},
+    natives::diem_natives,
+    natives::DiemNative,
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
@@ -42,7 +44,7 @@ use std::{convert::TryFrom, sync::Arc};
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
 pub struct DiemVMImpl {
-    move_vm: Arc<MoveVM>,
+    move_vm: Arc<MoveVM<DiemNative>>,
     on_chain_config: Option<VMConfig>,
     version: Option<DiemVersion>,
     publishing_option: Option<VMPublishingOption>,
@@ -51,7 +53,7 @@ pub struct DiemVMImpl {
 impl DiemVMImpl {
     #[allow(clippy::new_without_default)]
     pub fn new<S: StateView>(state: &S) -> Self {
-        let inner = MoveVM::new();
+        let inner = MoveVM::new(diem_natives());
         let mut vm = Self {
             move_vm: Arc::new(inner),
             on_chain_config: None,
@@ -67,7 +69,7 @@ impl DiemVMImpl {
         on_chain_config: VMConfig,
         publishing_option: VMPublishingOption,
     ) -> Self {
-        let inner = MoveVM::new();
+        let inner = MoveVM::new(diem_natives());
         Self {
             move_vm: Arc::new(inner),
             on_chain_config: Some(on_chain_config),
@@ -207,7 +209,7 @@ impl DiemVMImpl {
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_script_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
@@ -248,7 +250,7 @@ impl DiemVMImpl {
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_module_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
@@ -288,7 +290,7 @@ impl DiemVMImpl {
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_success_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
@@ -330,7 +332,7 @@ impl DiemVMImpl {
     /// stored in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_failure_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
@@ -368,7 +370,7 @@ impl DiemVMImpl {
     /// in the `WRITESET_MODULE` on chain.
     pub(crate) fn run_writeset_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         txn_data: &TransactionMetadata,
         log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
@@ -402,7 +404,7 @@ impl DiemVMImpl {
     /// in the `WRITESET_MODULE` on chain.
     pub(crate) fn run_writeset_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<S>,
+        session: &mut Session<S, DiemNative>,
         txn_data: &TransactionMetadata,
         should_trigger_reconfiguration: bool,
         log_context: &impl LogContext,
@@ -428,7 +430,7 @@ impl DiemVMImpl {
             })
     }
 
-    pub fn new_session<'r, R: MoveStorage>(&self, r: &'r R) -> Session<'r, '_, R> {
+    pub fn new_session<'r, R: MoveStorage>(&self, r: &'r R) -> Session<'r, '_, R, DiemNative> {
         self.move_vm.new_session(r)
     }
 }
@@ -443,7 +445,7 @@ impl<'a> DiemVMInternals<'a> {
     }
 
     /// Returns the internal Move VM instance.
-    pub fn move_vm(self) -> &'a MoveVM {
+    pub fn move_vm(self) -> &'a MoveVM<DiemNative> {
         &self.0.move_vm
     }
 
@@ -465,7 +467,7 @@ impl<'a> DiemVMInternals<'a> {
     pub fn with_txn_data_cache<T, S: StateView>(
         self,
         state_view: &S,
-        f: impl for<'txn, 'r> FnOnce(Session<'txn, 'r, RemoteStorage<S>>) -> T,
+        f: impl for<'txn, 'r> FnOnce(Session<'txn, 'r, RemoteStorage<S>, DiemNative>) -> T,
     ) -> T {
         let remote_storage = RemoteStorage::new(state_view);
         let session = self.move_vm().new_session(&remote_storage);
@@ -528,7 +530,7 @@ pub fn convert_changeset_and_events(
 
 pub(crate) fn charge_global_write_gas_usage<R: MoveStorage>(
     gas_status: &mut GasStatus,
-    session: &Session<R>,
+    session: &Session<R, DiemNative>,
     sender: &AccountAddress,
 ) -> Result<(), VMStatus> {
     let total_cost = session.num_mutated_accounts(sender)
@@ -545,7 +547,7 @@ pub(crate) fn charge_global_write_gas_usage<R: MoveStorage>(
 
 pub(crate) fn get_transaction_output<A: AccessPathCache, S: MoveStorage>(
     ap_cache: &mut A,
-    session: Session<S>,
+    session: Session<S, DiemNative>,
     gas_left: GasUnits<GasCarrier>,
     txn_data: &TransactionMetadata,
     status: KeptVMStatus,
@@ -574,6 +576,6 @@ fn vm_thread_safe() {
     assert_sync::<DiemVM>();
     assert_send::<DiemVMValidator>();
     assert_sync::<DiemVMValidator>();
-    assert_send::<MoveVM>();
-    assert_sync::<MoveVM>();
+    assert_send::<MoveVM<DiemNative>>();
+    assert_sync::<MoveVM<DiemNative>>();
 }

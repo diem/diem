@@ -11,6 +11,7 @@ use move_core_types::{
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::natives::function::DummyNative;
 use std::{path::PathBuf, sync::Arc, thread};
 
 const WORKING_ACCOUNT: AccountAddress =
@@ -18,7 +19,7 @@ const WORKING_ACCOUNT: AccountAddress =
 
 struct Adapter {
     store: InMemoryStorage,
-    vm: Arc<MoveVM>,
+    vm: Arc<MoveVM<DummyNative>>,
     functions: Vec<(ModuleId, Identifier)>,
 }
 
@@ -47,7 +48,7 @@ impl Adapter {
         ));
         Self {
             store,
-            vm: Arc::new(MoveVM::new()),
+            vm: Arc::new(MoveVM::new(vec![])),
             functions,
         }
     }

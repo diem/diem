@@ -28,7 +28,11 @@ use diem_types::{
         authenticator::AuthenticationKey, ChangeSet, ScriptFunction, Transaction, WriteSetPayload,
     },
 };
-use diem_vm::{convert_changeset_and_events, data_cache::StateViewCache};
+use diem_vm::{
+    convert_changeset_and_events,
+    data_cache::StateViewCache,
+    natives::{diem_natives, DiemNative},
+};
 use move_binary_format::CompiledModule;
 use move_core_types::{
     account_address::AccountAddress,
@@ -107,7 +111,7 @@ pub fn encode_genesis_change_set(
     }
     let data_cache = StateViewCache::new(&state_view);
 
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(diem_natives());
     let mut session = move_vm.new_session(&data_cache);
     let log_context = NoContextLog::new();
 
@@ -162,7 +166,7 @@ pub fn encode_genesis_change_set(
 }
 
 fn exec_function(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     module_name: &str,
     function_name: &str,
@@ -192,7 +196,7 @@ fn exec_function(
 }
 
 fn exec_script_function(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     sender: AccountAddress,
     script_function: &ScriptFunction,
@@ -212,7 +216,7 @@ fn exec_script_function(
 
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
@@ -295,7 +299,7 @@ fn create_and_initialize_main_accounts(
 }
 
 fn create_and_initialize_testnet_minting(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     public_key: &Ed25519PublicKey,
 ) {
@@ -352,7 +356,7 @@ fn create_and_initialize_testnet_minting(
 /// the required accounts, sets the validator operators for each validator owner, and sets the
 /// validator config on-chain.
 fn create_and_initialize_owners_operators(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
@@ -451,7 +455,7 @@ fn create_and_initialize_owners_operators(
 
 /// Publish the standard library.
 fn publish_stdlib(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<StateViewCache, DiemNative>,
     log_context: &impl LogContext,
     stdlib: Vec<(ModuleId, &Vec<u8>)>,
 ) {
@@ -472,7 +476,7 @@ fn publish_stdlib(
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
-fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogContext) {
+fn reconfigure(session: &mut Session<StateViewCache, DiemNative>, log_context: &impl LogContext) {
     exec_function(
         session,
         log_context,

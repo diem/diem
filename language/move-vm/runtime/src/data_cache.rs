@@ -15,6 +15,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::Type,
+    natives::function::NativeFunction,
     values::{GlobalValue, GlobalValueEffect, Value},
 };
 use std::collections::btree_map::BTreeMap;
@@ -74,17 +75,17 @@ impl AccountDataCache {
 /// The Move VM takes a `DataStore` in input and this is the default and correct implementation
 /// for a data store related to a transaction. Clients should create an instance of this type
 /// and pass it to the Move VM.
-pub(crate) struct TransactionDataCache<'r, 'l, S> {
+pub(crate) struct TransactionDataCache<'r, 'l, S, N> {
     remote: &'r S,
-    loader: &'l Loader,
+    loader: &'l Loader<N>,
     account_map: BTreeMap<AccountAddress, AccountDataCache>,
     event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
-impl<'r, 'l, S: MoveStorage> TransactionDataCache<'r, 'l, S> {
+impl<'r, 'l, S: MoveStorage, N: NativeFunction> TransactionDataCache<'r, 'l, S, N> {
     /// Create a `TransactionDataCache` with a `RemoteCache` that provides access to data
     /// not updated in the transaction.
-    pub(crate) fn new(remote: &'r S, loader: &'l Loader) -> Self {
+    pub(crate) fn new(remote: &'r S, loader: &'l Loader<N>) -> Self {
         TransactionDataCache {
             remote,
             loader,
@@ -171,7 +172,7 @@ impl<'r, 'l, S: MoveStorage> TransactionDataCache<'r, 'l, S> {
 }
 
 // `DataStore` implementation for the `TransactionDataCache`
-impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
+impl<'r, 'l, S: MoveStorage, N: NativeFunction> DataStore for TransactionDataCache<'r, 'l, S, N> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.

@@ -15,9 +15,15 @@ publish = false
 docgen = { path = "../move-prover/docgen" }
 move-prover = { path = "../move-prover" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-vm-types = { path = "../move-vm/types" }
+move-binary-format = { path = "../move-binary-format" }
+move-core-types = { path = "../move-core/types" }
+diem-crypto = { path = "../../crypto/crypto" }
 
 log = "0.4.14"
+smallvec = "1.6.1"
 walkdir = "2.3.1"
+sha2 = "0.9.3"
 
 [dev-dependencies]
 tempfile = "3.2.0"

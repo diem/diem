@@ -16,8 +16,8 @@ proptest = { version = "1.0.0", optional = true }
 sha2 = "0.9.3"
 serde = { version = "1.0.124", features = ["derive", "rc"] }
 smallvec = "1.6.1"
-
 bcs = "0.1.2"
+
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-binary-format = { path = "../../move-binary-format" }

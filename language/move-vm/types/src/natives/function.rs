@@ -22,7 +22,9 @@ use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits},
     value::MoveTypeLayout,
 };
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
+use std::any::Any;
+use std::collections::VecDeque;
 use std::fmt::Write;
 
 pub use move_binary_format::errors::PartialVMError;
@@ -51,6 +53,65 @@ pub trait NativeContext {
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
 }
 
+pub trait NativeFunction: Copy {
+    fn run<C>(
+        &self,
+        context: &mut C,
+        ty_args: Vec<Type>,
+        args: VecDeque<Value>,
+    ) -> PartialVMResult<NativeResult>
+    where
+        C: NativeContext;
+}
+
+#[macro_export]
+macro_rules! make_enum_for_natives {
+    ($ec: ident = $($tc: ident)|*) => {
+        #[derive(Copy, Clone)]
+        pub enum $ec {
+            $($tc($tc)),*
+        }
+
+        $(impl From<$tc> for $ec {
+            fn from(x: $tc) -> $ec {
+                $ec::$tc(x)
+            }
+        })*
+
+        impl NativeFunction for $ec {
+            fn run<C>(
+                &self,
+                context: &mut C,
+                ty_args: Vec<Type>,
+                args: VecDeque<Value>,
+            ) -> PartialVMResult<NativeResult>
+            where
+                C: NativeContext,
+            {
+                match self {
+                    $($ec::$tc(f) => f.run(context, ty_args, args)),*
+                }
+            }
+        }
+    };
+}
+
+#[derive(Copy, Clone)]
+pub enum DummyNative {}
+impl NativeFunction for DummyNative {
+    fn run<C>(
+        &self,
+        _context: &mut C,
+        _ty_args: Vec<Type>,
+        _args: VecDeque<Value>,
+    ) -> PartialVMResult<NativeResult>
+    where
+        C: NativeContext,
+    {
+        unreachable!()
+    }
+}
+
 /// Result of a native function execution requires charges for execution cost.
 ///
 /// An execution that causes an invariant violation would not return a `NativeResult` but
@@ -65,6 +126,8 @@ pub struct NativeResult {
     pub cost: InternalGasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
     pub result: Result<SmallVec<[Value; 1]>, u64>,
+
+    pub messages: SmallVec<[Box<dyn Any>; 1]>,
 }
 
 impl NativeResult {
@@ -73,6 +136,7 @@ impl NativeResult {
         NativeResult {
             cost,
             result: Ok(values),
+            messages: smallvec![],
         }
     }
 
@@ -84,7 +148,13 @@ impl NativeResult {
         NativeResult {
             cost,
             result: Err(abort_code),
+            messages: smallvec![],
         }
+    }
+
+    pub fn with_messages(mut self, messages: impl IntoIterator<Item = Box<dyn Any>>) -> Self {
+        self.messages = messages.into_iter().collect();
+        self
     }
 }
 

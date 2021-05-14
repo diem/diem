@@ -8,6 +8,7 @@ use crate::debug::DebugContext;
 use ::{
     diem_infallible::Mutex,
     move_binary_format::file_format::Bytecode,
+    move_vm_types::natives::function::NativeFunction,
     move_vm_types::values::Locals,
     once_cell::sync::Lazy,
     std::{
@@ -59,13 +60,13 @@ static DEBUG_CONTEXT: Lazy<Mutex<DebugContext>> = Lazy::new(|| Mutex::new(DebugC
 
 // Only include in debug builds
 #[cfg(debug_assertions)]
-pub(crate) fn trace<L: LogContext>(
-    function_desc: &Function,
+pub(crate) fn trace<L: LogContext, N: NativeFunction>(
+    function_desc: &Function<N>,
     locals: &Locals,
     pc: u16,
     instr: &Bytecode,
-    loader: &Loader,
-    interp: &Interpreter<L>,
+    loader: &Loader<N>,
+    interp: &Interpreter<L, N>,
 ) {
     if *TRACING_ENABLED {
         let f = &mut *LOGGING_FILE.lock();

@@ -22,7 +22,7 @@ use move_core_types::{
 };
 use move_lang::{self, compiled_unit::CompiledUnit, shared::Flags, MOVE_COMPILED_EXTENSION};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::{gas_schedule::GasStatus, natives::function::DummyNative};
 
 use anyhow::{anyhow, bail, Result};
 use std::{collections::BTreeMap, ffi::OsStr, fs, path::Path};
@@ -105,7 +105,7 @@ pub fn publish(
 
     // use the the publish_module API frm the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut gas_status = get_gas_status(None)?;
         let log_context = NoContextLog::new();
         let mut session = vm.new_session(state);
@@ -237,7 +237,7 @@ move run` must be applied to a module inside `storage/`",
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
     let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
-    let vm = MoveVM::new();
+    let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
     let mut gas_status = get_gas_status(gas_budget)?;
     let log_context = NoContextLog::new();
     let mut session = vm.new_session(state);

@@ -11,9 +11,11 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
+use move_stdlib::natives::NativeSignerBorrowAddress;
 use move_vm_runtime::{data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::natives::function::DummyNative;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -82,7 +84,12 @@ fn test_malformed_resource() {
     m.serialize(&mut blob).unwrap();
     storage.publish_or_overwrite_module(m.self_id(), blob);
 
-    let vm = MoveVM::new();
+    let vm: MoveVM<NativeSignerBorrowAddress> = MoveVM::new(vec![(
+        AccountAddress::from_hex_literal("0x1").unwrap(),
+        Identifier::new("Signer").unwrap(),
+        Identifier::new("borrow_address").unwrap(),
+        NativeSignerBorrowAddress,
+    )]);
 
     let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
@@ -177,7 +184,7 @@ fn test_malformed_module() {
     {
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(m.self_id(), blob.clone());
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
         sess.execute_function(
             &module_id,
@@ -203,7 +210,7 @@ fn test_malformed_module() {
         blob[3] = 0xef;
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(m.self_id(), blob);
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
         let err = sess
             .execute_function(
@@ -245,7 +252,7 @@ fn test_unverifiable_module() {
         m.serialize(&mut blob).unwrap();
         storage.publish_or_overwrite_module(m.self_id(), blob);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -271,7 +278,7 @@ fn test_unverifiable_module() {
         m.serialize(&mut blob).unwrap();
         storage.publish_or_overwrite_module(m.self_id(), blob);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -326,7 +333,7 @@ fn test_missing_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -346,7 +353,7 @@ fn test_missing_module_dependency() {
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -401,7 +408,7 @@ fn test_malformed_module_denpency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m.clone());
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -427,7 +434,7 @@ fn test_malformed_module_denpency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -483,7 +490,7 @@ fn test_unverifiable_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -510,7 +517,7 @@ fn test_unverifiable_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -567,7 +574,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
         let storage = BogusStorage {
             bad_status_code: *error_code,
         };
-        let vm = MoveVM::new();
+        let vm: MoveVM<DummyNative> = MoveVM::new(vec![]);
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -636,7 +643,12 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         };
         let storage = DeltaStorage::new(&storage, &delta);
 
-        let vm = MoveVM::new();
+        let vm: MoveVM<NativeSignerBorrowAddress> = MoveVM::new(vec![(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+            Identifier::new("Signer").unwrap(),
+            Identifier::new("borrow_address").unwrap(),
+            NativeSignerBorrowAddress,
+        )]);
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(

@@ -1648,9 +1648,11 @@ dependencies = [
  "move-lang",
  "move-prover",
  "move-stdlib",
+ "move-vm-types",
  "once_cell",
  "rayon",
  "sha2",
+ "smallvec",
  "tempfile",
  "transaction-builder-generator",
  "walkdir",
@@ -2421,6 +2423,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "diem-crypto",
+ "diem-framework",
  "diem-framework-releases",
  "diem-logger",
  "diem-metrics",
@@ -2431,6 +2434,7 @@ dependencies = [
  "mirai-annotations",
  "move-binary-format",
  "move-core-types",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
@@ -2819,9 +2823,9 @@ checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "enum_dispatch"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8946e241a7774d5327d92749c50806f275f57d031d2229ecbfd65469a8ad338e"
+checksum = "44bead1f97ab8e54cd4f9205571b5c2c6f18abaa9193f9fdcf7fe09ddd4be313"
 dependencies = [
  "once_cell",
  "proc-macro2 1.0.24",
@@ -4644,11 +4648,17 @@ dependencies = [
 name = "move-stdlib"
 version = "0.1.0"
 dependencies = [
+ "diem-crypto",
  "diem-workspace-hack",
  "dir-diff",
  "docgen",
  "log",
+ "move-binary-format",
+ "move-core-types",
  "move-prover",
+ "move-vm-types",
+ "sha2",
+ "smallvec",
  "tempfile",
  "walkdir",
 ]
@@ -4686,25 +4696,11 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-lang",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
  "tempfile",
-]
-
-[[package]]
-name = "move-vm-natives"
-version = "0.1.0"
-dependencies = [
- "diem-crypto",
- "diem-workspace-hack",
- "mirai-annotations",
- "move-binary-format",
- "move-core-types",
- "move-vm-types",
- "once_cell",
- "sha2",
- "smallvec",
 ]
 
 [[package]]
@@ -4724,7 +4720,6 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-lang",
- "move-vm-natives",
  "move-vm-types",
  "once_cell",
  "proptest",

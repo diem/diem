@@ -22,7 +22,6 @@ diem-logger = { path = "../../../common/logger" }
 diem-infallible = { path = "../../../common/infallible" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
-move-vm-natives = { path = "../natives" }
 move-vm-types = { path = "../types" }
 move-binary-format = { path = "../../move-binary-format" }
 
@@ -36,6 +35,6 @@ move-lang = { path = "../../move-lang" }
 
 [features]
 default = []
-debug_module = ["move-vm-natives/debug_module"]
 fuzzing = ["move-vm-types/fuzzing"]
 failpoints = ["fail/failpoints"]
+debug_module = []

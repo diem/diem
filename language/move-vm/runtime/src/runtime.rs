@@ -6,6 +6,7 @@ use crate::{
     interpreter::Interpreter,
     loader::Loader,
     logging::LogContext,
+    native_functions::NativeFunctions,
     session::Session,
 };
 use diem_logger::prelude::*;
@@ -19,17 +20,19 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
+    identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     value::{MoveTypeLayout, MoveValue},
     vm_status::StatusCode,
 };
 use move_vm_types::{
-    data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type, values::Value,
+    data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type,
+    natives::function::NativeFunction, values::Value,
 };
 
 /// An instantiation of the MoveVM.
-pub(crate) struct VMRuntime {
-    loader: Loader,
+pub(crate) struct VMRuntime<N> {
+    loader: Loader<N>,
 }
 
 // signer helper closure
@@ -40,14 +43,17 @@ fn is_signer_reference(s: &Type) -> bool {
     }
 }
 
-impl VMRuntime {
-    pub(crate) fn new() -> Self {
+impl<N: NativeFunction> VMRuntime<N> {
+    pub(crate) fn new<I>(natives: I) -> Self
+    where
+        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, N)>,
+    {
         VMRuntime {
-            loader: Loader::new(),
+            loader: Loader::new(NativeFunctions::new(natives)),
         }
     }
 
-    pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S> {
+    pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S, N> {
         Session {
             runtime: self,
             data_cache: TransactionDataCache::new(remote, &self.loader),
@@ -283,7 +289,7 @@ impl VMRuntime {
         log_context: &impl LogContext,
     ) -> VMResult<Vec<Vec<u8>>>
     where
-        F: FnOnce(&VMRuntime, u32, &[Type]) -> PartialVMResult<Vec<Value>>,
+        F: FnOnce(&VMRuntime<N>, u32, &[Type]) -> PartialVMResult<Vec<Value>>,
     {
         let (func, ty_args, params, return_tys) = self.loader.load_function(
             function_name,

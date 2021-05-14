@@ -4,19 +4,57 @@
 use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
-    account_address::AccountAddress, gas_schedule::CostTable, language_storage::CORE_CODE_ADDRESS,
+    account_address::AccountAddress, gas_schedule::CostTable, identifier::Identifier,
     value::MoveTypeLayout, vm_status::StatusType,
 };
-use move_vm_natives::{account, bcs, debug, event, hash, signature, signer, vector};
 use move_vm_types::{
-    data_store::DataStore,
-    gas_schedule::GasStatus,
-    loaded_data::runtime_types::Type,
-    natives::function::{NativeContext, NativeResult},
-    values::Value,
+    data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type,
+    natives::function::NativeContext, natives::function::NativeFunction, values::Value,
 };
-use std::{collections::VecDeque, fmt::Write};
+use std::{
+    collections::{hash_map, HashMap},
+    fmt::Write,
+    hash::Hash,
+};
 
+pub(crate) struct NativeFunctions<N>(HashMap<AccountAddress, HashMap<String, HashMap<String, N>>>);
+
+fn get_mut_or_insert_with<K, V, F>(map: &mut HashMap<K, V>, key: K, mk_value: F) -> &mut V
+where
+    F: FnOnce() -> V,
+    K: Eq + Hash,
+{
+    match map.entry(key) {
+        hash_map::Entry::Occupied(entry) => entry.into_mut(),
+        hash_map::Entry::Vacant(entry) => entry.insert(mk_value()),
+    }
+}
+
+impl<N> NativeFunctions<N> {
+    pub fn resolve(&self, addr: &AccountAddress, module_name: &str, func_name: &str) -> Option<&N> {
+        self.0
+            .get(addr)
+            .and_then(|modules| modules.get(module_name))
+            .and_then(|funcs| funcs.get(func_name))
+    }
+
+    pub fn new<I>(natives: I) -> Self
+    where
+        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, N)>,
+    {
+        let mut map = HashMap::new();
+        for (addr, module_name, func_name, func) in natives.into_iter() {
+            let modules = get_mut_or_insert_with(&mut map, addr, || HashMap::new());
+            let funcs =
+                get_mut_or_insert_with(modules, module_name.into_string(), || HashMap::new());
+            // TODO: handle duplicates
+            funcs.insert(func_name.into_string(), func);
+        }
+        Self(map)
+    }
+}
+
+/*
 // The set of native functions the VM supports.
 // The functions can line in any crate linked in but the VM declares them here.
 // 2 functions have to be implemented for a `NativeFunction`:
@@ -118,21 +156,22 @@ impl NativeFunction {
         result
     }
 }
+*/
 
-pub(crate) struct FunctionContext<'a, L: LogContext> {
-    interpreter: &'a mut Interpreter<L>,
+pub(crate) struct FunctionContext<'a, L: LogContext, N> {
+    interpreter: &'a mut Interpreter<L, N>,
     data_store: &'a mut dyn DataStore,
     gas_status: &'a GasStatus<'a>,
-    resolver: &'a Resolver<'a>,
+    resolver: &'a Resolver<'a, N>,
 }
 
-impl<'a, L: LogContext> FunctionContext<'a, L> {
+impl<'a, L: LogContext, N> FunctionContext<'a, L, N> {
     pub(crate) fn new(
-        interpreter: &'a mut Interpreter<L>,
+        interpreter: &'a mut Interpreter<L, N>,
         data_store: &'a mut dyn DataStore,
         gas_status: &'a mut GasStatus,
-        resolver: &'a Resolver<'a>,
-    ) -> FunctionContext<'a, L> {
+        resolver: &'a Resolver<'a, N>,
+    ) -> FunctionContext<'a, L, N> {
         FunctionContext {
             interpreter,
             data_store,
@@ -142,7 +181,7 @@ impl<'a, L: LogContext> FunctionContext<'a, L> {
     }
 }
 
-impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
+impl<'a, L: LogContext, N: NativeFunction> NativeContext for FunctionContext<'a, L, N> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())
