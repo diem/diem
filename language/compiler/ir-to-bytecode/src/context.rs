@@ -160,27 +160,19 @@ impl<'a> CompiledDependencyView<'a> {
     }
 }
 
-use rental::rental;
-rental! {
-    mod rent_stored_compiled_dependency {
-        use super::CompiledDependencyView;
-        use move_binary_format::file_format::CompiledModule;
-
-        #[rental(covariant)]
-        pub(crate) struct StoredCompiledDependency {
-            module: Box<CompiledModule>,
-            view: CompiledDependencyView<'module>,
-        }
-    }
+#[ouroboros::self_referencing]
+pub(crate) struct StoredCompiledDependency {
+    module: Box<CompiledModule>,
+    #[borrows(module)]
+    #[covariant]
+    view: CompiledDependencyView<'this>,
 }
-pub(crate) use rent_stored_compiled_dependency::StoredCompiledDependency;
 
 impl StoredCompiledDependency {
     pub fn create(module: CompiledModule) -> Result<Self> {
         Self::try_new(Box::new(module), move |module| {
             CompiledDependencyView::new(module)
         })
-        .map_err(|e| e.0)
     }
 }
 
@@ -723,7 +715,7 @@ impl<'a> Context<'a> {
             .ok_or_else(|| format_err!("Dependency not provided for {}", m))?;
         Ok(match dep {
             CompiledDependency::Borrowed(v) => v,
-            CompiledDependency::Stored(stored) => stored.suffix(),
+            CompiledDependency::Stored(stored) => stored.borrow_view(),
         })
     }
 

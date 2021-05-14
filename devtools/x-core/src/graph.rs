@@ -2,22 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Result, SystemError, WorkspaceSubsets, XCoreContext};
-use guppy::MetadataCommand;
+use guppy::{graph::PackageGraph, MetadataCommand};
+use ouroboros::self_referencing;
 
-rental! {
-    mod rent_package_graph {
-        use crate::WorkspaceSubsets;
-        use guppy::graph::PackageGraph;
-
-        #[rental(covariant)]
-        pub(crate) struct PackageGraphPlus {
-            g: Box<PackageGraph>,
-            subsets: WorkspaceSubsets<'g>,
-        }
-    }
+#[self_referencing]
+pub(crate) struct PackageGraphPlus {
+    g: Box<PackageGraph>,
+    #[borrows(g)]
+    #[covariant]
+    subsets: WorkspaceSubsets<'this>,
 }
-
-pub(crate) use rent_package_graph::PackageGraphPlus;
 
 impl PackageGraphPlus {
     pub(crate) fn create(ctx: &XCoreContext) -> Result<Self> {
@@ -26,12 +20,20 @@ impl PackageGraphPlus {
         let project_root = ctx.project_root();
         cmd.current_dir(project_root);
 
-        Self::try_new_or_drop(
+        Self::try_new(
             Box::new(
                 cmd.build_graph()
                     .map_err(|err| SystemError::guppy("building package graph", err))?,
             ),
             move |graph| WorkspaceSubsets::new(graph, project_root, &ctx.config().subsets),
         )
+    }
+
+    pub(crate) fn package_graph(&self) -> &PackageGraph {
+        self.borrow_g()
+    }
+
+    pub(crate) fn subsets(&self) -> &WorkspaceSubsets {
+        self.borrow_subsets()
     }
 }

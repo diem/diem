@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate log;
-#[macro_use]
-extern crate rental;
 
 pub mod compiler;
 mod context;
