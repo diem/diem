@@ -44,8 +44,8 @@ impl MempoolProxy {
         Self {
             consensus_to_mempool_sender,
             poll_count,
-            mempool_txn_pull_timeout_ms,
             mempool_executed_txn_timeout_ms,
+            mempool_txn_pull_timeout_ms,
         }
     }
 

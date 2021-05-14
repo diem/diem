@@ -83,11 +83,11 @@ fn filter_tests_from_definition(
             if errors.is_empty() {
                 Some(P::Definition::Script(P::Script {
                     attributes,
+                    loc,
                     uses,
                     constants,
                     function,
                     specs,
-                    loc,
                 }))
             } else {
                 context.env.add_errors(errors);

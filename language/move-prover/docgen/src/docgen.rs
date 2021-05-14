@@ -1655,11 +1655,7 @@ impl<'env> Docgen<'env> {
                 // A qualified name, but without the address. This must be an item in a module
                 // denoted by the first name.
                 let module_opt = if parts[0] == "Self" {
-                    if let Some(module) = &self.current_module {
-                        Some(module.clone())
-                    } else {
-                        None
-                    }
+                    self.current_module.as_ref().cloned()
                 } else {
                     self.env.find_module_by_name(parts_sym[0])
                 };

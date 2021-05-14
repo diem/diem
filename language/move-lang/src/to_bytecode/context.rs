@@ -163,8 +163,8 @@ impl<'a> Context<'a> {
         let (abilities, type_formals) = struct_declarations.get(&key).unwrap().clone();
         let name = Self::translate_struct_name(sname);
         IR::StructDependency {
-            name,
             abilities,
+            name,
             type_formals,
         }
     }

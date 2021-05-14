@@ -303,10 +303,9 @@ impl NetworkBuilder {
     }
 
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
-        match self.connectivity_manager_builder.as_ref() {
-            Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
-            None => None,
-        }
+        self.connectivity_manager_builder
+            .as_ref()
+            .map(|conn_mgr_builder| conn_mgr_builder.conn_mgr_reqs_tx())
     }
 
     fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {

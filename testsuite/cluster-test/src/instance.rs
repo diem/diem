@@ -182,9 +182,9 @@ impl Instance {
             peer_name,
             ip,
             ac_port,
-            backend,
             debug_interface_port,
             http_client,
+            backend,
         }
     }
 

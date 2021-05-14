@@ -663,11 +663,10 @@ pub fn format_read_write_set_annotation(
     if code_offset != 0 {
         return None;
     }
-    if let Some(a) = target.get_annotations().get::<ReadWriteSetState>() {
-        Some(format!("{}", a.display(target.func_env)))
-    } else {
-        None
-    }
+    target
+        .get_annotations()
+        .get::<ReadWriteSetState>()
+        .map(|a| format!("{}", a.display(target.func_env)))
 }
 
 pub struct ReadWriteSetStateDisplay<'a> {

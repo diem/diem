@@ -254,41 +254,39 @@ fn get_flags_and_baseline(
 fn collect_enabled_tests(reqs: &mut Vec<Requirements>, group: &str, feature: &Feature, path: &str) {
     let mut p = PathBuf::new();
     p.push(path);
-    for e in WalkDir::new(p.clone()).min_depth(1).into_iter() {
-        if let Ok(entry) = e {
-            if !entry.file_name().to_string_lossy().ends_with(".move") {
-                continue;
-            }
-            let path = entry.path();
-            let mut included = match feature.inclusion_mode {
-                InclusionMode::Implicit => !extract_test_directives(path, "// exclude_for: ")
+    for entry in WalkDir::new(p.clone()).min_depth(1).into_iter().flatten() {
+        if !entry.file_name().to_string_lossy().ends_with(".move") {
+            continue;
+        }
+        let path = entry.path();
+        let mut included = match feature.inclusion_mode {
+            InclusionMode::Implicit => !extract_test_directives(path, "// exclude_for: ")
+                .unwrap_or_default()
+                .iter()
+                .any(|s| s.as_str() == feature.name),
+            InclusionMode::Explicit => extract_test_directives(path, "// also_include_for: ")
+                .unwrap_or_default()
+                .iter()
+                .any(|s| s.as_str() == feature.name),
+        };
+        if included && read_env_var(ENV_TEST_ON_CI) == "1" {
+            included = feature.enable_in_ci
+                && extract_test_directives(path, "// no_ci:")
                     .unwrap_or_default()
-                    .iter()
-                    .any(|s| s.as_str() == feature.name),
-                InclusionMode::Explicit => extract_test_directives(path, "// also_include_for: ")
-                    .unwrap_or_default()
-                    .iter()
-                    .any(|s| s.as_str() == feature.name),
-            };
-            if included && read_env_var(ENV_TEST_ON_CI) == "1" {
-                included = feature.enable_in_ci
-                    && extract_test_directives(path, "// no_ci:")
-                        .unwrap_or_default()
-                        .is_empty();
-            }
-            let root_str = p.to_string_lossy().to_string();
-            let path_str = path.to_string_lossy().to_string();
-            if included {
-                included = (feature.enabling_condition)(group, &path_str);
-            }
-            if included {
-                reqs.push(Requirements::new(
-                    feature.runner,
-                    format!("prover {}[{}]", group, feature.name),
-                    root_str,
-                    path_str,
-                ));
-            }
+                    .is_empty();
+        }
+        let root_str = p.to_string_lossy().to_string();
+        let path_str = path.to_string_lossy().to_string();
+        if included {
+            included = (feature.enabling_condition)(group, &path_str);
+        }
+        if included {
+            reqs.push(Requirements::new(
+                feature.runner,
+                format!("prover {}[{}]", group, feature.name),
+                root_str,
+                path_str,
+            ));
         }
     }
 }

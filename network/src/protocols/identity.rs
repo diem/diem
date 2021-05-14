@@ -88,9 +88,9 @@ mod tests {
                 .into(),
         );
         let client_handshake = HandshakeMsg {
+            supported_protocols,
             chain_id,
             network_id,
-            supported_protocols,
         };
 
         let server_handshake_clone = server_handshake.clone();

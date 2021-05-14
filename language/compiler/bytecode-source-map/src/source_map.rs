@@ -310,8 +310,8 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
             type_parameters,
             parameters,
             locals,
-            code_map,
             nops,
+            code_map,
         }
     }
 }

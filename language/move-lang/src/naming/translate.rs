@@ -381,8 +381,8 @@ fn module(
         dependency_order,
         friends,
         structs,
-        functions,
         constants,
+        functions,
     }
 }
 

@@ -76,8 +76,8 @@ fn module(
         dependency_order,
         friends,
         structs,
-        functions,
         constants,
+        functions,
     }
 }
 
@@ -108,9 +108,9 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     T::Script {
         attributes,
         loc,
+        constants,
         function_name,
         function,
-        constants,
     }
 }
 

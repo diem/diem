@@ -290,16 +290,14 @@ impl VerifyingBatch {
             )));
         }
 
-        for response in &responses {
-            if let Ok(response) = response {
-                if response.state() != state {
-                    return Err(Error::rpc_response(format!(
-                        "expected all responses in batch to have the same metadata: {:?}, \
+        for response in responses.iter().flatten() {
+            if response.state() != state {
+                return Err(Error::rpc_response(format!(
+                    "expected all responses in batch to have the same metadata: {:?}, \
                          received unexpected response metadata: {:?}",
-                        state,
-                        response.state(),
-                    )));
-                }
+                    state,
+                    response.state(),
+                )));
             }
         }
 

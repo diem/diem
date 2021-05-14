@@ -329,8 +329,8 @@ impl<'a> ModuleGenerator<'a> {
         };
         Self {
             options,
-            gen,
             current_module,
+            gen,
         }
         .gen()
     }

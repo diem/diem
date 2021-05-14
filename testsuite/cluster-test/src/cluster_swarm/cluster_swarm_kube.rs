@@ -146,9 +146,9 @@ impl ClusterSwarmKube {
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self {
             client,
-            node_map,
             http_client,
             s3_client,
+            node_map,
         })
     }
 

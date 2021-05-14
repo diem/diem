@@ -119,8 +119,8 @@ impl AbstractState {
 
         Self {
             current_function,
-            local_states,
             all_local_abilities,
+            local_states,
         }
     }
 }

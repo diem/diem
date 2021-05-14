@@ -122,9 +122,9 @@ impl TestFailure {
         storage_state: Option<String>,
     ) -> Self {
         Self {
-            failure_reason,
             test_run_info,
             vm_error,
+            failure_reason,
             storage_state,
         }
     }

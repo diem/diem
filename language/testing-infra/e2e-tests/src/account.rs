@@ -455,7 +455,7 @@ impl EventHandleGenerator {
     }
 
     pub fn new_with_event_count(addr: AccountAddress, counter: u64) -> Self {
-        Self { addr, counter }
+        Self { counter, addr }
     }
 
     pub fn to_value(&self) -> Value {

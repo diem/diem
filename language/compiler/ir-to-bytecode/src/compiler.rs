@@ -681,7 +681,7 @@ fn compile_friends(
     for friend in friends {
         let ident = match (address_opt, friend) {
             (Some(address), ModuleIdent::Transaction(name)) => {
-                QualifiedModuleIdent { address, name }
+                QualifiedModuleIdent { name, address }
             }
             (None, ModuleIdent::Transaction(name)) => bail!(
                 "Invalid friend '{}'. No address specified for script so cannot resolve friend",
@@ -703,7 +703,7 @@ fn compile_imports(
     for import in imports {
         let ident = match (address_opt, import.ident) {
             (Some(address), ModuleIdent::Transaction(name)) => {
-                QualifiedModuleIdent { address, name }
+                QualifiedModuleIdent { name, address }
             }
             (None, ModuleIdent::Transaction(name)) => bail!(
                 "Invalid import '{}'. No address specified for script so cannot resolve import",

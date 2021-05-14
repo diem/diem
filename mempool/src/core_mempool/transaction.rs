@@ -30,9 +30,9 @@ impl MempoolTransaction {
     ) -> Self {
         Self {
             txn,
+            expiration_time,
             gas_amount,
             ranking_score,
-            expiration_time,
             timeline_state,
             governance_role,
         }

@@ -784,7 +784,7 @@ impl QualifiedModuleIdent {
     /// Creates a new fully qualified module identifier from the module name and the address at
     /// which it is published
     pub fn new(name: ModuleName, address: AccountAddress) -> Self {
-        QualifiedModuleIdent { address, name }
+        QualifiedModuleIdent { name, address }
     }
 
     /// Accessor for the name of the fully qualified module identifier

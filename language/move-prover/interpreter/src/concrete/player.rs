@@ -489,7 +489,7 @@ impl<'env> FunctionContext<'env> {
                     typed_args.remove(0),
                     global_state,
                 )
-                .map(|_| vec![])
+                .map(|_| Vec::new())
             }
             Operation::MoveFrom(module_id, struct_id, ty_args) => {
                 if cfg!(debug_assertions) {

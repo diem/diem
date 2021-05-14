@@ -157,10 +157,10 @@ fn run_benchmark(
     writeln!(out, "# time  : {}", chrono::Utc::now())?;
 
     let mut runner = Runner {
-        out,
         options,
-        per_function,
+        out,
         error_writer,
+        per_function,
     };
     println!(
         "Starting benchmarking with config `{}`.\n\

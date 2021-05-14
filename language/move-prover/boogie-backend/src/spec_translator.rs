@@ -832,13 +832,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ", ");
             }
         };
-        let label_at = |i| {
-            if let Some(labels) = memory_labels {
-                Some(labels[i])
-            } else {
-                None
-            }
-        };
+        let label_at = |i| memory_labels.as_ref().map(|labels| labels[i]);
         let mut i = 0;
         for memory in &fun_decl.used_memory {
             let memory = &memory.to_owned().instantiate(inst);

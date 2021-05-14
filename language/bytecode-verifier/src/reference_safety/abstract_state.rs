@@ -645,8 +645,8 @@ impl AbstractState {
             current_function,
             locals,
             borrow_graph,
-            next_id,
             num_locals,
+            next_id,
         }
     }
 }

@@ -100,8 +100,8 @@ impl TestPlan {
 
         Self {
             files,
-            module_info,
             module_tests,
+            module_info,
         }
     }
 }

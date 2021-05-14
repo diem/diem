@@ -71,10 +71,7 @@ static BEGIN_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"<!-- @begin-diemdoc name=([^ ]*) -->").unwrap());
 
 fn match_begin_command(line: &str) -> Option<String> {
-    match BEGIN_RE.captures(line) {
-        Some(cap) => Some(cap[1].to_string()),
-        None => None,
-    }
+    BEGIN_RE.captures(line).map(|cap| cap[1].to_string())
 }
 
 fn match_end_command(line: &str) -> bool {

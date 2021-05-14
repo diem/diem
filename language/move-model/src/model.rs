@@ -348,8 +348,8 @@ impl<Id: Clone> QualifiedId<Id> {
         let QualifiedId { module_id, id } = self;
         QualifiedInstId {
             module_id,
-            id,
             inst,
+            id,
         }
     }
 }

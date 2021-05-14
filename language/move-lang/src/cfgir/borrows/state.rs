@@ -715,9 +715,9 @@ impl BorrowState {
 
         Self {
             locals,
+            acquired_resources,
             borrows,
             next_id,
-            acquired_resources,
             prev_errors,
         }
     }

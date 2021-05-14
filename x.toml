@@ -39,6 +39,7 @@ allowed = [
     "clippy::upper_case_acronyms",
     # vec_init_with_push is buggy: https://github.com/rust-lang/rust-clippy/issues/6956
     "clippy::vec_init_then_push",
+    "clippy::len-without-is-empty",
 ]
 warn = [
     "clippy::wildcard_dependencies",

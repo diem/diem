@@ -169,11 +169,7 @@ impl Cargo {
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
-        let converted_val = if let Some(s) = val {
-            Some(s.as_ref().to_owned())
-        } else {
-            None
-        };
+        let converted_val = val.map(|s| s.as_ref().to_owned());
 
         self.env_additions
             .insert(key.as_ref().to_owned(), converted_val);

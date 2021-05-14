@@ -33,8 +33,8 @@ impl ModuleViewer {
 
         Self {
             file_id,
-            source_map,
             source_code,
+            source_map,
             module,
         }
     }

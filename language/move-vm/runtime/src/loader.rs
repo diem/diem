@@ -1243,7 +1243,7 @@ impl Module {
             for struct_def in module.struct_defs() {
                 let idx = struct_refs[struct_def.struct_handle.0 as usize];
                 let field_count = cache.structs[idx].fields.len() as u16;
-                structs.push(StructDef { idx, field_count });
+                structs.push(StructDef { field_count, idx });
                 let name =
                     module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
                 struct_map.insert(name.to_owned(), idx);
@@ -1312,14 +1312,14 @@ impl Module {
                 let def_idx = f_handle.owner;
                 let owner = structs[def_idx.0 as usize].idx;
                 let offset = f_handle.field as usize;
-                field_handles.push(FieldHandle { owner, offset });
+                field_handles.push(FieldHandle { offset, owner });
             }
 
             for f_inst in module.field_instantiations() {
                 let fh_idx = f_inst.handle;
                 let owner = field_handles[fh_idx.0 as usize].owner;
                 let offset = field_handles[fh_idx.0 as usize].offset;
-                field_instantiations.push(FieldInstantiation { owner, offset });
+                field_instantiations.push(FieldInstantiation { offset, owner });
             }
 
             Ok(())
@@ -1331,8 +1331,8 @@ impl Module {
                 module,
                 struct_refs,
                 structs,
-                function_refs,
                 struct_instantiations,
+                function_refs,
                 function_instantiations,
                 field_handles,
                 field_instantiations,

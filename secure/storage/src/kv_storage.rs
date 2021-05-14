@@ -43,6 +43,6 @@ pub struct GetResponse<T> {
 impl<T> GetResponse<T> {
     /// Creates a GetResponse
     pub fn new(value: T, last_update: u64) -> Self {
-        Self { value, last_update }
+        Self { last_update, value }
     }
 }

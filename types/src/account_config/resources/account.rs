@@ -40,12 +40,12 @@ impl AccountResource {
         received_events: EventHandle,
     ) -> Self {
         AccountResource {
-            sequence_number,
+            authentication_key,
             withdrawal_capability,
             key_rotation_capability,
-            authentication_key,
-            sent_events,
             received_events,
+            sent_events,
+            sequence_number,
         }
     }
 

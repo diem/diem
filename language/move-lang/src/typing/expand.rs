@@ -33,10 +33,8 @@ pub fn function_signature(context: &mut Context, sig: &mut FunctionSignature) {
 //**************************************************************************************************
 
 fn expected_types(context: &mut Context, ss: &mut Vec<Option<Type>>) {
-    for st_opt in ss {
-        if let Some(ss) = st_opt {
-            type_(context, ss);
-        }
+    for st_opt in ss.iter_mut().flatten() {
+        type_(context, st_opt);
     }
 }
 

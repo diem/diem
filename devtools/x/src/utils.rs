@@ -130,16 +130,10 @@ pub fn apply_sccache_if_possible(
             if let Some(prefix) = &sccache_config.prefix {
                 envs.push(("SCCACHE_S3_KEY_PREFIX", Some(prefix.to_owned())));
             }
-            let access_key_id = if let Some(val) = var_os("SCCACHE_AWS_ACCESS_KEY_ID") {
-                Some(val.to_string_lossy().to_string())
-            } else {
-                None
-            };
-            let access_key_secret = if let Some(val) = var_os("SCCACHE_AWS_SECRET_ACCESS_KEY") {
-                Some(val.to_string_lossy().to_string())
-            } else {
-                None
-            };
+            let access_key_id =
+                var_os("SCCACHE_AWS_ACCESS_KEY_ID").map(|val| val.to_string_lossy().to_string());
+            let access_key_secret = var_os("SCCACHE_AWS_SECRET_ACCESS_KEY")
+                .map(|val| val.to_string_lossy().to_string());
             // if either the access or secret key is not set, attempt to perform a public read.
             // do not set this flag if attempting to write, as it will prevent the use of the aws creds.
             if (access_key_id.is_none() || access_key_secret.is_none())

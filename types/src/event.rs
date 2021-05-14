@@ -170,7 +170,7 @@ pub struct EventHandle {
 impl EventHandle {
     /// Constructs a new Event Handle
     pub fn new(key: EventKey, count: u64) -> Self {
-        EventHandle { key, count }
+        EventHandle { count, key }
     }
 
     /// Return the key to where this event is stored in EventStore.

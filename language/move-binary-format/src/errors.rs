@@ -199,8 +199,8 @@ impl PartialVMError {
         VMError {
             major_status,
             sub_status,
-            location,
             message,
+            location,
             indices,
             offsets,
         }

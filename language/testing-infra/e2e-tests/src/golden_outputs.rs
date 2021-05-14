@@ -28,7 +28,7 @@ impl GoldenOutputs {
             mint.new_goldenfile(file_path.with_extension(EXT_NAME))
                 .unwrap(),
         );
-        Self { file, mint }
+        Self { mint, file }
     }
 
     pub fn log(&self, msg: &str) {

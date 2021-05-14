@@ -105,9 +105,9 @@ fn common_protocols() {
     let mut supported_protocols = BTreeMap::new();
     supported_protocols.insert(MessagingProtocolVersion::V1, SupportedProtocols::default());
     let h2 = HandshakeMsg {
+        supported_protocols,
         chain_id,
         network_id,
-        supported_protocols,
     };
 
     assert_eq!(

@@ -497,9 +497,9 @@ impl CollectOptions {
             .collect::<BTreeMap<_, _>>();
 
         Ok(AssetsProof {
-            total_unfrozen_balances,
             metadata,
             all_child_vasps_valid,
+            total_unfrozen_balances,
             currencies,
             parent_vasp,
             child_vasps,

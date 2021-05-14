@@ -90,7 +90,7 @@ impl NibblePath {
     pub fn new(bytes: Vec<u8>) -> Self {
         checked_precondition!(bytes.len() <= ROOT_NIBBLE_HEIGHT / 2);
         let num_nibbles = bytes.len() * 2;
-        NibblePath { bytes, num_nibbles }
+        NibblePath { num_nibbles, bytes }
     }
 
     /// Similar to `new()` but assumes that the bytes have one less nibble.
@@ -102,7 +102,7 @@ impl NibblePath {
             "Last nibble must be 0."
         );
         let num_nibbles = bytes.len() * 2 - 1;
-        NibblePath { bytes, num_nibbles }
+        NibblePath { num_nibbles, bytes }
     }
 
     /// Adds a nibble to the end of the nibble path.

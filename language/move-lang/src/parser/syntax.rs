@@ -1730,8 +1730,8 @@ fn parse_constant_decl(
     Ok(Constant {
         attributes,
         loc,
-        name,
         signature,
+        name,
         value,
     })
 }

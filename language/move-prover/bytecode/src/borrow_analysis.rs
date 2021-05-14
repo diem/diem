@@ -484,7 +484,7 @@ impl<'a> BorrowAnalysis<'a> {
             }
         }
         summary.consolidate();
-        BorrowAnnotation { code_map, summary }
+        BorrowAnnotation { summary, code_map }
     }
 
     fn borrow_node(&self, idx: TempIndex) -> BorrowNode {

@@ -213,11 +213,7 @@ impl Service {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("get receiver account response not found"))?
             .as_ref();
-        let receiver_seq_num = if let Some(account) = receiver {
-            Some(account.sequence_number)
-        } else {
-            None
-        };
+        let receiver_seq_num = receiver.map(|account| account.sequence_number);
         Ok((treasury_compliance, designated_dealer, receiver_seq_num))
     }
 }

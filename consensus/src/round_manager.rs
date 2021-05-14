@@ -215,8 +215,8 @@ impl RoundManager {
             proposer_election,
             proposal_generator,
             safety_rules,
-            txn_manager,
             network,
+            txn_manager,
             storage,
             sync_only,
         }

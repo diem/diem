@@ -222,11 +222,7 @@ impl<'env> FunctionTarget<'env> {
     pub fn get_local_index(&self, name: Symbol) -> Option<usize> {
         self.data.name_to_index.get(&name).cloned().or_else(|| {
             let str = self.global_env().symbol_pool().string(name);
-            if let Some(s) = str.strip_prefix("$t") {
-                Some(s.parse::<usize>().unwrap())
-            } else {
-                None
-            }
+            str.strip_prefix("$t").map(|s| s.parse::<usize>().unwrap())
         })
     }
 

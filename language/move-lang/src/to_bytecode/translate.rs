@@ -323,8 +323,8 @@ fn function_info_map(
         })
         .collect();
     let function_info = FunctionInfo {
-        parameters,
         spec_info,
+        parameters,
     };
 
     let name_loc = *collected_function_infos.get_loc_(&name).unwrap();
@@ -356,8 +356,8 @@ fn script_function_info(
         })
         .collect();
     FunctionInfo {
-        parameters,
         spec_info,
+        parameters,
     }
 }
 

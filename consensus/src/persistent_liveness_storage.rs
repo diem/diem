@@ -132,9 +132,9 @@ pub struct RootMetadata {
 impl RootMetadata {
     pub fn new(num_leaves: u64, accu_hash: HashValue, frozen_root_hashes: Vec<HashValue>) -> Self {
         Self {
-            num_leaves,
             accu_hash,
             frozen_root_hashes,
+            num_leaves,
         }
     }
 
