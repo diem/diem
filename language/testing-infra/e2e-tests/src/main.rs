@@ -17,6 +17,7 @@ use bytecode_interpreter::{
         ty::BaseType,
         value::GlobalState,
     },
+    shared::bridge::{adapt_move_vm_change_set, adapt_move_vm_result},
     StacklessBytecodeInterpreter,
 };
 use diem_framework::diem_stdlib_files;
@@ -48,10 +49,7 @@ use language_e2e_tests::{
         TRACE_FILE_ERROR, TRACE_FILE_NAME,
     },
 };
-use move_binary_format::{
-    errors::{PartialVMError, VMResult},
-    CompiledModule,
-};
+use move_binary_format::{errors::VMResult, CompiledModule};
 use move_core_types::{
     effects::{ChangeSet, Event},
     gas_schedule::GasAlgebra,
@@ -147,18 +145,6 @@ fn compare_output(
     }
 }
 
-fn adapt_move_vm_result<T>(result: VMResult<T>) -> VMResult<T> {
-    result.map_err(|err| {
-        let (status_code, sub_status, _, location, _, _) = err.all_data();
-        let adapted = PartialVMError::new(status_code);
-        let adapted = match sub_status {
-            None => adapted,
-            Some(status_code) => adapted.with_sub_status(status_code),
-        };
-        adapted.finish(location)
-    })
-}
-
 //**************************************************************************************************
 // Cross-VM comparison
 //**************************************************************************************************
@@ -206,7 +192,7 @@ impl<'env> CrossRunner<'env> {
                             .unwrap();
                     let resource = convert_move_value(env, &struct_val, &struct_ty).unwrap();
                     let inst = struct_ty.into_struct_inst();
-                    stackless_vm_state.init_resource(ap.address, inst, resource);
+                    stackless_vm_state.put_resource(ap.address, inst, resource);
                 }
             }
         }
@@ -280,6 +266,8 @@ impl<'env> CrossRunner<'env> {
 
         // compare
         let move_vm_return_values = adapt_move_vm_result(move_vm_return_values);
+        let move_vm_change_set =
+            adapt_move_vm_change_set(Ok(move_vm_change_set), &self.move_vm_state).unwrap();
         assert_eq!(move_vm_return_values, stackless_vm_return_values);
         assert_eq!(move_vm_change_set, stackless_vm_change_set);
 
@@ -340,6 +328,8 @@ impl<'env> CrossRunner<'env> {
 
         // compare
         let move_vm_return_values = adapt_move_vm_result(move_vm_return_values);
+        let move_vm_change_set =
+            adapt_move_vm_change_set(Ok(move_vm_change_set), &self.move_vm_state).unwrap();
         assert_eq!(move_vm_return_values, stackless_vm_return_values);
         assert_eq!(move_vm_change_set, stackless_vm_change_set);
 

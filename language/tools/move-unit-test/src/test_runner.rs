@@ -8,13 +8,11 @@ use crate::{
 use anyhow::Result;
 use bytecode_interpreter::{
     concrete::{settings::InterpreterSettings, value::GlobalState},
+    shared::bridge::{adapt_move_vm_change_set, adapt_move_vm_result},
     StacklessBytecodeInterpreter,
 };
 use colored::*;
-use move_binary_format::{
-    errors::{PartialVMError, VMResult},
-    file_format::CompiledModule,
-};
+use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_core_types::{
     effects::ChangeSet,
     gas_schedule::{CostTable, GasAlgebra, GasCost, GasUnits},
@@ -233,24 +231,6 @@ impl SharedTestingConfig {
         (Ok(change_set), return_result, test_run_info)
     }
 
-    // The result returned by the stackless VM does not contain code offsets and indices. In order to
-    // do cross-vm comparison, we need to adapt the Move VM result by removing these fields.
-    fn adapt_move_vm_result(result: VMResult<Vec<Vec<u8>>>) -> VMResult<Vec<Vec<u8>>> {
-        result.map_err(|err| {
-            let (status_code, sub_status, message, location, _, _) = err.all_data();
-            let adapted = PartialVMError::new(status_code);
-            let adapted = match sub_status {
-                None => adapted,
-                Some(status_code) => adapted.with_sub_status(status_code),
-            };
-            let adapted = match message {
-                None => adapted,
-                Some(message) => adapted.with_message(message),
-            };
-            adapted.finish(location)
-        })
-    }
-
     fn exec_module_tests<W: Write>(
         &self,
         test_plan: &ModuleTestPlan,
@@ -308,8 +288,9 @@ impl SharedTestingConfig {
                         function_name,
                         test_info,
                     );
-                let move_vm_result = Self::adapt_move_vm_result(exec_result.clone());
-                let move_vm_change_set = cs_result.clone();
+                let move_vm_result = adapt_move_vm_result(exec_result.clone());
+                let move_vm_change_set =
+                    adapt_move_vm_change_set(cs_result.clone(), &self.starting_storage_state);
                 if stackless_vm_result != move_vm_result
                     || stackless_vm_change_set != move_vm_change_set
                 {
