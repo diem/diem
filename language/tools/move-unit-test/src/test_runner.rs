@@ -208,17 +208,23 @@ impl SharedTestingConfig {
     ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
         let now = Instant::now();
 
+        let settings = if self.verbose {
+            InterpreterSettings::verbose_default()
+        } else {
+            InterpreterSettings::default()
+        };
+        let interpreter = StacklessBytecodeInterpreter::new(env, None, settings);
+
         // NOTE: as of now, `self.starting_storage_state` contains modules only and no resources.
         // The modules are captured by `env: &GlobalEnv` and the default GlobalState captures the
         // empty-resource state.
-        let interpreter =
-            StacklessBytecodeInterpreter::new(env, None, InterpreterSettings::default());
+        let global_state = GlobalState::default();
         let (return_result, change_set, _) = interpreter.interpret(
             &test_plan.module_id,
             &IdentStr::new(function_name).unwrap(),
             &[], // no ty args, at least for now
             &test_info.arguments,
-            &GlobalState::default(),
+            &global_state,
         );
 
         let test_run_info = TestRunInfo::new(
