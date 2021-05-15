@@ -21,7 +21,7 @@ use move_core_types::{
     vm_status::{sub_status, StatusCode},
 };
 use move_model::{
-    ast::TempIndex,
+    ast::{MemoryLabel, TempIndex},
     model::{FunId, FunctionEnv, ModuleId, StructId},
     ty as MT,
 };
@@ -34,7 +34,7 @@ use crate::{
             convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
             Type,
         },
-        value::{GlobalState, LocalSlot, Pointer, TypedValue},
+        value::{EvalState, GlobalState, LocalSlot, Pointer, TypedValue},
     },
     shared::variant::choose_variant,
 };
@@ -103,6 +103,7 @@ impl<'env> FunctionContext<'env> {
         &self,
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
+        eval_state: &mut EvalState,
     ) -> ExecResult<LocalState> {
         let instructions = self.target.get_bytecode();
         let debug_bytecode = self.get_settings().verbose_bytecode;
@@ -117,7 +118,7 @@ impl<'env> FunctionContext<'env> {
                     bytecode.display(&self.target, &self.label_offsets)
                 );
             }
-            self.exec_bytecode(bytecode, &mut local_state, global_state)?;
+            self.exec_bytecode(bytecode, &mut local_state, global_state, eval_state)?;
         }
         Ok(local_state)
     }
@@ -303,15 +304,22 @@ impl<'env> FunctionContext<'env> {
         bytecode: &Bytecode,
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
+        eval_state: &mut EvalState,
     ) -> ExecResult<()> {
         match bytecode {
             Bytecode::Assign(_, dst, src, kind) => {
                 self.handle_assign(*dst, *src, kind, local_state)
             }
             Bytecode::Load(_, dst, constant) => self.handle_load(*dst, constant, local_state),
-            Bytecode::Call(_, dsts, op, srcs, on_abort) => {
-                self.handle_operation(dsts, op, srcs, on_abort.as_ref(), local_state, global_state)?
-            }
+            Bytecode::Call(_, dsts, op, srcs, on_abort) => self.handle_operation(
+                dsts,
+                op,
+                srcs,
+                on_abort.as_ref(),
+                local_state,
+                global_state,
+                eval_state,
+            )?,
             Bytecode::Label(_, label) => {
                 if cfg!(debug_assertions) {
                     self.code_offset_by_label(*label);
@@ -325,10 +333,19 @@ impl<'env> FunctionContext<'env> {
             }
             Bytecode::Abort(_, index) => self.handle_abort(*index, local_state),
             Bytecode::Ret(_, rets) => self.handle_return(rets, local_state),
-            // global memory and expressions (TODO: not supported yet)
-            Bytecode::SaveMem(..) | Bytecode::Prop(..) => {}
-            // deprecated
-            Bytecode::Nop(_) | Bytecode::SaveSpecVar(..) => {}
+            Bytecode::Nop(_) => (),
+            Bytecode::SaveMem(_, mem_label, qid) => self.handle_save_mem(
+                *mem_label,
+                qid.module_id,
+                qid.id,
+                &qid.inst,
+                global_state,
+                eval_state,
+            ),
+            // expressions (TODO: not supported yet)
+            Bytecode::Prop(..) => {}
+            // not-in-use as of now
+            Bytecode::SaveSpecVar(..) => unreachable!(),
         }
         local_state.ready_pc_for_next_instruction();
         Ok(())
@@ -379,6 +396,7 @@ impl<'env> FunctionContext<'env> {
         on_abort: Option<&AbortAction>,
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
+        eval_state: &mut EvalState,
     ) -> ExecResult<()> {
         // check abort handler
         if cfg!(debug_assertions) {
@@ -461,6 +479,7 @@ impl<'env> FunctionContext<'env> {
                 srcs,
                 local_state,
                 global_state,
+                eval_state,
             ),
             // opaque
             Operation::OpaqueCallBegin(module_id, fun_id, ty_args) => self.handle_call_function(
@@ -471,6 +490,7 @@ impl<'env> FunctionContext<'env> {
                 srcs,
                 local_state,
                 global_state,
+                eval_state,
             ),
             Operation::OpaqueCallEnd(module_id, fun_id, ty_args) => {
                 self.handle_opaque_call_end(*module_id, *fun_id, ty_args, typed_args);
@@ -842,6 +862,7 @@ impl<'env> FunctionContext<'env> {
         srcs: &[TempIndex],
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
+        eval_state: &mut EvalState,
     ) -> ExecResult<Vec<TypedValue>> {
         let env = self.target.global_env();
         let callee_env = env.get_function(module_id.qualified(fun_id));
@@ -866,7 +887,8 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // execute the user function
-        let mut callee_state = callee_ctxt.exec_user_function(typed_args, global_state)?;
+        let mut callee_state =
+            callee_ctxt.exec_user_function(typed_args, global_state, eval_state)?;
 
         // update mutable arguments
         for (callee_idx, origin_idx) in mut_args {
@@ -1818,6 +1840,24 @@ impl<'env> FunctionContext<'env> {
     }
 
     //
+    // expressions
+    //
+
+    fn handle_save_mem(
+        &self,
+        mem_label: MemoryLabel,
+        module_id: ModuleId,
+        struct_id: StructId,
+        ty_args: &[MT::Type],
+        global_state: &GlobalState,
+        eval_state: &mut EvalState,
+    ) {
+        let env = self.target.global_env();
+        let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
+        eval_state.save_memory(mem_label, inst, global_state);
+    }
+
+    //
     // utilities
     //
 
@@ -1921,8 +1961,9 @@ pub fn entrypoint(
     typed_args: Vec<TypedValue>,
     global_state: &mut GlobalState,
 ) -> ExecResult<Vec<TypedValue>> {
+    let mut eval_state = EvalState::default();
     let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
-    let local_state = ctxt.exec_user_function(typed_args, global_state)?;
+    let local_state = ctxt.exec_user_function(typed_args, global_state, &mut eval_state)?;
     let termination = local_state.into_termination_status();
     match termination {
         TerminationStatus::Abort(abort_info) => Err(abort_info),

@@ -9,7 +9,7 @@ use move_core_types::{
     effects::ChangeSet,
     value::{MoveStruct, MoveValue},
 };
-use move_model::ast::TempIndex;
+use move_model::ast::{MemoryLabel, TempIndex};
 
 use crate::concrete::ty::{BaseType, StructInstantiation, Type};
 
@@ -995,5 +995,42 @@ impl GlobalState {
         }
 
         change_set
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub struct EvalState {
+    // global resources specifically marked as saved
+    saved_memory:
+        BTreeMap<MemoryLabel, BTreeMap<StructInstantiation, BTreeMap<AccountAddress, BaseValue>>>,
+}
+
+impl EvalState {
+    pub fn save_memory(
+        &mut self,
+        label: MemoryLabel,
+        inst: StructInstantiation,
+        global_state: &GlobalState,
+    ) {
+        // type check that the values stored under the same memory_label may be of different
+        // instantiations but must have the same base struct type
+        if cfg!(debug_assertions) {
+            if let Some(per_label_map) = self.saved_memory.get(&label) {
+                assert_eq!(per_label_map.keys().next().unwrap().ident, inst.ident);
+            }
+        }
+
+        // collect values
+        let per_account_map = global_state
+            .accounts
+            .iter()
+            .filter_map(|(addr, state)| state.storage.get(&inst).map(|val| (*addr, val.clone())))
+            .collect();
+
+        self.saved_memory
+            .entry(label)
+            .and_modify(|per_label_map| per_label_map.clear())
+            .or_insert_with(BTreeMap::new)
+            .insert(inst, per_account_map);
     }
 }
