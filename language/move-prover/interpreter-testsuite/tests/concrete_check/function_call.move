@@ -36,7 +36,7 @@ module 0x2::A {
         a
     }
 
-    // TODO (mengxu): this creates a Weak edge in the borrow graph
+    #[test]
     public fun call_return_mut_ref(): u64 {
         let a = 0;
         let b = &mut a;

@@ -126,9 +126,10 @@ pub enum Pointer {
     None,
     Global(AccountAddress),
     Local(TempIndex),
-    RefWhole(TempIndex),
     RefField(TempIndex, usize),
     RefElement(TempIndex, usize),
+    ArgRef(TempIndex, Box<Pointer>),
+    RetRef(Vec<Pointer>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -492,6 +493,96 @@ impl TypedValue {
         }
     }
 
+    /// Wrap the pointer in the mutable reference to mark that this ref is passed in as an argument
+    pub fn box_into_mut_ref_arg(self, index: TempIndex) -> TypedValue {
+        let (ty, val, ptr) = self.decompose();
+        if cfg!(debug_assertions) {
+            assert!(ty.is_ref(Some(true)));
+        }
+        TypedValue {
+            ty,
+            val,
+            ptr: Pointer::ArgRef(index, Box::new(ptr)),
+        }
+    }
+
+    /// Unwrap the pointer from the mutable reference to its original pointer
+    pub fn unbox_from_mut_ref_arg(self) -> TypedValue {
+        let (ty, val, ptr) = self.decompose();
+        if cfg!(debug_assertions) {
+            assert!(ty.is_ref(Some(true)));
+        }
+        let unboxed_ptr = match ptr {
+            Pointer::ArgRef(_, original_ptr) => *original_ptr,
+            _ => unreachable!(),
+        };
+        TypedValue {
+            ty,
+            val,
+            ptr: unboxed_ptr,
+        }
+    }
+
+    /// Wrap the pointer in the mutable reference to mark that this ref is passed out as a return
+    pub fn box_into_mut_ref_ret(self, ptrs: &BTreeMap<TempIndex, &Pointer>) -> TypedValue {
+        fn follow_return_pointers_recursive(
+            cur: &Pointer,
+            ptrs: &BTreeMap<TempIndex, &Pointer>,
+            trace: &mut Vec<Pointer>,
+        ) {
+            match cur {
+                Pointer::ArgRef(_, _) => trace.push(cur.clone()),
+                Pointer::RefField(idx, _) | Pointer::RefElement(idx, _) => {
+                    trace.push(cur.clone());
+                    follow_return_pointers_recursive(ptrs.get(idx).unwrap(), ptrs, trace);
+                }
+                Pointer::None | Pointer::Local(_) | Pointer::Global(_) | Pointer::RetRef(_) => {
+                    unreachable!()
+                }
+            }
+        }
+
+        let (ty, val, ptr) = self.decompose();
+        if cfg!(debug_assertions) {
+            assert!(ty.is_ref(Some(true)));
+        }
+
+        let mut trace = vec![];
+        follow_return_pointers_recursive(&ptr, ptrs, &mut trace);
+        let boxed_ptr = Pointer::RetRef(trace);
+        TypedValue {
+            ty,
+            val,
+            ptr: boxed_ptr,
+        }
+    }
+
+    /// Unwrap the pointer from the mutable reference to its original pointer
+    pub fn unbox_from_mut_ref_ret(self) -> TypedValue {
+        let (ty, val, ptr) = self.decompose();
+        if cfg!(debug_assertions) {
+            assert!(ty.is_ref(Some(true)));
+        }
+        let unboxed_ptr = match ptr {
+            Pointer::RetRef(mut trace) => {
+                let sub = trace.pop().unwrap();
+                if cfg!(debug_assertions) {
+                    assert!(trace.is_empty());
+                }
+                match sub {
+                    Pointer::ArgRef(_, original_ptr) => *original_ptr,
+                    _ => unreachable!(),
+                }
+            }
+            _ => unreachable!(),
+        };
+        TypedValue {
+            ty,
+            val,
+            ptr: unboxed_ptr,
+        }
+    }
+
     pub fn get_vector_element(self, elem_num: usize) -> Option<TypedValue> {
         let elem_ty = self.ty.into_vector_elem();
         let val = match self.val {
@@ -593,17 +684,13 @@ impl TypedValue {
         Some(new_vec)
     }
 
-    pub fn update_ref_vector_element(self, elem_val: TypedValue) -> TypedValue {
-        let (elem_ty, elem_val, elem_ptr) = elem_val.decompose();
+    pub fn update_ref_vector_element(self, elem_num: usize, elem_val: TypedValue) -> TypedValue {
+        let (elem_ty, elem_val, _) = elem_val.decompose();
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
         let elem = vec_ty.into_ref_vector_elem(Some(true));
         if cfg!(debug_assertions) {
             assert!(elem_ty.is_ref_of(&elem, Some(true)));
         }
-        let elem_num = match elem_ptr {
-            Pointer::RefElement(_, elem_num) => elem_num,
-            _ => unreachable!(),
-        };
         let mut elems = vec_val.into_vector();
         *elems.get_mut(elem_num).unwrap() = elem_val;
         TypedValue {
@@ -682,11 +769,10 @@ impl TypedValue {
     }
 
     pub fn update_ref_struct_field(self, field_num: usize, field_val: TypedValue) -> TypedValue {
-        let (field_ty, field_val, field_ptr) = field_val.decompose();
+        let (field_ty, field_val, _) = field_val.decompose();
         let (struct_ty, struct_val, struct_ptr) = self.decompose();
         let inst = struct_ty.into_ref_struct_inst(Some(true));
         if cfg!(debug_assertions) {
-            assert!(matches!(field_ptr, Pointer::RefField(_, ref_field) if ref_field == field_num));
             assert!(field_ty.is_ref_of(&inst.fields.get(field_num).unwrap().ty, Some(true)));
         }
         let mut fields = struct_val.into_struct();
@@ -828,6 +914,11 @@ impl LocalSlot {
             val,
             ptr,
         }
+    }
+
+    /// Get the content of the slot, if any, return None of the slot does not currently hold a value
+    pub fn get_content(&self) -> Option<&(BaseValue, Pointer)> {
+        self.content.as_ref()
     }
 }
 
