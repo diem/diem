@@ -31,8 +31,8 @@ use crate::{
         local_state::{AbortInfo, LocalState, TerminationStatus},
         settings::InterpreterSettings,
         ty::{
-            convert_model_base_type, convert_model_local_type, convert_model_struct_type, BaseType,
-            Type,
+            convert_model_base_type, convert_model_local_type, convert_model_partial_struct_type,
+            convert_model_struct_type, BaseType, Type,
         },
         value::{EvalState, GlobalState, LocalSlot, Pointer, TypedValue},
     },
@@ -1853,7 +1853,7 @@ impl<'env> FunctionContext<'env> {
         eval_state: &mut EvalState,
     ) {
         let env = self.target.global_env();
-        let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
+        let inst = convert_model_partial_struct_type(env, module_id, struct_id, ty_args);
         eval_state.save_memory(mem_label, inst, global_state);
     }
 

@@ -11,7 +11,10 @@ use move_core_types::{
 };
 use move_model::ast::{MemoryLabel, TempIndex};
 
-use crate::concrete::ty::{BaseType, StructInstantiation, Type};
+use crate::{
+    concrete::ty::{BaseType, PartialStructInstantiation, StructInstantiation, Type},
+    shared::ident::StructIdent,
+};
 
 //**************************************************************************************************
 // Value core
@@ -1001,36 +1004,34 @@ impl GlobalState {
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct EvalState {
     // global resources specifically marked as saved
-    saved_memory:
-        BTreeMap<MemoryLabel, BTreeMap<StructInstantiation, BTreeMap<AccountAddress, BaseValue>>>,
+    saved_memory: BTreeMap<
+        MemoryLabel,
+        BTreeMap<StructIdent, BTreeMap<StructInstantiation, BTreeMap<AccountAddress, BaseValue>>>,
+    >,
 }
 
 impl EvalState {
     pub fn save_memory(
         &mut self,
         label: MemoryLabel,
-        inst: StructInstantiation,
+        partial_inst: PartialStructInstantiation,
         global_state: &GlobalState,
     ) {
-        // type check that the values stored under the same memory_label may be of different
-        // instantiations but must have the same base struct type
-        if cfg!(debug_assertions) {
-            if let Some(per_label_map) = self.saved_memory.get(&label) {
-                assert_eq!(per_label_map.keys().next().unwrap().ident, inst.ident);
+        let mut per_struct_map = BTreeMap::new();
+        for (addr, state) in &global_state.accounts {
+            for (inst, val) in &state.storage {
+                if inst.ident == partial_inst.ident {
+                    per_struct_map
+                        .entry(inst.clone())
+                        .or_insert_with(BTreeMap::new)
+                        .insert(*addr, val.clone());
+                }
             }
         }
-
-        // collect values
-        let per_account_map = global_state
-            .accounts
-            .iter()
-            .filter_map(|(addr, state)| state.storage.get(&inst).map(|val| (*addr, val.clone())))
-            .collect();
-
         self.saved_memory
             .entry(label)
             .and_modify(|per_label_map| per_label_map.clear())
             .or_insert_with(BTreeMap::new)
-            .insert(inst, per_account_map);
+            .insert(partial_inst.ident, per_struct_map);
     }
 }
