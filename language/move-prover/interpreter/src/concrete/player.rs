@@ -443,10 +443,6 @@ impl<'env> FunctionContext<'env> {
                 }
                 return Ok(());
             }
-            // deprecated
-            Operation::PackRefDeep | Operation::UnpackRefDeep => {
-                unreachable!();
-            }
             // all others require args to be collected up front
             _ => (),
         }
@@ -591,7 +587,10 @@ impl<'env> FunctionContext<'env> {
                 Ok(vec![exists])
             }
             // scope
-            Operation::PackRef | Operation::UnpackRef => {
+            Operation::PackRef
+            | Operation::UnpackRef
+            | Operation::PackRefDeep
+            | Operation::UnpackRefDeep => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                     let arg_ty = typed_args.get(0).unwrap().get_ty();
@@ -799,9 +798,7 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceLocal(..)
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
-            | Operation::TraceExp(..)
-            | Operation::PackRefDeep
-            | Operation::UnpackRefDeep => {
+            | Operation::TraceExp(..) => {
                 unreachable!();
             }
         };
