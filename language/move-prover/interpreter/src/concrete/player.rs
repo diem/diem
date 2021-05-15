@@ -619,12 +619,16 @@ impl<'env> FunctionContext<'env> {
                 Ok(vec![])
             }
             // write-back
-            Operation::WriteBack(BorrowNode::ReturnPlaceholder(_), ..) => {
-                unreachable!("unexpected intermediate borrow node")
+            Operation::IsParent(BorrowNode::Reference(parent_idx), edge) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(typed_args.len(), 1);
+                }
+                let result = self.handle_is_parent(*parent_idx, edge, typed_args.remove(0));
+                Ok(vec![result])
             }
-            Operation::IsParent(..) => {
-                // TODO: implement write_back check
-                Ok(vec![TypedValue::mk_bool(true)])
+            Operation::IsParent(_, _) => {
+                // only Reference can appear in BorrowNode
+                unreachable!()
             }
             Operation::WriteBack(BorrowNode::GlobalRoot(qid), edge) => {
                 if cfg!(debug_assertions) {
@@ -660,7 +664,7 @@ impl<'env> FunctionContext<'env> {
                 }
                 match edge {
                     BorrowEdge::Direct => {
-                        self.handle_write_back_ref_whole(*idx, typed_args.remove(0), local_state)
+                        self.handle_write_back_ref_direct(*idx, typed_args.remove(0), local_state)
                     }
                     BorrowEdge::Field(qid, field_num) => self.handle_write_back_ref_field(
                         qid.module_id,
@@ -674,12 +678,18 @@ impl<'env> FunctionContext<'env> {
                     BorrowEdge::Index => {
                         self.handle_write_back_ref_element(*idx, typed_args.remove(0), local_state)
                     }
-                    BorrowEdge::Hyper(_) => {
-                        // TODO: implement
-                        unimplemented!("hyper edges")
-                    }
+                    BorrowEdge::Hyper(hyper) => self.handle_write_back_ref_hyper(
+                        hyper,
+                        *idx,
+                        typed_args.remove(0),
+                        local_state,
+                    ),
                 }
                 Ok(vec![])
+            }
+            Operation::WriteBack(BorrowNode::ReturnPlaceholder(_), ..) => {
+                // this node should never appear in bytecode
+                unreachable!()
             }
             // references
             Operation::BorrowLoc => {
@@ -879,11 +889,24 @@ impl<'env> FunctionContext<'env> {
         }
 
         // collect mutable arguments
-        let mut_args: Vec<_> = typed_args
+        let mut_args: BTreeMap<_, _> = typed_args
             .iter()
             .enumerate()
             .filter(|(_, arg)| arg.get_ty().is_ref(Some(true)))
-            .map(|(callee_idx, _)| (callee_idx, *srcs.get(callee_idx).unwrap()))
+            .map(|(callee_idx, _)| (callee_idx, srcs[callee_idx]))
+            .collect();
+
+        // wrap the pointer in mut_ref args
+        let typed_args = typed_args
+            .into_iter()
+            .enumerate()
+            .map(|(idx, arg)| {
+                if mut_args.contains_key(&idx) {
+                    arg.box_into_mut_ref_arg(srcs[idx])
+                } else {
+                    arg
+                }
+            })
             .collect();
 
         // execute the user function
@@ -897,7 +920,8 @@ impl<'env> FunctionContext<'env> {
                 callee_state.del_value(callee_idx)
             } else {
                 callee_state.load_destroyed_arg(callee_idx)
-            };
+            }
+            .unbox_from_mut_ref_arg();
             if cfg!(debug_assertions) {
                 assert_eq!(old_val.get_ptr(), new_val.get_ptr());
             }
@@ -1084,6 +1108,64 @@ impl<'env> FunctionContext<'env> {
         TypedValue::mk_bool(global_state.has_resource(&addr, &inst))
     }
 
+    fn handle_is_parent(
+        &self,
+        parent_idx: TempIndex,
+        edge: &BorrowEdge,
+        op_val: TypedValue,
+    ) -> TypedValue {
+        fn follow_pointer_edge(p: &Pointer, e: &BorrowEdge) -> bool {
+            match (p, e) {
+                (Pointer::RefField(_, p_field_num), BorrowEdge::Field(_, e_field_num)) => {
+                    p_field_num == e_field_num
+                }
+                (Pointer::RefElement(_, _), BorrowEdge::Index) => true,
+                _ => false,
+            }
+        }
+
+        fn follow_pointer_trace(trace: &[Pointer], edges: &[BorrowEdge]) -> bool {
+            for (p, e) in trace.iter().rev().zip(edges.iter()) {
+                if !follow_pointer_edge(p, e) {
+                    return false;
+                }
+            }
+            true
+        }
+
+        let (_, _, ptr) = op_val.decompose();
+        let is_parent = match ptr {
+            Pointer::RefField(idx, _) => idx == parent_idx,
+            Pointer::RefElement(idx, _) => idx == parent_idx,
+            Pointer::ArgRef(idx, _) => idx == parent_idx,
+            Pointer::RetRef(mut trace) => match trace.pop().unwrap() {
+                Pointer::ArgRef(idx, _) => {
+                    if idx == parent_idx {
+                        if trace.len() == 1 {
+                            follow_pointer_edge(trace.get(0).unwrap(), edge)
+                        } else {
+                            match edge {
+                                BorrowEdge::Hyper(hyper) => {
+                                    if hyper.len() == trace.len() {
+                                        follow_pointer_trace(&trace, hyper)
+                                    } else {
+                                        false
+                                    }
+                                }
+                                _ => false,
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                }
+                _ => unreachable!(),
+            },
+            Pointer::None | Pointer::Local(_) | Pointer::Global(_) => unreachable!(),
+        };
+        TypedValue::mk_bool(is_parent)
+    }
+
     fn handle_write_back_global_struct(
         &self,
         module_id: ModuleId,
@@ -1128,26 +1210,35 @@ impl<'env> FunctionContext<'env> {
         }
     }
 
-    fn handle_write_back_ref_whole(
+    fn handle_write_back_ref_direct(
         &self,
         local_ref: TempIndex,
         op_val: TypedValue,
         local_state: &mut LocalState,
     ) {
+        let old_val = local_state.del_value(local_ref);
         if cfg!(debug_assertions) {
             let new_ty = op_val.get_ty();
             assert!(new_ty.is_ref(Some(true)));
-            assert_eq!(new_ty, local_state.get_type(local_ref));
-            assert!(local_state.has_value(local_ref));
-        }
-        match op_val.get_ptr() {
-            Pointer::RefWhole(ref_idx) => {
-                if *ref_idx == local_ref {
-                    local_state.put_value_override(local_ref, op_val);
+            assert_eq!(new_ty, old_val.get_ty());
+
+            // check pointer validity
+            match op_val.get_ptr() {
+                Pointer::RetRef(trace) => {
+                    assert_eq!(trace.len(), 1);
+                    match trace.get(0).unwrap() {
+                        Pointer::ArgRef(ref_idx, original_ptr) => {
+                            assert_eq!(*ref_idx, local_ref);
+                            assert_eq!(original_ptr.as_ref(), old_val.get_ptr());
+                        }
+                        _ => unreachable!(),
+                    }
                 }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
         }
+        let new_val = op_val.unbox_from_mut_ref_ret();
+        local_state.put_value(local_ref, new_val);
     }
 
     fn handle_write_back_ref_field(
@@ -1165,20 +1256,32 @@ impl<'env> FunctionContext<'env> {
             let env = self.target.global_env();
             let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
             assert!(old_struct.get_ty().is_ref_struct_of(&inst, Some(true)));
-        }
-        let new_struct = match op_val.get_ptr() {
-            Pointer::RefField(ref_idx, ref_field) => {
-                if cfg!(debug_assertions) {
+
+            // check pointer validity
+            match op_val.get_ptr() {
+                Pointer::RefField(ref_idx, ref_field) => {
                     assert_eq!(*ref_field, field_num);
+                    assert_eq!(*ref_idx, local_ref);
                 }
-                if *ref_idx == local_ref {
-                    old_struct.update_ref_struct_field(field_num, op_val)
-                } else {
-                    old_struct
+                Pointer::RetRef(trace) => {
+                    assert_eq!(trace.len(), 2);
+                    match trace.get(1).unwrap() {
+                        Pointer::ArgRef(ref_idx, _) => {
+                            assert_eq!(*ref_idx, local_ref);
+                        }
+                        _ => unreachable!(),
+                    }
+                    match trace.get(0).unwrap() {
+                        Pointer::RefField(_, ref_field) => {
+                            assert_eq!(*ref_field, field_num);
+                        }
+                        _ => unreachable!(),
+                    }
                 }
-            }
-            _ => unreachable!(),
-        };
+                _ => unreachable!(),
+            };
+        }
+        let new_struct = old_struct.update_ref_struct_field(field_num, op_val);
         local_state.put_value(local_ref, new_struct);
     }
 
@@ -1189,17 +1292,119 @@ impl<'env> FunctionContext<'env> {
         local_state: &mut LocalState,
     ) {
         let old_vector = local_state.del_value(local_ref);
-        let new_vector = match op_val.get_ptr() {
-            Pointer::RefElement(ref_idx, _) => {
-                if *ref_idx == local_ref {
-                    old_vector.update_ref_vector_element(op_val)
-                } else {
-                    old_vector
+        let elem_num = match op_val.get_ptr() {
+            Pointer::RefElement(ref_idx, elem_num) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(*ref_idx, local_ref);
+                }
+                elem_num
+            }
+            Pointer::RetRef(trace) => {
+                assert_eq!(trace.len(), 2);
+                match trace.get(1).unwrap() {
+                    Pointer::ArgRef(ref_idx, _) => {
+                        assert_eq!(*ref_idx, local_ref);
+                    }
+                    _ => unreachable!(),
+                }
+                match trace.get(0).unwrap() {
+                    Pointer::RefElement(_, elem_num) => elem_num,
+                    _ => unreachable!(),
                 }
             }
             _ => unreachable!(),
         };
+        let new_vector = old_vector.update_ref_vector_element(*elem_num, op_val);
         local_state.put_value(local_ref, new_vector);
+    }
+
+    fn handle_write_back_ref_hyper(
+        &self,
+        edges: &[BorrowEdge],
+        local_ref: TempIndex,
+        op_val: TypedValue,
+        local_state: &mut LocalState,
+    ) {
+        let new_val = match op_val.get_ptr() {
+            Pointer::RetRef(trace) => {
+                let steps = edges.len();
+                if cfg!(debug_assertions) {
+                    assert_eq!(trace.len(), steps + 1);
+                    match trace.last().unwrap() {
+                        Pointer::ArgRef(ref_idx, _) => assert_eq!(*ref_idx, local_ref),
+                        _ => unreachable!(),
+                    }
+                }
+
+                let mut cur = local_state.del_value(local_ref);
+                let mut path = vec![];
+                for (i, edge) in edges.iter().enumerate() {
+                    let ptr = trace.get(steps - 1 - i).unwrap();
+                    let sub = match (ptr, edge) {
+                        (
+                            Pointer::RefField(callee_idx, p_field_num),
+                            BorrowEdge::Field(qid, field_num),
+                        ) => {
+                            if cfg!(debug_assertions) {
+                                let env = self.target.global_env();
+                                let inst = convert_model_struct_type(
+                                    env,
+                                    qid.module_id,
+                                    qid.id,
+                                    &qid.inst,
+                                    &self.ty_args,
+                                );
+                                assert!(cur.get_ty().is_ref_struct_of(&inst, Some(true)));
+                                assert_eq!(p_field_num, field_num);
+                            }
+                            path.push(cur.clone());
+                            // NOTE: the local_idx argument can be any dummy value here
+                            cur.borrow_ref_struct_field(*field_num, true, *callee_idx)
+                        }
+                        (Pointer::RefElement(callee_idx, elem_num), BorrowEdge::Index) => {
+                            if cfg!(debug_assertions) {
+                                assert!(cur.get_ty().is_ref_vector(Some(true)));
+                            }
+                            path.push(cur.clone());
+                            // NOTE: the local_idx argument can be any dummy value here
+                            cur.borrow_ref_vector_element(*elem_num, true, *callee_idx)
+                                .unwrap()
+                        }
+                        _ => unreachable!(),
+                    };
+                    cur = sub;
+                }
+
+                if cfg!(debug_assertions) {
+                    let new_ty = op_val.get_ty();
+                    assert!(new_ty.is_ref(Some(true)));
+                    assert_eq!(new_ty, cur.get_ty());
+                }
+
+                // TODO (mengxu): refactor the code to remove this clone
+                let mut cur = op_val.clone();
+                for (i, (val, edge)) in path.into_iter().zip(edges.iter()).rev().enumerate() {
+                    let ptr = trace.get(steps - 1 - i).unwrap();
+                    let sub = match edge {
+                        BorrowEdge::Field(_, field_num) => {
+                            val.update_ref_struct_field(*field_num, cur)
+                        }
+                        BorrowEdge::Index => {
+                            let elem_num = match ptr {
+                                Pointer::RefElement(_, elem_num) => elem_num,
+                                _ => unreachable!(),
+                            };
+                            val.update_ref_vector_element(*elem_num, cur)
+                        }
+                        _ => unreachable!(),
+                    };
+                    cur = sub;
+                }
+                cur
+            }
+            _ => unreachable!(),
+        };
+        local_state.put_value(local_ref, new_val);
     }
 
     fn handle_borrow_local(
@@ -1570,9 +1775,19 @@ impl<'env> FunctionContext<'env> {
                 assert_eq!(&ret_ty, local_state.get_type(*ret_index));
             }
         }
+
+        let ptrs = local_state.collect_pointers();
         let ret_vals = rets
             .iter()
-            .map(|index| local_state.get_value(*index))
+            .map(|index| {
+                let val = local_state.get_value(*index);
+                // mark mut_ref returns with the pointer trace
+                if val.get_ty().is_ref(Some(true)) {
+                    val.box_into_mut_ref_ret(&ptrs)
+                } else {
+                    val
+                }
+            })
             .collect();
         local_state.terminate_with_return(ret_vals);
     }

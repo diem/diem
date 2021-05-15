@@ -12,7 +12,7 @@ use move_model::ast::TempIndex;
 
 use crate::concrete::{
     ty::Type,
-    value::{LocalSlot, TypedValue},
+    value::{LocalSlot, Pointer, TypedValue},
 };
 
 #[derive(Clone, Debug)]
@@ -141,6 +141,15 @@ impl LocalState {
         } else {
             self.pc += 1;
         }
+    }
+
+    /// Collect the pointers of the underlying values in the local slots
+    pub fn collect_pointers(&self) -> BTreeMap<TempIndex, &Pointer> {
+        self.slots
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, slot)| slot.get_content().map(|(_, ptr)| (idx, ptr)))
+            .collect()
     }
 
     /// Mark that an abort is raised and we will be executing the abort action next

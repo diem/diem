@@ -1,5 +1,6 @@
 Running Move unit tests
 [ PASS    ] 0x2::A::call_imm_ref
 [ PASS    ] 0x2::A::call_mut_ref
+[ PASS    ] 0x2::A::call_return_mut_ref
 [ PASS    ] 0x2::A::call_val
-Test result: OK. Total tests: 3; passed: 3; failed: 0
+Test result: OK. Total tests: 4; passed: 4; failed: 0

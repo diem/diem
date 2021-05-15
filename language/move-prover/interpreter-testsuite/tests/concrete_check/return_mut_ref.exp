@@ -1,0 +1,4 @@
+Running Move unit tests
+[ PASS    ] 0x2::A::return_ref_path
+[ PASS    ] 0x2::A::return_ref_root
+Test result: OK. Total tests: 2; passed: 2; failed: 0
