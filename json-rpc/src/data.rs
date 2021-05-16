@@ -5,12 +5,12 @@ use crate::{
     errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionDataView, TransactionView,
-        TransactionsWithProofsView, VMStatusView,
+        MetadataView, StateProofView, TransactionListView, TransactionView,
+        TransactionsWithProofsView,
     },
 };
 use anyhow::{format_err, Result};
-use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_crypto::HashValue;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{diem_root_address, resources::dual_attestation::Limit, AccountResource},
@@ -105,54 +105,12 @@ pub fn get_transactions(
     start_version: u64,
     limit: u64,
     include_events: bool,
-) -> Result<Vec<TransactionView>, JsonRpcError> {
-    if start_version > ledger_version {
-        return Ok(vec![]);
+) -> Result<TransactionListView, JsonRpcError> {
+    if start_version > ledger_version || limit == 0 {
+        return Ok(TransactionListView::empty());
     }
-
     let txs = db.get_transactions(start_version, limit, ledger_version, include_events)?;
-
-    let mut result = vec![];
-    if txs.is_empty() {
-        return Ok(result);
-    }
-
-    let all_events = if include_events {
-        txs.events
-            .ok_or_else(|| format_err!("Storage layer didn't return events when requested!"))?
-    } else {
-        vec![]
-    };
-
-    let txs_with_info = txs
-        .transactions
-        .into_iter()
-        .zip(txs.proof.transaction_infos().iter());
-
-    for (v, (tx, info)) in txs_with_info.enumerate() {
-        let events = if include_events {
-            all_events
-                .get(v)
-                .ok_or_else(|| format_err!("Missing events for version: {}", v))?
-                .iter()
-                .cloned()
-                .map(|x| (start_version + v as u64, x).try_into())
-                .collect::<Result<Vec<EventView>>>()?
-        } else {
-            vec![]
-        };
-
-        result.push(TransactionView {
-            version: start_version + v as u64,
-            hash: tx.hash(),
-            bytes: bcs::to_bytes(&tx)?.into(),
-            transaction: TransactionDataView::from(tx),
-            events,
-            vm_status: VMStatusView::from(info.status()),
-            gas_used: info.gas_used(),
-        });
-    }
-    Ok(result)
+    Ok(TransactionListView::try_from(txs)?)
 }
 
 /// Returns transactions by range with proofs
@@ -163,7 +121,7 @@ pub fn get_transactions_with_proofs(
     limit: u64,
     include_events: bool,
 ) -> Result<Option<TransactionsWithProofsView>, JsonRpcError> {
-    if start_version > ledger_version {
+    if start_version > ledger_version || limit == 0 {
         return Ok(None);
     }
     let txs = db.get_transactions(start_version, limit, ledger_version, include_events)?;
@@ -181,29 +139,12 @@ pub fn get_account_transaction(
     let tx = db.get_txn_by_account(account, sequence_number, ledger_version, include_events)?;
 
     if let Some(tx) = tx {
-        if include_events && tx.events.is_none() {
-            return Err(JsonRpcError::internal_error(
-                "Storage layer didn't return events when requested!".to_owned(),
-            ));
-        }
-        let tx_version = tx.version;
-
-        let events = tx
-            .events
-            .unwrap_or_default()
-            .into_iter()
-            .map(|x| (tx_version, x).try_into())
-            .collect::<Result<Vec<EventView>>>()?;
-
-        Ok(Some(TransactionView {
-            version: tx_version,
-            hash: tx.transaction.hash(),
-            bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: TransactionDataView::from(tx.transaction),
-            events,
-            vm_status: VMStatusView::from(tx.proof.transaction_info().status()),
-            gas_used: tx.proof.transaction_info().gas_used(),
-        }))
+        Ok(Some(TransactionView::try_from_tx_and_events(
+            tx.version,
+            tx.transaction,
+            tx.proof.transaction_info,
+            tx.events.unwrap_or_default(),
+        )?))
     } else {
         Ok(None)
     }
@@ -243,31 +184,13 @@ pub fn get_account_transactions(
             .get_txn_by_account(account, seq, ledger_version, include_events)?
             .ok_or_else(|| format_err!("Can not find transaction for seq {}!", seq))?;
 
-        let tx_version = tx.version;
-        let events = if include_events {
-            if tx.events.is_none() {
-                return Err(JsonRpcError::internal_error(
-                    "Storage layer didn't return events when requested!".to_owned(),
-                ));
-            }
-            tx.events
-                .unwrap_or_default()
-                .into_iter()
-                .map(|x| ((tx_version, x).try_into()))
-                .collect::<Result<Vec<EventView>>>()?
-        } else {
-            vec![]
-        };
-
-        all_txs.push(TransactionView {
-            version: tx.version,
-            hash: tx.transaction.hash(),
-            bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: TransactionDataView::from(tx.transaction),
-            events,
-            vm_status: VMStatusView::from(tx.proof.transaction_info().status()),
-            gas_used: tx.proof.transaction_info().gas_used(),
-        });
+        let tx_view = TransactionView::try_from_tx_and_events(
+            tx.version,
+            tx.transaction,
+            tx.proof.transaction_info,
+            tx.events.unwrap_or_default(),
+        )?;
+        all_txs.push(tx_view);
     }
 
     Ok(all_txs)

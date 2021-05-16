@@ -517,10 +517,10 @@ impl SparseMerkleRangeProof {
 pub struct TransactionInfoWithProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
+    pub ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
 
     /// The `TransactionInfo` object at the leaf of the accumulator.
-    transaction_info: TransactionInfo,
+    pub transaction_info: TransactionInfo,
 }
 
 impl TransactionInfoWithProof {

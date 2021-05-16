@@ -7,7 +7,8 @@ use crate::{
     errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
+        MetadataView, StateProofView, TransactionListView, TransactionView,
+        TransactionsWithProofsView,
     },
 };
 use anyhow::Result;
@@ -217,7 +218,7 @@ impl<'a> Handler<'a> {
     async fn get_transactions(
         &self,
         params: GetTransactionsParams,
-    ) -> Result<Vec<TransactionView>, JsonRpcError> {
+    ) -> Result<TransactionListView, JsonRpcError> {
         let GetTransactionsParams {
             start_version,
             limit,

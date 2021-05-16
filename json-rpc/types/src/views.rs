@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Error, Result};
-use diem_crypto::hash::HashValue;
+use anyhow::{ensure, format_err, Error, Result};
+use diem_crypto::hash::{CryptoHash, HashValue};
 use diem_transaction_builder::{error_explain, stdlib::ScriptCall};
 use diem_types::{
     account_config::{
@@ -709,9 +709,93 @@ pub struct TransactionView {
     pub gas_used: u64,
 }
 
+impl TransactionView {
+    pub fn try_from_tx_and_events(
+        version: u64,
+        tx: Transaction,
+        tx_info: TransactionInfo,
+        events: Vec<ContractEvent>,
+    ) -> Result<Self> {
+        let events = events
+            .into_iter()
+            .map(|event| EventView::try_from((version, event)))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(TransactionView {
+            version,
+            hash: tx.hash(),
+            bytes: BytesView::new(bcs::to_bytes(&tx)?),
+            transaction: TransactionDataView::from(tx),
+            events,
+            vm_status: VMStatusView::from(tx_info.status()),
+            gas_used: tx_info.gas_used(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct TransactionListView(pub Vec<TransactionView>);
+
+impl TransactionListView {
+    pub fn empty() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl TryFrom<TransactionListWithProof> for TransactionListView {
+    type Error = Error;
+
+    fn try_from(txs: TransactionListWithProof) -> Result<Self, Self::Error> {
+        if txs.is_empty() {
+            return Ok(Self::empty());
+        }
+        let start_version = txs
+            .first_transaction_version
+            .ok_or_else(|| format_err!("expected a start version since tx list non-empty"))?;
+
+        let transactions = txs.transactions;
+        let transaction_infos = txs.proof.transaction_infos;
+
+        ensure!(
+            transaction_infos.len() == transactions.len(),
+            "expected same number of transaction_infos as transactions, \
+             received {} transaction_infos and {} transactions",
+            transaction_infos.len(),
+            transactions.len(),
+        );
+
+        let event_lists = if let Some(event_lists) = txs.events {
+            ensure!(
+                event_lists.len() == transactions.len(),
+                "expected same number of event lists as transactions, \
+                 received {} event lists and {} transactions",
+                event_lists.len(),
+                transactions.len(),
+            );
+            event_lists
+        } else {
+            vec![Vec::new(); transactions.len()]
+        };
+
+        let tx_iter = transactions.into_iter();
+        let infos_iter = transaction_infos.into_iter();
+        let event_lists_iter = event_lists.into_iter();
+
+        let iter = tx_iter.enumerate().zip(infos_iter).zip(event_lists_iter);
+
+        let tx_list = iter
+            .map(|(((offset, tx), tx_info), tx_events)| {
+                let version = start_version + offset as u64;
+                TransactionView::try_from_tx_and_events(version, tx, tx_info, tx_events)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(TransactionListView(tx_list))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionsWithProofsView {
-    // TODO(philiphayes): just serialize as a giant BytesView instead of a Vec<_>?
     pub serialized_transactions: Vec<BytesView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub serialized_events: Option<BytesView>,
