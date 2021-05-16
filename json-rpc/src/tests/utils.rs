@@ -148,9 +148,18 @@ impl DbReader for MockDiemDB {
         &self,
         start_version: u64,
         limit: u64,
-        _ledger_version: u64,
+        ledger_version: u64,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof, Error> {
+        // ensure inputs are validated before we enter mock DB
+        assert!(
+            start_version <= ledger_version,
+            "start_version: {}, ledger_version: {}",
+            start_version,
+            ledger_version
+        );
+        assert!(limit > 0, "limit: {}", limit);
+        let limit = std::cmp::min(limit, ledger_version - start_version + 1);
         let mut transactions = vec![];
         let mut txn_infos = vec![];
         self.all_txns
@@ -170,24 +179,25 @@ impl DbReader for MockDiemDB {
         let first_transaction_version = transactions.first().map(|_| start_version);
         let proof = TransactionListProof::new(AccumulatorRangeProof::new_empty(), txn_infos);
 
+        let events = if fetch_events {
+            let events = (start_version..start_version + transactions.len() as u64)
+                .map(|version| {
+                    self.events
+                        .iter()
+                        .filter(|(v, _)| *v == version)
+                        .map(|(_, e)| e)
+                        .cloned()
+                        .collect()
+                })
+                .collect::<Vec<_>>();
+            Some(events)
+        } else {
+            None
+        };
+
         Ok(TransactionListWithProof {
             transactions,
-            events: if fetch_events {
-                Some(
-                    (start_version..start_version + limit)
-                        .map(|version| {
-                            self.events
-                                .iter()
-                                .filter(|(v, _)| *v == version)
-                                .map(|(_, e)| e)
-                                .cloned()
-                                .collect()
-                        })
-                        .collect(),
-                )
-            } else {
-                None
-            },
+            events,
             first_transaction_version,
             proof,
         })
