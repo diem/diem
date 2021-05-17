@@ -8,7 +8,9 @@ use crate::{
     response::{MethodResponse, Response},
     state::State,
 };
-use diem_json_rpc_types::views::{AccountView, CurrencyInfoView, EventView};
+use diem_json_rpc_types::views::{
+    AccountView, CurrencyInfoView, EventView, TransactionListView, TransactionView,
+};
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
@@ -159,6 +161,21 @@ impl<S: Storage> VerifyingClient<S> {
         self.request(MethodRequest::get_account_by_version(address, version))
             .await?
             .and_then(MethodResponse::try_into_get_account)
+    }
+
+    pub async fn get_transactions(
+        &self,
+        start_version: Version,
+        limit: u64,
+        include_events: bool,
+    ) -> Result<Response<Vec<TransactionView>>> {
+        self.request(MethodRequest::get_transactions(
+            start_version,
+            limit,
+            include_events,
+        ))
+        .await?
+        .and_then(MethodResponse::try_into_get_transactions)
     }
 
     pub async fn get_events(
@@ -417,6 +434,9 @@ impl From<MethodRequest> for VerifyingRequest {
     fn from(request: MethodRequest) -> Self {
         match request {
             MethodRequest::GetAccount(address, version) => verifying_get_account(address, version),
+            MethodRequest::GetTransactions(start_version, limit, include_events) => {
+                verifying_get_transactions(start_version, limit, include_events)
+            }
             MethodRequest::GetEvents(key, start_seq, limit) => {
                 verifying_get_events(key, start_seq, limit)
             }
@@ -451,7 +471,7 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
             [MethodResponse::GetAccountStateWithProof(ref account)] => account,
             subresponses => {
                 return Err(Error::rpc_response(format!(
-                    "expected [GetEventsWithProofs] subresponses, received: {:?}",
+                    "expected [GetAccountStateWithProof] subresponses, received: {:?}",
                     subresponses,
                 )))
             }
@@ -482,6 +502,76 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
             .transpose()?;
 
         Ok(MethodResponse::GetAccount(maybe_account_view))
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_transactions(
+    start_version: Version,
+    limit: u64,
+    include_events: bool,
+) -> VerifyingRequest {
+    let request = MethodRequest::GetTransactions(start_version, limit, include_events);
+    let subrequests = vec![MethodRequest::GetTransactionsWithProofs(
+        start_version,
+        limit,
+        include_events,
+    )];
+    let callback: RequestCallback = |ctxt, subresponses| {
+        let maybe_txs_with_proofs_view = match subresponses {
+            [MethodResponse::GetTransactionsWithProofs(ref txs)] => txs,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetTransactionsWithProofs] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        // Extract our original request arguments.
+        let (start_version, _limit, include_events) = match ctxt.request {
+            MethodRequest::GetTransactions(start_version, limit, include_events) => {
+                (*start_version, *limit, *include_events)
+            }
+            request => panic!("programmer error: unexpected request: {:?}", request),
+        };
+
+        // We don't guarantee that our response contains _all_ possible transactions
+        // in the range (start_version..start_version + min(limit, ledger_version - start_version + 1)).
+        // Instead, the remote server may return any prefix in the above range;
+        // however, our verification here _will_ verify the prefix.
+
+        let txs_with_proofs_view = if let Some(txs_with_proofs_view) = maybe_txs_with_proofs_view {
+            txs_with_proofs_view
+        } else {
+            return Ok(MethodResponse::GetTransactions(Vec::new()));
+        };
+
+        // Check that the presence of events in the response matches our expectation.
+        let has_events = txs_with_proofs_view.serialized_events.is_some();
+        if include_events != has_events {
+            return Err(Error::rpc_response(format!(
+                "expected events: {}, received events: {}",
+                include_events, has_events
+            )));
+        }
+
+        // Deserialize the diem-types from the json-rpc-types view.
+        let txn_list_with_proof = txs_with_proofs_view
+            .try_into_txn_list_with_proof(start_version)
+            .map_err(Error::decode)?;
+
+        // Verify the proofs
+        let latest_li = ctxt.state_proof.0.ledger_info();
+        txn_list_with_proof
+            .verify(latest_li, Some(start_version))
+            .map_err(Error::invalid_proof)?;
+
+        // Project into a list of TransactionView's.
+        let txn_list_view =
+            TransactionListView::try_from(txn_list_with_proof).map_err(Error::decode)?;
+
+        Ok(MethodResponse::GetTransactions(txn_list_view.0))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }

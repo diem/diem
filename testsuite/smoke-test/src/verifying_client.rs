@@ -16,9 +16,11 @@ use diem_types::{
         validator_set_address,
     },
     event::{EventHandle, EventKey},
+    transaction::Version,
     trusted_state::TrustedState,
 };
 use proptest::{collection::vec, prelude::*, sample::select};
+use std::cmp::max;
 use tokio::runtime::Builder;
 
 struct Environment {
@@ -66,6 +68,16 @@ impl Environment {
             .mint_coins(&["mintb", &idx, "1000", "XUS"], true)
             .unwrap();
         account.address
+    }
+
+    fn latest_observed_version(&self) -> Version {
+        let version_nv = self
+            .client
+            .last_known_state()
+            .map(|state| state.version)
+            .unwrap_or(0);
+        let version_v = self.verifying_client.version();
+        max(version_nv, version_v)
     }
 
     /// Send a request using both verifying and non-verifying clients.
@@ -205,6 +217,24 @@ fn arb_request(
         1 => Just(u64::MAX / 2),
     ];
 
+    let arb_version_and_limit = arb_version.clone().prop_flat_map(move |start_version| {
+        // We need to be careful how we choose our limit here, since both requests
+        // are handled at different times. In order to avoid a race where
+        // start_version..start_version+limit contains more transactions in the
+        // second request, we constrain the max limit to always give a valid
+        // response no matter the order/timing.
+        let max_limit = current_state_version.saturating_sub(start_version) + 1;
+        let arb_limit = prop_oneof! [
+            // usually pick a normal limit
+            20 => 1u64..=max_limit,
+            // occasionally pick some weird limits
+            1 => Just(0u64),
+            1 => Just(u64::MAX / 2),
+        ];
+        (Just(start_version), arb_limit)
+    });
+    let arb_include_events = any::<bool>();
+
     let arb_event_handle = prop_oneof! [
         20 => select(event_handles.to_owned()),
         // occasionally choose some garbage handles
@@ -226,6 +256,8 @@ fn arb_request(
 
     prop_oneof![
         (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
+        (arb_version_and_limit, arb_include_events)
+            .prop_map(|((v, l), i)| MethodRequest::GetTransactions(v, l, i)),
         arb_events.prop_map(|(k, s, l)| MethodRequest::GetEvents(k, s, l)),
         Just(MethodRequest::get_currencies()),
     ]
@@ -281,17 +313,16 @@ fn test_client_equivalence() {
 
     // Sync the verifying client
     rt.block_on(env.verifying_client.sync()).unwrap();
-    let current_version = env.verifying_client.version();
 
     // Generate random requests and ensure that both verifying and non-verifying
     // clients handle each request identically.
-    proptest!(|(request in arb_request(&accounts, &event_handles, current_version))| {
+    proptest!(|(request in arb_request(&accounts, &event_handles, env.latest_observed_version()))| {
         let (recv_nv, recv_v) = rt.block_on(env.request(request));
         assert_responses_equal(recv_nv, recv_v);
     });
 
     // Do the same but with random request batches instead of single requests.
-    proptest!(|(batch in arb_batch(env.max_batch_size, &accounts, &event_handles, current_version))| {
+    proptest!(|(batch in arb_batch(env.max_batch_size, &accounts, &event_handles, env.latest_observed_version()))| {
         let (recv_nv, recv_v) = rt.block_on(env.batch(batch));
         assert_batches_equal(recv_nv, recv_v);
     });
