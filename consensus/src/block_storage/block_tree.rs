@@ -265,8 +265,7 @@ impl BlockTree {
         }
 
         let mut blocks_pruned = VecDeque::new();
-        let mut blocks_to_be_pruned = Vec::new();
-        blocks_to_be_pruned.push(self.linkable_root());
+        let mut blocks_to_be_pruned = vec![self.linkable_root()];
         while let Some(block_to_remove) = blocks_to_be_pruned.pop() {
             // Add the children to the blocks to be pruned (if any), but stop when it reaches the
             // new root
@@ -359,8 +358,7 @@ impl BlockTree {
     pub(super) fn len(&self) -> usize {
         // BFS over the tree to find the number of blocks in the tree.
         let mut res = 0;
-        let mut to_visit = Vec::new();
-        to_visit.push(self.linkable_root());
+        let mut to_visit = vec![self.linkable_root()];
         while let Some(block) = to_visit.pop() {
             res += 1;
             for child_id in block.children() {

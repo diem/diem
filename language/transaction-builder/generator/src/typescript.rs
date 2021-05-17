@@ -137,9 +137,7 @@ fn write_script_calls(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Res
     let mut comments: BTreeMap<_, _> = abis
         .iter()
         .map(|abi| {
-            let mut paths = Vec::new();
-            paths.push("ScriptCall".to_string());
-            paths.push(abi.name().to_camel_case());
+            let paths = vec!["ScriptCall".to_string(), abi.name().to_camel_case()];
             (paths, crate::common::prepare_doc_string(abi.doc()))
         })
         .collect();

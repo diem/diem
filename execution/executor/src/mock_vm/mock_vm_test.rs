@@ -83,14 +83,11 @@ fn test_mock_vm_same_sender() {
 
 #[test]
 fn test_mock_vm_payment() {
-    let mut txns = vec![];
-    txns.push(encode_mint_transaction(gen_address(0), 100));
-    txns.push(encode_mint_transaction(gen_address(1), 100));
-    txns.push(encode_transfer_transaction(
-        gen_address(0),
-        gen_address(1),
-        50,
-    ));
+    let txns = vec![
+        encode_mint_transaction(gen_address(0), 100),
+        encode_mint_transaction(gen_address(1), 100),
+        encode_transfer_transaction(gen_address(0), gen_address(1), 50),
+    ];
 
     let output =
         MockVM::execute_block(txns, &MockStateView).expect("MockVM should not fail to start");

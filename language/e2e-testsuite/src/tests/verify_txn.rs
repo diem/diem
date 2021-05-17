@@ -106,11 +106,12 @@ fn verify_simple_payment() {
 
         // define the arguments to the peer to peer transaction
         let transfer_amount = 1_000;
-        let mut args: Vec<TransactionArgument> = Vec::new();
-        args.push(TransactionArgument::Address(*receiver.address()));
-        args.push(TransactionArgument::U64(transfer_amount));
-        args.push(TransactionArgument::U8Vector(vec![]));
-        args.push(TransactionArgument::U8Vector(vec![]));
+        let args: Vec<TransactionArgument> = vec![
+            TransactionArgument::Address(*receiver.address()),
+            TransactionArgument::U64(transfer_amount),
+            TransactionArgument::U8Vector(vec![]),
+            TransactionArgument::U8Vector(vec![]),
+        ];
 
         let p2p_script = LegacyStdlibScript::PeerToPeerWithMetadata
             .compiled_bytes()
@@ -323,9 +324,10 @@ fn verify_simple_payment() {
         );
 
         // Create a new transaction that swaps the two arguments.
-        let mut args: Vec<TransactionArgument> = Vec::new();
-        args.push(TransactionArgument::U64(transfer_amount));
-        args.push(TransactionArgument::Address(*receiver.address()));
+        let args: Vec<TransactionArgument> = vec![
+            TransactionArgument::U64(transfer_amount),
+            TransactionArgument::Address(*receiver.address()),
+        ];
 
         let txn = sender
             .account()

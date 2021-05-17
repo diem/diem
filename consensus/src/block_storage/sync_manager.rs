@@ -210,8 +210,7 @@ impl BlockStore {
             blocks.last().expect("should have 3-chain").id(),
             highest_commit_cert.commit_info().id(),
         );
-        let mut quorum_certs = vec![];
-        quorum_certs.push(highest_commit_cert.clone());
+        let mut quorum_certs = vec![highest_commit_cert.clone()];
         quorum_certs.extend(
             blocks
                 .iter()

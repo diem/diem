@@ -18,9 +18,10 @@ proptest! {
         txns in vec(any::<ScriptCall>(), 0..10),
     ) {
         let executor = FakeExecutor::from_genesis_file();
-        let mut accounts = vec![];
-        accounts.push((Account::new_diem_root(), 1));
-        accounts.push((Account::new_blessed_tc(), 0));
+        let accounts = vec![
+            (Account::new_diem_root(), 1),
+            (Account::new_blessed_tc(), 0),
+        ];
         let num_accounts = accounts.len();
 
         for (i, txn) in txns.into_iter().enumerate() {

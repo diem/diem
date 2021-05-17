@@ -24,27 +24,28 @@ struct Adapter {
 
 impl Adapter {
     fn new(store: InMemoryStorage) -> Self {
-        let mut functions = vec![];
-        functions.push((
-            ModuleId::new(WORKING_ACCOUNT, Identifier::new("A").unwrap()),
-            Identifier::new("entry_a").unwrap(),
-        ));
-        functions.push((
-            ModuleId::new(WORKING_ACCOUNT, Identifier::new("D").unwrap()),
-            Identifier::new("entry_d").unwrap(),
-        ));
-        functions.push((
-            ModuleId::new(WORKING_ACCOUNT, Identifier::new("E").unwrap()),
-            Identifier::new("entry_e").unwrap(),
-        ));
-        functions.push((
-            ModuleId::new(WORKING_ACCOUNT, Identifier::new("F").unwrap()),
-            Identifier::new("entry_f").unwrap(),
-        ));
-        functions.push((
-            ModuleId::new(WORKING_ACCOUNT, Identifier::new("C").unwrap()),
-            Identifier::new("just_c").unwrap(),
-        ));
+        let functions = vec![
+            (
+                ModuleId::new(WORKING_ACCOUNT, Identifier::new("A").unwrap()),
+                Identifier::new("entry_a").unwrap(),
+            ),
+            (
+                ModuleId::new(WORKING_ACCOUNT, Identifier::new("D").unwrap()),
+                Identifier::new("entry_d").unwrap(),
+            ),
+            (
+                ModuleId::new(WORKING_ACCOUNT, Identifier::new("E").unwrap()),
+                Identifier::new("entry_e").unwrap(),
+            ),
+            (
+                ModuleId::new(WORKING_ACCOUNT, Identifier::new("F").unwrap()),
+                Identifier::new("entry_f").unwrap(),
+            ),
+            (
+                ModuleId::new(WORKING_ACCOUNT, Identifier::new("C").unwrap()),
+                Identifier::new("just_c").unwrap(),
+            ),
+        ];
         Self {
             store,
             vm: Arc::new(MoveVM::new()),

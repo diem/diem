@@ -97,10 +97,11 @@ pub fn create_account_txn(
     initial_amount: u64,
     type_tag: TypeTag,
 ) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*new_account.address()));
-    args.push(TransactionArgument::U8Vector(new_account.auth_key_prefix()));
-    args.push(TransactionArgument::U64(initial_amount));
+    let args: Vec<TransactionArgument> = vec![
+        TransactionArgument::Address(*new_account.address()),
+        TransactionArgument::U8Vector(new_account.auth_key_prefix()),
+        TransactionArgument::U64(initial_amount),
+    ];
 
     sender
         .transaction()
@@ -121,11 +122,12 @@ pub fn peer_to_peer_txn(
     seq_num: u64,
     transfer_amount: u64,
 ) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*receiver.address()));
-    args.push(TransactionArgument::U64(transfer_amount));
-    args.push(TransactionArgument::U8Vector(vec![]));
-    args.push(TransactionArgument::U8Vector(vec![]));
+    let args: Vec<TransactionArgument> = vec![
+        TransactionArgument::Address(*receiver.address()),
+        TransactionArgument::U64(transfer_amount),
+        TransactionArgument::U8Vector(vec![]),
+        TransactionArgument::U8Vector(vec![]),
+    ];
 
     // get a SignedTransaction
     sender

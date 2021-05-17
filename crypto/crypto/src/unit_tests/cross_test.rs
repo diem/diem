@@ -79,8 +79,7 @@ proptest! {
         // this is impossible to write statically, due to the trait not being
         // object-safe (voluntarily), see unsupported_sigs below
         // let mut l: Vec<Box<dyn PrivateKey>> = vec![];
-        let mut l: Vec<Ed25519PrivateKey> = vec![];
-        l.push(ed_keypair1.private_key);
+        let mut l: Vec<Ed25519PrivateKey> = vec![ed_keypair1.private_key];
         let ed_key = l.pop().unwrap();
         let signature = ed_key.sign(&message);
 
@@ -88,9 +87,10 @@ proptest! {
         prop_assert!(signature.verify(&message, &ed_keypair1.public_key).is_ok());
 
         // signature-publickey mixups are statically impossible, see unsupported_sigs below
-        let mut l2: Vec<PrivateK> = vec![];
-        l2.push(PrivateK::MultiEd(med_keypair.private_key));
-        l2.push(PrivateK::Ed(ed_keypair2.private_key));
+        let mut l2: Vec<PrivateK> = vec![
+            PrivateK::MultiEd(med_keypair.private_key),
+            PrivateK::Ed(ed_keypair2.private_key),
+        ];
 
         let ed_key = l2.pop().unwrap();
         let ed_signature = ed_key.sign(&message);
