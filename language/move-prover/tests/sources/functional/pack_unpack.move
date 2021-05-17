@@ -10,14 +10,14 @@ module TestPackUnpack {
     }
 
     resource struct R { nested: S  }
-    spec struct R {
+    spec R {
         global r_count: num;
         invariant pack r_count = r_count + 1;
         invariant unpack r_count = r_count - 1;
     }
 
     resource struct S { value: u64 }
-    spec struct S {
+    spec S {
         global s_sum: num;
         invariant value > 0;
         invariant pack s_sum = s_sum + value;
@@ -32,7 +32,7 @@ module TestPackUnpack {
     public fun create(): R {
         R{nested: S{value: 3}}
     }
-    spec fun create {
+    spec create {
         ensures result == R{nested: S{value: 3}};
         ensures r_count == old(r_count) + 1;
         ensures s_sum == old(s_sum) + 3;
@@ -44,7 +44,7 @@ module TestPackUnpack {
         let S{value} = nested;
         value
     }
-    spec fun destroy {
+    spec destroy {
         ensures result == old(r.nested.value);
         ensures r_count == old(r_count) - 1;
         ensures s_sum == old(s_sum) - old(r.nested.value);
@@ -56,7 +56,7 @@ module TestPackUnpack {
         nested.value = nested.value + 3;
         nested
     }
-    spec fun extract_and_update {
+    spec extract_and_update {
         ensures result == S{value: old(r.nested.value) + 3};
         ensures r_count == old(r_count) - 1;
         ensures s_sum == old(s_sum) + 3;
@@ -70,7 +70,7 @@ module TestPackUnpack {
         let R{nested} = r;
         nested.value
     }
-    spec fun read_ref_unchanged {
+    spec read_ref_unchanged {
         ensures result == r.nested.value;
         ensures r_count == old(r_count);
         ensures s_sum == old(s_sum);
@@ -82,7 +82,7 @@ module TestPackUnpack {
         nested.value = nested.value + 2;
         nested.value
     }
-    spec fun update_ref_changed {
+    spec update_ref_changed {
         ensures result == r.nested.value;
         ensures r.nested.value == old(r.nested.value) + 2;
         ensures r_count == old(r_count);
@@ -94,7 +94,7 @@ module TestPackUnpack {
         r2.nested.value = r2.nested.value + r1.nested.value - 1;
         r1.nested.value = 1; // We can't reset this to 0 because then invariant fails
     }
-    spec fun move_ref_unchanged {
+    spec move_ref_unchanged {
         ensures r2.nested.value == old(r2.nested.value) + old(r1.nested.value) - 1;
         ensures r1.nested.value == 1;
         ensures r_count == old(r_count);
@@ -107,7 +107,7 @@ module TestPackUnpack {
         r2.nested.value = r2.nested.value + r1.nested.value;
         r1.nested.value = 0;
     }
-    spec fun move_ref_unchanged_invariant_incorrect {
+    spec move_ref_unchanged_invariant_incorrect {
         ensures r2.nested.value == old(r2.nested.value) + old(r1.nested.value);
         ensures r1.nested.value == 0;
         ensures r_count == old(r_count);
@@ -124,7 +124,7 @@ module TestPackUnpack {
     fun private_update_value(s: &mut S, v: u64) {
         s.value = v;
     }
-    spec fun call_private_violating_invariant {
+    spec call_private_violating_invariant {
         ensures r.nested.value == 1;
     }
 
@@ -138,10 +138,10 @@ module TestPackUnpack {
     public fun public_update_value(s: &mut S, v: u64) {
         s.value = v;
     }
-    spec fun call_public_violating_invariant_incorrect {
+    spec call_public_violating_invariant_incorrect {
         ensures r.nested.value == 1;
     }
-    spec fun public_update_value {
+    spec public_update_value {
         pragma verify = false; // turn noise off for this one, we are interested in the caller
     }
 
@@ -154,7 +154,7 @@ module TestPackUnpack {
     fun read_S_from_immutable(s: &S): u64 {
         s.value
     }
-    spec fun select_value_violating_invariant_incorrect {
+    spec select_value_violating_invariant_incorrect {
         ensures result == 0;
     }
 
@@ -164,7 +164,7 @@ module TestPackUnpack {
         // Because this is a private function, invariant for r may not hold.
         read_S_from_immutable(&r.nested)
     }
-    spec fun private_select_value_violating_invariant_incorrect {
+    spec private_select_value_violating_invariant_incorrect {
         ensures result == r.nested.value;
     }
 
@@ -174,7 +174,7 @@ module TestPackUnpack {
         // Because this is a private function, invariant for s may not hold.
         read_S_from_immutable(s)
     }
-    spec fun private_pass_value_violating_invariant_incorrect {
+    spec private_pass_value_violating_invariant_incorrect {
         ensures result == s.value;
     }
 
@@ -190,7 +190,7 @@ module TestPackUnpack {
     fun get_value_ref(r: &mut R): &mut u64 {
         &mut r.nested.value
     }
-    spec fun update_via_returned_ref {
+    spec update_via_returned_ref {
         ensures result.nested.value == 2;
         ensures r_count == old(r_count) + 1;
         ensures s_sum == old(s_sum) + 2;
@@ -209,7 +209,7 @@ module TestPackUnpack {
         *v_ref = 1;
         r
     }
-    spec fun update_via_returned_ref_var_incorrect {
+    spec update_via_returned_ref_var_incorrect {
         ensures result.nested.value == 1;
         ensures r_count == old(r_count) + 1;
         ensures s_sum == old(s_sum) + 2;

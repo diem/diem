@@ -3,7 +3,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/schema_exp.move:29:5 ───
     │
- 29 │ ╭     spec fun bar_incorrect {
+ 29 │ ╭     spec bar_incorrect {
  30 │ │         // Once we include a schema with aborts, even conditionally, we need to provide a full spec of the aborts
  31 │ │         // behavior. This is because the below translates to `aborts_if c && false`, which reduces
  32 │ │         // to `aborts_if false`.

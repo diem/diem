@@ -13,7 +13,7 @@ module TestMutRefs {
         value: u64
     }
 
-    spec struct R {
+    spec R {
         global sum: num;
         invariant pack sum = sum + value;
         invariant unpack sum = sum - value;
@@ -27,7 +27,7 @@ module TestMutRefs {
         *value = 0;
         result
     }
-    spec fun unpack {
+    spec unpack {
         ensures r.value == 0;
         ensures sum == old(sum) - old(r.value);
     }
@@ -39,14 +39,14 @@ module TestMutRefs {
          // *value = 0;
          result
      }
-     spec fun unpack_incorrect {
+     spec unpack_incorrect {
          ensures sum == old(sum) - old(r.value);
      }
 
      public fun unpack_caller(r: &mut R): u64 {
         unpack(r)
      }
-     spec fun unpack_caller {
+     spec unpack_caller {
         ensures r.value == 0;
      }
 

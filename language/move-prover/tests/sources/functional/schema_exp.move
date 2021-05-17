@@ -17,7 +17,7 @@ module 0x42::TestSchemaExp {
         if (!c) abort(1);
     }
 
-    spec fun foo {
+    spec foo {
         include c ==> DontAborts;
         include !c ==> Aborts;
     }
@@ -26,7 +26,7 @@ module 0x42::TestSchemaExp {
         if (!c) abort(1);
     }
 
-    spec fun bar_incorrect {
+    spec bar_incorrect {
         // Once we include a schema with aborts, even conditionally, we need to provide a full spec of the aborts
         // behavior. This is because the below translates to `aborts_if c && false`, which reduces
         // to `aborts_if false`.
@@ -46,14 +46,14 @@ module 0x42::TestSchemaExp {
         result: num;
         ensures result == i + 2;
     }
-    spec fun baz {
+    spec baz {
         include if (i > 10) AddsTwo else AddsOne;
     }
 
     fun baz_incorrect(i: u64): u64 {
         i + 1
     }
-    spec fun baz_incorrect {
+    spec baz_incorrect {
         include i > 10 ==> AddsTwo;
         include i <= 10 ==> AddsOne;
     }

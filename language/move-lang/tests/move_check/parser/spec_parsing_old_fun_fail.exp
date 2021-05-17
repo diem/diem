@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/spec_parsing_old_fun_fail.move:5:10 ───
+   │
+ 5 │     spec fun with_aborts_if {
+   │          ^^^ Unexpected 'fun'
+   ·
+ 5 │     spec fun with_aborts_if {
+   │          --- Expected only 'spec', drop the 'fun' keyword
+   │
+

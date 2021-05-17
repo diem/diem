@@ -12,7 +12,7 @@ module 0x42::TestAbortsWithCheck {
         };
         x
     }
-    spec fun aborts_with_check_too_many_incorrect {
+    spec aborts_with_check_too_many_incorrect {
         aborts_if x == 1 with 2;
         aborts_if y == 2 with 3;
         aborts_with [check] 2, 3, 4;

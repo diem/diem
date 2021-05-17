@@ -1,0 +1,15 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+
+    ┌── tests/sources/functional/module_level_spec.move:17:5 ───
+    │
+ 17 │     invariant forall addr: address where exists<R>(addr): global<R>(addr).value > 0;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/module_level_spec.move:9: store_incorrect
+    =     at tests/sources/functional/module_level_spec.move:31
+    =     at tests/sources/functional/module_level_spec.move:9: store_incorrect
+    =         s = <redacted>
+    =         value = <redacted>
+    =     at tests/sources/functional/module_level_spec.move:10: store_incorrect
+    =     at tests/sources/functional/module_level_spec.move:17

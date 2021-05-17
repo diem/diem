@@ -349,7 +349,7 @@ Returns false if this deposit violates the account limits.
 <a name="0x1_AccountLimits_spec_update_deposit_limits"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_receiving_limits_ok">spec_receiving_limits_ok</a>(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), amount)
 }
 </code></pre>
@@ -424,7 +424,7 @@ Returns <code><b>false</b></code> if this withdrawal violates account limits.
 <a name="0x1_AccountLimits_spec_update_withdrawal_limits"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_withdrawal_limits">spec_update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_withdrawal_limits">spec_update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_withdrawal_limits_ok">spec_withdrawal_limits_ok</a>(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), amount)
 }
 </code></pre>
@@ -766,14 +766,14 @@ the inflow and outflow records.
 <a name="0x1_AccountLimits_spec_window_expired"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_expired">spec_window_expired</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_expired">spec_window_expired</a>&lt;CoinType&gt;(
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;
 ): bool {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() &gt; window.window_start + limits_definition.time_period
 }
 <a name="0x1_AccountLimits_spec_window_reset_with_limits"></a>
-<b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset_with_limits">spec_window_reset_with_limits</a>&lt;CoinType&gt;(
+<b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset_with_limits">spec_window_reset_with_limits</a>&lt;CoinType&gt;(
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;
 ): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
@@ -913,7 +913,7 @@ Returns the limits associated with this window.
 <a name="0x1_AccountLimits_spec_window_limits"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
    <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(window.limit_address)
 }
 </code></pre>
@@ -925,7 +925,7 @@ Returns true of the window has unrestricted limits.
 <a name="0x1_AccountLimits_spec_window_unrestricted"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): bool {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>(<a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(window))
 }
 </code></pre>
@@ -937,7 +937,7 @@ Resets wrapping variables of the given window.
 <a name="0x1_AccountLimits_spec_window_reset"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>&lt;CoinType&gt;(window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset_with_limits">spec_window_reset_with_limits</a>(window, <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(window))
 }
 </code></pre>
@@ -949,7 +949,7 @@ Checks whether receiving limits are satisfied.
 <a name="0x1_AccountLimits_spec_receiving_limits_ok"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_receiving_limits_ok">spec_receiving_limits_ok</a>&lt;CoinType&gt;(receiving: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_receiving_limits_ok">spec_receiving_limits_ok</a>&lt;CoinType&gt;(receiving: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): bool {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(receiving) ||
        <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount
                &lt;= <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>(receiving).max_inflow &&
@@ -964,7 +964,7 @@ Checks whether receiving limits are satisfied.
 <a name="0x1_AccountLimits_spec_update_inflow"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_inflow">spec_update_inflow</a>&lt;CoinType&gt;(receiving: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_inflow">spec_update_inflow</a>&lt;CoinType&gt;(receiving: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
    update_field(update_field(receiving,
        window_inflow, receiving.window_inflow + amount),
        tracked_balance, receiving.tracked_balance + amount)
@@ -1089,7 +1089,7 @@ Check whether withdrawal limits are satisfied.
 <a name="0x1_AccountLimits_spec_withdrawal_limits_ok"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_withdrawal_limits_ok">spec_withdrawal_limits_ok</a>&lt;CoinType&gt;(sending: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_withdrawal_limits_ok">spec_withdrawal_limits_ok</a>&lt;CoinType&gt;(sending: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): bool {
    <a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(sending) ||
    <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &lt;= <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>(sending).max_outflow
 }
@@ -1102,7 +1102,7 @@ Update outflow.
 <a name="0x1_AccountLimits_spec_update_outflow"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_outflow">spec_update_outflow</a>&lt;CoinType&gt;(sending: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_update_outflow">spec_update_outflow</a>&lt;CoinType&gt;(sending: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, amount: u64): <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
    update_field(update_field(sending,
        window_outflow, sending.window_outflow + amount),
        tracked_balance, <b>if</b> (amount &gt;= sending.tracked_balance) 0
@@ -1160,7 +1160,7 @@ Checks whether the limits definition is unrestricted.
 <a name="0x1_AccountLimits_spec_is_unrestricted"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>&lt;CoinType&gt;(limits_def: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>&lt;CoinType&gt;(limits_def: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;): bool {
     limits_def.max_inflow == max_u64() &&
     limits_def.max_outflow == max_u64() &&
     limits_def.max_holding == max_u64() &&
@@ -1258,7 +1258,7 @@ Checks whether the limits definition is unrestricted.
 <a name="0x1_AccountLimits_spec_has_window_published"></a>
 
 
-<pre><code><b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_has_window_published">spec_has_window_published</a>&lt;CoinType&gt;(addr: address): bool {
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_has_window_published">spec_has_window_published</a>&lt;CoinType&gt;(addr: address): bool {
     <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr)
 }
 </code></pre>
@@ -1300,7 +1300,7 @@ Checks whether the limits definition is unrestricted.
 <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;</code> persists after publication.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <b>forall</b> addr: address, coin_type: type <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(addr)):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(addr);
 </code></pre>
@@ -1309,7 +1309,7 @@ Checks whether the limits definition is unrestricted.
 <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> persists after publication
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr)):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr);
 </code></pre>
@@ -1318,7 +1318,7 @@ Checks whether the limits definition is unrestricted.
 Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> exists if a <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code> exists.
 
 
-<pre><code><b>invariant</b> [<b>global</b>]
+<pre><code><b>invariant</b>
    <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr).limit_address);
 </code></pre>
@@ -1333,7 +1333,7 @@ Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinitio
 Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
 
 
-<pre><code><b>invariant</b> [<b>global</b>]
+<pre><code><b>invariant</b>
     <b>forall</b> addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(addr):
         <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr) &&
         (<b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr).role_id == <a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a> ||

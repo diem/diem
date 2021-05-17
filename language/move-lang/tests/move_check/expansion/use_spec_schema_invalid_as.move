@@ -9,7 +9,7 @@ module M {
     use 0x2::X::{Foo as foo};
     struct S {}
 
-    spec fun t {
+    spec t {
         apply foo<S> to t;
     }
 }

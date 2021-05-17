@@ -10,7 +10,7 @@ module Option {
     struct Option<Element> has copy, drop, store {
         vec: vector<Element>
     }
-    spec struct Option {
+    spec Option {
         /// The size of vector is always less than equal to 1
         /// because it's 0 for "none" or 1 for "some".
         invariant len(vec) <= 1;
@@ -27,12 +27,12 @@ module Option {
     public fun none<Element>(): Option<Element> {
         Option { vec: Vector::empty() }
     }
-    spec fun none {
+    spec none {
         pragma opaque;
         aborts_if false;
         ensures result == spec_none<Element>();
     }
-    spec define spec_none<Element>(): Option<Element> {
+    spec fun spec_none<Element>(): Option<Element> {
         Option{ vec: vec() }
     }
 
@@ -40,12 +40,12 @@ module Option {
     public fun some<Element>(e: Element): Option<Element> {
         Option { vec: Vector::singleton(e) }
     }
-    spec fun some {
+    spec some {
         pragma opaque;
         aborts_if false;
         ensures result == spec_some(e);
     }
-    spec define spec_some<Element>(e: Element): Option<Element> {
+    spec fun spec_some<Element>(e: Element): Option<Element> {
         Option{ vec: vec(e) }
     }
 
@@ -53,7 +53,7 @@ module Option {
     public fun is_none<Element>(t: &Option<Element>): bool {
         Vector::is_empty(&t.vec)
     }
-    spec fun is_none {
+    spec is_none {
         pragma opaque;
         aborts_if false;
         ensures result == is_none(t);
@@ -63,7 +63,7 @@ module Option {
     public fun is_some<Element>(t: &Option<Element>): bool {
         !Vector::is_empty(&t.vec)
     }
-    spec fun is_some {
+    spec is_some {
         pragma opaque;
         aborts_if false;
         ensures result == is_some(t);
@@ -74,12 +74,12 @@ module Option {
     public fun contains<Element>(t: &Option<Element>, e_ref: &Element): bool {
         Vector::contains(&t.vec, e_ref)
     }
-    spec fun contains {
+    spec contains {
         pragma opaque;
         aborts_if false;
         ensures result == spec_contains(t, e_ref);
     }
-    spec define spec_contains<Element>(t: Option<Element>, e: Element): bool {
+    spec fun spec_contains<Element>(t: Option<Element>, e: Element): bool {
         is_some(t) && borrow(t) == e
     }
 
@@ -89,7 +89,7 @@ module Option {
         assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::borrow(&t.vec, 0)
     }
-    spec fun borrow {
+    spec borrow {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(t);
@@ -102,7 +102,7 @@ module Option {
         if (Vector::is_empty(vec_ref)) default_ref
         else Vector::borrow(vec_ref, 0)
     }
-    spec fun borrow_with_default {
+    spec borrow_with_default {
         pragma opaque;
         aborts_if false;
         ensures result == (if (is_some(t)) borrow(t) else default_ref);
@@ -118,7 +118,7 @@ module Option {
         if (Vector::is_empty(vec_ref)) default
         else *Vector::borrow(vec_ref, 0)
     }
-    spec fun get_with_default {
+    spec get_with_default {
         pragma opaque;
         aborts_if false;
         ensures result == (if (is_some(t)) borrow(t) else default);
@@ -131,7 +131,7 @@ module Option {
         if (Vector::is_empty(vec_ref)) Vector::push_back(vec_ref, e)
         else abort Errors::invalid_argument(EOPTION_IS_SET)
     }
-    spec fun fill {
+    spec fill {
         pragma opaque;
         aborts_if is_some(t) with Errors::INVALID_ARGUMENT;
         ensures is_some(t);
@@ -144,7 +144,7 @@ module Option {
         assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::pop_back(&mut t.vec)
     }
-    spec fun extract {
+    spec extract {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(old(t));
@@ -157,7 +157,7 @@ module Option {
         assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::borrow_mut(&mut t.vec, 0)
     }
-    spec fun borrow_mut {
+    spec borrow_mut {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(t);
@@ -172,7 +172,7 @@ module Option {
         Vector::push_back(vec_ref, e);
         old_value
     }
-    spec fun swap {
+    spec swap {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(old(t));
@@ -186,7 +186,7 @@ module Option {
         if (Vector::is_empty(&mut vec)) default
         else Vector::pop_back(&mut vec)
     }
-    spec fun destroy_with_default {
+    spec destroy_with_default {
         pragma opaque;
         aborts_if false;
         ensures result == (if (is_some(t)) borrow(t) else default);
@@ -201,7 +201,7 @@ module Option {
         Vector::destroy_empty(vec);
         elem
     }
-    spec fun destroy_some {
+    spec destroy_some {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(t);
@@ -214,7 +214,7 @@ module Option {
         let Option { vec } = t;
         Vector::destroy_empty(vec)
     }
-    spec fun destroy_none {
+    spec destroy_none {
         pragma opaque;
         aborts_if is_some(t) with Errors::INVALID_ARGUMENT;
     }

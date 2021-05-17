@@ -3,16 +3,16 @@ error: [boogie translator] function or tuple result type not yet supported
 
    ┌── tests/sources/functional/restrictions.move:8:9 ───
    │
- 8 │         define f1(): (u64, u64) { (1u64, 2u64) }
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 8 │         fun f1(): (u64, u64) { (1u64, 2u64) }
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
 
 error: [boogie translator] function or tuple result type not yet supported
 
     ┌── tests/sources/functional/restrictions.move:11:9 ───
     │
- 11 │         define f2(): | |num { | | 1 }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 11 │         fun f2(): | |num { | | 1 }
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: [boogie translator] Invoke not yet supported

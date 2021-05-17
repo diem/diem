@@ -69,7 +69,7 @@ module TreasuryComplianceScripts {
         DiemAccount::cancel_burn<Token>(&account, preburn_address, amount)
     }
 
-    spec fun cancel_burn_with_amount {
+    spec cancel_burn_with_amount {
         use 0x1::CoreAddresses;
         use 0x1::Errors;
         use 0x1::Diem;
@@ -173,7 +173,7 @@ module TreasuryComplianceScripts {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         Diem::burn<Token>(&account, preburn_address, amount)
     }
-    spec fun burn_with_amount {
+    spec burn_with_amount {
         use 0x1::Errors;
         use 0x1::DiemAccount;
 
@@ -246,7 +246,7 @@ module TreasuryComplianceScripts {
         DiemAccount::restore_withdraw_capability(withdraw_cap);
     }
 
-    spec fun preburn {
+    spec preburn {
         use 0x1::Errors;
         use 0x1::Signer;
         use 0x1::Diem;
@@ -380,7 +380,7 @@ module TreasuryComplianceScripts {
         );
     }
 
-    spec fun tiered_mint {
+    spec tiered_mint {
         use 0x1::Errors;
         use 0x1::Roles;
 
@@ -580,7 +580,7 @@ module TreasuryComplianceScripts {
         );
         Diem::update_xdx_exchange_rate<Currency>(&tc_account, rate);
     }
-    spec fun update_exchange_rate {
+    spec update_exchange_rate {
         use 0x1::Errors;
         use 0x1::DiemAccount;
         use 0x1::Roles;
@@ -677,7 +677,7 @@ module TreasuryComplianceScripts {
     ) {
         DiemId::add_diem_id_domain(&tc_account, address, domain);
     }
-    spec fun add_diem_id_domain {
+    spec add_diem_id_domain {
         use 0x1::Errors;
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include DiemId::AddDiemIdDomainAbortsIf;
@@ -721,7 +721,7 @@ module TreasuryComplianceScripts {
     ) {
         DiemId::remove_diem_id_domain(&tc_account, address, domain);
     }
-    spec fun add_diem_id_domain {
+    spec remove_diem_id_domain {
         use 0x1::Errors;
         aborts_with [check]
             Errors::REQUIRES_ROLE,

@@ -3,7 +3,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/script_incorrect.move:10:1 ───
     │
- 10 │ ╭ spec fun main {
+ 10 │ ╭ spec main {
  11 │ │     pragma verify = true;
  12 │ │     aborts_if false;
  13 │ │ }

@@ -25,7 +25,7 @@ module TestMarketCapWithSchemas {
         // The value of the coin. May be zero
         value: u64,
     }
-    spec struct T {
+    spec T {
         include UpdateSumOfCoins<X>;
     }
     spec schema UpdateSumOfCoins<X> {
@@ -50,7 +50,7 @@ module TestMarketCapWithSchemas {
         aborts_if coin_ref.value + check.value > max_u64();
         ensures coin_ref.value == old(coin_ref.value) + check.value;
     }
-    spec fun deposit {
+    spec deposit {
         // module invariant
         include SumOfCoinsModuleInvariant<X>;
 
@@ -63,7 +63,7 @@ module TestMarketCapWithSchemas {
          let T { value } = check;
          coin_ref.value = coin_ref.value + value / 2;
      }
-     spec fun deposit_invalid {
+     spec deposit_invalid {
          // module invariant
          include SumOfCoinsModuleInvariant<X>;
 

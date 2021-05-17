@@ -73,7 +73,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:279:5 ───
      │
- 279 │ ╭     spec fun opaque {
+ 279 │ ╭     spec opaque {
  280 │ │         emits DummyEvent{msg: 0} to handle;
  281 │ │         emits DummyEvent{msg: 7} to handle;
  282 │ │         emits DummyEvent{msg: 77} to handle;
@@ -131,7 +131,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:267:5 ───
      │
- 267 │ ╭     spec fun callee {
+ 267 │ ╭     spec callee {
  268 │ │         pragma opaque;
  269 │ │         aborts_if false;
  270 │ │         emits DummyEvent{msg: 7} to handle;
@@ -202,7 +202,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:101:5 ───
      │
- 101 │ ╭     spec fun conditional {
+ 101 │ ╭     spec conditional {
  102 │ │         emits DummyEvent{msg: 0} to handle if x > 7;
  103 │ │     }
      │ ╰─────^
@@ -235,7 +235,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:128:5 ───
      │
- 128 │ ╭     spec fun conditional_bool {
+ 128 │ ╭     spec conditional_bool {
  129 │ │         emits DummyEvent{msg: 0} to handle if b;
  130 │ │     }
      │ ╰─────^
@@ -268,7 +268,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:119:5 ───
      │
- 119 │ ╭     spec fun conditional_missing_condition_incorrect {
+ 119 │ ╭     spec conditional_missing_condition_incorrect {
  120 │ │         emits DummyEvent{msg: 0} to handle;
  121 │ │     }
      │ ╰─────^
@@ -350,7 +350,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:143:5 ───
      │
- 143 │ ╭     spec fun conditional_multiple {
+ 143 │ ╭     spec conditional_multiple {
  144 │ │         emits DummyEvent{msg: 0} to handle if b0;
  145 │ │         emits DummyEvent{msg: 1} to handle if b1;
  146 │ │         emits DummyEvent{msg: 2} to handle if b2;
@@ -431,7 +431,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:156:5 ───
      │
- 156 │ ╭     spec fun conditional_multiple_incorrect {
+ 156 │ ╭     spec conditional_multiple_incorrect {
  157 │ │         emits DummyEvent{msg: 0} to handle;
  158 │ │         emits DummyEvent{msg: 1} to handle;
  159 │ │         emits DummyEvent{msg: 2} to handle;
@@ -518,7 +518,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:173:5 ───
      │
- 173 │ ╭     spec fun conditional_multiple_same {
+ 173 │ ╭     spec conditional_multiple_same {
  174 │ │         emits DummyEvent{msg: 0} to handle if b0;
  175 │ │         emits DummyEvent{msg: 0} to handle if b1;
  176 │ │         emits DummyEvent{msg: 0} to handle if b2;
@@ -599,7 +599,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:186:5 ───
      │
- 186 │ ╭     spec fun conditional_multiple_same_incorrect {
+ 186 │ ╭     spec conditional_multiple_same_incorrect {
  187 │ │         emits DummyEvent{msg: 0} to handle;
  188 │ │         emits DummyEvent{msg: 0} to handle;
  189 │ │         emits DummyEvent{msg: 0} to handle;
@@ -638,7 +638,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:110:5 ───
      │
- 110 │ ╭     spec fun conditional_wrong_condition_incorrect {
+ 110 │ ╭     spec conditional_wrong_condition_incorrect {
  111 │ │         emits DummyEvent{msg: 0} to handle if x > 0;
  112 │ │     }
      │ ╰─────^
@@ -670,7 +670,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:200:5 ───
      │
- 200 │ ╭     spec fun emits_in_schema {
+ 200 │ ╭     spec emits_in_schema {
  201 │ │         include EmitsInSchemaEmits;
  202 │ │     }
      │ ╰─────^
@@ -703,7 +703,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:213:5 ───
      │
- 213 │ ╭     spec fun emits_in_schema_condition {
+ 213 │ ╭     spec emits_in_schema_condition {
  214 │ │         include x > 7 ==> EmitsInSchemaEmits;
  215 │ │     }
      │ ╰─────^
@@ -753,7 +753,7 @@ error: emitted event not covered by any of the `emits` clauses
 
     ┌── tests/sources/functional/emits.move:42:5 ───
     │
- 42 │ ╭     spec fun multiple {
+ 42 │ ╭     spec multiple {
  43 │ │         emits DummyEvent{msg: 0} to handle;
  44 │ │         emits DummyEvent{msg: 1} to handle;
  45 │ │     }
@@ -967,7 +967,7 @@ error: emitted event not covered by any of the `emits` clauses
 
     ┌── tests/sources/functional/emits.move:61:5 ───
     │
- 61 │ ╭     spec fun multiple_same {
+ 61 │ ╭     spec multiple_same {
  62 │ │         emits DummyEvent{msg: 0} to handle;
  63 │ │         emits DummyEvent{msg: 0} to handle;
  64 │ │     }
@@ -1067,7 +1067,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:314:5 ───
      │
- 314 │ ╭     spec fun opaque_completeness_incorrect {
+ 314 │ ╭     spec opaque_completeness_incorrect {
  315 │ │         emits DummyEvent{msg: 0} to handle;
  316 │ │         emits DummyEvent{msg: 7} to handle;
  317 │ │         emits DummyEvent{msg: 1} to handle;
@@ -1180,7 +1180,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:302:5 ───
      │
- 302 │ ╭     spec fun opaque_in_call_chain {
+ 302 │ ╭     spec opaque_in_call_chain {
  303 │ │         emits DummyEvent{msg: 0} to handle;
  304 │ │         emits DummyEvent{msg: 7} to handle;
  305 │ │         emits DummyEvent{msg: 77} to handle;
@@ -1440,7 +1440,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:355:5 ───
      │
- 355 │ ╭     spec fun opaque_partial_incorrect {
+ 355 │ ╭     spec opaque_partial_incorrect {
  356 │ │         emits DummyEvent{msg: 0} to handle;
  357 │ │         emits DummyEvent{msg: 7} to handle;
  358 │ │         emits DummyEvent{msg: 77} to handle;
@@ -1496,7 +1496,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:235:5 ───
      │
- 235 │ ╭     spec fun partial_incorrect {
+ 235 │ ╭     spec partial_incorrect {
  236 │ │         emits DummyEvent{msg: 0} to handle;
  237 │ │     }
      │ ╰─────^
@@ -1528,7 +1528,7 @@ error: emitted event not covered by any of the `emits` clauses
 
     ┌── tests/sources/functional/emits.move:15:5 ───
     │
- 15 │ ╭     spec fun simple {
+ 15 │ ╭     spec simple {
  16 │ │         emits DummyEvent{msg: 0} to handle;
  17 │ │     }
     │ ╰─────^
@@ -1561,7 +1561,7 @@ error: emitted event not covered by any of the `emits` clauses
 
     ┌── tests/sources/functional/emits.move:29:5 ───
     │
- 29 │ ╭     spec fun simple_wrong_handle_incorrect {
+ 29 │ ╭     spec simple_wrong_handle_incorrect {
  30 │ │         emits DummyEvent{msg: 0} to _handle2;
  31 │ │     }
     │ ╰─────^
@@ -1594,7 +1594,7 @@ error: emitted event not covered by any of the `emits` clauses
 
     ┌── tests/sources/functional/emits.move:22:5 ───
     │
- 22 │ ╭     spec fun simple_wrong_msg_incorrect {
+ 22 │ ╭     spec simple_wrong_msg_incorrect {
  23 │ │         emits DummyEvent{msg: 1} to handle;
  24 │ │     }
     │ ╰─────^
@@ -1611,7 +1611,7 @@ error: emitted event not covered by any of the `emits` clauses
 
      ┌── tests/sources/functional/emits.move:255:5 ───
      │
- 255 │ ╭     spec fun strict_incorrect {
+ 255 │ ╭     spec strict_incorrect {
  256 │ │         pragma emits_is_strict;
  257 │ │     }
      │ ╰─────^

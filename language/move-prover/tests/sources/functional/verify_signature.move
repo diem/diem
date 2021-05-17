@@ -6,7 +6,7 @@ module 0x42::VerifySignature {
     public fun verify_ed25519_validate_pubkey(public_key: vector<u8>): bool {
         Signature::ed25519_validate_pubkey(public_key)
     }
-    spec fun verify_ed25519_validate_pubkey {
+    spec verify_ed25519_validate_pubkey {
         ensures result == Signature::ed25519_validate_pubkey(public_key);
     }
 
@@ -17,7 +17,7 @@ module 0x42::VerifySignature {
     ): bool {
         Signature::ed25519_verify(signature, public_key, message)
     }
-    spec fun verify_ed25519_verify {
+    spec verify_ed25519_verify {
         ensures result == Signature::ed25519_verify(signature, public_key, message);
     }
 }

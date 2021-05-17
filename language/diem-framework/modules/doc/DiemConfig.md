@@ -1022,7 +1022,7 @@ emits msg <b>to</b> handle;
 <a name="0x1_DiemConfig_spec_reconfigure_omitted"></a>
 
 
-<pre><code><b>define</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>(): bool {
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>(): bool {
   <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>() || <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() == 0 || !<a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>()
 }
 </code></pre>
@@ -1038,7 +1038,7 @@ emits msg <b>to</b> handle;
 After genesis, the <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a></code> is published.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
+<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
 </code></pre>
 
 
@@ -1051,7 +1051,7 @@ After genesis, the <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Co
 Configurations are only stored at the diem root address.
 
 
-<pre><code><b>invariant</b> [<b>global</b>]
+<pre><code><b>invariant</b>
     <b>forall</b> config_address: address, config_type: type <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;config_type&gt;&gt;(config_address):
         config_address == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
 </code></pre>
@@ -1060,7 +1060,7 @@ Configurations are only stored at the diem root address.
 After genesis, no new configurations are added.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt;
         (<b>forall</b> config_type: type <b>where</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;(): <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()));
 </code></pre>
@@ -1069,7 +1069,7 @@ After genesis, no new configurations are added.
 Published configurations are persistent.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     (<b>forall</b> config_type: type <b>where</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()): <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;());
 </code></pre>
 
@@ -1077,7 +1077,7 @@ Published configurations are persistent.
 If <code><a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;</code> is published, it is persistent.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> config_type: type
+<pre><code><b>invariant</b> <b>update</b> <b>forall</b> config_type: type
     <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())):
         <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 </code></pre>
@@ -1093,15 +1093,15 @@ If <code><a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyCon
 <a name="0x1_DiemConfig_spec_has_config"></a>
 
 
-<pre><code><b>define</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>(): bool {
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>(): bool {
     <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
 }
 <a name="0x1_DiemConfig_spec_is_published"></a>
-<b>define</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
+<b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
     <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
 }
 <a name="0x1_DiemConfig_spec_get_config"></a>
-<b>define</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_get_config">spec_get_config</a>&lt;Config&gt;(): Config {
+<b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_get_config">spec_get_config</a>&lt;Config&gt;(): Config {
     <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).payload
 }
 </code></pre>

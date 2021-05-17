@@ -113,13 +113,13 @@ module DualAttestation {
             base_url_rotation_events: Event::new_event_handle<BaseUrlRotationEvent>(created),
         })
     }
-    spec fun publish_credential {
+    spec publish_credential {
         /// The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H17]][PERMISSION].
         include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
         include Roles::AbortsIfNotTreasuryCompliance{account: creator};
         aborts_if spec_has_credential(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
     }
-    spec define spec_has_credential(addr: address): bool {
+    spec fun spec_has_credential(addr: address): bool {
         exists<Credential>(addr)
     }
 
@@ -134,7 +134,7 @@ module DualAttestation {
             time_rotated_seconds: DiemTimestamp::now_seconds(),
         });
     }
-    spec fun rotate_base_url {
+    spec rotate_base_url {
         include RotateBaseUrlAbortsIf;
         include RotateBaseUrlEnsures;
         include RotateBaseUrlEmits;
@@ -190,7 +190,7 @@ module DualAttestation {
         });
 
     }
-    spec fun rotate_compliance_public_key {
+    spec rotate_compliance_public_key {
         include RotateCompliancePublicKeyAbortsIf;
         include RotateCompliancePublicKeyEnsures;
         include RotateCompliancePublicKeyEmits;
@@ -234,7 +234,7 @@ module DualAttestation {
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).human_name
     }
-    spec fun human_name {
+    spec human_name {
         pragma opaque;
         include AbortsIfNoCredential;
         ensures result == global<Credential>(addr).human_name;
@@ -246,13 +246,13 @@ module DualAttestation {
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).base_url
     }
-    spec fun base_url {
+    spec base_url {
         pragma opaque;
         include AbortsIfNoCredential;
         ensures result == global<Credential>(addr).base_url;
     }
     /// Spec version of `Self::base_url`.
-    spec define spec_base_url(addr: address): vector<u8> {
+    spec fun spec_base_url(addr: address): vector<u8> {
         global<Credential>(addr).base_url
     }
 
@@ -262,13 +262,13 @@ module DualAttestation {
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).compliance_public_key
     }
-    spec fun compliance_public_key {
+    spec compliance_public_key {
         pragma opaque;
         include AbortsIfNoCredential;
         ensures result == spec_compliance_public_key(addr);
     }
     /// Spec version of `Self::compliance_public_key`.
-    spec define spec_compliance_public_key(addr: address): vector<u8> {
+    spec fun spec_compliance_public_key(addr: address): vector<u8> {
         global<Credential>(addr).compliance_public_key
     }
 
@@ -278,7 +278,7 @@ module DualAttestation {
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).expiration_date
     }
-    spec fun expiration_date {
+    spec expiration_date {
         pragma opaque;
         include AbortsIfNoCredential;
         ensures result == global<Credential>(addr).expiration_date;
@@ -292,12 +292,12 @@ module DualAttestation {
     fun credential_address(addr: address): address {
         if (VASP::is_child(addr)) VASP::parent_address(addr) else addr
     }
-    spec fun credential_address {
+    spec credential_address {
         pragma opaque;
         aborts_if false;
         ensures result == spec_credential_address(addr);
     }
-    spec define spec_credential_address(addr: address): address {
+    spec fun spec_credential_address(addr: address): address {
         if (VASP::is_child(addr)) {
             VASP::spec_parent_address(addr)
         } else {
@@ -325,7 +325,7 @@ module DualAttestation {
         VASP::is_vasp(payer) && VASP::is_vasp(payee) &&
             VASP::parent_address(payer) != VASP::parent_address(payee)
     }
-    spec fun dual_attestation_required {
+    spec dual_attestation_required {
         pragma opaque;
         include DualAttestationRequiredAbortsIf<Token>;
         ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
@@ -335,12 +335,12 @@ module DualAttestation {
         include Diem::ApproxXdmForValueAbortsIf<Token>{from_value: deposit_value};
         aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
     }
-    spec define spec_is_inter_vasp(payer: address, payee: address): bool {
+    spec fun spec_is_inter_vasp(payer: address, payee: address): bool {
         VASP::is_vasp(payer) && VASP::is_vasp(payee)
             && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
     }
     /// Helper functions which simulates `Self::dual_attestation_required`.
-    spec define spec_dual_attestation_required<Token>(
+    spec fun spec_dual_attestation_required<Token>(
         payer: address, payee: address, deposit_value: u64
     ): bool {
         Diem::spec_approx_xdx_for_value<Token>(deposit_value)
@@ -360,7 +360,7 @@ module DualAttestation {
         Vector::append(&mut message, DOMAIN_SEPARATOR);
         message
     }
-    spec fun dual_attestation_message {
+    spec dual_attestation_message {
         /// Abstract from construction of message for the prover. Concatenation of results from `BCS::to_bytes`
         /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
         /// message is not important for the verification problem, as long as the prover considers both
@@ -371,7 +371,7 @@ module DualAttestation {
     }
     /// Uninterpreted function for `Self::dual_attestation_message`. The actual value does not matter for
     /// the verification of callers.
-    spec define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
+    spec fun spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
 
     /// Helper function to check validity of a signature when dual attestion is required.
     fun assert_signature_is_valid(
@@ -405,7 +405,7 @@ module DualAttestation {
             Errors::invalid_argument(EINVALID_METADATA_SIGNATURE),
         );
     }
-    spec fun assert_signature_is_valid {
+    spec assert_signature_is_valid {
         pragma opaque = true;
         include AssertSignatureValidAbortsIf;
     }
@@ -423,7 +423,7 @@ module DualAttestation {
     }
 
     /// Returns true if signature is valid.
-    spec define spec_signature_is_valid(
+    spec fun spec_signature_is_valid(
         payer: address,
         payee: address,
         metadata_signature: vector<u8>,
@@ -461,7 +461,7 @@ module DualAttestation {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
     }
-    spec fun assert_payment_ok {
+    spec assert_payment_ok {
         pragma opaque;
         include AssertPaymentOkAbortsIf<Currency>;
     }
@@ -494,7 +494,7 @@ module DualAttestation {
             }
         )
     }
-    spec fun initialize {
+    spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         aborts_if exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()) with Errors::ALREADY_PUBLISHED;
@@ -508,7 +508,7 @@ module DualAttestation {
         assert(exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
         borrow_global<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit
     }
-    spec fun get_cur_microdiem_limit {
+    spec get_cur_microdiem_limit {
         pragma opaque;
         aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
         ensures result == spec_get_cur_microdiem_limit();
@@ -521,7 +521,7 @@ module DualAttestation {
         assert(exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
         borrow_global_mut<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit = micro_xdx_limit;
     }
-    spec fun set_microdiem_limit {
+    spec set_microdiem_limit {
         /// Must abort if the signer does not have the TreasuryCompliance role [[H6]][PERMISSION].
         /// The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
@@ -537,18 +537,18 @@ module DualAttestation {
 
     /// The Limit resource should be published after genesis
     spec module {
-        invariant [global] DiemTimestamp::is_operating() ==> spec_is_published();
+        invariant DiemTimestamp::is_operating() ==> spec_is_published();
     }
 
     /// # Helper Functions
     spec module {
         /// Helper function to determine whether the Limit is published.
-        define spec_is_published(): bool {
+        fun spec_is_published(): bool {
             exists<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS())
         }
 
         /// Mirrors `Self::get_cur_microdiem_limit`.
-        define spec_get_cur_microdiem_limit(): u64 {
+        fun spec_get_cur_microdiem_limit(): u64 {
             global<Limit>(CoreAddresses::DIEM_ROOT_ADDRESS()).micro_xdx_limit
         }
     }
@@ -575,7 +575,7 @@ module DualAttestation {
         /// "Credential" resources are only published under ParentVASP or DD accounts.
         apply PreserveCredentialAbsence to * except publish_credential;
         apply Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created} to publish_credential;
-        invariant [global] forall addr1: address:
+        invariant forall addr1: address:
             spec_has_credential(addr1) ==>
                 (Roles::spec_has_parent_VASP_role_addr(addr1) ||
                 Roles::spec_has_designated_dealer_role_addr(addr1));

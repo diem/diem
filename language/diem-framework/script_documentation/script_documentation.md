@@ -4867,16 +4867,6 @@ the account at <code>address</code>.
 
 
 
-
-<pre><code><b>aborts_with</b> [check]
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
-    <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
-    <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-</code></pre>
-
-
-
 </details>
 
 <a name="0x1_TreasuryComplianceScripts_remove_diem_id_domain"></a>
@@ -4941,6 +4931,22 @@ account with <code>address</code>.
 ) {
     <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_remove_diem_id_domain">DiemId::remove_diem_id_domain</a>(&tc_account, address, domain);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>aborts_with</b> [check]
+    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 

@@ -12,7 +12,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_0_x(x: FixedPoint32): u64 {
         FixedPoint32::multiply_u64(0, x)
     }
-    spec fun multiply_0_x {
+    spec multiply_0_x {
         aborts_if false; // proved
         ensures result == 0; // proved
     }
@@ -20,7 +20,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_0_x_incorrect(x: FixedPoint32): u64 {
         FixedPoint32::multiply_u64(0, x)
     }
-    spec fun multiply_0_x_incorrect {
+    spec multiply_0_x_incorrect {
         aborts_if false; // proved
         ensures result == 1; // disproved
     }
@@ -28,7 +28,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_x_0(x: u64): u64 {
         FixedPoint32::multiply_u64(x, FixedPoint32::create_from_raw_value(0))
     }
-    spec fun multiply_x_0 {
+    spec multiply_x_0 {
         aborts_if false; // proved
         ensures result == 0; // proved
     }
@@ -36,7 +36,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_x_0_incorrect(x: u64): u64 {
         FixedPoint32::multiply_u64(x, FixedPoint32::create_from_raw_value(0))
     }
-    spec fun multiply_x_0_incorrect {
+    spec multiply_x_0_incorrect {
         aborts_if false; // proved
         ensures result == 1; // disproved
     }
@@ -49,7 +49,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_1_x(x: FixedPoint32): u64 {
         FixedPoint32::multiply_u64(1, x)
     }
-    spec fun multiply_1_x {
+    spec multiply_1_x {
         aborts_if false; // proved
         // (x.value >> 32) is the integer part of x.
         ensures result == (x.value >> 32); // proved
@@ -58,7 +58,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_1_x_incorrect(x: FixedPoint32): u64 {
         FixedPoint32::multiply_u64(1, x)
     }
-    spec fun multiply_1_x_incorrect {
+    spec multiply_1_x_incorrect {
         aborts_if false; // proved
         // (x.value >> 32) is the integer part of x.
         ensures result != (x.value >> 32); // disproved
@@ -67,7 +67,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_x_1(x: u64): u64 {
         FixedPoint32::multiply_u64(x, FixedPoint32::create_from_rational(1,1))
     }
-    spec fun multiply_x_1 {
+    spec multiply_x_1 {
         aborts_if false; // proved
         ensures result == x; // proved
     }
@@ -75,7 +75,7 @@ module 0x42::FixedPointArithmetic {
     fun multiply_x_1_incorrect(x: u64): u64 {
         FixedPoint32::multiply_u64(x, FixedPoint32::create_from_rational(1,1))
     }
-    spec fun multiply_x_1_incorrect {
+    spec multiply_x_1_incorrect {
         aborts_if false; // proved
         ensures result != x; // disproved
     }
@@ -91,7 +91,7 @@ module 0x42::FixedPointArithmetic {
         let z = FixedPoint32::multiply_u64(x, FixedPoint32::create_from_raw_value(y_raw_val));
         FixedPoint32::divide_u64(z, FixedPoint32::create_from_raw_value(y_raw_val))
     }
-    spec fun mul_div {
+    spec mul_div {
         ensures result <= x; // proved
     }
 
@@ -100,7 +100,7 @@ module 0x42::FixedPointArithmetic {
         let z = FixedPoint32::multiply_u64(x, FixedPoint32::create_from_raw_value(y_raw_val));
         FixedPoint32::divide_u64(z, FixedPoint32::create_from_raw_value(y_raw_val))
     }
-    spec fun mul_div_incorrect {
+    spec mul_div_incorrect {
         ensures result >= x; // disproved
         ensures result == x; // disproved
         ensures result < x; // disproved
@@ -113,7 +113,7 @@ module 0x42::FixedPointArithmetic {
         let z = FixedPoint32::divide_u64(x, FixedPoint32::create_from_raw_value(y_raw_val));
         FixedPoint32::multiply_u64(z, FixedPoint32::create_from_raw_value(y_raw_val))
     }
-    spec fun div_mul {
+    spec div_mul {
         ensures result <= x; // proved
     }
 
@@ -122,7 +122,7 @@ module 0x42::FixedPointArithmetic {
         let z = FixedPoint32::divide_u64(x, FixedPoint32::create_from_raw_value(y_raw_val));
         FixedPoint32::multiply_u64(z, FixedPoint32::create_from_raw_value(y_raw_val))
     }
-    spec fun div_mul_incorrect {
+    spec div_mul_incorrect {
         ensures result >= x; // disproved
         ensures result == x; // disproved
         ensures result < x; // disproved

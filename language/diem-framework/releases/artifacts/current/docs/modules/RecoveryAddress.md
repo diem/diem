@@ -464,7 +464,7 @@ A RecoveryAddress has its own <code>KeyRotationCapability</code>.
 
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
    <b>forall</b> addr: address:
        <b>old</b>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr)) ==&gt; <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr);
 </code></pre>
@@ -479,7 +479,7 @@ A RecoveryAddress has its own <code>KeyRotationCapability</code>.
 <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> persists
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr)):
+<pre><code><b>invariant</b> <b>update</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr)):
     <b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr);
 </code></pre>
 
@@ -488,7 +488,7 @@ If <code>recovery_addr</code> holds the <code>KeyRotationCapability</code> of <c
 in the previous state, then it continues to hold the capability after the update.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <b>forall</b> recovery_addr: address, to_recovery_addr: address
     <b>where</b> <b>old</b>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr)):
         <b>old</b>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr))
@@ -523,7 +523,7 @@ Returns true if <code>addr</code> is a recovery address.
 <a name="0x1_RecoveryAddress_spec_is_recovery_address"></a>
 
 
-<pre><code><b>define</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr: address): bool
+<pre><code><b>fun</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr: address): bool
 {
     <b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr)
 }
@@ -536,7 +536,7 @@ Returns all the <code>KeyRotationCapability</code>s held at <code>recovery_addre
 <a name="0x1_RecoveryAddress_spec_get_rotation_caps"></a>
 
 
-<pre><code><b>define</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address: address):
+<pre><code><b>fun</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address: address):
     vector&lt;<a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a>&gt;
 {
     <b>global</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps
@@ -551,7 +551,7 @@ Returns true if <code>recovery_address</code> holds the
 <a name="0x1_RecoveryAddress_spec_holds_key_rotation_cap_for"></a>
 
 
-<pre><code><b>define</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(
+<pre><code><b>fun</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(
     recovery_address: address,
     addr: address): bool
 {

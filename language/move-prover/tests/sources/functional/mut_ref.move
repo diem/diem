@@ -5,7 +5,7 @@ module 0x1::TestMutRef {
     struct R has copy, drop { value: u64 }
     struct N has copy, drop { value: u64, t: T }
 
-    spec struct T { invariant value > 0; }
+    spec T { invariant value > 0; }
 
     // Identity
     // ========
@@ -18,7 +18,7 @@ module 0x1::TestMutRef {
         *r = 2;
         x
     }
-    spec fun call_identity {
+    spec call_identity {
         ensures result == 2;
     }
 
@@ -36,7 +36,7 @@ module 0x1::TestMutRef {
         *r = 5;
         (x, y)
     }
-    spec fun call_return_ref_different_root {
+    spec call_return_ref_different_root {
         ensures b ==> result_1 == T{value: 5} && result_2 == R{value: 10};
         ensures !b ==> result_1 == T{value: 1} && result_2 == R{value: 5};
     }
@@ -54,7 +54,7 @@ module 0x1::TestMutRef {
         *r = 5;
         x
     }
-    spec fun call_return_ref_different_path {
+    spec call_return_ref_different_path {
         ensures b ==> result == N{value: 5, t: T{value: 2}};
         ensures !b ==> result == N{value: 1, t: T{value: 5}};
     }
@@ -80,7 +80,7 @@ module 0x1::TestMutRef {
         *r = 5;
         x
     }
-    spec fun call_return_ref_different_path_vec {
+    spec call_return_ref_different_path_vec {
         ensures b ==> result == V{is: concat(vec(1u64), vec(5u64)), ts: vec()};
         ensures !b ==> result == V{is: concat(vec(5u64), vec(2u64)), ts: vec()};
     }
@@ -103,7 +103,7 @@ module 0x1::TestMutRef {
         *r = 5;
         x
     }
-    spec fun call_return_ref_different_path_vec2 {
+    spec call_return_ref_different_path_vec2 {
         ensures b ==> result == V{is: concat(vec(1u64), vec(5u64)), ts: concat(vec(T{value: 3}), vec(T{value: 4}))};
         ensures !b ==> result == V{is: concat(vec(1u64), vec(2u64)), ts: concat(vec(T{value: 5}), vec(T{value: 4}))};
     }
@@ -122,7 +122,7 @@ module 0x1::TestMutRef {
         *r = 0;
         x
     }
-    spec fun call_return_ref_different_path_vec2_incorrect {
+    spec call_return_ref_different_path_vec2_incorrect {
         ensures b ==> result == V{is: concat(vec(1u64), vec(0u64)), ts: concat(vec(T{value: 3}), vec(T{value: 4}))};
         ensures !b ==> result == V{is: concat(vec(1u64), vec(2u64)), ts: concat(vec(T{value: 0}), vec(T{value: 4}))};
     }

@@ -593,7 +593,7 @@ Returns the config published under addr.
 <a name="0x1_ValidatorConfig_spec_get_config"></a>
 
 
-<pre><code><b>define</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">Config</a> {
+<pre><code><b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">Config</a> {
    <a href="../../../../../../move-stdlib/docs/Option.md#0x1_Option_borrow">Option::borrow</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
@@ -802,7 +802,7 @@ See comment on <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_set_config"
 A validator stays valid once it becomes valid.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <b>forall</b> validator: address <b>where</b> <b>old</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(validator)): <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(validator);
 </code></pre>
 
@@ -816,7 +816,7 @@ A validator stays valid once it becomes valid.
 Every address that has a ValidatorConfig also has a validator role.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_exists_config">exists_config</a>(addr):
+<pre><code><b>invariant</b> <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_exists_config">exists_config</a>(addr):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr);
 </code></pre>
 
@@ -825,7 +825,7 @@ DIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This
 in DiemSystem so we don't have to check whether every validator address has a validator role.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_exists_config">exists_config</a>(addr):
+<pre><code><b>invariant</b> <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_exists_config">exists_config</a>(addr):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr);
 </code></pre>
 
@@ -836,7 +836,7 @@ of the previous invariant, but it is not inductive and can't be proved without t
 previous one as a helper.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr):
+<pre><code><b>invariant</b> <b>forall</b> addr: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr);
 </code></pre>
 
@@ -852,7 +852,7 @@ Returns true if addr has an operator account.
 <a name="0x1_ValidatorConfig_spec_has_operator"></a>
 
 
-<pre><code><b>define</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(addr: address): bool {
+<pre><code><b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(addr: address): bool {
    <a href="../../../../../../move-stdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account)
 }
 </code></pre>

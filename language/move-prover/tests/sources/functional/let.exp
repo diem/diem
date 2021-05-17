@@ -30,7 +30,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/let.move:73:5 ───
     │
- 73 │ ╭     spec fun spec_let_with_abort_incorrect {
+ 73 │ ╭     spec spec_let_with_abort_incorrect {
  74 │ │         let sum = a + b;
  75 │ │         let product = a * b;
  76 │ │         aborts_if sum != 0;

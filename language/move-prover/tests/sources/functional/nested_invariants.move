@@ -11,7 +11,7 @@ module 0x42::TestNestedInvariants {
         x: u64
     }
 
-    spec struct Nested {
+    spec Nested {
         // We must always have a value greater one.
         invariant x > 0;
 
@@ -24,7 +24,7 @@ module 0x42::TestNestedInvariants {
         n: Nested
     }
 
-    spec struct Outer {
+    spec Outer {
         // Invariant for own field.
         invariant y < 4;
 

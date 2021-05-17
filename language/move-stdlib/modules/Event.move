@@ -92,7 +92,7 @@ module Event {
 
         /// Determines equality between the guids of two event handles. Since fields of intrinsic
         /// structs cannot be accessed, this function is provided.
-        define spec_guid_eq<T>(h1: EventHandle<T>, h2: EventHandle<T>): bool {
+        fun spec_guid_eq<T>(h1: EventHandle<T>, h2: EventHandle<T>): bool {
             // The implementation currently can just use native equality since the mocked prover
             // representation does not have the `counter` field.
             h1 == h2

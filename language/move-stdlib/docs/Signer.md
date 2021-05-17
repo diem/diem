@@ -76,7 +76,7 @@ Specification version of <code><a href="Signer.md#0x1_Signer_address_of">Self::a
 <a name="0x1_Signer_spec_address_of"></a>
 
 
-<pre><code><b>native</b> <b>define</b> <a href="Signer.md#0x1_Signer_spec_address_of">spec_address_of</a>(account: signer): address;
+<pre><code><b>native</b> <b>fun</b> <a href="Signer.md#0x1_Signer_spec_address_of">spec_address_of</a>(account: signer): address;
 </code></pre>
 
 

@@ -5,7 +5,7 @@ module Compare {
     use 0x1::Vector;
 
     // Move does not have signed integers, so we cannot use the usual 0, -1, 1 convention to
-    // represent EQUAL, LESS_THAN, and GREATER_THAN. Instead, we define a new convention using u8
+    // represent EQUAL, LESS_THAN, and GREATER_THAN. Instead, we fun a new convention using u8
     // constants:
     const EQUAL: u8 = 0;
     const LESS_THAN: u8 = 1;

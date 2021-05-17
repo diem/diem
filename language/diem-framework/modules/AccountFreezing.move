@@ -58,7 +58,7 @@ module AccountFreezing {
             unfreeze_event_handle: Event::new_event_handle(dr_account),
         });
     }
-    spec fun initialize {
+    spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         let addr = Signer::spec_address_of(dr_account);
@@ -71,7 +71,7 @@ module AccountFreezing {
         assert(!exists<FreezingBit>(addr), Errors::already_published(EFREEZING_BIT));
         move_to(account, FreezingBit { is_frozen: false })
     }
-    spec fun create {
+    spec create {
         let addr = Signer::spec_address_of(account);
         modifies global<FreezingBit>(addr);
         aborts_if exists<FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
@@ -100,7 +100,7 @@ module AccountFreezing {
             },
         );
     }
-    spec fun freeze_account {
+    spec freeze_account {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance;
         aborts_if frozen_address == CoreAddresses::DIEM_ROOT_ADDRESS() with Errors::INVALID_ARGUMENT;
@@ -139,7 +139,7 @@ module AccountFreezing {
             },
         );
     }
-    spec fun unfreeze_account {
+    spec unfreeze_account {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance;
         aborts_if !exists<FreezingBit>(unfrozen_address) with Errors::NOT_PUBLISHED;
@@ -162,7 +162,7 @@ module AccountFreezing {
     acquires FreezingBit {
         exists<FreezingBit>(addr) && borrow_global<FreezingBit>(addr).is_frozen
      }
-    spec fun account_is_frozen {
+    spec account_is_frozen {
         aborts_if false;
         pragma opaque = true;
         ensures result == spec_account_is_frozen(addr);
@@ -172,7 +172,7 @@ module AccountFreezing {
     public fun assert_not_frozen(account: address) acquires FreezingBit {
         assert(!account_is_frozen(account), Errors::invalid_state(EACCOUNT_FROZEN));
     }
-    spec fun assert_not_frozen {
+    spec assert_not_frozen {
         pragma opaque;
         include AbortsIfFrozen;
     }
@@ -190,7 +190,7 @@ module AccountFreezing {
     /// # Initialization
     spec module {
         /// `FreezeEventsHolder` always exists after genesis.
-        invariant [global] DiemTimestamp::is_operating() ==>
+        invariant DiemTimestamp::is_operating() ==>
             exists<FreezeEventsHolder>(CoreAddresses::DIEM_ROOT_ADDRESS());
     }
 
@@ -198,19 +198,19 @@ module AccountFreezing {
     spec module {
         /// The account of DiemRoot is not freezable [[F1]][ROLE].
         /// After genesis, FreezingBit of DiemRoot is always false.
-        invariant [global] DiemTimestamp::is_operating() ==>
+        invariant DiemTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// The account of TreasuryCompliance is not freezable [[F2]][ROLE].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
-        invariant [global] DiemTimestamp::is_operating() ==>
+        invariant DiemTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
         /// resource struct FreezingBit persists
-        invariant update [global] forall addr: address where old(exists<FreezingBit>(addr)): exists<FreezingBit>(addr);
+        invariant update forall addr: address where old(exists<FreezingBit>(addr)): exists<FreezingBit>(addr);
 
         /// resource struct FreezeEventsHolder is there forever after initialization
-        invariant update [global] DiemTimestamp::is_operating() ==> exists<FreezeEventsHolder>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant update DiemTimestamp::is_operating() ==> exists<FreezeEventsHolder>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H7]][PERMISSION].
         apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
@@ -227,11 +227,11 @@ module AccountFreezing {
     /// # Helper Functions
     spec module {
 
-        define spec_account_is_frozen(addr: address): bool {
+        fun spec_account_is_frozen(addr: address): bool {
             exists<FreezingBit>(addr) && global<FreezingBit>(addr).is_frozen
         }
 
-        define spec_account_is_not_frozen(addr: address): bool {
+        fun spec_account_is_not_frozen(addr: address): bool {
             exists<FreezingBit>(addr) && !global<FreezingBit>(addr).is_frozen
         }
     }

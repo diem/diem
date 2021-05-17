@@ -40,7 +40,7 @@ module 0x42::VerifyLoopsWithMemoryOps {
             assert forall m in 0..length: a[m] == b[m];
         };
     }
-    spec fun nested_loop1 {
+    spec nested_loop1 {
         aborts_if false;
     }
 
@@ -93,7 +93,7 @@ module 0x42::VerifyLoopsWithMemoryOps {
             assert forall m in 0..length: a[m] == b[m];
         };
     }
-    spec fun nested_loop2 {
+    spec nested_loop2 {
         aborts_if false;
     }
 }

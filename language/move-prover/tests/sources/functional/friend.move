@@ -8,11 +8,11 @@ module 0x42::TestFriend {
     public fun f(account: &signer, val: u64) {
         move_to(account, R{x: val});
     }
-    spec fun f {
+    spec f {
         pragma friend = gg;
     }
 
-    spec fun f {
+    spec f {
         /// This pragma declaration overwrites the previous one.
         pragma friend = g;
     }
@@ -21,7 +21,7 @@ module 0x42::TestFriend {
         f(account, val);
     }
 
-    spec fun g {
+    spec g {
         pragma friend = h;
     }
 

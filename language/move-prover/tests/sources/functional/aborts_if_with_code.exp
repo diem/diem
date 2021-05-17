@@ -3,7 +3,7 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
     ┌── tests/sources/functional/aborts_if_with_code.move:77:5 ───
     │
- 77 │ ╭     spec fun aborts_if_with_code_mixed_invalid {
+ 77 │ ╭     spec aborts_if_with_code_mixed_invalid {
  78 │ │         aborts_if x == 1;
  79 │ │         aborts_if x == 2 with 1;
  80 │ │     }
@@ -22,7 +22,7 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
      ┌── tests/sources/functional/aborts_if_with_code.move:105:5 ───
      │
- 105 │ ╭     spec fun aborts_with_invalid {
+ 105 │ ╭     spec aborts_with_invalid {
  106 │ │         aborts_with 1,3;
  107 │ │     }
      │ ╰─────^
@@ -40,7 +40,7 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
      ┌── tests/sources/functional/aborts_if_with_code.move:131:5 ───
      │
- 131 │ ╭     spec fun aborts_with_mixed_invalid {
+ 131 │ ╭     spec aborts_with_mixed_invalid {
  132 │ │         pragma aborts_if_is_partial = true;
  133 │ │         aborts_if x == 1 with 1;
  134 │ │         aborts_with 2;
@@ -60,7 +60,7 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
     ┌── tests/sources/functional/aborts_if_with_code.move:38:5 ───
     │
- 38 │ ╭     spec fun conditional_abort_invalid {
+ 38 │ ╭     spec conditional_abort_invalid {
  39 │ │         aborts_if x == 1 with 1; // wrong code
  40 │ │         aborts_if y == 2 with 3;
  41 │ │         ensures result == x;
@@ -82,7 +82,7 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
     ┌── tests/sources/functional/aborts_if_with_code.move:48:5 ───
     │
- 48 │ ╭     spec fun exec_failure_invalid {
+ 48 │ ╭     spec exec_failure_invalid {
  49 │ │         aborts_if x == 0 with 1; // wrong code
  50 │ │         ensures result == 10 / x;
  51 │ │     }

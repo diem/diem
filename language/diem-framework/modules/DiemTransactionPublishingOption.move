@@ -50,7 +50,7 @@ module DiemTransactionPublishingOption {
             }
         );
     }
-    spec fun initialize {
+    spec initialize {
         /// Must abort if the signer does not have the DiemRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
@@ -79,7 +79,7 @@ module DiemTransactionPublishingOption {
             // fixed allowlist. check inclusion
             || Vector::contains(&publish_option.script_allow_list, hash)
     }
-    spec fun is_script_allowed {
+    spec is_script_allowed {
         include
             !Roles::has_diem_root_role(account) && !transactions_halted() && !Vector::is_empty(hash)
             ==> DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
@@ -94,7 +94,7 @@ module DiemTransactionPublishingOption {
 
         publish_option.module_publishing_allowed || Roles::has_diem_root_role(account)
     }
-    spec fun is_module_allowed{
+    spec is_module_allowed{
         include DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
     }
 
@@ -106,7 +106,7 @@ module DiemTransactionPublishingOption {
         publish_option.script_allow_list = Vector::empty();
         DiemConfig::set<DiemTransactionPublishingOption>(dr_account, publish_option);
     }
-    spec fun set_open_script {
+    spec set_open_script {
         /// Must abort if the signer does not have the DiemRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
@@ -123,7 +123,7 @@ module DiemTransactionPublishingOption {
         publish_option.module_publishing_allowed = open_module;
         DiemConfig::set<DiemTransactionPublishingOption>(dr_account, publish_option);
     }
-    spec fun set_open_module {
+    spec set_open_module {
         /// Must abort if the signer does not have the DiemRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
@@ -162,7 +162,7 @@ module DiemTransactionPublishingOption {
 
     /// # Initialization
     spec module {
-        invariant [global] DiemTimestamp::is_operating() ==>
+        invariant DiemTimestamp::is_operating() ==>
             DiemConfig::spec_is_published<DiemTransactionPublishingOption>();
     }
 
@@ -181,7 +181,7 @@ module DiemTransactionPublishingOption {
 
     /// # Helper Functions
     spec module {
-        define spec_is_script_allowed(account: signer, hash: vector<u8>): bool {
+        fun spec_is_script_allowed(account: signer, hash: vector<u8>): bool {
             let publish_option = DiemConfig::spec_get_config<DiemTransactionPublishingOption>();
             Roles::has_diem_root_role(account) || (!transactions_halted() && (
                 Vector::is_empty(hash) ||
@@ -190,7 +190,7 @@ module DiemTransactionPublishingOption {
             ))
         }
 
-        define spec_is_module_allowed(account: signer): bool {
+        fun spec_is_module_allowed(account: signer): bool {
             let publish_option = DiemConfig::spec_get_config<DiemTransactionPublishingOption>();
             publish_option.module_publishing_allowed || Roles::has_diem_root_role(account)
         }

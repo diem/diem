@@ -71,7 +71,7 @@ module PaymentScripts {
         );
         DiemAccount::restore_withdraw_capability(payer_withdrawal_cap);
     }
-    spec fun peer_to_peer_with_metadata {
+    spec peer_to_peer_with_metadata {
         use 0x1::Signer;
         use 0x1::Errors;
 

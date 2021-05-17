@@ -197,9 +197,9 @@ fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
  15: assert Implies(Not($t0), Eq<u64>($t3, Mul($t1, $t2)))
  16: return $t3
  17: label L5
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:26:2+169
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:26:2+165
  18: assert And($t0, Eq<u64>($t2, 0))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:26:2+169
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:26:2+165
  19: assert And(And($t0, Eq<u64>($t2, 0)), Eq(-1, $t4))
  20: abort($t4)
 }
@@ -234,9 +234,9 @@ fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
  16: assert Eq<u64>($t6, Div($t0, $t1))
  17: return $t6
  18: label L4
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:8:2+125
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:8:2+121
  19: assert Or(Eq<u64>($t1, 0), Eq<u64>($t0, 0))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:8:2+125
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:8:2+121
  20: assert Or(And(Eq<u64>($t1, 0), Eq(22, $t5)), Eq<u64>($t0, 0))
  21: abort($t5)
 }
@@ -260,9 +260,9 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
   7: assert Eq<u64>($t4, Mod($t0, $t1))
   8: return ($t2, $t4)
   9: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:17:2+140
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:17:2+136
  10: assert Eq<u64>($t1, 0)
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:17:2+140
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:17:2+136
  11: assert And(Eq<u64>($t1, 0), Eq(-1, $t3))
  12: abort($t3)
 }
@@ -297,9 +297,9 @@ fun Test::mut_ref_param($t0|r: &mut Test::R): u64 {
  13: assert Eq<u64>(select Test::R.v($t0), Add(select Test::R.v($t2), 1))
  14: return $t3
  15: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:66:2+138
  16: assert Eq<u64>(select Test::R.v($t2), 0)
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:66:2+138
  17: assert And(Eq<u64>(select Test::R.v($t2), 0), Eq(-1, $t7))
  18: abort($t7)
 }
@@ -377,9 +377,9 @@ fun Test::resource_with_old($t0|val: u64) {
  28: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
  29: return ()
  30: label L4
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+250
  31: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+250
  32: assert Or(And(Not(exists[@0]<Test::R>(0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
  33: abort($t6)
 }

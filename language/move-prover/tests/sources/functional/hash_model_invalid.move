@@ -14,7 +14,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha2_256(v2);
         (h1, h2)
     }
-    spec fun hash_test1 {
+    spec hash_test1 {
         aborts_if false;
         // TODO: two failing ensures seem to create non-determinism; one time the first, the next the
         // second is reported. Investigate whether this is caused by boogie_wrapper or by inherent to boogie.
@@ -29,7 +29,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha3_256(v2);
         (h1, h2)
     }
-    spec fun hash_test2 {
+    spec hash_test2 {
         aborts_if false;
         // ensures result_1 == result_2;
         ensures len(result_1) > 0 ==> result_1[0] < max_u8();

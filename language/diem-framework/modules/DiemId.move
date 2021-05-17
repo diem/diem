@@ -15,7 +15,7 @@ module DiemId {
         /// The list of domain names owned by this parent vasp account
         domains: vector<DiemIdDomain>,
     }
-    spec struct DiemIdDomains {
+    spec DiemIdDomains {
         /// All `DiemIdDomain`s stored in the `DiemIdDomains` resource are no more than 63 characters long.
         invariant forall i in 0..len(domains): len(domains[i].domain) <= DOMAIN_LENGTH;
         /// The list of `DiemIdDomain`s are a set
@@ -27,7 +27,7 @@ module DiemId {
     struct DiemIdDomain has drop, store, copy {
         domain: vector<u8>, // UTF-8 encoded and 63 characters
     }
-    spec struct DiemIdDomain {
+    spec DiemIdDomain {
         /// All `DiemIdDomain`s must be no more than 63 characters long.
         invariant len(domain) <= DOMAIN_LENGTH;
     }
@@ -67,7 +67,7 @@ module DiemId {
         assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALID_DIEM_ID_DOMAIN));
         DiemIdDomain{ domain }
     }
-    spec fun create_diem_id_domain {
+    spec create_diem_id_domain {
         include CreateDiemIdDomainAbortsIf;
         ensures result == DiemIdDomain { domain };
     }
@@ -91,7 +91,7 @@ module DiemId {
             domains: Vector::empty(),
         })
     }
-    spec fun publish_diem_id_domains {
+    spec publish_diem_id_domains {
         let vasp_addr = Signer::spec_address_of(vasp_account);
         include Roles::AbortsIfNotParentVasp{account: vasp_account};
         include PublishDiemIdDomainsAbortsIf;
@@ -110,7 +110,7 @@ module DiemId {
     public fun has_diem_id_domains(addr: address): bool {
         exists<DiemIdDomains>(addr)
     }
-    spec fun has_diem_id_domains {
+    spec has_diem_id_domains {
         aborts_if false;
         ensures result == exists<DiemIdDomains>(addr);
     }
@@ -133,7 +133,7 @@ module DiemId {
             }
         );
     }
-    spec fun publish_diem_id_domain_manager {
+    spec publish_diem_id_domain_manager {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
         ensures exists<DiemIdDomainManager>(Signer::spec_address_of(tc_account));
@@ -174,7 +174,7 @@ module DiemId {
             },
         );
     }
-    spec fun add_diem_id_domain {
+    spec add_diem_id_domain {
         include AddDiemIdDomainAbortsIf;
         include AddDiemIdDomainEnsures;
         include AddDiemIdDomainEmits;
@@ -240,7 +240,7 @@ module DiemId {
             },
         );
     }
-    spec fun remove_diem_id_domain {
+    spec remove_diem_id_domain {
         include RemoveDiemIdDomainAbortsIf;
         include RemoveDiemIdDomainEnsures;
         include RemoveDiemIdDomainEmits;
@@ -284,7 +284,7 @@ module DiemId {
         let diem_id_domain = create_diem_id_domain(domain);
         Vector::contains(&account_domains.domains, &diem_id_domain)
     }
-    spec fun has_diem_id_domain {
+    spec has_diem_id_domain {
         include HasDiemIdDomainAbortsIf;
         let id_domain = DiemIdDomain { domain };
         ensures result == contains(global<DiemIdDomains>(addr).domains, id_domain);
@@ -299,7 +299,7 @@ module DiemId {
     public fun tc_domain_manager_exists(): bool {
         exists<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
-    spec fun tc_domain_manager_exists {
+    spec tc_domain_manager_exists {
         aborts_if false;
         ensures result == exists<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
     }

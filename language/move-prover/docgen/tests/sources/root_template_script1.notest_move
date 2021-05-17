@@ -3,7 +3,7 @@ script {
 fun some<T>(_account: signer) {
     abort 1
 }
-spec fun some {
+spec some {
     aborts_if true with 1;
 }
 }

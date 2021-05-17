@@ -1,0 +1,7 @@
+error:
+
+   ┌── tests/sources/module_level_spec_err_unassociated.move:4:12 ───
+   │
+ 4 │ spec 0x42::TestModuleUndefined {
+   │            ^^^^^^^^^^^^^^^^^^^ Cannot associate specification with any target module in this compilation. A module specification cannot be compiled standalone.
+   │

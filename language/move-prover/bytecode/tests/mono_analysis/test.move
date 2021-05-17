@@ -21,7 +21,7 @@ module Test {
     public fun f3<T>(x1: T): A<T, u64> {
         A{x1, x2: 1}
     }
-    spec fun f3 {
+    spec f3 {
         pragma opaque = true;
     }
 

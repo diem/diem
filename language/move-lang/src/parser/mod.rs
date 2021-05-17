@@ -5,4 +5,5 @@ mod lexer;
 pub(crate) mod syntax;
 
 pub mod ast;
+pub(crate) mod merge_spec_modules;
 pub(crate) mod sources_shadow_deps;

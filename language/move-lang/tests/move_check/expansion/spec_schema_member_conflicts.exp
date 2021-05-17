@@ -33,10 +33,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:31:16 ───
+    ┌── tests/move_check/expansion/spec_schema_member_conflicts.move:31:13 ───
     │
- 31 │         define Foo(): bool { false }
-    │                ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+ 31 │         fun Foo(): bool { false }
+    │             ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
     ·
  27 │     spec schema Foo<T> {
     │                 --- Previously defined here

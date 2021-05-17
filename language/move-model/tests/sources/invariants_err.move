@@ -4,7 +4,7 @@ module 0x42::M {
     x: u64,
   }
 
-  spec struct S {
+  spec S {
     // Expression not a bool
     invariant x + 1;
     // Old expression in data invariant
@@ -20,14 +20,14 @@ module 0x42::M {
   spec module {
     global spec_var: num;
 
-    define rec_fun(c: bool): bool {
+    fun rec_fun(c: bool): bool {
         if (c) {
           rec_fun2(c)
         } else {
           spec_var > 0
         }
       }
-      define rec_fun2(c: bool): bool {
+      fun rec_fun2(c: bool): bool {
          rec_fun(!c)
       }
     }

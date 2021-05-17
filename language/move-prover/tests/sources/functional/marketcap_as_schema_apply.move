@@ -32,7 +32,7 @@ module TestMarketCapWithSchemas {
         // The value of the coin. May be zero
         value: u64,
     }
-    spec struct T {
+    spec T {
         invariant pack sum_of_coins<X> = sum_of_coins<X> + value;
         invariant unpack sum_of_coins<X> = sum_of_coins<X> - value;
     }
@@ -63,7 +63,7 @@ module TestMarketCapWithSchemas {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value;
     }
-    spec fun deposit {
+    spec deposit {
         include DepositCorrect<Token>;
     }
 
@@ -72,7 +72,7 @@ module TestMarketCapWithSchemas {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value / 2;
     }
-    spec fun deposit_incorrect {
+    spec deposit_incorrect {
         include DepositIncorrect<Token>;
     }
 
@@ -82,7 +82,7 @@ module TestMarketCapWithSchemas {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value / 2;
     }
-    spec fun deposit_not_public {
+    spec deposit_not_public {
         include DepositIncorrect<Token>;
     }
 
@@ -92,7 +92,7 @@ module TestMarketCapWithSchemas {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value / 2;
     }
-    spec fun excepted_deposit {
+    spec excepted_deposit {
         include DepositIncorrect<Token>;
     }
 
@@ -102,7 +102,7 @@ module TestMarketCapWithSchemas {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value / 2;
     }
-    spec fun deposit_different_type_params {
+    spec deposit_different_type_params {
         include DepositIncorrect<Token>;
     }
 

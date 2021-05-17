@@ -7,7 +7,7 @@ fun main<Token: store>(account: signer) {
     ScriptProvider::register<Token>(&account);
 }
 
-spec fun main {
+spec main {
     include ScriptProvider::RegisterConditions<Token>;
 }
 }

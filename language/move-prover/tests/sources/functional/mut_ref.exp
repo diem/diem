@@ -1,10 +1,10 @@
 Move prover returns: exiting with boogie verification errors
 error: data invariant does not hold
 
-   ┌── tests/sources/functional/mut_ref.move:8:21 ───
+   ┌── tests/sources/functional/mut_ref.move:8:14 ───
    │
- 8 │     spec struct T { invariant value > 0; }
-   │                     ^^^^^^^^^^^^^^^^^^^^
+ 8 │     spec T { invariant value > 0; }
+   │              ^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/mut_ref.move:127
    =     at tests/sources/functional/mut_ref.move:113: call_return_ref_different_path_vec2_incorrect

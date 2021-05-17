@@ -69,7 +69,7 @@ module XDX {
         let preburn_cap = Diem::create_preburn<XDX>(tc_account);
         move_to(dr_account, Reserve { mint_cap, burn_cap, preburn_cap });
     }
-    spec fun initialize {
+    spec initialize {
        use 0x1::Roles;
         include CoreAddresses::AbortsIfNotCurrencyInfo{account: dr_account};
         aborts_if exists<Reserve>(CoreAddresses::DIEM_ROOT_ADDRESS()) with Errors::ALREADY_PUBLISHED;
@@ -98,12 +98,12 @@ module XDX {
         Diem::is_currency<CoinType>() &&
             Diem::currency_code<CoinType>() == Diem::currency_code<XDX>()
     }
-    spec fun is_xdx {
+    spec is_xdx {
         pragma opaque;
         include Diem::spec_is_currency<CoinType>() ==> Diem::AbortsIfNoCurrency<XDX>;
         ensures result == spec_is_xdx<CoinType>();
     }
-    spec define spec_is_xdx<CoinType>(): bool {
+    spec fun spec_is_xdx<CoinType>(): bool {
         Diem::spec_is_currency<CoinType>() && Diem::spec_is_currency<XDX>() &&
             (Diem::spec_currency_code<CoinType>() == Diem::spec_currency_code<XDX>())
     }
@@ -122,31 +122,31 @@ module XDX {
 
     spec module {
         /// After genesis, the Reserve resource exists.
-        invariant [global] DiemTimestamp::is_operating() ==> reserve_exists();
+        invariant DiemTimestamp::is_operating() ==> reserve_exists();
 
         /// After genesis, XDX is registered.
-        invariant [global] DiemTimestamp::is_operating() ==> Diem::is_currency<XDX>();
+        invariant DiemTimestamp::is_operating() ==> Diem::is_currency<XDX>();
     }
 
     /// # Helper Functions
     spec module {
         /// Checks whether the Reserve resource exists.
-        define reserve_exists(): bool {
+        fun reserve_exists(): bool {
            exists<Reserve>(CoreAddresses::CURRENCY_INFO_ADDRESS())
         }
 
         /// After genesis, `LimitsDefinition<XDX>` is published at Diem root. It's published by
         /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
         /// it does not hold for all types (but does hold for XDX).
-        invariant [global] DiemTimestamp::is_operating()
+        invariant DiemTimestamp::is_operating()
             ==> exists<AccountLimits::LimitsDefinition<XDX>>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// `LimitsDefinition<XDX>` is not published at any other address
-        invariant [global] forall addr: address where exists<AccountLimits::LimitsDefinition<XDX>>(addr):
+        invariant forall addr: address where exists<AccountLimits::LimitsDefinition<XDX>>(addr):
             addr == CoreAddresses::DIEM_ROOT_ADDRESS();
 
         /// `Reserve` is persistent
-        invariant update [global] old(exists<Reserve>(reserve_address()))
+        invariant update old(exists<Reserve>(reserve_address()))
             ==> exists<Reserve>(reserve_address());
     }
 

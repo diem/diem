@@ -11,7 +11,7 @@ module 0x42::TestInvariants {
         x: u64
     }
 
-    spec struct R {
+    spec R {
         // We must always have a value greater one.
         invariant greater_one(x);
 
@@ -21,10 +21,10 @@ module 0x42::TestInvariants {
 
     spec module {
         // Pure function to be used in data invariants.
-        define greater_one(x: num): bool { x > 1 }
+        fun greater_one(x: num): bool { x > 1 }
 
         // Impure function to be used in update invariants.
-        define tautology() : bool { global<R>(@0x5551212) == R {x: 2} || global<R>(@0x5551212) != R {x: 2} }
+        fun tautology() : bool { global<R>(@0x5551212) == R {x: 2} || global<R>(@0x5551212) != R {x: 2} }
     }
 
 
@@ -35,14 +35,14 @@ module 0x42::TestInvariants {
     fun valid_R_pack(): R {
         R {x: 2}
     }
-    spec fun valid_R_pack {
+    spec valid_R_pack {
         ensures result.x == 2;
     }
 
     fun invalid_R_pack(): R {
         R {x: 1}
     }
-    spec fun invalid_R_pack {
+    spec invalid_R_pack {
         ensures result.x == 1;
     }
 
@@ -57,7 +57,7 @@ module 0x42::TestInvariants {
         *r = R {x: 2};
         t
     }
-    spec fun valid_R_update {
+    spec valid_R_update {
         ensures result.x == 2;
     }
 
@@ -67,7 +67,7 @@ module 0x42::TestInvariants {
         *r = R {x: 4};
         t
     }
-    spec fun invalid_R_update {
+    spec invalid_R_update {
         ensures result.x == 4;
     }
 
@@ -77,7 +77,7 @@ module 0x42::TestInvariants {
         *r = 4;
         t
     }
-    spec fun invalid_R_update_ref {
+    spec invalid_R_update_ref {
         ensures result.x == 4;
     }
 
@@ -139,14 +139,14 @@ module 0x42::TestInvariants {
     struct T {
         x: u64
     }
-    spec struct T {
+    spec T {
         invariant x > 1;
     }
 
     struct S {
         y: u64
     }
-    spec struct S {
+    spec S {
         invariant y > 1;
     }
 

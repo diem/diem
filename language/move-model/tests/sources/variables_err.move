@@ -4,7 +4,7 @@ module 0x42::M {
     x: u64,
   }
 
-  spec struct S {
+  spec S {
     global tick: num;
 
     // Undeclared

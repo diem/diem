@@ -3,7 +3,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/loops.move:86:5 ───
     │
- 86 │ ╭     spec fun iter10_abort_incorrect { // Disproved. Abort always happens.
+ 86 │ ╭     spec iter10_abort_incorrect { // Disproved. Abort always happens.
  87 │ │         pragma verify=true;
  88 │ │         aborts_if false;
  89 │ │     }

@@ -270,6 +270,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         attributes,
         loc,
         address,
+        is_spec_module: _,
         name,
         members,
     } = mdef;
@@ -1004,10 +1005,35 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
         loc,
         E::SpecBlock_ {
             attributes,
-            target,
+            target: spec_target(context, target),
             members,
         },
     )
+}
+
+fn spec_target(context: &mut Context, sp!(loc, pt): P::SpecBlockTarget) -> E::SpecBlockTarget {
+    use E::SpecBlockTarget_ as ET;
+    use P::SpecBlockTarget_ as PT;
+    let et = match pt {
+        PT::Code => ET::Code,
+        PT::Module => ET::Module,
+        PT::Schema(name, type_params) => {
+            let old_aliases = context.new_alias_scope(AliasMap::new());
+            let target = ET::Schema(name, type_parameters(context, type_params));
+            context.set_to_outer_scope(old_aliases);
+            target
+        }
+        PT::Member(name, signature_opt) => {
+            let old_aliases = context.new_alias_scope(AliasMap::new());
+            let target = ET::Member(
+                name,
+                signature_opt.map(|s| Box::new(function_signature(context, *s))),
+            );
+            context.set_to_outer_scope(old_aliases);
+            target
+        }
+    };
+    sp(loc, et)
 }
 
 fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {

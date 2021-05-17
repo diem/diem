@@ -399,7 +399,7 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP and Designat
 <a name="0x1_DualAttestation_spec_has_credential"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr: address): bool {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr: address): bool {
    <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)
 }
 </code></pre>
@@ -734,7 +734,7 @@ Spec version of <code><a href="DualAttestation.md#0x1_DualAttestation_base_url">
 <a name="0x1_DualAttestation_spec_base_url"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_base_url">spec_base_url</a>(addr: address): vector&lt;u8&gt; {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_base_url">spec_base_url</a>(addr: address): vector&lt;u8&gt; {
    <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url
 }
 </code></pre>
@@ -787,7 +787,7 @@ Spec version of <code><a href="DualAttestation.md#0x1_DualAttestation_compliance
 <a name="0x1_DualAttestation_spec_compliance_public_key"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(addr: address): vector&lt;u8&gt; {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(addr: address): vector&lt;u8&gt; {
    <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key
 }
 </code></pre>
@@ -878,7 +878,7 @@ Return the address where the credentials for <code>addr</code> are stored
 <a name="0x1_DualAttestation_spec_credential_address"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(addr: address): address {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(addr: address): address {
    <b>if</b> (<a href="VASP.md#0x1_VASP_is_child">VASP::is_child</a>(addr)) {
        <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(addr)
    } <b>else</b> {
@@ -961,7 +961,7 @@ Helper which returns true if dual attestion is required for a deposit.
 <a name="0x1_DualAttestation_spec_is_inter_vasp"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer: address, payee: address): bool {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer: address, payee: address): bool {
    <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee)
        && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
 }
@@ -974,7 +974,7 @@ Helper functions which simulates <code><a href="DualAttestation.md#0x1_DualAttes
 <a name="0x1_DualAttestation_spec_dual_attestation_required"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(
    payer: address, payee: address, deposit_value: u64
 ): bool {
    <a href="Diem.md#0x1_Diem_spec_approx_xdx_for_value">Diem::spec_approx_xdx_for_value</a>&lt;Token&gt;(deposit_value)
@@ -1043,7 +1043,7 @@ the verification of callers.
 <a name="0x1_DualAttestation_spec_dual_attestation_message"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
 </code></pre>
 
 
@@ -1139,7 +1139,7 @@ Returns true if signature is valid.
 <a name="0x1_DualAttestation_spec_signature_is_valid"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(
    payer: address,
    payee: address,
    metadata_signature: vector&lt;u8&gt;,
@@ -1384,7 +1384,7 @@ The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 The Limit resource should be published after genesis
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
+<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 </code></pre>
 
 
@@ -1400,7 +1400,7 @@ Helper function to determine whether the Limit is published.
 <a name="0x1_DualAttestation_spec_is_published"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>(): bool {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>(): bool {
     <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
 }
 </code></pre>
@@ -1412,7 +1412,7 @@ Mirrors <code><a href="DualAttestation.md#0x1_DualAttestation_get_cur_microdiem_
 <a name="0x1_DualAttestation_spec_get_cur_microdiem_limit"></a>
 
 
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_get_cur_microdiem_limit">spec_get_cur_microdiem_limit</a>(): u64 {
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_get_cur_microdiem_limit">spec_get_cur_microdiem_limit</a>(): u64 {
     <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).micro_xdx_limit
 }
 </code></pre>
@@ -1467,7 +1467,7 @@ The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP o
 
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialAbsence">PreserveCredentialAbsence</a> <b>to</b> * <b>except</b> publish_credential;
 <b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created} <b>to</b> publish_credential;
-<b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address:
+<b>invariant</b> <b>forall</b> addr1: address:
     <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1) ==&gt;
         (<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(addr1) ||
         <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr1));

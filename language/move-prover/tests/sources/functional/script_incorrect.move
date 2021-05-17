@@ -7,7 +7,7 @@ fun main<Token: store>(account: signer) {
     ScriptProvider::register<Token>(&account);
 }
 
-spec fun main {
+spec main {
     pragma verify = true;
     aborts_if false;
 }

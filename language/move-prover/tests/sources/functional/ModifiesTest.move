@@ -8,7 +8,7 @@ module A {
         let s = borrow_global<S>(addr);
         s.x
     }
-    spec fun read_at {
+    spec read_at {
         pragma opaque = true;
         aborts_if !exists<S>(addr);
         ensures result == global<S>(addr).x;
@@ -18,7 +18,7 @@ module A {
         let s = borrow_global_mut<S>(addr);
         s.x = 2;
     }
-    spec fun mutate_at {
+    spec mutate_at {
         pragma opaque = true;
         ensures global<S>(addr).x == 2;
         aborts_if !exists<S>(addr);
@@ -38,7 +38,7 @@ module B {
         let t = borrow_global_mut<T>(addr);
         t.x = 2;
     }
-    spec fun mutate_at_test {
+    spec mutate_at_test {
         pragma opaque = true;
         ensures global<T>(addr).x == 2;
         modifies global<T>(addr);
@@ -47,7 +47,7 @@ module B {
     public fun move_to_test(account: &signer) {
         move_to<T>(account, T{x: 2});
     }
-    spec fun move_to_test {
+    spec move_to_test {
         pragma opaque = true;
         ensures global<T>(Signer::spec_address_of(account)).x == 2;
         modifies global<T>(Signer::spec_address_of(account));
@@ -56,7 +56,7 @@ module B {
     public fun move_from_test(addr: address): T acquires T {
         move_from<T>(addr)
     }
-    spec fun move_from_test {
+    spec move_from_test {
         pragma opaque = true;
         requires global<T>(addr).x == 2;
         ensures result.x == 2;
@@ -72,7 +72,7 @@ module B {
         };
         mutate_at_test(addr2)
     }
-    spec fun mutate_S_test {
+    spec mutate_S_test {
         requires addr1 != addr2;
         ensures global<A::S>(addr2) == old(global<A::S>(addr2));
         ensures global<A::S>(addr1).x == 2;

@@ -8,7 +8,7 @@ module 0x42::TestOpaque {
     fun opaque_incorrect(): u64 {
         1
     }
-    spec fun opaque_incorrect {
+    spec opaque_incorrect {
         pragma opaque = true;
         ensures result == 2;
     }
@@ -16,7 +16,7 @@ module 0x42::TestOpaque {
     fun opaque_caller(): u64 {
         opaque_incorrect()
     }
-    spec fun opaque_caller {
+    spec opaque_caller {
         // because we only use the post condition but not the definition, this should verify
         ensures result == 2;
     }

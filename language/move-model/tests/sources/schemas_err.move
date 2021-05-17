@@ -48,7 +48,7 @@ module 0x42::M {
     spec schema UndeclaredVarInInclude {
         y: u64;
     }
-    spec fun undeclared_var_in_include {
+    spec undeclared_var_in_include {
         include UndeclaredVarInInclude;
     }
 
@@ -57,7 +57,7 @@ module 0x42::M {
         x: num;
         invariant x > 0;
     }
-    spec fun wrong_invariant_in_fun {
+    spec wrong_invariant_in_fun {
         include Invariant;
     }
 
@@ -66,7 +66,7 @@ module 0x42::M {
         x: num;
         requires x > 0;
     }
-    spec struct Wrong_condition_in_struct {
+    spec Wrong_condition_in_struct {
         include Condition;
     }
 

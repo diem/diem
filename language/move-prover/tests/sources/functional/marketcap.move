@@ -25,7 +25,7 @@ module TestMarketCap {
         // The value of the coin. May be zero
         value: u64,
     }
-    spec struct T {
+    spec T {
         // maintain true sum_of_coins
         invariant pack sum_of_coins = sum_of_coins + value;
         invariant unpack sum_of_coins = sum_of_coins - value;
@@ -43,7 +43,7 @@ module TestMarketCap {
         let T { value } = check;
         coin_ref.value = coin_ref.value + value;
     }
-    spec fun deposit {
+    spec deposit {
         aborts_if coin_ref.value + check.value > max_u64();
         ensures coin_ref.value == old(coin_ref.value) + check.value;
     }
@@ -53,7 +53,7 @@ module TestMarketCap {
          let T { value } = check;
          coin_ref.value = coin_ref.value + value / 2;
      }
-     spec fun deposit_invalid {
+     spec deposit_invalid {
          aborts_if coin_ref.value + check.value / 2 > max_u64();
          ensures coin_ref.value == old(coin_ref.value) + check.value / 2;
      }

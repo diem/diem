@@ -13,7 +13,7 @@ module 0x42::TestPureFun {
         false
     }
 
-    spec fun init {
+    spec init {
         aborts_if Signer::spec_address_of(dr_account) != CoreAddresses::DIEM_ROOT_ADDRESS();
         aborts_if exists<T>(Signer::spec_address_of(dr_account));
         ensures dr_x() == pure_f_2();
@@ -21,7 +21,7 @@ module 0x42::TestPureFun {
 
     public fun get_x(addr: address): u64 acquires T {
         assert(exists<T>(addr), 10);
-        assert(true, 0); // assertions are ignored when translating Move funs to spec funs.
+        assert(true, 0); // assertions are ignored when translating Move funs to specs.
         *&borrow_global<T>(addr).x
     }
 
@@ -35,7 +35,7 @@ module 0x42::TestPureFun {
         t.x = t.x + 1;
     }
 
-    spec fun increment_x {
+    spec increment_x {
         ensures get_x(addr) == old(get_x(addr)) + 1;
         ensures get_x(addr) == old(get_x_plus_one(addr));
     }
@@ -56,12 +56,12 @@ module 0x42::TestPureFun {
         Vector::borrow(v, 0).x
     }
 
-    spec fun get_elem {
+    spec get_elem {
         aborts_if Vector::is_empty(v);
     }
 
     spec module {
-        define dr_x(): u64 {
+        fun dr_x(): u64 {
             get_x(CoreAddresses::DIEM_ROOT_ADDRESS())
         }
     }

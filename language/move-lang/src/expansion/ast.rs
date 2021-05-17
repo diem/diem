@@ -4,7 +4,7 @@
 use crate::{
     parser::ast::{
         Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleIdent, QuantKind,
-        SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
+        SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
@@ -180,6 +180,16 @@ pub struct SpecBlock_ {
     pub members: Vec<SpecBlockMember>,
 }
 pub type SpecBlock = Spanned<SpecBlock_>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SpecBlockTarget_ {
+    Code,
+    Module,
+    Member(Name, Option<Box<FunctionSignature>>),
+    Schema(Name, Vec<(Name, AbilitySet)>),
+}
+
+pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::large_enum_variant)]
@@ -786,6 +796,32 @@ impl AstDebug for SpecBlock_ {
         w.write("{");
         w.semicolon(&self.members, |w, m| m.ast_debug(w));
         w.write("}");
+    }
+}
+
+impl AstDebug for SpecBlockTarget_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockTarget_::Code => {}
+            SpecBlockTarget_::Module => w.write("module "),
+            SpecBlockTarget_::Member(name, sign_opt) => {
+                w.write(&name.value);
+                if let Some(sign) = sign_opt {
+                    sign.ast_debug(w);
+                }
+            }
+            SpecBlockTarget_::Schema(n, tys) => {
+                w.write(&format!("schema {}", n.value));
+                if !tys.is_empty() {
+                    w.write("<");
+                    w.list(tys, ", ", |w, ty| {
+                        ty.ast_debug(w);
+                        true
+                    });
+                    w.write(">");
+                }
+            }
+        }
     }
 }
 

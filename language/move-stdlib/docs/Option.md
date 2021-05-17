@@ -145,7 +145,7 @@ Return an empty <code><a href="Option.md#0x1_Option">Option</a></code>
 <a name="0x1_Option_spec_none"></a>
 
 
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_none">spec_none</a>&lt;Element&gt;(): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
+<pre><code><b>fun</b> <a href="Option.md#0x1_Option_spec_none">spec_none</a>&lt;Element&gt;(): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
    <a href="Option.md#0x1_Option">Option</a>{ vec: vec() }
 }
 </code></pre>
@@ -195,7 +195,7 @@ Return an <code><a href="Option.md#0x1_Option">Option</a></code> containing <cod
 <a name="0x1_Option_spec_some"></a>
 
 
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_some">spec_some</a>&lt;Element&gt;(e: Element): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
+<pre><code><b>fun</b> <a href="Option.md#0x1_Option_spec_some">spec_some</a>&lt;Element&gt;(e: Element): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
    <a href="Option.md#0x1_Option">Option</a>{ vec: vec(e) }
 }
 </code></pre>
@@ -324,7 +324,7 @@ Always returns <code><b>false</b></code> if <code>t</code> does not hold a value
 <a name="0x1_Option_spec_contains"></a>
 
 
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_contains">spec_contains</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;, e: Element): bool {
+<pre><code><b>fun</b> <a href="Option.md#0x1_Option_spec_contains">spec_contains</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;, e: Element): bool {
    <a href="Option.md#0x1_Option_is_some">is_some</a>(t) && <a href="Option.md#0x1_Option_borrow">borrow</a>(t) == e
 }
 </code></pre>

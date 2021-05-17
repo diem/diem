@@ -24,7 +24,7 @@ module ScriptProvider {
         aborts_if exists<Info<T>>(@0x1);
         ensures exists<Info<T>>(@0x1);
     }
-    spec fun register {
+    spec register {
         include RegisterConditions<T>;
     }
 }

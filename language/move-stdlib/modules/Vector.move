@@ -50,7 +50,7 @@ module Vector {
         push_back(&mut v, e);
         v
     }
-    spec fun singleton {
+    spec singleton {
         // TODO: when using opaque here, we get verification errors.
         // pragma opaque;
         aborts_if false;
@@ -70,7 +70,7 @@ module Vector {
             back_index = back_index - 1;
         }
     }
-    spec fun reverse {
+    spec reverse {
         pragma intrinsic = true;
     }
 
@@ -81,10 +81,10 @@ module Vector {
         while (!is_empty(&other)) push_back(lhs, pop_back(&mut other));
         destroy_empty(other);
     }
-    spec fun append {
+    spec append {
         pragma intrinsic = true;
     }
-    spec fun is_empty {
+    spec is_empty {
         pragma intrinsic = true;
     }
 
@@ -104,7 +104,7 @@ module Vector {
         };
         false
     }
-    spec fun contains {
+    spec contains {
         pragma intrinsic = true;
     }
 
@@ -119,7 +119,7 @@ module Vector {
         };
         (false, 0)
     }
-    spec fun index_of {
+    spec index_of {
         pragma intrinsic = true;
     }
 
@@ -135,7 +135,7 @@ module Vector {
         while (i < len) swap(v, i, { i = i + 1; i });
         pop_back(v)
     }
-    spec fun remove {
+    spec remove {
         pragma intrinsic = true;
     }
 
@@ -147,7 +147,7 @@ module Vector {
         swap(v, i, last_idx);
         pop_back(v)
     }
-    spec fun swap_remove {
+    spec swap_remove {
         pragma intrinsic = true;
     }
 
@@ -160,27 +160,27 @@ module Vector {
 
     spec module {
         /// Check if `v1` is equal to the result of adding `e` at the end of `v2`
-        define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
+        fun eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
             len(v1) == len(v2) + 1 &&
             v1[len(v1)-1] == e &&
             v1[0..len(v1)-1] == v2[0..len(v2)]
         }
 
         /// Check if `v` is equal to the result of concatenating `v1` and `v2`
-        define eq_append<Element>(v: vector<Element>, v1: vector<Element>, v2: vector<Element>): bool {
+        fun eq_append<Element>(v: vector<Element>, v1: vector<Element>, v2: vector<Element>): bool {
             len(v) == len(v1) + len(v2) &&
             v[0..len(v1)] == v1 &&
             v[len(v1)..len(v)] == v2
         }
 
         /// Check `v1` is equal to the result of removing the first element of `v2`
-        define eq_pop_front<Element>(v1: vector<Element>, v2: vector<Element>): bool {
+        fun eq_pop_front<Element>(v1: vector<Element>, v2: vector<Element>): bool {
             len(v1) + 1 == len(v2) &&
             v1 == v2[1..len(v2)]
         }
 
         /// Check that `v1` is equal to the result of removing the element at index `i` from `v2`.
-        define eq_remove_elem_at_index<Element>(i: u64, v1: vector<Element>, v2: vector<Element>): bool {
+        fun eq_remove_elem_at_index<Element>(i: u64, v1: vector<Element>, v2: vector<Element>): bool {
             len(v1) + 1 == len(v2) &&
             v1[0..i] == v2[0..i] &&
             v1[i..len(v1)] == v2[i + 1..len(v2)]

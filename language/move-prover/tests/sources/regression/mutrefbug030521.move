@@ -10,7 +10,7 @@ module 0x42::Bug {
         coin.value = coin.value - amount;
         Diem { value: amount }
     }
-    spec fun withdraw {
+    spec withdraw {
         pragma opaque;
         include WithdrawAbortsIf<CoinType>;
         ensures coin.value == old(coin.value) - amount;
@@ -26,7 +26,7 @@ module 0x42::Bug {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
-    spec fun split {
+    spec split {
         aborts_if coin.value < amount;
         ensures result_1.value == coin.value - amount;
         ensures result_2.value == amount;

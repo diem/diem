@@ -2,7 +2,7 @@ module 0x42::M {
 
   fun foo(x: &mut u64): u64 { *x = *x + 1; *x }
 
-  spec fun foo {
+  spec foo {
     let zero = one;
     ensures result == old(x) + 1;
   }
@@ -12,7 +12,7 @@ module 0x42::M {
     *a = *a / (*a + *b);
     *b = saved_a * *b;
   }
-  spec fun spec_let_with_schema {
+  spec spec_let_with_schema {
     let sum = a + b;
     let product = a * b;
     aborts_if sum == 0;
@@ -39,7 +39,7 @@ module 0x42::M {
     *x = 2;
     *x
   }
-  spec fun result_with_schema {
+  spec result_with_schema {
     include Requires{a: result};
     include Requires{a: old(x)};
   }

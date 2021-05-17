@@ -13,7 +13,7 @@ module A {
         let s = borrow_global_mut<S>(addr);
         s.x = 2;
     }
-    spec fun mutate_at {
+    spec mutate_at {
         //pragma opaque = true;
         include ModifiesSchema;
     }
@@ -21,7 +21,7 @@ module A {
     public fun mutate_at_wrapper1(addr: address) acquires S {
         mutate_at(addr)
     }
-    spec fun mutate_at_wrapper1 {
+    spec mutate_at_wrapper1 {
         pragma opaque = true;
         include ModifiesSchema;
     }
@@ -30,7 +30,7 @@ module A {
         mutate_at(addr1);
         mutate_at(addr2)
     }
-    spec fun mutate_at_wrapper2 {
+    spec mutate_at_wrapper2 {
         pragma opaque = true;
         include ModifiesSchema{addr: addr1};
     }

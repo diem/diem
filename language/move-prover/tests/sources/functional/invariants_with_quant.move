@@ -11,7 +11,7 @@ module 0x42::TestQuantInvariant {
         Vector::push_back(&mut v, 3);
         v
     }
-    spec fun vector_of_proper_positives {
+    spec vector_of_proper_positives {
         aborts_if false;
         ensures forall n in result: n > 0;
         ensures forall i in 0..len(result), j in 0..len(result) where result[i] == result[j] : i == j;

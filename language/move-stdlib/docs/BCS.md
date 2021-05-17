@@ -52,7 +52,7 @@ Native function which is defined in the prover's prelude.
 <a name="0x1_BCS_serialize"></a>
 
 
-<pre><code><b>native</b> <b>define</b> <a href="BCS.md#0x1_BCS_serialize">serialize</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;;
+<pre><code><b>native</b> <b>fun</b> <a href="BCS.md#0x1_BCS_serialize">serialize</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;;
 </code></pre>
 
 

@@ -19,7 +19,7 @@ module TestModuleInvariants {
     }
 
     // Resource invariants counting the number of S instances.
-    spec struct S {
+    spec S {
         // A counter for the # of alive instances of R
         global spec_count: u64;
 
@@ -71,7 +71,7 @@ module TestModuleInvariants {
         let x = new_S();
         x
     }
-    spec fun private_calls_public {
+    spec private_calls_public {
         requires global<SCounter>(0x0).n == spec_count;
     }
 

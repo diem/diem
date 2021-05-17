@@ -38,7 +38,7 @@ module SharedEd25519PublicKey {
         assert(!exists_at(Signer::address_of(account)), Errors::already_published(ESHARED_KEY));
         move_to(account, t);
     }
-    spec fun publish {
+    spec publish {
         include PublishAbortsIf;
         include PublishEnsures;
     }
@@ -77,7 +77,7 @@ module SharedEd25519PublicKey {
         );
         shared_key.key = new_public_key;
     }
-    spec fun rotate_key_ {
+    spec rotate_key_ {
         include RotateKey_AbortsIf;
         include RotateKey_Ensures;
     }
@@ -107,7 +107,7 @@ module SharedEd25519PublicKey {
         assert(exists_at(addr), Errors::not_published(ESHARED_KEY));
         rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(addr), new_public_key);
     }
-    spec fun rotate_key {
+    spec rotate_key {
         include RotateKeyAbortsIf;
         include RotateKeyEnsures;
     }
@@ -144,7 +144,7 @@ module SharedEd25519PublicKey {
 
     /// # Persistence
     spec module {
-        invariant update [global] forall addr: address where old(exists<SharedEd25519PublicKey>(addr)):
+        invariant update forall addr: address where old(exists<SharedEd25519PublicKey>(addr)):
             exists<SharedEd25519PublicKey>(addr);
     }
 

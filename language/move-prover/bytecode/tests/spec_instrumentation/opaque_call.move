@@ -10,7 +10,7 @@ module 0x42::Test {
 	    r.v = r.v + 1;
 	    v
 	}
-	spec fun get_and_incr {
+	spec get_and_incr {
 	    pragma opaque;
 	    requires addr != @0x0;
 	    aborts_if !exists<R>(addr) with 33;
@@ -24,7 +24,7 @@ module 0x42::Test {
 	    get_and_incr(@0x1);
 	    get_and_incr(@0x1);
 	}
-	spec fun incr_twice {
+	spec incr_twice {
 	    aborts_if !exists<R>(@0x1) with 33;
 	    ensures global<R>(@0x1).v == old(global<R>(@0x1)).v + 2;
 	}

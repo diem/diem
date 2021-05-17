@@ -51,7 +51,7 @@ module VASP {
         move_to(vasp, ParentVASP { num_children: 0 });
     }
 
-    spec fun publish_parent_vasp_credential {
+    spec publish_parent_vasp_credential {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotParentVasp{account: vasp};
@@ -84,7 +84,7 @@ module VASP {
         *num_children = *num_children + 1;
         move_to(child, ChildVASP { parent_vasp_addr });
     }
-    spec fun publish_child_vasp_credential {
+    spec publish_child_vasp_credential {
         let child_addr = Signer::spec_address_of(child);
         include PublishChildVASPAbortsIf{child_addr};
         // NB: This aborts condition is separated out so that `PublishChildVASPAbortsIf` can be used in
@@ -133,21 +133,21 @@ module VASP {
             abort(Errors::invalid_argument(ENOT_A_VASP))
         }
     }
-    spec fun parent_address {
+    spec parent_address {
         pragma opaque;
         aborts_if !is_parent(addr) && !is_child(addr) with Errors::INVALID_ARGUMENT;
         ensures result == spec_parent_address(addr);
     }
     spec module {
         /// Spec version of `Self::parent_address`.
-        define spec_parent_address(addr: address): address {
+        fun spec_parent_address(addr: address): address {
             if (is_parent(addr)) {
                 addr
             } else {
                 global<ChildVASP>(addr).parent_vasp_addr
             }
         }
-        define spec_has_account_limits<Token>(addr: address): bool {
+        fun spec_has_account_limits<Token>(addr: address): bool {
             AccountLimits::has_window_published<Token>(spec_parent_address(addr))
         }
     }
@@ -156,7 +156,7 @@ module VASP {
     public fun is_parent(addr: address): bool {
         exists<ParentVASP>(addr)
     }
-    spec fun is_parent {
+    spec is_parent {
         pragma opaque = true;
         aborts_if false;
         ensures result == is_parent(addr);
@@ -166,7 +166,7 @@ module VASP {
     public fun is_child(addr: address): bool {
         exists<ChildVASP>(addr)
     }
-    spec fun is_child {
+    spec is_child {
         pragma opaque = true;
         aborts_if false;
         ensures result == is_child(addr);
@@ -176,7 +176,7 @@ module VASP {
     public fun is_vasp(addr: address): bool {
         is_parent(addr) || is_child(addr)
     }
-    spec fun is_vasp {
+    spec is_vasp {
         pragma opaque = true;
         aborts_if false;
         ensures result == is_vasp(addr);
@@ -190,13 +190,13 @@ module VASP {
     public fun is_same_vasp(addr1: address, addr2: address): bool acquires ChildVASP {
         is_vasp(addr1) && is_vasp(addr2) && parent_address(addr1) == parent_address(addr2)
     }
-    spec fun is_same_vasp {
+    spec is_same_vasp {
         pragma opaque = true;
         aborts_if false;
         ensures result == spec_is_same_vasp(addr1, addr2);
     }
     /// Spec version of `Self::is_same_vasp`.
-    spec define spec_is_same_vasp(addr1: address, addr2: address): bool {
+    spec fun spec_is_same_vasp(addr1: address, addr2: address): bool {
         is_vasp(addr1) && is_vasp(addr2) && spec_parent_address(addr1) == spec_parent_address(addr2)
     }
 
@@ -209,11 +209,11 @@ module VASP {
         // If parent VASP succeeds, the parent is guaranteed to exist.
         *&borrow_global<ParentVASP>(parent_address(addr)).num_children
     }
-    spec fun num_children {
+    spec num_children {
         aborts_if !is_vasp(addr) with Errors::INVALID_ARGUMENT;
     }
     /// Spec version of `Self::num_children`.
-    spec define spec_num_children(parent: address): u64 {
+    spec fun spec_num_children(parent: address): u64 {
         global<ParentVASP>(parent).num_children
     }
 
@@ -222,16 +222,16 @@ module VASP {
 
     /// # Persistence of parent and child VASPs
     spec module {
-        invariant update [global] forall addr: address where old(is_parent(addr)):
+        invariant update forall addr: address where old(is_parent(addr)):
             is_parent(addr);
 
-        invariant update [global] forall addr: address where old(is_child(addr)):
+        invariant update forall addr: address where old(is_child(addr)):
             is_child(addr);
     }
 
     /// # Existence of Parents
     spec module {
-        invariant [global]
+        invariant
             forall child_addr: address where is_child(child_addr):
                 is_parent(global<ChildVASP>(child_addr).parent_vasp_addr);
     }
@@ -264,7 +264,7 @@ module VASP {
 
     spec module {
         /// The parent address stored at ChildVASP resource never changes.
-        invariant update [global]
+        invariant update
             forall a: address where old(is_child(a)): spec_parent_address(a) == old(spec_parent_address(a));
     }
 

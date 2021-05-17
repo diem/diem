@@ -17,7 +17,7 @@ module 0x42::TestArithmetic {
 		let z: u64 = 3;
 		(z, res)
 	}
-	spec fun add_two_number {
+	spec add_two_number {
 	    aborts_if x + y > max_u64();
 	    ensures result_1 == 3;
 	    ensures result_2 == x + y;
@@ -26,7 +26,7 @@ module 0x42::TestArithmetic {
     fun div(x: u64, y: u64): (u64, u64) {
         (x / y, x % y)
     }
-    spec fun div {
+    spec div {
         aborts_if y == 0;
         ensures result_1 == x / y;
         ensures result_2 == x % y;
@@ -36,7 +36,7 @@ module 0x42::TestArithmetic {
 	fun multiple_ops(x: u64, y: u64, z: u64): u64 {
 		x + y * z
 	}
-	spec fun multiple_ops {
+	spec multiple_ops {
         ensures result == x + y * z;
     }
 
@@ -49,7 +49,7 @@ module 0x42::TestArithmetic {
         if (!(c != d)) abort 42;
         (c, d)
     }
-    spec fun bool_ops {
+    spec bool_ops {
         ensures result_1 == (a > b && a >= b);
         ensures result_2 == (a < b || a <= b);
     }
@@ -61,7 +61,7 @@ module 0x42::TestArithmetic {
         if (c != 2) abort 42;
         (c, a)
     }
-    spec fun arithmetic_ops {
+    spec arithmetic_ops {
         ensures result_1 == (6 + 4 - 1) * 2 / 3 % 4;
         ensures result_2 == a;
     }
@@ -69,7 +69,7 @@ module 0x42::TestArithmetic {
     fun f(x: u64) : u64 {
         x+1
     }
-    spec fun f {
+    spec f {
         aborts_if x+1 > max_u64();
         ensures result == x+1;
     }
@@ -77,7 +77,7 @@ module 0x42::TestArithmetic {
     fun g(x: u64) : u64 {
         x+2
     }
-    spec fun g {
+    spec g {
         aborts_if x+2 > max_u64();
         ensures result == x+2;
     }
@@ -90,7 +90,7 @@ module 0x42::TestArithmetic {
         if (!b && y != 5) abort 5;
         y
     }
-    spec fun h {
+    spec h {
         aborts_if false;
     }
 
@@ -104,7 +104,7 @@ module 0x42::TestArithmetic {
         let x = 0;
         x - 1
     }
-	spec fun underflow {
+	spec underflow {
 	    aborts_if true;
 	}
 
@@ -118,21 +118,21 @@ module 0x42::TestArithmetic {
         let x = 0;
         1 / x
     }
-	spec fun div_by_zero {
+	spec div_by_zero {
 	    aborts_if true;
 	}
 
     fun div_by_zero_u64_incorrect(x: u64, y: u64): u64 {
         x / y
     }
-    spec fun div_by_zero_u64_incorrect {
+    spec div_by_zero_u64_incorrect {
         aborts_if false;
     }
 
     fun div_by_zero_u64(x: u64, y: u64): u64 {
         x / y
     }
-    spec fun div_by_zero_u64 {
+    spec div_by_zero_u64 {
         aborts_if y == 0;
     }
 
@@ -145,7 +145,7 @@ module 0x42::TestArithmetic {
     fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
         x + y
     }
-    spec fun overflow_u8_add_incorrect {
+    spec overflow_u8_add_incorrect {
         aborts_if false;
     }
 
@@ -153,7 +153,7 @@ module 0x42::TestArithmetic {
     fun overflow_u8_add(x: u8, y: u8): u8 {
         x + y
     }
-    spec fun overflow_u8_add {
+    spec overflow_u8_add {
         aborts_if x + y > max_u8();
     }
 
@@ -161,7 +161,7 @@ module 0x42::TestArithmetic {
     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
         x + y
     }
-    spec fun overflow_u64_add_incorrect {
+    spec overflow_u64_add_incorrect {
         aborts_if false;
     }
 
@@ -169,7 +169,7 @@ module 0x42::TestArithmetic {
     fun overflow_u64_add(x: u64, y: u64): u64 {
         x + y
     }
-    spec fun overflow_u64_add {
+    spec overflow_u64_add {
         aborts_if x + y > max_u64();
     }
 
@@ -177,7 +177,7 @@ module 0x42::TestArithmetic {
     fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
         x + y
     }
-    spec fun overflow_u128_add_incorrect {
+    spec overflow_u128_add_incorrect {
         aborts_if false;
     }
 
@@ -185,7 +185,7 @@ module 0x42::TestArithmetic {
     fun overflow_u128_add(x: u128, y: u128): u128 {
         x + y
     }
-    spec fun overflow_u128_add {
+    spec overflow_u128_add {
         aborts_if x + y > max_u128();
     }
 
@@ -198,7 +198,7 @@ module 0x42::TestArithmetic {
     fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
         x * y
     }
-    spec fun overflow_u8_mul_incorrect {
+    spec overflow_u8_mul_incorrect {
         aborts_if false;
     }
 
@@ -206,7 +206,7 @@ module 0x42::TestArithmetic {
     fun overflow_u8_mul(x: u8, y: u8): u8 {
         x * y
     }
-    spec fun overflow_u8_mul {
+    spec overflow_u8_mul {
         aborts_if x * y > max_u8();
     }
 
@@ -214,14 +214,14 @@ module 0x42::TestArithmetic {
     fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
         x * y
     }
-    spec fun overflow_u64_mul_incorrect {
+    spec overflow_u64_mul_incorrect {
         aborts_if false;
     }
 
     fun overflow_u64_mul(x: u64, y: u64): u64 {
         x * y
     }
-    spec fun overflow_u64_mul {
+    spec overflow_u64_mul {
         aborts_if x * y > max_u64();
     }
 
@@ -229,14 +229,14 @@ module 0x42::TestArithmetic {
     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
         x * y
     }
-    spec fun overflow_u128_mul_incorrect {
+    spec overflow_u128_mul_incorrect {
         aborts_if false;
     }
 
     fun overflow_u128_mul(x: u128, y: u128): u128 {
         x * y
     }
-    spec fun overflow_u128_mul {
+    spec overflow_u128_mul {
         aborts_if x * y > max_u128(); // U128_MAX
     }
 }

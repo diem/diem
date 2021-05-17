@@ -16,7 +16,7 @@ module 0x42::TestResources {
     public fun create_resource_at_signer(account: &signer) {
         move_to<R>(account, R{x:1});
     }
-    spec fun create_resource_at_signer {
+    spec create_resource_at_signer {
         aborts_if exists<R>(Signer::spec_address_of(account));
         ensures exists<R>(Signer::spec_address_of(account));
     }
@@ -24,7 +24,7 @@ module 0x42::TestResources {
     public fun create_resource(account: &signer) {
         move_to<R>(account, R{x:1});
     }
-    spec fun create_resource {
+    spec create_resource {
         aborts_if exists<R>(Signer::spec_address_of(account));
         ensures exists<R>(Signer::spec_address_of(account));
     }
@@ -34,7 +34,7 @@ module 0x42::TestResources {
             abort 1
         };
     }
-    spec fun create_resource_incorrect {
+    spec create_resource_incorrect {
      aborts_if exists<R>(Signer::spec_address_of(account));
      ensures exists<R>(Signer::spec_address_of(account));
     }
@@ -43,7 +43,7 @@ module 0x42::TestResources {
         let r = move_from<R>(a);
         let R{x: _} = r;
     }
-    spec fun move_from_addr {
+    spec move_from_addr {
         aborts_if !exists<R>(a);
     }
 
@@ -52,7 +52,7 @@ module 0x42::TestResources {
         let R{x: x} = r;
         move_to<R>(account, R{x: x});
     }
-    spec fun move_from_addr_to_sender {
+    spec move_from_addr_to_sender {
         aborts_if !exists<R>(a);
         aborts_if (Signer::spec_address_of(account) != a) && exists<R>(Signer::spec_address_of(account));
         ensures exists<R>(Signer::spec_address_of(account));
@@ -66,7 +66,7 @@ module 0x42::TestResources {
         let R{x: x} = r;
         R{x: x}
     }
-    spec fun move_from_addr_and_return {
+    spec move_from_addr_and_return {
         aborts_if !exists<R>(a);
         ensures old(exists<R>(a));
         ensures result.x == old(global<R>(a).x);
@@ -78,7 +78,7 @@ module 0x42::TestResources {
         let R{x: x} = r;
         R{x: x}
     }
-    spec fun move_from_sender_and_return {
+    spec move_from_sender_and_return {
         aborts_if !exists<R>(Signer::spec_address_of(account));
         ensures result.x == old(global<R>(Signer::spec_address_of(account)).x);
         ensures result == old(global<R>(Signer::spec_address_of(account)));
@@ -89,7 +89,7 @@ module 0x42::TestResources {
         let R{x: x} = r;
         move_to<R>(account, R{x: x});
     }
-    spec fun move_from_sender_to_sender {
+    spec move_from_sender_to_sender {
         aborts_if !exists<R>(Signer::spec_address_of(account));
         ensures exists<R>(Signer::spec_address_of(account));
         ensures old(global<R>(Signer::spec_address_of(account)).x) == global<R>(Signer::spec_address_of(account)).x;
@@ -102,7 +102,7 @@ module 0x42::TestResources {
         let r2 = borrow_global_mut<R>(a);
         _ = r2;
     }
-    spec fun borrow_global_mut_correct {
+    spec borrow_global_mut_correct {
         aborts_if !exists<R>(a);
     }
 
@@ -129,7 +129,7 @@ module 0x42::TestResources {
     public fun identity(a: A, b: B, c: C): (A,B,C) {
         (a, b, c)
     }
-    spec fun identity {
+    spec identity {
         aborts_if false;
         ensures result_1 == a;
         ensures result_2 == b;
@@ -139,7 +139,7 @@ module 0x42::TestResources {
     public fun pack_A(a: address, va: u64): A {
         A{ addr:a, val:va }
     }
-    spec fun pack_A {
+    spec pack_A {
         aborts_if false;
         ensures result.addr == a;
         ensures result.val == va;
@@ -150,7 +150,7 @@ module 0x42::TestResources {
         let var_b = B{ val: vb, a: var_a };
         var_b
     }
-    spec fun pack_B {
+    spec pack_B {
         aborts_if false;
         ensures result.val == vb;
         ensures result.a.val == va;
@@ -163,7 +163,7 @@ module 0x42::TestResources {
         let var_c = C{ val: vc, b: var_b };
         var_c
     }
-    spec fun pack_C {
+    spec pack_C {
         aborts_if false;
         ensures result.val == vc;
         ensures result.b.val == vb;
@@ -176,7 +176,7 @@ module 0x42::TestResources {
         let A{addr: aa, val:v1} = var_a;
         (aa, v1)
     }
-    spec fun unpack_A {
+    spec unpack_A {
         aborts_if false;
         ensures result_1 == a;
         ensures result_2 == va;
@@ -188,7 +188,7 @@ module 0x42::TestResources {
         let B{val: v2, a: A{ addr:aa, val: v1}} = var_b;
         (aa, v1, v2)
     }
-    spec fun unpack_B {
+    spec unpack_B {
         aborts_if false;
         ensures result_1 == a;
         ensures result_2 == va;
@@ -202,7 +202,7 @@ module 0x42::TestResources {
         let C{val: v3, b: B{val: v2, a: A{ addr:aa, val: v1}}} = var_c;
         (aa, v1, v2, v3)
     }
-    spec fun unpack_C {
+    spec unpack_C {
         aborts_if false;
         ensures result_1 == a;
         ensures result_2 == va;
@@ -219,7 +219,7 @@ module 0x42::TestResources {
         if (b_var != 42) abort 42;
         var_a
     }
-    spec fun ref_A {
+    spec ref_A {
         aborts_if b;
         ensures result.addr == a;
     }
@@ -232,7 +232,7 @@ module 0x42::TestResources {
     public fun spec_pack_R(): R {
         R{x: 7}
     }
-    spec fun spec_pack_R {
+    spec spec_pack_R {
         aborts_if false;
         ensures result.x == 7;
         ensures result == R{x: 7};
@@ -241,7 +241,7 @@ module 0x42::TestResources {
     public fun spec_pack_A(account: &signer): A {
         A{ addr: Signer::address_of(account), val: 7 }
     }
-    spec fun spec_pack_A {
+    spec spec_pack_A {
         aborts_if false;
         ensures result.addr == Signer::spec_address_of(account);
         ensures result.val == 7;
@@ -252,7 +252,7 @@ module 0x42::TestResources {
     public fun spec_pack_B(account: &signer): B {
         B{ val: 77, a: A{ addr: Signer::address_of(account), val: 7 }}
     }
-    spec fun spec_pack_B {
+    spec spec_pack_B {
         aborts_if false;
         ensures result.val == 77;
         ensures result.a.val == 7;
@@ -272,7 +272,7 @@ module 0x42::TestResources {
     public fun create_empty(): Empty {
         Empty{}
     }
-    spec fun create_empty {
+    spec create_empty {
         ensures result == Empty{};
     }
 

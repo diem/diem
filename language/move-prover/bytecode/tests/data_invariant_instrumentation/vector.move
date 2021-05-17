@@ -9,7 +9,7 @@ module 0x42::Test {
         y: u64
     }
 
-    spec struct S {
+    spec S {
         invariant y > 0;
     }
 

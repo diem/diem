@@ -155,7 +155,7 @@ module Diem {
 
     /// Data structure invariant for CurrencyInfo.  Asserts that `CurrencyInfo.scaling_factor`
     /// is always greater than 0 and not greater than `MAX_SCALING_FACTOR`
-    spec struct CurrencyInfo {
+    spec CurrencyInfo {
         invariant 0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR;
     }
 
@@ -196,7 +196,7 @@ module Diem {
         preburns: vector<PreburnWithMetadata<CoinType>>,
     }
 
-    spec struct PreburnQueue {
+    spec PreburnQueue {
         /// The number of outstanding preburn requests is bounded.
         invariant len(preburns) <= MAX_OUTSTANDING_PREBURNS;
         /// No preburn request can have a zero value.
@@ -253,7 +253,7 @@ module Diem {
         CoreAddresses::assert_diem_root(dr_account);
         RegisteredCurrencies::initialize(dr_account);
     }
-    spec fun initialize {
+    spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         include RegisteredCurrencies::InitializeAbortsIf;
@@ -274,7 +274,7 @@ module Diem {
         );
         move_to(tc_account, cap)
     }
-    spec fun publish_burn_capability {
+    spec publish_burn_capability {
         aborts_if !spec_is_currency<CoinType>();
         include PublishBurnCapAbortsIfs<CoinType>;
     }
@@ -302,7 +302,7 @@ module Diem {
             borrow_global<MintCapability<CoinType>>(addr)
         )
     }
-    spec fun mint {
+    spec mint {
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         /// Must abort if the account does not have the MintCapability [[H1]][PERMISSION].
@@ -331,7 +331,7 @@ module Diem {
             amount
         )
     }
-    spec fun burn {
+    spec burn {
         include BurnAbortsIf<CoinType>;
         include BurnEnsures<CoinType>;
         include BurnWithResourceCapEmits<CoinType>{preburn: spec_make_preburn(amount)};
@@ -373,7 +373,7 @@ module Diem {
             amount,
         )
     }
-    spec fun cancel_burn {
+    spec cancel_burn {
         let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         let post post_currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         modifies global<PreburnQueue<CoinType>>(preburn_address);
@@ -431,7 +431,7 @@ module Diem {
 
         Diem<CoinType> { value }
     }
-    spec fun mint_with_capability {
+    spec mint_with_capability {
         pragma opaque;
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -500,7 +500,7 @@ module Diem {
             );
         };
     }
-    spec fun preburn_with_resource {
+    spec preburn_with_resource {
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
@@ -553,7 +553,7 @@ module Diem {
         assert_is_currency<CoinType>();
         Preburn<CoinType> { to_burn: zero<CoinType>() }
     }
-    spec fun create_preburn {
+    spec create_preburn {
         include CreatePreburnAbortsIf<CoinType>;
     }
     spec schema CreatePreburnAbortsIf<CoinType> {
@@ -582,7 +582,7 @@ module Diem {
             preburns: Vector::empty()
         })
     }
-    spec fun publish_preburn_queue {
+    spec publish_preburn_queue {
         pragma opaque;
         let account_addr = Signer::spec_address_of(account);
         modifies global<PreburnQueue<CoinType>>(account_addr);
@@ -623,7 +623,7 @@ module Diem {
         assert(!is_synthetic_currency<CoinType>(), Errors::invalid_argument(EIS_SYNTHETIC_CURRENCY));
         publish_preburn_queue<CoinType>(account)
     }
-    spec fun publish_preburn_queue_to_account {
+    spec publish_preburn_queue_to_account {
         pragma opaque;
         let account_addr = Signer::spec_address_of(account);
         modifies global<PreburnQueue<CoinType>>(account_addr);
@@ -672,7 +672,7 @@ module Diem {
             };
         }
     }
-    spec fun upgrade_preburn {
+    spec upgrade_preburn {
         let account_addr = Signer::spec_address_of(account);
         modifies global<Preburn<CoinType>>(account_addr);
         modifies global<PreburnQueue<CoinType>>(account_addr);
@@ -716,7 +716,7 @@ module Diem {
         );
         Vector::push_back(preburns, preburn);
     }
-    spec fun add_preburn_to_queue {
+    spec add_preburn_to_queue {
         pragma opaque;
         let account_addr = Signer::spec_address_of(account);
         let preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
@@ -763,7 +763,7 @@ module Diem {
         preburn_with_resource(coin, &mut preburn.preburn, sender);
         add_preburn_to_queue(account, preburn);
     }
-    spec fun preburn_to {
+    spec preburn_to {
         pragma opaque;
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
         include PreburnToEnsures<CoinType>{amount: coin.value};
@@ -833,7 +833,7 @@ module Diem {
         // If we didn't return already, we couldn't find a preburn with a matching value.
         abort Errors::invalid_state(EPREBURN_NOT_FOUND)
     }
-    spec fun remove_preburn_from_queue {
+    spec remove_preburn_from_queue {
         pragma opaque;
         modifies global<PreburnQueue<CoinType>>(preburn_address);
         include RemovePreburnFromQueueAbortsIf<CoinType>;
@@ -881,7 +881,7 @@ module Diem {
         let Preburn { to_burn } = preburn;
         destroy_zero(to_burn);
     }
-    spec fun burn_with_capability {
+    spec burn_with_capability {
         include BurnWithResourceCapEmits<CoinType>{preburn: spec_make_preburn(amount)};
         include BurnWithCapabilityAbortsIf<CoinType>;
         include BurnWithCapabilityEnsures<CoinType>;
@@ -936,7 +936,7 @@ module Diem {
             );
         };
     }
-    spec fun burn_with_resource_cap {
+    spec burn_with_resource_cap {
         let pre_preburn = preburn;
         include BurnWithResourceCapAbortsIf<CoinType>{preburn: pre_preburn};
         include BurnWithResourceCapEnsures<CoinType>{preburn: pre_preburn};
@@ -1006,7 +1006,7 @@ module Diem {
 
         to_burn
     }
-    spec fun cancel_burn_with_capability {
+    spec cancel_burn_with_capability {
         modifies global<PreburnQueue<CoinType>>(preburn_address);
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include CancelBurnWithCapAbortsIf<CoinType>;
@@ -1058,7 +1058,7 @@ module Diem {
         preburn_with_resource(coin, preburn, preburn_address);
         burn_with_resource_cap(preburn, preburn_address, capability);
     }
-    spec fun burn_now {
+    spec burn_now {
         include BurnNowAbortsIf<CoinType>;
         let info = spec_currency_info<CoinType>();
         let post post_info = spec_currency_info<CoinType>();
@@ -1086,7 +1086,7 @@ module Diem {
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         move_from<BurnCapability<CoinType>>(addr)
     }
-    spec fun remove_burn_capability {
+    spec remove_burn_capability {
         include AbortsIfNoBurnCapability<CoinType>;
     }
     spec schema AbortsIfNoBurnCapability<CoinType> {
@@ -1124,7 +1124,7 @@ module Diem {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
-    spec fun split {
+    spec split {
         aborts_if coin.value < amount with Errors::LIMIT_EXCEEDED;
         ensures result_1.value == coin.value - amount;
         ensures result_2.value == amount;
@@ -1142,7 +1142,7 @@ module Diem {
         coin.value = coin.value - amount;
         Diem { value: amount }
     }
-    spec fun withdraw {
+    spec withdraw {
         pragma opaque;
         include WithdrawAbortsIf<CoinType>;
         ensures coin.value == old(coin.value) - amount;
@@ -1160,7 +1160,7 @@ module Diem {
         let val = coin.value;
         withdraw(coin, val)
     }
-    spec fun withdraw_all {
+    spec withdraw_all {
         pragma opaque;
         aborts_if false;
         ensures result.value == old(coin.value);
@@ -1173,7 +1173,7 @@ module Diem {
         deposit(&mut coin1, coin2);
         coin1
     }
-    spec fun join {
+    spec join {
         pragma opaque;
         aborts_if coin1.value + coin2.value > max_u64() with Errors::LIMIT_EXCEEDED;
         ensures result.value == coin1.value + coin2.value;
@@ -1188,7 +1188,7 @@ module Diem {
         assert(MAX_U64 - coin.value >= value, Errors::limit_exceeded(ECOIN));
         coin.value = coin.value + value;
     }
-    spec fun deposit {
+    spec deposit {
         pragma opaque;
         include DepositAbortsIf<CoinType>;
         ensures coin.value == old(coin.value) + check.value;
@@ -1206,7 +1206,7 @@ module Diem {
         let Diem { value } = coin;
         assert(value == 0, Errors::invalid_argument(EDESTRUCTION_OF_NONZERO_COIN))
     }
-    spec fun destroy_zero {
+    spec destroy_zero {
         pragma opaque;
         aborts_if coin.value > 0 with Errors::INVALID_ARGUMENT;
     }
@@ -1264,7 +1264,7 @@ module Diem {
         );
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
-    spec fun register_currency {
+    spec register_currency {
         include RegisterCurrencyAbortsIf<CoinType>;
         include RegisterCurrencyEnsures<CoinType>;
     }
@@ -1321,7 +1321,7 @@ module Diem {
         publish_burn_capability<CoinType>(tc_account, burn_cap);
     }
 
-    spec fun register_SCS_currency {
+    spec register_SCS_currency {
         include RegisterSCSCurrencyAbortsIf<CoinType>;
         include RegisterSCSCurrencyEnsures<CoinType>;
     }
@@ -1352,7 +1352,7 @@ module Diem {
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
     }
     /// Returns the market cap of CoinType.
-    spec define spec_market_cap<CoinType>(): u128 {
+    spec fun spec_market_cap<CoinType>(): u128 {
         global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
     }
 
@@ -1364,7 +1364,7 @@ module Diem {
         let xdx_exchange_rate = xdx_exchange_rate<FromCoinType>();
         FixedPoint32::multiply_u64(from_value, xdx_exchange_rate)
     }
-    spec fun approx_xdx_for_value {
+    spec approx_xdx_for_value {
         pragma opaque;
         include ApproxXdmForValueAbortsIf<FromCoinType>;
         ensures result == spec_approx_xdx_for_value<FromCoinType>(from_value);
@@ -1413,7 +1413,7 @@ module Diem {
         assert_is_currency<CoinType>();
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
     }
-    spec define spec_scaling_factor<CoinType>(): u64 {
+    spec fun spec_scaling_factor<CoinType>(): u64 {
         global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
     }
 
@@ -1432,12 +1432,12 @@ module Diem {
         assert_is_currency<CoinType>();
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code
     }
-    spec fun currency_code {
+    spec currency_code {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
         ensures result == spec_currency_code<CoinType>();
     }
-    spec define spec_currency_code<CoinType>(): vector<u8> {
+    spec fun spec_currency_code<CoinType>(): vector<u8> {
         spec_currency_info<CoinType>().currency_code
     }
 
@@ -1459,7 +1459,7 @@ module Diem {
             }
         );
     }
-    spec fun update_xdx_exchange_rate {
+    spec update_xdx_exchange_rate {
         include UpdateXDXExchangeRateAbortsIf<FromCoinType>;
         include UpdateXDXExchangeRateEnsures<FromCoinType>;
         include UpdateXDXExchangeRateEmits<FromCoinType>;
@@ -1493,7 +1493,7 @@ module Diem {
         assert_is_currency<CoinType>();
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
     }
-    spec fun xdx_exchange_rate {
+    spec xdx_exchange_rate {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
         let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -1517,7 +1517,7 @@ module Diem {
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
     }
-    spec fun update_minting_ability {
+    spec update_minting_ability {
         include UpdateMintingAbilityAbortsIf<CoinType>;
         include UpdateMintingAbilityEnsures<CoinType>;
     }
@@ -1541,7 +1541,7 @@ module Diem {
     public fun assert_is_currency<CoinType: store>() {
         assert(is_currency<CoinType>(), Errors::not_published(ECURRENCY_INFO));
     }
-    spec fun assert_is_currency {
+    spec assert_is_currency {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
     }
@@ -1579,7 +1579,7 @@ module Diem {
 
         /// Only TreasuryCompliance can have MintCapability [[H1]][PERMISSION].
         /// If an account has MintCapability, it is a TreasuryCompliance account.
-        invariant [global] forall coin_type: type:
+        invariant forall coin_type: type:
             forall mint_cap_owner: address where exists<MintCapability<coin_type>>(mint_cap_owner):
                 Roles::spec_has_treasury_compliance_role_addr(mint_cap_owner);
 
@@ -1596,7 +1596,7 @@ module Diem {
                           mint_cap_owner1 == mint_cap_owner2;
 
         /// If an address has a mint capability, it is an SCS currency.
-        invariant [global]
+        invariant
             forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
                 is_SCS_currency<coin_type>();
     }
@@ -1657,7 +1657,7 @@ module Diem {
 
         /// Only TreasuryCompliance can have BurnCapability [[H3]][PERMISSION].
         /// If an account has BurnCapability, it is a TreasuryCompliance account.
-        invariant [global] forall coin_type: type:
+        invariant forall coin_type: type:
             forall addr1: address:
                 exists<BurnCapability<coin_type>>(addr1) ==>
                     Roles::spec_has_treasury_compliance_role_addr(addr1);
@@ -1724,7 +1724,7 @@ module Diem {
         /// Only DesignatedDealer can have PreburnQueue [[H3]][PERMISSION].
         /// If an account has PreburnQueue, it is a DesignatedDealer account.
         /// > NB: during the transition this holds for both `Preburn` and `PreburnQueue` resources.
-        invariant [global] forall coin_type: type:
+        invariant forall coin_type: type:
             forall addr1: address:
                 exists<PreburnQueue<coin_type>>(addr1) || exists<Preburn<coin_type>>(addr1) ==>
                     Roles::spec_has_designated_dealer_role_addr(addr1);
@@ -1736,7 +1736,7 @@ module Diem {
         /// > NB: This invariant is part of the upgrade process, eventually
         ///       this will be removed once all DD's have been upgraded to
         ///       using the `PreburnQueue`.
-        invariant [global] forall coin_type: type, dd_addr: address
+        invariant forall coin_type: type, dd_addr: address
             where exists<Preburn<coin_type>>(dd_addr):
                 global<Preburn<coin_type>>(dd_addr).to_burn.value == 0 &&
                 !exists<PreburnQueue<coin_type>>(dd_addr);
@@ -1744,17 +1744,17 @@ module Diem {
         /// If there is a `PreburnQueue` resource published, then there cannot
         /// also be a `Preburn` resource for that same currency published under
         /// the same address.
-        invariant [global] forall coin_type: type, dd_addr: address
+        invariant forall coin_type: type, dd_addr: address
             where exists<PreburnQueue<coin_type>>(dd_addr):
                 !exists<Preburn<coin_type>>(dd_addr);
 
         /// A `Preburn` resource can only be published holding a currency type.
-        invariant [global] forall addr: address, coin_type: type
+        invariant forall addr: address, coin_type: type
             where exists<Preburn<coin_type>>(addr):
             spec_is_currency<coin_type>();
 
         /// A `PreburnQueue` resource can only be published holding a currency type.
-        invariant [global] forall addr: address, coin_type: type
+        invariant forall addr: address, coin_type: type
             where exists<PreburnQueue<coin_type>>(addr):
             spec_is_currency<coin_type>();
 
@@ -1762,17 +1762,17 @@ module Diem {
         apply PreservePreburnQueueExistence<CoinType> to *<CoinType>;
 
         /// resource struct `CurrencyInfo` is persistent
-        invariant update [global] forall coin_type: type, dr_addr: address
+        invariant update forall coin_type: type, dr_addr: address
             where old(exists<CurrencyInfo<coin_type>>(dr_addr)):
                 exists<CurrencyInfo<coin_type>>(dr_addr);
 
         /// resource struct `PreburnQueue<CoinType>` is persistent
-        invariant update [global] forall coin_type: type, tc_addr: address
+        invariant update forall coin_type: type, tc_addr: address
             where old(exists<PreburnQueue<coin_type>>(tc_addr)):
                 exists<PreburnQueue<coin_type>>(tc_addr);
 
         /// resource struct `MintCapability<CoinType>` is persistent
-        invariant update [global] forall coin_type: type, tc_addr: address
+        invariant update forall coin_type: type, tc_addr: address
             where old(exists<MintCapability<coin_type>>(tc_addr)):
                 exists<MintCapability<coin_type>>(tc_addr);
     }
@@ -1798,37 +1798,37 @@ module Diem {
 
     spec module {
         /// Checks whether currency is registered. Mirrors `Self::is_currency<CoinType>`.
-        define spec_is_currency<CoinType>(): bool {
+        fun spec_is_currency<CoinType>(): bool {
             exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
         }
 
         /// Returns currency information.
-        define spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
+        fun spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
             global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
         }
 
         /// Specification version of `Self::approx_xdx_for_value`.
-        define spec_approx_xdx_for_value<CoinType>(value: num):  num {
+        fun spec_approx_xdx_for_value<CoinType>(value: num):  num {
             FixedPoint32::spec_multiply_u64(value, spec_xdx_exchange_rate<CoinType>())
         }
 
-        define spec_xdx_exchange_rate<CoinType>(): FixedPoint32 {
+        fun spec_xdx_exchange_rate<CoinType>(): FixedPoint32 {
             global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
         }
 
         /// Checks whether the currency has a mint capability.  This is only relevant for
         /// SCS coins
-        define spec_has_mint_capability<CoinType>(addr: address): bool {
+        fun spec_has_mint_capability<CoinType>(addr: address): bool {
             exists<MintCapability<CoinType>>(addr)
         }
 
         /// Returns true if a BurnCapability for CoinType exists at addr.
-        define spec_has_burn_capability<CoinType>(addr: address): bool {
+        fun spec_has_burn_capability<CoinType>(addr: address): bool {
             exists<BurnCapability<CoinType>>(addr)
         }
 
         /// Returns the Preburn in the preburn queue.
-        define spec_make_preburn<CoinType>(amount: u64): Preburn<CoinType> {
+        fun spec_make_preburn<CoinType>(amount: u64): Preburn<CoinType> {
             Preburn { to_burn: Diem { value: amount }}
         }
     }

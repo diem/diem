@@ -5,8 +5,8 @@ error:
  7 │     struct Foo {}
    │            ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
    ·
- 5 │         define Foo(): bool { true }
-   │                --- Previously defined here
+ 5 │         fun Foo(): bool { true }
+   │             --- Previously defined here
    │
 
 error: 
@@ -16,8 +16,8 @@ error:
  14 │     spec schema Foo<T> {
     │                 ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
     ·
- 12 │         define Foo(): bool { true }
-    │                --- Previously defined here
+ 12 │         fun Foo(): bool { true }
+    │             --- Previously defined here
     │
 
 error: 
@@ -27,8 +27,8 @@ error:
  23 │     fun Foo() {}
     │         ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
     ·
- 21 │         define Foo(): bool { true }
-    │                --- Previously defined here
+ 21 │         fun Foo(): bool { true }
+    │             --- Previously defined here
     │
 
 error: 
@@ -38,18 +38,18 @@ error:
  30 │     fun foo() {}
     │         ^^^ Duplicate module member or alias 'foo'. Top level names in a namespace must be unique
     ·
- 28 │         define foo(): bool { true }
-    │                --- Previously defined here
+ 28 │         fun foo(): bool { true }
+    │             --- Previously defined here
     │
 
 error: 
 
-    ┌── tests/move_check/expansion/spec_function_member_conflicts.move:38:16 ───
+    ┌── tests/move_check/expansion/spec_function_member_conflicts.move:38:13 ───
     │
- 38 │         define foo(): bool { true }
-    │                ^^^ Duplicate module member or alias 'foo'. Top level names in a namespace must be unique
+ 38 │         fun foo(): bool { true }
+    │             ^^^ Duplicate module member or alias 'foo'. Top level names in a namespace must be unique
     ·
- 35 │         define foo(): bool { true }
-    │                --- Previously defined here
+ 35 │         fun foo(): bool { true }
+    │             --- Previously defined here
     │
 

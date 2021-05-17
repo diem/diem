@@ -13,7 +13,7 @@ module 0x42::TestBCS {
         let s2 = BCS::to_bytes(v2);
         (s1, s2)
     }
-    spec fun bcs_test1 {
+    spec bcs_test1 {
         aborts_if false;
         ensures result_1 == result_2 ==> v1 == v2;
         ensures v1 == v2 ==> result_1 == result_2;
@@ -29,7 +29,7 @@ module 0x42::TestBCS {
         let s2 = BCS::to_bytes(v2);
         (s1, s2)
     }
-    spec fun bcs_test1_incorrect {
+    spec bcs_test1_incorrect {
         aborts_if false;
         ensures result_1 == result_2;
         ensures len(result_1) > 0;

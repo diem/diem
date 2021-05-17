@@ -15,7 +15,7 @@ module 0x42::TestLet {
     fun spec_let(a: u64, b: u64): (u64, u64) {
         (a + 1 + b, a + b)
     }
-    spec fun spec_let {
+    spec spec_let {
         let x = a + 1;
         let y = x + b;
         ensures result_1 == y;
@@ -26,7 +26,7 @@ module 0x42::TestLet {
         *a = *a + 1 + *b;
         *b = *a + *b;
     }
-    spec fun spec_let_with_old {
+    spec spec_let_with_old {
        let post new_a = old(a) + 1 + old(b);
        let post new_b = a + old(b);
        ensures a == new_a;
@@ -38,7 +38,7 @@ module 0x42::TestLet {
         *a = *a / (*a + *b);
         *b = saved_a * *b;
     }
-    spec fun spec_let_with_abort {
+    spec spec_let_with_abort {
         pragma opaque;
         let sum = a + b;
         let product = a * b;
@@ -53,7 +53,7 @@ module 0x42::TestLet {
     fun spec_let_with_abort_opaque_caller(a: &mut u64, b: &mut u64) {
         spec_let_with_abort(a, b)
     }
-    spec fun spec_let_with_abort_opaque_caller {
+    spec spec_let_with_abort_opaque_caller {
         // Same as the callee
         let sum = a + b;
         let product = a * b;
@@ -70,7 +70,7 @@ module 0x42::TestLet {
         *a = *a / (*a + *b);
         *b = saved_a * *b;
     }
-    spec fun spec_let_with_abort_incorrect {
+    spec spec_let_with_abort_incorrect {
         let sum = a + b;
         let product = a * b;
         aborts_if sum != 0;
@@ -86,7 +86,7 @@ module 0x42::TestLet {
         *a = *a / (*a + *b);
         *b = saved_a * *b;
     }
-    spec fun spec_let_with_schema {
+    spec spec_let_with_schema {
         let sum = a + b;
         let product = a * b;
         aborts_if sum == 0;
@@ -115,10 +115,10 @@ module 0x42::TestLet {
     fun local_let_with_memory_access(a1: address, a2: address): bool {
         exists<R>(a1) || exists<R>(a2)
     }
-    spec fun local_let_with_memory_access {
+    spec local_let_with_memory_access {
         ensures result == exists_R(a1, a2);
     }
-    spec define exists_R(a1: address, a2: address): bool {
+    spec fun exists_R(a1: address, a2: address): bool {
         let e = exists<R>(a1) || exists<R>(a2);
         e && e || e
     }

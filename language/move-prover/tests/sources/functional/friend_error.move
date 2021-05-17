@@ -8,13 +8,13 @@ module 0x42::TestFriendError {
 
     public fun f() {}
 
-    spec fun f {
+    spec f {
         pragma friend = 0x1::M::some_other_fun;
     }
 
     public fun g() {}
 
-    spec fun g {
+    spec g {
         pragma friend = h;
         pragma opaque; // Errors here since g can't be opaque with a friend
     }
@@ -24,7 +24,7 @@ module 0x42::TestFriendError {
         g();
     }
 
-    spec fun h {
+    spec h {
         pragma friend = i;
     }
 

@@ -74,33 +74,15 @@ pub enum ConditionKind {
     Emits,
     Ensures,
     Requires,
-    RequiresModule,
     Invariant,
-    InvariantModule,
     InvariantUpdate,
-    VarUpdate(ModuleId, SpecVarId, Vec<Type>),
-    VarPack(ModuleId, SpecVarId, Vec<Type>),
-    VarUnpack(ModuleId, SpecVarId, Vec<Type>),
 }
 
 impl ConditionKind {
-    /// If this is an assignment to a spec var, return it.
-    pub fn get_spec_var_target(&self) -> Option<(ModuleId, SpecVarId, Vec<Type>)> {
-        use ConditionKind::*;
-        if let VarUpdate(mid, vid, tys) | VarPack(mid, vid, tys) | VarUnpack(mid, vid, tys) = self {
-            Some((*mid, *vid, tys.clone()))
-        } else {
-            None
-        }
-    }
-
     /// Returns true of this condition allows the `old(..)` expression.
     pub fn allows_old(&self) -> bool {
         use ConditionKind::*;
-        matches!(
-            self,
-            Emits | Ensures | InvariantUpdate | VarUpdate(..) | LetPost(..)
-        )
+        matches!(self, Emits | Ensures | InvariantUpdate | LetPost(..))
     }
 
     /// Returns true if this condition is allowed on a public function declaration.
@@ -109,12 +91,12 @@ impl ConditionKind {
         matches!(
             self,
             Requires
-                | RequiresModule
                 | AbortsIf
                 | AbortsWith
                 | SucceedsIf
                 | Emits
                 | Ensures
+                | Invariant
                 | Modifies
                 | LetPost(..)
                 | LetPre(..)
@@ -127,12 +109,12 @@ impl ConditionKind {
         matches!(
             self,
             Requires
-                | RequiresModule
                 | AbortsIf
                 | AbortsWith
                 | SucceedsIf
                 | Emits
                 | Ensures
+                | Invariant
                 | Modifies
                 | LetPost(..)
                 | LetPre(..)
@@ -148,7 +130,7 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a struct.
     pub fn allowed_on_struct(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant | VarPack(..) | VarUnpack(..))
+        matches!(self, Invariant)
     }
 
     /// Returns true if this condition is allowed on a module.
@@ -175,13 +157,8 @@ impl std::fmt::Display for ConditionKind {
             Emits => write!(f, "emits"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
-            RequiresModule => write!(f, "requires module"),
             Invariant => write!(f, "invariant"),
-            InvariantModule => write!(f, "invariant module"),
             InvariantUpdate => write!(f, "invariant update"),
-            VarUpdate(..) => write!(f, "invariant update assign"),
-            VarPack(..) => write!(f, "invariant pack assign"),
-            VarUnpack(..) => write!(f, "invariant unpack assign"),
         }
     }
 }

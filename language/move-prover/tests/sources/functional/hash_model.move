@@ -16,7 +16,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha2_256(v2);
         (h1, h2)
     }
-    spec fun hash_test1 {
+    spec hash_test1 {
         aborts_if false;
         ensures result_1 == result_2 ==> v1 == v2;
         ensures v1 == v2 ==> result_1 == result_2;
@@ -31,7 +31,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha2_256(v2);
         h1 == h2
     }
-    spec fun hash_test2 {
+    spec hash_test2 {
         aborts_if false;
         ensures result == (v1 == v2);
     }
@@ -42,7 +42,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha2_256(v2);
         (h1, h2)
     }
-    spec fun hash_test1_incorrect {
+    spec hash_test1_incorrect {
         aborts_if false;
         // ensures result_1 == result_2; // TODO: uncomment this after fixing the non-determinism issue of Boogie
         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
@@ -59,7 +59,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha3_256(v2);
         (h1, h2)
     }
-    spec fun hash_test3 {
+    spec hash_test3 {
         aborts_if false;
         ensures result_1 == result_2 ==> v1 == v2;
         ensures v1 == v2 ==> result_1 == result_2;
@@ -74,7 +74,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha3_256(v2);
         h1 == h2
     }
-    spec fun hash_test4 {
+    spec hash_test4 {
         aborts_if false;
         ensures result == (v1 == v2);
     }
@@ -85,7 +85,7 @@ module 0x42::TestHash {
         let h2 = Hash::sha2_256(v2);
         (h1, h2)
     }
-    spec fun hash_test2_incorrect {
+    spec hash_test2_incorrect {
         aborts_if false;
         // ensures result_1 == result_2; // TODO: uncomment this after fixing the non-determinism issue of Boogie
         ensures len(result_1) > 0 ==> result_1[0] < max_u8();

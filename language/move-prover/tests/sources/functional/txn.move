@@ -16,14 +16,14 @@ module TestTransaction {
     fun check_sender1(sender: &signer) {
         assert(Signer::address_of(sender) == @0xdeadbeef, 1);
     }
-    spec fun check_sender1 {
+    spec check_sender1 {
         aborts_if Signer::spec_address_of(sender) != @0xdeadbeef;
     }
 
     fun check_sender2(sender: &signer) acquires T {
 	    borrow_global<T>(Signer::address_of(sender));
     }
-    spec fun check_sender2 {
+    spec check_sender2 {
         aborts_if !exists<T>(Signer::spec_address_of(sender));
     }
 
@@ -31,7 +31,7 @@ module TestTransaction {
         DiemTimestamp::assert_operating();
         assert(DiemAccount::exists_at(Signer::address_of(account)), 1);
     }
-    spec fun exists_account {
+    spec exists_account {
         include DiemTimestamp::AbortsIfNotOperating;
         // TODO: we can remove the following line once we have the feature to inject
         // the postconditions of the "prologue" functions as invariants

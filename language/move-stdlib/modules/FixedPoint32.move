@@ -53,7 +53,7 @@ module FixedPoint32 {
     /// an abstracted, simplified semantics for verification of callers. For the verification outcome of
     /// callers, the actual result of this function is not relevant, as long as the abstraction behaves
     /// homomorphic. This does not guarantee that arithmetic functions using this code is correct.
-    spec fun multiply_u64 {
+    spec multiply_u64 {
         pragma opaque;
         include [concrete] ConcreteMultiplyAbortsIf;
         ensures [concrete] result == spec_concrete_multiply_u64(val, multiplier);
@@ -65,7 +65,7 @@ module FixedPoint32 {
         multiplier: FixedPoint32;
         aborts_if spec_concrete_multiply_u64(val, multiplier) > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
-    spec define spec_concrete_multiply_u64(val: num, multiplier: FixedPoint32): num {
+    spec fun spec_concrete_multiply_u64(val: num, multiplier: FixedPoint32): num {
         (val * multiplier.value) >> 32
     }
 
@@ -77,7 +77,7 @@ module FixedPoint32 {
         aborts_if spec_multiply_u64(val, multiplier) > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
 
-    spec define spec_multiply_u64(val: num, multiplier: FixedPoint32): num {
+    spec fun spec_multiply_u64(val: num, multiplier: FixedPoint32): num {
         if (multiplier.value == 0)
             // Zero value
             0
@@ -112,7 +112,7 @@ module FixedPoint32 {
 
     /// We specify the concrete semantics of the implementation but use
     /// an abstracted, simplified semantics for verification of callers.
-    spec fun divide_u64 {
+    spec divide_u64 {
         pragma opaque;
         include [concrete] ConcreteDivideAbortsIf;
         ensures [concrete] result == spec_concrete_divide_u64(val, divisor);
@@ -125,7 +125,7 @@ module FixedPoint32 {
         aborts_if divisor.value == 0 with Errors::INVALID_ARGUMENT;
         aborts_if spec_concrete_divide_u64(val, divisor) > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
-    spec define spec_concrete_divide_u64(val: num, divisor: FixedPoint32): num {
+    spec fun spec_concrete_divide_u64(val: num, divisor: FixedPoint32): num {
         (val << 32) / divisor.value
     }
 
@@ -137,7 +137,7 @@ module FixedPoint32 {
         aborts_if divisor.value == 0 with Errors::INVALID_ARGUMENT;
         aborts_if spec_divide_u64(val, divisor) > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
-    spec define spec_divide_u64(val: num, divisor: FixedPoint32): num {
+    spec fun spec_divide_u64(val: num, divisor: FixedPoint32): num {
         if (divisor.value == 1)
             // 1.0
             val
@@ -173,7 +173,7 @@ module FixedPoint32 {
         assert(quotient <= MAX_U64, Errors::limit_exceeded(ERATIO_OUT_OF_RANGE));
         FixedPoint32 { value: (quotient as u64) }
     }
-    spec fun create_from_rational {
+    spec create_from_rational {
         pragma opaque;
         include [concrete] ConcreteCreateFromRationalAbortsIf;
         ensures [concrete] result == spec_concrete_create_from_rational(numerator, denominator);
@@ -190,7 +190,7 @@ module FixedPoint32 {
         aborts_if quotient == 0 && scaled_numerator != 0 with Errors::INVALID_ARGUMENT;
         aborts_if quotient > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
-    spec define spec_concrete_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
+    spec fun spec_concrete_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
         FixedPoint32{value: (numerator << 64) / (denominator << 32)}
     }
 
@@ -203,7 +203,7 @@ module FixedPoint32 {
 
     /// Abstract to either 0.5 or 1. This assumes validation of numerator and denominator has
     /// succeeded.
-    spec define spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
+    spec fun spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
         if (numerator == denominator)
             // 1.0
             FixedPoint32{value: 1}
@@ -216,7 +216,7 @@ module FixedPoint32 {
     public fun create_from_raw_value(value: u64): FixedPoint32 {
         FixedPoint32 { value }
     }
-    spec fun create_from_raw_value {
+    spec create_from_raw_value {
         pragma opaque;
         aborts_if false;
         ensures [concrete] result.value == value;

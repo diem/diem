@@ -596,7 +596,7 @@ Check if <code>v1</code> is equal to the result of adding <code>e</code> at the 
 <a name="0x1_Vector_eq_push_back"></a>
 
 
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_eq_push_back">eq_push_back</a>&lt;Element&gt;(v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;, e: Element): bool {
+<pre><code><b>fun</b> <a href="Vector.md#0x1_Vector_eq_push_back">eq_push_back</a>&lt;Element&gt;(v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;, e: Element): bool {
     len(v1) == len(v2) + 1 &&
     v1[len(v1)-1] == e &&
     v1[0..len(v1)-1] == v2[0..len(v2)]
@@ -610,7 +610,7 @@ Check if <code>v</code> is equal to the result of concatenating <code>v1</code> 
 <a name="0x1_Vector_eq_append"></a>
 
 
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_eq_append">eq_append</a>&lt;Element&gt;(v: vector&lt;Element&gt;, v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
+<pre><code><b>fun</b> <a href="Vector.md#0x1_Vector_eq_append">eq_append</a>&lt;Element&gt;(v: vector&lt;Element&gt;, v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
     len(v) == len(v1) + len(v2) &&
     v[0..len(v1)] == v1 &&
     v[len(v1)..len(v)] == v2
@@ -624,7 +624,7 @@ Check <code>v1</code> is equal to the result of removing the first element of <c
 <a name="0x1_Vector_eq_pop_front"></a>
 
 
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_eq_pop_front">eq_pop_front</a>&lt;Element&gt;(v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
+<pre><code><b>fun</b> <a href="Vector.md#0x1_Vector_eq_pop_front">eq_pop_front</a>&lt;Element&gt;(v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
     len(v1) + 1 == len(v2) &&
     v1 == v2[1..len(v2)]
 }
@@ -637,7 +637,7 @@ Check that <code>v1</code> is equal to the result of removing the element at ind
 <a name="0x1_Vector_eq_remove_elem_at_index"></a>
 
 
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_eq_remove_elem_at_index">eq_remove_elem_at_index</a>&lt;Element&gt;(i: u64, v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
+<pre><code><b>fun</b> <a href="Vector.md#0x1_Vector_eq_remove_elem_at_index">eq_remove_elem_at_index</a>&lt;Element&gt;(i: u64, v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
     len(v1) + 1 == len(v2) &&
     v1[0..i] == v2[0..i] &&
     v1[i..len(v1)] == v2[i + 1..len(v2)]

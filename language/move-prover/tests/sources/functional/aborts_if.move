@@ -12,7 +12,7 @@ module 0x42::TestAbortsIf {
     fun no_aborts_if(_x: u64, _y: u64) {
         abort 1
     }
-    spec fun no_aborts_if {
+    spec no_aborts_if {
     }
 
 
@@ -24,14 +24,14 @@ module 0x42::TestAbortsIf {
     fun abort1(x: u64, y: u64) {
         if (!(x > y)) abort 1
     }
-    spec fun abort1 {
+    spec abort1 {
         aborts_if x <= y;
     }
 
     // fails, because it does not abort when x <= y.
     fun abort2_incorrect(_x: u64, _y: u64) {
     }
-    spec fun abort2_incorrect {
+    spec abort2_incorrect {
         aborts_if _x <= _y;
     }
 
@@ -39,7 +39,7 @@ module 0x42::TestAbortsIf {
     fun abort3(_x: u64, _y: u64) {
         abort 1
     }
-    spec fun abort3 {
+    spec abort3 {
         aborts_if true;
     }
 
@@ -47,7 +47,7 @@ module 0x42::TestAbortsIf {
     fun abort4_incorrect(x: u64, y: u64) {
         if (x > y) abort 1
     }
-    spec fun abort4_incorrect {
+    spec abort4_incorrect {
         pragma aborts_if_is_partial = true;
         aborts_if x <= y;
     }
@@ -56,7 +56,7 @@ module 0x42::TestAbortsIf {
     fun abort5_incorrect(x: u64, y: u64) {
         if (x <= y) abort 1
     }
-    spec fun abort5_incorrect {
+    spec abort5_incorrect {
         aborts_if x < y;
     }
 
@@ -64,7 +64,7 @@ module 0x42::TestAbortsIf {
     fun abort6_incorrect(x: u64, y: u64) {
         if (x < y) abort 1
     }
-    spec fun abort6_incorrect {
+    spec abort6_incorrect {
         aborts_if x <= y;
     }
 
@@ -77,7 +77,7 @@ module 0x42::TestAbortsIf {
     fun multi_abort1(x: u64, y: u64) {
         if (x <= y) abort 1
     }
-    spec fun multi_abort1 {
+    spec multi_abort1 {
         aborts_if x < y;
         aborts_if x == y;
     }
@@ -86,7 +86,7 @@ module 0x42::TestAbortsIf {
     fun multi_abort2_incorrect(x: u64, y: u64) {
         if (x < y) abort 1
     }
-    spec fun multi_abort2_incorrect {
+    spec multi_abort2_incorrect {
         aborts_if x < y;
         aborts_if x == y;
     }
@@ -95,7 +95,7 @@ module 0x42::TestAbortsIf {
     fun multi_abort3_incorrect(_x: u64, _y: u64) {
         abort 1
     }
-    spec fun multi_abort3_incorrect {
+    spec multi_abort3_incorrect {
         aborts_if _x < _y;
         aborts_if _x == _y;
     }
@@ -104,7 +104,7 @@ module 0x42::TestAbortsIf {
     fun multi_abort4(_x: u64, _y: u64) {
         abort 1
     }
-    spec fun multi_abort4 {
+    spec multi_abort4 {
         aborts_if _x < _y;
         aborts_if _x == _y;
         aborts_if _x > _y;
@@ -115,7 +115,7 @@ module 0x42::TestAbortsIf {
             abort 1
         };
     }
-    spec fun multi_abort5_incorrect {
+    spec multi_abort5_incorrect {
         aborts_if true;
         aborts_if x > 0;
     }
@@ -127,7 +127,7 @@ module 0x42::TestAbortsIf {
     fun abort_at_2_or_3(x: u64) {
         if (x == 2 || x == 3) abort 1;
     }
-    spec fun abort_at_2_or_3 {
+    spec abort_at_2_or_3 {
         // It is ok to specify only one abort condition of we set partial to true.
         pragma aborts_if_is_partial = true;
         aborts_if x == 2;
@@ -136,7 +136,7 @@ module 0x42::TestAbortsIf {
     fun abort_at_2_or_3_total_incorrect(x: u64) {
         if (x == 2 || x == 3) abort 1;
     }
-    spec fun abort_at_2_or_3_total_incorrect {
+    spec abort_at_2_or_3_total_incorrect {
         // Counter check that we get an error message without the pragma.
         // pragma aborts_if_is_partial = false;  // default
         aborts_if x == 2;
@@ -145,7 +145,7 @@ module 0x42::TestAbortsIf {
     fun abort_at_2_or_3_spec_incorrect(x: u64) {
         if (x == 2 || x == 3) abort 1;
     }
-    spec fun abort_at_2_or_3_spec_incorrect {
+    spec abort_at_2_or_3_spec_incorrect {
         // Even with the pragma, wrong aborts_if will be flagged.
         pragma aborts_if_is_partial = true;
         aborts_if x == 4;
@@ -154,7 +154,7 @@ module 0x42::TestAbortsIf {
     fun abort_at_2_or_3_strict_incorrect(x: u64) {
         if (x == 2 || x == 3) abort 1;
     }
-    spec fun abort_at_2_or_3_strict_incorrect {
+    spec abort_at_2_or_3_strict_incorrect {
         // When the strict mode is enabled, no aborts_if clause means aborts_if false.
         pragma aborts_if_is_strict = true;
     }
@@ -162,7 +162,7 @@ module 0x42::TestAbortsIf {
     fun abort_1() {
         abort 1
     }
-    spec fun abort_1 {
+    spec abort_1 {
         pragma opaque;
         aborts_if true with 1;
     }
@@ -170,7 +170,7 @@ module 0x42::TestAbortsIf {
     fun aborts_if_with_code(x: u64) {
         if (x == 2 || x == 3) abort_1();
     }
-    spec fun aborts_if_with_code {
+    spec aborts_if_with_code {
         // It is ok to specify only one abort condition of we set partial to true.
         pragma aborts_if_is_partial = true;
         aborts_if x == 2 with 1;

@@ -12,21 +12,21 @@ module 0x42::TestEmits {
     public fun simple(handle: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun simple {
+    spec simple {
         emits DummyEvent{msg: 0} to handle;
     }
 
     public fun simple_wrong_msg_incorrect(handle: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun simple_wrong_msg_incorrect {
+    spec simple_wrong_msg_incorrect {
         emits DummyEvent{msg: 1} to handle;
     }
 
     public fun simple_wrong_handle_incorrect(handle: &mut EventHandle<DummyEvent>, _handle2: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun simple_wrong_handle_incorrect {
+    spec simple_wrong_handle_incorrect {
         emits DummyEvent{msg: 0} to _handle2;
     }
 
@@ -39,7 +39,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun multiple {
+    spec multiple {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 1} to handle;
     }
@@ -48,7 +48,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun multiple_incorrect {
+    spec multiple_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 1} to handle;
         emits DummyEvent{msg: 2} to handle;
@@ -58,7 +58,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun multiple_same {
+    spec multiple_same {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 0} to handle;
     }
@@ -66,7 +66,7 @@ module 0x42::TestEmits {
     public fun multiple_same_incorrect(handle: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun multiple_same_incorrect {
+    spec multiple_same_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 0} to handle;
     }
@@ -79,7 +79,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle2, DummyEvent{msg: 0});
         Event::emit_event(handle2, DummyEvent{msg: 1});
     }
-    spec fun multiple_different_handle {
+    spec multiple_different_handle {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 1} to handle;
@@ -98,7 +98,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional {
+    spec conditional {
         emits DummyEvent{msg: 0} to handle if x > 7;
     }
 
@@ -107,7 +107,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional_wrong_condition_incorrect {
+    spec conditional_wrong_condition_incorrect {
         emits DummyEvent{msg: 0} to handle if x > 0;
     }
 
@@ -116,7 +116,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional_missing_condition_incorrect {
+    spec conditional_missing_condition_incorrect {
         emits DummyEvent{msg: 0} to handle;
     }
 
@@ -125,7 +125,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional_bool {
+    spec conditional_bool {
         emits DummyEvent{msg: 0} to handle if b;
     }
 
@@ -140,7 +140,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 2});
         }
     }
-    spec fun conditional_multiple {
+    spec conditional_multiple {
         emits DummyEvent{msg: 0} to handle if b0;
         emits DummyEvent{msg: 1} to handle if b1;
         emits DummyEvent{msg: 2} to handle if b2;
@@ -153,7 +153,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 2});
         }
     }
-    spec fun conditional_multiple_incorrect {
+    spec conditional_multiple_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 1} to handle;
         emits DummyEvent{msg: 2} to handle;
@@ -170,7 +170,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional_multiple_same {
+    spec conditional_multiple_same {
         emits DummyEvent{msg: 0} to handle if b0;
         emits DummyEvent{msg: 0} to handle if b1;
         emits DummyEvent{msg: 0} to handle if b2;
@@ -183,7 +183,7 @@ module 0x42::TestEmits {
             Event::emit_event(handle, DummyEvent{msg: 0});
         }
     }
-    spec fun conditional_multiple_same_incorrect {
+    spec conditional_multiple_same_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 0} to handle;
@@ -197,7 +197,7 @@ module 0x42::TestEmits {
     public fun emits_in_schema(handle: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
     }
-    spec fun emits_in_schema {
+    spec emits_in_schema {
         include EmitsInSchemaEmits;
     }
     spec schema EmitsInSchemaEmits {
@@ -210,7 +210,7 @@ module 0x42::TestEmits {
             emits_in_schema(handle)
         };
     }
-    spec fun emits_in_schema_condition {
+    spec emits_in_schema_condition {
         include x > 7 ==> EmitsInSchemaEmits;
     }
 
@@ -223,7 +223,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun partial {
+    spec partial {
         pragma emits_is_partial;
         emits DummyEvent{msg: 0} to handle;
     }
@@ -232,7 +232,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun partial_incorrect {
+    spec partial_incorrect {
         emits DummyEvent{msg: 0} to handle;
     }
 
@@ -245,14 +245,14 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun strict {
+    spec strict {
     }
 
     public fun strict_incorrect(handle: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun strict_incorrect {
+    spec strict_incorrect {
         pragma emits_is_strict;
     }
 
@@ -264,7 +264,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 7});
         Event::emit_event(handle, DummyEvent{msg: 77});
     }
-    spec fun callee {
+    spec callee {
         pragma opaque;
         aborts_if false;
         emits DummyEvent{msg: 7} to handle;
@@ -276,7 +276,7 @@ module 0x42::TestEmits {
         callee(handle);
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun opaque {
+    spec opaque {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 77} to handle;
@@ -288,7 +288,7 @@ module 0x42::TestEmits {
         callee(handle);
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun opaque_incorrect {
+    spec opaque_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 77} to handle;
@@ -299,7 +299,7 @@ module 0x42::TestEmits {
     public fun opaque_in_call_chain(handle: &mut EventHandle<DummyEvent>) {
         opaque(handle);
     }
-    spec fun opaque_in_call_chain {
+    spec opaque_in_call_chain {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 77} to handle;
@@ -311,7 +311,7 @@ module 0x42::TestEmits {
         callee(handle);
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun opaque_completeness_incorrect {
+    spec opaque_completeness_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 1} to handle;
@@ -326,7 +326,7 @@ module 0x42::TestEmits {
         Event::emit_event(handle, DummyEvent{msg: 7});
         Event::emit_event(handle, DummyEvent{msg: 77});
     }
-    spec fun callee_partial {
+    spec callee_partial {
         pragma opaque;
         aborts_if false;
         emits DummyEvent{msg: 7} to handle;
@@ -339,7 +339,7 @@ module 0x42::TestEmits {
         callee_partial(handle);
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun opaque_partial {
+    spec opaque_partial {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 77} to handle;
@@ -352,7 +352,7 @@ module 0x42::TestEmits {
         callee_partial(handle);
         Event::emit_event(handle, DummyEvent{msg: 1});
     }
-    spec fun opaque_partial_incorrect {
+    spec opaque_partial_incorrect {
         emits DummyEvent{msg: 0} to handle;
         emits DummyEvent{msg: 7} to handle;
         emits DummyEvent{msg: 77} to handle;

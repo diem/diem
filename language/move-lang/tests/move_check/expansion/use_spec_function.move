@@ -1,8 +1,8 @@
 address 0x2 {
 module X {
     spec module {
-        define foo(): bool { true }
-        define bar(): bool { true }
+        fun foo(): bool { true }
+        fun bar(): bool { true }
     }
 }
 
@@ -11,7 +11,7 @@ module M {
     fun t() {
     }
 
-    spec fun t {
+    spec t {
         ensures foo();
         ensures baz();
     }

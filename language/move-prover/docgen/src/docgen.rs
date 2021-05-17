@@ -69,7 +69,6 @@ const WEAK_KEYWORDS: &[&str] = &[
     "assert",
     "assume",
     "decreases",
-    "define",
     "except",
     "forall",
     "global",

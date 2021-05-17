@@ -108,7 +108,7 @@ module DiemVMConfig {
             },
         );
     }
-    spec fun initialize {
+    spec initialize {
         let gas_constants = GasConstants {
             global_memory_per_byte_cost: 4,
             global_memory_per_byte_write_cost: 9,
@@ -180,7 +180,7 @@ module DiemVMConfig {
 
         DiemConfig::set(dr_account, config);
     }
-    spec fun set_gas_constants {
+    spec set_gas_constants {
         include DiemTimestamp::AbortsIfNotOperating;
         /// No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
@@ -216,7 +216,7 @@ module DiemVMConfig {
     /// # Initialization
 
     spec module {
-        invariant [global] DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVMConfig>();
+        invariant DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVMConfig>();
     }
 
     /// # Access Control

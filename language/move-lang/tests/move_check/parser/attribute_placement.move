@@ -15,7 +15,7 @@ module M {
     public fun foo() { N::bar() }
 
     #[attr]
-    spec fun foo {}
+    spec foo {}
 }
 }
 
@@ -42,5 +42,5 @@ script {
     }
 
     #[attr]
-    spec fun main { }
+    spec main { }
 }

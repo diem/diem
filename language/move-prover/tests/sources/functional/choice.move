@@ -8,29 +8,29 @@ module 0x42::TestSome {
     // ===========
 
     fun simple(): u64 { 4 }
-    spec fun simple {
+    spec simple {
         ensures result <= (choose x: u64 where x >= 4);
     }
 
     fun simple_incorrect(b: bool): u64 {
         if (b) 4 else 5
     }
-    spec fun simple_incorrect {
+    spec simple_incorrect {
         // This fails because the interpretation is not influenced by an assertion.
         // The choice freely selects a value and not a 'fitting' one.
         ensures result == TRACE(choose x: u64 where x >= 4 && x <= 5);
     }
 
-    // Testing choices in spec functions
+    // Testing choices in specctions
     // =================================
 
-    spec define spec_fun_choice(x: u64): u64 {
+    spec fun spec_fun_choice(x: u64): u64 {
         choose y: u64 where y >= x
     }
     fun with_spec_fun_choice(x: u64): u64 {
         x + 42
     }
-    spec fun with_spec_fun_choice {
+    spec with_spec_fun_choice {
         ensures result <= TRACE(spec_fun_choice(x + 42));
     }
 
@@ -45,7 +45,7 @@ module 0x42::TestSome {
         move_to<R>(s1, R{x: 1});
         move_to<R>(s2, R{x: 2});
     }
-    spec fun populate_R {
+    spec populate_R {
         let a1 = Signer::spec_address_of(s1);
         let a2 = Signer::spec_address_of(s2);
         /// The requires guarantees that there is no other address which can satisfy the choice below.
@@ -66,7 +66,7 @@ module 0x42::TestSome {
         Vector::push_back(v_ref, 2);
         v
     }
-    spec fun test_min {
+    spec test_min {
         ensures (choose min i in 0..len(result) where result[i] == 2) == 1;
     }
 
@@ -80,7 +80,7 @@ module 0x42::TestSome {
         Vector::push_back(v_ref, 2);
         v
     }
-    spec fun test_not_using_min_incorrect {
+    spec test_not_using_min_incorrect {
         // This fails because we do not necessary select the smallest i
         ensures TRACE(choose i in 0..len(result) where result[i] == 2) == 1;
     }

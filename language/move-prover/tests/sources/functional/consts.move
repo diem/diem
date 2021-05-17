@@ -15,7 +15,7 @@ module 0x42::TestConst {
         T { x: 43, b: !INIT_VAL_BOOL, a: ADDR }
     }
 
-    spec fun init {
+    spec init {
         ensures result.x == INIT_VAL_U64 + 1;
         ensures !result.b;
     }
@@ -24,7 +24,7 @@ module 0x42::TestConst {
         T { x: 43, b: INIT_VAL_BOOL, a: @0x1 }
     }
 
-    spec fun init_incorrect {
+    spec init_incorrect {
         ensures result.x == FORTY_TWO + ONE;
         ensures !result.b;
     }

@@ -8,7 +8,7 @@ module A {
         let s = borrow_global<S>(addr);
         s.x
     }
-    spec fun read_at {
+    spec read_at {
         pragma opaque = true;
         aborts_if !exists<S>(addr);
         ensures result == global<S>(addr).x;
@@ -18,7 +18,7 @@ module A {
         let s = borrow_global_mut<S>(addr);
         s.x = 2;
     }
-    spec fun mutate_at {
+    spec mutate_at {
         pragma opaque = true;
         ensures global<S>(addr).x == 2;
         aborts_if !exists<S>(addr);
@@ -42,7 +42,7 @@ module B {
             assert x0 == x1;
         };
     }
-    spec fun mutate_at_test_incorrect {
+    spec mutate_at_test_incorrect {
         pragma opaque = true;
         modifies global<T>(addr2);
     }
@@ -55,7 +55,7 @@ module B {
             assert x0 == x1;
         };
     }
-    spec fun move_to_test_incorrect {
+    spec move_to_test_incorrect {
         pragma opaque = true;
         modifies global<T>(addr2);
     }
@@ -69,7 +69,7 @@ module B {
         };
         v
     }
-    spec fun move_from_test_incorrect {
+    spec move_from_test_incorrect {
         pragma opaque = true;
         modifies global<T>(addr2);
     }
@@ -82,7 +82,7 @@ module B {
             assert x0 == x1;
         };
     }
-    spec fun mutate_S_test1_incorrect {
+    spec mutate_S_test1_incorrect {
         requires addr1 != addr2;
         modifies global<A::S>(addr2);
     }
@@ -95,7 +95,7 @@ module B {
             assert x0 == x1;
         };
     }
-    spec fun mutate_S_test2_incorrect {
+    spec mutate_S_test2_incorrect {
         modifies global<A::S>(addr);
     }
 }

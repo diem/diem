@@ -7,7 +7,7 @@ module 0x42::VerifyBCS {
     {
         BCS::to_bytes(v)
     }
-    spec fun verify_to_bytes {
+    spec verify_to_bytes {
         ensures result == BCS::serialize(v);
     }
 }

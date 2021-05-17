@@ -3,7 +3,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/cast.move:47:5 ───
     │
- 47 │ ╭     spec fun aborting_u64_cast_incorrect {
+ 47 │ ╭     spec aborting_u64_cast_incorrect {
  48 │ │         aborts_if false;
  49 │ │     }
     │ ╰─────^
@@ -20,7 +20,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/cast.move:33:5 ───
     │
- 33 │ ╭     spec fun aborting_u8_cast_incorrect {
+ 33 │ ╭     spec aborting_u8_cast_incorrect {
  34 │ │         aborts_if false;
  35 │ │     }
     │ ╰─────^

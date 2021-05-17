@@ -3,20 +3,20 @@ module 0x42::VectorExists {
 
     use 0x1::Vector;
     spec module {
-        define e_in_v_vec(e: u64, v: vector<u64>): bool {
+        fun e_in_v_vec(e: u64, v: vector<u64>): bool {
             exists x in v: x == e
         }
-        define e_in_v_range(e: u64, v: vector<u64>): bool {
+        fun e_in_v_range(e: u64, v: vector<u64>): bool {
             exists i in 0..len(v): v[i] == e
         }
-        define e_in_v_u64(e: u64, v: vector<u64>): bool {
+        fun e_in_v_u64(e: u64, v: vector<u64>): bool {
             exists i: u64 where 0 <= i && i < len(v): v[i] == e
         }
     }
 
     public fun do_nothing_ref(_v: &vector<u64>) {
     }
-    spec fun do_nothing_ref {
+    spec do_nothing_ref {
         aborts_if false;
 
         ensures _v == _v;
@@ -34,7 +34,7 @@ module 0x42::VectorExists {
 
     public fun do_nothing_ref_mut(_v: &mut vector<u64>) {
     }
-    spec fun do_nothing_ref_mut {
+    spec do_nothing_ref_mut {
         aborts_if false;
 
         ensures old(_v) == _v;
@@ -54,7 +54,7 @@ module 0x42::VectorExists {
     public fun push_one(v: &mut vector<u64>) {
         Vector::push_back(v, 1);
     }
-    spec fun push_one {
+    spec push_one {
         pragma verify=false;
         aborts_if false;
         ensures v[len(v)-1] == 1;

@@ -19,8 +19,8 @@ module 0x42::TestGlobalInvariants {
 
         invariant update [global] forall a: address where old(exists_R(a)): exists<R>(a);
 
-        // Use a spec function to test whether the right memory is accessed.
-        define exists_R(addr: address): bool {
+        // Use a specction to test whether the right memory is accessed.
+        fun exists_R(addr: address): bool {
             exists<R>(addr)
         }
     }
@@ -30,7 +30,7 @@ module 0x42::TestGlobalInvariants {
         move_to<S>(account, S{x: 0});
         move_to<R>(account, R{x: 0});
     }
-    spec fun create_R {
+    spec create_R {
         requires !exists<R>(Signer::spec_address_of(account));
         requires !exists<S>(Signer::spec_address_of(account));
     }
@@ -44,7 +44,7 @@ module 0x42::TestGlobalInvariants {
         assert(exists<R>(Signer::address_of(account)), 0);
         borrow_global<S>(Signer::address_of(account)).x
     }
-    spec fun get_S_x {
+    spec get_S_x {
         // We do not need the aborts for exists<S> because exists<R> implies this.
         aborts_if !exists<R>(Signer::spec_address_of(account));
         ensures result == global<S>(Signer::spec_address_of(account)).x;
@@ -55,7 +55,7 @@ module 0x42::TestGlobalInvariants {
         assert(exists<R>(Signer::address_of(account)), 0);
         let S{x:_} = move_from<S>(Signer::address_of(account));
     }
-    spec fun remove_S_invalid {
+    spec remove_S_invalid {
         aborts_if !exists<R>(Signer::spec_address_of(account));
     }
 

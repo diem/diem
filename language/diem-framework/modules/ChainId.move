@@ -23,7 +23,7 @@ module ChainId {
         move_to(dr_account, ChainId { id })
     }
 
-    spec fun initialize {
+    spec initialize {
         pragma opaque;
         let dr_addr = Signer::address_of(dr_account);
         modifies global<ChainId>(dr_addr);
@@ -48,14 +48,14 @@ module ChainId {
 
     spec module {
         /// When Diem is operating, the chain id is always available.
-        invariant [global] DiemTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant DiemTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         // Could also specify that ChainId is not stored on any other address, but it doesn't matter.
     }
 
     /// # Helper Functions
 
-    spec define spec_get_chain_id(): u8 {
+    spec fun spec_get_chain_id(): u8 {
         global<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS()).id
     }
 }

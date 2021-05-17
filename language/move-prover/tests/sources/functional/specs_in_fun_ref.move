@@ -75,7 +75,7 @@ module 0x42::TestAssertWithReferences {
         };
         x
     }
-    spec fun simple5 {
+    spec simple5 {
         ensures result == n;
     }
 
@@ -96,7 +96,7 @@ module 0x42::TestAssertWithReferences {
         };
         x
     }
-    spec fun simple6 {
+    spec simple6 {
         ensures result == n;
     }
 }

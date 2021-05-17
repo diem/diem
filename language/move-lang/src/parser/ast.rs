@@ -136,6 +136,7 @@ pub struct ModuleDefinition {
     pub loc: Loc,
     pub address: Option<Spanned<Address>>,
     pub name: ModuleName,
+    pub is_spec_module: bool,
     pub members: Vec<ModuleMember>,
 }
 
@@ -143,10 +144,10 @@ pub struct ModuleDefinition {
 pub enum ModuleMember {
     Function(Function),
     Struct(StructDefinition),
-    Spec(SpecBlock),
     Use(UseDecl),
     Friend(FriendDecl),
     Constant(Constant),
+    Spec(SpecBlock),
 }
 
 //**************************************************************************************************
@@ -270,8 +271,7 @@ pub type SpecBlock = Spanned<SpecBlock_>;
 pub enum SpecBlockTarget_ {
     Code,
     Module,
-    Function(FunctionName),
-    Structure(StructName),
+    Member(Name, Option<Box<FunctionSignature>>),
     Schema(Name, Vec<(Name, Vec<Ability>)>),
 }
 
@@ -363,23 +363,9 @@ pub enum SpecConditionKind {
     Emits,
     Ensures,
     Requires,
-    RequiresModule,
     Invariant,
     InvariantUpdate,
-    InvariantPack,
-    InvariantUnpack,
-    InvariantModule,
     Axiom,
-}
-
-// Specification invariant kind.
-#[derive(Debug, PartialEq)]
-pub enum InvariantKind {
-    Data,
-    Update,
-    Pack,
-    Unpack,
-    Module,
 }
 
 //**************************************************************************************************
@@ -1061,11 +1047,16 @@ impl AstDebug for ModuleDefinition {
             loc: _loc,
             address,
             name,
+            is_spec_module,
             members,
         } = self;
         attributes.ast_debug(w);
         match address {
-            None => w.write(&format!("module {}", name)),
+            None => w.write(&format!(
+                "module {}{}",
+                if *is_spec_module { "spec " } else { "" },
+                name
+            )),
             Some(addr) => w.write(&format!("module {}::{}", addr, name)),
         };
         w.block(|w| {
@@ -1081,10 +1072,10 @@ impl AstDebug for ModuleMember {
         match self {
             ModuleMember::Function(f) => f.ast_debug(w),
             ModuleMember::Struct(s) => s.ast_debug(w),
-            ModuleMember::Spec(s) => s.ast_debug(w),
             ModuleMember::Use(u) => u.ast_debug(w),
             ModuleMember::Friend(f) => f.ast_debug(w),
             ModuleMember::Constant(c) => c.ast_debug(w),
+            ModuleMember::Spec(s) => s.ast_debug(w),
         }
     }
 }
@@ -1197,8 +1188,12 @@ impl AstDebug for SpecBlockTarget_ {
         match self {
             SpecBlockTarget_::Code => {}
             SpecBlockTarget_::Module => w.write("module "),
-            SpecBlockTarget_::Function(n) => w.write(&format!("fun {} ", n.0.value)),
-            SpecBlockTarget_::Structure(n) => w.write(&format!("struct {} ", n.0.value)),
+            SpecBlockTarget_::Member(name, sign_opt) => {
+                w.write(&name.value);
+                if let Some(sign) = sign_opt {
+                    sign.ast_debug(w);
+                }
+            }
             SpecBlockTarget_::Schema(n, tys) => {
                 w.write(&format!("schema {}", n.value));
                 if !tys.is_empty() {
@@ -1228,12 +1223,8 @@ impl AstDebug for SpecConditionKind {
             Emits => w.write("emits "),
             Ensures => w.write("ensures "),
             Requires => w.write("requires "),
-            RequiresModule => w.write("requires module "),
             Invariant => w.write("invariant "),
             InvariantUpdate => w.write("invariant update "),
-            InvariantPack => w.write("invariant pack "),
-            InvariantUnpack => w.write("invariant unpack "),
-            InvariantModule => w.write("invariant module "),
             Axiom => w.write("axiom "),
         }
     }

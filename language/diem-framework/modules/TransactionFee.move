@@ -32,7 +32,7 @@ module TransactionFee {
         // accept fees in all the currencies
         add_txn_fee_currency<XUS>(tc_account);
     }
-    spec fun initialize {
+    spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AddTxnFeeCurrencyAbortsIf<XUS>;
@@ -81,7 +81,7 @@ module TransactionFee {
         Diem::deposit(&mut fees.balance, coin)
     }
 
-    spec fun pay_fee {
+    spec pay_fee {
         include DiemTimestamp::AbortsIfNotOperating;
         aborts_if !is_coin_initialized<CoinType>() with Errors::NOT_PUBLISHED;
         let fees = spec_transaction_fee<CoinType>().balance;
@@ -120,7 +120,7 @@ module TransactionFee {
         }
     }
 
-    spec fun burn_fees {
+    spec burn_fees {
         /// Must abort if the account does not have the TreasuryCompliance role [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
@@ -161,12 +161,12 @@ module TransactionFee {
 
     spec module {
         /// If time has started ticking, then `TransactionFee` resources have been initialized.
-        invariant [global] DiemTimestamp::is_operating() ==> is_initialized();
+        invariant DiemTimestamp::is_operating() ==> is_initialized();
     }
 
     /// # Helper Function
 
-    spec define spec_transaction_fee<CoinType>(): TransactionFee<CoinType> {
+    spec fun spec_transaction_fee<CoinType>(): TransactionFee<CoinType> {
         borrow_global<TransactionFee<CoinType>>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
 }

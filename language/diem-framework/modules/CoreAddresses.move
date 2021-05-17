@@ -59,7 +59,7 @@ module CoreAddresses {
     public fun assert_diem_root(account: &signer) {
         assert(Signer::address_of(account) == DIEM_ROOT_ADDRESS(), Errors::requires_address(EDIEM_ROOT))
     }
-    spec fun assert_diem_root {
+    spec assert_diem_root {
         pragma opaque;
         include AbortsIfNotDiemRoot;
     }
@@ -78,7 +78,7 @@ module CoreAddresses {
             Errors::requires_address(ETREASURY_COMPLIANCE)
         )
     }
-    spec fun assert_treasury_compliance {
+    spec assert_treasury_compliance {
         pragma opaque;
         include AbortsIfNotTreasuryCompliance;
     }
@@ -94,7 +94,7 @@ module CoreAddresses {
     public fun assert_vm(account: &signer) {
         assert(Signer::address_of(account) == VM_RESERVED_ADDRESS(), Errors::requires_address(EVM))
     }
-    spec fun assert_vm {
+    spec assert_vm {
         pragma opaque;
         include AbortsIfNotVM;
     }
@@ -110,7 +110,7 @@ module CoreAddresses {
     public fun assert_currency_info(account: &signer) {
         assert(Signer::address_of(account) == CURRENCY_INFO_ADDRESS(), Errors::requires_address(ECURRENCY_INFO))
     }
-    spec fun assert_currency_info {
+    spec assert_currency_info {
         pragma opaque;
         include AbortsIfNotCurrencyInfo;
     }

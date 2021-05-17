@@ -6,7 +6,7 @@ module 0x42::Inconsistency {
     fun dec(x: u64): u64 {
         x - 1
     }
-    spec fun dec {
+    spec dec {
         aborts_if x == 0;
         ensures result == x - 1;
     }
@@ -19,7 +19,7 @@ module 0x42::Inconsistency {
         };
         dec(x)
     }
-    spec fun assume_false {
+    spec assume_false {
         aborts_if x == 0;
         ensures result == x - 1;
         ensures false;
@@ -28,7 +28,7 @@ module 0x42::Inconsistency {
     // This opaque function has the false post-condition, so introduces an inconsistency.
     fun inconsistent_opaque() {
     }
-    spec fun inconsistent_opaque {
+    spec inconsistent_opaque {
         pragma verify=false;
         pragma opaque;
         ensures false;
@@ -39,7 +39,7 @@ module 0x42::Inconsistency {
     fun call_inconsistent_opaque() {
         inconsistent_opaque();
     }
-    spec fun call_inconsistent_opaque {
+    spec call_inconsistent_opaque {
         ensures false;
     }
 
@@ -48,7 +48,7 @@ module 0x42::Inconsistency {
     fun always_abort() {
         abort 0
     }
-    spec fun always_abort {
+    spec always_abort {
         ensures false;
     }
 

@@ -193,7 +193,7 @@ public fun A::mutate_at($t0|addr: address) {
  13: assert Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
  14: return ()
  15: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:21:5+166
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:21:5+162
  16: assert Not(exists[@1]<A::S>($t0))
  17: abort($t3)
 }
@@ -217,7 +217,7 @@ public fun A::read_at($t0|addr: address): u64 {
   7: assert Eq<u64>($t4, select A::S.x(global<A::S>($t0)))
   8: return $t4
   9: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:11:5+135
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:11:5+131
  10: assert Not(exists[@0]<A::S>($t0))
  11: abort($t3)
 }

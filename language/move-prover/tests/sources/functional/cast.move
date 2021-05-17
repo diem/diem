@@ -11,14 +11,14 @@ module 0x42::TestCast {
     fun u8_cast_incorrect(x: u8): u64 {
         (x as u64)
     }
-    spec fun u8_cast_incorrect {
+    spec u8_cast_incorrect {
         aborts_if false;
     }
 
     fun u64_cast(x: u64): u128 {
         (x as u128)
     }
-    spec fun aborting_u64_cast {
+    spec aborting_u64_cast {
         aborts_if false;
     }
 
@@ -30,28 +30,28 @@ module 0x42::TestCast {
     fun aborting_u8_cast_incorrect(x: u64): u8 {
         (x as u8)
     }
-    spec fun aborting_u8_cast_incorrect {
+    spec aborting_u8_cast_incorrect {
         aborts_if false;
     }
 
     fun aborting_u8_cast(x: u64): u8 {
         (x as u8)
     }
-    spec fun aborting_u8_cast {
+    spec aborting_u8_cast {
         aborts_if x > 255;
     }
 
     fun aborting_u64_cast_incorrect(x: u128): u64 {
         (x as u64)
     }
-    spec fun aborting_u64_cast_incorrect {
+    spec aborting_u64_cast_incorrect {
         aborts_if false;
     }
 
     fun aborting_u64_cast(x: u128): u64 {
         (x as u64)
     }
-    spec fun aborting_u64_cast {
+    spec aborting_u64_cast {
         aborts_if x > 18446744073709551615;
     }
 }

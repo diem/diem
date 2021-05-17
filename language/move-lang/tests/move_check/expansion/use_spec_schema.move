@@ -15,7 +15,7 @@ module M {
     fun t() {
     }
 
-    spec fun t {
+    spec t {
         apply Foo<S> to t;
         apply Baz<S> to t;
     }

@@ -119,9 +119,9 @@ fun Test::get_and_incr($t0|addr: address): u64 {
  29: assert Eq<u64>($t8, select Test::R.v(global<Test::R>($t0)))
  30: return $t8
  31: label L4
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:13:2+308
  32: assert Or(Not(exists[@0]<Test::R>($t0)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:13:2+308
  33: assert Or(And(Not(exists[@0]<Test::R>($t0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
  34: abort($t6)
 }
@@ -185,9 +185,9 @@ fun Test::incr_twice() {
  40: assert Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global[@1]<Test::R>(1)), 2))
  41: return ()
  42: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:27:2+127
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:27:2+123
  43: assert Not(exists[@1]<Test::R>(1))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+127
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+123
  44: assert And(Not(exists[@1]<Test::R>(1)), Eq(33, $t3))
  45: abort($t3)
 }

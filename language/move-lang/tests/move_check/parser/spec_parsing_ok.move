@@ -12,9 +12,9 @@ module 0x8675309::M {
         global expected_coin_sum: u64;
         global other: bool;
 
-        native define all<T>(x: SomeCollection<T>, predicate: |T|bool): bool;
+        native fun all<T>(x: SomeCollection<T>, predicate: |T|bool): bool;
 
-        define spec_fun_using_spec_constructs(x: u64, y: u64) : u64 {
+        fun spec_fun_using_spec_constructs(x: u64, y: u64) : u64 {
             // This function would crash in phases after expansion if we would pass it on as a regular function. Testing
             // here that we don't pass it on.
             let _ = |z| z + 1;
@@ -32,33 +32,27 @@ module 0x8675309::M {
         y: u64,
     }
 
-    spec struct SomeCoin {
+    spec SomeCoin {
         // Data invariants
         invariant x > 0;
         invariant x == y;
-        invariant update old(y) < x;  // this weird coin only allows to increase it's value
-
-        // Tracking the sum of all coins alive.
-        invariant update expected_coin_sum = expected_coin_sum - old(x) + x;
-        invariant pack expected_coin_sum = expected_coin_sum + x;
-        invariant unpack expected_coin_sum = expected_coin_sum - x;
     }
 
-    spec fun with_aborts_if {
+    spec with_aborts_if {
       aborts_if x == 0;
     }
     fun with_aborts_if(x: u64): u64 {
         x
     }
 
-    spec fun with_ensures {
+    spec with_ensures {
         ensures RET == x + 1;
     }
     fun with_ensures(x: u64): u64 {
         x + 1
     }
 
-    spec fun with_multiple_conditions_and_acquires {
+    spec with_multiple_conditions_and_acquires {
         aborts_if y == 0;
         aborts_if 0 == y;
         ensures RET == x/y;
@@ -72,14 +66,14 @@ module 0x8675309::M {
         x / y
     }
 
-    spec fun using_block {
+    spec using_block {
         ensures RET = {let y = x; y + 1};
     }
     fun using_block(x: u64): u64 {
         x + 1
     }
 
-    spec fun using_lambda
+    spec using_lambda
     {
         ensures all(x, |y, z| x + y + z);
     }
@@ -87,14 +81,14 @@ module 0x8675309::M {
         x
     }
 
-    spec fun using_index_and_range {
+    spec using_index_and_range {
         ensures RET = x[1] && x[0..3];
     }
     fun using_index_and_range(x: u64): u64 {
         x
     }
 
-    spec fun using_implies {
+    spec using_implies {
         ensures x > 0 ==> RET == x - 1;
         ensures x == 0 ==> RET == x;
     }
@@ -102,7 +96,7 @@ module 0x8675309::M {
         x
     }
 
-    spec fun with_emits {
+    spec with_emits {
         emits _msg to _guid;
         emits _msg to _guid if true;
         emits _msg to _guid if x > 7;
@@ -122,7 +116,7 @@ module 0x8675309::M {
 
     fun some_generic<T>() {
     }
-    spec fun some_generic {
+    spec some_generic {
         ensures generic<T> == 1;
         ensures Self::generic<T> == 1;
     }
@@ -132,7 +126,7 @@ module 0x8675309::M {
         ensures global<X>(0x0).f == global<X>(0x1).f;
     }
 
-    spec fun some_generic {
+    spec some_generic {
         include ModuleInvariant<T, T>{foo:bar, x:y};
     }
 

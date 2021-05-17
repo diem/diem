@@ -1,16 +1,11 @@
 error: 
 
-    ┌── tests/move_check/expansion/use_spec_function_as_normal_function.move:12:9 ───
-    │
- 12 │         foo();
-    │         ^^^ Invalid module access. Unbound function 'foo' in module '0x2::X'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/use_spec_function_as_normal_function.move:13:9 ───
-    │
- 13 │         baz();
-    │         ^^^ Invalid module access. Unbound function 'bar' in module '0x2::X'
-    │
+   ┌── tests/move_check/expansion/use_spec_function_as_normal_function.move:4:16 ───
+   │
+ 4 │         define foo(): bool { true }
+   │                ^^^ Unexpected 'foo'
+   ·
+ 4 │         define foo(): bool { true }
+   │                --- Expected ':'
+   │
 

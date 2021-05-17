@@ -25,35 +25,35 @@ module 0x42::M {
 
   spec module {
 
-    define struct_access(s: S): u64 {
+    fun struct_access(s: S): u64 {
       s.x
     }
 
-    define nested_struct_access(r: R): bool {
+    fun nested_struct_access(r: R): bool {
       r.s.y
     }
 
-    define struct_pack(x: u64, y: bool, z: vector<u64>): S {
+    fun struct_pack(x: u64, y: bool, z: vector<u64>): S {
       S{x: x, y: y, z: z}
     }
 
-    define struct_pack_other_order(x: u64, y: bool, z: vector<u64>): S {
+    fun struct_pack_other_order(x: u64, y: bool, z: vector<u64>): S {
       S{z: z, y: y, x: x}
     }
 
-    define generic_struct_pack(x: u64, y: bool): G<u64> {
+    fun generic_struct_pack(x: u64, y: bool): G<u64> {
       G{x: x, y: y}
     }
 
-    define generic_struct_pack_instantiated(x: u64, y: bool): G<u64> {
+    fun generic_struct_pack_instantiated(x: u64, y: bool): G<u64> {
       G<u64>{x: x, y: y}
     }
 
-    define resource_global(addr: address): T {
+    fun resource_global(addr: address): T {
       global<T>(addr)
     }
 
-    define resource_global_exists(addr: address): bool {
+    fun resource_global_exists(addr: address): bool {
       exists<T>(addr)
     }
 

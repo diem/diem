@@ -105,7 +105,7 @@ module Genesis {
     /// > (see above) times out. This can likely be solved by making more of the initialize
     /// > functions called by this function opaque, and prove the according invariants locally to
     /// > each module.
-    spec fun initialize {
+    spec initialize {
         /// Assume that this is called in genesis state (no timestamp).
         requires DiemTimestamp::is_genesis();
     }

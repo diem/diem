@@ -45,7 +45,7 @@ module DiemBlock {
             }
         );
     }
-    spec fun initialize_block_metadata {
+    spec initialize_block_metadata {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot;
         aborts_if is_initialized() with Errors::ALREADY_PUBLISHED;
@@ -90,7 +90,7 @@ module DiemBlock {
             }
         );
     }
-    spec fun block_prologue {
+    spec block_prologue {
         include DiemTimestamp::AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM{account: vm};
         aborts_if proposer != CoreAddresses::VM_RESERVED_ADDRESS() && !DiemSystem::spec_is_validator(proposer)
@@ -128,7 +128,7 @@ module DiemBlock {
     /// This implies that `BlockMetadata` is published after initialization and stays published
     /// ever after
     spec module {
-        invariant [global] DiemTimestamp::is_operating() ==> is_initialized();
+        invariant DiemTimestamp::is_operating() ==> is_initialized();
     }
 }
 

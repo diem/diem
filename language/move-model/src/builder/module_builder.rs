@@ -42,7 +42,7 @@ use crate::{
     },
     pragmas::{
         is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_DEACTIVATED_PROP,
-        CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP,
+        CONDITION_INJECTED_PROP,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -211,27 +211,21 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// at caller side.
     fn get_spec_block_context<'pa>(
         &self,
-        target: &'pa PA::SpecBlockTarget,
+        target: &'pa EA::SpecBlockTarget,
     ) -> Option<SpecBlockContext<'pa>> {
         match &target.value {
-            PA::SpecBlockTarget_::Code => None,
-            PA::SpecBlockTarget_::Function(name) => {
-                let qsym = self.qualified_by_module_from_name(&name.0);
+            EA::SpecBlockTarget_::Code => None,
+            EA::SpecBlockTarget_::Member(name, _) => {
+                let qsym = self.qualified_by_module_from_name(name);
                 if self.parent.fun_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Function(qsym))
-                } else {
-                    None
-                }
-            }
-            PA::SpecBlockTarget_::Structure(name) => {
-                let qsym = self.qualified_by_module_from_name(&name.0);
-                if self.parent.struct_table.contains_key(&qsym) {
+                } else if self.parent.struct_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Struct(qsym))
                 } else {
                     None
                 }
             }
-            PA::SpecBlockTarget_::Schema(name, _) => {
+            EA::SpecBlockTarget_::Schema(name, _) => {
                 let qsym = self.qualified_by_module_from_name(&name);
                 if self.parent.spec_schema_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Schema(qsym))
@@ -239,7 +233,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None
                 }
             }
-            PA::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
+            EA::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
         }
     }
 }
@@ -373,29 +367,33 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     fn decl_ana_spec_block(&mut self, block: &EA::SpecBlock) {
-        use EA::SpecBlockMember_::*;
-        // Process any spec block members which introduce global declarations.
         for member in &block.value.members {
-            let loc = self.parent.env.to_loc(&member.loc);
-            match &member.value {
-                Function {
-                    uninterpreted,
-                    name,
-                    signature,
-                    ..
-                } => self.decl_ana_spec_fun(&loc, *uninterpreted, name, signature),
-                Variable {
-                    is_global: true,
-                    name,
-                    type_,
-                    type_parameters,
-                } => self.decl_ana_global_var(&loc, name, type_parameters, type_),
-                _ => {}
-            }
+            self.decl_ana_spec_block_member(member)
         }
         // If this is a schema spec block, process its declaration.
-        if let PA::SpecBlockTarget_::Schema(name, type_params) = &block.value.target.value {
+        if let EA::SpecBlockTarget_::Schema(name, type_params) = &block.value.target.value {
             self.decl_ana_schema(&block, &name, &type_params);
+        }
+    }
+
+    /// Process any spec block members which introduce global declarations.
+    fn decl_ana_spec_block_member(&mut self, member: &EA::SpecBlockMember) {
+        use EA::SpecBlockMember_::*;
+        let loc = self.parent.env.to_loc(&member.loc);
+        match &member.value {
+            Function {
+                uninterpreted,
+                name,
+                signature,
+                ..
+            } => self.decl_ana_spec_fun(&loc, *uninterpreted, name, signature),
+            Variable {
+                is_global: true,
+                name,
+                type_,
+                type_parameters,
+            } => self.decl_ana_global_var(&loc, name, type_parameters, type_),
+            _ => {}
         }
     }
 
@@ -407,15 +405,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         signature: &EA::FunctionSignature,
     ) {
         let name = self.symbol_pool().make(&name.0.value);
-        let (type_params, params, result_type) = {
-            let et = &mut ExpTranslator::new(self);
-            let type_params = et.analyze_and_add_type_params(&signature.type_parameters);
-            et.enter_scope();
-            let params = et.analyze_and_add_params(&signature.parameters, false);
-            let result_type = et.translate_type(&signature.return_type);
-            et.finalize_types();
-            (type_params, params, result_type)
-        };
+        let (type_params, params, result_type) = self.decl_ana_signature(signature, false);
 
         // Add the function to the symbol table.
         let fun_id = SpecFunId::new(self.spec_funs.len());
@@ -447,6 +437,20 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             body: None,
         };
         self.spec_funs.push(fun_decl);
+    }
+
+    fn decl_ana_signature(
+        &mut self,
+        signature: &EA::FunctionSignature,
+        for_move_fun: bool,
+    ) -> (Vec<(Symbol, Type)>, Vec<(Symbol, Type)>, Type) {
+        let et = &mut ExpTranslator::new(self);
+        let type_params = et.analyze_and_add_type_params(&signature.type_parameters);
+        et.enter_scope();
+        let params = et.analyze_and_add_params(&signature.parameters, for_move_fun);
+        let result_type = et.translate_type(&signature.return_type);
+        et.finalize_types();
+        (type_params, params, result_type)
     }
 
     fn decl_ana_global_var(
@@ -573,7 +577,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .specs
                 .iter()
                 .filter_map(|block| {
-                    if let PA::SpecBlockTarget_::Schema(name, ..) = &block.value.target.value {
+                    if let EA::SpecBlockTarget_::Schema(name, ..) = &block.value.target.value {
                         let qsym = self.qualified_by_module_from_name(name);
                         Some((qsym, block))
                     } else {
@@ -596,11 +600,20 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Analyze all module level spec blocks (except schemas)
         for spec in &module_def.specs {
-            if matches!(spec.value.target.value, PA::SpecBlockTarget_::Schema(..)) {
+            if matches!(spec.value.target.value, EA::SpecBlockTarget_::Schema(..)) {
                 continue;
             }
             match self.get_spec_block_context(&spec.value.target) {
-                Some(context) => self.def_ana_spec_block(&context, spec),
+                Some(context) => {
+                    if let EA::SpecBlockTarget_::Member(_, Some(signature)) =
+                        &spec.value.target.value
+                    {
+                        // Validate that the provided signature matches the declaration
+                        let loc = self.parent.to_loc(&spec.value.target.loc);
+                        self.validate_target_signature(&context, loc, signature);
+                    }
+                    self.def_ana_spec_block(&context, spec)
+                }
                 None => {
                     let loc = self.parent.env.to_loc(&spec.value.target.loc);
                     self.parent.error(&loc, "unresolved spec target");
@@ -657,7 +670,43 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // Perform post analyzes of state usage in spec functions.
         self.compute_state_usage();
         // Perform post reduction of module invariants.
-        self.reduce_module_invariants();
+        self.process_module_invariants();
+    }
+
+    /// Validates whether a function signature provided with a spec block target matches the
+    /// function declaration. Currently we require literal matching. We may want to allow
+    /// matching modulo renaming to make specs more independent from the code, but this
+    /// requires some changes on the APIs has parameter names in specs are currently hardwired to be
+    /// discovered via function declarations.
+    fn validate_target_signature(
+        &mut self,
+        context: &SpecBlockContext,
+        loc: Loc,
+        signature: &EA::FunctionSignature,
+    ) {
+        match context {
+            SpecBlockContext::Function(qsym) => {
+                let (type_params, params, result_type) = self.decl_ana_signature(signature, true);
+                let fun_decl = self.parent.fun_table.get(qsym).expect("function defined");
+                let generic_msg = "provided function signature must match function declaration";
+                if fun_decl.type_params != type_params {
+                    self.parent
+                        .error(&loc, &format!("{}: type parameter mismatch", generic_msg));
+                }
+                if fun_decl.params != params {
+                    self.parent
+                        .error(&loc, &format!("{}: parameter mismatch", generic_msg));
+                }
+                if fun_decl.result_type != result_type {
+                    self.parent
+                        .error(&loc, &format!("{}: return type mismatch", generic_msg));
+                }
+            }
+            _ => self.parent.error(
+                &loc,
+                "the target is not a function and cannot have a signature",
+            ),
+        }
     }
 }
 
@@ -836,8 +885,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &EA::SpecBlock) {
-        use EA::SpecBlockMember_::*;
-
         let block_loc = self.parent.env.to_loc(&block.loc);
         self.update_spec(context, move |spec| spec.loc = Some(block_loc));
 
@@ -856,51 +903,58 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         });
 
         for member in let_sorted_members {
-            let loc = &self.parent.env.to_loc(&member.loc);
-            match &member.value {
-                Condition {
-                    kind,
-                    properties,
-                    exp,
-                    additional_exps,
-                } => {
-                    if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
-                        let properties = self.translate_properties(properties, &|prop| {
-                            if !is_property_valid_for_condition(&kind, prop) {
-                                Some(loc.clone())
-                            } else {
-                                None
-                            }
-                        });
-                        self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
-                    }
-                }
-                Function {
-                    signature, body, ..
-                } => self.def_ana_spec_fun(signature, body),
-                Let {
-                    name,
-                    post_state,
-                    def,
-                } => self.def_ana_let(context, loc, *post_state, name, def),
-                Include { properties, exp } => {
-                    let properties = self.translate_properties(properties, &|_| None);
-                    self.def_ana_schema_inclusion_outside_schema(
-                        loc, context, None, properties, exp,
-                    )
-                }
-                Apply {
-                    exp,
-                    patterns,
-                    exclusion_patterns,
-                } => self.def_ana_schema_apply(loc, context, exp, patterns, exclusion_patterns),
-                Pragma { properties } => self.def_ana_pragma(loc, context, properties),
-                Variable { .. } => { /* nothing to do right now */ }
-            }
+            self.def_ana_spec_block_member(context, &member)
         }
 
         // clear the let bindings stored in the build.
         self.spec_block_lets.clear();
+    }
+
+    fn def_ana_spec_block_member(
+        &mut self,
+        context: &SpecBlockContext,
+        member: &EA::SpecBlockMember,
+    ) {
+        use EA::SpecBlockMember_::*;
+        let loc = &self.parent.env.to_loc(&member.loc);
+        match &member.value {
+            Condition {
+                kind,
+                properties,
+                exp,
+                additional_exps,
+            } => {
+                if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
+                    let properties = self.translate_properties(properties, &|prop| {
+                        if !is_property_valid_for_condition(&kind, prop) {
+                            Some(loc.clone())
+                        } else {
+                            None
+                        }
+                    });
+                    self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
+                }
+            }
+            Function {
+                signature, body, ..
+            } => self.def_ana_spec_fun(signature, body),
+            Let {
+                name,
+                post_state,
+                def,
+            } => self.def_ana_let(context, loc, *post_state, name, def),
+            Include { properties, exp } => {
+                let properties = self.translate_properties(properties, &|_| None);
+                self.def_ana_schema_inclusion_outside_schema(loc, context, None, properties, exp)
+            }
+            Apply {
+                exp,
+                patterns,
+                exclusion_patterns,
+            } => self.def_ana_schema_apply(loc, context, exp, patterns, exclusion_patterns),
+            Pragma { properties } => self.def_ana_pragma(loc, context, properties),
+            Variable { .. } => { /* nothing to do right now */ }
+        }
     }
 }
 
@@ -1081,11 +1135,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         kind_opt: Option<&ConditionKind>,
     ) -> ExpTranslator<'env, 'translator, 'module_translator> {
         use SpecBlockContext::*;
-        let allow_old = if let Some(kind) = kind_opt {
-            kind.allows_old()
-        } else {
-            false
-        };
+        let allows_old = kind_opt.map(|k| k.allows_old()).unwrap_or(false);
         let mut et = match context {
             Function(name) => {
                 let entry = &self
@@ -1094,7 +1144,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .get(name)
                     .expect("invalid spec block context")
                     .clone();
-                let mut et = ExpTranslator::new_with_old(self, allow_old);
+                let mut et = ExpTranslator::new_with_old(self, allows_old);
                 for (n, ty) in &entry.type_params {
                     et.define_type_param(loc, *n, ty.clone());
                 }
@@ -1129,7 +1179,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .get(name)
                     .expect("invalid spec block context")
                     .clone();
-                let mut et = ExpTranslator::new_with_old(self, allow_old);
+                let mut et = ExpTranslator::new_with_old(self, allows_old);
                 for (n, ty) in &entry.type_params {
                     et.define_type_param(loc, *n, ty.clone());
                 }
@@ -1157,7 +1207,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .expect("invalid spec block context")
                     .clone();
 
-                let mut et = ExpTranslator::new_with_old(self, allow_old);
+                let mut et = ExpTranslator::new_with_old(self, allows_old);
                 for (n, ty) in &entry.type_params {
                     et.define_type_param(loc, *n, ty.clone());
                 }
@@ -1181,13 +1231,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 et
             }
-            Module => {
-                if let Some(ConditionKind::InvariantUpdate) = &kind_opt {
-                    ExpTranslator::new_with_old(self, true)
-                } else {
-                    ExpTranslator::new(self)
-                }
-            }
+            Module => ExpTranslator::new_with_old(self, allows_old),
             Schema(name) => {
                 let entry = self
                     .parent
@@ -1198,7 +1242,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // of self for expression build.
                 let type_params = entry.type_params.clone();
                 let all_vars = entry.all_vars.clone();
-                let mut et = ExpTranslator::new_with_old(self, allow_old);
+                let mut et = ExpTranslator::new_with_old(self, allows_old);
                 for (n, ty) in type_params {
                     et.define_type_param(loc, n, ty);
                 }
@@ -1220,7 +1264,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // If allow_old is true, we are looking at a condition in a post state like ensures.
                 // In this case all lets are available. If allow_old is false, only !post_state
                 // lets are available.
-                if allow_old || !post_state {
+                if allows_old || !post_state {
                     let ty = et.parent.parent.env.get_node_type(node_id);
                     let loc = et.parent.parent.env.get_node_loc(node_id);
                     et.define_let_local(&loc, name, ty);
@@ -1245,33 +1289,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         detail: &str,
     ) -> bool {
         use SpecBlockContext::*;
-        let mut notes = vec![];
+        let notes = vec![];
         let mut ok = match context {
             Module => cond.kind.allowed_on_module(),
-            Struct(s) => {
-                let mut ok = true;
-                if !cond.kind.allowed_on_struct() {
-                    ok = false;
-                } else if matches!(
-                    cond.kind,
-                    ConditionKind::VarPack(..)
-                        | ConditionKind::VarUnpack(..)
-                        | ConditionKind::VarUpdate(..)
-                ) {
-                    // The struct must be a resource.
-                    if let Some(entry) = self.parent.struct_table.get(s) {
-                        if !entry.is_resource {
-                            notes.push(
-                                "global var updates can only be used with \
-                                       resources since they require linear semantics"
-                                    .to_string(),
-                            );
-                            ok = false
-                        }
-                    }
-                };
-                ok
-            }
+            Struct(_) => cond.kind.allowed_on_struct(),
             Function(name) => {
                 let entry = self.parent.fun_table.get(name).expect("function defined");
                 if entry.is_public {
@@ -1433,66 +1454,22 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 _ => {}
             }
 
-            // If this is an invariant on a function decl, transform it into a pair of
-            // requires and ensures.
-            let derived_conds = match cond {
-                Condition {
-                    loc,
-                    kind: kind @ ConditionKind::Invariant,
-                    properties,
-                    exp,
-                    additional_exps,
-                }
-                | Condition {
-                    loc,
-                    kind: kind @ ConditionKind::InvariantModule,
-                    properties,
-                    exp,
-                    additional_exps,
-                } if matches!(context, SpecBlockContext::Function(..)) => {
-                    let requires_kind = if kind == ConditionKind::InvariantModule {
-                        ConditionKind::RequiresModule
-                    } else {
-                        ConditionKind::Requires
-                    };
-                    let mut merged_properties = context_properties.clone();
-                    merged_properties.extend(properties);
-                    vec![
-                        Condition {
-                            loc: loc.clone(),
-                            kind: requires_kind,
-                            properties: merged_properties.clone(),
-                            exp: exp.clone(),
-                            additional_exps: additional_exps.clone(),
-                        },
-                        Condition {
-                            loc,
-                            kind: ConditionKind::Ensures,
-                            properties: merged_properties,
-                            exp,
-                            additional_exps,
-                        },
-                    ]
-                }
-                Condition {
-                    loc,
-                    kind,
-                    properties,
-                    exp,
-                    additional_exps,
-                } => {
-                    let mut merged_properties = context_properties.clone();
-                    merged_properties.extend(properties);
-                    vec![Condition {
-                        loc,
-                        kind,
-                        properties: merged_properties,
-                        exp,
-                        additional_exps,
-                    }]
-                }
-            };
-            for derived_cond in derived_conds {
+            // Expand invariants on functions in requires/ensures
+            let derived_conds =
+                if matches!(context, SpecBlockContext::Function(..)) && cond.kind == Invariant {
+                    let mut ensures = cond.clone();
+                    ensures.kind = ConditionKind::Ensures;
+                    cond.kind = ConditionKind::Requires;
+                    vec![cond, ensures]
+                } else {
+                    vec![cond]
+                };
+
+            for mut derived_cond in derived_conds {
+                // Merge context properties.
+                derived_cond.properties.extend(context_properties.clone());
+
+                // Add condition to context.
                 if self.check_condition_is_valid(context, loc, &derived_cond, error_msg)
                     && !self
                         .parent
@@ -1598,39 +1575,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Compute the expected type for the expression in a condition.
-    fn expected_type_for_condition(&mut self, kind: &ConditionKind) -> Type {
-        if let Some((mid, vid, ty_args)) = kind.get_spec_var_target() {
-            if mid == self.module_id {
-                self.spec_vars[vid.as_usize()]
-                    .type_
-                    .clone()
-                    .instantiate(&ty_args)
-            } else {
-                let module_env = self.parent.env.get_module(mid);
-                module_env
-                    .get_spec_var(vid)
-                    .type_
-                    .clone()
-                    .instantiate(&ty_args)
-            }
-        } else {
-            BOOL_TYPE.clone()
-        }
+    fn expected_type_for_condition(&mut self, _kind: &ConditionKind) -> Type {
+        BOOL_TYPE.clone()
     }
 
     /// Extracts a condition kind based on the parsed kind and the associated expression. This
     /// identifies a spec var assignment expression and moves the var to the SpecConditionKind enum
     /// we use in our AST, returning the rhs expression of the assignment; otherwise it returns
     /// the passed expression.
+    #[allow(clippy::unnecessary_wraps)]
     fn extract_condition_kind<'a>(
         &mut self,
-        context: &SpecBlockContext,
+        _context: &SpecBlockContext,
         kind: &PA::SpecConditionKind,
         exp: &'a EA::Exp,
     ) -> Option<(ConditionKind, &'a EA::Exp)> {
         use ConditionKind::*;
         use PA::SpecConditionKind as PK;
-        let loc = self.parent.env.to_loc(&exp.loc);
         match kind {
             PK::Assert => Some((Assert, exp)),
             PK::Assume => Some((Assume, exp)),
@@ -1643,81 +1604,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             PK::AbortsIf => Some((AbortsIf, exp)),
             PK::AbortsWith => Some((AbortsWith, exp)),
             PK::SucceedsIf => Some((SucceedsIf, exp)),
-            PK::RequiresModule => Some((RequiresModule, exp)),
             PK::Invariant => Some((Invariant, exp)),
-            PK::InvariantModule => Some((InvariantModule, exp)),
-            PK::InvariantUpdate => {
-                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
-                    Some((VarUpdate(mid, vid, tys), exp1))
-                } else {
-                    Some((InvariantUpdate, exp))
-                }
-            }
-            PK::InvariantPack => {
-                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
-                    Some((VarPack(mid, vid, tys), exp1))
-                } else {
-                    self.parent
-                        .error(&loc, "expected assignment to spec variable");
-                    None
-                }
-            }
-            PK::InvariantUnpack => {
-                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
-                    Some((VarUnpack(mid, vid, tys), exp1))
-                } else {
-                    self.parent
-                        .error(&loc, "expected assignment to spec variable");
-                    None
-                }
-            }
-        }
-    }
-
-    /// Extracts an assignment from an expression, returning the assigned spec var and
-    /// rhs expression.
-    fn extract_assignment<'a>(
-        &mut self,
-        context: &SpecBlockContext,
-        exp: &'a EA::Exp,
-    ) -> Option<(ModuleId, SpecVarId, Vec<Type>, &'a EA::Exp)> {
-        if let EA::Exp_::Assign(list, rhs) = &exp.value {
-            let var_loc = self.parent.to_loc(&list.loc);
-            if list.value.len() != 1 {
-                self.parent.error(
-                    &var_loc,
-                    "[current restriction] tuples not supported in assignment",
-                );
-                return None;
-            }
-            if let EA::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
-                let var_name = self.module_access_to_qualified(maccess);
-                let mut et = self.exp_translator_for_context(&var_loc, context, None);
-                let tys = tys_opt
-                    .as_ref()
-                    .map(|tys| et.translate_types(tys))
-                    .unwrap_or_else(Vec::new);
-                if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
-                    Some((spec_var.module_id, spec_var.var_id, tys, rhs.as_ref()))
-                } else {
-                    et.error(
-                        &var_loc,
-                        &format!(
-                            "spec global `{}` undeclared",
-                            var_name.display(et.symbol_pool())
-                        ),
-                    );
-                    None
-                }
-            } else {
-                self.parent.error(
-                    &var_loc,
-                    "[current restriction] unpack not supported in assignment",
-                );
-                None
-            }
-        } else {
-            None
+            PK::InvariantUpdate => Some((InvariantUpdate, exp)),
         }
     }
 }
@@ -2273,12 +2161,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let mut exp = rewriter.rewrite_exp(exp.to_owned());
             let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
-                // There is a path condition to be added. This is only possible for proper
-                // boolean conditions and lets.
-                if kind.get_spec_var_target().is_some() {
-                    self.parent
-                        .error(loc, &format!("`{}` cannot be included conditionally", kind));
-                } else if kind == &ConditionKind::Emits {
+                // There is a path condition to be added.
+                if kind == &ConditionKind::Emits {
                     let cond_exp = if additional_exps.len() < 2 {
                         cond.clone()
                     } else {
@@ -2407,11 +2291,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
             SpecBlockContext::Struct(..) => {
-                let et = self.exp_translator_for_context(
-                    loc,
-                    context,
-                    Some(&ConditionKind::InvariantUpdate),
-                );
+                let et =
+                    self.exp_translator_for_context(loc, context, Some(&ConditionKind::Invariant));
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
             SpecBlockContext::Module => (BTreeMap::new(), vec![]),
@@ -2702,22 +2583,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 }
 
-/// ## Module Invariant Reduction
+/// ## Module Invariants
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
-    /// Reduce module invariants by making them requires/ensures on each function.
-    fn reduce_module_invariants(&mut self) {
-        for mut cond in self.module_spec.conditions.iter().cloned().collect_vec() {
-            if cond.kind == ConditionKind::Axiom {
-                continue;
-            }
-            if self
-                .parent
-                .env
-                .is_property_true(&cond.properties, CONDITION_GLOBAL_PROP)
-                .unwrap_or(false)
-            {
-                // Global invariant, attach to environment.
+    /// Process module invariants, attaching them to the global env.
+    fn process_module_invariants(&mut self) {
+        for cond in self.module_spec.conditions.iter().cloned().collect_vec() {
+            if matches!(
+                cond.kind,
+                ConditionKind::Invariant | ConditionKind::InvariantUpdate
+            ) {
                 let (spec_var_usage, mem_usage) = self.compute_state_usage_for_exp(None, &cond.exp);
                 let id = self.parent.env.new_global_id();
                 let Condition { loc, exp, .. } = cond;
@@ -2731,45 +2606,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     cond: exp,
                     properties: cond.properties.clone(),
                 });
-            } else {
-                if cond.kind != ConditionKind::Invariant {
-                    self.parent.error(
-                        &cond.loc,
-                        "only `invariant` allowed unless marked as `[global]`",
-                    );
-                    continue;
-                }
-                // An Invariant on module level becomes an InvariantModule on function level
-                // (which is then further reduced to a pair of RequiresModule and Ensures).
-                // Only public functions receive it.
-                cond.kind = ConditionKind::InvariantModule;
-                for qname in self
-                    .parent
-                    .fun_table
-                    .keys()
-                    .filter(|qn| qn.module_name == self.module_name)
-                    .cloned()
-                    .collect_vec()
-                {
-                    let entry = self.parent.fun_table.get(&qname).unwrap();
-                    if entry.is_public {
-                        let context = SpecBlockContext::Function(qname);
-                        // Create a property marking this as injected.
-                        let context_properties = self.add_bool_property(
-                            PropertyBag::default(),
-                            CONDITION_INJECTED_PROP,
-                            true,
-                        );
-                        // The below should not generate an error because of the above assert.
-                        self.add_conditions_to_context(
-                            &context,
-                            &cond.loc.clone(),
-                            vec![cond.clone()],
-                            context_properties,
-                            "[internal] (included via module level invariant) not allowed in this context",
-                        )
-                    }
-                }
             }
         }
     }

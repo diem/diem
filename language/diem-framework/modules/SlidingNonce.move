@@ -39,7 +39,7 @@ module SlidingNonce {
         assert(code == 0, Errors::invalid_argument(code));
     }
 
-    spec fun record_nonce_or_abort {
+    spec record_nonce_or_abort {
         include RecordNonceAbortsIf;
     }
 
@@ -245,7 +245,7 @@ module SlidingNonce {
         0
     }
 
-    spec fun try_record_nonce {
+    spec try_record_nonce {
         /// It is currently assumed that this function raises no arithmetic overflow/underflow.
         /// >Note: Verification is turned off. For verifying callers, this is effectively abstracted into a function
         /// that returns arbitrary results because `spec_try_record_nonce` is uninterpreted.
@@ -256,7 +256,7 @@ module SlidingNonce {
     }
 
     /// Specification version of `Self::try_record_nonce`.
-    spec define spec_try_record_nonce(account: signer, seq_nonce: u64): u64;
+    spec fun spec_try_record_nonce(account: signer, seq_nonce: u64): u64;
 
     /// Publishes nonce resource for `account`
     /// This is required before other functions in this module can be called for `account`
@@ -264,7 +264,7 @@ module SlidingNonce {
         assert(!exists<SlidingNonce>(Signer::address_of(account)), Errors::already_published(ENONCE_ALREADY_PUBLISHED));
         move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
-    spec fun publish {
+    spec publish {
         pragma opaque;
         modifies global<SlidingNonce>(Signer::spec_address_of(account));
         aborts_if exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
@@ -281,10 +281,10 @@ module SlidingNonce {
         use 0x1::DiemTimestamp;
 
         /// Sliding nonces are initialized at Diem root and treasury compliance addresses
-        invariant [global] DiemTimestamp::is_operating()
+        invariant DiemTimestamp::is_operating()
             ==> exists<SlidingNonce>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
-        invariant [global] DiemTimestamp::is_operating()
+        invariant DiemTimestamp::is_operating()
             ==> exists<SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
         // In the current code, only Diem root and Treasury compliance have sliding nonces.

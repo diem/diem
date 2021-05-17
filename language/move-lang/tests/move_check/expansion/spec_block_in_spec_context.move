@@ -1,7 +1,7 @@
 address 0x42 {
 module M {
     spec module {
-        define S(): () {
+        fun S(): () {
             spec {};
         }
     }

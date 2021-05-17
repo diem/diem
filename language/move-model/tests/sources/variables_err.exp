@@ -1,23 +1,10 @@
-error: assignment only allowed in spec var updates
-
-    ┌── tests/sources/variables_err.move:17:15 ───
-    │
- 17 │     invariant tick = x;
-    │               ^^^^^^^^
-    │
-
-error: expected assignment to spec variable
+error:
 
     ┌── tests/sources/variables_err.move:20:20 ───
     │
  20 │     invariant pack x == 0;
-    │                    ^^^^^^
-    │
-
-error: expected assignment to spec variable
-
-    ┌── tests/sources/variables_err.move:21:22 ───
-    │
- 21 │     invariant unpack x == 0;
-    │                      ^^^^^^
+    │                    ^ Unexpected 'x'
+    ·
+ 20 │     invariant pack x == 0;
+    │                    - Expected ';'
     │

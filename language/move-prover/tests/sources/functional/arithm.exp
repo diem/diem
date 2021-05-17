@@ -3,7 +3,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:128:5 ───
      │
- 128 │ ╭     spec fun div_by_zero_u64_incorrect {
+ 128 │ ╭     spec div_by_zero_u64_incorrect {
  129 │ │         aborts_if false;
  130 │ │     }
      │ ╰─────^
@@ -21,7 +21,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:180:5 ───
      │
- 180 │ ╭     spec fun overflow_u128_add_incorrect {
+ 180 │ ╭     spec overflow_u128_add_incorrect {
  181 │ │         aborts_if false;
  182 │ │     }
      │ ╰─────^
@@ -39,7 +39,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:232:5 ───
      │
- 232 │ ╭     spec fun overflow_u128_mul_incorrect {
+ 232 │ ╭     spec overflow_u128_mul_incorrect {
  233 │ │         aborts_if false;
  234 │ │     }
      │ ╰─────^
@@ -57,7 +57,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:164:5 ───
      │
- 164 │ ╭     spec fun overflow_u64_add_incorrect {
+ 164 │ ╭     spec overflow_u64_add_incorrect {
  165 │ │         aborts_if false;
  166 │ │     }
      │ ╰─────^
@@ -75,7 +75,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:217:5 ───
      │
- 217 │ ╭     spec fun overflow_u64_mul_incorrect {
+ 217 │ ╭     spec overflow_u64_mul_incorrect {
  218 │ │         aborts_if false;
  219 │ │     }
      │ ╰─────^
@@ -93,7 +93,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:148:5 ───
      │
- 148 │ ╭     spec fun overflow_u8_add_incorrect {
+ 148 │ ╭     spec overflow_u8_add_incorrect {
  149 │ │         aborts_if false;
  150 │ │     }
      │ ╰─────^
@@ -111,7 +111,7 @@ error: abort not covered by any of the `aborts_if` clauses
 
      ┌── tests/sources/functional/arithm.move:201:5 ───
      │
- 201 │ ╭     spec fun overflow_u8_mul_incorrect {
+ 201 │ ╭     spec overflow_u8_mul_incorrect {
  202 │ │         aborts_if false;
  203 │ │     }
      │ ╰─────^

@@ -28,7 +28,7 @@ module X4 {
         ensures true;
     }
     spec module {
-        define Foo(): bool { false }
+        fun Foo(): bool { false }
     }
 }
 

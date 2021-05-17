@@ -13,7 +13,7 @@ module 0x42::VerifyVector {
     fun verify_model_empty<Element>() : vector<Element> {
         Vector::empty<Element>() // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_empty {
+    spec verify_model_empty {
         ensures len(result) == 0;
     }
 
@@ -21,7 +21,7 @@ module 0x42::VerifyVector {
     fun verify_model_length<Element>(v: &vector<Element>): u64 {
         Vector::length(v) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_length {
+    spec verify_model_length {
         ensures result == len(v);
     }
 
@@ -29,7 +29,7 @@ module 0x42::VerifyVector {
     fun verify_model_borrow<Element>(v: &vector<Element>, i: u64): &Element {
         Vector::borrow(v, i) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_borrow {
+    spec verify_model_borrow {
         aborts_if i >= len(v);
         ensures result == v[i]; // TODO: enough?
     }
@@ -38,7 +38,7 @@ module 0x42::VerifyVector {
     fun verify_model_push_back<Element>(v: &mut vector<Element>, e: Element) {
         Vector::push_back(v, e); // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_push_back {
+    spec verify_model_push_back {
         ensures len(v) == len(old(v)) + 1;
         ensures v[len(v)-1] == e;
         ensures old(v) == v[0..len(v)-1];
@@ -48,7 +48,7 @@ module 0x42::VerifyVector {
     fun verify_model_borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element {
         Vector::borrow_mut(v, i) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_borrow_mut {
+    spec verify_model_borrow_mut {
         aborts_if i >= len(v);
         ensures result == v[i]; // TODO: enough?
     }
@@ -57,7 +57,7 @@ module 0x42::VerifyVector {
     fun verify_model_pop_back<Element>(v: &mut vector<Element>): Element {
         Vector::pop_back(v) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_pop_back {
+    spec verify_model_pop_back {
         aborts_if len(v) == 0;
         ensures len(v) == len(old(v)) - 1;
         ensures result == old(v[len(v)-1]);
@@ -68,7 +68,7 @@ module 0x42::VerifyVector {
     fun verify_model_destroy_empty<Element>(v: vector<Element>) {
         Vector::destroy_empty(v); // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_destroy_empty {
+    spec verify_model_destroy_empty {
         aborts_if len(v) > 0;
         // TODO: anything else?
     }
@@ -77,7 +77,7 @@ module 0x42::VerifyVector {
     fun verify_model_swap<Element>(v: &mut vector<Element>, i: u64, j: u64) {
         Vector::swap(v, i, j); // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_swap {
+    spec verify_model_swap {
         aborts_if i >= len(v);
         aborts_if j >= len(v);
         ensures v == old(update(update(v,i,v[j]),j,v[i]));
@@ -89,7 +89,7 @@ module 0x42::VerifyVector {
         Vector::push_back(&mut v, e);
         v
     }
-    spec fun verify_singleton {
+    spec verify_singleton {
         aborts_if false;
         ensures len(result) == 1;
         ensures result[0] == e;
@@ -130,7 +130,7 @@ module 0x42::VerifyVector {
             back_index = back_index - 1;
         };
     }
-    spec fun verify_reverse {
+    spec verify_reverse {
         // TODO(shaz): Enable once old() in loop invariants is implemented
         pragma verify = false;
         aborts_if false;
@@ -141,7 +141,7 @@ module 0x42::VerifyVector {
     fun verify_model_reverse<Element>(v: &mut vector<Element>) {
         Vector::reverse(v); // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_reverse {
+    spec verify_model_reverse {
         aborts_if false;
         ensures forall i in 0..len(v): old(v[i]) == v[len(v)-1-i];
     }
@@ -169,7 +169,7 @@ module 0x42::VerifyVector {
         };
         Vector::destroy_empty(other);
     }
-    spec fun verify_append {
+    spec verify_append {
         // TODO(shaz): Enable once old() in loop invariants is implemented
         pragma verify = false;
         ensures len(v) == old(len(v) + len(other));
@@ -181,7 +181,7 @@ module 0x42::VerifyVector {
     fun verify_model_append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
         Vector::append(lhs, other) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_append {
+    spec verify_model_append {
         ensures len(lhs) == old(len(lhs) + len(other));
         ensures lhs[0..len(old(lhs))] == old(lhs);
         ensures lhs[len(old(lhs))..len(lhs)] == other;
@@ -191,7 +191,7 @@ module 0x42::VerifyVector {
     fun verify_is_empty<Element>(v: &vector<Element>): bool {
         Vector::length(v) == 0
     }
-    spec fun verify_is_empty {
+    spec verify_is_empty {
         ensures result == (len(v) == 0);
     }
 
@@ -199,7 +199,7 @@ module 0x42::VerifyVector {
     fun verify_model_is_empty<Element>(v: &vector<Element>): bool {
         Vector::is_empty(v) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_is_empty {
+    spec verify_model_is_empty {
         ensures result == (len(v) == 0);
     }
 
@@ -219,7 +219,7 @@ module 0x42::VerifyVector {
         };
         (false, 0)
     }
-    spec fun verify_index_of {
+    spec verify_index_of {
         aborts_if false;
         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
         ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
@@ -230,7 +230,7 @@ module 0x42::VerifyVector {
     fun verify_model_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
         Vector::index_of(v, e) // inlining the built-in Boogie procedure
     }
-    spec fun verify_model_index_of {
+    spec verify_model_index_of {
         aborts_if false;
         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
         ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
@@ -256,7 +256,7 @@ module 0x42::VerifyVector {
         };
         false
     }
-    spec fun verify_contains {
+    spec verify_contains {
         aborts_if false;
         ensures result == (exists x in v: x==e);
     }
@@ -265,7 +265,7 @@ module 0x42::VerifyVector {
     fun verify_model_contains<Element>(v: &vector<Element>, e: &Element): bool {
         Vector::contains(v, e) // inlining the built-in Boogie procedure.
     }
-    spec fun verify_model_contains {
+    spec verify_model_contains {
         aborts_if false;
         ensures result == (exists x in v: x==e);
     }
@@ -299,7 +299,7 @@ module 0x42::VerifyVector {
         };
         Vector::pop_back(v)
     }
-    spec fun verify_remove {
+    spec verify_remove {
         // TODO(shaz): Enable once old() in loop invariants is implemented
         pragma verify = false;
         aborts_if j >= len(v);
@@ -314,7 +314,7 @@ module 0x42::VerifyVector {
     fun verify_model_remove<Element>(v: &mut vector<Element>, i: u64): Element {
         Vector::remove(v, i) // inlining the built-in Boogie procedure.
     }
-    spec fun verify_model_remove {
+    spec verify_model_remove {
         aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v[0..i] == old(v[0..i]);
@@ -330,7 +330,7 @@ module 0x42::VerifyVector {
         Vector::swap(v, i, last_idx);
         Vector::pop_back(v)
     }
-    spec fun verify_swap_remove {
+    spec verify_swap_remove {
         aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
@@ -343,7 +343,7 @@ module 0x42::VerifyVector {
     fun verify_model_swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
         Vector::swap_remove(v, i) // inlining the built-in Boogie procedure.
     }
-    spec fun verify_model_swap_remove {
+    spec verify_model_swap_remove {
         aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);

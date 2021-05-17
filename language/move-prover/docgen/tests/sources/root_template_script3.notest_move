@@ -3,7 +3,7 @@ script {
 fun yet_another<T>(_account: signer) {
     abort 3
 }
-spec fun yet_another {
+spec yet_another {
     aborts_if true with 3;
 }
 }

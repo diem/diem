@@ -14,7 +14,7 @@ module 0x1::DisableInv {
         move_to(s, R2 {});
     }
 
-    spec fun f1_incorrect {
+    spec f1_incorrect {
          pragma delegate_invariants_to_caller;
     }
 
@@ -23,7 +23,7 @@ module 0x1::DisableInv {
         f4(s);
     }
 
-    spec fun f2 {
+    spec f2 {
         pragma disable_invariants_in_body;
     }
 
@@ -33,7 +33,7 @@ module 0x1::DisableInv {
         move_to(s, R1 {});
     }
 
-    spec fun f3_incorrect {
+    spec f3_incorrect {
         pragma disable_invariants_in_body;
     }
 
@@ -48,7 +48,7 @@ module 0x1::DisableInv {
         move_to(s, R2 {});
     }
 
-    spec fun f5_incorrect {
+    spec f5_incorrect {
         pragma disable_invariants_in_body;
     }
 

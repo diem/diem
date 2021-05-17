@@ -16,7 +16,7 @@ module 0x42::TestStrongEdges {
         s.x = 2;
     }
 
-    spec fun glob_and_field_edges{
+    spec glob_and_field_edges{
         pragma opaque = true;
         ensures global<S>(addr).x == 2;
         aborts_if !exists<S>(addr);
@@ -38,7 +38,7 @@ module 0x42::TestStrongEdges {
         *Vector::borrow_mut(v, 0) = 7;
         x
     }
-    spec fun vec_edge {
+    spec vec_edge {
         aborts_if len(v) == 0;
         ensures v[0] == 7;
         ensures v[1] == old(v[1]);
@@ -49,7 +49,7 @@ module 0x42::TestStrongEdges {
         s.x = 2;
     }
 
-    spec fun glob_and_field_edges_incorrect{
+    spec glob_and_field_edges_incorrect{
         pragma opaque = true;
         ensures global<S>(addr).x == 3;
         aborts_if !exists<S>(addr);

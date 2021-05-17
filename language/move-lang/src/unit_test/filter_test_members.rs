@@ -110,6 +110,7 @@ fn filter_tests_from_module(
         loc,
         address,
         name,
+        is_spec_module,
         members,
     } = module_def;
 
@@ -123,6 +124,7 @@ fn filter_tests_from_module(
         loc,
         address,
         name,
+        is_spec_module,
         members: new_members,
     })
 }

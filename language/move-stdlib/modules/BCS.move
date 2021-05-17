@@ -13,7 +13,7 @@ module BCS {
 
     spec module {
         /// Native function which is defined in the prover's prelude.
-        native define serialize<MoveValue>(v: &MoveValue): vector<u8>;
+        native fun serialize<MoveValue>(v: &MoveValue): vector<u8>;
     }
 }
 }

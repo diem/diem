@@ -374,7 +374,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_parent_address">Self::parent_add
 <a name="0x1_VASP_spec_parent_address"></a>
 
 
-<pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr: address): address {
+<pre><code><b>fun</b> <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr: address): address {
     <b>if</b> (<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr)) {
         addr
     } <b>else</b> {
@@ -382,7 +382,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_parent_address">Self::parent_add
     }
 }
 <a name="0x1_VASP_spec_has_account_limits"></a>
-<b>define</b> <a href="VASP.md#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;Token&gt;(addr: address): bool {
+<b>fun</b> <a href="VASP.md#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;Token&gt;(addr: address): bool {
     <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;Token&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr))
 }
 </code></pre>
@@ -562,7 +562,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_is_same_vasp">Self::is_same_vasp
 <a name="0x1_VASP_spec_is_same_vasp"></a>
 
 
-<pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1: address, addr2: address): bool {
+<pre><code><b>fun</b> <a href="VASP.md#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1: address, addr2: address): bool {
    <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr1) && <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr2) && <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr1) == <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr2)
 }
 </code></pre>
@@ -615,7 +615,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 <a name="0x1_VASP_spec_num_children"></a>
 
 
-<pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent: address): u64 {
+<pre><code><b>fun</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent: address): u64 {
    <b>global</b>&lt;<a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).num_children
 }
 </code></pre>
@@ -636,9 +636,9 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr)):
+<pre><code><b>invariant</b> <b>update</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr)):
     <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr);
-<b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr)):
+<b>invariant</b> <b>update</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr)):
     <a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr);
 </code></pre>
 
@@ -650,7 +650,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 
 
-<pre><code><b>invariant</b> [<b>global</b>]
+<pre><code><b>invariant</b>
     <b>forall</b> child_addr: address <b>where</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(child_addr):
         <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(<b>global</b>&lt;<a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(child_addr).parent_vasp_addr);
 </code></pre>
@@ -714,7 +714,7 @@ previous state.
 The parent address stored at ChildVASP resource never changes.
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+<pre><code><b>invariant</b> <b>update</b>
     <b>forall</b> a: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(a)): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>
 

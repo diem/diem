@@ -5,18 +5,18 @@ module 0x42::TestDefines {
     }
 
     spec module {
-        define in_range(x: num, min: num, max: num): bool {
+        fun in_range(x: num, min: num, max: num): bool {
             x >= min && x <= max
         }
 
-        define eq<T>(x: T, y: T): bool {
+        fun eq<T>(x: T, y: T): bool {
             x == y
         }
     }
 
     fun add(x: u64, y: u64): u64 { x + y }
 
-    spec fun add {
+    spec add {
         aborts_if !in_range(x + y, 0, 18446744073709551615);
         ensures eq(result, x + y);
     }
@@ -28,10 +28,10 @@ module 0x42::TestDefines {
     struct R has key { x: u64 }
 
     spec module {
-        define exists_both(addr1: address, addr2: address): bool {
+        fun exists_both(addr1: address, addr2: address): bool {
             exists<R>(addr1) && exists<R>(addr2)
         }
-        define get(addr: address): u64 {
+        fun get(addr: address): u64 {
             global<R>(addr).x
         }
     }
@@ -41,7 +41,7 @@ module 0x42::TestDefines {
         let r2 = borrow_global<R>(addr2);
         r1.x == r2.x
     }
-    spec fun equal_R {
+    spec equal_R {
         aborts_if !exists_both(addr1, addr2);
         ensures result == (get(addr1) == get(addr2));
     }
@@ -52,7 +52,7 @@ module 0x42::TestDefines {
 
     fun add_as_spec_fun(x: u64, y: u64): u64 { x + y }
     fun add_fun(x: u64, y: u64): u64 { x + y }
-    spec fun add_fun {
+    spec add_fun {
         include AddOk;
     }
     spec schema AddOk {

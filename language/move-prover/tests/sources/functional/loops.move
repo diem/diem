@@ -13,7 +13,7 @@ module 0x42::VerifyLoops {
             if (i > 10) abort 10;
         }
     }
-    spec fun iter10_missing_inc_spec1 { // Verified. This is expected because Prover checks the partial correctness of this function which contains an infinite loop.
+    spec iter10_missing_inc_spec1 { // Verified. This is expected because Prover checks the partial correctness of this function which contains an infinite loop.
         aborts_if false;
         ensures false;
     }
@@ -24,7 +24,7 @@ module 0x42::VerifyLoops {
             if (i > 10) abort 10;
         }
     }
-    spec fun iter10_missing_inc_spec2 { // Verified. This is expected because Prover checks the partial correctness of this function which contains an infinite loop.
+    spec iter10_missing_inc_spec2 { // Verified. This is expected because Prover checks the partial correctness of this function which contains an infinite loop.
         aborts_if true;
         ensures false;
     }
@@ -39,7 +39,7 @@ module 0x42::VerifyLoops {
             i = i + 1;
         }
     }
-    spec fun iter10_no_abort { // Verified. Abort cannot happen.
+    spec iter10_no_abort { // Verified. Abort cannot happen.
         pragma verify=true;
         aborts_if false;
     }
@@ -54,7 +54,7 @@ module 0x42::VerifyLoops {
             i = i + 1;
         }
     }
-    spec fun iter10_no_abort_incorrect { // Disproved. Abort cannot happen.
+    spec iter10_no_abort_incorrect { // Disproved. Abort cannot happen.
         aborts_if true;
     }
 
@@ -68,7 +68,7 @@ module 0x42::VerifyLoops {
             i = i + 1;
         }
     }
-    spec fun iter10_abort { // Verified. Abort always happens.
+    spec iter10_abort { // Verified. Abort always happens.
         pragma verify=true;
         aborts_if true;
     }
@@ -83,7 +83,7 @@ module 0x42::VerifyLoops {
             i = i + 1;
         }
     }
-    spec fun iter10_abort_incorrect { // Disproved. Abort always happens.
+    spec iter10_abort_incorrect { // Disproved. Abort always happens.
         pragma verify=true;
         aborts_if false;
     }
@@ -106,7 +106,7 @@ module 0x42::VerifyLoops {
             assert x == y;
         };
     }
-    spec fun nested_loop_correct {
+    spec nested_loop_correct {
         aborts_if false;
     }
 
@@ -131,7 +131,7 @@ module 0x42::VerifyLoops {
             x = x + 1;
         };
     }
-    spec fun nested_loop_outer_invariant_incorrect {
+    spec nested_loop_outer_invariant_incorrect {
         aborts_if false;
     }
 
@@ -156,7 +156,7 @@ module 0x42::VerifyLoops {
             x = x + 1;
         };
     }
-    spec fun nested_loop_inner_invariant_incorrect {
+    spec nested_loop_inner_invariant_incorrect {
         aborts_if false;
     }
 
@@ -176,7 +176,7 @@ module 0x42::VerifyLoops {
             assert x == y;
         };
     }
-    spec fun loop_with_two_back_edges_correct {
+    spec loop_with_two_back_edges_correct {
         aborts_if false;
     }
 
@@ -199,7 +199,7 @@ module 0x42::VerifyLoops {
             break
         };
     }
-    spec fun loop_with_two_back_edges_incorrect {
+    spec loop_with_two_back_edges_incorrect {
         aborts_if false;
     }
 

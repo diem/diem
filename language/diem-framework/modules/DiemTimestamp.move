@@ -40,7 +40,7 @@ module DiemTimestamp {
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
         move_to(dr_account, timer);
     }
-    spec fun set_time_has_started {
+    spec set_time_has_started {
         /// The friend of this function is `Genesis::initialize` which means that
         /// this function can't be verified on its own and has to be verified in
         /// context of Genesis execution.
@@ -73,7 +73,7 @@ module DiemTimestamp {
         };
         global_timer.microseconds = timestamp;
     }
-    spec fun update_global_time {
+    spec update_global_time {
         pragma opaque;
         modifies global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
@@ -101,12 +101,12 @@ module DiemTimestamp {
         assert_operating();
         borrow_global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds
     }
-    spec fun now_microseconds {
+    spec now_microseconds {
         pragma opaque;
         include AbortsIfNotOperating;
         ensures result == spec_now_microseconds();
     }
-    spec define spec_now_microseconds(): u64 {
+    spec fun spec_now_microseconds(): u64 {
         global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds
     }
 
@@ -114,12 +114,12 @@ module DiemTimestamp {
     public fun now_seconds(): u64 acquires CurrentTimeMicroseconds {
         now_microseconds() / MICRO_CONVERSION_FACTOR
     }
-    spec fun now_seconds {
+    spec now_seconds {
         pragma opaque;
         include AbortsIfNotOperating;
         ensures result == spec_now_microseconds() /  MICRO_CONVERSION_FACTOR;
     }
-    spec define spec_now_seconds(): u64 {
+    spec fun spec_now_seconds(): u64 {
         global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS()).microseconds / MICRO_CONVERSION_FACTOR
     }
 
@@ -132,7 +132,7 @@ module DiemTimestamp {
     public fun assert_genesis() {
         assert(is_genesis(), Errors::invalid_state(ENOT_GENESIS));
     }
-    spec fun assert_genesis {
+    spec assert_genesis {
         pragma opaque = true;
         include AbortsIfNotGenesis;
     }
@@ -152,7 +152,7 @@ module DiemTimestamp {
     public fun assert_operating() {
         assert(is_operating(), Errors::invalid_state(ENOT_OPERATING));
     }
-    spec fun assert_operating {
+    spec assert_operating {
         pragma opaque = true;
         include AbortsIfNotOperating;
     }
@@ -168,10 +168,10 @@ module DiemTimestamp {
 
     spec module {
         /// After genesis, `CurrentTimeMicroseconds` is published forever
-        invariant [global] is_operating() ==> exists<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        invariant is_operating() ==> exists<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// After genesis, time progresses monotonically.
-        invariant update [global]
+        invariant update
             old(is_operating()) ==> old(spec_now_microseconds()) <= spec_now_microseconds();
     }
 

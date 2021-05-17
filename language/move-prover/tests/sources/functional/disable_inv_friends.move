@@ -13,13 +13,13 @@ module M1 {
         M3::f3(s);
     }
 
-    spec fun f1 {
+    spec f1 {
         pragma opaque;
         modifies global<M2::R2>(Signer::address_of(s));
         modifies global<M3::R3>(Signer::address_of(s));
     }
 
-    spec fun f1 {
+    spec f1 {
         pragma disable_invariants_in_body;
     }
 
@@ -40,7 +40,7 @@ module M2 {
         move_to(s, R2 {});
     }
 
-    spec fun f2 {
+    spec f2 {
         pragma opaque;
         modifies global<R2>(Signer::address_of(s));
         ensures exists<R2>(Signer::address_of(s));
@@ -58,7 +58,7 @@ module M3 {
         move_to(s, R3 {});
     }
 
-    spec fun f3 {
+    spec f3 {
         pragma opaque;
         modifies global<R3>(Signer::address_of(s));
         ensures exists<R3>(Signer::address_of(s));
@@ -75,13 +75,13 @@ module M4 {
         M2::f2(s);
     }
 
-    spec fun f4 {
+    spec f4 {
         pragma opaque;
         modifies global<M2::R2>(Signer::address_of(s));
         modifies global<M3::R3>(Signer::address_of(s));
     }
 
-    spec fun f4 {
+    spec f4 {
         pragma disable_invariants_in_body;
     }
 

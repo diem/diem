@@ -24,7 +24,7 @@ module Diem {
         requests: vector<T<Token>>,
         is_approved: bool,
     }
-    spec struct Preburn {
+    spec Preburn {
 	    invariant !is_approved ==> len(requests) == 0;
     }
 

@@ -13,7 +13,7 @@ module 0x42::TestVector {
 
     fun test_vector_equal(_v: vector<u64>, _w: &mut vector<u64>) {
     }
-    spec fun test_vector_equal {
+    spec test_vector_equal {
         aborts_if false;
         ensures _v == _v;
         ensures _v == _v[0..len(_v)];
@@ -30,7 +30,7 @@ module 0x42::TestVector {
         let ev2 = Vector::empty<u64>();
         (ev1, ev2)
     }
-    spec fun test_empty {
+    spec test_empty {
         ensures result_1 == result_2;
         ensures len(result_1) == 0;
         ensures len(result_2) == 0;
@@ -45,7 +45,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev2, 1);
         (ev1, ev2)
     }
-    spec fun test_push {
+    spec test_push {
         ensures result_1 == result_2;
         ensures len(result_1) == 1;
         ensures len(result_2) == 1;
@@ -60,7 +60,7 @@ module 0x42::TestVector {
         Vector::pop_back(&mut ev1);
         (ev1, ev2)
     }
-    spec fun test_push_pop {
+    spec test_push_pop {
         ensures result_1 == result_2;
     }
 
@@ -74,7 +74,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev2, 1);
         (ev1, ev2)
     }
-    spec fun test_neq1 {
+    spec test_neq1 {
         ensures result_1 != result_2;
     }
 
@@ -87,7 +87,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev2, 0);
         (ev1, ev2)
     }
-    spec fun test_neq2 {
+    spec test_neq2 {
         ensures result_1 != result_2;
     }
 
@@ -99,7 +99,7 @@ module 0x42::TestVector {
         Vector::reverse(&mut ev1);
         (ev1, ev2)
     }
-    spec fun test_reverse1 {
+    spec test_reverse1 {
         ensures result_1 == result_2;
     }
 
@@ -115,7 +115,7 @@ module 0x42::TestVector {
         Vector::reverse(&mut ev1);
         (ev1, ev2)
     }
-    spec fun test_reverse2 {
+    spec test_reverse2 {
         ensures result_1 == result_2;
     }
 
@@ -131,7 +131,7 @@ module 0x42::TestVector {
         Vector::reverse(&mut ev1);
         (ev1, ev2)
     }
-    spec fun test_reverse3 {
+    spec test_reverse3 {
         ensures result_1 != result_2;
     }
 
@@ -148,7 +148,7 @@ module 0x42::TestVector {
         Vector::swap(&mut ev1, 0, 1);
         (ev1, ev2)
     }
-    spec fun test_swap {
+    spec test_swap {
         ensures result_1 == result_2;
     }
 
@@ -159,7 +159,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev1, 1);
         Vector::swap(&mut ev1, 1, 0);
     }
-    spec fun test_swap_abort1 {
+    spec test_swap_abort1 {
         aborts_if true;
     }
 
@@ -170,7 +170,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev1, 1);
         Vector::swap(&mut ev1, 0, 1);
     }
-    spec fun test_swap_abort2 {
+    spec test_swap_abort2 {
         aborts_if true;
     }
 
@@ -182,7 +182,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev1, 1);
         (Vector::length(&ev1), Vector::length(&ev2))
     }
-    spec fun test_length1 {
+    spec test_length1 {
         ensures result_1 == result_2 + 1;
     }
 
@@ -193,7 +193,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut v, 3);
         v
     }
-    spec fun vector_of_proper_positives {
+    spec vector_of_proper_positives {
       ensures forall n in result: n > 0;
       ensures forall i in 0..len(result), j in 0..len(result) where result[i] == result[j] : i == j;
     }
@@ -205,7 +205,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut v, 7);
         *Vector::borrow(&v, 0)
     }
-    spec fun test_borrow1 {
+    spec test_borrow1 {
         ensures result == 7;
     }
 
@@ -216,7 +216,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut v, 0);
         *Vector::borrow(&v, 0)
     }
-    spec fun test_borrow2 {
+    spec test_borrow2 {
         ensures result != 7;
     }
 
@@ -227,7 +227,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut v, 7);
         *Vector::borrow(&v, 1)
     }
-    spec fun test_borrow3 {
+    spec test_borrow3 {
         aborts_if true;
     }
 
@@ -245,7 +245,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut ev2, 2);
         (ev1, ev2)
     }
-    spec fun test_slice {
+    spec test_slice {
         ensures result_1 == result_2[1..3];
         ensures result_1 != result_2[0..2];
         ensures result_1 == result_2[4..6];
@@ -267,7 +267,7 @@ module 0x42::TestVector {
         b2 = Vector::contains(&ev1, &4);
         (ev1, b1, b2)
     }
-    spec fun test_contains {
+    spec test_contains {
         aborts_if false;
         ensures result_2 == true;
         ensures result_3 == false;
@@ -300,7 +300,7 @@ module 0x42::TestVector {
         (b2, i2) = Vector::index_of<u64>(&ev1, &7);
         (ev1, b1, i1, b2, i2)
     }
-    spec fun test_index_of {
+    spec test_index_of {
         aborts_if false;
         ensures result_2 == false;
         ensures result_3 == 0;
@@ -326,7 +326,7 @@ module 0x42::TestVector {
         y = Vector::length(&v);
         (x, y)
     }
-    spec fun test_length2 {
+    spec test_length2 {
         ensures result_1 + 3 == result_2;
     }
 
@@ -336,7 +336,7 @@ module 0x42::TestVector {
         Vector::push_back(&mut v, 1);
         (l, Vector::length(&v))
     }
-    spec fun test_length3 {
+    spec test_length3 {
         ensures len(v) == result_1;
         ensures result_1 + 1 == result_2;
     }
@@ -347,7 +347,7 @@ module 0x42::TestVector {
         Vector::push_back(v, 1);
         (l, Vector::length(v))
     }
-    spec fun test_length4 {
+    spec test_length4 {
         ensures len(old(v)) == result_1;
         ensures result_1 + 1 == result_2;
         ensures v != old(v);
@@ -359,7 +359,7 @@ module 0x42::TestVector {
     {
         v
     }
-    spec fun test_id1 {
+    spec test_id1 {
         ensures result == v;
     }
 
@@ -370,7 +370,7 @@ module 0x42::TestVector {
         Vector::reverse(&mut v);
         v
     }
-    spec fun test_id2 {
+    spec test_id2 {
         ensures result == v;
     }
 
@@ -391,7 +391,7 @@ module 0x42::TestVector {
         Vector::reverse(&mut v);
         v
     }
-    spec fun test_id3 {
+    spec test_id3 {
         ensures result == v;
     }
 
@@ -406,7 +406,7 @@ module 0x42::TestVector {
             v
         }
     }
-    spec fun test_destroy_empty1 {
+    spec test_destroy_empty1 {
         ensures result == v;
     }
 
@@ -420,7 +420,7 @@ module 0x42::TestVector {
             Vector::destroy_empty(v);
         }
     }
-    spec fun test_destroy_empty2 {
+    spec test_destroy_empty2 {
         aborts_if true;
     }
 
@@ -430,7 +430,7 @@ module 0x42::TestVector {
         *Vector::borrow_mut(v, 0) = 7;
         x
     }
-    spec fun test_borrow_mut {
+    spec test_borrow_mut {
         aborts_if len(v) == 0;
     }
 
@@ -466,7 +466,7 @@ module 0x42::TestVector {
         let s = some<u64>(42);
         (unwrap_or<u64>(n, 0), unwrap_or<u64>(s, 0))
     }
-    spec fun option_type {
+    spec option_type {
         ensures result_1 == 0;
         ensures result_2 == 42;
     }

@@ -17,28 +17,28 @@ module 0x42::TestReferences {
     fun ref_param(r: &T): u64 {
         r.a
     }
-    spec fun ref_param {
+    spec ref_param {
         ensures result == r.a;
     }
 
     fun ref_param_vec(r: &vector<T>): u64 {
         Vector::length(r)
     }
-    spec fun ref_param_vec {
+    spec ref_param_vec {
         ensures result == len(r);
     }
 
     fun ref_return(r: &vector<T>, i: u64): &T {
         Vector::borrow(r, i)
     }
-    spec fun ref_return {
+    spec ref_return {
         ensures result == r[i];
     }
 
     fun increment(r: &mut u64) {
         *r = *r + 1
     }
-    spec fun increment {
+    spec increment {
         ensures r == old(r) + 1;
     }
 
@@ -50,7 +50,7 @@ module 0x42::TestReferences {
     fun mut_b(b: &mut u64) {
         *b = 10;
     }
-    spec fun mut_b {
+    spec mut_b {
         ensures b == 10;
     }
 
@@ -61,7 +61,7 @@ module 0x42::TestReferences {
         b = *b_ref;
         if (b != 10) abort 1;
     }
-    spec fun mut_ref {
+    spec mut_ref {
         aborts_if false;
     }
 
@@ -72,7 +72,7 @@ module 0x42::TestReferences {
         b = *b_ref;
         if (b != 10) abort 1;
     }
-    spec fun mut_ref_incorrect {
+    spec mut_ref_incorrect {
         aborts_if true;
     }
 
@@ -88,7 +88,7 @@ module 0x42::TestReferences {
     fun withdrawal_capability_address(cap: &WithdrawalCapability): &address {
         &cap.account_address
     }
-    spec fun withdrawal_capability_address {
+    spec withdrawal_capability_address {
         ensures result == cap.account_address;
     }
 
@@ -103,7 +103,7 @@ module 0x42::TestReferences {
         *r = 0;
         v
     }
-    spec fun mutate_vector {
+    spec mutate_vector {
         ensures result[0] == 0;
     }
 
@@ -111,7 +111,7 @@ module 0x42::TestReferences {
         let r = Vector::borrow_mut(v, 0);
         *r = *r + 1;
     }
-    spec fun mutate_vector_param {
+    spec mutate_vector_param {
         ensures v[0] == old(v[0]) + 1;
     }
 }

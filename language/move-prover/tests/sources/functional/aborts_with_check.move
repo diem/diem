@@ -13,7 +13,7 @@ module 0x42::TestAbortsWithCheck {
         };
         x
     }
-    spec fun aborts_with_check {
+    spec aborts_with_check {
         aborts_if x == 1 with 2;
         aborts_if y == 2 with 3;
         aborts_with [check] 2, 3;
@@ -29,7 +29,7 @@ module 0x42::TestAbortsWithCheck {
         };
         x
     }
-    spec fun aborts_with_check_missing_incorrect {
+    spec aborts_with_check_missing_incorrect {
         aborts_if x == 1 with 2;
         aborts_if y == 2 with 3;
         aborts_with [check] 2;

@@ -1,17 +1,10 @@
-error: `invariant pack assign` not allowed in struct context
+error:
 
-   ┌── tests/sources/pack_err.move:9:5 ───
+   ┌── tests/sources/pack_err.move:9:20 ───
    │
  9 │     invariant pack sum = sum + x;
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │                    ^^^ Unexpected 'sum'
+   ·
+ 9 │     invariant pack sum = sum + x;
+   │                    --- Expected ';'
    │
-   = global var updates can only be used with resources since they require linear semantics
-
-error: `invariant unpack assign` not allowed in struct context
-
-    ┌── tests/sources/pack_err.move:10:5 ───
-    │
- 10 │     invariant unpack sum = sum - x;
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    = global var updates can only be used with resources since they require linear semantics

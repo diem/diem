@@ -17,7 +17,7 @@ module TestMutRefsAccrossModule {
         sum: u64
     }
 
-    spec struct T {
+    spec T {
         // global specification variable tracking sum of values.
         global spec_sum: u64;
 
@@ -40,7 +40,7 @@ module TestMutRefsAccrossModule {
         r.sum = r.sum + x;
         T{value: x}
     }
-    spec fun new {
+    spec new {
         requires x > 0;
     }
 

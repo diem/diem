@@ -66,7 +66,7 @@ module ValidatorConfig {
         });
     }
 
-    spec fun publish {
+    spec publish {
         include PublishAbortsIf {validator_addr: Signer::spec_address_of(validator_account)};
         ensures exists_config(Signer::spec_address_of(validator_account));
     }
@@ -110,7 +110,7 @@ module ValidatorConfig {
         assert(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_addr);
     }
-    spec fun set_operator {
+    spec set_operator {
         /// Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
@@ -151,7 +151,7 @@ module ValidatorConfig {
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
     }
 
-    spec fun remove_operator {
+    spec remove_operator {
         /// Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
@@ -194,7 +194,7 @@ module ValidatorConfig {
             fullnode_network_addresses,
         });
     }
-    spec fun set_config {
+    spec set_config {
         pragma opaque;
         modifies global<ValidatorConfig>(validator_addr);
         include SetConfigAbortsIf;
@@ -232,7 +232,7 @@ module ValidatorConfig {
         exists<ValidatorConfig>(addr) && Option::is_some(&borrow_global<ValidatorConfig>(addr).config)
     }
 
-    spec fun is_valid {
+    spec is_valid {
         pragma opaque;
         aborts_if false;
         ensures result == is_valid(addr);
@@ -247,7 +247,7 @@ module ValidatorConfig {
         *Option::borrow(config)
     }
 
-    spec fun get_config {
+    spec get_config {
         pragma opaque;
         include AbortsIfNoValidatorConfig;
         aborts_if Option::is_none(global<ValidatorConfig>(addr).config) with Errors::INVALID_ARGUMENT;
@@ -255,7 +255,7 @@ module ValidatorConfig {
     }
 
     /// Returns the config published under addr.
-    spec define spec_get_config(addr: address): Config {
+    spec fun spec_get_config(addr: address): Config {
         Option::borrow(global<ValidatorConfig>(addr).config)
     }
 
@@ -267,7 +267,7 @@ module ValidatorConfig {
         *&t_ref.human_name
     }
 
-    spec fun get_human_name {
+    spec get_human_name {
         pragma opaque;
         include AbortsIfNoValidatorConfig;
         ensures result == get_human_name(addr);
@@ -283,7 +283,7 @@ module ValidatorConfig {
         *Option::borrow(&t_ref.operator_account)
     }
 
-    spec fun get_operator {
+    spec get_operator {
         pragma opaque;
         include AbortsIfGetOperator;
         ensures result == get_operator(addr);
@@ -333,7 +333,7 @@ module ValidatorConfig {
     /// See comment on `ValidatorConfig::set_config` -- DiemSystem depends on this.
     spec module {
         /// A validator stays valid once it becomes valid.
-        invariant update [global]
+        invariant update
             forall validator: address where old(is_valid(validator)): is_valid(validator);
     }
 
@@ -342,26 +342,26 @@ module ValidatorConfig {
     spec module {
 
         /// Every address that has a ValidatorConfig also has a validator role.
-        invariant [global] forall addr: address where exists_config(addr):
+        invariant forall addr: address where exists_config(addr):
             Roles::spec_has_validator_role_addr(addr);
 
         /// DIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
         /// in DiemSystem so we don't have to check whether every validator address has a validator role.
-        invariant [global] forall addr: address where exists_config(addr):
+        invariant forall addr: address where exists_config(addr):
             Roles::spec_has_validator_role_addr(addr);
 
         /// DIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with
         /// a config option that is "some") has a validator role. This is a trivial consequence
         /// of the previous invariant, but it is not inductive and can't be proved without the
         /// previous one as a helper.
-        invariant [global] forall addr: address where is_valid(addr):
+        invariant forall addr: address where is_valid(addr):
             Roles::spec_has_validator_role_addr(addr);
     }
 
     /// # Helper Function
 
     /// Returns true if addr has an operator account.
-    spec define spec_has_operator(addr: address): bool {
+    spec fun spec_has_operator(addr: address): bool {
         Option::is_some(global<ValidatorConfig>(addr).operator_account)
     }
 }

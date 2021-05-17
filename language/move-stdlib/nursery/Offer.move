@@ -38,7 +38,7 @@ module Offer {
     assert(!exists<Offer<Offered>>(Signer::address_of(account)), Errors::already_published(EOFFER_ALREADY_CREATED));
     move_to(account, Offer<Offered> { offered, for });
   }
-  spec fun create {
+  spec create {
     /// Offer a struct to the account under address `for` by
     /// placing the offer under the signer's address
     aborts_if exists<Offer<Offered>>(Signer::spec_address_of(account))
@@ -58,7 +58,7 @@ module Offer {
     assert(sender == for || sender == offer_address, Errors::invalid_argument(EOFFER_DNE_FOR_ACCOUNT));
     offered
   }
-  spec fun redeem {
+  spec redeem {
     /// Aborts if there is no offer under `offer_address` or if the account
     /// cannot redeem the offer.
     /// Ensures that the offered struct under `offer_address` is removed.
@@ -74,7 +74,7 @@ module Offer {
   public fun exists_at<Offered: store>(offer_address: address): bool {
     exists<Offer<Offered>>(offer_address)
   }
-  spec fun exists_at {
+  spec exists_at {
     aborts_if false;
     /// Returns whether or not an `Offer` resource is under the given address `offer_address`.
     ensures result == exists<Offer<Offered>>(offer_address);
@@ -87,7 +87,7 @@ module Offer {
     assert(exists<Offer<Offered>>(offer_address), Errors::not_published(EOFFER_DOES_NOT_EXIST));
     borrow_global<Offer<Offered>>(offer_address).for
   }
-  spec fun address_of {
+  spec address_of {
     /// Aborts is there is no offer resource `Offer` at the `offer_address`.
     /// Returns the address of the intended recipient of the Offer
     /// under the `offer_address`.
@@ -131,7 +131,7 @@ module Offer {
   spec module {
     /// Returns true if the recipient is allowed to redeem `Offer<Offered>` at `offer_address`
     /// and false otherwise.
-    define is_allowed_recipient<Offered>(offer_addr: address, recipient: address): bool {
+    fun is_allowed_recipient<Offered>(offer_addr: address, recipient: address): bool {
       recipient == global<Offer<Offered>>(offer_addr).for || recipient == offer_addr
     }
   }

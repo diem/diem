@@ -64,7 +64,7 @@ module ValidatorAdministrationScripts {
     }
 
 
-    spec fun add_validator_and_reconfigure {
+    spec add_validator_and_reconfigure {
         use 0x1::DiemAccount;
         use 0x1::Errors;
         use 0x1::Roles;
@@ -156,7 +156,7 @@ module ValidatorAdministrationScripts {
 
     /// Access control rule is that only the validator operator for a validator may set
     /// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
-    spec fun register_validator_config {
+    spec register_validator_config {
         use 0x1::Errors;
         use 0x1::DiemAccount;
         use 0x1::Signer;
@@ -232,7 +232,7 @@ module ValidatorAdministrationScripts {
         DiemSystem::remove_validator(&dr_account, validator_address);
     }
 
-    spec fun remove_validator_and_reconfigure {
+    spec remove_validator_and_reconfigure {
         use 0x1::DiemAccount;
         use 0x1::Errors;
         use 0x1::Roles;
@@ -322,7 +322,7 @@ module ValidatorAdministrationScripts {
         DiemSystem::update_config_and_reconfigure(&validator_operator_account, validator_account);
      }
 
-    spec fun set_validator_config_and_reconfigure {
+    spec set_validator_config_and_reconfigure {
         use 0x1::DiemAccount;
         use 0x1::DiemConfig;
         use 0x1::DiemSystem;
@@ -429,7 +429,7 @@ module ValidatorAdministrationScripts {
         ValidatorConfig::set_operator(&account, operator_account);
     }
 
-    spec fun set_validator_operator {
+    spec set_validator_operator {
         use 0x1::DiemAccount;
         use 0x1::Signer;
         use 0x1::Errors;
@@ -515,7 +515,7 @@ module ValidatorAdministrationScripts {
         ValidatorConfig::set_operator(&account, operator_account);
     }
 
-    spec fun set_validator_operator_with_nonce_admin {
+    spec set_validator_operator_with_nonce_admin {
         use 0x1::DiemAccount;
         use 0x1::Signer;
         use 0x1::Errors;

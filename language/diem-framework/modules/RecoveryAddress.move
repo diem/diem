@@ -61,7 +61,7 @@ module RecoveryAddress {
             RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
         )
     }
-    spec fun publish {
+    spec publish {
         include PublishAbortsIf;
         include PublishEnsures;
     }
@@ -128,7 +128,7 @@ module RecoveryAddress {
         // Couldn't find `to_recover` in the account recovery resource; abort
         abort Errors::invalid_argument(EACCOUNT_NOT_RECOVERABLE)
     }
-    spec fun rotate_authentication_key {
+    spec rotate_authentication_key {
         include RotateAuthenticationKeyAbortsIf;
         include RotateAuthenticationKeyEnsures;
     }
@@ -172,7 +172,7 @@ module RecoveryAddress {
 
         Vector::push_back(recovery_caps, to_recover);
     }
-    spec fun add_rotation_capability {
+    spec add_rotation_capability {
         include AddRotationCapabilityAbortsIf;
         include AddRotationCapabilityEnsures;
     }
@@ -208,7 +208,7 @@ module RecoveryAddress {
     /// # Persistence of Resource
 
     spec module {
-        invariant update [global]
+        invariant update
            forall addr: address:
                old(spec_is_recovery_address(addr)) ==> spec_is_recovery_address(addr);
     }
@@ -217,12 +217,12 @@ module RecoveryAddress {
 
     spec module {
         /// `RecoveryAddress` persists
-        invariant update [global] forall addr: address where old(exists<RecoveryAddress>(addr)):
+        invariant update forall addr: address where old(exists<RecoveryAddress>(addr)):
             exists<RecoveryAddress>(addr);
 
         /// If `recovery_addr` holds the `KeyRotationCapability` of `to_recovery_addr`
         /// in the previous state, then it continues to hold the capability after the update.
-        invariant update [global]
+        invariant update
             forall recovery_addr: address, to_recovery_addr: address
             where old(spec_is_recovery_address(recovery_addr)):
                 old(spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr))
@@ -243,13 +243,13 @@ module RecoveryAddress {
 
     spec module {
         /// Returns true if `addr` is a recovery address.
-        define spec_is_recovery_address(addr: address): bool
+        fun spec_is_recovery_address(addr: address): bool
         {
             exists<RecoveryAddress>(addr)
         }
 
         /// Returns all the `KeyRotationCapability`s held at `recovery_address`.
-        define spec_get_rotation_caps(recovery_address: address):
+        fun spec_get_rotation_caps(recovery_address: address):
             vector<DiemAccount::KeyRotationCapability>
         {
             global<RecoveryAddress>(recovery_address).rotation_caps
@@ -257,7 +257,7 @@ module RecoveryAddress {
 
         /// Returns true if `recovery_address` holds the
         /// `KeyRotationCapability` for `addr`.
-        define spec_holds_key_rotation_cap_for(
+        fun spec_holds_key_rotation_cap_for(
             recovery_address: address,
             addr: address): bool
         {

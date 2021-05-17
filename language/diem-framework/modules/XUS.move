@@ -26,7 +26,7 @@ module XUS {
         );
         AccountLimits::publish_unrestricted_limits<XUS>(dr_account);
     }
-    spec fun initialize {
+    spec initialize {
         use 0x1::Roles;
         include Diem::RegisterSCSCurrencyAbortsIf<XUS>{
             currency_code: b"XUS",
@@ -54,16 +54,16 @@ module XUS {
         use 0x1::CoreAddresses;
 
         /// After genesis, XUS is registered.
-        invariant [global] DiemTimestamp::is_operating() ==> Diem::is_currency<XUS>();
+        invariant DiemTimestamp::is_operating() ==> Diem::is_currency<XUS>();
 
         /// After genesis, `LimitsDefinition<XUS>` is published at Diem root. It's published by
         /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
         /// it does not hold for all types (but does hold for XUS).
-        invariant [global] DiemTimestamp::is_operating()
+        invariant DiemTimestamp::is_operating()
             ==> exists<AccountLimits::LimitsDefinition<XUS>>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// `LimitsDefinition<XUS>` is not published at any other address
-        invariant [global] forall addr: address where exists<AccountLimits::LimitsDefinition<XUS>>(addr):
+        invariant forall addr: address where exists<AccountLimits::LimitsDefinition<XUS>>(addr):
             addr == CoreAddresses::DIEM_ROOT_ADDRESS();
 
     }

@@ -15,7 +15,7 @@ module 0x42::TestPureFun {
         false
     }
 
-    spec fun init {
+    spec init {
         ensures get_x(Signer::spec_address_of(account)) == 0;
     }
 
@@ -28,7 +28,7 @@ module 0x42::TestPureFun {
         t.x = t.x + 1;
     }
 
-    spec fun increment_x_incorrect {
+    spec increment_x_incorrect {
         // error: calling impure function `init` is not allowed.
         aborts_if !init(account);
     }
@@ -52,18 +52,18 @@ module 0x42::TestPureFun {
         Vector::pop_back(v)
     }
 
-    spec fun remove_elem {
+    spec remove_elem {
         // error: calling impure function `pop_back` is not allowed.
         ensures result == Vector::pop_back(old(v));
     }
 
     spec module {
-        define two(): u64 {
+        fun two(): u64 {
             // error: calling impure function `impure_f_2` is not allowed.
             impure_f_2()
         }
 
-        define dr_x(): u64 {
+        fun dr_x(): u64 {
             get_x(CoreAddresses::DIEM_ROOT_ADDRESS())
         }
     }

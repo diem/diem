@@ -9,17 +9,17 @@ module 0x42::TestInvariants {
         t: T
     }
 
-    spec struct R {
+    spec R {
         invariant greater_one(x);
     }
 
-    spec define greater_one(x: num): bool { x > 1 }
+    spec fun greater_one(x: num): bool { x > 1 }
 
     // Tests whether the invariant of resources in memory holds.
     public fun get<T: store>(a: address): u64 acquires R {
         borrow_global<R<T>>(a).x
     }
-    spec fun get {
+    spec get {
         ensures result > 0;
     }
 
@@ -27,7 +27,7 @@ module 0x42::TestInvariants {
     public fun get_invalid<T: store>(a: address): u64 acquires R {
         borrow_global<R<T>>(a).x
     }
-    spec fun get_invalid {
+    spec get_invalid {
         ensures result < 1;
     }
 }
