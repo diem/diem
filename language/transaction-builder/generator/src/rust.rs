@@ -74,6 +74,7 @@ where
         self.out.indent();
         self.output_transaction_script_encode_method(transaction_script_abis)?;
         self.output_transaction_script_decode_method()?;
+        self.output_transaction_script_name_method(transaction_script_abis)?;
         self.out.unindent();
         writeln!(self.out, "\n}}")
     }
@@ -345,6 +346,33 @@ pub fn decode(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {{
                 "script.function.0"
             }
         )
+    }
+
+    fn output_transaction_script_name_method(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+/// Return the name of a Diem `Script` from a structured object `ScriptCall`.
+pub fn name(&self) -> &'static str {{"#
+        )?;
+        self.out.indent();
+        writeln!(self.out, "use ScriptCall::*;\nmatch self {{")?;
+        self.out.indent();
+        for abi in abis {
+            writeln!(
+                self.out,
+                "{} {{ .. }} => \"{}\",",
+                abi.name().to_camel_case(),
+                abi.name(),
+            )?;
+        }
+        self.out.unindent();
+        writeln!(self.out, "}}")?;
+        self.out.unindent();
+        writeln!(self.out, "}}\n")
     }
 
     fn output_comment(&mut self, indentation: usize, doc: &str) -> std::io::Result<()> {

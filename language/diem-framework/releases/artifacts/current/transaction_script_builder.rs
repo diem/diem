@@ -3297,6 +3297,50 @@ impl ScriptCall {
             None => None,
         }
     }
+
+    /// Return the name of a Diem `Script` from a structured object `ScriptCall`.
+    pub fn name(&self) -> &'static str {
+        use ScriptCall::*;
+        match self {
+            AddCurrencyToAccount { .. } => "add_currency_to_account",
+            AddRecoveryRotationCapability { .. } => "add_recovery_rotation_capability",
+            AddValidatorAndReconfigure { .. } => "add_validator_and_reconfigure",
+            Burn { .. } => "burn",
+            BurnTxnFees { .. } => "burn_txn_fees",
+            CancelBurn { .. } => "cancel_burn",
+            CreateChildVaspAccount { .. } => "create_child_vasp_account",
+            CreateDesignatedDealer { .. } => "create_designated_dealer",
+            CreateParentVaspAccount { .. } => "create_parent_vasp_account",
+            CreateRecoveryAddress { .. } => "create_recovery_address",
+            CreateValidatorAccount { .. } => "create_validator_account",
+            CreateValidatorOperatorAccount { .. } => "create_validator_operator_account",
+            FreezeAccount { .. } => "freeze_account",
+            PeerToPeerWithMetadata { .. } => "peer_to_peer_with_metadata",
+            Preburn { .. } => "preburn",
+            PublishSharedEd25519PublicKey { .. } => "publish_shared_ed25519_public_key",
+            RegisterValidatorConfig { .. } => "register_validator_config",
+            RemoveValidatorAndReconfigure { .. } => "remove_validator_and_reconfigure",
+            RotateAuthenticationKey { .. } => "rotate_authentication_key",
+            RotateAuthenticationKeyWithNonce { .. } => "rotate_authentication_key_with_nonce",
+            RotateAuthenticationKeyWithNonceAdmin { .. } => {
+                "rotate_authentication_key_with_nonce_admin"
+            }
+            RotateAuthenticationKeyWithRecoveryAddress { .. } => {
+                "rotate_authentication_key_with_recovery_address"
+            }
+            RotateDualAttestationInfo { .. } => "rotate_dual_attestation_info",
+            RotateSharedEd25519PublicKey { .. } => "rotate_shared_ed25519_public_key",
+            SetValidatorConfigAndReconfigure { .. } => "set_validator_config_and_reconfigure",
+            SetValidatorOperator { .. } => "set_validator_operator",
+            SetValidatorOperatorWithNonceAdmin { .. } => "set_validator_operator_with_nonce_admin",
+            TieredMint { .. } => "tiered_mint",
+            UnfreezeAccount { .. } => "unfreeze_account",
+            UpdateDiemVersion { .. } => "update_diem_version",
+            UpdateDualAttestationLimit { .. } => "update_dual_attestation_limit",
+            UpdateExchangeRate { .. } => "update_exchange_rate",
+            UpdateMintingAbility { .. } => "update_minting_ability",
+        }
+    }
 }
 
 impl ScriptFunctionCall {
