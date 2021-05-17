@@ -28,7 +28,6 @@ use crate::{
 /// A stackless bytecode runtime in charge of pre- and post-execution checking, conversion, and
 /// monitoring. The main, step-by-step interpretation loop is delegated to the `Player` instance.
 pub struct Runtime<'env> {
-    env: &'env GlobalEnv,
     functions: &'env FunctionTargetsHolder,
 }
 
@@ -38,102 +37,30 @@ impl<'env> Runtime<'env> {
     //
 
     /// Construct a runtime with all information pre-loaded.
-    pub fn new(env: &'env GlobalEnv, functions: &'env FunctionTargetsHolder) -> Self {
-        Self { env, functions }
+    pub fn new(functions: &'env FunctionTargetsHolder) -> Self {
+        Self { functions }
     }
 
     /// Execute a function (identified by `fun_id`) with given type arguments, arguments, and a
-    /// snapshot of the global state. Returns a tuple contains both the result of the execution
-    /// and the new global state.
-    ///
-    /// NOTE: there may be multiple variants of the same function registered in the
-    /// FunctionTargetsHolder, all variants will be executed and this function only return a new
-    /// global state if results from all variants converges. Otherwise, the old state is returned
-    /// and the VMResult is set to an error accordingly.
+    /// mutable reference of the global state. Returns the result of the execution. Any updates to
+    /// the global states is recorded in the mutable reference.
     pub fn execute(
         &self,
         fun_env: &FunctionEnv,
         ty_args: &[TypeTag],
         args: &[MoveValue],
-        mut global_state: GlobalState,
-    ) -> (VMResult<Vec<TypedValue>>, GlobalState) {
-        // check and convert type arguments
-        match check_type_instantiation(self.env, &fun_env.get_type_parameters(), ty_args) {
-            Ok(_) => (),
-            Err(err) => {
-                return (Err(err.finish(Location::Undefined)), global_state);
-            }
-        };
-        let mut converted_ty_args = vec![];
-        for ty_arg in ty_args {
-            match convert_move_type_tag(self.env, ty_arg) {
-                Ok(converted) => converted_ty_args.push(converted),
-                Err(err) => {
-                    return (Err(err.finish(Location::Undefined)), global_state);
-                }
-            }
-        }
-
-        // check and convert value arguments
-        let params = fun_env.get_parameters();
-        if params.len() != args.len() {
-            return (
-                Err(
-                    PartialVMError::new(StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH)
-                        .finish(Location::Undefined),
-                ),
-                global_state,
-            );
-        }
-        let mut converted_args = vec![];
-        for (i, arg) in args.iter().enumerate() {
-            let local_ty = fun_env.get_local_type(i);
-            if cfg!(debug_assertions) {
-                let param_ty = &params.get(i).unwrap().1;
-                assert_eq!(&local_ty, param_ty);
-            }
-            // NOTE: for historical reasons, we may receive `&signer` as arguments
-            // TODO (mengxu): clean this up when we no longer accept `&signer` as valid arguments
-            // for transaction scripts and `public(script)` functions.
-            match local_ty {
-                MT::Type::Reference(false, base_ty)
-                    if matches!(*base_ty, MT::Type::Primitive(MT::PrimitiveType::Signer)) =>
-                {
-                    match arg {
-                        MoveValue::Address(v) => {
-                            converted_args.push(TypedValue::mk_signer(*v));
-                        }
-                        _ => {
-                            return (
-                                Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
-                                    .finish(Location::Undefined)),
-                                global_state,
-                            );
-                        }
-                    }
-                }
-                _ => {
-                    let base_ty = convert_model_base_type(self.env, &local_ty, &converted_ty_args);
-                    match convert_move_value(self.env, arg, &base_ty) {
-                        Ok(converted) => {
-                            converted_args.push(converted);
-                        }
-                        Err(err) => {
-                            return (Err(err.finish(Location::Undefined)), global_state);
-                        }
-                    }
-                }
-            }
-        }
-
+        global_state: &mut GlobalState,
+    ) -> VMResult<Vec<TypedValue>> {
+        let (converted_ty_args, converted_args) =
+            check_and_convert_type_args_and_args(fun_env, ty_args, args)
+                .map_err(|e| e.finish(Location::Undefined))?;
         let fun_target = choose_variant(self.functions, &fun_env);
-        let result = self.execute_target(
+        self.execute_target(
             fun_target,
             &converted_ty_args,
             &converted_args,
-            &mut global_state,
-        );
-        (result, global_state)
+            global_state,
+        )
     }
 
     //
@@ -161,6 +88,62 @@ impl<'env> Runtime<'env> {
 //**************************************************************************************************
 // Utilities
 //**************************************************************************************************
+
+fn check_and_convert_type_args_and_args(
+    fun_env: &FunctionEnv,
+    ty_args: &[TypeTag],
+    args: &[MoveValue],
+) -> PartialVMResult<(Vec<BaseType>, Vec<TypedValue>)> {
+    let env = fun_env.module_env.env;
+
+    // check and convert type arguments
+    check_type_instantiation(env, &fun_env.get_type_parameters(), ty_args)?;
+    let mut converted_ty_args = vec![];
+    for ty_arg in ty_args {
+        let converted = convert_move_type_tag(env, ty_arg)?;
+        converted_ty_args.push(converted);
+    }
+
+    // check and convert value arguments
+    let params = fun_env.get_parameters();
+    if params.len() != args.len() {
+        return Err(PartialVMError::new(
+            StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH,
+        ));
+    }
+    let mut converted_args = vec![];
+    for (i, (arg, param)) in args.iter().zip(params.into_iter()).enumerate() {
+        let local_ty = fun_env.get_local_type(i);
+
+        #[cfg(debug_assertions)]
+        assert_eq!(local_ty, param.1);
+
+        // NOTE: for historical reasons, we may receive `&signer` as arguments
+        // TODO (mengxu): clean this up when we no longer accept `&signer` as valid arguments
+        // for transaction scripts and `public(script)` functions.
+        match local_ty {
+            MT::Type::Reference(false, base_ty)
+                if matches!(*base_ty, MT::Type::Primitive(MT::PrimitiveType::Signer)) =>
+            {
+                match arg {
+                    MoveValue::Address(v) => {
+                        converted_args.push(TypedValue::mk_signer(*v));
+                    }
+                    _ => {
+                        return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
+                    }
+                }
+            }
+            _ => {
+                let base_ty = convert_model_base_type(env, &local_ty, &converted_ty_args);
+                let converted = convert_move_value(env, arg, &base_ty)?;
+                converted_args.push(converted);
+            }
+        }
+    }
+
+    Ok((converted_ty_args, converted_args))
+}
 
 pub fn convert_move_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<BaseType> {
     let converted = match tag {

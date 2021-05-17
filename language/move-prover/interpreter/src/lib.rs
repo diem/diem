@@ -183,10 +183,11 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
         args: &[MoveValue],
         global_state: &GlobalState,
     ) -> (VMResult<Vec<Vec<u8>>>, ChangeSet, GlobalState) {
+        let mut new_global_state = global_state.clone();
+
         // execute and convert results
-        let vm = Runtime::new(self.env, &self.targets);
-        let (vm_result, new_global_state) =
-            vm.execute(fun_env, ty_args, args, global_state.clone());
+        let vm = Runtime::new(&self.targets);
+        let vm_result = vm.execute(fun_env, ty_args, args, &mut new_global_state);
         let serialized_vm_result = vm_result.map(|rets| {
             rets.into_iter()
                 .map(|v| {
