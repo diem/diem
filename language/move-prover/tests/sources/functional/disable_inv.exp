@@ -1,24 +1,31 @@
-Move prover returns: exiting with boogie verification errors
-error: global memory invariant does not hold
+Move prover returns: exiting with bytecode transformation errors
+error: Public or script functions must not be called when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
 
-    ┌── tests/sources/functional/disable_inv.move:61:9 ───
+    ┌── tests/sources/functional/disable_inv.move:12:5 ───
     │
- 61 │         invariant [global] forall a: address where exists<R1>(a): exists<R2>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 12 │ ╭     public fun f1_incorrect(s: &signer) {
+ 13 │ │         move_to(s, R1 {});
+ 14 │ │         move_to(s, R2 {});
+ 15 │ │     }
+    │ ╰─────^
     │
-    =     at tests/sources/functional/disable_inv.move:12: f1_incorrect
-    =         s = <redacted>
-    =     at tests/sources/functional/disable_inv.move:13: f1_incorrect
-    =     at tests/sources/functional/disable_inv.move:61
 
-error: global memory invariant does not hold
+error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
 
-    ┌── tests/sources/functional/disable_inv.move:61:9 ───
+    ┌── tests/sources/functional/disable_inv.move:32:5 ───
     │
- 61 │         invariant [global] forall a: address where exists<R1>(a): exists<R2>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 32 │ ╭     fun f3_incorrect(s: &signer) {
+ 33 │ │         move_to(s, R1 {});
+ 34 │ │     }
+    │ ╰─────^
     │
-    =     at tests/sources/functional/disable_inv.move:32: f3_incorrect
-    =         s = <redacted>
-    =     at tests/sources/functional/disable_inv.move:33: f3_incorrect
-    =     at tests/sources/functional/disable_inv.move:61
+
+error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
+
+    ┌── tests/sources/functional/disable_inv.move:47:5 ───
+    │
+ 47 │ ╭     fun f5_incorrect(s: &signer) {
+ 48 │ │         move_to(s, R2 {});
+ 49 │ │     }
+    │ ╰─────^
+    │

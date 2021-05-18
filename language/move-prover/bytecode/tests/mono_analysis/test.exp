@@ -111,52 +111,52 @@ public fun Test::f3<#0>($t0|x1: #0): Test::A<#0, u64> {
 
 [variant baseline]
 public fun Test::f4<#0>($t0|x1: #0): Test::B<#0> {
-     var $t1: bool
-     var $t2: num
-     var $t3: Test::A<#0, u64>
+     var $t1: Test::A<#0, u64>
+     var $t2: bool
+     var $t3: num
      var $t4: Test::B<#0>
      # >> opaque call: $t2 := Test::f3<#0>($t1)
   0: nop
-  1: havoc[val]($t1)
-  2: if ($t1) goto 3 else goto 6
-  3: label L4
-  4: trace_abort($t2)
-  5: goto 12
-  6: label L3
-  7: assume WellFormed($t3)
-     # << opaque call: $t2 := Test::f3<#0>($t1)
-  8: nop
-  9: $t4 := pack Test::B<#0>($t3)
- 10: label L1
- 11: return $t4
- 12: label L2
- 13: abort($t2)
+  1: $t1 := opaque begin: Test::f3<#0>($t0)
+  2: havoc[val]($t2)
+  3: if ($t2) goto 4 else goto 7
+  4: label L4
+  5: trace_abort($t3)
+  6: goto 13
+  7: label L3
+  8: assume WellFormed($t1)
+  9: $t1 := opaque end: Test::f3<#0>($t0)
+ 10: $t4 := pack Test::B<#0>($t1)
+ 11: label L1
+ 12: return $t4
+ 13: label L2
+ 14: abort($t3)
 }
 
 
 [variant verification]
 public fun Test::f4<#0>($t0|x1: #0): Test::B<#0> {
-     var $t1: bool
-     var $t2: num
-     var $t3: Test::A<#0, u64>
+     var $t1: Test::A<#0, u64>
+     var $t2: bool
+     var $t3: num
      var $t4: Test::B<#0>
   0: assume WellFormed($t0)
      # >> opaque call: $t2 := Test::f3<#0>($t1)
   1: nop
-  2: havoc[val]($t1)
-  3: if ($t1) goto 4 else goto 7
-  4: label L4
-  5: trace_abort($t2)
-  6: goto 13
-  7: label L3
-  8: assume WellFormed($t3)
-     # << opaque call: $t2 := Test::f3<#0>($t1)
-  9: nop
- 10: $t4 := pack Test::B<#0>($t3)
- 11: label L1
- 12: return $t4
- 13: label L2
- 14: abort($t2)
+  2: $t1 := opaque begin: Test::f3<#0>($t0)
+  3: havoc[val]($t2)
+  4: if ($t2) goto 5 else goto 8
+  5: label L4
+  6: trace_abort($t3)
+  7: goto 14
+  8: label L3
+  9: assume WellFormed($t1)
+ 10: $t1 := opaque end: Test::f3<#0>($t0)
+ 11: $t4 := pack Test::B<#0>($t1)
+ 12: label L1
+ 13: return $t4
+ 14: label L2
+ 15: abort($t3)
 }
 
 

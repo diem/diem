@@ -636,14 +636,15 @@ impl GlobalEnv {
         file_id
     }
 
-    /// Get a single target module
-    pub fn get_target_module(&self) -> ModuleEnv {
+    /// Find all target modules and return in a vector
+    pub fn get_target_modules(&self) -> Vec<ModuleEnv> {
+        let mut target_modules: Vec<ModuleEnv> = vec![];
         for module_env in self.get_modules() {
             if module_env.is_target() {
-                return module_env;
+                target_modules.push(module_env);
             }
         }
-        unreachable!("TODO: Extend V2 invariant processing to handle multiple target modules.");
+        target_modules
     }
 
     /// Adds documentation for a file.

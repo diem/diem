@@ -12,8 +12,10 @@ use crate::{
 };
 use log::debug;
 use move_model::{
-    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, QualifiedId},
-    pragmas::{DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA},
+    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, ModuleEnv, QualifiedId, VerificationScope},
+    pragmas::{
+        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, VERIFY_PRAGMA,
+    },
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -62,10 +64,17 @@ pub struct InvariantAnalysisData {
     pub friend_fun_ids: BTreeSet<QualifiedId<FunId>>,
 }
 
-/// Get all invariants from target module
-fn get_target_invariants(global_env: &GlobalEnv) -> BTreeSet<GlobalId> {
-    let module_id = global_env.get_target_module().get_id();
-    global_env.get_global_invariants_by_module(module_id)
+/// Get all invariants from target modules
+fn get_target_invariants(
+    global_env: &GlobalEnv,
+    target_modules: &[ModuleEnv],
+) -> BTreeSet<GlobalId> {
+    let target_mod_ids = target_modules
+        .iter()
+        .map(|mod_env| mod_env.get_id())
+        .flat_map(|target_mod_id| global_env.get_global_invariants_by_module(target_mod_id))
+        .collect();
+    target_mod_ids
 }
 
 /// Return the set of all functions that have a pragma
@@ -157,19 +166,18 @@ fn compute_non_inv_fun_set(global_env: &GlobalEnv) -> BTreeSet<QualifiedId<FunId
 
 /// Collect all functions that are defined in the target module, or called transitively
 /// from those functions.
+/// TODO: This is not very efficient.  It would be better to compute the transitive closure.
 fn compute_dep_fun_ids(
     global_env: &GlobalEnv,
-    target_fun_ids: &BTreeSet<QualifiedId<FunId>>,
+    target_modules: &[ModuleEnv],
 ) -> BTreeSet<QualifiedId<FunId>> {
     let mut dep_fun_ids = BTreeSet::new();
-    let mut worklist = vec![];
-    worklist.extend(target_fun_ids);
-    while let Some(fun_id) = worklist.pop() {
-        // Find the called functions that are not already in called_from_target
-        let called = global_env.get_function(fun_id).get_called_functions();
-        for called_fun_id in called {
-            if !dep_fun_ids.insert(called_fun_id) {
-                worklist.push(called_fun_id);
+    for module_env in global_env.get_modules() {
+        for target_env in target_modules {
+            if target_env.is_transitive_dependency(module_env.get_id()) {
+                for fun_env in module_env.get_functions() {
+                    dep_fun_ids.insert(fun_env.get_qualified_id());
+                }
             }
         }
     }
@@ -237,8 +245,16 @@ fn compute_friend_fun_ids(
     let mut worklist: Vec<QualifiedId<FunId>> = target_fun_ids.iter().cloned().collect();
     worklist.extend(dep_fun_ids.iter().cloned());
     while let Some(fun_id) = worklist.pop() {
+        // Check for legacy friend pragma
+        // TODO: Delete when we stop using pragma friend in DiemFramework
+        let fun_env = global_env.get_function(fun_id);
+        let friend_env = fun_env.get_transitive_friend();
+        let friend_id = friend_env.get_qualified_id();
+        // if no transitive friend, it just returns the original fun_env
+        if friend_id != fun_env.get_qualified_id() && friend_fun_set.insert(friend_id) {
+            worklist.push(friend_id);
+        }
         if funs_that_delegate_to_caller.contains(&fun_id) {
-            let fun_env = global_env.get_function(fun_id);
             let callers = fun_env.get_calling_functions();
             for caller_fun_id in callers {
                 // Exclude callers that are in target or dep modules, because we will verify them, anyway.
@@ -319,30 +335,48 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
         fun_env: &FunctionEnv<'_>,
         data: FunctionData,
     ) -> FunctionData {
-        // When we are called, the data of this function is removed from targets so it can
-        // be mutated, as per pipeline processor design. We put it back temporarily to have
-        // a unique model of targets.
         let global_env = fun_env.module_env.env;
         let fun_id = fun_env.get_qualified_id();
         let variant = data.variant.clone();
+        // When we are called, the data of this function is removed from targets so it can
+        // be mutated, as per pipeline processor design. We put it back temporarily to have
+        // a unique model of targets.
         targets.insert_target_data(&fun_id, variant.clone(), data);
         let inv_ana_data = global_env.get_extension::<InvariantAnalysisData>().unwrap();
         let target_fun_ids = &inv_ana_data.target_fun_ids;
         let dep_fun_ids = &inv_ana_data.dep_fun_ids;
         let friend_fun_ids = &inv_ana_data.friend_fun_ids;
         let funs_that_modify_some_inv = &inv_ana_data.funs_that_modify_some_inv;
-        // verify the function if
-        // * user did not have a pragma verify=false on it, and
-        //    - it is in target module, or
-        //    - it is in dep and can modify an invariant, or
-        //    - it is a friend caller [ modify invariant is factored in. Seems inconsistent? ]
-        let options = ProverOptions::get(global_env);
-        if !fun_env.is_explicitly_not_verified(&options.verify_scope)
-            && (target_fun_ids.contains(&fun_id)
-                || (dep_fun_ids.contains(&fun_id) && funs_that_modify_some_inv.contains(&fun_id))
-                || friend_fun_ids.contains(&fun_id))
-        {
-            mark_verified(fun_env, variant.clone(), targets);
+        // Logic to decide whether to verify this function
+        // Never verify if "pragma verify = false;"
+        if fun_env.is_pragma_true(VERIFY_PRAGMA, || true) {
+            let is_in_target_mod = target_fun_ids.contains(&fun_id);
+            let is_in_deps_and_modifies_inv =
+                dep_fun_ids.contains(&fun_id) && funs_that_modify_some_inv.contains(&fun_id);
+            let is_in_friends = friend_fun_ids.contains(&fun_id);
+            let is_normally_verified =
+                is_in_target_mod || is_in_deps_and_modifies_inv || is_in_friends;
+            let options = ProverOptions::get(global_env);
+            let is_verified = match &options.verify_scope {
+                // TODO: Eliminate public option? Purpose is unclear.
+                VerificationScope::Public => {
+                    (is_in_target_mod && fun_env.is_exposed())
+                        || is_in_deps_and_modifies_inv
+                        || is_in_friends
+                }
+                VerificationScope::All => is_normally_verified,
+                VerificationScope::Only(function_name) => {
+                    fun_env.matches_name(function_name) && is_in_target_mod
+                }
+                VerificationScope::OnlyModule(module_name) => {
+                    is_in_target_mod && fun_env.module_env.matches_name(module_name)
+                }
+                VerificationScope::None => false,
+            };
+            if is_verified {
+                debug!("marking `{}` to be verified", fun_env.get_full_name_str());
+                mark_verified(fun_env, variant.clone(), targets);
+            }
         }
 
         targets.remove_target_data(&fun_id, &variant)
@@ -353,8 +387,41 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
     }
 
     fn initialize(&self, global_env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
-        let target_mod_env = global_env.get_target_module();
-        let target_invariants = get_target_invariants(global_env);
+        let options = ProverOptions::get(global_env);
+
+        // If we are verifying only one function or module, check that this indeed exists.
+        match &options.verify_scope {
+            VerificationScope::Only(name) | VerificationScope::OnlyModule(name) => {
+                let for_module = matches!(&options.verify_scope, VerificationScope::OnlyModule(_));
+                let mut target_exists = false;
+                for module in global_env.get_modules() {
+                    if module.is_target() {
+                        if for_module {
+                            target_exists = module.matches_name(name)
+                        } else {
+                            target_exists = module.get_functions().any(|f| f.matches_name(name));
+                        }
+                        if target_exists {
+                            break;
+                        }
+                    }
+                }
+                if !target_exists {
+                    global_env.error(
+                        &global_env.unknown_loc(),
+                        &format!(
+                            "{} target {} does not exist in target modules",
+                            if for_module { "module" } else { "function" },
+                            name
+                        ),
+                    )
+                }
+            }
+            _ => {}
+        }
+
+        let target_modules = global_env.get_target_modules();
+        let target_invariants = get_target_invariants(global_env, &target_modules);
         let disabled_inv_fun_set = compute_disabled_inv_fun_set(global_env);
         let (funs_that_modify_inv, funs_that_modify_some_inv) = compute_funs_that_modify_inv(
             global_env,
@@ -363,11 +430,12 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
             FunctionVariant::Baseline,
         );
         let non_inv_fun_set = compute_non_inv_fun_set(global_env);
-        let target_fun_ids: BTreeSet<QualifiedId<FunId>> = target_mod_env
-            .get_functions()
+        let target_fun_ids: BTreeSet<QualifiedId<FunId>> = target_modules
+            .iter()
+            .flat_map(|mod_env| mod_env.get_functions())
             .map(|fun| fun.get_qualified_id())
             .collect();
-        let dep_fun_ids = compute_dep_fun_ids(global_env, &target_fun_ids);
+        let dep_fun_ids = compute_dep_fun_ids(&global_env, &target_modules);
         let funs_that_delegate_to_caller = non_inv_fun_set
             .intersection(&funs_that_modify_some_inv)
             .cloned()
@@ -401,9 +469,6 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
             funs_that_delegate_to_caller,
             friend_fun_ids,
         };
-
-        // print when -v debug is set
-        debug_print_invariant_analysis_data(global_env, &inv_ana_data);
 
         global_env.set_extension(inv_ana_data);
     }

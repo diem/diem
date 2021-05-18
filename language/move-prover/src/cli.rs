@@ -207,9 +207,9 @@ impl Options {
                     .help("whether to use the old polymorphic Boogie backend")
             )
             .arg(
-                Arg::with_name("inv_v2")
-                    .long("inv_v2")
-                    .help("whether to use the new v2 invariant processing (with disabled invariants)")
+                Arg::with_name("inv-v1")
+                    .long("inv-v1")
+                    .help("whether to use the old v1 invariant processing (without disabled invariants)")
             )
             .arg(
                 Arg::with_name("negative")
@@ -552,8 +552,8 @@ impl Options {
             options.boogie_poly = true;
             options.prover.run_mono = false;
         }
-        if matches.is_present("inv_v2") {
-            options.prover.invariants_v2 = true;
+        if matches.is_present("inv-v1") {
+            options.prover.invariants_v2 = false;
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
@@ -607,9 +607,6 @@ impl Options {
                 fun_name = &fun_name[i + 2..];
             }
             options.backend.z3_trace_file = Some(format!("{}.z3log", fun_name));
-        }
-        if matches.is_present("inv-v2") {
-            options.prover.invariants_v2 = true;
         }
 
         options.backend.derive_options();

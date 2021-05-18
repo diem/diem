@@ -1,4 +1,4 @@
-// separate_baseline: inv_v2
+// separate_baseline: inv-v1
 module 0x1::DisableInv {
 
     struct R1 has key { }

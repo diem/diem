@@ -100,13 +100,13 @@ fn get_features() -> &'static [Feature] {
             },
             // Tests for new invariants
             Feature {
-                name: "inv_v2",
-                flags: &["--inv_v2"],
+                name: "inv-v1",
+                flags: &["--inv-v1"],
                 inclusion_mode: InclusionMode::Implicit,
                 enable_in_ci: false, // Do not enable in CI until we have more data about stability
                 only_if_requested: false,
                 separate_baseline: false,
-                runner: |p| test_runner_for_feature(p, get_feature_by_name("inv_v2")),
+                runner: |p| test_runner_for_feature(p, get_feature_by_name("inv-v1")),
                 enabling_condition: |_, _| true,
             },
         ]

@@ -1,4 +1,3 @@
-// exclude_for: inv_v2
 address 0x0 {
 module A {
 
