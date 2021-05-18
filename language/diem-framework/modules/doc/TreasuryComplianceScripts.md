@@ -1214,28 +1214,32 @@ the Treasury Compliance account.
 ### Technical Description
 
 Adds a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> to the <code>domains</code> field of the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
-account with <code>address</code>.
+the account at <code>address</code>.
 
 
 <a name="@Parameters_59"></a>
 
 ### Parameters
 
-| Name                  | Type     | Description                                                                                     |
-| ------                | ------   | -------------                                                                                   |
-| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
-| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| Name         | Type         | Description                                                                                     |
+| ------       | ------       | -------------                                                                                   |
+| <code>tc_account</code> | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>    | <code>address</code>    | The <code>address</code> of the parent VASP account that will have have <code>domain</code> added to its domains.     |
+| <code>domain</code>     | <code>vector&lt;u8&gt;</code> | The domain to be added.                                                                         |
 
 
 <a name="@Common_Abort_Conditions_60"></a>
 
 ### Common Abort Conditions
 
-| Error Category             | Error Reason                            | Description                                                                                |
-| ----------------           | --------------                          | -------------                                                                              |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+| Error Category             | Error Reason                             | Description                                                                                                                            |
+| ----------------           | --------------                           | -------------                                                                                                                          |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDOMAIN_ALREADY_EXISTS">DiemId::EDOMAIN_ALREADY_EXISTS</a></code>         | The <code>domain</code> already exists in the list of <code><a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
@@ -1254,6 +1258,36 @@ account with <code>address</code>.
 ) {
     <a href="DiemId.md#0x1_DiemId_add_diem_id_domain">DiemId::add_diem_id_domain</a>(&tc_account, address, domain);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
+<b>include</b> <a href="DiemId.md#0x1_DiemId_AddDiemIdDomainAbortsIf">DiemId::AddDiemIdDomainAbortsIf</a>;
+<b>include</b> <a href="DiemId.md#0x1_DiemId_AddDiemIdDomainEnsures">DiemId::AddDiemIdDomainEnsures</a>;
+<b>include</b> <a href="DiemId.md#0x1_DiemId_AddDiemIdDomainEmits">DiemId::AddDiemIdDomainEmits</a>;
+<b>aborts_with</b> [check]
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_with</b> [check]
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -1285,21 +1319,25 @@ account with <code>address</code>.
 
 ### Parameters
 
-| Name                  | Type     | Description                                                                                     |
-| ------                | ------   | -------------                                                                                   |
-| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
-| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| Name         | Type         | Description                                                                                     |
+| ------       | ------       | -------------                                                                                   |
+| <code>tc_account</code> | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>    | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                              |
+| <code>domain</code>     | <code>vector&lt;u8&gt;</code> | The domain name.                                                                                |
 
 
 <a name="@Common_Abort_Conditions_64"></a>
 
 ### Common Abort Conditions
 
-| Error Category             | Error Reason                            | Description                                                                                |
-| ----------------           | --------------                          | -------------                                                                              |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+| Error Category             | Error Reason                             | Description                                                                                                                            |
+| ----------------           | --------------                           | -------------                                                                                                                          |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDOMAIN_NOT_FOUND">DiemId::EDOMAIN_NOT_FOUND</a></code>              | The <code>domain</code> does not exist in the list of <code><a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)

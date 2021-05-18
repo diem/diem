@@ -1357,9 +1357,9 @@ module DiemAccount {
         add_all_currencies: bool;
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
+        include DiemId::PublishDiemIdDomainsAbortsIf{vasp_addr: new_account_address};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if VASP::is_vasp(new_account_address) with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<DiemId::DiemIdDomains>(new_account_address) with Errors::ALREADY_PUBLISHED;
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
         include MakeAccountAbortsIf{addr: new_account_address};
     }
@@ -1370,6 +1370,7 @@ module DiemAccount {
         ensures exists_at(new_account_address);
         ensures Roles::spec_has_parent_VASP_role_addr(new_account_address);
         include AddCurrencyForAccountEnsures<Token>{addr: new_account_address};
+        include DiemId::PublishDiemIdDomainsEnsures{ vasp_addr: new_account_address };
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key

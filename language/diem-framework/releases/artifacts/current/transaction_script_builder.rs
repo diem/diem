@@ -1478,20 +1478,24 @@ pub enum ScriptFunctionCall {
     ///
     /// # Technical Description
     /// Adds a `DiemId::DiemIdDomain` to the `domains` field of the `DiemId::DiemIdDomains` resource published under
-    /// account with `address`.
+    /// the account at `address`.
     ///
     /// # Parameters
-    /// | Name                  | Type     | Description                                                                                     |
-    /// | ------                | ------   | -------------                                                                                   |
-    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    /// | Name         | Type         | Description                                                                                     |
+    /// | ------       | ------       | -------------                                                                                   |
+    /// | `tc_account` | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `address`    | `address`    | The `address` of the parent VASP account that will have have `domain` added to its domains.     |
+    /// | `domain`     | `vector<u8>` | The domain to be added.                                                                         |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                |
-    /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | Error Category             | Error Reason                             | Description                                                                                                                            |
+    /// | ----------------           | --------------                           | -------------                                                                                                                          |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
     AddDiemIdDomain {
         address: AccountAddress,
         domain: Bytes,
@@ -1868,12 +1872,13 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
-    /// Publishes a `DiemIdDomains` resource under a VASP account.
-    /// The sending account must be a VASP account, and be a parent VASP account.
+    /// Publishes a `DiemId::DiemIdDomains` resource under a parent VASP account.
+    /// The sending account must be a parent VASP account.
     ///
     /// # Technical Description
-    /// Publishes a `DiemId::DiemIdDomains` resource under `account`. It then
-    /// The `domains` field is a vector of DiemIdDomain, and will be empty on initialization.
+    /// Publishes a `DiemId::DiemIdDomains` resource under `account`.
+    /// The The `DiemId::DiemIdDomains` resource's `domains` field is a vector
+    /// of DiemIdDomain, and will be empty on at the end of processing this transaction.
     ///
     /// # Parameters
     /// | Name      | Type     | Description                                           |
@@ -1881,9 +1886,10 @@ pub enum ScriptFunctionCall {
     /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                      | Description                                                                                   |
-    /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
+    /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
     CreateDiemIdDomains {},
 
     /// # Summary
@@ -2344,17 +2350,21 @@ pub enum ScriptFunctionCall {
     /// account with `address`.
     ///
     /// # Parameters
-    /// | Name                  | Type     | Description                                                                                     |
-    /// | ------                | ------   | -------------                                                                                   |
-    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    /// | Name         | Type         | Description                                                                                     |
+    /// | ------       | ------       | -------------                                                                                   |
+    /// | `tc_account` | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `address`    | `address`    | The `address` of parent VASP account that will update its domains.                              |
+    /// | `domain`     | `vector<u8>` | The domain name.                                                                                |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                |
-    /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | Error Category             | Error Reason                             | Description                                                                                                                            |
+    /// | ----------------           | --------------                           | -------------                                                                                                                          |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_NOT_FOUND`              | The `domain` does not exist in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
     RemoveDiemIdDomain {
         address: AccountAddress,
         domain: Bytes,
@@ -3639,20 +3649,24 @@ pub fn encode_add_currency_to_account_script_function(currency: TypeTag) -> Tran
 ///
 /// # Technical Description
 /// Adds a `DiemId::DiemIdDomain` to the `domains` field of the `DiemId::DiemIdDomains` resource published under
-/// account with `address`.
+/// the account at `address`.
 ///
 /// # Parameters
-/// | Name                  | Type     | Description                                                                                     |
-/// | ------                | ------   | -------------                                                                                   |
-/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-/// | `domain` | `vector<u8>`    | The domain name.                                             |
+/// | Name         | Type         | Description                                                                                     |
+/// | ------       | ------       | -------------                                                                                   |
+/// | `tc_account` | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `address`    | `address`    | The `address` of the parent VASP account that will have have `domain` added to its domains.     |
+/// | `domain`     | `vector<u8>` | The domain to be added.                                                                         |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                            | Description                                                                                |
-/// | ----------------           | --------------                          | -------------                                                                              |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+/// | Error Category             | Error Reason                             | Description                                                                                                                            |
+/// | ----------------           | --------------                           | -------------                                                                                                                          |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+/// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
 pub fn encode_add_diem_id_domain_script_function(
     address: AccountAddress,
     domain: Vec<u8>,
@@ -4136,12 +4150,13 @@ pub fn encode_create_designated_dealer_script_function(
 }
 
 /// # Summary
-/// Publishes a `DiemIdDomains` resource under a VASP account.
-/// The sending account must be a VASP account, and be a parent VASP account.
+/// Publishes a `DiemId::DiemIdDomains` resource under a parent VASP account.
+/// The sending account must be a parent VASP account.
 ///
 /// # Technical Description
-/// Publishes a `DiemId::DiemIdDomains` resource under `account`. It then
-/// The `domains` field is a vector of DiemIdDomain, and will be empty on initialization.
+/// Publishes a `DiemId::DiemIdDomains` resource under `account`.
+/// The The `DiemId::DiemIdDomains` resource's `domains` field is a vector
+/// of DiemIdDomain, and will be empty on at the end of processing this transaction.
 ///
 /// # Parameters
 /// | Name      | Type     | Description                                           |
@@ -4149,9 +4164,10 @@ pub fn encode_create_designated_dealer_script_function(
 /// | `account` | `signer` | The signer of the sending account of the transaction. |
 ///
 /// # Common Abort Conditions
-/// | Error Category              | Error Reason                      | Description                                                                                   |
-/// | ----------------            | --------------                    | -------------                                                                                 |
-/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+/// | Error Category              | Error Reason              | Description                                                                    |
+/// | ----------------            | --------------            | -------------                                                                  |
+/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
+/// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
 pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -4755,17 +4771,21 @@ pub fn encode_register_validator_config_script_function(
 /// account with `address`.
 ///
 /// # Parameters
-/// | Name                  | Type     | Description                                                                                     |
-/// | ------                | ------   | -------------                                                                                   |
-/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-/// | `domain` | `vector<u8>`    | The domain name.                                             |
+/// | Name         | Type         | Description                                                                                     |
+/// | ------       | ------       | -------------                                                                                   |
+/// | `tc_account` | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `address`    | `address`    | The `address` of parent VASP account that will update its domains.                              |
+/// | `domain`     | `vector<u8>` | The domain name.                                                                                |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                            | Description                                                                                |
-/// | ----------------           | --------------                          | -------------                                                                              |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+/// | Error Category             | Error Reason                             | Description                                                                                                                            |
+/// | ----------------           | --------------                           | -------------                                                                                                                          |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+/// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
+/// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_NOT_FOUND`              | The `domain` does not exist in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
 pub fn encode_remove_diem_id_domain_script_function(
     address: AccountAddress,
     domain: Vec<u8>,

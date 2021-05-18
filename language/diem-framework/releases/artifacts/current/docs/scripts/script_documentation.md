@@ -2563,16 +2563,17 @@ may be used as a recovery account for those accounts.
 
 ###### Summary
 
-Publishes a <code>DiemIdDomains</code> resource under a VASP account.
-The sending account must be a VASP account, and be a parent VASP account.
+Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under a parent VASP account.
+The sending account must be a parent VASP account.
 
 
 <a name="@Technical_Description_130"></a>
 
 ###### Technical Description
 
-Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>. It then
-The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on initialization.
+Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>.
+The The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource's <code>domains</code> field is a vector
+of DiemIdDomain, and will be empty on at the end of processing this transaction.
 
 
 <a name="@Parameters_131"></a>
@@ -2588,9 +2589,10 @@ The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on
 
 ###### Common Abort Conditions
 
-| Error Category              | Error Reason                      | Description                                                                                   |
-| ----------------            | --------------                    | -------------                                                                                 |
-| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code>           | A <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>.     |
+| Error Category              | Error Reason              | Description                                                                    |
+| ----------------            | --------------            | -------------                                                                  |
+| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code> | A <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>. |
+| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
@@ -2605,6 +2607,25 @@ The <code>domains</code> field is a vector of DiemIdDomain, and will be empty on
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer) {
     <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&account)
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>let</b> vasp_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_PublishDiemIdDomainsAbortsIf">DiemId::PublishDiemIdDomainsAbortsIf</a> { vasp_addr };
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_PublishDiemIdDomainsEnsures">DiemId::PublishDiemIdDomainsEnsures</a> { vasp_addr };
+<b>aborts_with</b> [check]
+    <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
+    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
 
@@ -4778,28 +4799,32 @@ the Treasury Compliance account.
 ###### Technical Description
 
 Adds a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> to the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
-account with <code>address</code>.
+the account at <code>address</code>.
 
 
 <a name="@Parameters_231"></a>
 
 ###### Parameters
 
-| Name                  | Type     | Description                                                                                     |
-| ------                | ------   | -------------                                                                                   |
-| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
-| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| Name         | Type         | Description                                                                                     |
+| ------       | ------       | -------------                                                                                   |
+| <code>tc_account</code> | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>    | <code>address</code>    | The <code>address</code> of the parent VASP account that will have have <code>domain</code> added to its domains.     |
+| <code>domain</code>     | <code>vector&lt;u8&gt;</code> | The domain to be added.                                                                         |
 
 
 <a name="@Common_Abort_Conditions_232"></a>
 
 ###### Common Abort Conditions
 
-| Error Category             | Error Reason                            | Description                                                                                |
-| ----------------           | --------------                          | -------------                                                                              |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
-| <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+| Error Category             | Error Reason                             | Description                                                                                                                            |
+| ----------------           | --------------                           | -------------                                                                                                                          |
+| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDOMAIN_ALREADY_EXISTS">DiemId::EDOMAIN_ALREADY_EXISTS</a></code>         | The <code>domain</code> already exists in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
@@ -4818,6 +4843,36 @@ account with <code>address</code>.
 ) {
     <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_add_diem_id_domain">DiemId::add_diem_id_domain</a>(&tc_account, address, domain);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainAbortsIf">DiemId::AddDiemIdDomainAbortsIf</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEnsures">DiemId::AddDiemIdDomainEnsures</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEmits">DiemId::AddDiemIdDomainEmits</a>;
+<b>aborts_with</b> [check]
+    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_with</b> [check]
+    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -4849,21 +4904,25 @@ account with <code>address</code>.
 
 ###### Parameters
 
-| Name                  | Type     | Description                                                                                     |
-| ------                | ------   | -------------                                                                                   |
-| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
-| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+| Name         | Type         | Description                                                                                     |
+| ------       | ------       | -------------                                                                                   |
+| <code>tc_account</code> | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>    | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                              |
+| <code>domain</code>     | <code>vector&lt;u8&gt;</code> | The domain name.                                                                                |
 
 
 <a name="@Common_Abort_Conditions_236"></a>
 
 ###### Common Abort Conditions
 
-| Error Category             | Error Reason                            | Description                                                                                |
-| ----------------           | --------------                          | -------------                                                                              |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
-| <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+| Error Category             | Error Reason                             | Description                                                                                                                            |
+| ----------------           | --------------                           | -------------                                                                                                                          |
+| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDOMAIN_NOT_FOUND">DiemId::EDOMAIN_NOT_FOUND</a></code>              | The <code>domain</code> does not exist in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)

@@ -596,12 +596,13 @@ module AccountAdministrationScripts {
     }
 
     /// # Summary
-    /// Publishes a `DiemIdDomains` resource under a VASP account.
-    /// The sending account must be a VASP account, and be a parent VASP account.
+    /// Publishes a `DiemId::DiemIdDomains` resource under a parent VASP account.
+    /// The sending account must be a parent VASP account.
     ///
     /// # Technical Description
-    /// Publishes a `DiemId::DiemIdDomains` resource under `account`. It then
-    /// The `domains` field is a vector of DiemIdDomain, and will be empty on initialization.
+    /// Publishes a `DiemId::DiemIdDomains` resource under `account`.
+    /// The The `DiemId::DiemIdDomains` resource's `domains` field is a vector
+    /// of DiemIdDomain, and will be empty on at the end of processing this transaction.
     ///
     /// # Parameters
     /// | Name      | Type     | Description                                           |
@@ -609,12 +610,27 @@ module AccountAdministrationScripts {
     /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                      | Description                                                                                   |
-    /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
-
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
+    /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
     public(script) fun create_diem_id_domains(account: signer) {
         DiemId::publish_diem_id_domains(&account)
+    }
+    spec fun create_diem_id_domains {
+        use 0x1::Signer;
+        use 0x1::Roles;
+        use 0x1::Errors;
+
+        let vasp_addr = Signer::spec_address_of(account);
+        include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+        include Roles::AbortsIfNotParentVasp;
+        include DiemId::PublishDiemIdDomainsAbortsIf { vasp_addr };
+        include DiemId::PublishDiemIdDomainsEnsures { vasp_addr };
+
+        aborts_with [check]
+            Errors::ALREADY_PUBLISHED,
+            Errors::REQUIRES_ROLE;
     }
 }
 }

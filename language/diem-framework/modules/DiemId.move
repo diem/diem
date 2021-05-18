@@ -15,10 +15,21 @@ module DiemId {
         /// The list of domain names owned by this parent vasp account
         domains: vector<DiemIdDomain>,
     }
+    spec struct DiemIdDomains {
+        /// All `DiemIdDomain`s stored in the `DiemIdDomains` resource are no more than 63 characters long.
+        invariant forall i in 0..len(domains): len(domains[i].domain) <= DOMAIN_LENGTH;
+        /// The list of `DiemIdDomain`s are a set
+        invariant forall i in 0..len(domains):
+            forall j in i + 1..len(domains): domains[i] != domains[j];
+    }
 
     /// Struct to store the limit on-chain
     struct DiemIdDomain has drop, store, copy {
         domain: vector<u8>, // UTF-8 encoded and 63 characters
+    }
+    spec struct DiemIdDomain {
+        /// All `DiemIdDomain`s must be no more than 63 characters long.
+        invariant len(domain) <= DOMAIN_LENGTH;
     }
 
     struct DiemIdDomainManager has key {
@@ -52,13 +63,17 @@ module DiemId {
     /// Invalid domain for DiemIdDomain
     const EINVALID_DIEM_ID_DOMAIN: u64 = 5;
 
-    spec module {
-        pragma verify = false;
-    }
-
     fun create_diem_id_domain(domain: vector<u8>): DiemIdDomain {
         assert(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALID_DIEM_ID_DOMAIN));
-        DiemIdDomain {domain}
+        DiemIdDomain{ domain }
+    }
+    spec fun create_diem_id_domain {
+        include CreateDiemIdDomainAbortsIf;
+        ensures result == DiemIdDomain { domain };
+    }
+    spec schema CreateDiemIdDomainAbortsIf {
+        domain: vector<u8>;
+        aborts_if Vector::length(domain) > DOMAIN_LENGTH with Errors::INVALID_ARGUMENT;
     }
 
     /// Publish a `DiemIdDomains` resource under `created` with an empty `domains`.
@@ -76,15 +91,28 @@ module DiemId {
             domains: Vector::empty(),
         })
     }
-
     spec fun publish_diem_id_domains {
+        let vasp_addr = Signer::spec_address_of(vasp_account);
         include Roles::AbortsIfNotParentVasp{account: vasp_account};
-        aborts_if has_diem_id_domains(Signer::spec_address_of(vasp_account)) with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<DiemIdDomains>(Signer::address_of(vasp_account)) with Errors::ALREADY_PUBLISHED;
+        include PublishDiemIdDomainsAbortsIf;
+        include PublishDiemIdDomainsEnsures;
+    }
+    spec schema PublishDiemIdDomainsAbortsIf {
+        vasp_addr: address;
+        aborts_if has_diem_id_domains(vasp_addr) with Errors::ALREADY_PUBLISHED;
+    }
+    spec schema PublishDiemIdDomainsEnsures {
+        vasp_addr: address;
+        ensures exists<DiemIdDomains>(vasp_addr);
+        ensures Vector::is_empty(global<DiemIdDomains>(vasp_addr).domains);
     }
 
     public fun has_diem_id_domains(addr: address): bool {
         exists<DiemIdDomains>(addr)
+    }
+    spec fun has_diem_id_domains {
+        aborts_if false;
+        ensures result == exists<DiemIdDomains>(addr);
     }
 
     /// Publish a `DiemIdDomainManager` resource under `tc_account` with an empty `diem_id_domain_events`.
@@ -105,10 +133,10 @@ module DiemId {
             }
         );
     }
-
     spec fun publish_diem_id_domain_manager {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
+        ensures exists<DiemIdDomainManager>(Signer::spec_address_of(tc_account));
     }
 
     /// Add a DiemIdDomain to a parent VASP's DiemIdDomains resource.
@@ -121,29 +149,63 @@ module DiemId {
         domain: vector<u8>,
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
-        if (!exists<DiemIdDomains>(address)) {
-            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
-        };
+        assert(tc_domain_manager_exists(), Errors::not_published(EDIEM_ID_DOMAIN_MANAGER));
+        assert(
+            exists<DiemIdDomains>(address),
+            Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED)
+        );
+
         let account_domains = borrow_global_mut<DiemIdDomains>(address);
         let diem_id_domain = create_diem_id_domain(domain);
-        if (!Vector::contains(&account_domains.domains, &diem_id_domain)) {
-            Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
-        } else {
-            abort(Errors::invalid_argument(EDOMAIN_ALREADY_EXISTS))
-        };
+
+        assert(
+            !Vector::contains(&account_domains.domains, &diem_id_domain),
+            Errors::invalid_argument(EDOMAIN_ALREADY_EXISTS)
+        );
+
+        Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
 
         Event::emit_event(
             &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
             DiemIdDomainEvent {
                 removed: false,
                 domain: diem_id_domain,
-                address: address,
+                address,
             },
         );
     }
-
     spec fun add_diem_id_domain {
+        include AddDiemIdDomainAbortsIf;
+        include AddDiemIdDomainEnsures;
+        include AddDiemIdDomainEmits;
+    }
+    spec schema AddDiemIdDomainAbortsIf {
+        tc_account: signer;
+        address: address;
+        domain: vector<u8>;
+        let domains = global<DiemIdDomains>(address).domains;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include CreateDiemIdDomainAbortsIf;
+        aborts_if !exists<DiemIdDomains>(address) with Errors::NOT_PUBLISHED;
+        aborts_if !tc_domain_manager_exists() with Errors::NOT_PUBLISHED;
+        aborts_if contains(domains, DiemIdDomain { domain }) with Errors::INVALID_ARGUMENT;
+    }
+    spec schema AddDiemIdDomainEnsures {
+        address: address;
+        domain: vector<u8>;
+        let post domains = global<DiemIdDomains>(address).domains;
+        ensures contains(domains, DiemIdDomain { domain });
+    }
+    spec schema AddDiemIdDomainEmits {
+        address: address;
+        domain: vector<u8>;
+        let handle = global<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events;
+        let msg = DiemIdDomainEvent {
+            removed: false,
+            domain: DiemIdDomain { domain },
+            address,
+        };
+        emits msg to handle;
     }
 
     /// Remove a DiemIdDomain from a parent VASP's DiemIdDomains resource.
@@ -153,16 +215,20 @@ module DiemId {
         domain: vector<u8>,
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
-        if (!exists<DiemIdDomains>(address)) {
-            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
-        };
+        assert(tc_domain_manager_exists(), Errors::not_published(EDIEM_ID_DOMAIN_MANAGER));
+        assert(
+            exists<DiemIdDomains>(address),
+            Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED)
+        );
+
         let account_domains = borrow_global_mut<DiemIdDomains>(address);
         let diem_id_domain = create_diem_id_domain(domain);
+
         let (has, index) = Vector::index_of(&account_domains.domains, &diem_id_domain);
         if (has) {
             Vector::remove(&mut account_domains.domains, index);
         } else {
-            abort(Errors::invalid_argument(EDOMAIN_NOT_FOUND))
+            abort Errors::invalid_argument(EDOMAIN_NOT_FOUND)
         };
 
         Event::emit_event(
@@ -174,23 +240,68 @@ module DiemId {
             },
         );
     }
-
     spec fun remove_diem_id_domain {
+        include RemoveDiemIdDomainAbortsIf;
+        include RemoveDiemIdDomainEnsures;
+        include RemoveDiemIdDomainEmits;
+    }
+    spec schema RemoveDiemIdDomainAbortsIf {
+        tc_account: signer;
+        address: address;
+        domain: vector<u8>;
+        let domains = global<DiemIdDomains>(address).domains;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include CreateDiemIdDomainAbortsIf;
+        aborts_if !exists<DiemIdDomains>(address) with Errors::NOT_PUBLISHED;
+        aborts_if !tc_domain_manager_exists() with Errors::NOT_PUBLISHED;
+        aborts_if !contains(domains, DiemIdDomain { domain }) with Errors::INVALID_ARGUMENT;
+    }
+    spec schema RemoveDiemIdDomainEnsures {
+        address: address;
+        domain: vector<u8>;
+        let post domains = global<DiemIdDomains>(address).domains;
+        ensures !contains(domains, DiemIdDomain { domain });
+    }
+    spec schema RemoveDiemIdDomainEmits {
+        tc_account: signer;
+        address: address;
+        domain: vector<u8>;
+        let handle = global<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events;
+        let msg = DiemIdDomainEvent {
+            removed: true,
+            domain: DiemIdDomain { domain },
+            address,
+        };
+        emits msg to handle;
     }
 
     public fun has_diem_id_domain(addr: address, domain: vector<u8>): bool acquires DiemIdDomains {
-        if (!exists<DiemIdDomains>(addr)) {
-            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
-        };
+        assert(
+            exists<DiemIdDomains>(addr),
+            Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED)
+        );
         let account_domains = borrow_global<DiemIdDomains>(addr);
         let diem_id_domain = create_diem_id_domain(domain);
         Vector::contains(&account_domains.domains, &diem_id_domain)
+    }
+    spec fun has_diem_id_domain {
+        include HasDiemIdDomainAbortsIf;
+        let id_domain = DiemIdDomain { domain };
+        ensures result == contains(global<DiemIdDomains>(addr).domains, id_domain);
+    }
+    spec schema HasDiemIdDomainAbortsIf {
+        addr: address;
+        domain: vector<u8>;
+        include CreateDiemIdDomainAbortsIf;
+        aborts_if !exists<DiemIdDomains>(addr) with Errors::NOT_PUBLISHED;
     }
 
     public fun tc_domain_manager_exists(): bool {
         exists<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
-
+    spec fun tc_domain_manager_exists {
+        aborts_if false;
+        ensures result == exists<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+    }
 }
 }
