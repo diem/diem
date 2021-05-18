@@ -88,8 +88,8 @@ module DiemId {
     }
 
     /// Publish a `DiemIdDomainManager` resource under `tc_account` with an empty `diem_id_domain_events`.
-    /// When Treasury Compliance account sends a transaction that invokes `update_diem_id_domains`,
-    /// a `DiemIdDomainEvent` is emitted and added to `diem_id_domain_events`.
+    /// When Treasury Compliance account sends a transaction that invokes either `add_diem_id_domain` or
+    /// `remove_diem_id_domain`, a `DiemIdDomainEvent` is emitted and added to `diem_id_domain_events`.
     public fun publish_diem_id_domain_manager(
         tc_account : &signer,
     ) {
@@ -111,47 +111,71 @@ module DiemId {
         aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
 
+    /// Add a DiemIdDomain to a parent VASP's DiemIdDomains resource.
     /// When updating DiemIdDomains, a simple duplicate domain check is done.
     /// However, since domains are case insensitive, it is possible by error that two same domains in
     /// different lowercase and uppercase format gets added.
-    public fun update_diem_id_domains(
+    public fun add_diem_id_domain(
         tc_account: &signer,
-        to_update_address: address,
+        address: address,
         domain: vector<u8>,
-        is_remove: bool
     ) acquires DiemIdDomainManager, DiemIdDomains {
         Roles::assert_treasury_compliance(tc_account);
-        if (!exists<DiemIdDomains>(to_update_address)) {
+        if (!exists<DiemIdDomains>(address)) {
             abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
         };
-        let account_domains = borrow_global_mut<DiemIdDomains>(to_update_address);
+        let account_domains = borrow_global_mut<DiemIdDomains>(address);
         let diem_id_domain = create_diem_id_domain(domain);
-        if (is_remove) {
-            let (has, index) = Vector::index_of(&account_domains.domains, &diem_id_domain);
-            if (has) {
-                Vector::remove(&mut account_domains.domains, index);
-            } else {
-                abort(Errors::invalid_argument(EDOMAIN_NOT_FOUND))
-            };
+        if (!Vector::contains(&account_domains.domains, &diem_id_domain)) {
+            Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
         } else {
-            if (!Vector::contains(&account_domains.domains, &diem_id_domain)) {
-                Vector::push_back(&mut account_domains.domains, copy diem_id_domain);
-            } else {
-                abort(Errors::invalid_argument(EDOMAIN_ALREADY_EXISTS))
-            }
+            abort(Errors::invalid_argument(EDOMAIN_ALREADY_EXISTS))
         };
 
         Event::emit_event(
             &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
             DiemIdDomainEvent {
-                removed: is_remove,
+                removed: false,
                 domain: diem_id_domain,
-                address: to_update_address,
+                address: address,
             },
         );
     }
 
-    spec fun update_diem_id_domains {
+    spec fun add_diem_id_domain {
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+    }
+
+    /// Remove a DiemIdDomain from a parent VASP's DiemIdDomains resource.
+    public fun remove_diem_id_domain(
+        tc_account: &signer,
+        address: address,
+        domain: vector<u8>,
+    ) acquires DiemIdDomainManager, DiemIdDomains {
+        Roles::assert_treasury_compliance(tc_account);
+        if (!exists<DiemIdDomains>(address)) {
+            abort(Errors::not_published(EDIEM_ID_DOMAINS_NOT_PUBLISHED))
+        };
+        let account_domains = borrow_global_mut<DiemIdDomains>(address);
+        let diem_id_domain = create_diem_id_domain(domain);
+        let (has, index) = Vector::index_of(&account_domains.domains, &diem_id_domain);
+        if (has) {
+            Vector::remove(&mut account_domains.domains, index);
+        } else {
+            abort(Errors::invalid_argument(EDOMAIN_NOT_FOUND))
+        };
+
+        Event::emit_event(
+            &mut borrow_global_mut<DiemIdDomainManager>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).diem_id_domain_events,
+            DiemIdDomainEvent {
+                removed: true,
+                domain: diem_id_domain,
+                address: address,
+            },
+        );
+    }
+
+    spec fun remove_diem_id_domain {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
 

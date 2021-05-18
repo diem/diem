@@ -30,7 +30,7 @@ script{
         let domain_name = b"diem";
 
         /// add a diem id domain
-        DiemId::update_diem_id_domains(tc_account, addr, copy domain_name, false);
+        DiemId::add_diem_id_domain(tc_account, addr, copy domain_name);
 
         /// check if diem id domain is added to DiemIdDomains
         assert(DiemId::has_diem_id_domain(addr, domain_name), 5);
@@ -52,7 +52,7 @@ script{
         let domain_name = b"diem";
 
         /// add the same diem ID domain to the bob account, expect it to fail
-        DiemId::update_diem_id_domains(tc_account, addr, copy domain_name, false);
+        DiemId::add_diem_id_domain(tc_account, addr, copy domain_name);
 
         /// check if the previously added domain is still there
         assert(DiemId::has_diem_id_domain(addr, domain_name), 389);
@@ -73,7 +73,7 @@ script{
         let domain_name = b"diem";
 
         /// remove a diem id domain
-        DiemId::update_diem_id_domains(tc_account, addr, copy domain_name, true);
+        DiemId::remove_diem_id_domain(tc_account, addr, copy domain_name);
 
         /// check if diem id domain is removed from DiemIdDomains
         assert(!DiemId::has_diem_id_domain(addr, domain_name), 205);
@@ -95,7 +95,7 @@ script{
         let domain_name = b"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggg";
 
         /// Try adding a domain ID longer than 63 characters, expect to fail
-        DiemId::update_diem_id_domains(tc_account, addr, copy domain_name, false);
+        DiemId::add_diem_id_domain(tc_account, addr, copy domain_name);
 
         /// check that diem id domain is not added to DiemIdDomains
         assert(!DiemId::has_diem_id_domain(addr, domain_name), 888);
@@ -112,7 +112,7 @@ script{
         /// check if vasp account tries to add domain id, it fails
         let account = &account;
         let addr: address = @{{bob}};
-        DiemId::update_diem_id_domains(account, addr, b"diem", false);
+        DiemId::add_diem_id_domain(account, addr, b"diem");
     }
 }
 // check: "Keep(ABORTED { code: 258,"

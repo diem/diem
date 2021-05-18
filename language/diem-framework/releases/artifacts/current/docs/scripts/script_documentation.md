@@ -59,9 +59,9 @@
         -  [Module `0x1::ValidatorAdministrationScripts`](#0x1_ValidatorAdministrationScripts)
     -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_171)
         -  [Module `0x1::TreasuryComplianceScripts`](#0x1_TreasuryComplianceScripts)
-    -  [System Administration](#@System_Administration_233)
+    -  [System Administration](#@System_Administration_237)
         -  [Module `0x1::SystemAdministrationScripts`](#0x1_SystemAdministrationScripts)
-    -  [Index](#@Index_250)
+    -  [Index](#@Index_254)
 
 
 
@@ -4760,26 +4760,25 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 </details>
 
-<a name="0x1_TreasuryComplianceScripts_update_diem_id_domains"></a>
+<a name="0x1_TreasuryComplianceScripts_add_diem_id_domain"></a>
 
-##### Function `update_diem_id_domains`
+##### Function `add_diem_id_domain`
 
 
 <a name="@Summary_229"></a>
 
 ###### Summary
 
-Update the Diem ID domains of a parent VASP account. The transaction can
-only be sent by the Treasury Compliance account. Domains can only be added or removed.
+Add a DiemID domain to parent VASP account. The transaction can only be sent by
+the Treasury Compliance account.
 
 
 <a name="@Technical_Description_230"></a>
 
 ###### Technical Description
 
-Updates the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
-account with <code>to_update_address</code>. <code>is_remove</code> should be set to <code><b>false</b></code> if adding a domain name
-and set to <code><b>true</b></code> if removing a domain name.
+Adds a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> to the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>address</code>.
 
 
 <a name="@Parameters_231"></a>
@@ -4789,9 +4788,8 @@ and set to <code><b>true</b></code> if removing a domain name.
 | Name                  | Type     | Description                                                                                     |
 | ------                | ------   | -------------                                                                                   |
 | <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>to_update_address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
 | <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
-| <code>is_remove</code> | <code>bool</code>    | Whether to add or remove the <code>domain</code>                                             |
 
 
 <a name="@Common_Abort_Conditions_232"></a>
@@ -4804,7 +4802,7 @@ and set to <code><b>true</b></code> if removing a domain name.
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -4813,13 +4811,76 @@ and set to <code><b>true</b></code> if removing a domain name.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a> (
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a> (
     tc_account: signer,
-    to_update_address: address,
+    address: address,
     domain: vector&lt;u8&gt;,
-    is_remove: bool,
 ) {
-    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_update_diem_id_domains">DiemId::update_diem_id_domains</a>(&tc_account, to_update_address, domain, is_remove);
+    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_add_diem_id_domain">DiemId::add_diem_id_domain</a>(&tc_account, address, domain);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_TreasuryComplianceScripts_remove_diem_id_domain"></a>
+
+##### Function `remove_diem_id_domain`
+
+
+<a name="@Summary_233"></a>
+
+###### Summary
+
+Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+the Treasury Compliance account.
+
+
+<a name="@Technical_Description_234"></a>
+
+###### Technical Description
+
+Removes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> from the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>address</code>.
+
+
+<a name="@Parameters_235"></a>
+
+###### Parameters
+
+| Name                  | Type     | Description                                                                                     |
+| ------                | ------   | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+
+
+<a name="@Common_Abort_Conditions_236"></a>
+
+###### Common Abort Conditions
+
+| Error Category             | Error Reason                            | Description                                                                                |
+| ----------------           | --------------                          | -------------                                                                              |
+| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
+| <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a> (
+    tc_account: signer,
+    address: address,
+    domain: vector&lt;u8&gt;,
+) {
+    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_remove_diem_id_domain">DiemId::remove_diem_id_domain</a>(&tc_account, address, domain);
 }
 </code></pre>
 
@@ -4830,7 +4891,7 @@ and set to <code><b>true</b></code> if removing a domain name.
 
 ---
 
-<a name="@System_Administration_233"></a>
+<a name="@System_Administration_237"></a>
 
 ### System Administration
 
@@ -4857,7 +4918,7 @@ network outside of validators and validator operators.
 ##### Function `update_diem_version`
 
 
-<a name="@Summary_234"></a>
+<a name="@Summary_238"></a>
 
 ###### Summary
 
@@ -4865,7 +4926,7 @@ Updates the Diem major version that is stored on-chain and is used by the VM.  T
 transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_235"></a>
+<a name="@Technical_Description_239"></a>
 
 ###### Technical Description
 
@@ -4875,7 +4936,7 @@ than the current major version held on-chain. The VM reads this information and 
 preserve backwards compatibility with previous major versions of the VM.
 
 
-<a name="@Parameters_236"></a>
+<a name="@Parameters_240"></a>
 
 ###### Parameters
 
@@ -4886,7 +4947,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>major</code>         | <code>u64</code>    | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
-<a name="@Common_Abort_Conditions_237"></a>
+<a name="@Common_Abort_Conditions_241"></a>
 
 ###### Common Abort Conditions
 
@@ -4924,7 +4985,7 @@ preserve backwards compatibility with previous major versions of the VM.
 ##### Function `set_gas_constants`
 
 
-<a name="@Summary_238"></a>
+<a name="@Summary_242"></a>
 
 ###### Summary
 
@@ -4932,7 +4993,7 @@ Updates the gas constants stored on chain and used by the VM for gas
 metering. This transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_239"></a>
+<a name="@Technical_Description_243"></a>
 
 ###### Technical Description
 
@@ -4940,7 +5001,7 @@ Updates the on-chain config holding the <code><a href="../../../../../releases/a
 <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> to trigger a reconfiguration of the system.
 
 
-<a name="@Parameters_240"></a>
+<a name="@Parameters_244"></a>
 
 ###### Parameters
 
@@ -4961,7 +5022,7 @@ Updates the on-chain config holding the <code><a href="../../../../../releases/a
 | <code>default_account_size</code>              | <code>u64</code>    | The new default account size to use when assessing final costs for reads and writes to global storage. |
 
 
-<a name="@Common_Abort_Conditions_241"></a>
+<a name="@Common_Abort_Conditions_245"></a>
 
 ###### Common Abort Conditions
 
@@ -5026,7 +5087,7 @@ Updates the on-chain config holding the <code><a href="../../../../../releases/a
 ##### Function `initialize_diem_consensus_config`
 
 
-<a name="@Summary_242"></a>
+<a name="@Summary_246"></a>
 
 ###### Summary
 
@@ -5034,7 +5095,7 @@ Initializes the Diem consensus config that is stored on-chain.  This
 transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_243"></a>
+<a name="@Technical_Description_247"></a>
 
 ###### Technical Description
 
@@ -5042,7 +5103,7 @@ Initializes the <code><a href="../../../../../releases/artifacts/current/docs/mo
 <code>update_diem_consensus_config</code>. This doesn't emit a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code>.
 
 
-<a name="@Parameters_244"></a>
+<a name="@Parameters_248"></a>
 
 ###### Parameters
 
@@ -5052,7 +5113,7 @@ Initializes the <code><a href="../../../../../releases/artifacts/current/docs/mo
 | <code>sliding_nonce</code> | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
 
 
-<a name="@Common_Abort_Conditions_245"></a>
+<a name="@Common_Abort_Conditions_249"></a>
 
 ###### Common Abort Conditions
 
@@ -5089,7 +5150,7 @@ Initializes the <code><a href="../../../../../releases/artifacts/current/docs/mo
 ##### Function `update_diem_consensus_config`
 
 
-<a name="@Summary_246"></a>
+<a name="@Summary_250"></a>
 
 ###### Summary
 
@@ -5097,7 +5158,7 @@ Updates the Diem consensus config that is stored on-chain and is used by the Con
 transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_247"></a>
+<a name="@Technical_Description_251"></a>
 
 ###### Technical Description
 
@@ -5105,7 +5166,7 @@ Updates the <code><a href="../../../../../releases/artifacts/current/docs/module
 a reconfiguration of the system.
 
 
-<a name="@Parameters_248"></a>
+<a name="@Parameters_252"></a>
 
 ###### Parameters
 
@@ -5116,7 +5177,7 @@ a reconfiguration of the system.
 | <code>config</code>        | <code>vector&lt;u8&gt;</code>  | The serialized bytes of consensus config.                                  |
 
 
-<a name="@Common_Abort_Conditions_249"></a>
+<a name="@Common_Abort_Conditions_253"></a>
 
 ###### Common Abort Conditions
 
@@ -5150,7 +5211,7 @@ a reconfiguration of the system.
 
 
 
-<a name="@Index_250"></a>
+<a name="@Index_254"></a>
 
 ### Index
 

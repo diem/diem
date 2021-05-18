@@ -79,11 +79,16 @@ per-transaction basis.
     -  [Parameters](#@Parameters_54)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_55)
     -  [Related Scripts](#@Related_Scripts_56)
--  [Function `update_diem_id_domains`](#0x1_TreasuryComplianceScripts_update_diem_id_domains)
+-  [Function `add_diem_id_domain`](#0x1_TreasuryComplianceScripts_add_diem_id_domain)
     -  [Summary](#@Summary_57)
     -  [Technical Description](#@Technical_Description_58)
     -  [Parameters](#@Parameters_59)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_60)
+-  [Function `remove_diem_id_domain`](#0x1_TreasuryComplianceScripts_remove_diem_id_domain)
+    -  [Summary](#@Summary_61)
+    -  [Technical Description](#@Technical_Description_62)
+    -  [Parameters](#@Parameters_63)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_64)
 
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
@@ -1191,26 +1196,25 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 </details>
 
-<a name="0x1_TreasuryComplianceScripts_update_diem_id_domains"></a>
+<a name="0x1_TreasuryComplianceScripts_add_diem_id_domain"></a>
 
-## Function `update_diem_id_domains`
+## Function `add_diem_id_domain`
 
 
 <a name="@Summary_57"></a>
 
 ### Summary
 
-Update the Diem ID domains of a parent VASP account. The transaction can
-only be sent by the Treasury Compliance account. Domains can only be added or removed.
+Add a DiemID domain to parent VASP account. The transaction can only be sent by
+the Treasury Compliance account.
 
 
 <a name="@Technical_Description_58"></a>
 
 ### Technical Description
 
-Updates the <code>domains</code> field of the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
-account with <code>to_update_address</code>. <code>is_remove</code> should be set to <code><b>false</b></code> if adding a domain name
-and set to <code><b>true</b></code> if removing a domain name.
+Adds a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> to the <code>domains</code> field of the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>address</code>.
 
 
 <a name="@Parameters_59"></a>
@@ -1220,9 +1224,8 @@ and set to <code><b>true</b></code> if removing a domain name.
 | Name                  | Type     | Description                                                                                     |
 | ------                | ------   | -------------                                                                                   |
 | <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>to_update_address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
 | <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
-| <code>is_remove</code> | <code>bool</code>    | Whether to add or remove the <code>domain</code>                                             |
 
 
 <a name="@Common_Abort_Conditions_60"></a>
@@ -1235,7 +1238,7 @@ and set to <code><b>true</b></code> if removing a domain name.
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a>(tc_account: signer, to_update_address: address, domain: vector&lt;u8&gt;, is_remove: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1244,13 +1247,76 @@ and set to <code><b>true</b></code> if removing a domain name.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_update_diem_id_domains">update_diem_id_domains</a> (
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a> (
     tc_account: signer,
-    to_update_address: address,
+    address: address,
     domain: vector&lt;u8&gt;,
-    is_remove: bool,
 ) {
-    <a href="DiemId.md#0x1_DiemId_update_diem_id_domains">DiemId::update_diem_id_domains</a>(&tc_account, to_update_address, domain, is_remove);
+    <a href="DiemId.md#0x1_DiemId_add_diem_id_domain">DiemId::add_diem_id_domain</a>(&tc_account, address, domain);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_TreasuryComplianceScripts_remove_diem_id_domain"></a>
+
+## Function `remove_diem_id_domain`
+
+
+<a name="@Summary_61"></a>
+
+### Summary
+
+Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+the Treasury Compliance account.
+
+
+<a name="@Technical_Description_62"></a>
+
+### Technical Description
+
+Removes a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> from the <code>domains</code> field of the <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+account with <code>address</code>.
+
+
+<a name="@Parameters_63"></a>
+
+### Parameters
+
+| Name                  | Type     | Description                                                                                     |
+| ------                | ------   | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>address</code>       | <code>address</code>    | The <code>address</code> of parent VASP account that will update its domains.                      |
+| <code>domain</code> | <code>vector&lt;u8&gt;</code>    | The domain name.                                             |
+
+
+<a name="@Common_Abort_Conditions_64"></a>
+
+### Common Abort Conditions
+
+| Error Category             | Error Reason                            | Description                                                                                |
+| ----------------           | --------------                          | -------------                                                                              |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                             |                                        |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a> (
+    tc_account: signer,
+    address: address,
+    domain: vector&lt;u8&gt;,
+) {
+    <a href="DiemId.md#0x1_DiemId_remove_diem_id_domain">DiemId::remove_diem_id_domain</a>(&tc_account, address, domain);
 }
 </code></pre>
 

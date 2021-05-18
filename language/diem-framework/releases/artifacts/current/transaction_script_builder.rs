@@ -1473,6 +1473,31 @@ pub enum ScriptFunctionCall {
     AddCurrencyToAccount { currency: TypeTag },
 
     /// # Summary
+    /// Add a DiemID domain to parent VASP account. The transaction can only be sent by
+    /// the Treasury Compliance account.
+    ///
+    /// # Technical Description
+    /// Adds a `DiemId::DiemIdDomain` to the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// account with `address`.
+    ///
+    /// # Parameters
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                            | Description                                                                                |
+    /// | ----------------           | --------------                          | -------------                                                                              |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    AddDiemIdDomain {
+        address: AccountAddress,
+        domain: Bytes,
+    },
+
+    /// # Summary
     /// Stores the sending accounts ability to rotate its authentication key with a designated recovery
     /// account. Both the sending and recovery accounts need to belong to the same VASP and
     /// both be VASP accounts. After this transaction both the sending account and the
@@ -2311,6 +2336,31 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
+    /// Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+    /// the Treasury Compliance account.
+    ///
+    /// # Technical Description
+    /// Removes a `DiemId::DiemIdDomain` from the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// account with `address`.
+    ///
+    /// # Parameters
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+    /// | `domain` | `vector<u8>`    | The domain name.                                             |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                            | Description                                                                                |
+    /// | ----------------           | --------------                          | -------------                                                                              |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    RemoveDiemIdDomain {
+        address: AccountAddress,
+        domain: Bytes,
+    },
+
+    /// # Summary
     /// This script removes a validator account from the validator set, and triggers a reconfiguration
     /// of the system to remove the validator from the system. This transaction can only be
     /// successfully called by the Diem Root account.
@@ -2869,34 +2919,6 @@ pub enum ScriptFunctionCall {
     UpdateDiemConsensusConfig { sliding_nonce: u64, config: Bytes },
 
     /// # Summary
-    /// Update the Diem ID domains of a parent VASP account. The transaction can
-    /// only be sent by the Treasury Compliance account. Domains can only be added or removed.
-    ///
-    /// # Technical Description
-    /// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
-    /// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
-    /// and set to `true` if removing a domain name.
-    ///
-    /// # Parameters
-    /// | Name                  | Type     | Description                                                                                     |
-    /// | ------                | ------   | -------------                                                                                   |
-    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-    /// | `domain` | `vector<u8>`    | The domain name.                                             |
-    /// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                |
-    /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-    UpdateDiemIdDomains {
-        to_update_address: AccountAddress,
-        domain: Bytes,
-        is_remove: bool,
-    },
-
-    /// # Summary
     /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
     /// transaction can only be sent from the Diem Root account.
     ///
@@ -3275,6 +3297,9 @@ impl ScriptFunctionCall {
             AddCurrencyToAccount { currency } => {
                 encode_add_currency_to_account_script_function(currency)
             }
+            AddDiemIdDomain { address, domain } => {
+                encode_add_diem_id_domain_script_function(address, domain)
+            }
             AddRecoveryRotationCapability { recovery_address } => {
                 encode_add_recovery_rotation_capability_script_function(recovery_address)
             }
@@ -3406,6 +3431,9 @@ impl ScriptFunctionCall {
                 validator_network_addresses,
                 fullnode_network_addresses,
             ),
+            RemoveDiemIdDomain { address, domain } => {
+                encode_remove_diem_id_domain_script_function(address, domain)
+            }
             RemoveValidatorAndReconfigure {
                 sliding_nonce,
                 validator_name,
@@ -3518,13 +3546,6 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 config,
             } => encode_update_diem_consensus_config_script_function(sliding_nonce, config),
-            UpdateDiemIdDomains {
-                to_update_address,
-                domain,
-                is_remove,
-            } => {
-                encode_update_diem_id_domains_script_function(to_update_address, domain, is_remove)
-            }
             UpdateDiemVersion {
                 sliding_nonce,
                 major,
@@ -3609,6 +3630,44 @@ pub fn encode_add_currency_to_account_script_function(currency: TypeTag) -> Tran
         ident_str!("add_currency_to_account").to_owned(),
         vec![currency],
         vec![],
+    ))
+}
+
+/// # Summary
+/// Add a DiemID domain to parent VASP account. The transaction can only be sent by
+/// the Treasury Compliance account.
+///
+/// # Technical Description
+/// Adds a `DiemId::DiemIdDomain` to the `domains` field of the `DiemId::DiemIdDomains` resource published under
+/// account with `address`.
+///
+/// # Parameters
+/// | Name                  | Type     | Description                                                                                     |
+/// | ------                | ------   | -------------                                                                                   |
+/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+/// | `domain` | `vector<u8>`    | The domain name.                                             |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                            | Description                                                                                |
+/// | ----------------           | --------------                          | -------------                                                                              |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+pub fn encode_add_diem_id_domain_script_function(
+    address: AccountAddress,
+    domain: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("TreasuryComplianceScripts").to_owned(),
+        ),
+        ident_str!("add_diem_id_domain").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&address).unwrap(),
+            bcs::to_bytes(&domain).unwrap(),
+        ],
     ))
 }
 
@@ -4688,6 +4747,44 @@ pub fn encode_register_validator_config_script_function(
 }
 
 /// # Summary
+/// Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+/// the Treasury Compliance account.
+///
+/// # Technical Description
+/// Removes a `DiemId::DiemIdDomain` from the `domains` field of the `DiemId::DiemIdDomains` resource published under
+/// account with `address`.
+///
+/// # Parameters
+/// | Name                  | Type     | Description                                                                                     |
+/// | ------                | ------   | -------------                                                                                   |
+/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
+/// | `domain` | `vector<u8>`    | The domain name.                                             |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                            | Description                                                                                |
+/// | ----------------           | --------------                          | -------------                                                                              |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+pub fn encode_remove_diem_id_domain_script_function(
+    address: AccountAddress,
+    domain: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("TreasuryComplianceScripts").to_owned(),
+        ),
+        ident_str!("remove_diem_id_domain").to_owned(),
+        vec![],
+        vec![
+            bcs::to_bytes(&address).unwrap(),
+            bcs::to_bytes(&domain).unwrap(),
+        ],
+    ))
+}
+
+/// # Summary
 /// This script removes a validator account from the validator set, and triggers a reconfiguration
 /// of the system to remove the validator from the system. This transaction can only be
 /// successfully called by the Diem Root account.
@@ -5448,48 +5545,6 @@ pub fn encode_update_diem_consensus_config_script_function(
         vec![
             bcs::to_bytes(&sliding_nonce).unwrap(),
             bcs::to_bytes(&config).unwrap(),
-        ],
-    ))
-}
-
-/// # Summary
-/// Update the Diem ID domains of a parent VASP account. The transaction can
-/// only be sent by the Treasury Compliance account. Domains can only be added or removed.
-///
-/// # Technical Description
-/// Updates the `domains` field of the `DiemId::DiemIdDomains` resource published under
-/// account with `to_update_address`. `is_remove` should be set to `false` if adding a domain name
-/// and set to `true` if removing a domain name.
-///
-/// # Parameters
-/// | Name                  | Type     | Description                                                                                     |
-/// | ------                | ------   | -------------                                                                                   |
-/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `to_update_address`       | `address`    | The `address` of parent VASP account that will update its domains.                      |
-/// | `domain` | `vector<u8>`    | The domain name.                                             |
-/// | `is_remove` | `bool`    | Whether to add or remove the `domain`                                             |
-///
-/// # Common Abort Conditions
-/// | Error Category             | Error Reason                            | Description                                                                                |
-/// | ----------------           | --------------                          | -------------                                                                              |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                             |                                        |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-pub fn encode_update_diem_id_domains_script_function(
-    to_update_address: AccountAddress,
-    domain: Vec<u8>,
-    is_remove: bool,
-) -> TransactionPayload {
-    TransactionPayload::ScriptFunction(ScriptFunction::new(
-        ModuleId::new(
-            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
-            ident_str!("TreasuryComplianceScripts").to_owned(),
-        ),
-        ident_str!("update_diem_id_domains").to_owned(),
-        vec![],
-        vec![
-            bcs::to_bytes(&to_update_address).unwrap(),
-            bcs::to_bytes(&domain).unwrap(),
-            bcs::to_bytes(&is_remove).unwrap(),
         ],
     ))
 }
@@ -7372,6 +7427,19 @@ fn decode_add_currency_to_account_script_function(
     }
 }
 
+fn decode_add_diem_id_domain_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::AddDiemIdDomain {
+            address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            domain: bcs::from_bytes(script.args().get(1)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_add_recovery_rotation_capability_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -7618,6 +7686,19 @@ fn decode_register_validator_config_script_function(
     }
 }
 
+fn decode_remove_diem_id_domain_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::RemoveDiemIdDomain {
+            address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            domain: bcs::from_bytes(script.args().get(1)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_remove_validator_and_reconfigure_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -7810,20 +7891,6 @@ fn decode_update_diem_consensus_config_script_function(
         Some(ScriptFunctionCall::UpdateDiemConsensusConfig {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
             config: bcs::from_bytes(script.args().get(1)?).ok()?,
-        })
-    } else {
-        None
-    }
-}
-
-fn decode_update_diem_id_domains_script_function(
-    payload: &TransactionPayload,
-) -> Option<ScriptFunctionCall> {
-    if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::UpdateDiemIdDomains {
-            to_update_address: bcs::from_bytes(script.args().get(0)?).ok()?,
-            domain: bcs::from_bytes(script.args().get(1)?).ok()?,
-            is_remove: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -8294,6 +8361,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_add_currency_to_account_script_function),
         );
         map.insert(
+            "TreasuryComplianceScriptsadd_diem_id_domain".to_string(),
+            Box::new(decode_add_diem_id_domain_script_function),
+        );
+        map.insert(
             "AccountAdministrationScriptsadd_recovery_rotation_capability".to_string(),
             Box::new(decode_add_recovery_rotation_capability_script_function),
         );
@@ -8366,6 +8437,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_register_validator_config_script_function),
         );
         map.insert(
+            "TreasuryComplianceScriptsremove_diem_id_domain".to_string(),
+            Box::new(decode_remove_diem_id_domain_script_function),
+        );
+        map.insert(
             "ValidatorAdministrationScriptsremove_validator_and_reconfigure".to_string(),
             Box::new(decode_remove_validator_and_reconfigure_script_function),
         );
@@ -8421,10 +8496,6 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "SystemAdministrationScriptsupdate_diem_consensus_config".to_string(),
             Box::new(decode_update_diem_consensus_config_script_function),
-        );
-        map.insert(
-            "TreasuryComplianceScriptsupdate_diem_id_domains".to_string(),
-            Box::new(decode_update_diem_id_domains_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsupdate_diem_version".to_string(),
