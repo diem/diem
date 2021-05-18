@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use structopt::StructOpt;
 
 use bytecode::{
-    function_target_pipeline::FunctionTargetsHolder, options::ProverOptions,
+    function_target_pipeline::{
+        FunctionTargetProcessor, FunctionTargetsHolder, ProcessorResultDisplay,
+    },
+    options::ProverOptions,
     pipeline_factory::default_pipeline_with_options,
 };
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
@@ -105,6 +109,7 @@ pub fn interpret_with_options(
     let settings = InterpreterSettings {
         verbose_stepwise: options.verbose.map_or(false, |level| level > 0),
         verbose_bytecode: options.verbose.map_or(false, |level| level > 1),
+        verbose_expression: options.verbose.map_or(false, |level| level > 2),
     };
 
     // run the actual interpreter
@@ -129,6 +134,16 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
         options_opt: Option<ProverOptions>,
         settings: InterpreterSettings,
     ) -> Self {
+        // make sure that the global env does not have an error
+        if env.has_errors() {
+            let mut buffer = Buffer::no_color();
+            env.report_diag(&mut buffer, Severity::Error);
+            panic!(
+                "errors accumulated in the model builder and the transformation pipeline\n{}",
+                String::from_utf8_lossy(&buffer.into_inner())
+            )
+        }
+
         // create the pipeline
         let options = options_opt.unwrap_or_else(|| ProverOptions {
             for_interpretation: true,
@@ -148,9 +163,9 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
             pipeline.run_with_hook(
                 env,
                 &mut targets,
-                |holder| verbose_stepwise_processing(env, 0, "stackless", holder),
+                |holder| verbose_stepwise_processing(env, 0, None, holder),
                 |step, processor, holders| {
-                    verbose_stepwise_processing(env, step, &processor.name(), holders)
+                    verbose_stepwise_processing(env, step, Some(processor), holders)
                 },
             )
         } else {
@@ -266,18 +281,35 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
         // run the actual interpretation
         self.interpret_internal(&entrypoint_env, ty_args, &args, global_state)
     }
+
+    pub fn report_property_checking_results(&self) -> Option<String> {
+        if self.env.has_errors() {
+            let mut buffer = Buffer::no_color();
+            self.env.report_diag(&mut buffer, Severity::Error);
+            self.env.clear_diag();
+            Some(String::from_utf8_lossy(&buffer.into_inner()).to_string())
+        } else {
+            None
+        }
+    }
 }
 
 fn verbose_stepwise_processing(
     env: &GlobalEnv,
     step: usize,
-    name: &str,
+    processor_opt: Option<&dyn FunctionTargetProcessor>,
     targets: &FunctionTargetsHolder,
 ) {
     // short-circuit the execution if prior phases run into errors
     if env.has_errors() {
         return;
     }
+
+    let name = processor_opt
+        .map(|processor| processor.name())
+        .unwrap_or_else(|| "stackless".to_string());
+
+    // dump bytecode
     let mut text = String::new();
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
@@ -288,6 +320,16 @@ fn verbose_stepwise_processing(
                 }
             }
         }
+    }
+
+    // dump analysis results, if any
+    if let Some(processor) = processor_opt {
+        text += &ProcessorResultDisplay {
+            env,
+            targets,
+            processor,
+        }
+        .to_string();
     }
     println!("{}", text);
 }

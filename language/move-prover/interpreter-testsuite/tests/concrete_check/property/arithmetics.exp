@@ -1,0 +1,35 @@
+Running Move unit tests
+[ FAIL    ] 0x2::A::check_arithmetics_div0
+[ FAIL    ] 0x2::A::check_arithmetics_mod0
+[ PASS    ] 0x2::A::check_arithmetics_ok
+
+Test failures:
+
+Failures in 0x2::A:
+
+┌── check_arithmetics_div0 ──────
+│ error: failed to evaluate expression
+│
+│     ┌── tests/concrete_check/property/arithmetics.move:17:20 ───
+│     │
+│  17 │             assert 5 / 0 == 1;
+│     │                    ^^^^^^^^^^
+│     │
+│
+│
+└──────────────────
+
+
+┌── check_arithmetics_mod0 ──────
+│ error: failed to evaluate expression
+│
+│     ┌── tests/concrete_check/property/arithmetics.move:24:20 ───
+│     │
+│  24 │             assert 5 % 0 == 1;
+│     │                    ^^^^^^^^^^
+│     │
+│
+│
+└──────────────────
+
+Test result: FAILED. Total tests: 3; passed: 1; failed: 2

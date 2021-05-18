@@ -620,6 +620,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytecode",
+ "codespan-reporting",
  "datatest-stable",
  "diem-crypto",
  "diem-workspace-hack",

@@ -1,0 +1,29 @@
+Running Move unit tests
+[ FAIL    ] 0x2::A::check_bitwise_fail
+[ PASS    ] 0x2::A::check_bitwise_ok
+
+Test failures:
+
+Failures in 0x2::A:
+
+┌── check_bitwise_fail ──────
+│ error: property does not hold
+│
+│     ┌── tests/concrete_check/property/bitwise.move:14:20 ───
+│     │
+│  14 │             assert 0x1u128 ^ 0x2 != 0x3u64;
+│     │                    ^^^^^^^^^^^^^^^^^^^^^^^
+│     │
+│
+│ error: property does not hold
+│
+│     ┌── tests/concrete_check/property/bitwise.move:15:20 ───
+│     │
+│  15 │             assert 0x100u64 >> 16 != 0;
+│     │                    ^^^^^^^^^^^^^^^^^^^
+│     │
+│
+│
+└──────────────────
+
+Test result: FAILED. Total tests: 2; passed: 1; failed: 1

@@ -33,6 +33,8 @@ pub enum FailureReason {
         stackless_vm_return_values: Box<VMResult<Vec<Vec<u8>>>>,
         stackless_vm_change_set: Box<VMResult<ChangeSet>>,
     },
+    // Property checking failed
+    Property(String),
     // The test failed for some unknown reason. This shouldn't be encountered
     Unknown(String),
 }
@@ -109,6 +111,10 @@ impl FailureReason {
         }
     }
 
+    pub fn property(details: String) -> Self {
+        FailureReason::Property(details)
+    }
+
     pub fn unknown() -> Self {
         FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
     }
@@ -163,6 +169,7 @@ impl TestFailure {
                     stackless_vm_change_set
                 )
             }
+            FailureReason::Property(message) => message.clone(),
             FailureReason::Unknown(message) => {
                 format!(
                     "{}. VMError (if there is one) is: {}",

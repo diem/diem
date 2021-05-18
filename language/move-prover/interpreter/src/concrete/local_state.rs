@@ -163,6 +163,10 @@ impl LocalState {
             TerminationStatus::Return(_) | TerminationStatus::Abort(_)
         )
     }
+    /// Check whether we are executing in a post-abort status
+    pub fn is_post_abort(&self) -> bool {
+        matches!(self.termination, TerminationStatus::PostAbort(_))
+    }
     /// Mark that the current function terminated with an abort
     pub fn terminate_with_abort(&mut self, abort_info: AbortInfo) {
         if cfg!(debug_assertions) {

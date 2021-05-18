@@ -79,6 +79,8 @@ impl<'env> Runtime<'env> {
             fun_target,
             ty_args,
             args.to_vec(),
+            /* skip_specs */ false,
+            /* level */ 1,
             global_state,
         )
         .map_err(|abort_info| abort_info.into_err())

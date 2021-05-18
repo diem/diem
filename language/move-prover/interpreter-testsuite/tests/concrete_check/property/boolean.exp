@@ -1,0 +1,21 @@
+Running Move unit tests
+[ FAIL    ] 0x2::A::check_boolean_fail
+[ PASS    ] 0x2::A::check_boolean_ok
+
+Test failures:
+
+Failures in 0x2::A:
+
+┌── check_boolean_fail ──────
+│ error: property does not hold
+│
+│     ┌── tests/concrete_check/property/boolean.move:13:20 ───
+│     │
+│  13 │             assert true ==> false;
+│     │                    ^^^^^^^^^^^^^^
+│     │
+│
+│
+└──────────────────
+
+Test result: FAILED. Total tests: 2; passed: 1; failed: 1

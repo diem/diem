@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use num::{BigUint, ToPrimitive, Zero};
+use num::{BigInt, ToPrimitive, Zero};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, convert::TryFrom, rc::Rc};
 
@@ -12,7 +12,7 @@ use bytecode::{
     function_target_pipeline::FunctionTargetsHolder,
     stackless_bytecode::{
         AbortAction, AssignKind, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Label,
-        Operation,
+        Operation, PropKind,
     },
 };
 use move_binary_format::errors::Location;
@@ -21,13 +21,14 @@ use move_core_types::{
     vm_status::{sub_status, StatusCode},
 };
 use move_model::{
-    ast::{MemoryLabel, TempIndex},
+    ast::{Exp, MemoryLabel, TempIndex},
     model::{FunId, FunctionEnv, ModuleId, StructId},
     ty as MT,
 };
 
 use crate::{
     concrete::{
+        evaluator::{Evaluator, ExpState},
         local_state::{AbortInfo, LocalState, TerminationStatus},
         settings::InterpreterSettings,
         ty::{
@@ -61,11 +62,15 @@ const DESTROY_NON_EMPTY_VEC: u64 = sub_status::NFE_VECTOR_ERROR_BASE + 3;
 // Execution context
 //**************************************************************************************************
 
-struct FunctionContext<'env> {
+pub struct FunctionContext<'env> {
+    // context
     holder: &'env FunctionTargetsHolder,
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
+    skip_specs: bool,
     label_offsets: BTreeMap<Label, CodeOffset>,
+    // debug
+    level: usize,
 }
 
 impl<'env> FunctionContext<'env> {
@@ -73,13 +78,17 @@ impl<'env> FunctionContext<'env> {
         holder: &'env FunctionTargetsHolder,
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
+        skip_specs: bool,
+        level: usize,
     ) -> Self {
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
         Self {
             holder,
             target,
             ty_args,
+            skip_specs,
             label_offsets,
+            level,
         }
     }
 
@@ -87,7 +96,7 @@ impl<'env> FunctionContext<'env> {
     // settings
     //
 
-    fn get_settings(&self) -> Rc<InterpreterSettings> {
+    pub fn get_settings(&self) -> Rc<InterpreterSettings> {
         self.target
             .global_env()
             .get_extension::<InterpreterSettings>()
@@ -113,8 +122,10 @@ impl<'env> FunctionContext<'env> {
             let bytecode = instructions.get(pc).unwrap();
             if debug_bytecode {
                 println!(
-                    "{}: {}",
+                    "{} {}[{}]: {}",
+                    "-".repeat(self.level),
                     self.target.func_env.get_full_name_str(),
+                    pc,
                     bytecode.display(&self.target, &self.label_offsets)
                 );
             }
@@ -342,8 +353,18 @@ impl<'env> FunctionContext<'env> {
                 global_state,
                 eval_state,
             ),
+            Bytecode::Prop(_, PropKind::Assert, exp) => {
+                if !self.skip_specs {
+                    self.handle_prop_assert(exp, eval_state, local_state, global_state)
+                }
+            }
+            Bytecode::Prop(_, PropKind::Assume, exp) => {
+                if !self.skip_specs {
+                    self.handle_prop_assume(exp, eval_state, local_state, global_state)
+                }
+            }
             // expressions (TODO: not supported yet)
-            Bytecode::Prop(..) => {}
+            Bytecode::Prop(_, PropKind::Modifies, _) => {}
             // not-in-use as of now
             Bytecode::SaveSpecVar(..) => unreachable!(),
         }
@@ -787,7 +808,7 @@ impl<'env> FunctionContext<'env> {
                 let rhs = typed_args.remove(1);
                 let lhs = typed_args.remove(0);
                 let calculated =
-                    self.handle_binary_comparision(op, lhs, rhs, local_state.get_type(dsts[0]));
+                    self.handle_binary_comparison(op, lhs, rhs, local_state.get_type(dsts[0]));
                 Ok(vec![calculated])
             }
             // binary equality
@@ -852,7 +873,7 @@ impl<'env> FunctionContext<'env> {
                     let abort_val = if local_state.get_type(abort_idx).is_u64() {
                         TypedValue::mk_u64(abort_info.get_status_code())
                     } else {
-                        TypedValue::mk_num(BigUint::from(abort_info.get_status_code()))
+                        TypedValue::mk_num(BigInt::from(abort_info.get_status_code()))
                     };
                     local_state.put_value(abort_idx, abort_val);
                     local_state.set_pc(self.code_offset_by_label(action.0));
@@ -1533,12 +1554,7 @@ impl<'env> FunctionContext<'env> {
         let rval = rhs.into_int();
         let result = match op {
             Operation::Add => lval + rval,
-            Operation::Sub => {
-                if lval < rval {
-                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
-                }
-                lval - rval
-            }
+            Operation::Sub => lval - rval,
             Operation::Mul => lval * rval,
             Operation::Div => {
                 if rval.is_zero() {
@@ -1577,7 +1593,9 @@ impl<'env> FunctionContext<'env> {
                 Some(v) => TypedValue::mk_u128(v),
             }
         } else {
-            assert!(res.is_num());
+            if cfg!(debug_assertions) {
+                assert!(res.is_num());
+            }
             TypedValue::mk_num(result)
         };
         Ok(res_val)
@@ -1608,7 +1626,9 @@ impl<'env> FunctionContext<'env> {
         } else if res.is_u64() {
             TypedValue::mk_u64(result.to_u64().unwrap())
         } else {
-            assert!(res.is_u128());
+            if cfg!(debug_assertions) {
+                assert!(res.is_u128());
+            }
             TypedValue::mk_u128(result.to_u128().unwrap())
         }
     }
@@ -1653,7 +1673,7 @@ impl<'env> FunctionContext<'env> {
         }
     }
 
-    fn handle_binary_comparision(
+    fn handle_binary_comparison(
         &self,
         op: &Operation,
         lhs: TypedValue,
@@ -1790,6 +1810,52 @@ impl<'env> FunctionContext<'env> {
             })
             .collect();
         local_state.terminate_with_return(ret_vals);
+    }
+
+    fn handle_prop_assert(
+        &self,
+        exp: &Exp,
+        eval_state: &EvalState,
+        local_state: &LocalState,
+        global_state: &GlobalState,
+    ) {
+        let evaluator = Evaluator::new(
+            self.holder,
+            &self.target,
+            &self.ty_args,
+            self.level,
+            ExpState::default(),
+            eval_state,
+            local_state,
+            global_state,
+        );
+        evaluator.check_assert(exp);
+    }
+
+    fn handle_prop_assume(
+        &self,
+        exp: &Exp,
+        eval_state: &EvalState,
+        local_state: &mut LocalState,
+        global_state: &GlobalState,
+    ) {
+        let evaluator = Evaluator::new(
+            self.holder,
+            &self.target,
+            &self.ty_args,
+            self.level,
+            ExpState::default(),
+            eval_state,
+            local_state,
+            global_state,
+        );
+        match evaluator.check_assume(exp) {
+            None => (),
+            // handle let-bindings
+            Some((local_idx, local_val)) => {
+                local_state.put_value_override(local_idx, local_val);
+            }
+        }
     }
 
     //
@@ -2113,7 +2179,13 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // build the context
-        FunctionContext::new(self.holder, callee_target, callee_ty_insts)
+        FunctionContext::new(
+            self.holder,
+            callee_target,
+            callee_ty_insts,
+            self.skip_specs,
+            self.level + 1,
+        )
     }
 
     fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
@@ -2174,10 +2246,12 @@ pub fn entrypoint(
     target: FunctionTarget,
     ty_args: &[BaseType],
     typed_args: Vec<TypedValue>,
+    skip_specs: bool,
+    level: usize,
     global_state: &mut GlobalState,
 ) -> ExecResult<Vec<TypedValue>> {
     let mut eval_state = EvalState::default();
-    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec());
+    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), skip_specs, level);
     let local_state = ctxt.exec_user_function(typed_args, global_state, &mut eval_state)?;
     let termination = local_state.into_termination_status();
     match termination {

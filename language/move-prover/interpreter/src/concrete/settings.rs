@@ -7,6 +7,8 @@ pub struct InterpreterSettings {
     pub verbose_stepwise: bool,
     /// dump bytecode trace
     pub verbose_bytecode: bool,
+    /// dump expression trace
+    pub verbose_expression: bool,
 }
 
 impl InterpreterSettings {
@@ -14,6 +16,7 @@ impl InterpreterSettings {
         Self {
             verbose_stepwise: true,
             verbose_bytecode: true,
+            verbose_expression: true,
         }
     }
 }

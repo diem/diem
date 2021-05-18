@@ -205,7 +205,12 @@ impl SharedTestingConfig {
         test_plan: &ModuleTestPlan,
         function_name: &str,
         test_info: &TestCase,
-    ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
+    ) -> (
+        VMResult<ChangeSet>,
+        VMResult<Vec<Vec<u8>>>,
+        TestRunInfo,
+        Option<String>,
+    ) {
         let now = Instant::now();
 
         let settings = if self.verbose {
@@ -226,6 +231,7 @@ impl SharedTestingConfig {
             &test_info.arguments,
             &global_state,
         );
+        let prop_check_result = interpreter.report_property_checking_results();
 
         let test_run_info = TestRunInfo::new(
             function_name.to_string(),
@@ -234,7 +240,12 @@ impl SharedTestingConfig {
             // gas is not charged against stackless VM instruction.
             0,
         );
-        (Ok(change_set), return_result, test_run_info)
+        (
+            Ok(change_set),
+            return_result,
+            test_run_info,
+            prop_check_result,
+        )
     }
 
     fn exec_module_tests<W: Write>(
@@ -287,7 +298,7 @@ impl SharedTestingConfig {
             let (cs_result, exec_result, test_run_info) =
                 self.execute_via_move_vm(test_plan, function_name, test_info);
             if self.check_stackless_vm {
-                let (stackless_vm_change_set, stackless_vm_result, _) = self
+                let (stackless_vm_change_set, stackless_vm_result, _, prop_check_result) = self
                     .execute_via_stackless_vm(
                         stackless_model.as_ref().unwrap(),
                         test_plan,
@@ -317,7 +328,20 @@ impl SharedTestingConfig {
                     );
                     continue;
                 }
-            };
+                if let Some(prop_failure) = prop_check_result {
+                    fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::property(prop_failure),
+                            test_run_info,
+                            None,
+                            None,
+                        ),
+                        &test_plan,
+                    );
+                    continue;
+                }
+            }
 
             let save_session_state = || {
                 if self.save_storage_state_on_failure {

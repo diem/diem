@@ -1,0 +1,4 @@
+Running Move unit tests
+[ PASS    ] 0x2::A::check_mem_label_set
+[ PASS    ] 0x2::A::check_mem_label_swap
+Test result: OK. Total tests: 2; passed: 2; failed: 0

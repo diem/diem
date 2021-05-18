@@ -1,0 +1,3 @@
+Running Move unit tests
+[ PASS    ] 0x2::A::check_lambda
+Test result: OK. Total tests: 1; passed: 1; failed: 0

@@ -1,0 +1,3 @@
+Running Move unit tests
+[ PASS    ] 0x2::A::check_signer_spec_address_of
+Test result: OK. Total tests: 1; passed: 1; failed: 0

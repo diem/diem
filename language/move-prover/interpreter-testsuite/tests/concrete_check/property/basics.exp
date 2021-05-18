@@ -1,0 +1,36 @@
+Running Move unit tests
+[ FAIL    ] 0x2::A::check_const_fail
+[ PASS    ] 0x2::A::check_const_pass
+[ FAIL    ] 0x2::A::check_local_fail
+[ PASS    ] 0x2::A::check_local_pass
+
+Test failures:
+
+Failures in 0x2::A:
+
+┌── check_const_fail ──────
+│ error: property does not hold
+│
+│     ┌── tests/concrete_check/property/basics.move:12:20 ───
+│     │
+│  12 │             assert false;
+│     │                    ^^^^^
+│     │
+│
+│
+└──────────────────
+
+
+┌── check_local_fail ──────
+│ error: property does not hold
+│
+│     ┌── tests/concrete_check/property/basics.move:29:20 ───
+│     │
+│  29 │             assert a;
+│     │                    ^
+│     │
+│
+│
+└──────────────────
+
+Test result: FAILED. Total tests: 4; passed: 2; failed: 2

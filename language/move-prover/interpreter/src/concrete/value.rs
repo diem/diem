@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use num::{BigUint, ToPrimitive};
+use num::{BigInt, ToPrimitive};
 use std::collections::BTreeMap;
 
 use move_core_types::{
@@ -12,7 +12,9 @@ use move_core_types::{
 use move_model::ast::{MemoryLabel, TempIndex};
 
 use crate::{
-    concrete::ty::{BaseType, PartialStructInstantiation, StructInstantiation, Type},
+    concrete::ty::{
+        BaseType, PartialStructInstantiation, PrimitiveType, StructInstantiation, Type,
+    },
     shared::ident::StructIdent,
 };
 
@@ -23,7 +25,7 @@ use crate::{
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum BaseValue {
     Bool(bool),
-    Int(BigUint),
+    Int(BigInt),
     Address(AccountAddress),
     Signer(AccountAddress),
     Vector(Vec<BaseValue>),
@@ -35,15 +37,15 @@ impl BaseValue {
         Self::Bool(v)
     }
     pub fn mk_u8(v: u8) -> Self {
-        Self::Int(BigUint::from(v))
+        Self::Int(BigInt::from(v))
     }
     pub fn mk_u64(v: u64) -> Self {
-        Self::Int(BigUint::from(v))
+        Self::Int(BigInt::from(v))
     }
     pub fn mk_u128(v: u128) -> Self {
-        Self::Int(BigUint::from(v))
+        Self::Int(BigInt::from(v))
     }
-    pub fn mk_num(v: BigUint) -> Self {
+    pub fn mk_num(v: BigInt) -> Self {
         Self::Int(v)
     }
     pub fn mk_address(v: AccountAddress) -> Self {
@@ -83,13 +85,13 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
-    pub fn into_num(self) -> BigUint {
+    pub fn into_num(self) -> BigInt {
         match self {
             Self::Int(v) => v,
             _ => unreachable!(),
         }
     }
-    pub fn into_int(self) -> BigUint {
+    pub fn into_int(self) -> BigInt {
         match self {
             Self::Int(v) => v,
             _ => unreachable!(),
@@ -141,6 +143,37 @@ pub struct TypedValue {
 
 #[allow(dead_code)]
 impl TypedValue {
+    pub fn fuse_base(ty: BaseType, val: BaseValue) -> Self {
+        fn type_match(ty: &BaseType, val: &BaseValue) -> bool {
+            match (ty, val) {
+                (BaseType::Primitive(PrimitiveType::Bool), BaseValue::Bool(_)) => true,
+                (BaseType::Primitive(PrimitiveType::Int(_)), BaseValue::Int(_)) => true,
+                (BaseType::Primitive(PrimitiveType::Address), BaseValue::Address(_)) => true,
+                (BaseType::Primitive(PrimitiveType::Signer), BaseValue::Signer(_)) => true,
+                (BaseType::Vector(elem_ty), BaseValue::Vector(elem_vals)) => elem_vals
+                    .iter()
+                    .all(|elem_val| type_match(elem_ty, elem_val)),
+                (BaseType::Struct(inst), BaseValue::Struct(field_vals)) => {
+                    field_vals.len() == inst.fields.len()
+                        && field_vals
+                            .iter()
+                            .zip(inst.fields.iter())
+                            .all(|(field_val, field_info)| type_match(&field_info.ty, field_val))
+                }
+                _ => false,
+            }
+        }
+
+        if cfg!(debug_assertions) {
+            assert!(type_match(&ty, &val));
+        }
+        Self {
+            ty: Type::Base(ty),
+            val,
+            ptr: Pointer::None,
+        }
+    }
+
     //
     // value creation
     //
@@ -173,7 +206,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
-    pub fn mk_num(v: BigUint) -> Self {
+    pub fn mk_num(v: BigInt) -> Self {
         Self {
             ty: Type::mk_num(),
             val: BaseValue::mk_num(v),
@@ -248,7 +281,7 @@ impl TypedValue {
             ptr,
         }
     }
-    pub fn mk_ref_num(v: BigUint, is_mut: bool, ptr: Pointer) -> Self {
+    pub fn mk_ref_num(v: BigInt, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_num(is_mut),
             val: BaseValue::mk_num(v),
@@ -328,13 +361,13 @@ impl TypedValue {
         }
         self.val.into_u128()
     }
-    pub fn into_num(self) -> BigUint {
+    pub fn into_num(self) -> BigInt {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_num());
         }
         self.val.into_num()
     }
-    pub fn into_int(self) -> BigUint {
+    pub fn into_int(self) -> BigInt {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_int());
         }
@@ -389,7 +422,7 @@ impl TypedValue {
         }
         (self.val.into_u128(), self.ty.into_ref_type().0, self.ptr)
     }
-    pub fn into_ref_num(self) -> (BigUint, bool, Pointer) {
+    pub fn into_ref_num(self) -> (BigInt, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_num(None));
         }
@@ -1124,5 +1157,37 @@ impl EvalState {
             .and_modify(|per_label_map| per_label_map.clear())
             .or_insert_with(BTreeMap::new)
             .insert(partial_inst.ident, per_struct_map);
+    }
+
+    pub fn load_memory(
+        &self,
+        label: &MemoryLabel,
+        inst: &StructInstantiation,
+        addr: &AccountAddress,
+    ) -> Option<BaseValue> {
+        self.saved_memory
+            .get(label)
+            .and_then(|sub| sub.get(&inst.ident))
+            .and_then(|sub| sub.get(&inst))
+            .and_then(|sub| sub.get(addr))
+            .cloned()
+    }
+
+    pub fn register_memory(&self, label: &MemoryLabel, global_state: &mut GlobalState) {
+        for inst_map in self.saved_memory.get(label).unwrap().values() {
+            for (inst, account_map) in inst_map {
+                for (addr, val) in account_map {
+                    let typed_val = TypedValue {
+                        ty: Type::mk_struct(inst.clone()),
+                        val: val.clone(),
+                        ptr: Pointer::None,
+                    };
+                    let exists = global_state.put_resource(*addr, inst.clone(), typed_val);
+                    if cfg!(debug_assertions) {
+                        assert!(exists.is_none());
+                    }
+                }
+            }
+        }
     }
 }
