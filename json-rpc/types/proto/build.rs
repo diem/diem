@@ -10,6 +10,6 @@ fn main() {
         "#[serde(default, skip_serializing_if = \"crate::is_default\")]",
     );
 
-    conf.compile_protos(&["src/proto/jsonrpc.proto"], &["src/proto"])
+    conf.compile_protos(&["src/jsonrpc.proto"], &["src/"])
         .unwrap();
 }

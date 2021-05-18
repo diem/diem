@@ -1886,8 +1886,6 @@ dependencies = [
  "diem-workspace-hack",
  "hex",
  "move-core-types",
- "prost",
- "prost-build",
  "serde",
  "serde_json",
 ]
@@ -4030,6 +4028,19 @@ dependencies = [
  "array_tool",
  "env_logger 0.7.1",
  "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jsonrpc-types-proto"
+version = "0.0.0"
+dependencies = [
+ "diem-json-rpc-types",
+ "diem-types",
+ "diem-workspace-hack",
+ "prost",
+ "prost-build",
  "serde",
  "serde_json",
 ]

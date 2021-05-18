@@ -182,6 +182,7 @@ members = [
     "generate-format",
     "invalid-mutations",
     "ir-testsuite",
+    "jsonrpc-types-proto",
     "language-benchmarks",
     "language-e2e-tests",
     "language-e2e-testsuite",

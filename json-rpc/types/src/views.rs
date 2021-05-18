@@ -967,10 +967,7 @@ impl TryFrom<&AccountStateProofView> for AccountStateProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        proto::types as jsonrpc,
-        views::{AmountView, EventDataView, PreburnWithMetadataView},
-    };
+    use crate::views::{AmountView, EventDataView, PreburnWithMetadataView};
     use diem_types::{contract_event::ContractEvent, event::EventKey};
     use move_core_types::language_storage::TypeTag;
     use serde_json::json;
@@ -1011,8 +1008,5 @@ mod tests {
                 }
             })
         );
-
-        let preburn: jsonrpc::PreburnWithMetadata = serde_json::from_value(value).unwrap();
-        assert_eq!(preburn.metadata, "");
     }
 }
