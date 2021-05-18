@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::views::{AccountStateWithProofView, CurrencyInfoView, EventView, StateProofView};
 use diem_client::{
     views::{
         AccountView, EventWithProofView, MetadataView, TransactionView, TransactionsWithProofsView,
@@ -10,8 +11,6 @@ use diem_client::{
 use diem_types::{
     account_address::AccountAddress, event::EventKey, transaction::SignedTransaction,
 };
-
-use crate::views::{AccountStateWithProofView, CurrencyInfoView, EventView, StateProofView};
 use futures::future::join_all;
 use rand::seq::{SliceChooseIter, SliceRandom};
 use std::cmp::Reverse;

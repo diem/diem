@@ -1866,23 +1866,13 @@ dependencies = [
 name = "diem-json-rpc-client"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
- "bcs",
  "diem-client",
- "diem-config",
  "diem-crypto",
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",
  "futures",
- "hex",
  "rand 0.8.3",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "warp",
 ]
 
 [[package]]
