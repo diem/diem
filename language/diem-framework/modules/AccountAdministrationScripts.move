@@ -7,6 +7,7 @@ module AccountAdministrationScripts {
     use 0x1::SlidingNonce;
     use 0x1::DualAttestation;
     use 0x1::DiemId;
+    use 0x1::CRSN;
 
     /// # Summary
     /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
@@ -609,12 +610,67 @@ module AccountAdministrationScripts {
     /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                      | Description                                                                                   |
-    /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
 
     public(script) fun create_diem_id_domains(account: signer) {
         DiemId::publish_diem_id_domains(&account)
+    }
+
+    /// # Summary
+    /// Publishes a CRSN resource under `account` and opts the account in to
+    /// concurrent transaction processing. Upon successful execution of this
+    /// script, all further transactions sent from this account will be ordered
+    /// and processed according to DIP-168.
+    ///
+    /// # Technical Description
+    /// This publishes a `CRSN::CRSN` resource under `account` with `crsn_size`
+    /// number of slots. All slots will be initialized to the empty (unused)
+    /// state, and the CRSN resource's `min_nonce` field will be set to the transaction's
+    /// sequence number + 1.
+    ///
+    /// # Parameters
+    /// | Name        | Type     | Description                                           |
+    /// | ------      | ------   | -------------                                         |
+    /// | `account`   | `signer` | The signer of the sending account of the transaction. |
+    /// | `crsn_size` | `u64`    | The the number of slots the published CRSN will have. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason            | Description                                                    |
+    /// | ----------------           | --------------          | -------------                                                  |
+    /// | `Errors::INVALID_STATE`    | `CRSN::EHAS_CRSN`       | A `CRSN::CRSN` resource was already published under `account`. |
+    /// | `Errors::INVALID_ARGUMENT` | `CRSN::EZERO_SIZE_CRSN` | The `crsn_size` was zero.                                      |
+    public(script) fun opt_in_to_crsn(account: signer, crsn_size: u64) {
+        DiemAccount::publish_crsn(&account, crsn_size)
+    }
+
+    /// # Summary
+    /// Shifts the window held by the CRSN resource published under `account`
+    /// by `shift_amount`. This will expire all unused slots in the CRSN at the
+    /// time of processing that are less than `shift_amount`. The exact
+    /// semantics are defined in DIP-168.
+    ///
+    /// # Technical Description
+    /// This shifts the slots in the published `CRSN::CRSN` resource under
+    /// `account` by `shift_amount`, and increments the CRSN's `min_nonce` field
+    /// by `shift_amount` as well. After this, it will shift the window over
+    /// any set bits. It is important to note that the sequence nonce of the
+    /// sending transaction must still lie within the range of the window in
+    /// order for this transaction to be processed successfully.
+    ///
+    /// # Parameters
+    /// | Name           | Type     | Description                                                 |
+    /// | ------         | ------   | -------------                                               |
+    /// | `account`      | `signer` | The signer of the sending account of the transaction.       |
+    /// | `shift_amount` | `u64`    | The amount to shift the window in the CRSN under `account`. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category          | Error Reason     | Description                                               |
+    /// | ----------------        | --------------   | -------------                                             |
+    /// | `Errors::INVALID_STATE` | `CRSN::ENO_CRSN` | A `CRSN::CRSN` resource is not published under `account`. |
+    public(script) fun force_expire(account: signer, shift_amount: u64) {
+        CRSN::force_expire(&account, shift_amount)
     }
 }
 }

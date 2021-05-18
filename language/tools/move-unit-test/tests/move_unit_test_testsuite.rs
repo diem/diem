@@ -102,8 +102,13 @@ fn run_test_with_modifiers(
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
     std::env::set_var("NO_COLOR", "1");
     let update_baseline = read_bool_env_var(UPDATE_BASELINE) || read_bool_env_var(UPB);
-    let mut targets = move_stdlib::move_stdlib_files();
-    targets.push(path.to_str().unwrap().to_owned());
+    let targets = vec![
+        move_stdlib::path_in_crate("modules/Signer.move")
+            .to_str()
+            .unwrap()
+            .to_owned(),
+        path.to_str().unwrap().to_owned(),
+    ];
     let unit_test_config = UnitTestingConfig {
         num_threads: 1,
         instruction_execution_bound: 1000,

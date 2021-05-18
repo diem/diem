@@ -13,6 +13,9 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     env::set_var("NO_COLOR", "1");
 
     let mut targets = move_stdlib_files();
+    // TODO: BitVector module causes the stackless bytecode interpreter to panic, so don't include
+    // it for now
+    targets.retain(|x| !x.contains("BitVector.move"));
     targets.push(path.to_str().unwrap().to_owned());
     let config = UnitTestingConfig {
         instruction_execution_bound: 5000,

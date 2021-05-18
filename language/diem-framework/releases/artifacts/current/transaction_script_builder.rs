@@ -1881,9 +1881,9 @@ pub enum ScriptFunctionCall {
     /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                      | Description                                                                                   |
-    /// | ----------------            | --------------                    | -------------                                                                                 |
-    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
     CreateDiemIdDomains {},
 
     /// # Summary
@@ -2085,6 +2085,32 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
+    /// Shifts the window held by the CRSN resource published under `account`
+    /// by `shift_amount`. This will expire all unused slots in the CRSN at the
+    /// time of processing that are less than `shift_amount`. The exact
+    /// semantics are defined in DIP-168.
+    ///
+    /// # Technical Description
+    /// This shifts the slots in the published `CRSN::CRSN` resource under
+    /// `account` by `shift_amount`, and increments the CRSN's `min_nonce` field
+    /// by `shift_amount` as well. After this, it will shift the window over
+    /// any set bits. It is important to note that the sequence nonce of the
+    /// sending transaction must still lie within the range of the window in
+    /// order for this transaction to be processed successfully.
+    ///
+    /// # Parameters
+    /// | Name           | Type     | Description                                                 |
+    /// | ------         | ------   | -------------                                               |
+    /// | `account`      | `signer` | The signer of the sending account of the transaction.       |
+    /// | `shift_amount` | `u64`    | The amount to shift the window in the CRSN under `account`. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category          | Error Reason     | Description                                               |
+    /// | ----------------        | --------------   | -------------                                             |
+    /// | `Errors::INVALID_STATE` | `CRSN::ENO_CRSN` | A `CRSN::CRSN` resource is not published under `account`. |
+    ForceExpire { shift_amount: u64 },
+
+    /// # Summary
     /// Freezes the account at `address`. The sending account of this transaction
     /// must be the Treasury Compliance account. The account being frozen cannot be
     /// the Diem Root or Treasury Compliance account. After the successful
@@ -2155,6 +2181,31 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
     InitializeDiemConsensusConfig { sliding_nonce: u64 },
+
+    /// # Summary
+    /// Publishes a CRSN resource under `account` and opts the account in to
+    /// concurrent transaction processing. Upon successful execution of this
+    /// script, all further transactions sent from this account will be ordered
+    /// and processed according to DIP-168.
+    ///
+    /// # Technical Description
+    /// This publishes a `CRSN::CRSN` resource under `account` with `crsn_size`
+    /// number of slots. All slots will be initialized to the empty (unused)
+    /// state, and the CRSN resource's `min_nonce` field will be set to the transaction's
+    /// sequence number + 1.
+    ///
+    /// # Parameters
+    /// | Name        | Type     | Description                                           |
+    /// | ------      | ------   | -------------                                         |
+    /// | `account`   | `signer` | The signer of the sending account of the transaction. |
+    /// | `crsn_size` | `u64`    | The the number of slots the published CRSN will have. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason            | Description                                                    |
+    /// | ----------------           | --------------          | -------------                                                  |
+    /// | `Errors::INVALID_STATE`    | `CRSN::EHAS_CRSN`       | A `CRSN::CRSN` resource was already published under `account`. |
+    /// | `Errors::INVALID_ARGUMENT` | `CRSN::EZERO_SIZE_CRSN` | The `crsn_size` was zero.                                      |
+    OptInToCrsn { crsn_size: u64 },
 
     /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
@@ -3396,6 +3447,7 @@ impl ScriptFunctionCall {
                 auth_key_prefix,
                 human_name,
             ),
+            ForceExpire { shift_amount } => encode_force_expire_script_function(shift_amount),
             FreezeAccount {
                 sliding_nonce,
                 to_freeze_account,
@@ -3403,6 +3455,7 @@ impl ScriptFunctionCall {
             InitializeDiemConsensusConfig { sliding_nonce } => {
                 encode_initialize_diem_consensus_config_script_function(sliding_nonce)
             }
+            OptInToCrsn { crsn_size } => encode_opt_in_to_crsn_script_function(crsn_size),
             PeerToPeerWithMetadata {
                 currency,
                 payee,
@@ -4149,9 +4202,9 @@ pub fn encode_create_designated_dealer_script_function(
 /// | `account` | `signer` | The signer of the sending account of the transaction. |
 ///
 /// # Common Abort Conditions
-/// | Error Category              | Error Reason                      | Description                                                                                   |
-/// | ----------------            | --------------                    | -------------                                                                                 |
-/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN`           | A `DiemId::DiemIdDomains` resource has already been published under `account`.     |
+/// | Error Category              | Error Reason              | Description                                                                    |
+/// | ----------------            | --------------            | -------------                                                                  |
+/// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
 pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -4419,6 +4472,42 @@ pub fn encode_create_validator_operator_account_script_function(
 }
 
 /// # Summary
+/// Shifts the window held by the CRSN resource published under `account`
+/// by `shift_amount`. This will expire all unused slots in the CRSN at the
+/// time of processing that are less than `shift_amount`. The exact
+/// semantics are defined in DIP-168.
+///
+/// # Technical Description
+/// This shifts the slots in the published `CRSN::CRSN` resource under
+/// `account` by `shift_amount`, and increments the CRSN's `min_nonce` field
+/// by `shift_amount` as well. After this, it will shift the window over
+/// any set bits. It is important to note that the sequence nonce of the
+/// sending transaction must still lie within the range of the window in
+/// order for this transaction to be processed successfully.
+///
+/// # Parameters
+/// | Name           | Type     | Description                                                 |
+/// | ------         | ------   | -------------                                               |
+/// | `account`      | `signer` | The signer of the sending account of the transaction.       |
+/// | `shift_amount` | `u64`    | The amount to shift the window in the CRSN under `account`. |
+///
+/// # Common Abort Conditions
+/// | Error Category          | Error Reason     | Description                                               |
+/// | ----------------        | --------------   | -------------                                             |
+/// | `Errors::INVALID_STATE` | `CRSN::ENO_CRSN` | A `CRSN::CRSN` resource is not published under `account`. |
+pub fn encode_force_expire_script_function(shift_amount: u64) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("AccountAdministrationScripts").to_owned(),
+        ),
+        ident_str!("force_expire").to_owned(),
+        vec![],
+        vec![bcs::to_bytes(&shift_amount).unwrap()],
+    ))
+}
+
+/// # Summary
 /// Freezes the account at `address`. The sending account of this transaction
 /// must be the Treasury Compliance account. The account being frozen cannot be
 /// the Diem Root or Treasury Compliance account. After the successful
@@ -4512,6 +4601,41 @@ pub fn encode_initialize_diem_consensus_config_script_function(
         ident_str!("initialize_diem_consensus_config").to_owned(),
         vec![],
         vec![bcs::to_bytes(&sliding_nonce).unwrap()],
+    ))
+}
+
+/// # Summary
+/// Publishes a CRSN resource under `account` and opts the account in to
+/// concurrent transaction processing. Upon successful execution of this
+/// script, all further transactions sent from this account will be ordered
+/// and processed according to DIP-168.
+///
+/// # Technical Description
+/// This publishes a `CRSN::CRSN` resource under `account` with `crsn_size`
+/// number of slots. All slots will be initialized to the empty (unused)
+/// state, and the CRSN resource's `min_nonce` field will be set to the transaction's
+/// sequence number + 1.
+///
+/// # Parameters
+/// | Name        | Type     | Description                                           |
+/// | ------      | ------   | -------------                                         |
+/// | `account`   | `signer` | The signer of the sending account of the transaction. |
+/// | `crsn_size` | `u64`    | The the number of slots the published CRSN will have. |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason            | Description                                                    |
+/// | ----------------           | --------------          | -------------                                                  |
+/// | `Errors::INVALID_STATE`    | `CRSN::EHAS_CRSN`       | A `CRSN::CRSN` resource was already published under `account`. |
+/// | `Errors::INVALID_ARGUMENT` | `CRSN::EZERO_SIZE_CRSN` | The `crsn_size` was zero.                                      |
+pub fn encode_opt_in_to_crsn_script_function(crsn_size: u64) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("AccountAdministrationScripts").to_owned(),
+        ),
+        ident_str!("opt_in_to_crsn").to_owned(),
+        vec![],
+        vec![bcs::to_bytes(&crsn_size).unwrap()],
     ))
 }
 
@@ -7607,6 +7731,16 @@ fn decode_create_validator_operator_account_script_function(
     }
 }
 
+fn decode_force_expire_script_function(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::ForceExpire {
+            shift_amount: bcs::from_bytes(script.args().get(0)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_freeze_account_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -7626,6 +7760,18 @@ fn decode_initialize_diem_consensus_config_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::InitializeDiemConsensusConfig {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
+fn decode_opt_in_to_crsn_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::OptInToCrsn {
+            crsn_size: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -8413,12 +8559,20 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_create_validator_operator_account_script_function),
         );
         map.insert(
+            "AccountAdministrationScriptsforce_expire".to_string(),
+            Box::new(decode_force_expire_script_function),
+        );
+        map.insert(
             "TreasuryComplianceScriptsfreeze_account".to_string(),
             Box::new(decode_freeze_account_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsinitialize_diem_consensus_config".to_string(),
             Box::new(decode_initialize_diem_consensus_config_script_function),
+        );
+        map.insert(
+            "AccountAdministrationScriptsopt_in_to_crsn".to_string(),
+            Box::new(decode_opt_in_to_crsn_script_function),
         );
         map.insert(
             "PaymentScriptspeer_to_peer_with_metadata".to_string(),
