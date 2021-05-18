@@ -95,6 +95,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(storage::AccumulatorRangeProof::default()),
         Box::new(storage::AccumulatorAppendMany::default()),
         Box::new(storage::AccumulatorAppendEmpty::default()),
+        Box::new(storage::SparseMerkleCorrectness::default()),
         // Transaction
         Box::new(transaction::LanguageTransactionExecution::default()),
         Box::new(transaction::SignedTransactionTarget::default()),
