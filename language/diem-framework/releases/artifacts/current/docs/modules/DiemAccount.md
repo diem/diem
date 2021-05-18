@@ -46,6 +46,7 @@ before and after every transaction.
 -  [Function `create_parent_vasp_account`](#0x1_DiemAccount_create_parent_vasp_account)
 -  [Function `create_child_vasp_account`](#0x1_DiemAccount_create_child_vasp_account)
 -  [Function `create_signer`](#0x1_DiemAccount_create_signer)
+-  [Function `publish_crsn`](#0x1_DiemAccount_publish_crsn)
 -  [Function `balance_for`](#0x1_DiemAccount_balance_for)
 -  [Function `balance`](#0x1_DiemAccount_balance)
 -  [Function `add_currency`](#0x1_DiemAccount_add_currency)
@@ -85,6 +86,7 @@ before and after every transaction.
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
 <b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/BCS.md#0x1_BCS">0x1::BCS</a>;
+<b>use</b> <a href="CRSN.md#0x1_CRSN">0x1::CRSN</a>;
 <b>use</b> <a href="ChainId.md#0x1_ChainId">0x1::ChainId</a>;
 <b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
 <b>use</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer">0x1::DesignatedDealer</a>;
@@ -3220,6 +3222,38 @@ also be added. This account will be a child of <code>creator</code>, which must 
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_signer">create_signer</a>(addr: address): signer;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemAccount_publish_crsn"></a>
+
+## Function `publish_crsn`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_publish_crsn">publish_crsn</a>(account: &signer, size: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_publish_crsn">publish_crsn</a>(account: &signer, size: u64)
+<b>acquires</b> <a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a> {
+    <b>let</b> account_state = borrow_global&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+    // Don't set this <b>to</b> start at account_state.sequence_number + 1, since
+    // after this the epilogue will record the sequence nonce
+    // `account_state.sequence_number` which will shift the window.
+    // If we set the window <b>to</b> start at `account_state.sequence_number +
+    // 1`, this transaction would be rejected in the epilogue <b>as</b> the
+    // sequence nonce would be outside of the window.
+    <a href="CRSN.md#0x1_CRSN_publish">CRSN::publish</a>(account, account_state.sequence_number, size)
+}
 </code></pre>
 
 

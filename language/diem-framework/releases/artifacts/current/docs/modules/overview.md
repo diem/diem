@@ -95,6 +95,8 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::AccountLimits`](AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
 -  [`0x1::BCS`](../../../../../../move-stdlib/docs/BCS.md#0x1_BCS)
+-  [`0x1::BitVector`](../../../../../../move-stdlib/docs/BitVector.md#0x1_BitVector)
+-  [`0x1::CRSN`](CRSN.md#0x1_CRSN)
 -  [`0x1::ChainId`](ChainId.md#0x1_ChainId)
 -  [`0x1::CoreAddresses`](CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](DesignatedDealer.md#0x1_DesignatedDealer)
