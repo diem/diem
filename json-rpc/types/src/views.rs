@@ -13,7 +13,7 @@ use diem_types::{
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::ContractEvent,
+    contract_event::{ContractEvent, EventWithProof},
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -244,9 +244,40 @@ pub struct EventView {
     pub data: EventDataView,
 }
 
+impl TryFrom<(u64, ContractEvent)> for EventView {
+    type Error = Error;
+
+    fn try_from((txn_version, event): (u64, ContractEvent)) -> Result<Self> {
+        Ok(EventView {
+            key: *event.key(),
+            sequence_number: event.sequence_number(),
+            transaction_version: txn_version,
+            data: event.try_into()?,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct EventWithProofView {
     pub event_with_proof: BytesView,
+}
+
+impl TryFrom<&EventWithProofView> for EventWithProof {
+    type Error = Error;
+
+    fn try_from(view: &EventWithProofView) -> Result<Self> {
+        Ok(bcs::from_bytes(&view.event_with_proof)?)
+    }
+}
+
+impl TryFrom<&EventWithProof> for EventWithProofView {
+    type Error = Error;
+
+    fn try_from(event: &EventWithProof) -> Result<Self> {
+        Ok(Self {
+            event_with_proof: BytesView::from(bcs::to_bytes(event)?),
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -449,19 +480,6 @@ impl TryFrom<ContractEvent> for EventDataView {
         };
 
         Ok(data)
-    }
-}
-
-impl TryFrom<(u64, ContractEvent)> for EventView {
-    type Error = Error;
-
-    fn try_from((txn_version, event): (u64, ContractEvent)) -> Result<Self> {
-        Ok(EventView {
-            key: *event.key(),
-            sequence_number: event.sequence_number(),
-            transaction_version: txn_version,
-            data: event.try_into()?,
-        })
     }
 }
 

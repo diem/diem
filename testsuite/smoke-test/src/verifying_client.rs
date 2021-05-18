@@ -15,6 +15,7 @@ use diem_types::{
         diem_root_address, testnet_dd_account_address, treasury_compliance_account_address,
         validator_set_address,
     },
+    event::{EventHandle, EventKey},
     trusted_state::TrustedState,
 };
 use proptest::{collection::vec, prelude::*, sample::select};
@@ -94,6 +95,36 @@ impl Environment {
 
         tokio::join!(send_nv, send_v)
     }
+
+    /// Scan the chain for some event handles. This is not too complicated; we
+    /// just look up the first few handle ids for each account that we know about.
+    async fn scan_event_handles(&self, accounts: &[AccountAddress]) -> Vec<EventHandle> {
+        let mut event_handles = Vec::new();
+
+        for account in accounts {
+            // scan for a few handle ids
+            for id in 0..10 {
+                // TODO(philiphayes): add Order to get_events to allow us to just
+                // look up latest event.
+                let key = EventKey::new_from_address(account, id);
+                let start_seq = 0;
+                let limit = 1000;
+                let events = self
+                    .client
+                    .get_events(key, start_seq, limit)
+                    .await
+                    .unwrap()
+                    .into_inner();
+
+                let count = events.len() as u64;
+                if count != 0 {
+                    event_handles.push(EventHandle::new(key, count));
+                }
+            }
+        }
+
+        event_handles
+    }
 }
 
 /// Running a request against a `VerifyingClient` and non-verifying `Client`
@@ -162,6 +193,7 @@ fn assert_batches_equal(
 /// and querying from the given set of accounts.
 fn arb_request(
     accounts: &[AccountAddress],
+    event_handles: &[EventHandle],
     current_state_version: u64,
 ) -> impl Strategy<Value = MethodRequest> {
     let arb_account = select(accounts.to_owned());
@@ -172,8 +204,30 @@ fn arb_request(
         // occasionally choose an invalid version
         1 => Just(u64::MAX / 2),
     ];
-    (arb_account, arb_version)
-        .prop_map(|(address, version)| MethodRequest::get_account_by_version(address, version))
+
+    let arb_event_handle = prop_oneof! [
+        20 => select(event_handles.to_owned()),
+        // occasionally choose some garbage handles
+        1 => select(accounts.to_owned()).prop_map(|addr| {
+            let key = EventKey::new_from_address(&addr, u64::MAX / 2);
+            EventHandle::new(key, 1)
+        }),
+    ];
+    // choose event queries that we know are valid at the time we scanned.
+    let arb_events = arb_event_handle.prop_flat_map(|event_handle| {
+        let num_events = event_handle.count();
+        let arb_seq_num = 0..num_events;
+        arb_seq_num.prop_flat_map(move |seq_num| {
+            let max_limit = num_events - seq_num;
+            let arb_limit = 1..=max_limit;
+            (Just(*event_handle.key()), Just(seq_num), arb_limit)
+        })
+    });
+
+    prop_oneof![
+        (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
+        arb_events.prop_map(|(k, s, l)| MethodRequest::GetEvents(k, s, l)),
+    ]
 }
 
 /// A `Strategy` for generating a batch of `MethodRequest`s with the added restriction
@@ -182,10 +236,11 @@ fn arb_request(
 fn arb_batch(
     max_batch_size: usize,
     accounts: &[AccountAddress],
+    event_handles: &[EventHandle],
     current_state_version: u64,
 ) -> impl Strategy<Value = Vec<MethodRequest>> {
     vec(
-        arb_request(accounts, current_state_version),
+        arb_request(accounts, event_handles, current_state_version),
         1..max_batch_size,
     )
     .prop_filter(
@@ -220,19 +275,22 @@ fn test_client_equivalence() {
         AccountAddress::random(),
     ];
 
+    // Scan the accounts for some event handles we can query from
+    let event_handles = rt.block_on(env.scan_event_handles(&accounts));
+
     // Sync the verifying client
     rt.block_on(env.verifying_client.sync()).unwrap();
     let current_version = env.verifying_client.version();
 
     // Generate random requests and ensure that both verifying and non-verifying
     // clients handle each request identically.
-    proptest!(|(request in arb_request(&accounts, current_version))| {
+    proptest!(|(request in arb_request(&accounts, &event_handles, current_version))| {
         let (recv_nv, recv_v) = rt.block_on(env.request(request));
         assert_responses_equal(recv_nv, recv_v);
     });
 
     // Do the same but with random request batches instead of single requests.
-    proptest!(|(batch in arb_batch(env.max_batch_size, &accounts, current_version))| {
+    proptest!(|(batch in arb_batch(env.max_batch_size, &accounts, &event_handles, current_version))| {
         let (recv_nv, recv_v) = rt.block_on(env.batch(batch));
         assert_batches_equal(recv_nv, recv_v);
     });

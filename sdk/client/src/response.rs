@@ -154,4 +154,14 @@ impl MethodResponse {
             ))),
         }
     }
+
+    pub fn try_into_get_events(self) -> Result<Vec<EventView>, Error> {
+        match self {
+            MethodResponse::GetEvents(events) => Ok(events),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetEvents found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
 }

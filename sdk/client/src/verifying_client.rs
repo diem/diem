@@ -8,13 +8,15 @@ use crate::{
     response::{MethodResponse, Response},
     state::State,
 };
-use diem_json_rpc_types::views::AccountView;
+use diem_json_rpc_types::views::{AccountView, EventView};
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
+    contract_event::EventWithProof,
     epoch_change::EpochChangeProof,
+    event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::RegisteredCurrencies,
     proof::AccumulatorConsistencyProof,
@@ -158,6 +160,17 @@ impl<S: Storage> VerifyingClient<S> {
         self.request(MethodRequest::get_account_by_version(address, version))
             .await?
             .and_then(MethodResponse::try_into_get_account)
+    }
+
+    pub async fn get_events(
+        &self,
+        key: EventKey,
+        start_seq: u64,
+        limit: u64,
+    ) -> Result<Response<Vec<EventView>>> {
+        self.request(MethodRequest::get_events(key, start_seq, limit))
+            .await?
+            .and_then(MethodResponse::try_into_get_events)
     }
 
     /// Send a single request via `VerifyingClient::batch`.
@@ -393,6 +406,9 @@ impl From<MethodRequest> for VerifyingRequest {
     fn from(request: MethodRequest) -> Self {
         match request {
             MethodRequest::GetAccount(address, version) => verifying_get_account(address, version),
+            MethodRequest::GetEvents(key, start_seq, limit) => {
+                verifying_get_events(key, start_seq, limit)
+            }
             _ => todo!(),
         }
     }
@@ -482,6 +498,73 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
                     subresponses,
                     ))),
     }
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingRequest {
+    let request = MethodRequest::GetEvents(key, start_seq, limit);
+    let subrequests = vec![MethodRequest::GetEventsWithProofs(key, start_seq, limit)];
+
+    let callback: RequestCallback = |ctxt, subresponses| {
+        let event_with_proof_views = match subresponses {
+            [MethodResponse::GetEventsWithProofs(ref inner)] => inner,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetEventsWithProofs] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        let (key, start_seq, limit) = match ctxt.request {
+            MethodRequest::GetEvents(key, start_seq, limit) => (key, *start_seq, *limit),
+            request => panic!("programmer error: unexpected request: {:?}", request),
+        };
+
+        // Make sure we didn't get more than we requested. Note that remote can
+        // always return a shorter prefix than is on-chain and we don't consider
+        // that an invalid response.
+        let num_received = event_with_proof_views.len() as u64;
+        if num_received > limit {
+            return Err(Error::rpc_response(format!(
+                "more events than limit: limit {} events, received {} events",
+                limit, num_received,
+            )));
+        }
+
+        let latest_li = ctxt.state_proof.0.ledger_info();
+        let event_views = event_with_proof_views
+            .iter()
+            .enumerate()
+            .map(|(offset, event_with_proof_view)| {
+                // Deserialize the diem-core type from the json-rpc view type.
+                let event_with_proof =
+                    EventWithProof::try_from(event_with_proof_view).map_err(Error::decode)?;
+
+                // Actually verify the proof. Once verified, we should be guaranteed
+                // that this event exists on-chain in the `key` event stream with
+                // the given sequence number and transaction version.
+                let txn_version = event_with_proof.transaction_version;
+                event_with_proof
+                    .verify(
+                        latest_li,
+                        key,
+                        start_seq + offset as u64,
+                        txn_version,
+                        event_with_proof.event_index,
+                    )
+                    .map_err(Error::invalid_proof)?;
+
+                // Project into the json-rpc type
+                let event_view = EventView::try_from((txn_version, event_with_proof.event))
+                    .map_err(Error::decode)?;
+
+                Ok(event_view)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(MethodResponse::GetEvents(event_views))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }

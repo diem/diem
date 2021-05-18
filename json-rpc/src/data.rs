@@ -336,18 +336,12 @@ pub fn get_events_with_proofs(
         Some(ledger_version),
     )?;
 
-    let mut results = vec![];
+    let views = events_with_proofs
+        .iter()
+        .map(EventWithProofView::try_from)
+        .collect::<Result<Vec<_>>>()?;
 
-    for event in events_with_proofs
-        .into_iter()
-        .filter(|e| e.transaction_version <= ledger_version)
-    {
-        results.push(EventWithProofView {
-            event_with_proof: bcs::to_bytes(&event)?.into(),
-        });
-    }
-
-    Ok(results)
+    Ok(views)
 }
 
 /// Returns meta information about supported currencies
