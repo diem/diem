@@ -4,11 +4,12 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion, Throughput};
 use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_types::account_state_blob::AccountStateBlob;
-use executor_types::ProofReader;
 use itertools::zip_eq;
-use rand::{prelude::StdRng, seq::IteratorRandom, Rng, SeedableRng};
-use scratchpad::{test_utils::NaiveSmt, SparseMerkleTree};
-use std::collections::{HashMap, HashSet};
+use rand::{distributions::Standard, prelude::StdRng, seq::IteratorRandom, Rng, SeedableRng};
+use scratchpad::{test_utils::naive_smt::NaiveSmt, SparseMerkleTree};
+use std::collections::HashSet;
+
+type ProofReader = scratchpad::test_utils::proof_reader::ProofReader<AccountStateBlob>;
 
 struct Block {
     smt: SparseMerkleTree<AccountStateBlob>,
@@ -141,7 +142,7 @@ impl Benches {
                 .map(|block_size| Block {
                     smt: SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH),
                     updates: Self::gen_updates(&mut rng, &keys, *block_size),
-                    proof_reader: ProofReader::new(HashMap::new()),
+                    proof_reader: ProofReader::new(Vec::new()),
                 })
                 .collect(),
         };
@@ -223,7 +224,10 @@ impl Benches {
     }
 
     fn gen_value(rng: &mut StdRng) -> AccountStateBlob {
-        rng.gen::<[u8; 100]>().to_vec().into()
+        rng.sample_iter(&Standard)
+            .take(100)
+            .collect::<Vec<u8>>()
+            .into()
     }
 
     fn gen_proof_reader(
@@ -234,7 +238,7 @@ impl Benches {
             .iter()
             .flatten()
             .map(|(key, _)| (*key, naive_smt.get_proof(key)))
-            .collect::<HashMap<_, _>>();
+            .collect();
         ProofReader::new(proofs)
     }
 

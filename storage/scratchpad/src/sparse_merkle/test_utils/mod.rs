@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(any(test, feature = "bench", feature = "fuzzing"))]
-mod naive_smt;
+pub mod naive_smt;
 #[cfg(any(test, feature = "bench", feature = "fuzzing"))]
-pub(crate) mod proof_reader;
+pub mod proof_reader;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_helpers;
