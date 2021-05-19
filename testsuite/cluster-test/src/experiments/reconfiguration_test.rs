@@ -44,7 +44,7 @@ impl ExperimentParam for ReconfigurationParams {
     type E = Reconfiguration;
     fn build(self, cluster: &Cluster) -> Self::E {
         let full_node = cluster.random_fullnode_instance();
-        let client = JsonRpcClientWrapper::new(full_node.json_rpc_url().into_string());
+        let client = JsonRpcClientWrapper::new(full_node.json_rpc_url().into());
         let validator_info = client
             .validator_set(None)
             .expect("Unable to fetch validator set");

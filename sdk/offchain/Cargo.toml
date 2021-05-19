@@ -11,15 +11,21 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.13"
+bech32 = "0.8.0"
+hex = "0.4.3"
+rand = "0.8.3"
+rand_core = "0.6"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.61"
 serde_repr = "0.1"
+thiserror = "1.0.24"
+url = "2.2.2"
 uuid = { version = "0.8.2", features = ["serde"] }
 
 diem-sdk = { path = ".." }
 
 [dev-dependencies]
-hex = "0.4.2"
 rand_core = "0.6"
+rstest = "0.10.0"
 
 diem-workspace-hack = { path = "../../common/workspace-hack" }
