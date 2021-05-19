@@ -30,4 +30,5 @@
 //! ```
 //!
 
+pub mod diem_id_domain;
 pub mod mint;

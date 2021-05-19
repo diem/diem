@@ -127,11 +127,13 @@ mod tests {
     use crate::routes;
     use diem_faucet::mint;
     use diem_infallible::RwLock;
+    use diem_sdk::types::account_config::DiemIdDomain;
     use diem_sdk::{
-        transaction_builder::stdlib::ScriptCall,
+        transaction_builder::stdlib::{ScriptCall, ScriptFunctionCall},
         types::{
             account_address::AccountAddress,
             chain_id::ChainId,
+            diem_id_identifier::DiemIdVaspDomainIdentifier,
             transaction::{
                 metadata::{CoinTradeMetadata, Metadata},
                 SignedTransaction, TransactionPayload,
@@ -332,6 +334,69 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn test_diem_id_domain() {
+        let accounts = genesis_accounts();
+        let service = setup(accounts.clone());
+        let filter = routes(service);
+
+        // auth_key is outside of the loop for minting same account multiple
+        // times, it should success and should not create same account multiple
+        // times.
+        let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
+        let diem_id_domain = DiemIdVaspDomainIdentifier::new("diem").unwrap();
+        let domain = DiemIdDomain {
+            domain: diem_id_domain,
+        };
+
+        {
+            let resp = warp::test::request()
+                .method("POST")
+                .path(
+                    format!(
+                        "/mint?auth_key={}&diem_id_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
+                        auth_key, "diem", false,
+                    )
+                    .as_str(),
+                )
+                .reply(&filter)
+                .await;
+            assert_eq!(resp.body(), 1.to_string().as_str());
+            let reader = accounts.read();
+            let addr =
+                AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
+            let account = reader.get(&addr).expect("account should be created");
+            assert_eq!(
+                account["role"]["diem_id_domains"]["domains"][0],
+                serde_json::json!(domain),
+            );
+        }
+
+        {
+            let diem_id_domain_to_remove = "diem";
+            let resp = warp::test::request()
+                .method("POST")
+                .path(
+                    format!(
+                        "/mint?auth_key={}&diem_id_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
+                        auth_key, diem_id_domain_to_remove, true,
+                    )
+                        .as_str(),
+                )
+                .reply(&filter)
+                .await;
+            assert_eq!(resp.body(), 2.to_string().as_str());
+            let reader = accounts.read();
+            let addr =
+                AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
+            let account = reader.get(&addr).expect("account should be created");
+            assert_eq!(
+                account["role"]["diem_id_domains"]["domains"],
+                serde_json::json!([])
+            );
+        }
+    }
+
     fn get_trade_ids_from_payload(payload: &TransactionPayload) -> Vec<String> {
         match payload {
             Script(script) => match ScriptCall::decode(script) {
@@ -387,6 +452,49 @@ mod tests {
                             let account =
                                 writer.get_mut(&payee).expect("account should be created");
                             account["balances"][0]["amount"] = serde_json::json!(amount);
+                        }
+                        _ => panic!("unexpected type of script"),
+                    }
+                }
+                if let Some(script_function) = ScriptFunctionCall::decode(txn.payload()) {
+                    match script_function {
+                        ScriptFunctionCall::AddDiemIdDomain {
+                            address, domain, ..
+                        } => {
+                            let mut writer = accounts.write();
+                            let account =
+                                writer.get_mut(&address).expect("account should be created");
+                            let domain = DiemIdVaspDomainIdentifier::new(
+                                String::from_utf8(domain).unwrap().as_str(),
+                            )
+                            .unwrap();
+                            &account["role"]["diem_id_domains"]["domains"]
+                                .as_array_mut()
+                                .unwrap()
+                                .push(serde_json::json!({ "domain": domain }));
+                        }
+                        ScriptFunctionCall::RemoveDiemIdDomain {
+                            address, domain, ..
+                        } => {
+                            let mut writer = accounts.write();
+                            let domain = DiemIdVaspDomainIdentifier::new(
+                                String::from_utf8(domain).unwrap().as_str(),
+                            )
+                            .unwrap();
+                            let json_domain = &serde_json::json!({ "domain": domain });
+                            let account =
+                                writer.get_mut(&address).expect("account should be created");
+
+                            let index = account["role"]["diem_id_domains"]["domains"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .position(|x| x == json_domain)
+                                .unwrap();
+                            &account["role"]["diem_id_domains"]["domains"]
+                                .as_array_mut()
+                                .unwrap()
+                                .remove(index);
                         }
                         _ => panic!("unexpected type of script"),
                     }
@@ -456,7 +564,8 @@ mod tests {
                 "compliance_key": "",
                 "num_children": 0,
                 "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
-                "base_url_rotation_events_key": format!("0300000000000000{}", address)
+                "base_url_rotation_events_key": format!("0300000000000000{}", address),
+                "diem_id_domains": {"domains": []},
             }),
         )
     }

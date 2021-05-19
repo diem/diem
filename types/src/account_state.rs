@@ -7,7 +7,8 @@ use crate::{
     account_config::{
         currency_code_from_type_tag, AccountResource, AccountRole, BalanceResource,
         ChainIdResource, ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer,
-        DesignatedDealerPreburns, DiemIdDomains, FreezingBit, ParentVASP, PreburnQueueResource, PreburnResource,
+        DesignatedDealerPreburns, DiemIdDomains, FreezingBit, ParentVASP, PreburnQueueResource,
+        PreburnResource,
     },
     block_metadata::DiemBlockResource,
     diem_timestamp::DiemTimestampResource,
@@ -109,7 +110,7 @@ impl AccountState {
                 self.get_resource::<Credential>(),
                 self.get_resource::<DiemIdDomains>(),
             ) {
-                (Ok(Some(vasp)), Ok(Some(credential)), Ok(Some(diem_id_domains))) => {
+                (Ok(Some(vasp)), Ok(Some(credential)), Ok(diem_id_domains)) => {
                     Ok(Some(AccountRole::ParentVASP {
                         vasp,
                         credential,

@@ -17,7 +17,7 @@ pub const DIEM_ID_MODULE_IDENTIFIER: &IdentStr = ident_str!("DiemId");
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiemIdDomains {
-    domains: Vec<DiemIdDomain>,
+    pub domains: Vec<DiemIdDomain>,
 }
 
 impl DiemIdDomains {
@@ -35,7 +35,7 @@ impl MoveResource for DiemIdDomains {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiemIdDomain {
-    domain: DiemIdVaspDomainIdentifier,
+    pub domain: DiemIdVaspDomainIdentifier,
 }
 
 impl DiemIdDomain {

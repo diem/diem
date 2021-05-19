@@ -463,6 +463,26 @@ impl TransactionFactory {
         }
     }
 
+    pub fn add_diem_id_domain(
+        &self,
+        address: AccountAddress,
+        domain: Vec<u8>,
+    ) -> TransactionBuilder {
+        self.payload(stdlib::encode_add_diem_id_domain_script_function(
+            address, domain,
+        ))
+    }
+
+    pub fn remove_diem_id_domain(
+        &self,
+        address: AccountAddress,
+        domain: Vec<u8>,
+    ) -> TransactionBuilder {
+        self.payload(stdlib::encode_remove_diem_id_domain_script_function(
+            address, domain,
+        ))
+    }
+
     //
     // Internal Helpers
     //

@@ -84,6 +84,17 @@ message AccountRole {
   string received_mint_events_key = 10 [json_name="received_mint_events_key"];
   repeated Amount preburn_balances = 11 [json_name="preburn_balances"];
   repeated PreburnQueue preburn_queues = 12 [json_name="preburn_queues"];
+
+  // DiemID
+  DiemIdDomains diem_id_domains = 13 [json_name="diem_id_domains"];
+}
+
+message DiemIdDomains {
+  repeated DiemIdDomain domains = 1 [json_name="domains"];
+}
+
+message DiemIdDomain {
+  string domain = 1 [json_name="domain"];
 }
 
 message PreburnQueue {

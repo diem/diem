@@ -73,7 +73,7 @@ pub enum AccountRoleView {
         num_children: u64,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
-        diem_id_domains: DiemIdDomains,
+        diem_id_domains: Option<DiemIdDomains>,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {

@@ -24,6 +24,10 @@ mod tests {
         AmountView, BytesView, PreburnWithMetadataView, ScriptView, TransactionDataView,
     };
     use diem_types::account_address::AccountAddress;
+    use diem_types::{
+        account_config::{DiemIdDomain, DiemIdDomains},
+        diem_id_identifier::DiemIdVaspDomainIdentifier,
+    };
     use serde_json::json;
 
     #[test]
@@ -201,5 +205,28 @@ mod tests {
         );
         assert_eq!(txn_data.secondary_signatures, vec!["2a", "2b"]);
         assert_eq!(txn_data.secondary_public_keys, vec!["2c", "2d"]);
+    }
+
+    #[test]
+    fn test_serialize_diem_id_domain_view() {
+        let domains = DiemIdDomain {
+            domain: DiemIdVaspDomainIdentifier::new(&"diem").unwrap(),
+        };
+        let view = DiemIdDomains {
+            domains: vec![domains],
+        };
+        let value = serde_json::to_value(&view).unwrap();
+        assert_eq!(
+            value,
+            json!({
+                "domains": [{"domain": "diem"}]
+            })
+        );
+        let serde_domains: jsonrpc::DiemIdDomains = serde_json::from_value(value).unwrap();
+
+        assert_eq!(
+            serde_domains.domains[0].domain,
+            view.domains[0].domain.as_str()
+        );
     }
 }

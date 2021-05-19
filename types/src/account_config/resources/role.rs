@@ -12,7 +12,7 @@ pub enum AccountRole {
     ParentVASP {
         vasp: ParentVASP,
         credential: Credential,
-        diem_id_domains: DiemIdDomains,
+        diem_id_domains: Option<DiemIdDomains>,
     },
     ChildVASP(ChildVASP),
     DesignatedDealer {

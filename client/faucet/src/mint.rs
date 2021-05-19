@@ -42,6 +42,14 @@ pub struct MintParams {
     pub return_txns: Option<bool>,
     pub is_designated_dealer: Option<bool>,
     pub trade_id: Option<String>,
+    pub diem_id_domain: Option<String>,
+    pub is_remove_domain: Option<bool>,
+}
+
+impl std::fmt::Display for MintParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self.diem_id_domain)
+    }
 }
 
 impl MintParams {
@@ -100,7 +108,6 @@ impl Service {
 
     pub async fn process(&self, mut params: MintParams) -> Result<Response> {
         let (tc_seq, dd_seq, receiver_seq) = self.sequences(params.receiver()).await?;
-
         let txns = {
             let mut treasury_account = self.treasury_account.lock().unwrap();
             let mut dd_account = self.dd_account.lock().unwrap();
@@ -134,6 +141,23 @@ impl Service {
                     )
                 };
 
+                txns.push(treasury_account.sign_with_transaction_builder(builder));
+            }
+
+            if let (Some(ref diem_id_domain), Some(is_remove_domain)) =
+                (&params.diem_id_domain, params.is_remove_domain)
+            {
+                let builder = if is_remove_domain {
+                    self.transaction_factory.remove_diem_id_domain(
+                        params.receiver(),
+                        diem_id_domain.as_str().as_bytes().to_vec(),
+                    )
+                } else {
+                    self.transaction_factory.add_diem_id_domain(
+                        params.receiver(),
+                        diem_id_domain.as_str().as_bytes().to_vec(),
+                    )
+                };
                 txns.push(treasury_account.sign_with_transaction_builder(builder));
             }
 
@@ -191,7 +215,6 @@ impl Service {
             .map(|r| r.map_err(anyhow::Error::new))
             .map(|r| r.map(|response| response.into_inner().unwrap_get_account()))
             .collect::<Result<Vec<_>>>()?;
-
         let treasury_compliance = responses
             .get(0)
             .as_ref()

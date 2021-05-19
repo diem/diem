@@ -77,8 +77,11 @@ use diem_client::{
 };
 use diem_crypto::HashValue;
 use diem_types::{
-    account_address::AccountAddress, account_config::constants::from_currency_code_string,
-    account_state::AccountState, account_state_blob::AccountStateBlob, chain_id::ChainId,
+    account_address::AccountAddress,
+    account_config::{constants::from_currency_code_string, DiemIdDomains},
+    account_state::AccountState,
+    account_state_blob::AccountStateBlob,
+    chain_id::ChainId,
     transaction::Version,
 };
 use move_core_types::identifier::Identifier;
@@ -150,6 +153,7 @@ pub struct ParentVASPView {
     base_url: String,
     /// The number of child VASP accounts under this parent VASP account.
     num_children: u64,
+    diem_id_domains: Option<DiemIdDomains>,
 }
 
 impl TryFrom<AccountView> for ParentVASPView {
@@ -166,6 +170,7 @@ impl TryFrom<AccountView> for ParentVASPView {
                 human_name,
                 base_url,
                 num_children,
+                diem_id_domains,
                 ..
             } => Ok(ParentVASPView {
                 address: account.address,
@@ -173,6 +178,7 @@ impl TryFrom<AccountView> for ParentVASPView {
                 human_name,
                 base_url,
                 num_children,
+                diem_id_domains,
             }),
             _ => Err(format_err!(
                 "expected parent VASP account, actual account type: {:?}",

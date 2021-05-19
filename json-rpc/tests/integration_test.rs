@@ -10,6 +10,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_config::xus_tag,
     contract_event::EventWithProof,
+    diem_id_identifier::DiemIdVaspDomainIdentifier,
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
@@ -1175,6 +1176,49 @@ fn create_test_cases() -> Vec<Test> {
                     // and we eventually verify the proofs for the transactions
                     assert!(li_to_tip.verify(expected_hash, Some(*base_version), &hashes).is_ok());
                 }
+            },
+        },
+        Test {
+            name: "add and remove diem id domain to parent vasp account",
+            run: |env: &mut testing::Env| {
+                let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
+                let txn = env.create_txn_by_payload(
+                    &env.tc,
+                    stdlib::encode_add_diem_id_domain_script_function(
+                        env.vasps[0].address,
+                        domain,
+                    ),
+                );
+                env.submit_and_wait(txn);
+                let account = &env.vasps[0];
+                let address = format!("{:x}", &account.address);
+                let resp = env.send("get_account", json!([address]));
+                let result = resp.result.unwrap();
+                assert_eq!(
+                    result["role"]["diem_id_domains"],
+                    json!(
+                        {"domains": [{"domain": "diem"}]}
+                    ),
+                );
+                let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
+                let txn = env.create_txn_by_payload(
+                    &env.tc,
+                    stdlib::encode_remove_diem_id_domain_script_function(
+                        env.vasps[0].address,
+                        domain,
+                    ),
+                );
+                env.submit_and_wait(txn);
+                let account = &env.vasps[0];
+                let address = format!("{:x}", &account.address);
+                let resp = env.send("get_account", json!([address]));
+                let result = resp.result.unwrap();
+                assert_eq!(
+                    result["role"]["diem_id_domains"],
+                    json!(
+                        {"domains": []}
+                    ),
+                );
             },
         },
         Test {
