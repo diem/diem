@@ -141,7 +141,7 @@ const DISCLAIMER: &str =
 
 fn write_friend_decl(ctx: &mut Context, fdecl: &ModuleHandle) -> String {
     format!(
-        "friend {}::{}",
+        "    friend {}::{};",
         ctx.module
             .address_identifier_at(fdecl.address)
             .short_str_lossless(),
