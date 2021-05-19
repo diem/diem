@@ -612,7 +612,7 @@ impl Client for diem_client::BlockingClient {
 fn make_account_view(
     address: AccountAddress,
     account_state: AccountState,
-    currency_ids: &[Identifier],
+    _currency_ids: &[Identifier],
     version: Version,
 ) -> Result<AccountView> {
     let account_resource = account_state
@@ -622,9 +622,9 @@ fn make_account_view(
         .get_freezing_bit()?
         .ok_or_else(|| format_err!("invalid account data: no freezing bit"))?;
     let account_role = account_state
-        .get_account_role(currency_ids)?
+        .get_account_role()?
         .ok_or_else(|| format_err!("invalid account data: no account role"))?;
-    let balances = account_state.get_balance_resources(currency_ids)?;
+    let balances = account_state.get_balance_resources()?;
 
     Ok(AccountView::new(
         address,

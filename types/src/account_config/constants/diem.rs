@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_config::constants::CORE_CODE_ADDRESS;
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -27,6 +27,34 @@ pub fn type_tag_for_currency_code(currency_code: Identifier) -> TypeTag {
         name: currency_code,
         type_params: vec![],
     })
+}
+
+pub fn currency_code_from_type_tag(type_tag: TypeTag) -> Result<Identifier> {
+    let struct_tag = match type_tag {
+        TypeTag::Struct(struct_tag) => struct_tag,
+        _ => bail!(
+            "expected a type for a currency struct, received: {:?}",
+            type_tag
+        ),
+    };
+
+    ensure!(
+        struct_tag.address == CORE_CODE_ADDRESS
+            && struct_tag.module == struct_tag.name
+            && struct_tag.type_params.is_empty(),
+        "not a valid currency struct tag: {:?}",
+        struct_tag,
+    );
+
+    let currency_code = struct_tag.name;
+
+    ensure!(
+        allowed_currency_code_string(currency_code.as_str()),
+        "currency code can only contain uppercase alphanumeric characters: '{}'",
+        currency_code,
+    );
+
+    Ok(currency_code)
 }
 
 /// In addition to the constraints for valid Move identifiers, currency codes

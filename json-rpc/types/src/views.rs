@@ -192,7 +192,7 @@ impl AccountView {
     pub fn try_from_account_state(
         address: AccountAddress,
         account_state: AccountState,
-        currency_codes: &[Identifier],
+        _currency_codes: &[Identifier],
         version: u64,
     ) -> Result<Self> {
         let account_resource = account_state
@@ -202,9 +202,9 @@ impl AccountView {
             .get_freezing_bit()?
             .ok_or_else(|| format_err!("invalid account state: no freezing bit"))?;
         let account_role = account_state
-            .get_account_role(currency_codes)?
+            .get_account_role()?
             .ok_or_else(|| format_err!("invalid account state: no account role"))?;
-        let balances = account_state.get_balance_resources(currency_codes)?;
+        let balances = account_state.get_balance_resources()?;
 
         Ok(AccountView::new(
             address,

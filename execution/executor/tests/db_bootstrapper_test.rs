@@ -192,7 +192,7 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
         .unwrap();
     let account_state = AccountState::try_from(&account_state_blob).unwrap();
     account_state
-        .get_balance_resources(&[from_currency_code_string(XUS_NAME).unwrap()])
+        .get_balance_resources()
         .unwrap()
         .get(&from_currency_code_string(XUS_NAME).unwrap())
         .unwrap()

@@ -20,7 +20,7 @@ use diem_metrics::get_all_metrics;
 use diem_proptest_helpers::ValueGenerator;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, AccountResource, FreezingBit, XUS_NAME},
+    account_config::{AccountResource, FreezingBit},
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     chain_id::ChainId,
@@ -1131,7 +1131,7 @@ fn test_get_account() {
         .unwrap();
     let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
     let expected_resource_balances: Vec<_> = expected_resource
-        .get_balance_resources(&[from_currency_code_string(XUS_NAME).unwrap()])
+        .get_balance_resources()
         .unwrap()
         .iter()
         .map(|(_, bal_resource)| bal_resource.coin())
@@ -1166,7 +1166,7 @@ fn test_get_account() {
         let account = response.unwrap().into_inner().unwrap_get_account().unwrap();
         let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
         let expected_resource_balances: Vec<_> = states[idx]
-            .get_balance_resources(&[from_currency_code_string(XUS_NAME).unwrap()])
+            .get_balance_resources()
             .unwrap()
             .iter()
             .map(|(_, bal_resource)| bal_resource.coin())
