@@ -1007,6 +1007,17 @@ impl ClientProxy {
         )
     }
 
+    /// Submit a writeset transaction signed by local diem root account.
+    pub fn submit_writeset(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "submit_payload" || space_delim_strings[0] == "ws",
+            "inconsistent command '{}' for submit_payload",
+            space_delim_strings[0]
+        );
+        let payload = bcs::from_bytes(fs::read(space_delim_strings[1])?.as_slice())?;
+        self.association_transaction_with_local_diem_root_account(payload, true)
+    }
+
     /// Get the latest account information from validator.
     pub fn get_latest_account(
         &mut self,

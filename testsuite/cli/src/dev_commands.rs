@@ -28,6 +28,7 @@ impl Command for DevCommand {
             Box::new(DevCommandGenWaypoint {}),
             Box::new(DevCommandChangeDiemVersion {}),
             Box::new(DevCommandEnableCustomScript {}),
+            Box::new(DevSubmitWriteSet {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -246,6 +247,34 @@ impl Command for DevCommandGenWaypoint {
                 li_time_str,
                 waypoint
             ),
+        }
+    }
+}
+
+/// Sub command to execute a custom Move script
+pub struct DevSubmitWriteSet {}
+
+impl Command for DevSubmitWriteSet {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["submit_writeset", "ws"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<path_to_writeset>"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Submit a WriteSet with local diem root account. Path should be a bcs serialized TransactionPayload."
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() < 2 {
+            println!("Invalid number of arguments to execute script");
+            return;
+        }
+        match client.submit_writeset(params) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
         }
     }
 }
