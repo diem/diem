@@ -33,16 +33,17 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::Roles::RoleId: [0, 0, 0, 0, 0, 0, 0, 0] (wrote 39 bytes)
     Added type 0x1::SlidingNonce::SlidingNonce: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 68 bytes)
     Added type 0x1::XDX::Reserve: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
-  Changed 8 resource(s) under address 0000000000000000000000000B1E55ED:
+  Changed 9 resource(s) under address 0000000000000000000000000B1E55ED:
     Added type 0x1::AccountFreezing::FreezingBit: [0] (wrote 47 bytes)
     Added type 0x1::Diem::BurnCapability<0x1::XUS::XUS>: [0] (wrote 65 bytes)
     Added type 0x1::Diem::MintCapability<0x1::XUS::XUS>: [0] (wrote 65 bytes)
-    Added type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
-    Added type 0x1::Event::EventHandleGenerator: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237] (wrote 69 bytes)
+    Added type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0, 24, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
+    Added type 0x1::DiemId::DiemIdDomainManager: [0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237] (wrote 78 bytes)
+    Added type 0x1::Event::EventHandleGenerator: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237] (wrote 69 bytes)
     Added type 0x1::Roles::RoleId: [1, 0, 0, 0, 0, 0, 0, 0] (wrote 39 bytes)
     Added type 0x1::SlidingNonce::SlidingNonce: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 68 bytes)
     Added type 0x1::TransactionFee::TransactionFee<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 90 bytes)
-Wrote 3530 bytes of resource ID's and data
+Wrote 3608 bytes of resource ID's and data
 Command `run scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
 Compiling transaction script...
 Emitted 1 events:

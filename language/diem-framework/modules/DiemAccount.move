@@ -1227,6 +1227,7 @@ module DiemAccount {
         Roles::grant_treasury_compliance_role(&new_account, dr_account);
         SlidingNonce::publish(&new_account);
         Event::publish_generator(&new_account);
+        DiemId::publish_diem_id_domain_manager(&new_account);
         make_account(new_account, auth_key_prefix)
     }
     spec create_treasury_compliance_account {
@@ -1241,6 +1242,7 @@ module DiemAccount {
         let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
         include MakeAccountEmits{new_account_address: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
+        aborts_if DiemId::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountModifies {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1251,6 +1253,7 @@ module DiemAccount {
         modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         modifies global<Event::EventHandleGenerator>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+        modifies global<DiemId::DiemIdDomainManager>(tc_addr);
     }
     spec schema CreateTreasuryComplianceAccountAbortsIf {
         dr_account: signer;
@@ -1259,6 +1262,7 @@ module DiemAccount {
         include Roles::GrantRole{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), role_id: Roles::TREASURY_COMPLIANCE_ROLE_ID};
         aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
             with Errors::ALREADY_PUBLISHED;
+        aborts_if DiemId::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountEnsures {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1268,6 +1272,7 @@ module DiemAccount {
         ensures AccountFreezing::spec_account_is_not_frozen(tc_addr);
         ensures spec_holds_own_key_rotation_cap(tc_addr);
         ensures spec_holds_own_withdraw_cap(tc_addr);
+        ensures exists<DiemId::DiemIdDomainManager>(tc_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////

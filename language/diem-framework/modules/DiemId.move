@@ -137,6 +137,7 @@ module DiemId {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
         ensures exists<DiemIdDomainManager>(Signer::spec_address_of(tc_account));
+        modifies global<DiemIdDomainManager>(Signer::spec_address_of(tc_account));
     }
 
     /// Add a DiemIdDomain to a parent VASP's DiemIdDomains resource.

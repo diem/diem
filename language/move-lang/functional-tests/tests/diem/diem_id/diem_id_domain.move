@@ -11,7 +11,6 @@ script {
         let addr: address = @{{bob}};
         assert(!DiemAccount::exists_at(addr), 83);
         DiemAccount::create_parent_vasp_account<XUS>(tc_account, addr, {{bob::auth_key}}, x"aa", false);
-        DiemId::publish_diem_id_domain_manager(tc_account);
         assert(DiemId::tc_domain_manager_exists(), 77);
     }
 }
