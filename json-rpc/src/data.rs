@@ -14,10 +14,7 @@ use anyhow::{format_err, Result};
 use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{
-        diem_root_address, from_currency_code_string, resources::dual_attestation::Limit,
-        AccountResource,
-    },
+    account_config::{diem_root_address, resources::dual_attestation::Limit, AccountResource},
     account_state::AccountState,
     chain_id::ChainId,
     event::EventKey,
@@ -87,7 +84,6 @@ pub fn get_metadata(
 /// Returns account state (AccountView) by given address
 pub fn get_account(
     db: &dyn DbReader,
-    ledger_version: u64,
     account_address: AccountAddress,
     version: u64,
 ) -> Result<Option<AccountView>, JsonRpcError> {
@@ -96,16 +92,9 @@ pub fn get_account(
         None => return Ok(None),
     };
 
-    let currencies = get_currencies(db, ledger_version)?;
-    let currency_codes: Vec<_> = currencies
-        .into_iter()
-        .map(|info| from_currency_code_string(&info.code))
-        .collect::<Result<_, _>>()?;
-
     Ok(Some(AccountView::try_from_account_state(
         account_address,
         account_state,
-        &currency_codes,
         version,
     )?))
 }

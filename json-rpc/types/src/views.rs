@@ -192,7 +192,6 @@ impl AccountView {
     pub fn try_from_account_state(
         address: AccountAddress,
         account_state: AccountState,
-        _currency_codes: &[Identifier],
         version: u64,
     ) -> Result<Self> {
         let account_resource = account_state

@@ -210,12 +210,7 @@ impl<'a> Handler<'a> {
     ) -> Result<Option<AccountView>, JsonRpcError> {
         let account_address = params.account;
         let version = self.version_param(params.version, "version")?;
-        data::get_account(
-            self.service.db.borrow(),
-            self.version(),
-            account_address,
-            version,
-        )
+        data::get_account(self.service.db.borrow(), account_address, version)
     }
 
     /// Returns transactions by range

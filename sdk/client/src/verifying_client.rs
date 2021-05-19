@@ -18,7 +18,6 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    on_chain_config::RegisteredCurrencies,
     proof::AccumulatorConsistencyProof,
     transaction::Version,
     trusted_state::TrustedState,
@@ -444,16 +443,13 @@ impl From<MethodRequest> for VerifyingRequest {
 
 fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> VerifyingRequest {
     let request = MethodRequest::GetAccount(address, version);
-    let subrequests = vec![
-        MethodRequest::GetAccountStateWithProof(diem_root_address(), version, None),
-        MethodRequest::GetAccountStateWithProof(address, version, None),
-    ];
+    let subrequests = vec![MethodRequest::GetAccountStateWithProof(
+        address, version, None,
+    )];
     let callback: RequestCallback = |ctxt, subresponses| {
         match subresponses {
-        [MethodResponse::GetAccountStateWithProof(ref diem_root), MethodResponse::GetAccountStateWithProof(ref account)] =>
+        [MethodResponse::GetAccountStateWithProof(ref account)] =>
         {
-            let diem_root_with_proof =
-                AccountStateWithProof::try_from(diem_root).map_err(Error::decode)?;
             let account_state_with_proof =
                 AccountStateWithProof::try_from(account).map_err(Error::decode)?;
 
@@ -465,31 +461,9 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
             let ledger_version = latest_li.version();
             let version = version.unwrap_or(ledger_version);
 
-            diem_root_with_proof
-                .verify(latest_li, version, diem_root_address())
-                .map_err(Error::invalid_proof)?;
             account_state_with_proof
                 .verify(latest_li, version, address)
                 .map_err(Error::invalid_proof)?;
-
-            // TODO(philiphayes): it seems wasteful to lookup the whole diem_root
-            // account, verify the proofs, etc... just to get a list of supported
-            // currency codes. Would it make sense for the AccountView to just
-            // list _all_ BalanceResource's under balance? Then we could avoid
-            // this extra lookup. It's even more problematic when a batch
-            // includes many GetAccount requests, as this batch handling logic
-            // isn't (currently) smart enough to dedup the diem_root lookups.
-            let diem_root_blob = diem_root_with_proof
-                .blob
-                .ok_or_else(|| Error::unknown("missing diem_root account"))?;
-            let diem_root = AccountState::try_from(&diem_root_blob)
-                .map_err(Error::decode)?;
-            let currencies: Option<RegisteredCurrencies> = diem_root.get_config()
-                .map_err(Error::decode)?;
-            let currency_codes = currencies
-                .as_ref()
-                .map(RegisteredCurrencies::currency_codes)
-                .ok_or_else(|| Error::unknown("diem_root has no registered currencies"))?;
 
             let maybe_account_view = account_state_with_proof
                 .blob
@@ -499,7 +473,6 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
                     AccountView::try_from_account_state(
                         address,
                         account_state,
-                        &currency_codes,
                         version,
                     ).map_err(Error::decode)
                 })

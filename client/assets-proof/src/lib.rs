@@ -409,14 +409,9 @@ impl CollectOptions {
             .collect::<Result<Vec<_>>>()
             .context("Invalid currency metadata")?;
 
-        let currency_ids = currencies
-            .iter()
-            .map(|currency_info| currency_info.currency.clone())
-            .collect::<Vec<_>>();
-
         // Get the parent VASP account.
         let parent_vasp = client
-            .get_account_by_version(self.parent_vasp, target_version, &currency_ids)
+            .get_account_by_version(self.parent_vasp, target_version)
             .context("Failed to retrieve parent VASP account")?
             .into_inner()
             .ok_or_else(|| {
@@ -455,7 +450,7 @@ impl CollectOptions {
             .iter()
             .map(|child_vasp_address| -> (AccountAddress, ResultWrapper<ChildVASPView>) {
                 let maybe_account_view = client
-                    .get_account_by_version(*child_vasp_address, target_version, &currency_ids)
+                    .get_account_by_version(*child_vasp_address, target_version)
                     .context("Failed to retrieve child VASP account")
                     .map(Response::into_inner)
                     .and_then(|opt_account_view| opt_account_view.ok_or_else(|| format_err!("no child VASP account at the address")));
@@ -550,7 +545,6 @@ pub trait Client {
         &self,
         address: AccountAddress,
         version: Version,
-        currency_ids: &[Identifier],
     ) -> Result<Response<Option<AccountView>>>;
 }
 
@@ -581,7 +575,6 @@ impl Client for diem_client::BlockingClient {
         &self,
         address: AccountAddress,
         version: Version,
-        currency_ids: &[Identifier],
     ) -> Result<Response<Option<AccountView>>> {
         // HACK: until the follwing PR lands and hits release (https://github.com/diem/diem/pull/7983),
         // there is no `get_account_by_version` API available. However, we can
@@ -602,38 +595,10 @@ impl Client for diem_client::BlockingClient {
 
         let account_state =
             AccountState::try_from(&account_blob).context("Failed to deserialize account state")?;
-        let account_view = make_account_view(address, account_state, currency_ids, version)
+        let account_view = AccountView::try_from_account_state(address, account_state, version)
             .context("Failed to project account state into account view")?;
         Ok(Response::new(Some(account_view), response_state))
     }
-}
-
-/// Try to convert an [`AccountState`] into an [`AccountView`].
-fn make_account_view(
-    address: AccountAddress,
-    account_state: AccountState,
-    _currency_ids: &[Identifier],
-    version: Version,
-) -> Result<AccountView> {
-    let account_resource = account_state
-        .get_account_resource()?
-        .ok_or_else(|| format_err!("invalid account data: no account resource"))?;
-    let freezing_bit = account_state
-        .get_freezing_bit()?
-        .ok_or_else(|| format_err!("invalid account data: no freezing bit"))?;
-    let account_role = account_state
-        .get_account_role()?
-        .ok_or_else(|| format_err!("invalid account data: no account role"))?;
-    let balances = account_state.get_balance_resources()?;
-
-    Ok(AccountView::new(
-        address,
-        &account_resource,
-        balances,
-        account_role,
-        freezing_bit,
-        version,
-    ))
 }
 
 /// For pretty printing outputs in JSON
