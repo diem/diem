@@ -2316,6 +2316,7 @@ dependencies = [
 name = "diem-transaction-builder"
 version = "0.0.2"
 dependencies = [
+ "anyhow",
  "bcs",
  "diem-types",
  "diem-workspace-hack",
