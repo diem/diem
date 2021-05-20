@@ -31,6 +31,7 @@ module DiemAccount {
     use 0x1::Option::{Self, Option};
     use 0x1::Roles;
     use 0x1::DiemId;
+    use 0x1::CRSN;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
     struct DiemAccount has key {
@@ -1426,6 +1427,18 @@ module DiemAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     native fun create_signer(addr: address): signer;
+
+    public fun publish_crsn(account: &signer, size: u64)
+    acquires DiemAccount {
+        let account_state = borrow_global<DiemAccount>(Signer::address_of(account));
+        // Don't set this to start at account_state.sequence_number + 1, since
+        // after this the epilogue will record the sequence nonce
+        // `account_state.sequence_number` which will shift the window.
+        // If we set the window to start at `account_state.sequence_number +
+        // 1`, this transaction would be rejected in the epilogue as the
+        // sequence nonce would be outside of the window.
+        CRSN::publish(account, account_state.sequence_number, size)
+    }
 
     /// Helper to return the u64 value of the `balance` for `account`
     fun balance_for<Token: store>(balance: &Balance<Token>): u64 {
