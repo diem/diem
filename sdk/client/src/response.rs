@@ -164,4 +164,14 @@ impl MethodResponse {
             ))),
         }
     }
+
+    pub fn try_into_get_currencies(self) -> Result<Vec<CurrencyInfoView>, Error> {
+        match self {
+            MethodResponse::GetCurrencies(currencies) => Ok(currencies),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetCurrencies found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
 }

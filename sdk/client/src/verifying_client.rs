@@ -8,7 +8,7 @@ use crate::{
     response::{MethodResponse, Response},
     state::State,
 };
-use diem_json_rpc_types::views::{AccountView, EventView};
+use diem_json_rpc_types::views::{AccountView, CurrencyInfoView, EventView};
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
@@ -171,6 +171,12 @@ impl<S: Storage> VerifyingClient<S> {
         self.request(MethodRequest::get_events(key, start_seq, limit))
             .await?
             .and_then(MethodResponse::try_into_get_events)
+    }
+
+    pub async fn get_currencies(&self) -> Result<Response<Vec<CurrencyInfoView>>> {
+        self.request(MethodRequest::get_currencies())
+            .await?
+            .and_then(MethodResponse::try_into_get_currencies)
     }
 
     /// Send a single request via `VerifyingClient::batch`.
@@ -409,6 +415,7 @@ impl From<MethodRequest> for VerifyingRequest {
             MethodRequest::GetEvents(key, start_seq, limit) => {
                 verifying_get_events(key, start_seq, limit)
             }
+            MethodRequest::GetCurrencies([]) => verifying_get_currencies(),
             _ => todo!(),
         }
     }
@@ -565,6 +572,50 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
             .collect::<Result<Vec<_>>>()?;
 
         Ok(MethodResponse::GetEvents(event_views))
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_currencies() -> VerifyingRequest {
+    let request = MethodRequest::GetCurrencies([]);
+    let subrequests = vec![MethodRequest::GetAccountStateWithProof(
+        diem_root_address(),
+        None,
+        None,
+    )];
+    let callback: RequestCallback = |ctxt, subresponses| {
+        let diem_root = match subresponses {
+            [MethodResponse::GetAccountStateWithProof(ref diem_root)] => diem_root,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetAccountStateWithProof] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        let diem_root_with_proof =
+            AccountStateWithProof::try_from(diem_root).map_err(Error::decode)?;
+
+        let latest_li = ctxt.state_proof.0.ledger_info();
+        let version = latest_li.version();
+
+        diem_root_with_proof
+            .verify(latest_li, version, diem_root_address())
+            .map_err(Error::invalid_proof)?;
+
+        // Deserialize the DiemRoot account state, pull out its currency infos,
+        // and project them into json-rpc currency views.
+        let diem_root_blob = diem_root_with_proof
+            .blob
+            .ok_or_else(|| Error::unknown("missing diem_root account"))?;
+        let diem_root = AccountState::try_from(&diem_root_blob).map_err(Error::decode)?;
+        let currency_infos = diem_root
+            .get_registered_currency_info_resources()
+            .map_err(Error::decode)?;
+        let currency_views = currency_infos.iter().map(CurrencyInfoView::from).collect();
+
+        Ok(MethodResponse::GetCurrencies(currency_views))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }

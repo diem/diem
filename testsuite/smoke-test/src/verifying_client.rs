@@ -227,6 +227,7 @@ fn arb_request(
     prop_oneof![
         (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
         arb_events.prop_map(|(k, s, l)| MethodRequest::GetEvents(k, s, l)),
+        Just(MethodRequest::get_currencies()),
     ]
 }
 
