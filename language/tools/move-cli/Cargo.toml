@@ -21,7 +21,6 @@ bcs = "0.1.2"
 bytecode-verifier = { path = "../../bytecode-verifier" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
 disassembler = { path = "../disassembler" }
-errmapgen = { path = "../../move-prover/errmapgen" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-types = { path = "../../../types" }
 move-coverage = { path = "../move-coverage" }

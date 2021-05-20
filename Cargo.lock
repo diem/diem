@@ -4433,7 +4433,6 @@ dependencies = [
  "diem-workspace-hack",
  "difference",
  "disassembler",
- "errmapgen",
  "include_dir",
  "move-binary-format",
  "move-core-types",
@@ -4497,7 +4496,6 @@ dependencies = [
  "bcs",
  "diem-framework-releases",
  "diem-workspace-hack",
- "errmapgen",
  "move-core-types",
  "structopt 0.3.21",
 ]

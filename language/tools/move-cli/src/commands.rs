@@ -1,8 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use errmapgen::ErrorMapping;
-
 use crate::on_disk_state_view::OnDiskStateView;
 use move_binary_format::{
     access::ModuleAccess,
@@ -14,6 +12,7 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
+    errmap::ErrorMapping,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
