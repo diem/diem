@@ -8,7 +8,10 @@ use crate::{
     logging::{LogEntry, LogSchema},
 };
 use diem_logger::prelude::*;
-use diem_types::{account_address::AccountAddress, transaction::GovernanceRole};
+use diem_types::{
+    account_address::AccountAddress, account_config::AccountSequenceNumber,
+    transaction::GovernanceRole,
+};
 use rand::seq::SliceRandom;
 use std::{
     cmp::Ordering,
@@ -58,6 +61,7 @@ impl PriorityIndex {
             address: txn.get_sender(),
             sequence_number: txn.get_sequence_number(),
             governance_role: txn.governance_role,
+            seqno_type: txn.seqno_type,
         }
     }
 
@@ -77,6 +81,7 @@ pub struct OrderedQueueKey {
     pub address: AccountAddress,
     pub sequence_number: u64,
     pub governance_role: GovernanceRole,
+    pub seqno_type: AccountSequenceNumber,
 }
 
 impl PartialOrd for OrderedQueueKey {

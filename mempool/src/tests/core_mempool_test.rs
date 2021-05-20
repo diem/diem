@@ -9,14 +9,17 @@ use crate::{
     },
 };
 use diem_config::config::NodeConfig;
-use diem_types::transaction::{GovernanceRole, SignedTransaction};
+use diem_types::{
+    account_config::AccountSequenceNumber,
+    transaction::{GovernanceRole, SignedTransaction},
+};
 use std::{
     collections::HashSet,
     time::{Duration, SystemTime},
 };
 
 #[test]
-fn test_transaction_ordering() {
+fn test_transaction_ordering_only_seqnos() {
     let (mut mempool, mut consensus) = setup_mempool();
 
     // Default ordering: gas price
@@ -62,6 +65,118 @@ fn test_transaction_ordering() {
             consensus.get_block(&mut mempool, 1),
             vec![transaction.clone()]
         );
+    }
+}
+
+#[test]
+fn test_transaction_ordering_only_crsns() {
+    let (mut mempool, mut consensus) = setup_mempool();
+
+    // Default ordering: gas price
+    let mut transactions = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(0, 0, 3).crsn(0),
+            TestTransaction::new(1, 0, 5).crsn(0),
+        ],
+    );
+    assert_eq!(
+        consensus.get_block(&mut mempool, 1),
+        vec!(transactions[1].clone())
+    );
+    assert_eq!(
+        consensus.get_block(&mut mempool, 1),
+        vec!(transactions[0].clone())
+    );
+
+    // Second level ordering: expiration time
+    let (mut mempool, mut consensus) = setup_mempool();
+    transactions = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(0, 0, 1).crsn(0),
+            TestTransaction::new(1, 0, 1).crsn(0),
+        ],
+    );
+    for transaction in &transactions {
+        assert_eq!(
+            consensus.get_block(&mut mempool, 1),
+            vec![transaction.clone()]
+        );
+    }
+
+    // Last level: for same account it should be highest gas price
+    // first with ties broken for lowest sequence nonce
+    let (mut mempool, mut consensus) = setup_mempool();
+    transactions = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(1, 0, 7).crsn(0),
+            TestTransaction::new(1, 4, 6).crsn(0),
+            TestTransaction::new(1, 1, 5).crsn(0),
+            TestTransaction::new(1, 2, 5).crsn(0),
+            TestTransaction::new(1, 3, 1).crsn(0),
+        ],
+    );
+    for transaction in &transactions {
+        assert_eq!(
+            consensus.get_block(&mut mempool, 1),
+            vec![transaction.clone()]
+        );
+    }
+}
+
+#[test]
+fn test_transaction_nonblocking_crsns() {
+    let (mut mempool, mut consensus) = setup_mempool();
+
+    // no transaction with sequence number 1 sent, but the transactions won't block on it.
+    let transactions = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(1, 0, 7).crsn(0),
+            TestTransaction::new(1, 4, 6).crsn(0),
+            TestTransaction::new(1, 2, 5).crsn(0),
+            TestTransaction::new(1, 3, 1).crsn(0),
+        ],
+    );
+    for transaction in &transactions {
+        assert_eq!(
+            consensus.get_block(&mut mempool, 1),
+            vec![transaction.clone()]
+        );
+    }
+}
+
+#[test]
+fn test_transaction_eviction_crsns() {
+    let (mut mempool, mut consensus) = setup_mempool();
+
+    let to_be_removed_txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(1, 2, 5).crsn(0),
+            TestTransaction::new(1, 0, 7).crsn(0),
+        ],
+    );
+    let transactions = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(1, 4, 6).crsn(3),
+            TestTransaction::new(1, 3, 1).crsn(3),
+        ],
+    );
+
+    for transaction in &transactions {
+        assert_eq!(
+            consensus.get_block(&mut mempool, 1),
+            vec![transaction.clone()]
+        );
+    }
+
+    // These transactions should have been evicted because the account's min_nonce got bumped
+    for _transaction in &to_be_removed_txns {
+        assert_eq!(consensus.get_block(&mut mempool, 1), vec![]);
     }
 }
 
@@ -150,6 +265,26 @@ fn test_update_transaction_in_mempool() {
 }
 
 #[test]
+fn test_update_transaction_in_mempool_crsn() {
+    let (mut mempool, mut consensus) = setup_mempool();
+    let txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(0, 0, 1).crsn(0),
+            TestTransaction::new(1, 0, 2).crsn(0),
+        ],
+    );
+    let fixed_txns = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 5).crsn(0)]);
+
+    // Check that first transactions pops up first
+    assert_eq!(
+        consensus.get_block(&mut mempool, 1),
+        vec![fixed_txns[0].clone()]
+    );
+    assert_eq!(consensus.get_block(&mut mempool, 1), vec![txns[1].clone()]);
+}
+
+#[test]
 fn test_ignore_same_transaction_submitted_to_mempool() {
     let (mut mempool, _) = setup_mempool();
     let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0)]);
@@ -158,10 +293,29 @@ fn test_ignore_same_transaction_submitted_to_mempool() {
 }
 
 #[test]
+fn test_ignore_same_transaction_submitted_to_mempool_crsn() {
+    let (mut mempool, _) = setup_mempool();
+    let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0).crsn(0)]);
+    let ret = add_txn(&mut mempool, TestTransaction::new(0, 0, 0).crsn(0));
+    assert!(ret.is_ok())
+}
+
+#[test]
 fn test_fail_for_same_gas_amount_and_not_same_expiration_time() {
     let (mut mempool, _) = setup_mempool();
     let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0)]);
     let txn = TestTransaction::new(0, 0, 0)
+        .make_signed_transaction_with_expiration_time(u64::max_value() - 1000);
+    let ret = add_signed_txn(&mut mempool, txn);
+    assert!(ret.is_err())
+}
+
+#[test]
+fn test_fail_for_same_gas_amount_and_not_same_expiration_time_crsn() {
+    let (mut mempool, _) = setup_mempool();
+    let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0).crsn(0)]);
+    let txn = TestTransaction::new(0, 0, 0)
+        .crsn(0)
         .make_signed_transaction_with_expiration_time(u64::max_value() - 1000);
     let ret = add_signed_txn(&mut mempool, txn);
     assert!(ret.is_err())
@@ -189,6 +343,30 @@ fn test_update_invalid_transaction_in_mempool() {
 }
 
 #[test]
+fn test_update_invalid_transaction_in_mempool_crsn() {
+    let (mut mempool, mut consensus) = setup_mempool();
+    let txns = add_txns_to_mempool(
+        &mut mempool,
+        vec![
+            TestTransaction::new(0, 0, 1).crsn(0),
+            TestTransaction::new(1, 0, 2).crsn(0),
+        ],
+    );
+    let updated_txn = TestTransaction::make_signed_transaction_with_max_gas_amount(
+        &TestTransaction::new(0, 0, 5).crsn(0),
+        200,
+    );
+    let _added_tnx = add_signed_txn(&mut mempool, updated_txn);
+
+    // Since both gas price and mas gas amount were updated, the ordering should not have changed.
+    // The second transaction with gas price 2 should come first.
+    assert_eq!(consensus.get_block(&mut mempool, 1), vec![txns[1].clone()]);
+    let next_tnx = consensus.get_block(&mut mempool, 1);
+    assert_eq!(next_tnx, vec![txns[0].clone()]);
+    assert_eq!(next_tnx[0].gas_unit_price(), 1);
+}
+
+#[test]
 fn test_remove_transaction() {
     let (mut pool, mut consensus) = setup_mempool();
 
@@ -203,6 +381,33 @@ fn test_remove_transaction() {
     let new_txns = add_txns_to_mempool(
         &mut pool,
         vec![TestTransaction::new(1, 0, 3), TestTransaction::new(1, 1, 4)],
+    );
+    // Should return only txns from new_txns.
+    assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[0].clone()));
+    assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[1].clone()));
+}
+
+#[test]
+fn test_remove_transaction_crsn() {
+    let (mut pool, mut consensus) = setup_mempool();
+
+    // Test normal flow.
+    let txns = add_txns_to_mempool(
+        &mut pool,
+        vec![
+            TestTransaction::new(0, 0, 1).crsn(0),
+            TestTransaction::new(0, 1, 2).crsn(0),
+        ],
+    );
+    for txn in txns {
+        pool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+    }
+    let new_txns = add_txns_to_mempool(
+        &mut pool,
+        vec![
+            TestTransaction::new(1, 1, 4).crsn(0),
+            TestTransaction::new(1, 0, 3).crsn(0),
+        ],
     );
     // Should return only txns from new_txns.
     assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[0].clone()));
@@ -408,7 +613,7 @@ fn test_gc_ready_transaction() {
         txn,
         0,
         1,
-        0,
+        AccountSequenceNumber::SequenceNumber(0),
         TimelineState::NotReady,
         GovernanceRole::NonGovernanceRole,
     );
@@ -447,7 +652,7 @@ fn test_clean_stuck_transactions() {
         txn,
         0,
         1,
-        db_sequence_number,
+        AccountSequenceNumber::SequenceNumber(db_sequence_number),
         TimelineState::NotReady,
         GovernanceRole::NonGovernanceRole,
     );

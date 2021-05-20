@@ -15,6 +15,7 @@ use diem_config::{
 };
 use diem_infallible::{Mutex, RwLock};
 use diem_types::{
+    account_config::AccountSequenceNumber,
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},
 };
@@ -110,7 +111,7 @@ impl MockSharedMempool {
                         txn.clone(),
                         0,
                         txn.gas_unit_price(),
-                        0,
+                        AccountSequenceNumber::SequenceNumber(0),
                         TimelineState::NotReady,
                         GovernanceRole::NonGovernanceRole,
                     )

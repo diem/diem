@@ -222,9 +222,9 @@ where
         .into_iter()
         .enumerate()
         .filter_map(|(idx, t)| {
-            if let Ok(sequence_number) = seq_numbers[idx] {
-                if t.sequence_number() >= sequence_number {
-                    return Some((t, sequence_number));
+            if let Ok(crsn_or_seqno) = seq_numbers[idx] {
+                if t.sequence_number() >= crsn_or_seqno.min_seq() {
+                    return Some((t, crsn_or_seqno));
                 } else {
                     statuses.push((
                         t,
@@ -260,7 +260,7 @@ where
 
     {
         let mut mempool = smp.mempool.lock();
-        for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
+        for (idx, (transaction, crsn_or_seqno)) in transactions.into_iter().enumerate() {
             if let Ok(validation_result) = &validation_results[idx] {
                 match validation_result.status() {
                     None => {
@@ -271,7 +271,7 @@ where
                             transaction.clone(),
                             gas_amount,
                             ranking_score,
-                            sequence_number,
+                            crsn_or_seqno,
                             timeline_state,
                             governance_role,
                         );

@@ -59,6 +59,12 @@ min_nonce                       min_nonce + k - 1
 
 </dd>
 <dt>
+<code>size: u64</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
 <code>slots: <a href="../../../../../../move-stdlib/docs/BitVector.md#0x1_BitVector_BitVector">BitVector::BitVector</a></code>
 </dt>
 <dd>
@@ -125,6 +131,7 @@ Publish a DSN under <code>account</code>. Cannot already have a DSN published.
     <b>assert</b>(size &gt; 0, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="CRSN.md#0x1_CRSN_EZERO_SIZE_CRSN">EZERO_SIZE_CRSN</a>));
     move_to(account, <a href="CRSN.md#0x1_CRSN">CRSN</a> {
         min_nonce,
+        size,
         slots: <a href="../../../../../../move-stdlib/docs/BitVector.md#0x1_BitVector_new">BitVector::new</a>(size),
     })
 }

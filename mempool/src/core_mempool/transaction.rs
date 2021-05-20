@@ -3,12 +3,13 @@
 
 use diem_types::{
     account_address::AccountAddress,
+    account_config::AccountSequenceNumber,
     transaction::{GovernanceRole, SignedTransaction},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MempoolTransaction {
     pub txn: SignedTransaction,
     // System expiration time of the transaction. It should be removed from mempool by that time.
@@ -17,6 +18,7 @@ pub struct MempoolTransaction {
     pub ranking_score: u64,
     pub timeline_state: TimelineState,
     pub governance_role: GovernanceRole,
+    pub seqno_type: AccountSequenceNumber,
 }
 
 impl MempoolTransaction {
@@ -27,6 +29,7 @@ impl MempoolTransaction {
         ranking_score: u64,
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
+        seqno_type: AccountSequenceNumber,
     ) -> Self {
         Self {
             txn,
@@ -35,6 +38,7 @@ impl MempoolTransaction {
             ranking_score,
             timeline_state,
             governance_role,
+            seqno_type,
         }
     }
     pub(crate) fn get_sequence_number(&self) -> u64 {

@@ -7,7 +7,7 @@ use diem_config::config::NodeConfig;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_types::{
     account_address::AccountAddress,
-    account_config::XUS_NAME,
+    account_config::{AccountSequenceNumber, XUS_NAME},
     chain_id::ChainId,
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, RawTransaction, Script, SignedTransaction},
@@ -38,6 +38,7 @@ pub struct TestTransaction {
     pub(crate) sequence_number: u64,
     pub(crate) gas_price: u64,
     pub(crate) governance_role: GovernanceRole,
+    pub(crate) account_seqno_type: AccountSequenceNumber,
 }
 
 impl TestTransaction {
@@ -47,7 +48,17 @@ impl TestTransaction {
             sequence_number,
             gas_price,
             governance_role: GovernanceRole::NonGovernanceRole,
+            account_seqno_type: AccountSequenceNumber::SequenceNumber(0),
         }
+    }
+
+    pub(crate) fn crsn(mut self, min_nonce: u64) -> Self {
+        // Default CRSN size to 128
+        self.account_seqno_type = AccountSequenceNumber::CRSN {
+            min_nonce,
+            size: 128,
+        };
+        self
     }
 
     pub(crate) fn make_signed_transaction_with_expiration_time(
@@ -109,7 +120,7 @@ pub(crate) fn add_txns_to_mempool(
             txn.clone(),
             0,
             txn.gas_unit_price(),
-            0,
+            transaction.account_seqno_type,
             TimelineState::NotReady,
             transaction.governance_role,
         );
@@ -128,7 +139,7 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
             transaction.clone(),
             0,
             transaction.gas_unit_price(),
-            0,
+            AccountSequenceNumber::SequenceNumber(0),
             TimelineState::NotReady,
             GovernanceRole::NonGovernanceRole,
         )
@@ -164,7 +175,9 @@ impl ConsensusMock {
         mempool: &mut CoreMempool,
         block_size: u64,
     ) -> Vec<SignedTransaction> {
+        println!("IN");
         let block = mempool.get_block(block_size, self.0.clone());
+        println!("OUT");
         self.0 = self
             .0
             .union(

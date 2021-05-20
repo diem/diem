@@ -22,6 +22,7 @@ module CRSN {
     /// ```
     struct CRSN has key {
         min_nonce: u64,
+        size: u64,
         slots: BitVector,
     }
 
@@ -39,6 +40,7 @@ module CRSN {
         assert(size > 0, Errors::invalid_argument(EZERO_SIZE_CRSN));
         move_to(account, CRSN {
             min_nonce,
+            size,
             slots: BitVector::new(size),
         })
     }

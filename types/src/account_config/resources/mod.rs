@@ -4,6 +4,7 @@
 pub mod account;
 pub mod balance;
 pub mod chain_id;
+pub mod crsn;
 pub mod currency_info;
 pub mod designated_dealer;
 pub mod diem_id;
@@ -21,6 +22,7 @@ pub mod withdraw_capability;
 pub use account::*;
 pub use balance::*;
 pub use chain_id::*;
+pub use crsn::*;
 pub use currency_info::*;
 pub use designated_dealer::*;
 pub use diem_id::*;
