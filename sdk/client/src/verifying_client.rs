@@ -179,6 +179,12 @@ impl<S: Storage> VerifyingClient<S> {
             .and_then(MethodResponse::try_into_get_currencies)
     }
 
+    pub async fn get_network_status(&self) -> Result<Response<u64>> {
+        self.request(MethodRequest::get_network_status())
+            .await?
+            .and_then(MethodResponse::try_into_get_network_status)
+    }
+
     /// Send a single request via `VerifyingClient::batch`.
     pub async fn request(&self, request: MethodRequest) -> Result<Response<MethodResponse>> {
         let mut responses = self.batch(vec![request]).await?.into_iter();
@@ -416,6 +422,7 @@ impl From<MethodRequest> for VerifyingRequest {
                 verifying_get_events(key, start_seq, limit)
             }
             MethodRequest::GetCurrencies([]) => verifying_get_currencies(),
+            MethodRequest::GetNetworkStatus([]) => verifying_get_network_status(),
             _ => todo!(),
         }
     }
@@ -616,6 +623,24 @@ fn verifying_get_currencies() -> VerifyingRequest {
         let currency_views = currency_infos.iter().map(CurrencyInfoView::from).collect();
 
         Ok(MethodResponse::GetCurrencies(currency_views))
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_network_status() -> VerifyingRequest {
+    let request = MethodRequest::get_network_status();
+    let subrequests = vec![MethodRequest::get_network_status()];
+    let callback: RequestCallback = |_ctxt, subresponses| {
+        let status = match subresponses {
+            [MethodResponse::GetNetworkStatus(ref status)] => *status,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetNetworkStatus] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+        Ok(MethodResponse::GetNetworkStatus(status))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }

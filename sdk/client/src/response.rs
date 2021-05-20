@@ -174,4 +174,14 @@ impl MethodResponse {
             ))),
         }
     }
+
+    pub fn try_into_get_network_status(self) -> Result<u64, Error> {
+        match self {
+            MethodResponse::GetNetworkStatus(status) => Ok(status),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetNetworkStatus found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
 }
