@@ -61,6 +61,7 @@ join_env_vars() {
 }
 
 kube_init_context () {
+  kubectl config get-contexts
   aws eks --region us-west-2 describe-cluster --name libra-rustietest &>/dev/null || (echo "Failed to access EKS, try awsmfa?"; exit 1)
 }
 
@@ -231,6 +232,7 @@ pod_name="cluster-test-$(whoami)-$(date +%s)"
 pod_name=${pod_name/_/-} #underscore not allowed in pod name
 specfile=$(mktemp)
 echo "Pod Spec : ${specfile}"
+echo "hhhhh tag : ${CLUSTER_TEST_TAG}"
 join_args "$@"
 if [[ -z "${WORKSPACE}" ]]; then
   kube_select_cluster
@@ -250,6 +252,7 @@ sed -e "s/{pod_name}/${pod_name}/g" \
 
 echo "Using cluster : ${WORKSPACE}"
 context=${K8S_CONTEXT_PATTERN}
+echo "contect: ${context}"
 kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
 kube_wait_pod ${pod_name} ${context}
 START_UTC=$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")

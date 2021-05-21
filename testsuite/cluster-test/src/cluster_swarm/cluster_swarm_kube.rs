@@ -335,9 +335,9 @@ impl ClusterSwarmKube {
         Ok(())
     }
 
-    async fn list_nodes(&self) -> Result<Vec<KubeNode>> {
+    pub async fn list_nodes(&self) -> Result<Vec<KubeNode>> {
         let node_api: Api<Node> = Api::all(self.client.clone());
-        let lp = ListParams::default().labels("nodeType=validators");
+        let lp = ListParams::default();
         let nodes = node_api.list(&lp).await?.items;
         nodes.into_iter().map(KubeNode::try_from).collect()
     }

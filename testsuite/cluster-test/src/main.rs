@@ -122,6 +122,12 @@ pub async fn main() {
     if args.swarm && !(args.emit_tx || args.diag || args.health_check) {
         panic!("Can only use --emit-tx or --diag or --health-check in --swarm mode");
     }
+    let cluster_swarm = ClusterSwarmKube::new().await.unwrap();
+    let a = cluster_swarm.list_nodes().await.unwrap();
+    println!("hhhhhhh {}", a.len());
+    for n in &a {
+        println!("nnnnnnn name = {:?}, ip = {:?}", n.name, n.internal_ip);
+    }
 }
 
 // This function contain handlers for commands that require cluster running for executing them

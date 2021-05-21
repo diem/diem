@@ -5,10 +5,7 @@ metadata:
   labels:
     app: cluster-test
 spec:
-  nodeSelector:
-    nodeType: clustertest
   restartPolicy: Never
-  serviceAccountName: clustertest
   tolerations:
   - key: "clustertest"
     operator: "Exists"
