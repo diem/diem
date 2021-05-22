@@ -132,16 +132,16 @@ impl VaultStorage {
     }
 
     fn crypto_name(&self, name: &str) -> String {
-        self.name(name, &VaultEngine::Transit)
+        self.name(name).replace('/', "__")
     }
 
     fn secret_name(&self, name: &str) -> String {
-        self.name(name, &VaultEngine::KVSecrets)
+        self.name(name)
     }
 
-    fn name(&self, name: &str, engine: &VaultEngine) -> String {
+    fn name(&self, name: &str) -> String {
         if let Some(namespace) = &self.namespace {
-            format!("{}{}{}", namespace, engine.ns_seperator(), name)
+            format!("{}/{}", namespace, name)
         } else {
             name.into()
         }
@@ -306,19 +306,5 @@ impl CryptoStorage for VaultStorage {
             ))
         })?;
         Ok(self.client().sign_ed25519(&name, &bytes, Some(vers))?)
-    }
-}
-
-pub enum VaultEngine {
-    KVSecrets,
-    Transit,
-}
-
-impl VaultEngine {
-    fn ns_seperator(&self) -> &str {
-        match self {
-            VaultEngine::KVSecrets => "/",
-            VaultEngine::Transit => "__",
-        }
     }
 }
