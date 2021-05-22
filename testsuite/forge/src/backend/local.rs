@@ -301,7 +301,7 @@ impl Factory for LocalFactory {
             self.diem_node_bin.as_ref(),
             None,
             None,
-            &vfn_swarm.config,
+            &validator_swarm.config,
             FullnodeType::PublicFullnode(1),
         )
         .unwrap();
@@ -332,7 +332,7 @@ impl Factory for LocalFactory {
         vfn_swarm.launch();
         pfn_swarm.launch();
 
-        let url = format!("http://localhost:{}/v1", validator_swarm.get_client_port(0));
+        let url = format!("http://localhost:{}/v1", pfn_swarm.get_client_port(0));
 
         Box::new(LocalSwarm {
             validator_swarm,
