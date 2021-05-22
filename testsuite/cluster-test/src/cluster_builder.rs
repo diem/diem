@@ -29,7 +29,7 @@ use diem_global_constants::{
     OPERATOR_KEY, OWNER_KEY, SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS,
     VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
-use diem_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
+use diem_secure_storage::{CryptoStorage, KVStorage, Namespaced, Storage, VaultStorage};
 use diem_types::{chain_id::ChainId, network_address::NetworkAddress, waypoint::Waypoint};
 use std::str::FromStr;
 
@@ -362,15 +362,17 @@ impl ClusterBuilder {
         let addr = vault_node.internal_ip.clone();
         tokio::task::spawn_blocking(move || {
             let pod_name = validator_pod_name(validator_index);
-            let mut vault_storage = Storage::from(VaultStorage::new(
-                format!("http://{}:{}", addr, VAULT_PORT),
-                VAULT_TOKEN.to_string(),
-                Some(pod_name.clone()),
-                None,
-                None,
-                true,
-                None,
-                None,
+            let mut vault_storage = Storage::from(Namespaced::new(
+                &pod_name,
+                Box::new(Storage::from(VaultStorage::new(
+                    format!("http://{}:{}", addr, VAULT_PORT),
+                    VAULT_TOKEN.to_string(),
+                    None,
+                    None,
+                    true,
+                    None,
+                    None,
+                ))),
             ));
             if validator_index == 0 {
                 vault_storage.create_key(DIEM_ROOT_KEY).map_err(|e| {

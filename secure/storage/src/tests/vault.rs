@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{tests::suite, vault::VaultStorage, CryptoStorage, KVStorage, Storage};
+use crate::{tests::suite, vault::VaultStorage, CryptoStorage, KVStorage, Namespaced, Storage};
 use diem_vault_client::dev::{self, ROOT_TOKEN};
 
 /// VaultStorage namespace constants
@@ -31,7 +31,7 @@ fn execute_storage_tests_vault() {
     if dev::test_host_safe().is_none() {
         return;
     }
-    let mut storage = create_vault_with_namespace(None);
+    let mut storage = create_vault();
     storage.reset_and_clear().unwrap();
 
     for test in VAULT_TESTS.iter() {
@@ -42,16 +42,16 @@ fn execute_storage_tests_vault() {
 
 /// Runs the test suite on a VaultStorage instance that does not use distinct namespaces
 fn test_suite_no_namespaces() {
-    let mut storage = Storage::from(create_vault_with_namespace(None));
+    let mut storage = Storage::from(create_vault());
     suite::execute_all_storage_tests(&mut storage);
 }
 
 /// Runs the test suite on a VaultStorage instance that supports multiple distinct namespaces.
 /// Tests should be able to run across namespaces without interfering.
 fn test_suite_multiple_namespaces() {
-    let mut storage_1 = Storage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_1.into())));
-    let mut storage_2 = Storage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_2.into())));
-    let mut storage_3 = Storage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_3.into())));
+    let mut storage_1 = Storage::from(create_vault_with_namespace(VAULT_NAMESPACE_1));
+    let mut storage_2 = Storage::from(create_vault_with_namespace(VAULT_NAMESPACE_2));
+    let mut storage_3 = Storage::from(create_vault_with_namespace(VAULT_NAMESPACE_3));
 
     suite::execute_all_storage_tests(&mut storage_1);
     suite::execute_all_storage_tests(&mut storage_2);
@@ -60,20 +60,18 @@ fn test_suite_multiple_namespaces() {
 
 /// Creates and initializes a VaultStorage instance for testing. If a namespace is specified, the
 /// instance will perform all storage operations under that namespace.
-fn create_vault_with_namespace(namespace: Option<String>) -> VaultStorage {
-    create_vault_storage(ROOT_TOKEN.into(), namespace, None, true)
+fn create_vault_with_namespace(namespace: &str) -> Namespaced<Box<Storage>> {
+    Namespaced::new(namespace, Box::new(Storage::from(create_vault())))
 }
 
-fn create_vault_storage(
-    token: String,
-    namespace: Option<String>,
-    renew_ttl_secs: Option<u32>,
-    use_cas: bool,
-) -> VaultStorage {
+fn create_vault() -> VaultStorage {
+    create_vault_storage(ROOT_TOKEN.into(), None, true)
+}
+
+fn create_vault_storage(token: String, renew_ttl_secs: Option<u32>, use_cas: bool) -> VaultStorage {
     VaultStorage::new(
         dev::test_host(),
         token,
-        namespace,
         None,
         renew_ttl_secs,
         use_cas,
@@ -83,8 +81,8 @@ fn create_vault_storage(
 }
 
 fn test_vault_cas() {
-    let mut with_cas = create_vault_with_namespace(None);
-    let mut without_cas = create_vault_storage(ROOT_TOKEN.into(), None, None, false);
+    let mut with_cas = create_vault();
+    let mut without_cas = create_vault_storage(ROOT_TOKEN.into(), None, false);
     // Test initial write with no version
     with_cas.set("test", 1).unwrap();
     assert_eq!(with_cas.get::<u64>("test").unwrap().value, 1);
@@ -112,7 +110,7 @@ fn test_vault_cas() {
 }
 
 fn test_vault_key_trimming() {
-    let mut storage = create_vault_with_namespace(None);
+    let mut storage = create_vault();
 
     // Create key
     let _ = storage.create_key(CRYPTO_KEY).unwrap();

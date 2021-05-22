@@ -38,7 +38,6 @@ fn safety_rules(
             ROOT_TOKEN.to_string(),
             None,
             None,
-            None,
             true,
             None,
             None,
