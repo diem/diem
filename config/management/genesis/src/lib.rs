@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod builder;
 pub mod command;
 mod genesis;
 mod key;
