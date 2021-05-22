@@ -178,7 +178,6 @@ fn create_vault_storage() -> VaultStorage {
         VAULT_TOKEN.to_string(),
         None,
         None,
-        None,
         true,
         None,
         None,

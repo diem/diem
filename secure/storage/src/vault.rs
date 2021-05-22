@@ -29,7 +29,6 @@ use diem_vault_client::ReadResponse;
 pub struct VaultStorage {
     client: Client,
     time_service: TimeService,
-    namespace: Option<String>,
     renew_ttl_secs: Option<u32>,
     next_renewal: AtomicU64,
     use_cas: bool,
@@ -40,7 +39,6 @@ impl VaultStorage {
     pub fn new(
         host: String,
         token: String,
-        namespace: Option<String>,
         certificate: Option<String>,
         renew_ttl_secs: Option<u32>,
         use_cas: bool,
@@ -56,7 +54,6 @@ impl VaultStorage {
                 response_timeout_ms,
             ),
             time_service: TimeService::real(),
-            namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),
             use_cas,
@@ -132,19 +129,11 @@ impl VaultStorage {
     }
 
     fn crypto_name(&self, name: &str) -> String {
-        self.name(name).replace('/', "__")
+        name.replace('/', "__")
     }
 
-    fn secret_name(&self, name: &str) -> String {
-        self.name(name)
-    }
-
-    fn name(&self, name: &str) -> String {
-        if let Some(namespace) = &self.namespace {
-            format!("{}/{}", namespace, name)
-        } else {
-            name.into()
-        }
+    fn unnamespaced<'a>(&self, name: &'a str) -> &'a str {
+        name.rsplit_once('/').map(|(_, key)| key).unwrap_or(name)
     }
 }
 
@@ -158,7 +147,8 @@ impl KVStorage for VaultStorage {
     }
 
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
-        let secret = self.secret_name(key);
+        let secret = key;
+        let key = self.unnamespaced(key);
         let resp = self.client().read_secret(&secret, key)?;
         let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
         let value: T = serde_json::from_value(resp.value)?;
@@ -169,7 +159,8 @@ impl KVStorage for VaultStorage {
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
-        let secret = self.secret_name(key);
+        let secret = key;
+        let key = self.unnamespaced(key);
         let version = if self.use_cas {
             self.secret_versions.read().get(key).copied()
         } else {

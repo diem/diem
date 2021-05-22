@@ -178,19 +178,25 @@ impl From<&SecureBackend> for Storage {
                     storage
                 }
             }
-            SecureBackend::Vault(config) => Storage::from(VaultStorage::new(
-                config.server.clone(),
-                config.token.read_token().expect("Unable to read token"),
-                config.namespace.clone(),
-                config
-                    .ca_certificate
-                    .as_ref()
-                    .map(|_| config.ca_certificate().unwrap()),
-                config.renew_ttl_secs,
-                config.disable_cas.map_or_else(|| true, |disable| !disable),
-                config.connection_timeout_ms,
-                config.response_timeout_ms,
-            )),
+            SecureBackend::Vault(config) => {
+                let storage = Storage::from(VaultStorage::new(
+                    config.server.clone(),
+                    config.token.read_token().expect("Unable to read token"),
+                    config
+                        .ca_certificate
+                        .as_ref()
+                        .map(|_| config.ca_certificate().unwrap()),
+                    config.renew_ttl_secs,
+                    config.disable_cas.map_or_else(|| true, |disable| !disable),
+                    config.connection_timeout_ms,
+                    config.response_timeout_ms,
+                ));
+                if let Some(namespace) = &config.namespace {
+                    Storage::from(Namespaced::new(namespace, Box::new(storage)))
+                } else {
+                    storage
+                }
+            }
         }
     }
 }
