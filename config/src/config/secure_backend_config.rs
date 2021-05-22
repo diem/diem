@@ -3,7 +3,7 @@
 
 use crate::config::Error;
 use diem_secure_storage::{
-    GitHubStorage, InMemoryStorage, NamespacedStorage, OnDiskStorage, Storage, VaultStorage,
+    GitHubStorage, InMemoryStorage, Namespaced, OnDiskStorage, Storage, VaultStorage,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -164,7 +164,7 @@ impl From<&SecureBackend> for Storage {
                     config.token.read_token().expect("Unable to read token"),
                 ));
                 if let Some(namespace) = &config.namespace {
-                    Storage::from(NamespacedStorage::new(storage, namespace.clone()))
+                    Storage::from(Namespaced::new(namespace, Box::new(storage)))
                 } else {
                     storage
                 }
@@ -173,7 +173,7 @@ impl From<&SecureBackend> for Storage {
             SecureBackend::OnDiskStorage(config) => {
                 let storage = Storage::from(OnDiskStorage::new(config.path()));
                 if let Some(namespace) = &config.namespace {
-                    Storage::from(NamespacedStorage::new(storage, namespace.clone()))
+                    Storage::from(Namespaced::new(namespace, Box::new(storage)))
                 } else {
                     storage
                 }

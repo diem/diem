@@ -1,29 +1,61 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage};
+use crate::{CryptoStorage, Error, GetResponse, KVStorage, PublicKeyResponse};
+use diem_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    hash::CryptoHash,
+};
 use serde::{de::DeserializeOwned, Serialize};
 
 /// This provides a light wrapper around KV storages to support a namespace. That namespace is
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
-/// key of bar becomes "foo/bar". Without a namespace, the key would just be "bar". This matches
-/// how this library implements namespaces for Vault.
-pub struct NamespacedStorage {
+/// key of bar becomes "foo/bar". Without a namespace, the key would just be "bar".
+pub struct Namespaced<S> {
     namespace: String,
-    inner: Box<Storage>,
+    inner: S,
 }
 
-impl KVStorage for NamespacedStorage {
+impl<S> Namespaced<S> {
+    pub fn new<N: Into<String>>(namespace: N, inner: S) -> Self {
+        Self {
+            namespace: namespace.into(),
+            inner,
+        }
+    }
+
+    pub fn inner(&self) -> &S {
+        &self.inner
+    }
+
+    pub fn inner_mut(&mut self) -> &mut S {
+        &mut self.inner
+    }
+
+    pub fn into_inner(self) -> S {
+        self.inner
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    fn namespaced(&self, name: &str) -> String {
+        format!("{}/{}", self.namespace, name)
+    }
+}
+
+impl<S: KVStorage> KVStorage for Namespaced<S> {
     fn available(&self) -> Result<(), Error> {
         self.inner.available()
     }
 
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
-        self.inner.get(&self.ns_name(key))
+        self.inner.get(&self.namespaced(key))
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
-        self.inner.set(&self.ns_name(key), value)
+        self.inner.set(&self.namespaced(key), value)
     }
 
     /// Note: This is not a namespace function
@@ -33,20 +65,59 @@ impl KVStorage for NamespacedStorage {
     }
 }
 
-impl NamespacedStorage {
-    pub fn new(storage: Storage, namespace: String) -> Self {
-        NamespacedStorage {
-            namespace,
-            inner: Box::new(storage),
-        }
+impl<S: CryptoStorage> CryptoStorage for Namespaced<S> {
+    fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        self.inner.create_key(&self.namespaced(name))
     }
 
-    fn ns_name(&self, key: &str) -> String {
-        format!("{}/{}", self.namespace, key)
+    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
+        self.inner.export_private_key(&self.namespaced(name))
+    }
+
+    fn import_private_key(&mut self, name: &str, key: Ed25519PrivateKey) -> Result<(), Error> {
+        self.inner.import_private_key(&self.namespaced(name), key)
+    }
+
+    fn export_private_key_for_version(
+        &self,
+        name: &str,
+        version: Ed25519PublicKey,
+    ) -> Result<Ed25519PrivateKey, Error> {
+        self.inner
+            .export_private_key_for_version(&self.namespaced(name), version)
+    }
+
+    fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
+        self.inner.get_public_key(&self.namespaced(name))
+    }
+
+    fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        self.inner
+            .get_public_key_previous_version(&self.namespaced(name))
+    }
+
+    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        self.inner.rotate_key(&self.namespaced(name))
+    }
+
+    fn sign<T: CryptoHash + Serialize>(
+        &self,
+        name: &str,
+        message: &T,
+    ) -> Result<Ed25519Signature, Error> {
+        self.inner.sign(&self.namespaced(name), message)
+    }
+
+    fn sign_using_version<T: CryptoHash + Serialize>(
+        &self,
+        name: &str,
+        version: Ed25519PublicKey,
+        message: &T,
+    ) -> Result<Ed25519Signature, Error> {
+        self.inner
+            .sign_using_version(&self.namespaced(name), version, message)
     }
 }
-
-impl CryptoKVStorage for NamespacedStorage {}
 
 #[cfg(test)]
 mod test {
@@ -63,12 +134,8 @@ mod test {
         let path_buf = TempPath::new().path().to_path_buf();
 
         let mut default = OnDiskStorage::new(path_buf.clone());
-
-        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
-        let mut nss0 = NamespacedStorage::new(storage, ns0.into());
-
-        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf));
-        let mut nss1 = NamespacedStorage::new(storage, ns1.into());
+        let mut nss0 = Namespaced::new(ns0, OnDiskStorage::new(path_buf.clone()));
+        let mut nss1 = Namespaced::new(ns1, OnDiskStorage::new(path_buf));
 
         default.set(key, 0).unwrap();
         nss0.set(key, 1).unwrap();
@@ -86,13 +153,9 @@ mod test {
 
         let path_buf = TempPath::new().path().to_path_buf();
 
-        let default = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
-
-        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
-        let mut nss = NamespacedStorage::new(storage, ns.into());
-
-        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf));
-        let another_nss = NamespacedStorage::new(storage, ns.into());
+        let default = OnDiskStorage::new(path_buf.clone());
+        let mut nss = Namespaced::new(ns, OnDiskStorage::new(path_buf.clone()));
+        let another_nss = Namespaced::new(ns, OnDiskStorage::new(path_buf));
 
         nss.set(key, 1).unwrap();
         default.get::<u64>(key).unwrap_err();

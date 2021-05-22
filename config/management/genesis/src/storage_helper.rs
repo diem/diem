@@ -14,7 +14,7 @@ use diem_global_constants::{
     SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use diem_management::{error::Error, secure_backend::DISK};
-use diem_secure_storage::{CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage};
+use diem_secure_storage::{CryptoStorage, KVStorage, Namespaced, OnDiskStorage, Storage};
 use diem_types::{
     chain_id::ChainId,
     network_address::{self, NetworkAddress},
@@ -38,7 +38,7 @@ impl StorageHelper {
 
     pub fn storage(&self, namespace: String) -> Storage {
         let storage = OnDiskStorage::new(self.temppath.path().to_path_buf());
-        Storage::from(NamespacedStorage::new(Storage::from(storage), namespace))
+        Storage::from(Namespaced::new(namespace, Box::new(Storage::from(storage))))
     }
 
     pub fn path(&self) -> &Path {
