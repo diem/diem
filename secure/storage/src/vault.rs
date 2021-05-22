@@ -1,9 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    Capability, CryptoStorage, Error, GetResponse, Identity, KVStorage, Policy, PublicKeyResponse,
-};
+use crate::{CryptoStorage, Error, GetResponse, KVStorage, PublicKeyResponse};
 use chrono::DateTime;
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
@@ -11,7 +9,7 @@ use diem_crypto::{
 };
 use diem_infallible::RwLock;
 use diem_time_service::{TimeService, TimeServiceTrait};
-use diem_vault_client::{self as vault, Client};
+use diem_vault_client::Client;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     collections::HashMap,
@@ -20,8 +18,6 @@ use std::{
 
 #[cfg(any(test, feature = "testing"))]
 use diem_vault_client::ReadResponse;
-
-const DIEM_DEFAULT: &str = "diem_default";
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Diem. This
 /// version currently matches the behavior of OnDiskStorage and InMemoryStorage. In the future,
@@ -115,25 +111,6 @@ impl VaultStorage {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    fn reset_policies(&self) -> Result<(), Error> {
-        let policies = match self.client().list_policies() {
-            Ok(policies) => policies,
-            Err(diem_vault_client::Error::NotFound(_, _)) => return Ok(()),
-            Err(e) => return Err(e.into()),
-        };
-
-        for policy in policies {
-            // Never touch the default or root policy
-            if policy == "default" || policy == "root" {
-                continue;
-            }
-
-            self.client().delete_policy(&policy)?;
-        }
-        Ok(())
-    }
-
-    #[cfg(any(test, feature = "testing"))]
     pub fn revoke_token_self(&self) -> Result<(), Error> {
         Ok(self.client.revoke_token_self()?)
     }
@@ -146,85 +123,12 @@ impl VaultStorage {
         Ok(self.client().read_ed25519_key(name)?)
     }
 
-    /// Creates a token but uses the namespace for policies
-    pub fn create_token(&self, mut policies: Vec<&str>) -> Result<String, Error> {
-        policies.push(DIEM_DEFAULT);
-        let result = if let Some(ns) = &self.namespace {
-            let policies: Vec<_> = policies.iter().map(|p| format!("{}/{}", ns, p)).collect();
-            self.client()
-                .create_token(policies.iter().map(|p| &**p).collect())?
-        } else {
-            self.client().create_token(policies)?
-        };
-        Ok(result)
-    }
-
-    /// Create a new policy in Vault, see the explanation for Policy for how the data is
-    /// structured. Vault does not distingush a create and update. An update must first read the
-    /// existing policy, amend the contents,  and then be applied via this API.
-    pub fn set_policy(
-        &self,
-        policy_name: &str,
-        engine: &VaultEngine,
-        key: &str,
-        capabilities: &[Capability],
-    ) -> Result<(), Error> {
-        let policy_name = self.name(policy_name, engine);
-
-        let mut vault_policy = self.client().read_policy(&policy_name).unwrap_or_default();
-        let mut core_capabilities = Vec::new();
-        for capability in capabilities {
-            match capability {
-                Capability::Export => {
-                    let export_capability = vec![vault::Capability::Read];
-                    let export_policy = format!("transit/export/signing-key/{}", key);
-                    vault_policy.add_policy(&export_policy, export_capability);
-                }
-                Capability::Read => core_capabilities.push(vault::Capability::Read),
-                Capability::Rotate => {
-                    let rotate_capability = vec![vault::Capability::Update];
-                    let rotate_policy = format!("transit/keys/{}/rotate", key);
-                    vault_policy.add_policy(&rotate_policy, rotate_capability);
-                }
-                Capability::Sign => {
-                    let sign_capability = vec![vault::Capability::Update];
-                    let sign_policy = format!("transit/sign/{}", key);
-                    vault_policy.add_policy(&sign_policy, sign_capability);
-                }
-                Capability::Write => core_capabilities.push(vault::Capability::Update),
-            }
-        }
-
-        let path = format!("{}/{}", engine.to_policy_path(), self.name(key, engine));
-        vault_policy.add_policy(&path, core_capabilities);
-        self.client().set_policy(&policy_name, &vault_policy)?;
-        Ok(())
-    }
-
     fn key_version(&self, name: &str, version: &Ed25519PublicKey) -> Result<u32, Error> {
         let pubkeys = self.client().read_ed25519_key(name)?;
         let pubkey = pubkeys.iter().find(|pubkey| version == &pubkey.value);
         Ok(pubkey
             .ok_or_else(|| Error::KeyVersionNotFound(name.into(), version.to_string()))?
             .version)
-    }
-
-    pub fn set_policies(
-        &self,
-        name: &str,
-        engine: &VaultEngine,
-        policy: &Policy,
-    ) -> Result<(), Error> {
-        for perm in &policy.permissions {
-            match &perm.id {
-                Identity::User(id) => self.set_policy(id, engine, name, &perm.capabilities)?,
-                Identity::Anyone => {
-                    self.set_policy(DIEM_DEFAULT, engine, name, &perm.capabilities)?
-                }
-                Identity::NoOne => (),
-            };
-        }
-        Ok(())
     }
 
     fn crypto_name(&self, name: &str) -> String {
@@ -285,7 +189,7 @@ impl KVStorage for VaultStorage {
         self.secret_versions.write().clear();
         self.reset_kv("")?;
         self.reset_crypto()?;
-        self.reset_policies()
+        Ok(())
     }
 }
 
@@ -411,13 +315,6 @@ pub enum VaultEngine {
 }
 
 impl VaultEngine {
-    fn to_policy_path(&self) -> &str {
-        match self {
-            VaultEngine::KVSecrets => "secret/data",
-            VaultEngine::Transit => "transit/keys",
-        }
-    }
-
     fn ns_seperator(&self) -> &str {
         match self {
             VaultEngine::KVSecrets => "/",
