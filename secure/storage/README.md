@@ -41,8 +41,8 @@ storage, on-disk should not be used in production environments as it provides no
 guarantees (e.g., encryption before writing to disk). Moreover, OnDisk storage does not
 currently support concurrent data accesses.
 
-In addition, this crate also offers a `NamespacedStorage` wrapper around secure storage
-implementations. Using the NamespacedStorage wrapper, different entities can share the
+In addition, this crate also offers a `Namespaced` wrapper around secure storage
+implementations. Using the Namespaced wrapper, different entities can share the
 same secure storage instance, under different namespaces, providing an abstraction that
 each entity has its own secure storage backend.
 

@@ -22,7 +22,7 @@ pub use crate::{
     github::GitHubStorage,
     in_memory::InMemoryStorage,
     kv_storage::{GetResponse, KVStorage},
-    namespaced_storage::NamespacedStorage,
+    namespaced_storage::Namespaced,
     on_disk::OnDiskStorage,
     policy::{Capability, Identity, Permission, Policy},
     storage::Storage,
