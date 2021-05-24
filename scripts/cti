@@ -234,10 +234,6 @@ specfile=$(mktemp)
 echo "Pod Spec : ${specfile}"
 echo "hhhhh tag : ${CLUSTER_TEST_TAG}"
 join_args "$@"
-if [[ -z "${WORKSPACE}" ]]; then
-  kube_select_cluster
-  WORKSPACE=${retval_kube_select_cluster}
-fi
 RUN_ID="${WORKSPACE}-${pod_name}"
 ENV="$ENV AWS_ROLE_SESSION_NAME=AWS_ROLE_SESSION_NAME RUN_ID=$RUN_ID"
 join_env_vars $ENV
@@ -250,7 +246,6 @@ sed -e "s/{pod_name}/${pod_name}/g" \
     -e "s+{extra_args}+${retval_join_args}+g" \
     ${DIR}/cluster_test_pod_template.yaml > ${specfile}
 
-echo "Using cluster : ${WORKSPACE}"
 context=${K8S_CONTEXT_PATTERN}
 echo "contect: ${context}"
 kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)

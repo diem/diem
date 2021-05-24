@@ -342,6 +342,13 @@ impl ClusterSwarmKube {
         nodes.into_iter().map(KubeNode::try_from).collect()
     }
 
+    pub async fn list_pods(&self) -> Result<Vec<KubePod>> {
+        let node_api: Api<Pod> = Api::all(self.client.clone());
+        let lp = ListParams::default();
+        let nodes = node_api.list(&lp).await?.items;
+        nodes.into_iter().map(KubePod::try_from).collect()
+    }
+
     async fn delete_resource<T>(&self, name: &str) -> Result<()>
     where
         T: k8s_openapi::Resource
@@ -877,10 +884,43 @@ impl TryFrom<Node> for KubeNode {
             .find(|a| a.type_ == "InternalIP")
             .ok_or_else(|| format_err!("internal address not found"))?;
         let internal_ip = internal_address.address.clone();
+        let temp = metadata.labels.unwrap();
+        println!("hhhhh labels = {:?}", temp);
         Ok(Self {
             name,
             provider_id,
             internal_ip,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct KubePod {
+    pub name: String,
+    pub host_ip: String,
+    pub pod_ip: String,
+    pub phase: String,
+}
+
+impl TryFrom<Pod> for KubePod {
+    type Error = anyhow::Error;
+
+    fn try_from(node: Pod) -> Result<Self, Self::Error> {
+        let metadata = node.metadata;
+        let name = metadata
+            .name
+            .ok_or_else(|| format_err!("node name not found"))?;
+        let status = node
+            .status
+            .ok_or_else(|| format_err!("status not found for node"))?;
+        let host_ip = status.host_ip.unwrap_or_default().clone();
+        let pod_ip = status.pod_ip.unwrap_or_default().clone();
+        let phase = status.phase.unwrap_or_default().clone();
+        Ok(Self {
+            name,
+            host_ip,
+            pod_ip,
+            phase,
         })
     }
 }

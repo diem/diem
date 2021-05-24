@@ -124,9 +124,13 @@ pub async fn main() {
     }
     let cluster_swarm = ClusterSwarmKube::new().await.unwrap();
     let a = cluster_swarm.list_nodes().await.unwrap();
-    println!("hhhhhhh {}", a.len());
+    let b = cluster_swarm.list_pods().await.unwrap();
+    println!("hhhhhhh {}, {} 0", a.len(), b.len());
     for n in &a {
-        println!("nnnnnnn name = {:?}, ip = {:?}", n.name, n.internal_ip);
+        println!("nnnnnnn name = {:?}, ip = {:?}, provider_id = {:?}", n.name, n.internal_ip, n.provider_id);
+    }
+    for n in &b {
+        println!("nnnnnnn name = {:?}, host_ip = {:?}, pod_ip = {:?}", n.name, n.host_ip, n.pod_ip);
     }
 }
 

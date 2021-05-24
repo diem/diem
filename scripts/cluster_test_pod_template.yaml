@@ -6,6 +6,7 @@ metadata:
     app: cluster-test
 spec:
   restartPolicy: Never
+  serviceAccountName: diem-testnet
   tolerations:
   - key: "clustertest"
     operator: "Exists"
