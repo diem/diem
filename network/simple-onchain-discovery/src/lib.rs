@@ -133,7 +133,7 @@ fn extract_validator_set_updates(
         .collect();
 
     vec![ConnectivityRequest::UpdateDiscoveredPeers(
-        DiscoverySource::OnChainValidatorSet,
+        DiscoverySource::OnChain,
         discovered_peers,
     )]
 }

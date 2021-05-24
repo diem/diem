@@ -120,7 +120,7 @@ pub struct ConnectivityManager<TBackoff> {
 #[repr(u8)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, NumVariants, Serialize)]
 pub enum DiscoverySource {
-    OnChainValidatorSet,
+    OnChain,
     Config,
 }
 
@@ -136,7 +136,7 @@ impl fmt::Display for DiscoverySource {
             f,
             "{}",
             match self {
-                DiscoverySource::OnChainValidatorSet => "OnChainValidatorSet",
+                DiscoverySource::OnChain => "OnChain",
                 DiscoverySource::Config => "Config",
             }
         )
