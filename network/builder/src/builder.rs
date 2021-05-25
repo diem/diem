@@ -256,7 +256,7 @@ impl NetworkBuilder {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
         self.executor = Some(executor);
-        self.build_peer_manager().build_connectivity_manager()
+        self.build_peer_manager()
     }
 
     /// Start the built Networking components.
@@ -348,13 +348,6 @@ impl NetworkBuilder {
         self
     }
 
-    fn build_connectivity_manager(&mut self) -> &mut Self {
-        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
-            builder.build(self.executor.as_mut().expect("Executor must exist"));
-        }
-        self
-    }
-
     fn start_connectivity_manager(&mut self) -> &mut Self {
         if let Some(builder) = self.connectivity_manager_builder.as_mut() {
             builder.start(self.executor.as_mut().expect("Executor must exist"));
@@ -362,11 +355,7 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_validator_set_listener(
-        &mut self,
-        pubkey: PublicKey,
-        encryptor: Encryptor,
-    ) -> &mut Self {
+    fn add_validator_set_listener(&mut self, pubkey: PublicKey, encryptor: Encryptor) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");

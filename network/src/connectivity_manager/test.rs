@@ -94,7 +94,7 @@ impl TestHarness {
             network_context,
             time_service.clone(),
             trusted_peers.clone(),
-            &seeds,
+            seeds,
             ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
             conn_mgr_reqs_rx,
