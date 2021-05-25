@@ -265,7 +265,7 @@ impl NetworkBuilder {
 
         match &config.discovery_method {
             DiscoveryMethod::Onchain => {
-                network_builder.add_configuration_change_listener(pubkey, config.encryptor());
+                network_builder.add_validator_set_listener(pubkey, config.encryptor());
             }
             DiscoveryMethod::None => {}
         }
@@ -279,7 +279,6 @@ impl NetworkBuilder {
         self.state = State::BUILT;
         self.executor = Some(executor);
         self.build_peer_manager()
-            .build_configuration_change_listener()
             .build_connectivity_manager()
             .build_connection_monitoring()
     }
@@ -291,7 +290,7 @@ impl NetworkBuilder {
         self.start_peer_manager()
             .start_connectivity_manager()
             .start_connection_monitoring()
-            .start_configuration_change_listener()
+            .start_validator_set_listener()
     }
 
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
@@ -402,7 +401,7 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_configuration_change_listener(
+    fn add_validator_set_listener(
         &mut self,
         pubkey: PublicKey,
         encryptor: Encryptor,
@@ -426,16 +425,7 @@ impl NetworkBuilder {
         self
     }
 
-    fn build_configuration_change_listener(&mut self) -> &mut Self {
-        if let Some(configuration_change_listener) =
-            self.configuration_change_listener_builder.as_mut()
-        {
-            configuration_change_listener.build();
-        }
-        self
-    }
-
-    fn start_configuration_change_listener(&mut self) -> &mut Self {
+    fn start_validator_set_listener(&mut self) -> &mut Self {
         if let Some(configuration_change_listener) =
             self.configuration_change_listener_builder.as_mut()
         {

@@ -11,43 +11,8 @@ use network::connectivity_manager::ConnectivityRequest;
 use std::sync::Arc;
 use tokio::runtime::Handle;
 
-struct ValidatorSetListenerConfig {
-    network_context: Arc<NetworkContext>,
-    expected_pubkey: PublicKey,
-    encryptor: Encryptor,
-    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-}
-
-impl ValidatorSetListenerConfig {
-    fn new(
-        network_context: Arc<NetworkContext>,
-        expected_pubkey: PublicKey,
-        encryptor: Encryptor,
-        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-    ) -> Self {
-        Self {
-            network_context,
-            expected_pubkey,
-            encryptor,
-            conn_mgr_reqs_tx,
-            reconfig_events,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, PartialOrd)]
-enum State {
-    CREATED,
-    BUILT,
-    STARTED,
-}
-
 pub struct ValidatorSetChangeListenerBuilder {
-    config: Option<ValidatorSetListenerConfig>,
     listener: Option<ValidatorSetChangeListener>,
-    state: State,
 }
 
 impl ValidatorSetChangeListenerBuilder {
@@ -59,35 +24,17 @@ impl ValidatorSetChangeListenerBuilder {
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> ValidatorSetChangeListenerBuilder {
         Self {
-            config: Some(ValidatorSetListenerConfig::new(
+            listener: Some(ValidatorSetChangeListener::new(
                 network_context,
                 expected_pubkey,
                 encryptor,
                 conn_mgr_reqs_tx,
                 reconfig_events,
             )),
-            listener: None,
-            state: State::CREATED,
         }
     }
 
-    pub fn build(&mut self) -> &mut Self {
-        assert_eq!(self.state, State::CREATED);
-        self.state = State::BUILT;
-        let config = self.config.take().expect("Listener must be configured");
-        self.listener = Some(ValidatorSetChangeListener::new(
-            config.network_context,
-            config.expected_pubkey,
-            config.encryptor,
-            config.conn_mgr_reqs_tx,
-            config.reconfig_events,
-        ));
-        self
-    }
-
     pub fn start(&mut self, executor: &Handle) -> &mut Self {
-        assert_eq!(self.state, State::BUILT);
-        self.state = State::STARTED;
         let listener = self.listener.take().expect("Listener must be built");
         executor.spawn(listener.start());
         self
