@@ -4,9 +4,9 @@
 use crate::{
     errors::ServerCode,
     runtime::check_latest_ledger_info_timestamp,
-    tests::{
-        genesis::generate_genesis_state,
-        utils::{test_bootstrap, MockDiemDB},
+    tests::utils::{
+        create_database_client_and_runtime, create_db_and_runtime, mock_db, test_bootstrap,
+        MockDiemDB,
     },
     util::{sdk_info_from_user_agent, SdkInfo, SdkLang, SdkVersion},
     views::VMStatusView,
@@ -14,134 +14,36 @@ use crate::{
 use diem_client::{views::TransactionDataView, BlockingClient, MethodRequest};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
 use diem_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
-use diem_mempool::SubmissionStatus;
 use diem_metrics::get_all_metrics;
-use diem_proptest_helpers::ValueGenerator;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{AccountResource, FreezingBit},
+    account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     chain_id::ChainId,
-    contract_event::ContractEvent,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof, TransactionInfoWithProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{SignedTransaction, Transaction, TransactionInfo, TransactionPayload},
+    transaction::{Transaction, TransactionInfo, TransactionPayload},
     vm_status::StatusCode,
 };
-use diemdb::test_helper::arb_blocks_to_commit;
-use futures::{
-    channel::{
-        mpsc::{channel, Receiver},
-        oneshot,
-    },
-    StreamExt,
-};
-use move_core_types::{
-    language_storage::TypeTag,
-    move_resource::MoveResource,
-    value::{MoveStructLayout, MoveTypeLayout},
-};
-use move_vm_types::values::{Struct, Value};
-use proptest::prelude::*;
+use futures::{channel::mpsc::channel, StreamExt};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::{
     cmp::{max, min},
-    collections::HashMap,
     convert::TryFrom,
     ops::Sub,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use storage_interface::DbReader;
-use tokio::runtime::Runtime;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
 
 use serde_json::json;
-
-// returns MockDiemDB for unit-testing
-fn mock_db() -> MockDiemDB {
-    let mut gen = ValueGenerator::new();
-    let blocks = gen.generate(arb_blocks_to_commit());
-    let mut account_state_with_proof = gen.generate(any::<AccountStateWithProof>());
-
-    let mut version = 1;
-    let mut all_accounts = HashMap::new();
-    let mut all_txns = vec![];
-    let mut events = vec![];
-    let mut timestamps = vec![0_u64];
-
-    for (txns_to_commit, ledger_info_with_sigs) in &blocks {
-        for (idx, txn) in txns_to_commit.iter().enumerate() {
-            timestamps.push(ledger_info_with_sigs.ledger_info().timestamp_usecs());
-            events.extend(
-                txn.events()
-                    .iter()
-                    .map(|e| ((idx + version) as u64, e.clone())),
-            );
-        }
-        version += txns_to_commit.len();
-        let mut account_states = HashMap::new();
-        // Get the ground truth of account states.
-        txns_to_commit.iter().for_each(|txn_to_commit| {
-            account_states.extend(txn_to_commit.account_states().clone())
-        });
-
-        // Record all account states.
-        for (address, blob) in account_states.into_iter() {
-            let mut state = AccountState::try_from(&blob).unwrap();
-            let freezing_bit = Value::struct_(Struct::pack(vec![Value::bool(false)]))
-                .value_as::<Struct>()
-                .unwrap()
-                .simple_serialize(&MoveStructLayout::new(vec![MoveTypeLayout::Bool]))
-                .unwrap();
-            state.insert(FreezingBit::resource_path(), freezing_bit);
-            all_accounts.insert(address, AccountStateBlob::try_from(&state).unwrap());
-        }
-
-        // Record all transactions.
-        all_txns.extend(txns_to_commit.iter().map(|txn_to_commit| {
-            (
-                txn_to_commit.transaction().clone(),
-                txn_to_commit.status().clone(),
-            )
-        }));
-    }
-
-    if account_state_with_proof.blob.is_none() {
-        let (_, blob) = all_accounts.iter().next().unwrap();
-        account_state_with_proof.blob = Some(blob.clone());
-    }
-
-    let account_state_with_proof = vec![account_state_with_proof];
-
-    if events.is_empty() {
-        // mock the first event
-        let mock_event = ContractEvent::new(
-            EventKey::new_from_address(&AccountAddress::random(), 0),
-            0,
-            TypeTag::Bool,
-            b"event_data".to_vec(),
-        );
-        events.push((version as u64, mock_event));
-    }
-
-    let (genesis, _) = generate_genesis_state();
-    MockDiemDB {
-        version: version as u64,
-        genesis,
-        all_accounts,
-        all_txns,
-        events,
-        account_state_with_proof,
-        timestamps,
-    }
-}
 
 #[test]
 fn test_cors() {
@@ -1606,39 +1508,6 @@ fn test_check_latest_ledger_info_timestamp() {
         now
     )
     .is_ok());
-}
-
-/// Creates and returns a MockDiemDB, JsonRpcAsyncClient and corresponding server Runtime tuple for
-/// testing. The given channel_buffer specifies the buffer size of the mempool client sender channel.
-fn create_database_client_and_runtime() -> (MockDiemDB, BlockingClient, Runtime) {
-    let (mock_db, runtime, url, _) = create_db_and_runtime();
-    let client = BlockingClient::new(url);
-
-    (mock_db, client, runtime)
-}
-
-fn create_db_and_runtime() -> (
-    MockDiemDB,
-    Runtime,
-    String,
-    Receiver<(
-        SignedTransaction,
-        oneshot::Sender<anyhow::Result<SubmissionStatus>>,
-    )>,
-) {
-    let mock_db = mock_db();
-
-    let host = "127.0.0.1";
-    let port = utils::get_available_port();
-    let address = format!("{}:{}", host, port);
-    let (mp_sender, mp_events) = channel(1);
-
-    let runtime = test_bootstrap(
-        address.parse().unwrap(),
-        Arc::new(mock_db.clone()),
-        mp_sender,
-    );
-    (mock_db, runtime, format!("http://{}", address), mp_events)
 }
 
 /// Returns the first account address stored in the given mock database.

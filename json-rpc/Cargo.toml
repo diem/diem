@@ -27,6 +27,7 @@ regex = { version = "1.4.3", default-features = false, features = ["std", "perf"
 
 bcs = "0.1.2"
 diem-framework-releases= { path = "../language/diem-framework/releases" }
+diem-client = { path = "../sdk/client", optional = true }
 diem-config = { path = "../config" }
 diem-crypto = { path = "../crypto/crypto" }
 diemdb = { path = "../storage/diemdb", optional = true }
@@ -38,10 +39,15 @@ diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 diem-types = { path = "../types" }
 diem-temppath = { path = "../common/temppath", optional = true }
 diem-workspace-hack = { path = "../common/workspace-hack" }
+executor = { path = "../execution/executor" , optional = true}
+executor-types = { path = "../execution/executor-types" , optional = true}
 move-core-types = { path = "../language/move-core/types" }
 move-explain = { path = "../language/tools/move-explain" }
+move-vm-types = { path = "../language/move-vm/types", optional = true }
 network = { path = "../network" }
+scratchpad = { path = "../storage/scratchpad", optional = true }
 storage-interface = { path = "../storage/storage-interface" }
+vm-genesis = { path = "../language/tools/vm-genesis", optional = true }
 
 [dev-dependencies]
 proptest = "1.0.0"
@@ -67,5 +73,5 @@ diem-transaction-builder = { path = "../sdk/transaction-builder" }
 diem-node = { path = "../diem-node" }
 
 [features]
-fuzzing = ["proptest", "diem-mempool/fuzzing", "diemdb/fuzzing", "diem-proptest-helpers", "diem-temppath", "reqwest"]
+fuzzing = ["proptest", "diem-client", "diem-mempool/fuzzing", "diemdb/fuzzing", "diem-proptest-helpers", "diem-temppath", "executor", "executor-types", "move-vm-types", "reqwest", "scratchpad", "vm-genesis"]
 failpoints = ["fail/failpoints"]
