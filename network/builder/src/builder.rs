@@ -124,7 +124,7 @@ impl NetworkBuilder {
 
     pub fn new_for_test(
         chain_id: ChainId,
-        seeds: &PeerSet,
+        seeds: PeerSet,
         trusted_peers: Arc<RwLock<PeerSet>>,
         network_context: Arc<NetworkContext>,
         time_service: TimeService,
@@ -210,9 +210,6 @@ impl NetworkBuilder {
             config.ping_failures_tolerated,
         );
 
-        // Sanity check seed addresses.
-        config.verify_seeds().expect("Seeds must be well formed");
-
         // Don't turn on connectivity manager if we're a public-facing server,
         // for example.
         //
@@ -230,29 +227,10 @@ impl NetworkBuilder {
             || !config.seed_addrs.is_empty()
             || !config.seeds.is_empty()
         {
-            let mut seeds = config.seeds.clone();
-
-            // Merge old seed configuration with new seed configuration
-            // TODO(gnazario): Once fully migrated, remove `seed_addrs`
-            config
-                .seed_addrs
-                .iter()
-                .map(|(peer_id, addrs)| {
-                    (
-                        peer_id,
-                        Peer::from_addrs(PeerRole::ValidatorFullNode, addrs.clone()),
-                    )
-                })
-                .for_each(|(peer_id, peer)| {
-                    seeds
-                        .entry(*peer_id)
-                        // Sad clone due to Rust not realizing these are two distinct paths
-                        .and_modify(|seed| seed.extend(peer.clone()).unwrap())
-                        .or_insert(peer);
-                });
+            let seeds = merge_seeds(config);
 
             network_builder.add_connectivity_manager(
-                &seeds,
+                seeds,
                 trusted_peers,
                 config.max_outbound_connections,
                 config.connection_backoff_base,
@@ -338,7 +316,7 @@ impl NetworkBuilder {
     /// permissioned.
     pub fn add_connectivity_manager(
         &mut self,
-        seeds: &PeerSet,
+        seeds: PeerSet,
         trusted_peers: Arc<RwLock<PeerSet>>,
         max_outbound_connections: usize,
         connection_backoff_base: u64,
@@ -354,21 +332,6 @@ impl NetworkBuilder {
         } else {
             None
         };
-
-        // Merge pubkeys that may be in the seed addresses
-        let mut seeds = seeds.clone();
-        seeds.values_mut().for_each(
-            |Peer {
-                 addresses, keys, ..
-             }| {
-                addresses
-                    .iter()
-                    .filter_map(NetworkAddress::find_noise_proto)
-                    .for_each(|pubkey| {
-                        keys.insert(pubkey);
-                    });
-            },
-        );
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
@@ -515,4 +478,44 @@ impl NetworkBuilder {
             EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),
         )
     }
+}
+
+/// Retrieve and merge seeds so that they have all keys associated
+fn merge_seeds(config: &NetworkConfig) -> PeerSet {
+    config.verify_seeds().expect("Seeds must be well formed");
+    let mut seeds = config.seeds.clone();
+
+    // Merge old seed configuration with new seed configuration
+    // TODO(gnazario): Once fully migrated, remove `seed_addrs`
+    config
+        .seed_addrs
+        .iter()
+        .map(|(peer_id, addrs)| {
+            (
+                peer_id,
+                Peer::from_addrs(PeerRole::ValidatorFullNode, addrs.clone()),
+            )
+        })
+        .for_each(|(peer_id, peer)| {
+            seeds
+                .entry(*peer_id)
+                // Sad clone due to Rust not realizing these are two distinct paths
+                .and_modify(|seed| seed.extend(peer.clone()).unwrap())
+                .or_insert(peer);
+        });
+
+    // Pull public keys out of addresses
+    seeds.values_mut().for_each(
+        |Peer {
+             addresses, keys, ..
+         }| {
+            addresses
+                .iter()
+                .filter_map(NetworkAddress::find_noise_proto)
+                .for_each(|pubkey| {
+                    keys.insert(pubkey);
+                });
+        },
+    );
+    seeds
 }

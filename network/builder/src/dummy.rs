@@ -147,7 +147,7 @@ pub fn setup_network() -> DummyNetwork {
     ));
     let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        &seeds,
+        seeds.clone(),
         trusted_peers,
         network_context,
         TimeService::real(),
@@ -175,7 +175,7 @@ pub fn setup_network() -> DummyNetwork {
 
     let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        &seeds,
+        seeds,
         trusted_peers,
         network_context,
         TimeService::real(),

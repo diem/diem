@@ -388,7 +388,7 @@ impl StateSyncEnvironment {
 
             let mut network_builder = NetworkBuilder::new_for_test(
                 ChainId::default(),
-                &seeds,
+                seeds,
                 trusted_peers,
                 network_context,
                 TimeService::real(),
