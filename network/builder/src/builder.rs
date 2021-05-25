@@ -256,9 +256,7 @@ impl NetworkBuilder {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
         self.executor = Some(executor);
-        self.build_peer_manager()
-            .build_connectivity_manager()
-            .build_connection_monitoring()
+        self.build_peer_manager().build_connectivity_manager()
     }
 
     /// Start the built Networking components.
@@ -409,7 +407,7 @@ impl NetworkBuilder {
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
 
-        self.health_checker_builder = Some(HealthCheckerBuilder::create(
+        self.health_checker_builder = Some(HealthCheckerBuilder::new(
             self.network_context(),
             self.time_service.clone(),
             ping_interval_ms,
@@ -422,18 +420,6 @@ impl NetworkBuilder {
             NetworkSchema::new(&self.network_context),
             "{} Created health checker", self.network_context
         );
-        self
-    }
-
-    /// Build the HealthChecker, if it has been added.
-    fn build_connection_monitoring(&mut self) -> &mut Self {
-        if let Some(health_checker) = self.health_checker_builder.as_mut() {
-            health_checker.build(self.executor.as_mut().expect("Executor must exist"));
-            debug!(
-                NetworkSchema::new(&self.network_context),
-                "{} Built health checker", self.network_context
-            );
-        };
         self
     }
 
