@@ -77,6 +77,7 @@ pub enum MethodRequest {
     // Experimental APIs
     //
     GetStateProof(GetStateProofParams),
+    GetAccumulatorConsistencyProof(GetAccumulatorConsistencyProofParams),
     GetAccountStateWithProof(GetAccountStateWithProofParams),
     GetTransactionsWithProofs(GetTransactionsWithProofsParams),
     GetEventsWithProofs(GetEventsWithProofsParams),
@@ -103,6 +104,9 @@ impl MethodRequest {
                 MethodRequest::GetNetworkStatus(serde_json::from_value(value)?)
             }
             Method::GetStateProof => MethodRequest::GetStateProof(serde_json::from_value(value)?),
+            Method::GetAccumulatorConsistencyProof => {
+                MethodRequest::GetAccumulatorConsistencyProof(serde_json::from_value(value)?)
+            }
             Method::GetAccountStateWithProof => {
                 MethodRequest::GetAccountStateWithProof(serde_json::from_value(value)?)
             }
@@ -129,6 +133,9 @@ impl MethodRequest {
             MethodRequest::GetCurrencies(_) => Method::GetCurrencies,
             MethodRequest::GetNetworkStatus(_) => Method::GetNetworkStatus,
             MethodRequest::GetStateProof(_) => Method::GetStateProof,
+            MethodRequest::GetAccumulatorConsistencyProof(_) => {
+                Method::GetAccumulatorConsistencyProof
+            }
             MethodRequest::GetAccountStateWithProof(_) => Method::GetAccountStateWithProof,
             MethodRequest::GetTransactionsWithProofs(_) => Method::GetTransactionsWithProofs,
             MethodRequest::GetEventsWithProofs(_) => Method::GetEventsWithProofs,
@@ -304,6 +311,14 @@ impl<'de> de::Visitor<'de> for NoParamsVisitor {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct GetStateProofParams {
     pub version: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct GetAccumulatorConsistencyProofParams {
+    #[serde(default)]
+    pub client_known_version: Option<u64>,
+    #[serde(default)]
+    pub ledger_version: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -711,6 +726,64 @@ mod test {
             "foo": 11,
         });
         serde_json::from_value::<GetStateProofParams>(value).unwrap();
+    }
+
+    #[test]
+    fn get_accumulator_consistency_proof() {
+        // Array with all params
+        let value = serde_json::json!([11, 42]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Array with too many params
+        let value = serde_json::json!([11, 42, 7]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+
+        // Array with no ledger version
+        let value = serde_json::json!([11]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Array with no ledger version or client known version
+        let value = serde_json::json!([]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Array with wrong first param
+        let value = serde_json::json!(["foo"]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+
+        // Array with wrong second param
+        let value = serde_json::json!([123, "bar"]);
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+
+        // Object with no ledger version or client known version
+        let value = serde_json::json!({});
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Object with no ledger version
+        let value = serde_json::json!({
+            "client_known_version": 123,
+        });
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Object with no client known version
+        let value = serde_json::json!({
+            "ledger_version": 123,
+        });
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Object with all params
+        let value = serde_json::json!({
+            "client_known_version": 42,
+            "ledger_version": 123,
+        });
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+
+        // Object with extra params
+        let value = serde_json::json!({
+            "client_known_version": 42,
+            "ledger_version": 123,
+            "foo": "bar",
+        });
+        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
     }
 
     #[test]

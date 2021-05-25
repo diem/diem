@@ -1292,6 +1292,29 @@ impl TryFrom<&StateProofView>
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct AccumulatorConsistencyProofView {
+    pub ledger_consistency_proof: BytesView,
+}
+
+impl TryFrom<&AccumulatorConsistencyProof> for AccumulatorConsistencyProofView {
+    type Error = Error;
+
+    fn try_from(proof: &AccumulatorConsistencyProof) -> Result<Self, Self::Error> {
+        Ok(Self {
+            ledger_consistency_proof: BytesView::new(bcs::to_bytes(proof)?),
+        })
+    }
+}
+
+impl TryFrom<&AccumulatorConsistencyProofView> for AccumulatorConsistencyProof {
+    type Error = Error;
+
+    fn try_from(view: &AccumulatorConsistencyProofView) -> Result<Self, Self::Error> {
+        Ok(bcs::from_bytes(view.ledger_consistency_proof.as_ref())?)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AccountStateWithProofView {
     pub version: u64,
     pub blob: Option<BytesView>,

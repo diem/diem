@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-06-01 Add `get_accumulator_consistency_proof` API
+
+This API allows light clients to build their initial transaction accumulator summary
+and verifiably extend their accumulator summary to newer ledger states.
+
 ## 2021-05-25 Add `TreasuryComplianceRole`
 
 TreasuryComplianceRole has been created and has a field `diem_id_domain_events_key` that stores the event key of diem id domain events.

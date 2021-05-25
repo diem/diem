@@ -314,12 +314,9 @@ impl LedgerStore {
         ledger_version: Version,
     ) -> Result<AccumulatorConsistencyProof> {
         let client_known_num_leaves = client_known_version
-            .map(|v| v.checked_add(1).ok_or_else(|| format_err!("overflow")))
-            .transpose()?
+            .map(|v| v.saturating_add(1))
             .unwrap_or(0);
-        let ledger_num_leaves = ledger_version
-            .checked_add(1)
-            .ok_or_else(|| format_err!("overflow"))?;
+        let ledger_num_leaves = ledger_version.saturating_add(1);
         Accumulator::get_consistency_proof(self, ledger_num_leaves, client_known_num_leaves)
     }
 

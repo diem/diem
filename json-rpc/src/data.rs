@@ -4,9 +4,9 @@
 use crate::{
     errors::JsonRpcError,
     views::{
-        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionListView, TransactionView,
-        TransactionsWithProofsView,
+        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
+        EventView, EventWithProofView, MetadataView, StateProofView, TransactionListView,
+        TransactionView, TransactionsWithProofsView,
     },
 };
 use anyhow::{format_err, Result};
@@ -269,6 +269,27 @@ pub fn get_state_proof(
 ) -> Result<StateProofView, JsonRpcError> {
     let proofs = db.get_state_proof_with_ledger_info(version, ledger_info.clone())?;
     StateProofView::try_from((ledger_info.clone(), proofs.0, proofs.1)).map_err(Into::into)
+}
+
+/// Returns a proof that allows a client to extend their accumulator summary from
+/// `client_known_version` (or pre-genesis if `None`) to `ledger_version`.
+///
+/// See [`DbReader::get_accumulator_consistency_proof`]
+pub fn get_accumulator_consistency_proof(
+    db: &dyn DbReader,
+    client_known_version: Option<u64>,
+    ledger_version: u64,
+) -> Result<AccumulatorConsistencyProofView, JsonRpcError> {
+    if let Some(client_known_version) = client_known_version {
+        if client_known_version > ledger_version {
+            return Err(JsonRpcError::invalid_request_with_msg(format!(
+                "client_known_version({}) should be <= ledger_version({})",
+                client_known_version, ledger_version,
+            )));
+        }
+    }
+    let proof = db.get_accumulator_consistency_proof(client_known_version, ledger_version)?;
+    AccumulatorConsistencyProofView::try_from(&proof).map_err(Into::into)
 }
 
 /// Returns the account state to the client, alongside a proof relative to the version and

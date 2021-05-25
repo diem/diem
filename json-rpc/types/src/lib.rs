@@ -41,6 +41,7 @@ pub enum Method {
     // Experimental APIs
     //
     GetStateProof,
+    GetAccumulatorConsistencyProof,
     GetAccountStateWithProof,
     GetTransactionsWithProofs,
     GetEventsWithProofs,
@@ -59,6 +60,7 @@ impl Method {
             Method::GetCurrencies => "get_currencies",
             Method::GetNetworkStatus => "get_network_status",
             Method::GetStateProof => "get_state_proof",
+            Method::GetAccumulatorConsistencyProof => "get_accumulator_consistency_proof",
             Method::GetAccountStateWithProof => "get_account_state_with_proof",
             Method::GetTransactionsWithProofs => "get_transactions_with_proofs",
             Method::GetEventsWithProofs => "get_events_with_proofs",

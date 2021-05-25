@@ -420,3 +420,11 @@ message AccountStateProof {
   // hex-encoded bcs bytes
   string transaction_info_to_account_proof = 3 [json_name="transaction_info_to_account_proof"];
 }
+
+/**
+ * This is for the experimental API get_accumulator_consistency_proof response. It is unstable and likely to be changed.
+ */
+message AccumulatorConsistencyProof {
+  // hex-encoded bcs bytes
+  string ledger_consistency_proof = 1 [json_name="ledger_consistency_proof"];
+}

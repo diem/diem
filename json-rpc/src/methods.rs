@@ -6,18 +6,19 @@ use crate::{
     data,
     errors::JsonRpcError,
     views::{
-        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionListView, TransactionView,
-        TransactionsWithProofsView,
+        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
+        EventView, EventWithProofView, MetadataView, StateProofView, TransactionListView,
+        TransactionView, TransactionsWithProofsView,
     },
 };
 use anyhow::Result;
 use diem_config::config::RoleType;
 use diem_json_rpc_types::request::{
     GetAccountParams, GetAccountStateWithProofParams, GetAccountTransactionParams,
-    GetAccountTransactionsParams, GetCurrenciesParams, GetEventsParams, GetEventsWithProofsParams,
-    GetMetadataParams, GetNetworkStatusParams, GetStateProofParams, GetTransactionsParams,
-    GetTransactionsWithProofsParams, MethodRequest, SubmitParams,
+    GetAccountTransactionsParams, GetAccumulatorConsistencyProofParams, GetCurrenciesParams,
+    GetEventsParams, GetEventsWithProofsParams, GetMetadataParams, GetNetworkStatusParams,
+    GetStateProofParams, GetTransactionsParams, GetTransactionsWithProofsParams, MethodRequest,
+    SubmitParams,
 };
 use diem_mempool::{MempoolClientSender, SubmissionStatus};
 use diem_types::{
@@ -169,6 +170,9 @@ impl<'a> Handler<'a> {
             }
             MethodRequest::GetStateProof(params) => {
                 serde_json::to_value(self.get_state_proof(params).await?)?
+            }
+            MethodRequest::GetAccumulatorConsistencyProof(params) => {
+                serde_json::to_value(self.get_accumulator_consistency_proof(params).await?)?
             }
             MethodRequest::GetAccountStateWithProof(params) => {
                 serde_json::to_value(self.get_account_state_with_proof(params).await?)?
@@ -341,6 +345,18 @@ impl<'a> Handler<'a> {
     ) -> Result<StateProofView, JsonRpcError> {
         let version = self.version_param(Some(params.version), "version")?;
         data::get_state_proof(self.service.db.borrow(), version, &self.ledger_info)
+    }
+
+    async fn get_accumulator_consistency_proof(
+        &self,
+        params: GetAccumulatorConsistencyProofParams,
+    ) -> Result<AccumulatorConsistencyProofView, JsonRpcError> {
+        let ledger_version = self.version_param(params.ledger_version, "ledger_version")?;
+        data::get_accumulator_consistency_proof(
+            self.service.db.borrow(),
+            params.client_known_version,
+            ledger_version,
+        )
     }
 
     /// Returns the account state to the client, alongside a proof relative to the version and

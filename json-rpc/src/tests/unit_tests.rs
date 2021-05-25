@@ -763,6 +763,38 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_accumulator_consistency_proof: ledger_version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [5, version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param ledger_version should be <= known latest version {}", version),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_accumulator_consistency_proof: client_known_version is greater than ledger_version",
+            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [10, 5], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid Request: client_known_version(10) should be <= ledger_version(5)".to_string(),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
             "get_account_state_with_proof: invalid account address",
             json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["invalid", 1, 1], "id": 1}),
             json!({

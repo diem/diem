@@ -290,6 +290,10 @@ impl AccumulatorConsistencyProof {
     pub fn subtrees(&self) -> &[HashValue] {
         &self.subtrees
     }
+
+    pub fn into_subtrees(self) -> Vec<HashValue> {
+        self.subtrees
+    }
 }
 
 /// A proof that is similar to `AccumulatorProof`, but can be used to authenticate a range of
