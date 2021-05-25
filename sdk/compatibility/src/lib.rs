@@ -7,13 +7,19 @@
 
 use anyhow::Result;
 use diem_sdk::{
-    crypto::HashValue,
+    crypto::hash::{HashValue, TransactionAccumulatorHasher},
     transaction_builder::{
         stdlib::{self, ScriptCall},
         Currency, DualAttestationMessage,
     },
-    types::{account_address::AccountAddress, transaction::Script, AccountKey},
+    types::{
+        account_address::AccountAddress,
+        proof::{accumulator::InMemoryAccumulator, AccumulatorConsistencyProof},
+        transaction::Script,
+        AccountKey,
+    },
 };
+use std::convert::TryFrom;
 
 mod env;
 pub use env::{Coffer, Environment};
@@ -53,6 +59,29 @@ fn metadata_by_version() -> Result<()> {
     assert!(metadata.diem_version.is_none());
     assert!(metadata.module_publishing_allowed.is_none());
     assert!(metadata.dual_attestation_limit.is_none());
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn get_accumulator_consistency_proof() -> Result<()> {
+    let env = Environment::from_env();
+    let client = env.client();
+
+    let metadata = client.get_metadata()?.into_inner();
+
+    // build a complete accumulator up to the version in the previous response.
+    let proof_view = client
+        .get_accumulator_consistency_proof(None, Some(metadata.version))?
+        .into_inner();
+    let proof = AccumulatorConsistencyProof::try_from(&proof_view)?;
+    let num_txns = metadata.version + 1;
+    let accumulator =
+        InMemoryAccumulator::<TransactionAccumulatorHasher>::new(proof.into_subtrees(), num_txns)?;
+
+    // the root hashes should match up
+    assert_eq!(metadata.accumulator_root_hash, accumulator.root_hash());
 
     Ok(())
 }

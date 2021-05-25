@@ -78,6 +78,7 @@ pub enum Method {
     // Experimental APIs
     //
     GetStateProof,
+    GetAccumulatorConsistencyProof,
     GetAccountStateWithProof,
     GetTransactionsWithProofs,
     GetEventsWithProofs,

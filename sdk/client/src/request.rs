@@ -26,6 +26,7 @@ pub enum MethodRequest {
     // Experimental APIs
     //
     GetStateProof((u64,)),
+    GetAccumulatorConsistencyProof(Option<u64>, Option<u64>),
     GetAccountStateWithProof(AccountAddress, Option<u64>, Option<u64>),
     GetTransactionsWithProofs(u64, u64, bool),
     GetEventsWithProofs(EventKey, u64, u64),
@@ -93,6 +94,14 @@ impl MethodRequest {
     pub fn get_state_proof(from_version: u64) -> Self {
         Self::GetStateProof((from_version,))
     }
+
+    pub fn get_accumulator_consistency_proof(
+        client_known_version: Option<u64>,
+        ledger_version: Option<u64>,
+    ) -> Self {
+        Self::GetAccumulatorConsistencyProof(client_known_version, ledger_version)
+    }
+
     pub fn get_account_state_with_proof(
         address: AccountAddress,
         version: Option<u64>,
@@ -125,6 +134,9 @@ impl MethodRequest {
             MethodRequest::GetCurrencies(_) => Method::GetCurrencies,
             MethodRequest::GetNetworkStatus(_) => Method::GetNetworkStatus,
             MethodRequest::GetStateProof(_) => Method::GetStateProof,
+            MethodRequest::GetAccumulatorConsistencyProof(_, _) => {
+                Method::GetAccumulatorConsistencyProof
+            }
             MethodRequest::GetAccountStateWithProof(_, _, _) => Method::GetAccountStateWithProof,
             MethodRequest::GetTransactionsWithProofs(_, _, _) => Method::GetTransactionsWithProofs,
             MethodRequest::GetEventsWithProofs(_, _, _) => Method::GetEventsWithProofs,

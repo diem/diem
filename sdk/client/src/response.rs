@@ -4,12 +4,12 @@
 use super::Method;
 use crate::{
     views::{
-        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
-        StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
+        EventView, EventWithProofView, MetadataView, StateProofView, TransactionView,
+        TransactionsWithProofsView,
     },
     Error, State,
 };
-use diem_json_rpc_types::views::{EventWithProofView, TransactionsWithProofsView};
 use serde_json::Value;
 
 #[derive(Debug)]
@@ -65,7 +65,11 @@ pub enum MethodResponse {
     GetCurrencies(Vec<CurrencyInfoView>),
     GetNetworkStatus(u64),
 
+    //
+    // Experimental APIs
+    //
     GetStateProof(StateProofView),
+    GetAccumulatorConsistencyProof(AccumulatorConsistencyProofView),
     GetAccountStateWithProof(AccountStateWithProofView),
     GetTransactionsWithProofs(Option<TransactionsWithProofsView>),
     GetEventsWithProofs(Vec<EventWithProofView>),
@@ -92,6 +96,9 @@ impl MethodResponse {
                 MethodResponse::GetNetworkStatus(serde_json::from_value(json)?)
             }
             Method::GetStateProof => MethodResponse::GetStateProof(serde_json::from_value(json)?),
+            Method::GetAccumulatorConsistencyProof => {
+                MethodResponse::GetAccumulatorConsistencyProof(serde_json::from_value(json)?)
+            }
             Method::GetAccountStateWithProof => {
                 MethodResponse::GetAccountStateWithProof(serde_json::from_value(json)?)
             }
@@ -118,6 +125,9 @@ impl MethodResponse {
             MethodResponse::GetCurrencies(_) => Method::GetCurrencies,
             MethodResponse::GetNetworkStatus(_) => Method::GetNetworkStatus,
             MethodResponse::GetStateProof(_) => Method::GetStateProof,
+            MethodResponse::GetAccumulatorConsistencyProof(_) => {
+                Method::GetAccumulatorConsistencyProof
+            }
             MethodResponse::GetAccountStateWithProof(_) => Method::GetAccountStateWithProof,
             MethodResponse::GetTransactionsWithProofs(_) => Method::GetTransactionsWithProofs,
             MethodResponse::GetEventsWithProofs(_) => Method::GetEventsWithProofs,

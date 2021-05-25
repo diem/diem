@@ -11,8 +11,9 @@ use crate::{
     error::WaitForTransactionError,
     move_deserialize::{self, Event},
     views::{
-        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
+        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
+        EventView, EventWithProofView, MetadataView, StateProofView, TransactionView,
+        TransactionsWithProofsView,
     },
     Error, Result, Retry, State,
 };
@@ -233,6 +234,18 @@ impl Client {
     pub async fn get_state_proof(&self, from_version: u64) -> Result<Response<StateProofView>> {
         self.send(MethodRequest::get_state_proof(from_version))
             .await
+    }
+
+    pub async fn get_accumulator_consistency_proof(
+        &self,
+        client_known_version: Option<u64>,
+        ledger_version: Option<u64>,
+    ) -> Result<Response<AccumulatorConsistencyProofView>> {
+        self.send(MethodRequest::get_accumulator_consistency_proof(
+            client_known_version,
+            ledger_version,
+        ))
+        .await
     }
 
     pub async fn get_account_state_with_proof(
