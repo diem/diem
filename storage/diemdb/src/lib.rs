@@ -774,7 +774,7 @@ impl DbReader for DiemDB {
 
             let ledger_consistency_proof = self
                 .ledger_store
-                .get_consistency_proof(known_version, ledger_info.version())?;
+                .get_consistency_proof(Some(known_version), ledger_info.version())?;
             Ok((epoch_change_proof, ledger_consistency_proof))
         })
     }
@@ -918,6 +918,17 @@ impl DbReader for DiemDB {
     fn get_accumulator_root_hash(&self, version: Version) -> Result<HashValue> {
         gauged_api("get_accumulator_root_hash", || {
             self.ledger_store.get_root_hash(version)
+        })
+    }
+
+    fn get_accumulator_consistency_proof(
+        &self,
+        client_known_version: Option<Version>,
+        ledger_version: Version,
+    ) -> Result<AccumulatorConsistencyProof> {
+        gauged_api("get_accumulator_consistency_proof", || {
+            self.ledger_store
+                .get_consistency_proof(client_known_version, ledger_version)
         })
     }
 }

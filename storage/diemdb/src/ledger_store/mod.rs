@@ -310,10 +310,17 @@ impl LedgerStore {
     /// `client_known_version`.
     pub fn get_consistency_proof(
         &self,
-        client_known_version: Version,
+        client_known_version: Option<Version>,
         ledger_version: Version,
     ) -> Result<AccumulatorConsistencyProof> {
-        Accumulator::get_consistency_proof(self, ledger_version + 1, client_known_version + 1)
+        let client_known_num_leaves = client_known_version
+            .map(|v| v.checked_add(1).ok_or_else(|| format_err!("overflow")))
+            .transpose()?
+            .unwrap_or(0);
+        let ledger_num_leaves = ledger_version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("overflow"))?;
+        Accumulator::get_consistency_proof(self, ledger_num_leaves, client_known_num_leaves)
     }
 
     /// Write `txn_infos` to `batch`. Assigned `first_version` to the the version number of the

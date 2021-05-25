@@ -283,11 +283,16 @@ pub fn test_get_frozen_subtree_hashes_impl(leaves: Vec<HashValue>) {
     let (root_hash, writes) = TestAccumulator::append(&store, 0, &leaves).unwrap();
     store.put_many(&writes);
 
+    let num_leaves = leaves.len() as LeafCount;
     let frozen_subtree_hashes =
-        TestAccumulator::get_frozen_subtree_hashes(&store, leaves.len() as LeafCount).unwrap();
-    let in_mem_acc =
-        InMemoryAccumulator::new(frozen_subtree_hashes, leaves.len() as LeafCount).unwrap();
-    assert_eq!(root_hash, in_mem_acc.root_hash());
+        TestAccumulator::get_frozen_subtree_hashes(&store, num_leaves).unwrap();
+    let consistency_proof = TestAccumulator::get_consistency_proof(&store, num_leaves, 0).unwrap();
+    let in_mem_acc_1 = InMemoryAccumulator::new(frozen_subtree_hashes, num_leaves).unwrap();
+    let in_mem_acc_2 = InMemoryAccumulator::default()
+        .append_subtrees(consistency_proof.subtrees(), num_leaves)
+        .unwrap();
+    assert_eq!(root_hash, in_mem_acc_1.root_hash());
+    assert_eq!(root_hash, in_mem_acc_2.root_hash());
 }
 
 prop_compose! {

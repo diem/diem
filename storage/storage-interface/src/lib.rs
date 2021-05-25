@@ -327,6 +327,27 @@ pub trait DbReader: Send + Sync {
     fn get_accumulator_root_hash(&self, _version: Version) -> Result<HashValue> {
         unimplemented!()
     }
+
+    /// Gets an [`AccumulatorConsistencyProof`] starting from `client_known_version`
+    /// (or pre-genesis if `None`) until `ledger_version`.
+    ///
+    /// In other words, if the client has an accumulator summary for
+    /// `client_known_version`, they can use the result from this API to efficiently
+    /// extend their accumulator to `ledger_version` and prove that the new accumulator
+    /// is consistent with their old accumulator. By consistent, we mean that by
+    /// appending the actual `ledger_version - client_known_version` transactions
+    /// to the old accumulator summary you get the new accumulator summary.
+    ///
+    /// If the client is starting up for the first time and has no accumulator
+    /// summary yet, they can call this with `client_known_version=None`, i.e.,
+    /// pre-genesis, to get the complete accumulator summary up to `ledger_version`.
+    fn get_accumulator_consistency_proof(
+        &self,
+        _client_known_version: Option<Version>,
+        _ledger_version: Version,
+    ) -> Result<AccumulatorConsistencyProof> {
+        unimplemented!()
+    }
 }
 
 impl MoveStorage for &dyn DbReader {
