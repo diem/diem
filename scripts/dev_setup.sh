@@ -667,6 +667,8 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_pkg unzip "$PACKAGE_MANAGER"
   install_pkg jq "$PACKAGE_MANAGER"
   install_pkg git "$PACKAGE_MANAGER"
+  install_pkg tidy "$PACKAGE_MANAGER"
+  install_pkg xmlproc "$PACKAGE_MANAGER"
   #for timeout
   if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
     install_pkg coreutils "$PACKAGE_MANAGER"
