@@ -86,7 +86,8 @@ message AccountRole {
   repeated PreburnQueue preburn_queues = 12 [json_name="preburn_queues"];
 
   // DiemID
-  DiemIdDomains diem_id_domains = 13 [json_name="diem_id_domains"];
+  // DiemIdDomains diem_id_domains = 13 [json_name="diem_id_domains"];
+  repeated string diem_id_domains = 13 [json_name="diem_id_domains"];
 }
 
 message DiemIdDomains {

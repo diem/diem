@@ -11,6 +11,7 @@ use move_core_types::{
     move_resource::{MoveResource, MoveStructType},
 };
 use serde::{Deserialize, Serialize};
+use anyhow::Result;
 
 /// The Identifier for the DiemID module.
 pub const DIEM_ID_MODULE_IDENTIFIER: &IdentStr = ident_str!("DiemId");
@@ -24,6 +25,8 @@ impl DiemIdDomains {
     pub fn domains(&self) -> &[DiemIdDomain] {
         &self.domains
     }
+
+
 }
 
 impl MoveStructType for DiemIdDomains {
@@ -62,6 +65,10 @@ pub struct DiemIdDomainEvent {
 }
 
 impl DiemIdDomainEvent {
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        bcs::from_bytes(bytes).map_err(Into::into)
+    }
+
     pub fn removed(&self) -> bool {
         self.removed
     }
@@ -70,8 +77,8 @@ impl DiemIdDomainEvent {
         &self.domain
     }
 
-    pub fn address(&self) -> &AccountAddress {
-        &self.address
+    pub fn address(&self) -> AccountAddress {
+        self.address
     }
 }
 

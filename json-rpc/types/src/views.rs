@@ -8,9 +8,9 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomains, FreezingBit, MintEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomains, DiemIdDomain, FreezingBit, MintEvent,
         NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
-        SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
+        SentPaymentEvent, ToXDXExchangeRateUpdateEvent, DiemIdDomainEvent,
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -73,7 +73,7 @@ pub enum AccountRoleView {
         num_children: u64,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
-        diem_id_domains: Option<DiemIdDomains>,
+        diem_id_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {
@@ -357,6 +357,15 @@ pub enum EventDataView {
         created_address: AccountAddress,
         role_id: u64,
     },
+    #[serde(rename = "diemiddomain")]
+    DiemIdDomain {
+        // Whether a domain was added or removed
+        removed: bool,
+        // Diem ID Domain string of the account
+        domain: DiemIdDomain,
+        // On-chain account address
+        address: AccountAddress,
+    },
     #[serde(rename = "unknown")]
     Unknown { bytes: Option<BytesView> },
 
@@ -480,6 +489,13 @@ impl TryFrom<ContractEvent> for EventDataView {
             let admin_transaction_event = AdminTransactionEvent::try_from(&event)?;
             EventDataView::AdminTransaction {
                 committed_timestamp_secs: admin_transaction_event.committed_timestamp_secs(),
+            }
+        } else if event.type_tag() == &TypeTag::Struct(DiemIdDomainEvent::struct_tag()) {
+            let diem_id_domain_event = DiemIdDomainEvent::try_from(&event)?;
+            EventDataView::DiemIdDomain {
+                removed: diem_id_domain_event.removed(),
+                domain: diem_id_domain_event.domain().clone(),
+                address: diem_id_domain_event.address(),
             }
         } else {
             EventDataView::Unknown {
@@ -1151,7 +1167,7 @@ impl From<AccountRole> for AccountRoleView {
                     .compliance_key_rotation_events()
                     .key(),
                 base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
-                diem_id_domains,
+                diem_id_domains: diem_id_domains,
             },
             AccountRole::DesignatedDealer {
                 dd_credential,
