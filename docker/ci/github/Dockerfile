@@ -39,16 +39,18 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v helm)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
+    && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
+    && [ -x "$(command -v tidy)" ] \
+    && [ -x "$(command -v xsltproc)" ] \
     && [ -x "$(command -v javac)" ] \
     && [ -x "$(command -v clang)" ] \
     && [ -x "$(command -v python3)" ] \
     && [ -x "$(command -v go)" ] \
-    && [ -x "$(command -v npm)" ] \
-    && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
+    && [ -x "$(command -v npm)" ]
 
 # should be a no-op
 # sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.
-RUN /diem/scripts/dev_setup.sh -b -p -s
+RUN /diem/scripts/dev_setup.sh -t -o -y -b -p -s
 
 FROM setup_ci as build_environment

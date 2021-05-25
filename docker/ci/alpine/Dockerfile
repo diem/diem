@@ -8,7 +8,7 @@ COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 RUN apk add bash=5.1.0-r0 --no-cache
 
 # Batch mode and all operations tooling
-RUN scripts/dev_setup.sh -t -o -y -b -p
+RUN scripts/dev_setup.sh -t -o -y -b -p -s
 ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
 
 FROM setup_ci_alpine as tested_ci_alpine
@@ -27,10 +27,19 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v helm)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
+    && [ -x "$(command -v tidy)" ] \
+    && [ -x "$(command -v xsltproc)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
+    && [ -x "$(command -v tidy)" ] \
+    && [ -x "$(command -v xsltproc)" ] \
+    && [ -x "$(command -v javac)" ] \
+    && [ -x "$(command -v clang)" ] \
+    && [ -x "$(command -v python3)" ] \
+    && [ -x "$(command -v go)" ] \
+    && [ -x "$(command -v npm)" ]
 
 # should be a no-op, but since sccache failes to execute, sccache is rebuilt.
-#RUN scripts/dev_setup.sh -b -p
+RUN scripts/dev_setup.sh -t -o -y -b -p -s
 
 FROM setup_ci_alpine as build_environment_alpine

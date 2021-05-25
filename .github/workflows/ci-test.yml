@@ -128,8 +128,9 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
+      fail-fast: false
       matrix:
-        target_os: [alpine, centos, arch, github]
+        target_os: [alpine, arch, github]
     steps:
       - uses: actions/checkout@v2.3.4
         with:

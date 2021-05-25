@@ -30,5 +30,4 @@ runs:
       run: |
         hadolint docker/ci/github/Dockerfile && \
         hadolint docker/ci/arch/Dockerfile && \
-        hadolint docker/ci/alpine/Dockerfile && \
-        hadolint docker/ci/centos/Dockerfile
+        hadolint docker/ci/alpine/Dockerfile

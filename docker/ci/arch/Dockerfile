@@ -33,9 +33,17 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
+    && [ -x "$(command -v tidy)" ] \
+    && [ -x "$(command -v xsltproc)" ]
+# These should eventually be installed and tested, but since we don't automate on arch, low pri.
+# && [ -x "$(command -v javac)" ] \
+# && [ -x "$(command -v clang)" ] \
+# && [ -x "$(command -v python3)" ] \
+# && [ -x "$(command -v go)" ] \
+# && [ -x "$(command -v npm)" ]
 
 # should be a no-op
-RUN scripts/dev_setup.sh -b -p
+RUN scripts/dev_setup.sh -t -o -y -b -p
 
 FROM setup_ci_arch as build_environment_arch
