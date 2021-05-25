@@ -26,7 +26,7 @@ pub fn generate_genesis_state() -> (
     let blobs =
         process_write_set(&txn, &mut account_states, change_set.write_set().clone()).unwrap();
     let new_tree = Arc::new(
-        tree.update(
+        tree.batch_update(
             blobs
                 .iter()
                 .map(|(addr, value)| (addr.hash(), value))

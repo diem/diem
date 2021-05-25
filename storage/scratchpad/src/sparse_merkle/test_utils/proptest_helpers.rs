@@ -65,7 +65,6 @@ pub fn test_smt_correctness_impl(input: Vec<(BlockOutput, bool)>) {
 
     let mut serial_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
     let mut batches_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
-    let mut batch_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
     let mut updater_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
 
     for (block, commit) in input {
@@ -96,28 +95,20 @@ pub fn test_smt_correctness_impl(input: Vec<(BlockOutput, bool)>) {
         batches_smt.assert_no_external_strong_ref();
         batches_smt = upd_batches_smt;
 
-        let upd_batch_smt = batch_smt
-            .batch_update(updates_flat_batch.clone(), &proof_reader)
-            .unwrap();
-        batch_smt.assert_no_external_strong_ref();
-        batch_smt = upd_batch_smt;
-
         let upd_updater_smt = updater_smt
-            .batch_update_by_updater(updates_flat_batch, &proof_reader)
+            .batch_update(updates_flat_batch, &proof_reader)
             .unwrap();
         updater_smt.assert_no_external_strong_ref();
         updater_smt = upd_updater_smt;
 
         assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
         assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
-        assert_eq!(batch_smt.root_hash(), naive_smt.get_root_hash());
         assert_eq!(updater_smt.root_hash(), naive_smt.get_root_hash());
 
         if commit {
             persisted_smt = naive_smt.clone();
             serial_smt.prune();
             batches_smt.prune();
-            batch_smt.prune();
             updater_smt.prune();
         }
     }
