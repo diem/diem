@@ -8,13 +8,14 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomains, DiemIdDomain, FreezingBit, MintEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomainEvent, FreezingBit, MintEvent,
         NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
-        SentPaymentEvent, ToXDXExchangeRateUpdateEvent, DiemIdDomainEvent,
+        SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    diem_id_identifier::DiemIdVaspDomainIdentifier,
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -362,7 +363,7 @@ pub enum EventDataView {
         // Whether a domain was added or removed
         removed: bool,
         // Diem ID Domain string of the account
-        domain: DiemIdDomain,
+        domain: DiemIdVaspDomainIdentifier,
         // On-chain account address
         address: AccountAddress,
     },
@@ -494,7 +495,7 @@ impl TryFrom<ContractEvent> for EventDataView {
             let diem_id_domain_event = DiemIdDomainEvent::try_from(&event)?;
             EventDataView::DiemIdDomain {
                 removed: diem_id_domain_event.removed(),
-                domain: diem_id_domain_event.domain().clone(),
+                domain: diem_id_domain_event.domain().domain().clone(),
                 address: diem_id_domain_event.address(),
             }
         } else {
@@ -1157,18 +1158,22 @@ impl From<AccountRole> for AccountRoleView {
                 vasp,
                 credential,
                 diem_id_domains,
-            } => AccountRoleView::ParentVASP {
-                human_name: credential.human_name().to_string(),
-                base_url: credential.base_url().to_string(),
-                expiration_time: credential.expiration_date(),
-                compliance_key: BytesView::from(credential.compliance_public_key()),
-                num_children: vasp.num_children(),
-                compliance_key_rotation_events_key: *credential
-                    .compliance_key_rotation_events()
-                    .key(),
-                base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
-                diem_id_domains: diem_id_domains,
-            },
+            } => {
+                let domains =
+                    diem_id_domains.map(|diem_id_domains| diem_id_domains.get_domains_list());
+                AccountRoleView::ParentVASP {
+                    human_name: credential.human_name().to_string(),
+                    base_url: credential.base_url().to_string(),
+                    expiration_time: credential.expiration_date(),
+                    compliance_key: BytesView::from(credential.compliance_public_key()),
+                    num_children: vasp.num_children(),
+                    compliance_key_rotation_events_key: *credential
+                        .compliance_key_rotation_events()
+                        .key(),
+                    base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
+                    diem_id_domains: domains,
+                }
+            }
             AccountRole::DesignatedDealer {
                 dd_credential,
                 preburn_balances,

@@ -5,13 +5,13 @@ use crate::{
     account_address::AccountAddress, diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventHandle,
 };
+use anyhow::Result;
 use move_core_types::{
     ident_str,
     identifier::IdentStr,
     move_resource::{MoveResource, MoveStructType},
 };
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 /// The Identifier for the DiemID module.
 pub const DIEM_ID_MODULE_IDENTIFIER: &IdentStr = ident_str!("DiemId");
@@ -26,7 +26,12 @@ impl DiemIdDomains {
         &self.domains
     }
 
-
+    pub fn get_domains_list(&self) -> Vec<DiemIdVaspDomainIdentifier> {
+        self.domains
+            .iter()
+            .map(|diem_id_domain| diem_id_domain.domain().clone())
+            .collect()
+    }
 }
 
 impl MoveStructType for DiemIdDomains {

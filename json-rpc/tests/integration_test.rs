@@ -343,7 +343,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "diem_id_domains": {"domains": []},
+                            "diem_id_domains": [],
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 1,
@@ -384,7 +384,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "diem_id_domains": {"domains": []},
+                            "diem_id_domains": [],
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 0,
@@ -1197,7 +1197,7 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(
                     result["role"]["diem_id_domains"],
                     json!(
-                        {"domains": [{"domain": "diem"}]}
+                        ["diem"]
                     ),
                 );
                 let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
@@ -1216,7 +1216,7 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(
                     result["role"]["diem_id_domains"],
                     json!(
-                        {"domains": []}
+                        []
                     ),
                 );
             },

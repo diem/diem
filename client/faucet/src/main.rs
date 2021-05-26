@@ -127,7 +127,6 @@ mod tests {
     use crate::routes;
     use diem_faucet::mint;
     use diem_infallible::RwLock;
-    use diem_sdk::types::account_config::DiemIdDomain;
     use diem_sdk::{
         transaction_builder::stdlib::{ScriptCall, ScriptFunctionCall},
         types::{
@@ -345,9 +344,6 @@ mod tests {
         // times.
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
         let diem_id_domain = DiemIdVaspDomainIdentifier::new("diem").unwrap();
-        let domain = DiemIdDomain {
-            domain: diem_id_domain,
-        };
 
         {
             let resp = warp::test::request()
@@ -367,8 +363,8 @@ mod tests {
                 AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
             let account = reader.get(&addr).expect("account should be created");
             assert_eq!(
-                account["role"]["diem_id_domains"]["domains"][0],
-                serde_json::json!(domain),
+                account["role"]["diem_id_domains"][0],
+                serde_json::json!(diem_id_domain),
             );
         }
 
@@ -390,10 +386,7 @@ mod tests {
             let addr =
                 AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
             let account = reader.get(&addr).expect("account should be created");
-            assert_eq!(
-                account["role"]["diem_id_domains"]["domains"],
-                serde_json::json!([])
-            );
+            assert_eq!(account["role"]["diem_id_domains"], serde_json::json!([]));
         }
     }
 
@@ -468,10 +461,10 @@ mod tests {
                                 String::from_utf8(domain).unwrap().as_str(),
                             )
                             .unwrap();
-                            &account["role"]["diem_id_domains"]["domains"]
+                            account["role"]["diem_id_domains"]
                                 .as_array_mut()
                                 .unwrap()
-                                .push(serde_json::json!({ "domain": domain }));
+                                .push(serde_json::json!(domain));
                         }
                         ScriptFunctionCall::RemoveDiemIdDomain {
                             address, domain, ..
@@ -481,17 +474,17 @@ mod tests {
                                 String::from_utf8(domain).unwrap().as_str(),
                             )
                             .unwrap();
-                            let json_domain = &serde_json::json!({ "domain": domain });
+                            let json_domain = &serde_json::json!(domain);
                             let account =
                                 writer.get_mut(&address).expect("account should be created");
 
-                            let index = account["role"]["diem_id_domains"]["domains"]
+                            let index = account["role"]["diem_id_domains"]
                                 .as_array()
                                 .unwrap()
                                 .iter()
                                 .position(|x| x == json_domain)
                                 .unwrap();
-                            &account["role"]["diem_id_domains"]["domains"]
+                            account["role"]["diem_id_domains"]
                                 .as_array_mut()
                                 .unwrap()
                                 .remove(index);
@@ -565,7 +558,7 @@ mod tests {
                 "num_children": 0,
                 "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
                 "base_url_rotation_events_key": format!("0300000000000000{}", address),
-                "diem_id_domains": {"domains": []},
+                "diem_id_domains": [],
             }),
         )
     }

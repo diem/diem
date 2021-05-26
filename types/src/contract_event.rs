@@ -4,9 +4,9 @@
 use crate::{
     account_config::{
         AdminTransactionEvent, BaseUrlRotationEvent, BurnEvent, CancelBurnEvent,
-        ComplianceKeyRotationEvent, CreateAccountEvent, MintEvent, NewBlockEvent, NewEpochEvent,
-        PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
-        ToXDXExchangeRateUpdateEvent, DiemIdDomainEvent
+        ComplianceKeyRotationEvent, CreateAccountEvent, DiemIdDomainEvent, MintEvent,
+        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
+        SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
     },
     event::EventKey,
     ledger_info::LedgerInfo,
