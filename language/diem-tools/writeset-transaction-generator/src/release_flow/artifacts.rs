@@ -57,7 +57,7 @@ impl ReleaseArtifacts {
         existing_artifacts.0.push(artifact);
         std::fs::write(
             artifact_path().as_path(),
-            serde_json::to_vec_pretty(&existing_artifacts)?.as_slice(),
+            format!("{}\n", serde_json::to_string_pretty(&existing_artifacts)?),
         )
         .map_err(|err| format_err!("Unable to write to path: {:?}", err))
     }

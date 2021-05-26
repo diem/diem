@@ -5,7 +5,7 @@ use anyhow::{bail, format_err, Result};
 use diem_types::{
     account_address::AccountAddress,
     chain_id::ChainId,
-    transaction::{Transaction, TransactionPayload, WriteSetPayload},
+    transaction::{Transaction, TransactionPayload},
 };
 
 use diem_writeset_generator::{
@@ -73,6 +73,9 @@ enum Command {
         /// Path to the serialized bytes of WriteSet.
         #[structopt(parse(from_os_str))]
         writeset_path: PathBuf,
+        /// The verification tool will automatically verify the payload against the latest blockchain state. Set this flag to false if we want to verify the payload against the height when the payload gets created.
+        #[structopt(long)]
+        use_latest_version: bool,
     },
 }
 
@@ -148,20 +151,33 @@ fn main() -> Result<()> {
             url,
             chain_id,
             writeset_path,
+            use_latest_version,
         } => {
             let release_name = load_latest_artifact(&chain_id)?.release_name;
             let writeset_payload = {
                 let raw_bytes = std::fs::read(writeset_path.as_path()).unwrap();
-                bcs::from_bytes::<WriteSetPayload>(raw_bytes.as_slice()).or_else(|_| {
-                    let txn: Transaction = bcs::from_bytes(raw_bytes.as_slice())?;
-                    match txn {
-                        Transaction::GenesisTransaction(ws) => Ok(ws),
+                if let Ok(txn_payload) = bcs::from_bytes::<TransactionPayload>(raw_bytes.as_slice())
+                {
+                    match txn_payload {
+                        TransactionPayload::WriteSet(payload) => payload,
                         _ => bail!("Unexpected transacton type"),
                     }
-                })?
+                } else {
+                    let txn: Transaction = bcs::from_bytes(raw_bytes.as_slice())?;
+                    match txn {
+                        Transaction::GenesisTransaction(ws) => ws,
+                        _ => bail!("Unexpected transacton type"),
+                    }
+                }
             };
             let release_modules = diem_framework_modules(release_name.as_str());
-            verify_release(chain_id, url, &writeset_payload, &release_modules)?;
+            verify_release(
+                chain_id,
+                url,
+                &writeset_payload,
+                &release_modules,
+                use_latest_version,
+            )?;
             return Ok(());
         }
     };

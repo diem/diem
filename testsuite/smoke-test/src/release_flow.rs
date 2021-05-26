@@ -37,9 +37,9 @@ fn test_move_release_flow() {
     let payload_1 =
         create_release(chain_id, url.clone(), 1, true, &release_modules, None, "").unwrap();
     // Verifying the generated payload against release modules should pass.
-    verify_release(chain_id, url.clone(), &payload_1, &release_modules).unwrap();
+    verify_release(chain_id, url.clone(), &payload_1, &release_modules, false).unwrap();
     // Verifying the generated payload against older modules should pass due to hash mismatch.
-    assert!(verify_release(chain_id, url.clone(), &payload_1, &old_modules).is_err());
+    assert!(verify_release(chain_id, url.clone(), &payload_1, &old_modules, false).is_err());
 
     // Commit the release
     client
@@ -82,10 +82,10 @@ fn test_move_release_flow() {
     )
     .unwrap();
     // Verifying the generated payload against release modules should pass.
-    verify_release(chain_id, url.clone(), &payload_2, &old_modules).unwrap();
+    verify_release(chain_id, url.clone(), &payload_2, &old_modules, false).unwrap();
     // Verifying the old payload would fail.
-    assert!(verify_release(chain_id, url.clone(), &payload_1, &old_modules).is_err());
-    assert!(verify_release(chain_id, url.clone(), &payload_1, &release_modules).is_err());
+    assert!(verify_release(chain_id, url.clone(), &payload_1, &old_modules, false).is_err());
+    assert!(verify_release(chain_id, url.clone(), &payload_1, &release_modules, false).is_err());
 
     // Cannot create a release with an older version.
     assert!(create_release(

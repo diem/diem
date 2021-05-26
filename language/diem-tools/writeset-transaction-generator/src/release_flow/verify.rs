@@ -24,6 +24,8 @@ pub fn verify_release(
     // Path to the serialized bytes of WriteSet
     writeset_payload: &WriteSetPayload,
     remote_modules: &[(Vec<u8>, CompiledModule)],
+    // If set to true, will verify the release payload against the latest blockchain height instead of the height recorded in the artifact file. This would be needed when the height is already pruned.
+    use_latest_version: bool,
 ) -> Result<()> {
     let artifact = load_latest_artifact(&chain_id)?;
     if artifact.chain_id != chain_id {
@@ -38,14 +40,21 @@ pub fn verify_release(
     {
         bail!("Build artifact doesn't match local stdlib hash");
     }
-    let generated_payload = create_release_from_artifact(&artifact, url.as_str(), remote_modules)?;
+    let remote = Box::new(JsonRpcDebuggerInterface::new(url.as_str())?);
+    let override_version = if use_latest_version {
+        Some(remote.get_latest_version()?)
+    } else {
+        Some(artifact.version)
+    };
+
+    let generated_payload =
+        create_release_from_artifact(&artifact, url.as_str(), remote_modules, override_version)?;
     if &generated_payload != writeset_payload {
         bail!("Payload generated from the artifact doesn't match with input file");
     }
-    let remote = Box::new(JsonRpcDebuggerInterface::new(url.as_str())?);
     verify_payload_change(
         remote,
-        Some(artifact.version),
+        override_version,
         &writeset_payload,
         remote_modules.iter().map(|(_bytes, m)| m),
     )

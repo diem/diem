@@ -11,7 +11,7 @@ use anyhow::{bail, Result};
 use diem_types::{
     access_path::AccessPath,
     chain_id::ChainId,
-    transaction::{ChangeSet, WriteSetPayload},
+    transaction::{ChangeSet, Version, WriteSetPayload},
     write_set::{WriteOp, WriteSetMut},
 };
 use diem_validator_interface::{
@@ -75,7 +75,8 @@ pub fn create_release(
     }
 
     let remote = Box::new(JsonRpcDebuggerInterface::new(url.as_str())?);
-    let payload = create_release_from_artifact(&release_artifact, url.as_str(), release_modules)?;
+    let payload =
+        create_release_from_artifact(&release_artifact, url.as_str(), release_modules, None)?;
 
     verify_payload_change(
         remote,
@@ -91,9 +92,11 @@ pub(crate) fn create_release_from_artifact(
     artifact: &ReleaseArtifact,
     remote_url: &str,
     release_modules: &[(Vec<u8>, CompiledModule)],
+    override_version: Option<Version>,
 ) -> Result<WriteSetPayload> {
     let remote = JsonRpcDebuggerInterface::new(remote_url)?;
-    let remote_modules = remote.get_diem_framework_modules_by_version(artifact.version)?;
+    let remote_modules = remote
+        .get_diem_framework_modules_by_version(override_version.unwrap_or(artifact.version))?;
     let modules_payload = create_release_writeset(&remote_modules, release_modules)?;
 
     Ok(if let Some(updated_diem_version) = artifact.diem_version {
