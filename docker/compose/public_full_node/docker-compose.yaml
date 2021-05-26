@@ -28,6 +28,12 @@
 # of the db:
 #   * `docker exec -it $CONTAINER_ID /bin/bash`
 #   * `du -csm /opt/diem/data``
+#
+# Monitoring:
+# If you want to install the monitoring components for your fullnode
+# you can symlink the ../monitoring folder into this directory, and run
+# `docker-compose -f docker-compose.yaml -f docker-compose.mon.yaml up -d`
+# Dashboard can be accessed locally by loading localhost:3000 on your browser
 version: "3.8"
 services:
   fullnode:
@@ -51,5 +57,7 @@ services:
     command: ["/opt/diem/bin/diem-node", "-f", "/opt/diem/etc/node.yaml"]
     ports:
       - "8080:8080"
+    expose:
+      - 9101
 volumes:
   db:

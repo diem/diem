@@ -1,0 +1,82 @@
+# To start the services, run
+# `docker-compose -f docker-compose.mon.yaml up -d`
+version: "3.8"
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring_prometheus
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: prom_db
+        target: /prometheus
+      - type: bind
+        source: ./prometheus.yaml
+        target: /etc/prometheus/prometheus.yaml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+    expose:
+      - 9090
+    ports:
+      - 9090:9090
+    links:
+      - cadvisor:cadvisor
+      - node-exporter:node-exporter
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: monitoring_node_exporter
+    restart: unless-stopped
+    expose:
+      - 9100
+
+  cadvisor:
+    image: google/cadvisor:latest
+    container_name: monitoring_cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    command:
+      - '-port=8098'
+    expose:
+      - 8098
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring_grafana
+    restart: unless-stopped
+    links:
+      - prometheus:prometheus
+    volumes:
+      - type: volume
+        source: grafana_db
+        target: /prometheus
+      - type: bind
+        source: ./grafana/datasource.yaml
+        target: /etc/grafana/provisioning/datasources/datasource.yaml
+      - type: bind
+        source: ./grafana/dashboards.yaml
+        target: /etc/grafana/provisioning/dashboards/dashboards.yaml
+      - type: bind
+        source: ./grafana/dashboards
+        target: /var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORD
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=myrul.com
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=myadrress@gmail.com
+      - GF_SMTP_PASSWORD=mypassword
+      - GF_SMTP_FROM_ADDRESS=myaddress@gmail.com
+    ports:
+      - 3000:3000
+    expose:
+      - 3000
+
+volumes:
+  prom_db:
+  grafana_db:
