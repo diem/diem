@@ -152,7 +152,7 @@ impl DbReader for FakeDb {
     fn get_state_proof_with_ledger_info(
         &self,
         _known_version: u64,
-        _ledger_info: LedgerInfoWithSignatures,
+        _ledger_info: &LedgerInfoWithSignatures,
     ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
         unimplemented!();
     }

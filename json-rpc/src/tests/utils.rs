@@ -269,7 +269,7 @@ impl DbReader for MockDiemDB {
         AccumulatorConsistencyProof,
     )> {
         let li = self.get_latest_ledger_info()?;
-        let proofs = self.get_state_proof_with_ledger_info(known_version, li.clone())?;
+        let proofs = self.get_state_proof_with_ledger_info(known_version, &li)?;
         Ok((
             LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new()),
             proofs.0,
@@ -280,7 +280,7 @@ impl DbReader for MockDiemDB {
     fn get_state_proof_with_ledger_info(
         &self,
         _known_version: u64,
-        _ledger_info: LedgerInfoWithSignatures,
+        _ledger_info: &LedgerInfoWithSignatures,
     ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
         Ok((
             EpochChangeProof::new(vec![], false),

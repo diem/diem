@@ -263,7 +263,7 @@ pub trait DbReader: Send + Sync {
     fn get_state_proof_with_ledger_info(
         &self,
         known_version: u64,
-        ledger_info: LedgerInfoWithSignatures,
+        ledger_info: &LedgerInfoWithSignatures,
     ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)>;
 
     /// Returns proof of new state relative to version known to client

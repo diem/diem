@@ -55,7 +55,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
 use diem_config::config::RocksdbConfig;
 use diem_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use diem_logger::prelude::*;
@@ -753,7 +753,7 @@ impl DbReader for DiemDB {
     fn get_state_proof_with_ledger_info(
         &self,
         known_version: u64,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        ledger_info_with_sigs: &LedgerInfoWithSignatures,
     ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
         gauged_api("get_state_proof_with_ledger_info", || {
             let ledger_info = ledger_info_with_sigs.ledger_info();
@@ -764,17 +764,36 @@ impl DbReader for DiemDB {
                 ledger_info.version(),
             );
             let known_epoch = self.ledger_store.get_epoch(known_version)?;
-            let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
-                let (ledger_infos_with_sigs, more) = self
-                    .get_epoch_ending_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
+            let end_epoch = ledger_info.next_block_epoch();
+            let epoch_change_proof = if known_epoch < end_epoch {
+                let (ledger_infos_with_sigs, more) =
+                    self.get_epoch_ending_ledger_infos(known_epoch, end_epoch)?;
                 EpochChangeProof::new(ledger_infos_with_sigs, more)
             } else {
                 EpochChangeProof::new(vec![], /* more = */ false)
             };
 
+            // Only return a consistency proof up to the verifiable end LI. If a
+            // client still needs to sync more epoch change LI's, then they cannot
+            // verify the latest LI nor verify a consistency proof up to the latest
+            // LI. If the client needs more epochs, we just return the consistency
+            // proof up to the last epoch change LI.
+            let verifiable_li = if epoch_change_proof.more {
+                epoch_change_proof
+                    .ledger_info_with_sigs
+                    .last()
+                    .ok_or_else(|| format_err!(
+                        "No epoch changes despite claiming the client needs to sync more epochs: known_epoch={}, end_epoch={}",
+                        known_epoch, end_epoch,
+                    ))?
+                    .ledger_info()
+            } else {
+                ledger_info
+            };
+
             let ledger_consistency_proof = self
                 .ledger_store
-                .get_consistency_proof(Some(known_version), ledger_info.version())?;
+                .get_consistency_proof(Some(known_version), verifiable_li.version())?;
             Ok((epoch_change_proof, ledger_consistency_proof))
         })
     }
@@ -789,8 +808,8 @@ impl DbReader for DiemDB {
     )> {
         gauged_api("get_state_proof", || {
             let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-            let (epoch_change_proof, ledger_consistency_proof) = self
-                .get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs.clone())?;
+            let (epoch_change_proof, ledger_consistency_proof) =
+                self.get_state_proof_with_ledger_info(known_version, &ledger_info_with_sigs)?;
             Ok((
                 ledger_info_with_sigs,
                 epoch_change_proof,

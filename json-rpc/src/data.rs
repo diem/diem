@@ -267,7 +267,7 @@ pub fn get_state_proof(
     version: u64,
     ledger_info: &LedgerInfoWithSignatures,
 ) -> Result<StateProofView, JsonRpcError> {
-    let proofs = db.get_state_proof_with_ledger_info(version, ledger_info.clone())?;
+    let proofs = db.get_state_proof_with_ledger_info(version, &ledger_info)?;
     StateProofView::try_from((ledger_info.clone(), proofs.0, proofs.1)).map_err(Into::into)
 }
 
