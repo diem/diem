@@ -21,7 +21,7 @@ URL Query Params:
 | `currency_code`        | string | Y         | the currency code, e.g. XDX                                          |
 | `return_txns`          | bool   | N         | returns the transactions for creating / funding the account          |
 | `is_designated_dealer` | bool   | N         | creates a designated dealer account instead of a parent VASP account |
-| `diem_id_domain` | string   | N         | domain for diem ID to add or remove |
+| `diem_id_domain` | string   | N         | domain for diem ID to add or remove for parent VASP, is_designated_dealer must be set to false |
 | `is_remove_domain` | bool   | N         | add or remove the above diem id domain to parent VASP account |
 
 Notes:
