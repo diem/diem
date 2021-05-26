@@ -23,6 +23,7 @@ use diem_types::{
     PeerId,
 };
 use fallible::copy_from_slice::copy_slice_to_vec;
+use futures::{AsyncReadExt, AsyncWriteExt};
 use netcore::transport::tcp::{resolve_and_connect, TcpSocket};
 use network::{
     noise::{HandshakeAuthMode, NoiseUpgrader},
@@ -53,6 +54,9 @@ pub struct CheckEndpoint {
     /// Optional number of seconds to timeout attempting to connect to endpoint
     #[structopt(long)]
     timeout_seconds: Option<u64>,
+    /// Skip handshake for network checking
+    #[structopt(long)]
+    no_handshake: bool,
 }
 
 fn parse_private_key_hex(src: &str) -> Result<x25519::PrivateKey, Error> {
@@ -90,6 +94,7 @@ impl CheckEndpoint {
             build_upgrade_context(self.chain_id, self.network_id, peer_id, private_key),
             self.address,
             timeout,
+            self.no_handshake,
         )
     }
 }
@@ -117,6 +122,9 @@ pub struct CheckValidatorSetEndpoints {
     /// Optional number of seconds to timeout attempting to connect to endpoint
     #[structopt(long)]
     timeout_seconds: Option<u64>,
+    /// Skip handshake for network checking
+    #[structopt(long)]
+    no_handshake: bool,
 }
 
 fn parse_validator_key_hex(src: &str) -> Result<Key, Error> {
@@ -136,7 +144,7 @@ impl CheckValidatorSetEndpoints {
         let client = JsonRpcClientWrapper::new(self.json_server);
         let private_key = if let Some(private_key) = self.private_key {
             private_key
-        } else if is_validator {
+        } else if is_validator && !self.no_handshake {
             return Err(Error::CommandArgumentError(
                 "Must provide a private key for validators".into(),
             ));
@@ -186,7 +194,7 @@ impl CheckValidatorSetEndpoints {
         // Check all the addresses accordingly
         for (name, peer_id, addrs) in nodes {
             for addr in addrs {
-                match check_endpoint(upgrade_context.clone(), addr, timeout) {
+                match check_endpoint(upgrade_context.clone(), addr, timeout, self.no_handshake) {
                     Ok(_) => println!("{} -- good", name),
                     Err(err) => println!("{} : {} -- bad -- {}", name, peer_id, err),
                 };
@@ -256,15 +264,19 @@ fn check_endpoint(
     upgrade_context: Arc<UpgradeContext>,
     address: NetworkAddress,
     timeout: Duration,
+    no_handshake: bool,
 ) -> Result<String, Error> {
     let runtime = Runtime::new().unwrap();
     let remote_pubkey = address.find_noise_proto().unwrap();
 
     let connect_future = async {
-        tokio::time::timeout(
-            timeout,
-            check_endpoint_inner(upgrade_context, address.clone(), remote_pubkey),
-        )
+        tokio::time::timeout(timeout, async {
+            if no_handshake {
+                check_endpoint_inner_no_handshake(address.clone()).await
+            } else {
+                check_endpoint_inner(upgrade_context.clone(), address.clone(), remote_pubkey).await
+            }
+        })
         .await
         .map_err(|_| Error::Timeout("CheckEndpoint", address.to_string()))
     };
@@ -305,6 +317,49 @@ async fn check_endpoint_inner(
         }
         Err(error) => Err(Error::UnexpectedError(format!(
             "Failed to connect to {} due to {}",
+            address, error
+        ))),
+    }
+}
+
+const INVALID_NOISE_HEADER: &[u8; 152] = &[7; 152];
+
+async fn check_endpoint_inner_no_handshake(address: NetworkAddress) -> Result<String, Error> {
+    let mut socket = resolve_and_connect(address.clone())
+        .await
+        .map(TcpSocket::new)
+        .map_err(|error| {
+            Error::UnexpectedError(format!("Failed to connect to {} due to {}", address, error))
+        })?;
+
+    if let Err(error) = socket.write_all(INVALID_NOISE_HEADER).await {
+        return Err(Error::UnexpectedError(format!(
+            "Failed to write to {} due to {}",
+            address, error
+        )));
+    }
+
+    let buf = &mut [0; 1];
+    match socket.read(buf).await {
+        Ok(size) => {
+            // We should be able to write to the socket dummy data
+
+            if size == 0 {
+                // Connection is open, and doesn't return anything
+                // This is the closest we can get to working
+                return Ok(format!(
+                    "Accepted write and responded with nothing at {}",
+                    address
+                ));
+            } else {
+                Err(Error::UnexpectedError(format!(
+                    "Endpoint {} responded with data when it shouldn't",
+                    address
+                )))
+            }
+        }
+        Err(error) => Err(Error::UnexpectedError(format!(
+            "Failed to read from {} due to {}",
             address, error
         ))),
     }
