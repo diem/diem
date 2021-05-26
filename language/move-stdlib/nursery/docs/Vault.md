@@ -123,6 +123,7 @@ language to have 'phantom type parameters' or similar features added, which will
 -  [Function `delegate_cap_type`](#0x1_Vault_delegate_cap_type)
 -  [Function `transfer_cap_type`](#0x1_Vault_transfer_cap_type)
 -  [Function `new`](#0x1_Vault_new)
+-  [Function `is_delegation_enabled`](#0x1_Vault_is_delegation_enabled)
 -  [Function `enable_delegation`](#0x1_Vault_enable_delegation)
 -  [Function `enable_events`](#0x1_Vault_enable_events)
 -  [Function `remove_vault`](#0x1_Vault_remove_vault)
@@ -819,6 +820,34 @@ Creates new vault for the given signer. The vault is populated with the <code>in
 
 </details>
 
+<a name="0x1_Vault_is_delegation_enabled"></a>
+
+## Function `is_delegation_enabled`
+
+Returns <code><b>true</b></code> if the delegation functionality has been enabled.
+Returns <code><b>false</b></code> otherwise.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &signer): bool {
+    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
+    <b>assert</b>(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
+    <b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Vault_enable_delegation"></a>
 
 ## Function `enable_delegation`
@@ -836,9 +865,7 @@ Enables delegation functionality for this vault. By default, vaults to not suppo
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &signer) {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
-    <b>assert</b>(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
-    <b>assert</b>(!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
+    <b>assert</b>(!<a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content&gt;(owner), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
     move_to&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(owner, <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>{delegates: <a href="_empty">Vector::empty</a>()})
 }
 </code></pre>

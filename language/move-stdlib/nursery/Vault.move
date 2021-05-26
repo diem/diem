@@ -214,11 +214,17 @@ module 0x1::Vault {
         )
     }
 
-    /// Enables delegation functionality for this vault. By default, vaults to not support delegation.
-    public fun enable_delegation<Content: store>(owner: &signer) {
+    /// Returns `true` if the delegation functionality has been enabled.
+    /// Returns `false` otherwise.
+    public fun is_delegation_enabled<Content: store>(owner: &signer): bool {
         let addr = Signer::address_of(owner);
         assert(exists<Vault<Content>>(addr), Errors::not_published(EVAULT));
-        assert(!exists<VaultDelegates<Content>>(addr), Errors::already_published(EDELEGATE));
+        exists<VaultDelegates<Content>>(addr)
+    }
+
+    /// Enables delegation functionality for this vault. By default, vaults to not support delegation.
+    public fun enable_delegation<Content: store>(owner: &signer) {
+        assert(!is_delegation_enabled<Content>(owner), Errors::already_published(EDELEGATE));
         move_to<VaultDelegates<Content>>(owner, VaultDelegates{delegates: Vector::empty()})
     }
 
