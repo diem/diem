@@ -7,8 +7,8 @@ use crate::{
     account_config::{
         currency_code_from_type_tag, AccountResource, AccountRole, BalanceResource,
         ChainIdResource, ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer,
-        DesignatedDealerPreburns, DiemIdDomains, FreezingBit, ParentVASP, PreburnQueueResource,
-        PreburnResource,
+        DesignatedDealerPreburns, DiemIdDomainManager, DiemIdDomains, FreezingBit, ParentVASP,
+        PreburnQueueResource, PreburnResource,
     },
     block_metadata::DiemBlockResource,
     diem_timestamp::DiemTimestampResource,
@@ -149,6 +149,13 @@ impl AccountState {
                         designated_dealer,
                     }))
                 }
+                _ => Ok(None),
+            }
+        } else if self.0.contains_key(&DiemIdDomainManager::resource_path()) {
+            match self.get_resource::<DiemIdDomainManager>() {
+                Ok(Some(diem_id_domain_manager)) => Ok(Some(AccountRole::TreasuryCompliance {
+                    diem_id_domain_manager,
+                })),
                 _ => Ok(None),
             }
         } else {

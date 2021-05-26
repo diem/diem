@@ -1181,6 +1181,7 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "add and remove diem id domain to parent vasp account",
             run: |env: &mut testing::Env| {
+                // add domain
                 let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
                 let txn = env.create_txn_by_payload(
                     &env.tc,
@@ -1189,7 +1190,10 @@ fn create_test_cases() -> Vec<Test> {
                         domain,
                     ),
                 );
-                env.submit_and_wait(txn);
+                let result = env.submit_and_wait(txn);
+                let version1 = result["version"].as_u64().unwrap();
+
+                // get account
                 let account = &env.vasps[0];
                 let address = format!("{:x}", &account.address);
                 let resp = env.send("get_account", json!([address]));
@@ -1200,6 +1204,8 @@ fn create_test_cases() -> Vec<Test> {
                         ["diem"]
                     ),
                 );
+
+                // remove domain
                 let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
                 let txn = env.create_txn_by_payload(
                     &env.tc,
@@ -1208,7 +1214,10 @@ fn create_test_cases() -> Vec<Test> {
                         domain,
                     ),
                 );
-                env.submit_and_wait(txn);
+                let result = env.submit_and_wait(txn);
+                let version2 = result["version"].as_u64().unwrap();
+
+                // get account
                 let account = &env.vasps[0];
                 let address = format!("{:x}", &account.address);
                 let resp = env.send("get_account", json!([address]));
@@ -1219,7 +1228,72 @@ fn create_test_cases() -> Vec<Test> {
                         []
                     ),
                 );
+
+                // get event
+                let tc_address = format!("{:x}", &env.tc.address);
+                let resp = env.send("get_account", json!([tc_address]));
+                let result = resp.result.unwrap();
+                let diem_id_domain_events_key = result["role"]["diem_id_domain_events_key"].clone();
+                let response = env.send(
+                    "get_events",
+                    json!([diem_id_domain_events_key, 0, 3]),
+                );
+                let events = response.result.unwrap();
+                assert_eq!(
+                    events,
+                    json!([
+                        {
+                            "data":{
+                                "domain": "diem",
+                                "removed": false,
+                                "address": address,
+                                "type":"diemiddomain"
+                            },
+                            "key": format!("0000000000000000{}", tc_address),
+                            "sequence_number": 0,
+                            "transaction_version": version1,
+                        },
+                        {
+                            "data":{
+                                "domain": "diem",
+                                "removed": true,
+                                "address": address,
+                                "type":"diemiddomain"
+                            },
+                            "key": format!("0000000000000000{}", tc_address),
+                            "sequence_number": 1,
+                            "transaction_version": version2,
+                        },
+                    ]),
+                );
             },
+        },
+        Test {
+            name: "get tc account",
+            run: |env: &mut testing::Env| {
+                let address = format!("{:x}", &env.tc.address);
+                let resp = env.send("get_account", json!([address]));
+                let result = resp.result.unwrap();
+                assert_eq!(
+                    result,
+                    json!({
+                        "address": address,
+                        "authentication_key": &env.tc.auth_key().to_string(),
+                        "balances": [],
+                        "delegated_key_rotation_capability": false,
+                        "delegated_withdrawal_capability": false,
+                        "is_frozen": false,
+                        "received_events_key": format!("0100000000000000{}", address),
+                        "role": {
+                            "diem_id_domain_events_key": format!("0000000000000000{}", address),
+                            "type": "treasury_compliance",
+                        },
+                        "sent_events_key": format!("0200000000000000{}", address),
+                        "sequence_number": 8,
+                        "version": resp.diem_ledger_version,
+                    }),
+                );
+            }
         },
         Test {
             name: "get_events_with_proofs",

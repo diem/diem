@@ -87,6 +87,7 @@ message AccountRole {
 
   // DiemID
   repeated string diem_id_domains = 13 [json_name="diem_id_domains"];
+  string diem_id_domain_events_key = 14 [json_name="diem_id_domain_events_key"];
 }
 
 message PreburnQueue {

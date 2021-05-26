@@ -80,6 +80,19 @@ A Diem account.
 
 ---
 
+
+## Type TreasuryComplianceRole
+
+### Attributes
+
+| Name                | Type   | Description                                |
+|---------------------|--------|--------------------------------------------|
+| type                | string | "treasury_compliance"                               |
+| diem_id_domain_events_key | string | key of diem id domain events under treasury compliance     |
+
+
+---
+
 ## Type UnknownRole
 
 ### Attributes

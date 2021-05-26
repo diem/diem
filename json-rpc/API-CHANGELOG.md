@@ -12,6 +12,11 @@ Please add the API change in the following format:
 - <describe another change of the API>
 
 ```
+
+## 2021-05-25 Add `TreasuryComplianceRole`
+
+TreasuryComplianceRole has been created and has a field `diem_id_domain_events_key` that stores the event key of diem id domain events.
+
 ## 2021-05-24 Add `diem_id_domains` field to `ParentVASPRole`
 
 ParentVASPRole has a new field `diem_id_domains` that stores the domain names for diem ID that belong to the parent VASP.
