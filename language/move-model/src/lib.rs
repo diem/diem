@@ -19,9 +19,9 @@ use move_ir_types::location::sp;
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
-    expansion::ast::{Address, ModuleDefinition, ModuleIdent, ModuleIdent_, Program},
+    expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     move_continue_up_to, move_parse,
-    parser::ast::ModuleName as ParserModuleName,
+    parser::ast::{self as P, ModuleName as ParserModuleName},
     shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Flags},
     Pass as MovePass, PassResult as MovePassResult,
 };
@@ -65,7 +65,7 @@ pub fn run_model_builder_with_compilation_flags(
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
-    let mut compilation_env = CompilationEnv::new(flags.clone());
+    let mut compilation_env = CompilationEnv::new(flags);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, pprog_and_comments_res) =
@@ -99,19 +99,17 @@ pub fn run_model_builder_with_compilation_flags(
         env.add_documentation(file_id, documentation);
     }
 
-    // Step 2: parse all sources in targets and dependencies, prepare for selective compilation.
-    let all_sources: Vec<_> = files
-        .into_iter()
-        .map(|(fname, _)| fname.to_owned())
-        .collect();
-    // Run the compiler up to expansion
-    let (_, pprog_and_comments_res) = move_parse(&compilation_env, &all_sources, &[], None)?;
-    let (_, parsed_prog) = match pprog_and_comments_res {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
-            return Ok(env);
+    // Step 2: run the compiler up to expansion
+    let parsed_prog = {
+        let P::Program {
+            mut source_definitions,
+            lib_definitions,
+        } = parsed_prog;
+        source_definitions.extend(lib_definitions);
+        P::Program {
+            source_definitions,
+            lib_definitions: vec![],
         }
-        Ok(res) => res,
     };
     let expansion_ast = match move_continue_up_to(
         &mut compilation_env,
@@ -128,25 +126,16 @@ pub fn run_model_builder_with_compilation_flags(
     };
     // Extract the module/script closure
     let mut visited_modules = BTreeSet::new();
-    let mut selective_files = BTreeSet::new();
-    for (loc, _name, _value_opt) in &expansion_ast.addresses {
-        let src_file = loc.file();
-        if !dep_sources.contains(src_file) {
-            selective_files.insert(src_file.to_owned());
-        }
-    }
     for (mident, mdef) in expansion_ast.modules.key_cloned_iter() {
         let src_file = mdef.loc.file();
         if !dep_sources.contains(src_file) {
-            selective_files.insert(src_file.to_owned());
             collect_related_modules_recursive(mident, &expansion_ast.modules, &mut visited_modules);
         }
     }
-    for (_, sdef) in expansion_ast.scripts {
+    for sdef in expansion_ast.scripts.values() {
         let src_file = sdef.loc.file();
         if !dep_sources.contains(src_file) {
-            selective_files.insert(src_file.to_owned());
-            for (mident, _neighbor) in sdef.immediate_neighbors {
+            for (mident, _neighbor) in sdef.immediate_neighbors.key_cloned_iter() {
                 collect_related_modules_recursive(
                     mident,
                     &expansion_ast.modules,
@@ -155,49 +144,38 @@ pub fn run_model_builder_with_compilation_flags(
             }
         }
     }
-    for mident in visited_modules {
-        selective_files.insert(
-            expansion_ast
-                .modules
-                .get(&mident)
-                .unwrap()
-                .loc
-                .file()
-                .to_owned(),
-        );
+    let mut visited_addresses = BTreeSet::new();
+    for mident in &visited_modules {
+        if let Address::Named(n) = &mident.value.address {
+            visited_addresses.insert(n);
+        }
     }
 
     // Step 3: selective compilation.
-    let selective_sources: Vec<_> = selective_files.into_iter().collect();
-
-    // Run the compiler up to expansion and clone a copy of the expansion program ast
-    let mut compilation_env = CompilationEnv::new(flags);
-    let (_, pprog_and_comments_res) = move_parse(&compilation_env, &selective_sources, &[], None)?;
-    let (_, parsed_prog) = match pprog_and_comments_res {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
-            return Ok(env);
+    let expansion_ast = {
+        let E::Program {
+            addresses,
+            modules,
+            scripts,
+        } = expansion_ast;
+        let addresses = addresses.filter_map(|n, val| visited_addresses.contains(&n).then(|| val));
+        let modules = modules.filter_map(|mident, mut mdef| {
+            visited_modules.contains(&mident).then(|| {
+                mdef.is_source_module = true;
+                mdef
+            })
+        });
+        E::Program {
+            addresses,
+            modules,
+            scripts,
         }
-        Ok(res) => res,
-    };
-    let (expansion_ast, expansion_result) = match move_continue_up_to(
-        &mut compilation_env,
-        None,
-        MovePassResult::Parser(parsed_prog),
-        MovePass::Expansion,
-    ) {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
-            return Ok(env);
-        }
-        Ok(MovePassResult::Expansion(eprog)) => (eprog.clone(), MovePassResult::Expansion(eprog)),
-        Ok(_) => unreachable!(),
     };
     // Run the compiler fully to the compiled units
     let units = match move_continue_up_to(
         &mut compilation_env,
         None,
-        expansion_result,
+        MovePassResult::Expansion(expansion_ast.clone()),
         MovePass::Compilation,
     ) {
         Err(errors) => {
@@ -295,7 +273,7 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Program) {
+fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: E::Program) {
     let named_address_mapping = eprog
         .addresses
         .iter()
