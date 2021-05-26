@@ -22,7 +22,7 @@ let a2 = 0x2;
 // ... and so on for every other possible address
 ```
 
-However, `signer` values are special because they cannot be created via literals or instructions--only by the Move VM. Before the VM runs a script with parameters of type `signer`, it will automatically create `signer` values and pass them into the script:
+However, `signer` values are special because they cannot be created via literals or instructions--only by the Move VM. Before the VM runs a script with parameters of type `&signer`, it will automatically create `signer` values and pass them into the script:
 
 ```rust=
 script {

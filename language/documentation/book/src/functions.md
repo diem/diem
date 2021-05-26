@@ -313,7 +313,7 @@ For more details, see [Move generics](./generics.md).
 
 ## Returning values
 
-The result of a function, it's "return value", is the final value of it's function body. For example
+The result of a function, its "return value", is the final value of its function body. For example
 ```rust=
 fun add(x: u64, y: u64): u64 {
     x + y

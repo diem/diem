@@ -47,7 +47,7 @@ const FLAG: bool = false;
 const MY_ERROR_CODE: u64 = 0;
 const ADDRESS_42: address = 0x42;
 ```
-Even though you can use letters `a` to `z` in a constant. The  [general style guidelines](/GSiO5fHXTlK7E8kBZf50IQ) are to use just uppercase letters `A` to `Z`, with underscores `_` between each word.
+Even though you can use letters `a` to `z` in a constant. The  [general style guidelines](./coding-conventions.md) are to use just uppercase letters `A` to `Z`, with underscores `_` between each word.
 
 
 This naming restriction of starting with `A` to `Z` is in place to give room for future language features. It may or may not be removed later.

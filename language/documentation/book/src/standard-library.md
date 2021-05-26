@@ -10,7 +10,7 @@ The Move standard library exposes interfaces that implement the following functi
 * [A common error encoding code interface for abort codes](#errors).
 * [32-bit precision fixed-point numbers](#fixedpoint32).
 
-## <a href="vector">Vector</a>
+## Vector
 
 The `Vector` module defines a number of operations over the primitive
 [`vector`](./vector.md) type. The module is published under the
@@ -137,7 +137,7 @@ Return whether the vector `v` is empty.
 ```
 ---------------------------------------------------------------------------
 
-## <a href="option">Option</a>
+## Option
 
 The `Option` module defines a generic option type `Option<T>` that represents a
 value of type `T` that may, or may not, be present. It is published under the core code address at `0x1`.
@@ -275,7 +275,9 @@ Error categories are declared as constants in the `Errors` module and are global
 The lower 8 bits of the abort code hold the *error category*. The remaining 56 bits of the abort code hold the *error reason*.
 The reason should be a unique number relative to the module which raised the error and can be used to obtain more information about the error at hand. It should mostly be used for diagnostic purposes as error reasons may change over time if the module is updated.
 
-![Error bits](/img/docs/standard-library-error-bits.png)
+| Category | Reason |
+|----------|--------|
+| 8 bits   | 56 bits|
 
 Since error categories are globally stable, these present the most stable API and should in general be what is used by clients to determine the messages they may present to users (whereas the reason is useful for diagnostic purposes). There are public functions in the `Errors` module for creating an abort code of each error category with a specific `reason` number (represented as a `u64`).
 
@@ -405,7 +407,7 @@ Used for extension points, should be not used under most circumstances. Construc
 
 ---------------------------------------------------------------------------
 
-## <a href="fixedpoint32">FixedPoint32</a>
+## FixedPoint32
 
 
 The `FixedPoint32` module defines a fixed-point numeric type with 32 integer bits and 32 fractional bits. Internally, this is represented as a `u64` integer wrapped in a struct to make a unique `FixedPoint32` type. Since the numeric representation is a binary one, some decimal values may not be exactly representable, but it provides more than 9 decimal digits of precision both before and after the decimal point (18 digits total). For comparison, double precision floating-point has less than 16 decimal digits of precision, so you should be careful about using floating-point to convert these values to decimal.
