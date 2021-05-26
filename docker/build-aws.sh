@@ -49,6 +49,9 @@ while [[ "$1" =~ ^- ]]; do case $1 in
   --build-tools )
     BUILD_PROJECTS=(diem-tools)
     ;;
+  --build-forge )
+    BUILD_PROJECTS=(diem-forge)
+    ;;
   --version )
     shift;
     if [[ "$1" =~ ^pull ]]; then
