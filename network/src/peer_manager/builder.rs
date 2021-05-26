@@ -265,13 +265,6 @@ impl PeerManagerBuilder {
             .clone()
     }
 
-    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
-        self.peer_manager_context
-            .as_mut()
-            .expect("Cannot add an event listener if PeerManager has already been built.")
-            .add_connection_event_listener()
-    }
-
     /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
@@ -414,6 +407,13 @@ impl PeerManagerBuilder {
             TransportPeerManager::Memory(pm) => self.start_peer_manager(pm, executor),
             TransportPeerManager::Tcp(pm) => self.start_peer_manager(pm, executor),
         }
+    }
+
+    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
+        self.peer_manager_context
+            .as_mut()
+            .expect("Cannot add an event listener if PeerManager has already been built.")
+            .add_connection_event_listener()
     }
 
     /// Add a handler for given protocols using raw bytes.
