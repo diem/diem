@@ -69,7 +69,7 @@ module M {
         r.value = r.value + 1;
     }
 
-    spec fun increment {
+    spec increment {
         aborts_if aborts_if !exists<Counter>(a);
         ensures global<Counter>(a).value == old(global<Counter>(a)).value + 1;
     }
@@ -111,7 +111,7 @@ only cover the abort if the resource does not exists, but not the overflow.
 Let's fix the above and add the following condition:
 
 ```move
-spec fun increment {
+spec increment {
     aborts_if global<Counter>(a).value == 255;
 }
 ```

@@ -153,7 +153,7 @@ module M {
     spec schema Other {
         // Gotcha! Still associated with module, as there is no struct spec block before.
     }
-    spec struct S {
+    spec S {
         // Associated with S because of named spec block target. Notice that this can be in fact anywhere in
         // the file (before declaration of S, at the end of the file, etc.).
     }
@@ -167,7 +167,7 @@ module M {
     spec schema FAbortsIf {
         // Gotcha! The last explicitly targeted spec block was for S, not for f, so this will go with S.
     }
-    spec fun f {
+    spec f {
         // Associated with f because of named spec block target.
     }
     spec schema FEnsures {
@@ -181,15 +181,15 @@ Notice that one can enforce an association of subsequent spec block to the modul
 
 ```move
 module M {
-    fn f(): T { ... }
-    spec fun f {
+    fun f(): T { ... }
+    spec f {
        aborts_if f_aborts();
        ensures result == f_result();
     }
     // This goes with the documentation of function f
-    spec define f_aborts() { .. }
+    spec fun f_aborts() { .. }
     spec module {}
     // This goes with the documentation of the module
-    spec define f_result(): T { .. }
+    spec fun f_result(): T { .. }
 }
 ```

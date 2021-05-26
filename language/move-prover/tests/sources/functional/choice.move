@@ -21,8 +21,8 @@ module 0x42::TestSome {
         ensures result == TRACE(choose x: u64 where x >= 4 && x <= 5);
     }
 
-    // Testing choices in specctions
-    // =================================
+    // Testing choices in spec funs
+    // =============================
 
     spec fun spec_fun_choice(x: u64): u64 {
         choose y: u64 where y >= x

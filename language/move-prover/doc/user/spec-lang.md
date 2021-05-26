@@ -1,29 +1,37 @@
 [PROVER]: prover-guide.md
-[PROVER_USAGE]: prover-guide.md
-[PRE_POST_REFERENCE]: https://en.wikipedia.org/wiki/Design_by_contract
-[FRAMEWORK]: ../../../diem-framework/modules/doc/overview.md
 
+[PROVER_USAGE]: prover-guide.md
+
+[PRE_POST_REFERENCE]: https://en.wikipedia.org/wiki/Design_by_contract
+
+[FRAMEWORK]: ../../../diem-framework/modules/doc/overview.md
 
 # Move Specification Language
 
-The *Move specification language*, abbreviated **MSL**, is a subset of the Move language which enables formal
-specification of Move programs.
+**version 1.3**
 
-MSL code is not intended to be executed, but plays together with the [Move Prover][PROVER], a tool which can
-statically verify the correctness of MSL specifications against Move programs. In contrast to traditional testing,
-verification of MSL is exhaustive and holds for all possible inputs and global states of a Move module or transaction
-script. At the same time, it is fast and automated enough that it can be used at a similar place in the developer
-workflow where tests are, for example, for qualification of pull requests in continuous integration.
+This document describes the *Move specification language*, a subset of the Move language which
+supports specification of the behavior of Move programs. Throughout this document, we abbreviate
+this subset of Move
+*MSL*.
 
-While the Move programming language at this point is stable, the subset represented by MSL should be considered
-evolving. This has no impact on platform stability, since MSL is not running in production, but is used for offline
-quality assurance, where it is continuously improved for evolving objectives.
+MSL plays together with the [Move Prover][PROVER], a tool which can statically verify the
+correctness of MSL specifications against Move programs. In contrast to traditional testing,
+verification of MSL is exhaustive and holds for all possible inputs and global states of a Move
+module or transaction script. At the same time, it is fast and automated enough that it can be used
+at a similar place in the developer workflow where tests are (for example, for qualification of pull
+requests in continuous integration).
 
-This document describes the language only; see [here][PROVER_USAGE] for how to use the Move prover tool. The reader is
-expected to have basic knowledge of the Move language, as well as basic principles of pre/post condition specifications
-(see e.g. [this article][PRE_POST_REFERENCE]). For examples of specifications, we refer to the [Diem
-framework documentation][FRAMEWORK] which has specifications embedded.
+While the Move programming language at this point is stable, the subset represented by MSL should be
+considered evolving. This has no impact on platform stability, since MSL is not running in
+production, but is used for offline quality assurance, where it is continuously improved for
+evolving objectives.
 
+This document describes the language only; see [here][PROVER_USAGE] for how to use the Move prover
+tool. The reader is expected to have basic knowledge of the Move language, as well as basic
+principles of pre/post condition specifications
+(see e.g. [this article][PRE_POST_REFERENCE]). For examples of specifications, we refer to
+the [Diem framework documentation][FRAMEWORK] which has specifications embedded.
 
 ---
 
@@ -35,113 +43,122 @@ framework documentation][FRAMEWORK] which has specifications embedded.
     - [Statements](#statements)
     - [Pack and Unpack](#pack-and-unpack)
     - [Quantifiers](#quantifiers)
+    - [Choice Operator](#choice-operator)
     - [Builtin Functions](#builtin-functions)
     - [Partial Semantics](#partial-semantics)
 - [Specifications](#specifications)
+    - [Separating Specifications](#separating-specifications)
     - [Pragmas and Properties](#pragmas-and-properties)
         - [Pragma Inheritance](#pragma-inheritance)
         - [General Pragmas and Properties](#general-pragmas-and-properties)
     - [Pre and Post State](#pre-and-post-state)
     - [Helper Functions](#helper-functions)
         - [Uninterpreted Functions](#uninterpreted-functions)
+        - [Axioms](#axioms)
     - [Let Bindings](#let-bindings)
-    - [Aborts-If Condition](#aborts-if-condition)
-        - [Aborts-If Condition With Code](#aborts-if-condition-with-code)
-    - [Aborts-With Condition](#aborts-with-condition)
-    - [Requires Condition](#requires-condition)
-    - [Ensures Condition](#ensures-condition)
-    - [Modifies Condition](#modifies-condition)
-    - [Invariant Condition](#invariant-condition)
-        - [Struct Invariants](#struct-invariants)
-        - [Global Invariants](#global-invariants)
-            - [Isolated Global Invariants](#isolated-global-invariants)
-            - [Modular Verification and Global Invariants](#modular-verification-and-global-invariants)
-    - [Assume and Assert Conditions in Code](#assume-and-assert-conditions-in-code)
-    - [Specification Variables](#specification-variables)
-    - [Schemas](#schemas)
-        - [Basic Schema Usage](#basic-schema-usage)
-        - [Schema Expressions](#schema-expressions)
-        - [Schema Apply Operation](#schema-apply-operation)
-    - [Opaque Specifications](#opaque-specifications)
-    - [Abstract Specifications](#abstract-specifications)
-    - [Documentation Generation](#documentation-generation)
+        - [Aborts-If Condition](#aborts-if-condition)
+            - [Aborts-If Condition With Code](#aborts-if-condition-with-code)
+        - [Aborts-With Condition](#aborts-with-condition)
+        - [Requires Condition](#requires-condition)
+        - [Ensures Condition](#ensures-condition)
+        - [Modifies Condition](#modifies-condition)
+        - [Invariant Condition](#invariant-condition)
+            - [Function Invariants](#function-invariants)
+            - [Struct Invariants](#struct-invariants)
+            - [Global Invariants](#global-invariants)
+                - [Isolated Global Invariants](#isolated-global-invariants)
+                - [Modular Verification and Global Invariants](#modular-verification-and-global-invariants)
+        - [Assume and Assert Conditions in Code](#assume-and-assert-conditions-in-code)
+        - [Specification Variables](#specification-variables)
+        - [Schemas](#schemas)
+            - [Basic Schema Usage](#basic-schema-usage)
+            - [Schema Expressions](#schema-expressions)
+            - [Schema Apply Operation](#schema-apply-operation)
+        - [Opaque Specifications](#opaque-specifications)
+        - [Abstract Specifications](#abstract-specifications)
+        - [Documentation Generation](#documentation-generation)
 - [Expressiveness](#expressiveness)
-- [Appendix: Experimental/Deprecated Features](#appendix-experimentaldeprecated-features)
 
 ---
 
 # Expressions
 
-Expressions in MSL are a subset of Move program expressions plus a set of additional constructs, as discussed
-in the following sections.
+Expressions in MSL are a subset of Move program expressions plus a set of additional constructs, as
+discussed in the following sections.
 
 ## Type System
 
 The type system of MSL is similar to that of Move, with the following differences:
 
-- All integer types of Move (`u8`, `u64`, and `u128`) are treated as the same type. In specifications, this
-  type is called `num`, which is an arbitrary precision *signed* integer type. When MSL refers to a Move name
-  which represents an `u8` or such, it will be automatically widened to `num`. This allows writing MSL expressions
-  like `x + 1 <= MAX_U128` or `x - y >= 0` without needing to worry about overflow or underflow.
-- The Move types `&T`, `&mut T`, and `T` are considered equivalent for MSL.  Equality is interpreted as
-  value equality. There is no need to worry about dereferencing a reference from the Move program: these are
-  automatically dereferenced as needed. This simplification is possible because MSL cannot modify
-  values from a Move program and the program cannot directly reason about reference equality (which eliminates the
-  need for doing so in MSL). (Note there is also a restriction in expressiveness
-  coming with this, namely for [functions which return `&mut T`](#expressiveness), however, this is
-  rarely hit in practice, and there are workarounds.)
-- There is the additional type `type` which is the type of all types (and the function `type<T>()`
-  to denote a value of it).
-- There is the additional type `range` which represents an integer range (and the notation `n..m` to denote a value).
+- All integer types of Move (`u8`, `u64`, and `u128`) are treated as the same type. In
+  specifications, this type is called `num`, which is an arbitrary precision *signed* integer type.
+  When MSL refers to a Move name which represents an `u8` or such, it will be automatically widened
+  to `num`. This allows writing MSL expressions like `x + 1 <= MAX_U128` or `x - y >= 0` without
+  needing to worry about overflow or underflow.
+- The Move types `&T`, `&mut T`, and `T` are considered equivalent for MSL. Equality is interpreted
+  as value equality. There is no need to worry about dereferencing a reference from the Move
+  program: these are automatically dereferenced as needed. This simplification is possible because
+  MSL cannot modify values from a Move program and the program cannot directly reason about
+  reference equality (which eliminates the need for doing so in MSL). (Note there is also a
+  restriction in expressiveness coming with this, namely
+  for [functions which return `&mut T`](#expressiveness), however, this is rarely hit in practice,
+  and there are workarounds.)
+- There is the additional type `type` which is the type of all types. It can only be used in
+  quantifiers.
+- There is the additional type `range` which represents an integer range (and the notation `n..m` to
+  denote a value).
 
 ## Naming
 
-Name resolution works similar to the Move language. `use` declarations can introduce aliases for imported names.
-MSL functions and variable names must start with a lower case letter. Schema names are treated like types and must start
-with a capital letter (schemas are a new named construct discussed [later](#schemas)).
+Name resolution works similar to the Move language. `use` declarations can introduce aliases for
+imported names. MSL functions and variable names must start with a lower case letter. Schema names
+are treated like types and must start with a capital letter (schemas are a new named construct
+discussed [later](#schemas)).
 
-Move functions, MSL functions, Move types, and schemas all share the same namespace, and are therefore unambiguous
-if aliased via a Move `use` clause. Because of the common name space, an MSL function cannot have the same
-name than a Move function. This is often handled via the convention to prefix MSL function as in
+Move functions, MSL functions, Move types, and schemas all share the same namespace, and are
+therefore unambiguous if aliased via a Move `use` clause. Because of the common name space, an MSL
+function cannot have the same name than a Move function. This is often handled via the convention to
+prefix MSL function as in
 `spec_has_access` when the related Move function is called `has_access`.
-
 
 ## Operators
 
 All Move operators are supported in MSL, except `&`, `&mut`, and `*` (dereference).
 
-In addition to the existing operators, vector subscript `v[i]`, slicing `v[i..j]`, and range construction
-`i..j` are supported (the type of integer ranges is a new builtin type called `range`). Moreover, boolean
-implication `p ==> q` is supported as a more intuitive form than `!p || q`.
+In addition to the existing operators, vector subscript `v[i]`, slicing `v[i..j]`, and range
+construction
+`i..j` are supported (the type of integer ranges is a new builtin type called `range`). Moreover,
+boolean implication `p ==> q` is supported as a more intuitive form than `!p || q`.
 
 ## Function Calls
 
-In MSL expressions, functions can be called like in Move. However, the
-callee must either be a [MSL function](#helper-functions), or a **pure** Move function.
+In MSL expressions, functions can be called like in Move. However, the callee must either be
+a [MSL function](#helper-functions), or a **pure** Move function.
 
 Move functions are considered pure if they do not modify global state and do not use Move expression
 features which are not supported in MSL expressions (as defined here).
 
-There is one extension. If a Move function definition contains a direct `assert`, this will be ignored when it
-is called from an MSL expression, and the function will be considered pure. For example:
+There is one extension. If a Move function definition contains a direct `assert`, this will be
+ignored when it is called from an MSL expression, and the function will be considered pure. For
+example:
 
 ```move
 fun get(addr: address): &T { assert(exists<T>(addr), ERROR_CODE); borrow_global<T>(addr) }
 ```
 
-This function is pure and can be called from an MSL expression. The assertion will be ignored, and the function
-will be interpreted as:
+This function is pure and can be called from an MSL expression. The assertion will be ignored, and
+the function will be interpreted as:
 
 ```move
-spec define get(addr: address): T { global<T>(addr) }
+spec fun get(addr: address): T { global<T>(addr) }
 ```
 
 This is justified by that MSL has [*partial semantics*](#partial-semantics).
 
 ## Statements
 
-Limited sequencing of the form `{ let x = foo(); x + x }` is supported, as well as if-then-else. Other statement
-forms of the Move language are not supported.
+Limited sequencing of the form `{ let x = foo(); x + x }` is supported, as well as if-then-else.
+Other statement forms of the Move language are not supported.
 
 ## Pack and Unpack
 
@@ -156,9 +173,10 @@ forall <binding>, ..., <binding> [ where <exp> ] : <exp>
 exists <binding>, ..., <binding> [ where <exp> ] : <exp>
 ```
 
-- Bindings can either be of the form `name: <type>` or `name in <exp>`. For the second form, the expression
-  currently must either be a `range` or a vector.
-- The optional constraint `where <exp>` allows to restrict the quantified range. `forall x: T where p: q`
+- Bindings can either be of the form `name: <type>` or `name in <exp>`. For the second form, the
+  expression currently must either be a `range` or a vector.
+- The optional constraint `where <exp>` allows to restrict the quantified
+  range. `forall x: T where p: q`
   is equivalent to `forall x: T : p ==> q` and `exists x: T where p: q` is equivalent to
   `exists x: T : p && q`.
 
@@ -168,56 +186,85 @@ Notice that it is possible to quantify over types. For example:
 forall t: type, addr: address where exists<R<t>>(addr): exists<T<t>>(addr)
 ```
 
+## Choice Operator
 
+The choice operator allows to select a value which satisfies a predicate:
+
+```
+choose a: address where exists<R>(a) && global<R>(a).value > 0
+```
+
+If the predicate is not satisfiable, the result of the choice will be undetermined (see discussion
+of
+[partial semantics](#partial-semantics)).
+
+The choice also comes in a form to select the *minimal* value from a set of integers, as in:
+
+```
+choose min i: num where in_range(v, i) && v[i] == 2
+```
 
 ## Builtin Functions
 
-MSL supports a number of builtin constants and functions. Most of them are not available
-in the Move language:
+MSL supports a number of builtin constants and functions. Most of them are not available in the Move
+language:
 
-- `MAX_U8: num`, `MAX_U64: num`, `MAX_U128: num` returns the maximum value of the corresponding type.
+- `MAX_U8: num`, `MAX_U64: num`, `MAX_U128: num` returns the maximum value of the corresponding
+  type.
 - `exists<T>(address): bool` returns true if the resource T exists at address.
-- `global<T>(address): T` returns the resource at address.
+- `global<T>(address): T` returns the resource value at address.
 - `len<T>(vector<T>): num` returns the length of the vector.
-- `update_vector<T>(vector<T>, num, T>): vector<T>` returns a new vector with the element replaced at the given index.
-- `empty_vector<T>(): vector<T>` returns an empty vector.
-- `singleton_vector<T>(T): vector<T>` returns a single element vector.
-- `concat_vector<T>(vector<T>, vector<T>): vector<T>` returns the concatenation of the parameters.
-- `update_field(S, F, T): S` where `S` is some struct, `F` the name of a field in `S`, and `T` a value for this field.
-- `type<T>()` returns an opaque value of MSL type `type` which represents
-   the type T. Type values can be only compared for equality.
-- `old(T): T` delivers the value of the passed argument at point of entry into a Move function. This is only allowed
-  in `ensures` post-conditions and certain forms of invariants, as discussed later.
-- `TRACE(T): T` is semantically the identity function and causes visualization of the argument's value in error messages created by the
-  prover.
+- `update<T>(vector<T>, num, T>): vector<T>` returns a new vector with the element replaced at the
+  given index.
+- `vec<T>(): vector<T>` returns an empty vector.
+- `vec<T>(x): vector<T>` returns a singleton vector.
+- `concat<T>(vector<T>, vector<T>): vector<T>` returns the concatenation of the parameters.
+- `contains<T>(vector<T>, T): bool` returns true if element is in vector.
+- `index_of<T>(vector<T>, T): num` returns the index of the element in the vector, or the length of
+  the vector if it does not contain it.
+- `range<T>(vector<T>): range` returns the index range of the vector.
+- `in_range<T>(vector<T>, num): bool` returns true if the number is in the index range of the
+  vector.
+- `in_range<T>(range, num): bool` returns true if the number is in the range.
+- `update_field(S, F, T): S` updates a field in a struct, preserving the values of other fields,
+  where `S` is some struct, `F` the name of a field in `S`, and `T` a value for this field.
+- `old(T): T` delivers the value of the passed argument at point of entry into a Move function. This
+  is only allowed in `ensures` post-conditions and certain forms of invariants, as discussed later.
+- `TRACE(T): T` is semantically the identity function and causes visualization of the argument's
+  value in error messages created by the prover.
 
-Builtin functions live in an unnamed outer scope of a module. It the module defines a function `len` then this
-definition will shadow that of the according builtin function. To access the builtin function in such a situation,
-one can use the notation `::len(v)`.
+Builtin functions live in an unnamed outer scope of a module. If the module defines a function `len`
+then this definition will shadow that of the according builtin function. To access the builtin
+function in such a situation, one can use the notation `::len(v)`.
 
 ## Partial Semantics
 
-In MSL, expressions have a partial semantics. This is in contrast to Move program expressions, which have a total
-semantics, since they either deliver a value or abort.
+In MSL, expressions have a partial semantics. This is in contrast to Move program expressions, which
+have a total semantics, since they either deliver a value or abort.
 
-An expression `e[X]` which depends on some some variables `X` may have a known
-interpretation for some assignments to variables in `X`, but unknown for others. An unknown interpretation for a
-sub-expression causes no issue if its value is not needed for the overall expression result. Therefore it does not
-matter if we say `y != 0 && x / y > 0` or `x / y > 0 && y != 0`: boolean operators are commutative.
+An expression `e[X]` which depends on some some variables `X` may have a known interpretation for
+some assignments to variables in `X`, but unknown for others. An unknown interpretation for a
+sub-expression causes no issue if its value is not needed for the overall expression result.
+Therefore it does not matter if we say `y != 0 && x / y > 0`
+or `x / y > 0 && y != 0`: boolean operators are commutative.
 
-This basic principle inherits to higher-level language constructs. For example, in specifications, it does not matter
-in which order conditions are supplied: `aborts_if y != 0; ensures result == x / y;` is the same as
-`ensures result == x / y; aborts_if y != 0;`. Also, `aborts_if P; aborts_if Q;` is the same as `aborts_if Q || P`.
+This basic principle inherits to higher-level language constructs. For example, in specifications,
+it does not matter in which order conditions are
+supplied: `aborts_if y != 0; ensures result == x / y;` is the same as
+`ensures result == x / y; aborts_if y != 0;`. Also, `aborts_if P; aborts_if Q;` is the same
+as `aborts_if Q || P`
+.
 
-Moreover, the principle of partial semantics is inherited to [specification helper functions](#helper-functions),
-which behave transparently. Specifically, inlining those functions is equivalent to not inlining them.
-
+Moreover, the principle of partial semantics is inherited
+to [specification helper functions](#helper-functions)
+, which behave transparently. Specifically, inlining those functions is equivalent to calling them (
+call-by-expression parameter passing semantics).
 
 # Specifications
 
-Specifications are contained in so-called *specification blocks* (abbreviated **spec block**) that can appear as module
-members and inside Move functions. The various types of spec blocks are shown below, and will be discussed in
-subsequent sections.
+Specifications are contained in so-called *specification blocks* (abbreviated **spec block**) that
+can appear as module members and inside Move functions. The various types of spec blocks are shown
+below, and will be discussed in subsequent sections.
 
 ```move
 module M {
@@ -234,12 +281,12 @@ module M {
         r.value = r.value + 1;
     }
 
-    spec fun increment {
+    spec increment {
         // spec block targeting function increment
         ...
     }
 
-    spec struct Counter {
+    spec Counter {
         // spec block targeting struct Counter
         ...
     }
@@ -249,7 +296,7 @@ module M {
         ...
     }
 
-    spec define f(x: num): num {
+    spec fun f(x: num): num {
         // spec block declaring a helper function
         ...
     }
@@ -261,14 +308,47 @@ module M {
 }
 ```
 
-Apart of spec blocks inside Move functions, the textual position of spec block is irrelevant. Also, a spec block for
-a struct, function, or module can be repeated multiple times, accumulating the content.
+Apart of spec blocks inside Move functions, the textual position of spec block is irrelevant. Also,
+a spec block for a struct, function, or module can be repeated multiple times, accumulating the
+content.
+
+## Separating Specifications
+
+Instead of putting specifications into the same module as the regular Move definitions, one can also
+put them into a separate "specification" module, which can live in the same or a different file:
+
+```move
+module M {
+    ...
+}
+spec M {
+    spec increment { .. }
+}
+```
+
+The syntax of a specification module is the same as for a regular module, however, Move functions
+and structures are not allowed.
+
+A specification module must be compiled together with the Move module it is targeting, and cannot be
+compiled and verified standalone.
+
+In case Move definitions are far apart (e.g. in different files), it is possible to augment the
+specification of a Move function with a signature of this function, to give sufficient context to
+understand the specification. This syntax is optionally enabled in regular and in specification
+modules:
+
+```move
+public fun increment(a: address) acquires Counter { .. }
+...
+spec increment(a: address) { .. }
+```
 
 ## Pragmas and Properties
 
-Pragmas and properties are a generic mechanism to influence interpretation of specifications. They are also an extension
-point to experiment with new concepts before they come part of the mainstream syntax. Here we give a brief introduction
-into their general syntax; individual instances are discussed later.
+Pragmas and properties are a generic mechanism to influence interpretation of specifications. They
+are also an extension point to experiment with new concepts before they come part of the mainstream
+syntax. Here we give a brief introduction into their general syntax; individual instances are
+discussed later.
 
 The general form of a pragma is:
 
@@ -286,17 +366,19 @@ spec .. {
 }
 ```
 
-The `<literal>` can be any value supported by MSL (or the Move language). A value assignment can also be omitted,
-in which case a default is used. For example, it is common to use `pragma option;` as a shortcut for
+The `<literal>` can be any value supported by MSL (or the Move language). A value assignment can
+also be omitted, in which case a default is used. For example, it is common to use `pragma option;`
+as a shortcut for
 `pragma option = true;`.
 
-Instead of a single pragma or property, a list can also be provided, as in `invariant [global, isolated] P`.
+Instead of a single pragma or property, a list can also be provided, as
+in `invariant [global, isolated] P`.
 
 ### Pragma Inheritance
 
-A pragma in a module spec block sets a value which applies to all other spec blocks in the module. A pragma
-in a function or struct spec block can override this value for the function or struct. Furthermore, the
-default value of some pragmas can be defined via the prover configuration.
+A pragma in a module spec block sets a value which applies to all other spec blocks in the module. A
+pragma in a function or struct spec block can override this value for the function or struct.
+Furthermore, the default value of some pragmas can be defined via the prover configuration.
 
 As an example, we look at the `verify` pragma. This pragma is used to turn verification on or off.
 
@@ -305,7 +387,7 @@ spec module {
     pragma verify = false; // By default, do not verify specs in this module ...
 }
 
-spec fun increment {
+spec increment {
     pragma verify = true; // ... but do verify this function.
     ...
 }
@@ -329,25 +411,26 @@ The following properties control general behavior of verification:
 |------------|--------------
 | `[deactivated]` | Excludes the associated condition from verification.
 
-
 ## Pre and Post State
 
-Multiple conditions in spec blocks work with a *pre* and *post* state, relating them to each other. Function
-specifications are one example of this: in the `ensures P` condition, the pre-state (at function entry) and
-the post-state (at function exit) are related via the predicate `P`. However, the concept is more general and
-also applied for invariants, where the pre-state is before and post-state after a global update.
+Multiple conditions in spec blocks work with a *pre* and *post* state, relating them to each other.
+Function specifications are one example of this: in the `ensures P` condition, the pre-state (at
+function entry) and the post-state (at function exit) are related via the predicate `P`. However,
+the concept is more general and also applied for invariants, where the pre-state is before and
+post-state after a global update.
 
-In contexts where a pre/post state is active, expressions are evaluated implicitly in the post-state. To evaluate
-an expression in a pre-state, one uses the builtin function `old(exp)`, which evaluates its parameter in the pre-state
-and returns its value. It is important to understand that every sub-expression in `exp` is computed in the pre-state
-as well, including calls to helper functions.
+In contexts where a pre/post state is active, expressions are evaluated implicitly in the
+post-state. To evaluate an expression in a pre-state, one uses the builtin function `old(exp)`,
+which evaluates its parameter in the pre-state and returns its value. It is important to understand
+that every sub-expression in `exp` is computed in the pre-state as well, including calls to helper
+functions.
 
-The 'state' in question here consists of assignments to global resource memory, as well as to any parameters
-of the function of type `&mut T`. Examples:
+The 'state' in question here consists of assignments to global resource memory, as well as to any
+parameters of the function of type `&mut T`. Examples:
 
 ```move
 fun increment(counter: &mut u64) { *counter = *counter + 1 }
-spec fun increment {
+spec increment {
    ensures counter == old(counter) + 1;
 }
 
@@ -355,27 +438,28 @@ fun increment_R(addr: address) {
     let r =  borrow_global_mut<R>(addr);
     r.value = r.value + 1;
 }
-spec fun increment_R {
+spec increment_R {
     ensures global<R>(addr).value == old(global<R>(addr).value) + 1;
 }
 ```
 
 ## Helper Functions
 
-MSL allows to define helper functions. Those functions can then be used in expressions.
+MSL allows defining helper functions. Those functions can then be used in expressions.
 
-Helper functions are defined via a spec block:
+Helper functions are defined using the following syntax:
 
 ```move
-spec define exists_balance<Currency>(a: address): bool { exists<Balance<Currency>>(a) }
+spec fun exists_balance<Currency>(a: address): bool { exists<Balance<Currency>>(a) }
 ```
 
 As seen in the example, helper functions can be generic. Moreover, they can access global state.
 
-Definitions of helper functions are neutral regards whether they apply to a [pre- or post-state](#pre-and-post-state).
-They are evaluated in the currently active state. For instance, in order to see whether a balance existed in the
-pre-state, one uses `old(exists_balance<Currency>(a))`. Consequently, the expression `old(..)` is not allowed within the
-definition of a helper function.
+Definitions of helper functions are neutral regards whether they apply to
+a [pre- or post-state](#pre-and-post-state). They are evaluated in the currently active state. For
+instance, in order to see whether a balance existed in the pre-state, one
+uses `old(exists_balance<Currency>(a))`. Consequently, the expression `old(..)` is not allowed
+within the definition of a helper function.
 
 Helper functions are partial functions; see discussion of [partial semantics](#partial-semantics).
 
@@ -384,14 +468,28 @@ Helper functions are partial functions; see discussion of [partial semantics](#p
 A helper function can be defined as **uninterpreted** by simply omitting its body:
 
 ```move
-spec define something(x: u64): u64;
+spec fun something(x: num): num;
 ```
 
-An uninterpreted function is one the prover is allowed to assign some arbitrary meaning to, as long as it is
-consistent within a given verification context. Uninterpreted functions are a useful tool for abstraction
-in specifications (see also [here](#abstract-specifications)).
+An uninterpreted function is one the prover is allowed to assign some arbitrary meaning to, as long
+as it is consistent within a given verification context. Uninterpreted functions are a useful tool
+for abstraction in specifications (see also [here](#abstract-specifications)).
 
-> NOTE: currently MSL does not support axioms for uninterpreted functions
+### Axioms
+
+The meaning of helper functions can be further constraint by using **axioms**. Currently, axioms
+must be contained in module spec blocks:
+
+```move
+spec module {
+    axiom forall x: num: something(x) == x + 1;
+}
+```
+
+Axiom should be used with care as they can introduce unsoundness in the specification logic via
+contradicting assumptions. The Move prover supports a smoke test for detecting unsoundness via
+the `--check-inconsistency`
+flag.
 
 ## Let Bindings
 
@@ -399,61 +497,42 @@ A spec block can contain let bindings which introduce names for expressions:
 
 ```move
 fun get_R(account: signer): R { ... }
-spec fun get_R {
+spec get_R {
     let addr = Signer::spec_address_of(account);
     aborts_if addr != ROOT;
     ensures result == global<R>(addr);
 }
 ```
 
-Semantically, let bindings are helper functions which get implicitly passed any names they access
-in their context (here `account` ). This means also that the same rules hold regards state access:
-`old(..)` cannot be used on the rhs of a let, and the actual value for a let name may
-be influenced by `old(..)`:
-
-```move
-spec fun f {
-    let r = global<R>(addr);
-    ensures r.x == old(r.x) + 1;
-}
-```
-
-Let bindings can also introduce helper functions using lambda notation, as seen here:
-
-```move
-spec fun f {
-    let ex = |a| exists<R>(a);
-    ensures ex(addr1) ==> ex(addr2);
-}
-```
-
-This is a natural extension of lets without lambdas, which simply adds explicit parameters to the implicit
-context parameters of the underlying helper function.
+In a spec block which has a pre and post state (like a function specification), the `let name = e`
+form will evaluate `e` in the pre-state. In order to evaluate an expression in the post state, one
+uses `let post name = e`. In the rhs expression of this form, one can use `old(..)` to refer to the
+pre-state.
 
 ## Aborts-If Condition
 
-The `aborts_if` condition is a spec block member which can appear only in a function context. It specifies conditions
-under which the function aborts.
+The `aborts_if` condition is a spec block member which can appear only in a function context. It
+specifies conditions under which the function aborts.
 
-In the following example, we specify that the function `increment` aborts if the `Counter` resource does not exist
-at address `a` (recall that `a` is the name of the parameter of `increment`).
+In the following example, we specify that the function `increment` aborts if the `Counter` resource
+does not exist at address `a` (recall that `a` is the name of the parameter of `increment`).
 
 ```move
-spec fun increment {
+spec increment {
     aborts_if !exists<Counter>(a);
 }
 ```
 
 If a function has more than one `aborts_if` condition, those conditions are or-ed with each other.
-The evaluation of the combined aborts condition (or-ed from each individual condition) depends on the value of the
-pragma `aborts_if_is_partial`. If this value is false (the default), the function aborts *if and only if* the
-combined aborts condition is true. In this case, the above aborts specification for `increment` will
-lead to a verification error, since there are additional situations where `increment` can abort, namely if
-incrementing `Counter.value` would lead to an overflow. To fix this, the specification can be
-completed like this:
+The evaluation of the combined aborts condition (or-ed from each individual condition) depends on
+the value of the pragma `aborts_if_is_partial`. If this value is false (the default), the function
+aborts *if and only if* the combined aborts condition is true. In this case, the above aborts
+specification for `increment` will lead to a verification error, since there are additional
+situations where `increment` can abort, namely if incrementing `Counter.value` would lead to an
+overflow. To fix this, the specification can be completed like this:
 
 ```move
-spec fun increment {
+spec increment {
     pragma aborts_if_is_partial = false; // This is the default, but added here for illustration.
     aborts_if !exists<Counter>(a);
     aborts_if global<Counter>(a).value == 255;
@@ -461,29 +540,28 @@ spec fun increment {
 ```
 
 If the value of `aborts_if_is_partial` is true, the combined aborts condition (the or-ed individual
-conditions) only *imply* that the function aborts. Formally, if `A` is the combined aborts condition,
-then with `aborts_if_is_partial = true`, we have `A ==> function_aborts`, otherwise we have
+conditions)
+only *
+imply* that the function aborts. Formally, if `A` is the combined aborts condition, then
+with `aborts_if_is_partial = true`, we have `A ==> function_aborts`, otherwise we have
 `A <==> function_aborts`. Therefore, the following does verify:
 
 ```move
-spec fun increment {
+spec increment {
     pragma aborts_if_is_partial = true;
     aborts_if !exists<Counter>(a);
 }
 ```
 
 <a name="risk-aborts-if-is-partial"></a>
-> Note that there is a certain risk in setting `aborts_if_is_partial` to true, and best practice is to avoid it
-in specifications of public functions and transaction scripts once those are considered finalized. This is because
-changing the code after finalization
-of the spec can add new (non-trivial, undesired) abort situations which the original specification did not
-anticipate, but which will nevertheless silently pass verification.
+> Note that there is a certain risk in setting `aborts_if_is_partial` to true, and best practice is to avoid it in specifications of public functions and transaction scripts once those are considered finalized. This is because changing the code after finalization of the spec can add new (non-trivial, undesired) abort situations which the original specification did not anticipate, but which will nevertheless silently pass verification.
 
-If no aborts condition is specified for a function, abort behavior is unspecified. The function may or
-may not abort, and verification will not raise any errors, whether `aborts_if_is_partial` is set or not.
-In order to state that a function never aborts, use `aborts_if false`. One can use the pragma `aborts_if_is_strict`
-to change this behavior; this is equivalent to as if an `aborts_if false` has been added to each function which
-does not have an explicit `aborts_if` clause.
+If no aborts condition is specified for a function, abort behavior is unspecified. The function may
+or may not abort, and verification will not raise any errors, whether `aborts_if_is_partial` is set
+or not. In order to state that a function never aborts, use `aborts_if false`. One can use the
+pragma `aborts_if_is_strict`
+to change this behavior; this is equivalent to as if an `aborts_if false` has been added to each
+function which does not have an explicit `aborts_if` clause.
 
 ### Aborts-If Condition with Code
 
@@ -494,12 +572,13 @@ fun get_value(addr: address): u64 {
     aborts(exists<Counter>(addr), 3);
     borrow_global<Counter>(addr).value
 }
-spec fun get_value {
+spec get_value {
     aborts_if !exists<Counter>(addr) with 3;
 }
 ```
 
-It is a verification error if the above function does not abort with code `3` under the given condition.
+It is a verification error if the above function does not abort with code `3` under the given
+condition.
 
 In order to specify a direct VM abort, one can use the special constant `EXECUTION_FAILURE`:
 
@@ -507,7 +586,7 @@ In order to specify a direct VM abort, one can use the special constant `EXECUTI
 fun get(addr: address): &Counter acquires Counter {
     borrow_global<Counter>(addr)
 }
-spec fun get {
+spec get {
     aborts_if !exists<Counter>(addr) with EXECUTION_FAILURE;
 }
 ```
@@ -516,36 +595,40 @@ This same constant can be used for all other VM failures (division by zero, over
 
 ## Aborts-With Condition
 
-The `aborts_with` condition allows to specify with which codes a function can abort, independent under which
-condition. It is similar to a 'throws' clause in languages like Java.
+The `aborts_with` condition allows specifying with which codes a function can abort, independent
+under which condition. It is similar to a 'throws' clause in languages like Java.
 
 ```move
 fun get_one_off(addr: address): u64 {
     aborts(exists<Counter>(addr), 3);
     borrow_global<Counter>(addr).value - 1
 }
-spec fun get_one_off {
+spec get_one_off {
     aborts_with 3, EXECUTION_FAILURE;
 }
 ```
 
-If the function aborts with any other or none of the specified codes, a verification error will be produced.
+If the function aborts with any other or none of the specified codes, a verification error will be
+produced.
 
-The `aborts_with` condition can be combined with `aborts_if` conditions. In this case, the `aborts_with` specifies
-any other codes with which the function may abort, in addition to the ones given in the `aborts_if`:
+The `aborts_with` condition can be combined with `aborts_if` conditions. In this case,
+the `aborts_with`
+specifies any other codes with which the function may abort, in addition to the ones given in
+the `aborts_if`:
 
 ```move
-spec fun get_one_off {
+spec get_one_off {
     aborts_if !exists<Counter>(addr) with 3;
     aborts_with EXECUTION_FAILURE;
 }
 ```
 
-If this is not wanted, and the `aborts_with` should be independent of `aborts_if`, one can use the property
+If this is not wanted, and the `aborts_with` should be independent of `aborts_if`, one can use the
+property
 `[check]`:
 
 ```move
-spec fun get_one_off {
+spec get_one_off {
     aborts_if !exists<Counter>(addr) with 3;
     aborts_if global<Counter>(addr) == 0 with EXECUTION_FAILURE;
 
@@ -553,41 +636,39 @@ spec fun get_one_off {
 }
 ```
 
+> TODO: `[check]` property is currently not longer implemented
+
 ## Requires Condition
 
-The `requires` condition is a spec block member which postulates a pre-condition for a function. The prover
-will produce verification errors for functions which are called with violating pre-conditions.
+The `requires` condition is a spec block member which postulates a pre-condition for a function. The
+prover will produce verification errors for functions which are called with violating
+pre-conditions.
 
-A `requires` is different from an `aborts_if`: in the latter case, the function can be called, and any aborts
-it produces will be propagated to the caller context. In the `requires` case, the prover will not allow the function to
-be called in the first place. Nevertheless, the function can *still be called at
-runtime* if verification is skipped. Because of this, `requires` are rare in Move specifications, and
+A `requires` is different from an `aborts_if`: in the latter case, the function can be called, and
+any aborts it produces will be propagated to the caller context. In the `requires` case, the prover
+will not allow the function to be called in the first place. Nevertheless, the function can *still
+be called at runtime* if verification is skipped. Because of this, `requires` are rare in Move
+specifications, and
 `aborts_if` are more common. Specifically, `requires` should be avoided for public APIs.
 
 An example of `requires` is the following:
 
 ```move
-spec fun increment {
+spec increment {
     requires global<Counter>(a).value < 255;
 }
 ```
 
-Notice that in the presence of an `aborts_if` with a negation of this condition
-(as [illustrated here](#aborts-if-condition)) the requires is redundant. In fact the prover takes the combined
-aborts condition of a function to be or-ed with a requires condition. That is `requires P` is translated to
-`requires P || A` (with `A` the combined aborts condition). For our example,
-`requires global<Counter>(a).value < 255 || global<Counter>(a).value == 255` simplifies to `requires true`.
-
-
 ## Ensures Condition
 
-The `ensures` condition postulates a post-condition for a function which must be satisfied when the function
-terminates successfully (i.e. does not abort). The prover will verify each `ensures` to this end.
+The `ensures` condition postulates a post-condition for a function which must be satisfied when the
+function terminates successfully (i.e. does not abort). The prover will verify each `ensures` to
+this end.
 
 An example for the `ensures` condition is the following:
 
 ```move
-spec fun increment {
+spec increment {
     ensures global<Counter>(a) == old(global<Counter>(a)) + 1;
 }
 ```
@@ -595,11 +676,10 @@ spec fun increment {
 Within the expression for the `ensures` condition, one can use the `old` function,
 [as discussed here](#pre-and-post-state).
 
-
 ## Modifies Condition
 
-The `modifies` condition is used to provide permissions to a function to modify global storage.
-The annotation itself comprises a list of global access expressions. It is specifically used together
+The `modifies` condition is used to provide permissions to a function to modify global storage. The
+annotation itself comprises a list of global access expressions. It is specifically used together
 with [opaque function specifications](#opaque-specifications).
 
 ```move
@@ -611,14 +691,14 @@ fun mutate_at(addr: address) acquires S {
     let s = borrow_global_mut<S>(addr);
     s.x = 2;
 }
-spec fun mutate_at {
+spec mutate_at {
     pragma opaque;
     modifies global<S>(addr);
 }
 ```
 
-In general, a global access expression has the form `global<type_expr>(address_expr)`.
-The address-valued expression is evaluated in the pre-state of the annotated function.
+In general, a global access expression has the form `global<type_expr>(address_expr)`. The
+address-valued expression is evaluated in the pre-state of the annotated function.
 
 ```move
 fun read_at(addr: address): u64 acquires S {
@@ -632,75 +712,104 @@ fun mutate_S_test(addr1: address, addr2: address): bool acquires T {
     mutate_at(addr1); // Note we are mutating a different address than the one read before and after
     x == read_at(addr2)
 }
-spec fun mutate_S_test {
+spec mutate_S_test {
     aborts_if addr1 == addr2;
     ensures result == true;
 }
 ```
 
-In the function `mutate_S_test`, the assertion in the spec block is expected to hold.
-A benefit of the modifies specification on `mutate_at` is that this assertion can be proved
-whether or not `mutate_at` is inlined.
+In the function `mutate_S_test`, the assertion in the spec block is expected to hold. A benefit of
+the modifies specification on `mutate_at` is that this assertion can be proved whether or
+not `mutate_at` is inlined.
 
 If the modifies annotation is omitted on a function, then that function is deemed to have all
-possible permissions for those resources it may modify during its execution.  The set of all
-resources that may be modified by a function is obtained via an interprocedural analysis of
-the code.  In the example above, `mutate_S_test` does not have a modifies specification
-and modifies resource `S` via the call to `mutate_at`.  Therefore, it is considered to have
-modified `S` at any possible address.  Instead, if the programmer adds `modifies global<S>(addr1)`
-to the specification of `mutate_S_test`, then the call to `mutate_at` is checked to make sure
-that modify permissions granted to `mutate_S_test` cover the permissions it grants to `mutate_at`.
+possible permissions for those resources it may modify during its execution. The set of all
+resources that may be modified by a function is obtained via an interprocedural analysis of the
+code. In the example above, `mutate_S_test` does not have a modifies specification and modifies
+resource `S` via the call to `mutate_at`. Therefore, it is considered to have modified `S` at any
+possible address. Instead, if the programmer adds `modifies global<S>(addr1)`
+to the specification of `mutate_S_test`, then the call to `mutate_at` is checked to make sure that
+modify permissions granted to `mutate_S_test` cover the permissions it grants to `mutate_at`.
 
 ## Invariant Condition
 
-The invariant condition can be applied on structs and on global state.
+The invariant condition can be applied on structs and on global level.
+
+### Function Invariants
+
+The `invariant` condition on a function is simply a shortcut for a `requires` and `ensures` with the
+same predicate.
+
+Thus the following spec block:
+
+```move
+spec increment {
+    invariant global<Counter>(a).value < 128;
+}
+```
+
+... is equivalent to:
+
+```move
+spec increment {
+    requires global<Counter>(a).value < 128;
+    ensures global<Counter>(a).value < 128;
+}
+```
 
 ### Struct Invariants
 
-When the `invariant` condition is applied to a struct, it expresses a well-formedness property of the struct data.
-Any instance of this struct which is currently not mutated will satisfy this property (with exceptions as
-outlined below).
+When the `invariant` condition is applied to a struct, it expresses a well-formedness property of
+the struct data. Any instance of this struct which is currently not mutated will satisfy this
+property (with exceptions as outlined below).
 
-For example, we can postulate an invariant on our counter that it never must exceed the value of 127:
+For example, we can postulate an invariant on our counter that it never must exceed the value of
+127:
 
 ```move
-spec struct Counter {
+spec Counter {
     invariant value < 128;
 }
 ```
 
-A struct invariant is checked by the prover whenever the struct value is constructed (packed). While the struct
-is mutated (e.g. via a `&mut Counter`) the invariant does *not* hold (but see exception below). In general,
-we consider mutation as an implicit unpack, and end of mutation as a pack.
+A struct invariant is checked by the prover whenever the struct value is constructed (packed). While
+the struct is mutated (e.g. via a `&mut Counter`) the invariant does *not* hold (but see exception
+below). In general, we consider mutation as an implicit unpack, and end of mutation as a pack.
 
-The Move language semantics unambiguously identifies the point when mutation ends and starts.
-This follows from the borrow semantics of Move, and includes mutation via an enclosing struct.
-(The mutation of an inner struct ends when the mutation of the root struct where mutation started ends.)
+The Move language semantics unambiguously identifies the point when mutation ends and starts. This
+follows from the borrow semantics of Move, and includes mutation via an enclosing struct.
+(The mutation of an inner struct ends when the mutation of the root struct where mutation started
+ends.)
 
-There is one exception to this rule. When a mutable reference to a struct declared in module M is passed into
-a *public* function of M which does by itself *not* return any other mutable reference (which could be borrowed from
-the input parameter), we treat this parameter as "packed". That means, on function entry, we will unpack it
-and on function exit we will pack again, enforcing the invariant. This reflects that in
-Move, struct data can only be mutated within the module which declares the struct, so for an outside caller
-of the public function, the mutable reference can actually not be mutated unless by calling public functions of
-module M again. It is a significant simplification of the verification problem to exploit this in the semantics.
+There is one exception to this rule. When a mutable reference to a struct declared in module M is
+passed into a *
+public*
+function of M which does by itself *not* return any other mutable reference (which could be borrowed
+from the input parameter), we treat this parameter as "packed". That means, on function entry, we
+will unpack it and on function exit we will pack again, enforcing the invariant. This reflects that
+in Move, struct data can only be mutated within the module which declares the struct, so for an
+outside caller of the public function, the mutable reference can actually not be mutated unless by
+calling public functions of module M again. It is a significant simplification of the verification
+problem to exploit this in the semantics.
 
 ### Global Invariants
 
-A global invariant is used in a module spec block and must be marked with the `[global]` property. It is used to
-define invariants over the global resource state. For example, the below invariant states that a `Counter` resource
-stored at any given address can never be zero:
+A global invariant appears as a member of module. It can express a condition over the global state
+of the Move program, as represented by resources stored in memory. For example, the below invariant
+states that a `Counter`
+resource stored at any given address can never be zero:
 
 ```move
-spec module {
-    invariant [global] forall a: addr where exists<Counter>(a): global<Counter>(a).value > 0;
+module M {
+    invariant forall a: addr where exists<Counter>(a): global<Counter>(a).value > 0;
 }
 ```
 
-A global invariant is assumed to hold when data is read from the global state, and is asserted (and may fail
-to verify) at the moment the state is updated. For example, the below function will never abort with arithmetic
-underflow because the counter value is always greater zero; however, it will create a verification error since the
-counter can drop to zero:
+A global invariant is assumed to hold when data is read from the global state, and is asserted (and
+may fail to verify)
+at the moment the state is updated. For example, the below function will never abort with arithmetic
+underflow because the counter value is always greater zero; however, it will create a verification
+error since the counter can drop to zero:
 
 ```
 fun decrement_ad(addr: address) acquires Counter {
@@ -711,72 +820,51 @@ fun decrement_ad(addr: address) acquires Counter {
 ```
 
 The `update` form of a global invariant allows to express a relation
-between [pre-state and post-state](#pre-and-post-state) of a global state update. For example, the following invariant
-states that the counter must decrease monotonically whenever it is updated:
+between [pre-state and post-state](#pre-and-post-state) of a global state update. For example, the
+following invariant states that the counter must decrease monotonically whenever it is updated:
 
 ```move
-spec module {
+module M {
     invariant update [global] forall a: addr where old(exists<Counter>(a)) && exists<Counter>(addr):
         global<Counter>(a).value <= old(global<Counter>(a));
 }
 ```
 
-> NOTE: there is also an older form of invariant on module level, simple written as
-> `spec module { invariant P; }`. This style of invariant is deprecated. For now, be sure to always provide
-> the property `[global]` with an invariant on module level.
-
 #### Isolated Global Invariants
 
-A global invariant can be marked as `[isolated]` to indicate that it is not relevant for proving other
-properties of the program. An isolated global invariant will not be assumed when the related
-global state is read. It will only be assumed before the state is updated, to help prove that the invariant
-still holds after the update. This feature is for improving performance in situations where there are many
-global invariants but there have no direct influence on verification.
+A global invariant can be marked as `[isolated]` to indicate that it is not relevant for proving
+other properties of the program. An isolated global invariant will not be assumed when the related
+global state is read. It will only be assumed before the state is updated, to help prove that the
+invariant still holds after the update. This feature is for improving performance in situations
+where there are many global invariants but there have no direct influence on verification.
 
 #### Modular Verification and Global Invariants
 
-Certain usage of global invariants leads to verification problems which cannot be checked in a modular fashion.
-"Modular" here means that a module can be verified standalone and proven to be universally correct in all
-usage contexts (if preconditions are met).
+Certain usage of global invariants leads to verification problems which cannot be checked in a
+modular fashion.
+"Modular" here means that a module can be verified standalone and proven to be universally correct
+in all usage contexts (if preconditions are met).
 
-A non-modular verification problem may arise if a global invariant refers to state from multiple modules.
-Consider a situation where
-module `M1` uses module `M2`, and `M1` contains the following invariant, with the helper function `condition`
-referring to global state of each respective module:
-
-```move
-module M1 {
-    spec module {
-        invariant [global] M1::condition() ==> M2::condition();
-    }
-}
-```
-
-If we verify `M1` standalone, we do *not* also verify that all functions in `M2` maintain the `M2::condition()`, because
-verification of `M2` is not enabled. In order to verify the above invariant, we must verify `M1` and `M2`
-together, in one call to the Move prover.
-
-As a rule of thumb, a global invariant which refers to other module state in the *premise* of implications can still
-be verified modular. For example, if premise and conclusion are swapped for the above example, then `M1` can be
-verified standalone:
+A non-modular verification problem may arise if a global invariant refers to state from multiple
+modules. Consider a situation where module `M1` uses module `M2`, and `M1` contains the following
+invariant, with the helper function `condition` referring to global state of each respective module:
 
 ```move
 module M1 {
-    spec module {
-        invariant [global] M2::condition() ==> M1::condition();
-    }
+    invariant M1::condition() ==> M2::condition();
 }
 ```
 
-The semantic background for this is that the above invariant -- in contrast to the one before -- does not impose any
-constraints on the state of `M2`, but only on that of `M1`. Therefore, `M2` can be verified without considering this
-invariant.
+When we verify `M1` standalone, the Move prover will determine that it also needs to verify
+functions in `M2`, namely those which update the M2 memory such that the invariant in M1 can fail.
+
+> TODO: document mechanism and pragmas to defer invariant verification for code sections
 
 ## Assume and Assert Conditions in Code
 
-In spec blocks inside of code, the only allowed conditions are assume and assert.
-A spec block in code can occur anywhere an ordinary Move statement block can occur.
-Here is an example:
+In spec blocks inside of code, the only allowed conditions are assume and assert. A spec block in
+code can occur anywhere an ordinary Move statement block can occur. Here is an example:
+
 ```
 fun simple1(x: u64, y: u64) {
     let z;
@@ -788,12 +876,14 @@ fun simple1(x: u64, y: u64) {
     }
 }
 ```
-An assert statement inside a spec block indicates a condition that must hold when control reaches that block.
-If the condition does not hold, an error is reported by the Move Prover.
-An assume statement, on the other hand, blocks executions violating the condition in the statement.
-The function `simple2` shown below is verified by the Move Prover.
-However, if the first spec block containing the assume statement is removed, Move Prover will
-show a violating to the assert statement in the second spec block.
+
+An assert statement inside a spec block indicates a condition that must hold when control reaches
+that block. If the condition does not hold, an error is reported by the Move Prover. An assume
+statement, on the other hand, blocks executions violating the condition in the statement. The
+function `simple2` shown below is verified by the Move Prover. However, if the first spec block
+containing the assume statement is removed, Move Prover will show a violating to the assert
+statement in the second spec block.
+
 ```
 fun simple2(x: u64, y: u64) {
     let z: u64;
@@ -806,7 +896,10 @@ fun simple2(x: u64, y: u64) {
     }
 }
 ```
-An assert statement can also encode a loop invariant if it is placed at a loop head, as in the following example.
+
+An assert statement can also encode a loop invariant if it is placed at a loop head, as in the
+following example.
+
 ```
 fun simple3(n: u64) {
     let x = 0
@@ -825,19 +918,21 @@ fun simple3(n: u64) {
     }
 }
 ```
-A loop invariant may comprise both assert and assume statements.
-The assume statements will be assumed at each entry into the loop while the assert statements will be
-checked at each entry into the loop.
+
+A loop invariant may comprise both assert and assume statements. The assume statements will be
+assumed at each entry into the loop while the assert statements will be checked at each entry into
+the loop.
 
 ## Specification Variables
 
 MSL supports *spec variables*, also called *ghost variables* in the verification community. These
-variables are used only in specifications and represent information derived from the global state
-of resources. An example use case is to compute the sum of all coins
-available in the system and specify that the sum can be changed only in certain scenarios.
+variables are used only in specifications and represent information derived from the global state of
+resources. An example use case is to compute the sum of all coins available in the system and
+specify that the sum can be changed only in certain scenarios.
 
-We illustrate this feature by introducing a spec variable which maintains the sum of all `Counter` resources from
-our running example. First, a spec variable is introduced via spec module block as follows:
+We illustrate this feature by introducing a spec variable which maintains the sum of all `Counter`
+resources from our running example. First, a spec variable is introduced via spec module block as
+follows:
 
 ```move
 spec module {
@@ -845,18 +940,18 @@ spec module {
 }
 ```
 
-This value is going to be updated whenever a `Counter` is packed or unpacked. (Recall that mutation is
-interpreted as an implicit unpack and pack):
+This value is going to be updated whenever a `Counter` is packed or unpacked. (Recall that mutation
+is interpreted as an implicit unpack and pack):
 
 ```move
-spec struct Counter {
+spec Counter {
     invariant pack sum_of_counters = sum_of_counters + value;
     invariant unpack sum_of_counters = sum_of_counters - value;
 }
 ```
 
-Now we may for example want to specify that the sum of all Counter instances in the global state should never
-exceed a particular value. We can do this as follows:
+Now we may for example want to specify that the sum of all Counter instances in the global state
+should never exceed a particular value. We can do this as follows:
 
 ```move
 spec module {
@@ -864,7 +959,8 @@ spec module {
 }
 ```
 
-Note that spec variables can be referenced also from helper functions. Moreover, spec variables can be generic:
+Note that spec variables can be referenced also from helper functions. Moreover, spec variables can
+be generic:
 
 ```move
 spec module {
@@ -872,13 +968,13 @@ spec module {
 }
 ```
 
-When using such a spec variable, a type parameter need to be provided, as in `some_generic_var<u64>`. Effectively,
-a generic spec variable is like a family of variables indexed by types.
+When using such a spec variable, a type parameter need to be provided, as in `some_generic_var<u64>`
+. Effectively, a generic spec variable is like a family of variables indexed by types.
 
 ## Schemas
 
-Schemas are a means for structuring specifications by grouping properties together. Semantically, they are just
-syntactic sugar which expand to conditions on functions, structs, or modules.
+Schemas are a means for structuring specifications by grouping properties together. Semantically,
+they are just syntactic sugar which expand to conditions on functions, structs, or modules.
 
 ### Basic Schema Usage
 
@@ -891,59 +987,61 @@ spec schema IncrementAborts {
     aborts_if global<Counter>(a).value == 255;
 }
 
-spec fun increment {
+spec increment {
     include IncrementAborts;
 }
 ```
 
-Each schema may declare a number of typed variable names and a list of conditions over those variables. All supported
-condition types can be used in schemas. The schema can then be included in another spec block:
+Each schema may declare a number of typed variable names and a list of conditions over those
+variables. All supported condition types can be used in schemas. The schema can then be included in
+another spec block:
 
-- If that spec block is for a function or a struct, all variable names the schema declares must be matched against
-  existing names of compatible type in the context.
-- If a schema is included in another schema, existing names are matched and must have the same type, but non-existing
-  names will be added as new declarations to the inclusion context.
+- If that spec block is for a function or a struct, all variable names the schema declares must be
+  matched against existing names of compatible type in the context.
+- If a schema is included in another schema, existing names are matched and must have the same type,
+  but non-existing names will be added as new declarations to the inclusion context.
 
-When a schema is included in another spec block, it will be checked whether the conditions it contains are allowed
-in this block. For example, including the schema `IncrementAborts` into a struct spec block will lead to a compile
-time error.
+When a schema is included in another spec block, it will be checked whether the conditions it
+contains are allowed in this block. For example, including the schema `IncrementAborts` into a
+struct spec block will lead to a compile time error.
 
-When a schema is included the names it declares can also bound by expressions. For example, one
-can write `include IncrementAborts{a: some_helper_address()}`. Effectively, not providing a binding
-is equivalent to writing `IncrementAborts{a: a}` if `a` is an existing name in scope.
+When a schema is included the names it declares can also bound by expressions. For example, one can
+write `include IncrementAborts{a: some_helper_address()}`. Effectively, not providing a binding is
+equivalent to writing `IncrementAborts{a: a}` if `a` is an existing name in scope.
 
-Schemas can be generic. Generic schemas must be fully instantiated where they are included; type inference is
-not available for schemas.
+Schemas can be generic. Generic schemas must be fully instantiated where they are included; type
+inference is not available for schemas.
 
 ### Schema Expressions
 
 When a schema is included, one can use a limited set of Boolean operators as follows:
 
-- `P ==> SchemaExp`: all conditions in the schema will be prefixed with `P ==> ..`.
-    Conditions which are not based on boolean expressions will be rejected.
+- `P ==> SchemaExp`: all conditions in the schema will be prefixed with `P ==> ..`. Conditions which
+  are not based on boolean expressions will be rejected.
 - `if (P) SchemaExp1 else SchemaExp2`: this is treated similar as including both
   `P ==> SchemaExp1` and `!P ==> SchemaExp2`.
-- `SchemaExp1 && SchemaExp2`: this is treated as two includes for the both schema
-   expressions.
+- `SchemaExp1 && SchemaExp2`: this is treated as two includes for the both schema expressions.
 
 ### Schema Apply Operation
 
-One of the main uses cases for schemas is to be able to name a group of properties and then apply those
-to a set of functions. This is achieved by the `apply` operator. The `apply` spec block member can only appear
-in module spec blocks.
+One of the main uses cases for schemas is to be able to name a group of properties and then apply
+those to a set of functions. This is achieved by the `apply` operator. The `apply` spec block member
+can only appear in module spec blocks.
 
-The general form of the apply operator is `apply Schema to FunctionPattern, .. except FunctionPattern, ..`. Here,
+The general form of the apply operator
+is `apply Schema to FunctionPattern, .. except FunctionPattern, ..`. Here,
 `Schema` can be a schema name or a schema name plus formal type arguments.
- `FunctionPatterns` consists of an optional
-visibility modifier `public` or `internal` (if not provided, both visibilities will match), a name pattern in
-the style of a shell file pattern (e.g. `*`, `foo*`, `foo*bar`, etc.), and finally an optional type argument list.
-All type arguments provided to `Schema` must be bound in this list and vice versa.
+`FunctionPatterns` consists of an optional visibility modifier `public` or `internal` (if not
+provided, both visibilities will match), a name pattern in the style of a shell file pattern (
+e.g. `*`, `foo*`, `foo*bar`, etc.)
+, and finally an optional type argument list. All type arguments provided to `Schema` must be bound
+in this list and vice versa.
 
-The apply operator includes the given schema in all function spec blocks which match the patterns, except those
-which are excluded via the `except` patterns.
+The apply operator includes the given schema in all function spec blocks which match the patterns,
+except those which are excluded via the `except` patterns.
 
-A typical use of the apply operator is to provide common pre and post conditions to all functions in a module with
-some exceptions. Example:
+A typical use of the apply operator is to provide common pre and post conditions to all functions in
+a module with some exceptions. Example:
 
 ```move
 spec schema Unchanged {
@@ -957,62 +1055,65 @@ spec module {
 }
 ```
 
-Notice that while with [global invariants](#global-invariants) we can express similar things, we *cannot*
+Notice that while with [global invariants](#global-invariants) we can express similar things, we *
+cannot*
 express the restriction of the invariant to only specific functions.
 
 ## Opaque Specifications
 
-With the pragma `opaque`, a function is declared to be solely defined by its
-specification at caller sides. In contrast, if this
-pragma is not provided, then the function's implementation will be used as the basis to verify the caller.
+With the pragma `opaque`, a function is declared to be solely defined by its specification at caller
+sides. In contrast, if this pragma is not provided, then the function's implementation will be used
+as the basis to verify the caller.
 
-Using `opaque` requires the specification to be sufficiently complete for the verification problem at hand.
-Without opaque, the Move prover will use the implementation as the source of truth of the definition of the
-function. But with opaque, if there is an aspect of the function definition unspecified, an arbitrary meaning
-will be assumed. For example, with the specification below, the `increment` function can abort under
-arbitrary conditions:
+Using `opaque` requires the specification to be sufficiently complete for the verification problem
+at hand. Without opaque, the Move prover will use the implementation as the source of truth of the
+definition of the function. But with opaque, if there is an aspect of the function definition
+unspecified, an arbitrary meaning will be assumed. For example, with the specification below,
+the `increment` function can abort under arbitrary conditions:
 
 ```move
-spec fun increment {
+spec increment {
     pragma opaque;
     // aborts_if !exists<Counter>(a);  // We need to add this to make the function not abort arbitrarily
     ensures global<Counter>(a) == old(global<Counter>(a)) + 1;
 }
 ```
 
-In general, opaque functions enable modular verification, as they abstract from the implementation of functions,
-resulting in much faster verification.
+In general, opaque functions enable modular verification, as they abstract from the implementation
+of functions, resulting in much faster verification.
 
-If an opaque function modifies state, it is advised to use the [`modifies` condition](#modifies-condition) in its
-specification. If this is omitted, the modified state is determined by static analysis of the implementation, which
-is often more coarse-grained than desired.
-
+If an opaque function modifies state, it is advised to use
+the [`modifies` condition](#modifies-condition) in its specification. If this is omitted,
+verification of the state changes will fail.
 
 ## Abstract Specifications
 
-The `[abstract]` property allow to specify a function such that an abstract semantics is used at the caller side which
-is different from the actual implementation. This is useful if the implementation is too complex for verification, and
-an abstract semantics is sufficient for verification goals. The `[concrete]` property, in turn, allows to still
-specify conditions which are verified against the implementation, but not used at the caller side.
+The `[abstract]` property allow to specify a function such that an abstract semantics is used at the
+caller side which is different from the actual implementation. This is useful if the implementation
+is too complex for verification, and an abstract semantics is sufficient for verification goals.
+The `[concrete]` property, in turn, allows to still specify conditions which are verified against
+the implementation, but not used at the caller side.
 
-Consider the following example of a hash function. The actual value of the hash is not relevant for verification of
-callers, and we use an [uninterpreted helper function](#uninterpreted-functions) delivering an arbitrary value chosen
-by the prover. We can still specify the concrete implementation and verify its correctness:
+Consider the following example of a hash function. The actual value of the hash is not relevant for
+verification of callers, and we use an [uninterpreted helper function](#uninterpreted-functions)
+delivering an arbitrary value chosen by the prover. We can still specify the concrete implementation
+and verify its correctness:
 
 ```move
 fun hash(v: vector<u8>): u64 {
     <<sum up values>>(v)
 }
-spec fun hash {
+spec hash {
     pragma opaque;
     aborts_if false;
     ensures [concrete] result == <<sum up values>>(v);
     ensures [abstract] result == spec_hash_abstract(v);
 }
-spec define abstract_hash(v: vector<u8>): u64; // uninterpreted function
+spec fun abstract_hash(v: vector<u8>): u64; // uninterpreted function
 ```
 
-The soundness of the abstraction is the responsibility of the specifier, and not verified by the prover.
+The soundness of the abstraction is the responsibility of the specifier, and not verified by the
+prover.
 
 > NOTE: the abstract/concrete properties should only be used with opaque specifications, but the prover will
 > currently not generate an error if not.
@@ -1022,14 +1123,14 @@ The soundness of the abstraction is the responsibility of the specifier, and not
 
 ## Documentation Generation
 
-The organization of specification blocks in a file is relevant for documentation generation -- even though it is not for
-the semantics. See discussion of [organization of specification blocks](docgen.md#organization-of-specification-blocks).
-
+The organization of specification blocks in a file is relevant for documentation generation -- even
+though it is not for the semantics. See discussion
+of [organization of specification blocks](docgen.md#organization-of-specification-blocks).
 
 # Expressiveness
 
-The Move Specification language is expressive enough to represent the full Move language semantics (formal argument
-outstanding) with one exception: functions which return a `&mut T` type.
+The Move Specification language is expressive enough to represent the full Move language semantics (
+formal argument outstanding) with one exception: functions which return a `&mut T` type.
 
 Consider the following code:
 
@@ -1039,83 +1140,30 @@ struct S { x: u64, y: u64 }
 fun x_or_y(b: bool, s: &mut S): &mut u64 {
     if (b) &mut s.x else &mut s.y
 }
-spec fun x_or_y {
+spec x_or_y {
     ensures b ==> result == s.x;
     ensures !b ==> result == s.y;
 }
 ```
 
-We are not able to specify the *full* semantics of `x_or_y` in MSL, because we cannot capture the semantics
-of mutable references. While we can say something about the value behind the reference at function exit, subsequent
-effects as in `*x_or_y(b, &mut s) = 2` cannot be specified.
+We are not able to specify the *full* semantics of `x_or_y` in MSL, because we cannot capture the
+semantics of mutable references. While we can say something about the value behind the reference at
+function exit, subsequent effects as in `*x_or_y(b, &mut s) = 2` cannot be specified.
 
-However, the Move prover *does* understand the meaning of such functions -- the restriction is only in what we
-can specify. Practically this means we cannot make the function `x_or_y` opaque, and must let verification rely on that
-the prover directly works with the implementation. Specifically, we can verify the following (opaque):
+However, the Move prover *does* understand the meaning of such functions -- the restriction is only
+in what we can specify. Practically this means we cannot make the function `x_or_y` opaque, and must
+let verification rely on that the prover directly works with the implementation. Specifically, we
+can verify the following
+(which can then be opaque):
 
 ```move
 fun x_or_y_test(s: S): S {
     *x_or_y(true, &mut s) = 2;
     s
 }
-spec fun x_or_y_test {
+spec x_or_y_test {
     pragma opaque;
     ensures result.x == 2;
     ensures result.y == s.y;
-}
-```
-
-
-# Appendix: Experimental/Deprecated Features
-
-This appendix describes features which are experimental and/or deprecated.
-
-
-## SucceedsIf Condition (experimental)
-
-> NOTE: this condition is experimental and might be removed in the future unless we find good indication
-> that we need it.
-
-The `succeeds_if` condition expresses when a function is expected to terminate with no abort.
-In the presence of `pragma aborts_if_is_partial = true` is true, it might help
-to minimize the risk of this model.
-
-If there are multiple `succeeds_if` conditions, they are or-ed into a combined terminates condition. That is,
-each individual `succeeds_if` is a condition under which the function should always succeed.
-
-Consider a combined aborts condition `A` (which is `false` if there is no `aborts_if`) and a combined terminates
-condition `T ` (which is false if there is no `succeeds_if`). Then abort of a function is governed by the
-following predicate:
-
-```
-A ==>  function_aborts && T ==> !functions_abort    // if aborts_if_is_partial is true
-A <==> function_aborts && T ==> !functions_abort    // if aborts_if_is_partial is false
-```
-
-Notice that in the 2nd case, we should expect for a sound specification that `!A ==> T`, so
-termination conditions are in fact redundant if `aborts_if_is_partial = false`.
-
-> Note that mixing `aborts_if` and `succeeds_if` conditions can cause unsound (contradicting) specifications,
-> as illustrated above, and should be done with care.
-
-## Invariant Condition on Functions (deprecated)
-
-The `invariant` condition on a function is simply a shortcut for a `requires` and `ensures` with the same predicate.
-Similarly, the `invariant module` condition is a shortcut for `requires module` and `ensures` with the same predicate.
-
-Thus the following spec block:
-
-```move
-spec fun increment {
-    invariant module global<Counter>(a).value < 128;
-}
-```
-
-... is equivalent to:
-
-```move
-spec fun increment {
-    requires module global<Counter>(a).value < 128;
-    ensures global<Counter>(a).value < 128;
-}
+}/in
 ```
