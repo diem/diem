@@ -252,7 +252,15 @@ impl Benches {
 }
 
 fn sparse_merkle_benches(c: &mut Criterion) {
-    Benches::gen(&[100, 1000, 10000]).run(c);
+    // Fix Rayon threadpool size to 8, which is realistic as in the current production setting
+    // and benchmarking result will be more stable across different machines.
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8)
+        .thread_name(|index| format!("rayon-global-{}", index))
+        .build_global()
+        .expect("Failed to build rayon global thread pool.");
+
+    Benches::gen(&[2, 4, 8, 16, 32, 100, 1000, 10000]).run(c);
 }
 
 criterion_group!(benches, sparse_merkle_benches);
