@@ -89,7 +89,10 @@ pub enum AccountRoleView {
         preburn_queues: Option<Vec<PreburnQueueView>>,
     },
     #[serde(rename = "treasury_compliance")]
-    TreasuryCompliance { diem_id_domain_events_key: EventKey },
+    TreasuryCompliance {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        diem_id_domain_events_key: Option<EventKey>,
+    },
 }
 
 impl AccountRoleView {
@@ -1197,10 +1200,13 @@ impl From<AccountRole> for AccountRoleView {
                     preburn_queues,
                 }
             }
+            //Some(*diem_id_domain_manager.diem_id_domain_events().key())
             AccountRole::TreasuryCompliance {
                 diem_id_domain_manager,
             } => AccountRoleView::TreasuryCompliance {
-                diem_id_domain_events_key: *diem_id_domain_manager.diem_id_domain_events().key(),
+                diem_id_domain_events_key: diem_id_domain_manager.map(|diem_id_domain_manager| {
+                    *diem_id_domain_manager.diem_id_domain_events().key()
+                }),
             },
         }
     }
