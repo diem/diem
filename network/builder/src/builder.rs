@@ -177,7 +177,7 @@ impl NetworkBuilder {
         let authentication_mode = if config.mutual_authentication {
             AuthenticationMode::Mutual(identity_key)
         } else {
-            AuthenticationMode::ServerOnly(identity_key)
+            AuthenticationMode::MaybeMutual(identity_key)
         };
 
         let network_context = Arc::new(NetworkContext::new(

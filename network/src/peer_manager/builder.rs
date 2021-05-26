@@ -34,17 +34,17 @@ use netcore::transport::{
 use std::{clone::Clone, collections::HashMap, fmt::Debug, net::IpAddr, sync::Arc};
 use tokio::runtime::Handle;
 
-// TODO:  This is the wrong logical location for this code to exist.  Determine the better location.
+/// Inbound and Outbound connections are always secured with NoiseIK.  The dialer
+/// will always verify the listener.
 #[derive(Debug)]
 pub enum AuthenticationMode {
-    /// Inbound and outbound connections are secured with NoiseIK; however, only
-    /// clients/dialers will authenticate the servers/listeners. More specifically,
-    /// dialers will pin the connection to a specific, expected pubkey while
-    /// listeners will accept any inbound dialer's pubkey.
-    ServerOnly(x25519::PrivateKey),
-    /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
-    /// listener will only accept connections that successfully authenticate to a
-    /// pubkey in their "trusted peers" set.
+    /// Inbound connections will first be checked against the known peers set, and
+    /// if the `PeerId` is known it will be authenticated against it's `PublicKey`
+    /// Otherwise, the incoming connections will be allowed through in the common
+    /// pool of unknown peers.
+    MaybeMutual(x25519::PrivateKey),
+    /// Both dialer and listener will verify public keys of each other in the
+    /// handshake.
     Mutual(x25519::PrivateKey),
 }
 
@@ -54,6 +54,7 @@ struct TransportContext {
     rpc_protocols: Vec<ProtocolId>,
     authentication_mode: AuthenticationMode,
     trusted_peers: Arc<RwLock<PeerSet>>,
+    enable_proxy_protocol: bool,
 }
 
 impl TransportContext {
@@ -63,6 +64,7 @@ impl TransportContext {
         rpc_protocols: Vec<ProtocolId>,
         authentication_mode: AuthenticationMode,
         trusted_peers: Arc<RwLock<PeerSet>>,
+        enable_proxy_protocol: bool,
     ) -> Self {
         Self {
             chain_id,
@@ -70,6 +72,7 @@ impl TransportContext {
             rpc_protocols,
             authentication_mode,
             trusted_peers,
+            enable_proxy_protocol,
         }
     }
 
@@ -108,7 +111,10 @@ struct PeerManagerContext {
 
     max_concurrent_network_reqs: usize,
     channel_size: usize,
+    max_frame_size: usize,
     inbound_connection_limit: usize,
+    inbound_rate_limit_config: Option<RateLimitConfig>,
+    outbound_rate_limit_config: Option<RateLimitConfig>,
 }
 
 impl PeerManagerContext {
@@ -127,7 +133,10 @@ impl PeerManagerContext {
 
         max_concurrent_network_reqs: usize,
         channel_size: usize,
+        max_frame_size: usize,
         inbound_connection_limit: usize,
+        inbound_rate_limit_config: Option<RateLimitConfig>,
+        outbound_rate_limit_config: Option<RateLimitConfig>,
     ) -> Self {
         Self {
             pm_reqs_tx,
@@ -141,7 +150,10 @@ impl PeerManagerContext {
 
             max_concurrent_network_reqs,
             channel_size,
+            max_frame_size,
             inbound_connection_limit,
+            inbound_rate_limit_config,
+            outbound_rate_limit_config,
         }
     }
 
@@ -166,11 +178,10 @@ type MemoryPeerManager =
     PeerManager<DiemNetTransport<MemoryTransport>, NoiseStream<memsocket::MemorySocket>>;
 type TcpPeerManager = PeerManager<DiemNetTransport<TcpTransport>, NoiseStream<TcpSocket>>;
 
-#[derive(Debug, PartialEq, PartialOrd)]
-enum State {
-    CREATED,
-    BUILT,
-    STARTED,
+enum TransportPeerManager {
+    #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
+    Memory(MemoryPeerManager),
+    Tcp(TcpPeerManager),
 }
 
 pub struct PeerManagerBuilder {
@@ -179,17 +190,9 @@ pub struct PeerManagerBuilder {
     transport_context: Option<TransportContext>,
     peer_manager_context: Option<PeerManagerContext>,
     // TODO(philiphayes): better support multiple listening addrs
-    // An option to ensure at most one copy of the contained private key.
-    #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
-    memory_peer_manager: Option<MemoryPeerManager>,
-    tcp_peer_manager: Option<TcpPeerManager>,
+    peer_manager: Option<TransportPeerManager>,
     // ListenAddress will be updated when the PeerManager is built
     listen_address: NetworkAddress,
-    state: State,
-    max_frame_size: usize,
-    enable_proxy_protocol: bool,
-    inbound_rate_limit_config: Option<RateLimitConfig>,
-    outbound_rate_limit_config: Option<RateLimitConfig>,
 }
 
 impl PeerManagerBuilder {
@@ -228,6 +231,7 @@ impl PeerManagerBuilder {
                 Vec::new(),
                 authentication_mode,
                 trusted_peers.clone(),
+                enable_proxy_protocol,
             )),
             peer_manager_context: Some(PeerManagerContext::new(
                 pm_reqs_tx,
@@ -239,17 +243,13 @@ impl PeerManagerBuilder {
                 Vec::new(),
                 max_concurrent_network_reqs,
                 channel_size,
+                max_frame_size,
                 inbound_connection_limit,
+                inbound_rate_limit_config,
+                outbound_rate_limit_config,
             )),
-            #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
-            memory_peer_manager: None,
-            tcp_peer_manager: None,
+            peer_manager: None,
             listen_address,
-            state: State::CREATED,
-            max_frame_size,
-            enable_proxy_protocol,
-            inbound_rate_limit_config,
-            outbound_rate_limit_config,
         }
     }
 
@@ -275,8 +275,6 @@ impl PeerManagerBuilder {
     /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
-        assert_eq!(self.state, State::CREATED);
-        self.state = State::BUILT;
         use diem_types::network_address::Protocol::*;
 
         let transport_context = self
@@ -286,9 +284,10 @@ impl PeerManagerBuilder {
 
         let protos = transport_context.supported_protocols();
         let chain_id = transport_context.chain_id;
+        let enable_proxy_protocol = transport_context.enable_proxy_protocol;
 
         let (key, auth_mode) = match transport_context.authentication_mode {
-            AuthenticationMode::ServerOnly(key) => (
+            AuthenticationMode::MaybeMutual(key) => (
                 key,
                 HandshakeAuthMode::maybe_mutual(transport_context.trusted_peers),
             ),
@@ -298,9 +297,9 @@ impl PeerManagerBuilder {
             ),
         };
 
-        match self.listen_address.as_slice() {
+        self.peer_manager = match self.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
-                self.tcp_peer_manager = Some(self.build_with_transport(
+                Some(TransportPeerManager::Tcp(self.build_with_transport(
                     DiemNetTransport::new(
                         DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
@@ -310,28 +309,26 @@ impl PeerManagerBuilder {
                         HANDSHAKE_VERSION,
                         chain_id,
                         protos,
-                        self.enable_proxy_protocol,
+                        enable_proxy_protocol,
                     ),
                     executor,
-                ))
+                )))
             }
             #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
-            [Memory(_)] => {
-                self.memory_peer_manager = Some(self.build_with_transport(
-                    DiemNetTransport::new(
-                        MemoryTransport,
-                        self.network_context.clone(),
-                        self.time_service.clone(),
-                        key,
-                        auth_mode,
-                        HANDSHAKE_VERSION,
-                        chain_id,
-                        protos,
-                        self.enable_proxy_protocol,
-                    ),
-                    executor,
-                ))
-            }
+            [Memory(_)] => Some(TransportPeerManager::Memory(self.build_with_transport(
+                DiemNetTransport::new(
+                    MemoryTransport,
+                    self.network_context.clone(),
+                    self.time_service.clone(),
+                    key,
+                    auth_mode,
+                    HANDSHAKE_VERSION,
+                    chain_id,
+                    protos,
+                    enable_proxy_protocol,
+                ),
+                executor,
+            ))),
             _ => panic!(
                 "{} Unsupported listen_address: '{}', expected '/memory/<port>', \
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
@@ -360,12 +357,12 @@ impl PeerManagerBuilder {
         let inbound_rate_limiters = token_bucket_rate_limiter(
             &self.network_context,
             "inbound",
-            self.inbound_rate_limit_config,
+            pm_context.inbound_rate_limit_config,
         );
         let outbound_rate_limiters = token_bucket_rate_limiter(
             &self.network_context,
             "outbound",
-            self.outbound_rate_limit_config,
+            pm_context.outbound_rate_limit_config,
         );
         let peer_mgr = PeerManager::new(
             executor.clone(),
@@ -382,7 +379,7 @@ impl PeerManagerBuilder {
             pm_context.connection_event_handlers,
             pm_context.max_concurrent_network_reqs,
             pm_context.channel_size,
-            self.max_frame_size,
+            pm_context.max_frame_size,
             pm_context.inbound_connection_limit,
             inbound_rate_limiters,
             outbound_rate_limiters,
@@ -407,15 +404,15 @@ impl PeerManagerBuilder {
     }
 
     pub fn start(&mut self, executor: &Handle) {
-        assert_eq!(self.state, State::BUILT);
-        self.state = State::STARTED;
         debug!("{} Starting Peer manager", self.network_context);
-        #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
-        if let Some(memory_pm) = self.memory_peer_manager.take() {
-            self.start_peer_manager(memory_pm, executor);
-        };
-        if let Some(tcp_pm) = self.tcp_peer_manager.take() {
-            self.start_peer_manager(tcp_pm, executor);
+        match self
+            .peer_manager
+            .take()
+            .expect("Can only start PeerManager once")
+        {
+            #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
+            TransportPeerManager::Memory(pm) => self.start_peer_manager(pm, executor),
+            TransportPeerManager::Tcp(pm) => self.start_peer_manager(pm, executor),
         }
     }
 
@@ -465,6 +462,7 @@ impl PeerManagerBuilder {
     }
 }
 
+/// Builds a token bucket rate limiter with attached metrics
 fn token_bucket_rate_limiter(
     network_context: &Arc<NetworkContext>,
     label: &'static str,
