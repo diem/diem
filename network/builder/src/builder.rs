@@ -31,7 +31,7 @@ use network::{
     logging::NetworkSchema,
     peer_manager::{
         builder::{AuthenticationMode, PeerManagerBuilder},
-        conn_notifs_channel, ConnectionRequestSender,
+        ConnectionRequestSender,
     },
     protocols::{
         health_checker::{self, builder::HealthCheckerBuilder},
@@ -64,7 +64,7 @@ pub struct NetworkBuilder {
     time_service: TimeService,
     network_context: Arc<NetworkContext>,
 
-    configuration_change_listener_builder: Option<ValidatorSetChangeListenerBuilder>,
+    validator_set_listener_builder: Option<ValidatorSetChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
     peer_manager_builder: PeerManagerBuilder,
@@ -114,7 +114,7 @@ impl NetworkBuilder {
             executor: None,
             time_service,
             network_context,
-            configuration_change_listener_builder: None,
+            validator_set_listener_builder: None,
             connectivity_manager_builder: None,
             health_checker_builder: None,
             peer_manager_builder,
@@ -256,17 +256,47 @@ impl NetworkBuilder {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
         self.executor = Some(executor);
-        self.build_peer_manager()
+        self.peer_manager_builder
+            .build(self.executor.as_mut().expect("Executor must exist"));
+        self
     }
 
     /// Start the built Networking components.
     pub fn start(&mut self) -> &mut Self {
         assert_eq!(self.state, State::BUILT);
         self.state = State::STARTED;
-        self.start_peer_manager()
-            .start_connectivity_manager()
-            .start_connection_monitoring()
-            .start_validator_set_listener()
+
+        let executor = self.executor.as_mut().expect("Executor must exist");
+        self.peer_manager_builder.start(executor);
+        debug!(
+            NetworkSchema::new(&self.network_context),
+            "{} Started peer manager", self.network_context
+        );
+
+        if let Some(conn_mgr_builder) = self.connectivity_manager_builder.as_mut() {
+            conn_mgr_builder.start(executor);
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Started conn manager", self.network_context
+            );
+        }
+
+        if let Some(health_checker_builder) = self.health_checker_builder.as_mut() {
+            health_checker_builder.start(executor);
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Started health checker", self.network_context
+            );
+        }
+
+        if let Some(validator_set_listener_builder) = self.validator_set_listener_builder.as_mut() {
+            validator_set_listener_builder.start(executor);
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Started validator set listener", self.network_context
+            );
+        }
+        self
     }
 
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
@@ -283,24 +313,8 @@ impl NetworkBuilder {
             .map(|conn_mgr_builder| conn_mgr_builder.conn_mgr_reqs_tx())
     }
 
-    fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
-        self.peer_manager_builder.add_connection_event_listener()
-    }
-
     pub fn listen_address(&self) -> NetworkAddress {
         self.peer_manager_builder.listen_address()
-    }
-
-    fn build_peer_manager(&mut self) -> &mut Self {
-        self.peer_manager_builder
-            .build(self.executor.as_mut().expect("Executor must exist"));
-        self
-    }
-
-    fn start_peer_manager(&mut self) -> &mut Self {
-        self.peer_manager_builder
-            .start(self.executor.as_mut().expect("Executor must exist"));
-        self
     }
 
     /// Add a [`ConnectivityManager`] to the network.
@@ -323,7 +337,7 @@ impl NetworkBuilder {
         channel_size: usize,
         mutual_authentication: bool,
     ) -> &mut Self {
-        let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
+        let pm_conn_mgr_notifs_rx = self.peer_manager_builder.add_connection_event_listener();
         let outbound_connection_limit = if !self.network_context.network_id().is_validator_network()
         {
             Some(max_outbound_connections)
@@ -348,13 +362,6 @@ impl NetworkBuilder {
         self
     }
 
-    fn start_connectivity_manager(&mut self) -> &mut Self {
-        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
-            builder.start(self.executor.as_mut().expect("Executor must exist"));
-        }
-        self
-    }
-
     fn add_validator_set_listener(&mut self, pubkey: PublicKey, encryptor: Encryptor) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
@@ -364,24 +371,13 @@ impl NetworkBuilder {
         self.reconfig_subscriptions
             .push(simple_discovery_reconfig_subscription);
 
-        self.configuration_change_listener_builder =
-            Some(ValidatorSetChangeListenerBuilder::create(
-                self.network_context.clone(),
-                pubkey,
-                encryptor,
-                conn_mgr_reqs_tx,
-                simple_discovery_reconfig_rx,
-            ));
-        self
-    }
-
-    fn start_validator_set_listener(&mut self) -> &mut Self {
-        if let Some(configuration_change_listener) =
-            self.configuration_change_listener_builder.as_mut()
-        {
-            configuration_change_listener
-                .start(self.executor.as_mut().expect("Executor must exist"));
-        }
+        self.validator_set_listener_builder = Some(ValidatorSetChangeListenerBuilder::create(
+            self.network_context.clone(),
+            pubkey,
+            encryptor,
+            conn_mgr_reqs_tx,
+            simple_discovery_reconfig_rx,
+        ));
         self
     }
 
@@ -409,18 +405,6 @@ impl NetworkBuilder {
             NetworkSchema::new(&self.network_context),
             "{} Created health checker", self.network_context
         );
-        self
-    }
-
-    /// Star the built HealthChecker.
-    fn start_connection_monitoring(&mut self) -> &mut Self {
-        if let Some(health_checker) = self.health_checker_builder.as_mut() {
-            health_checker.start(self.executor.as_mut().expect("Executor must exist"));
-            debug!(
-                NetworkSchema::new(&self.network_context),
-                "{} Started health checker", self.network_context
-            );
-        };
         self
     }
 
