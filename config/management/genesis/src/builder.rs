@@ -9,7 +9,7 @@ use diem_global_constants::{
     SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
-use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_secure_storage::{CryptoStorage, KVStorage, Namespaced, Storage};
 use diem_types::chain_id::ChainId;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -18,43 +18,39 @@ pub struct GenesisBuilder<S> {
 }
 
 impl<S> GenesisBuilder<S> {
-    fn new(storage: S) -> Self {
+    pub fn new(storage: S) -> Self {
         Self { storage }
     }
 }
 
 impl<S: KVStorage> GenesisBuilder<S> {
-    fn get_with_namespace<T: DeserializeOwned>(&self, namespace: &str, key: &str) -> Result<T> {
-        let key = format!("{}/{}", namespace, key);
-        self.storage
-            .get::<T>(&key)
-            .map(|v| v.value)
-            .map_err(Into::into)
+    fn with_namespace(&self, namespace: &str) -> Namespaced<&S> {
+        Namespaced::new(namespace, &self.storage)
     }
 
-    fn set_with_namespace<T: Serialize>(
-        &mut self,
-        namespace: &str,
-        key: &str,
-        value: T,
-    ) -> Result<()> {
-        let key = format!("{}/{}", namespace, key);
-        self.storage.set(&key, value).map_err(Into::into)
+    fn with_namespace_mut(&mut self, namespace: &str) -> Namespaced<&mut S> {
+        Namespaced::new(namespace, &mut self.storage)
     }
 
     pub fn set_layout(&mut self, layout: &Layout) -> Result<()> {
-        self.set_with_namespace(constants::COMMON_NS, constants::LAYOUT, layout.to_toml()?)
+        self.with_namespace_mut(constants::COMMON_NS)
+            .set(constants::LAYOUT, layout.to_toml()?)
+            .map_err(Into::into)
     }
 
     pub fn layout(&self) -> Result<Layout> {
-        let raw_layout =
-            self.get_with_namespace::<String>(constants::COMMON_NS, constants::LAYOUT)?;
+        let raw_layout = self
+            .with_namespace(constants::COMMON_NS)
+            .get::<String>(constants::LAYOUT)?
+            .value;
         Layout::parse(&raw_layout).map_err(Into::into)
     }
 
     pub fn set_root_key(&mut self, root_key: Ed25519PublicKey) -> Result<()> {
         let layout = self.layout()?;
-        self.set_with_namespace(&layout.diem_root, DIEM_ROOT_KEY, root_key)
+        self.with_namespace_mut(&layout.diem_root)
+            .set(DIEM_ROOT_KEY, root_key)
+            .map_err(Into::into)
     }
 
     pub fn set_treasury_compliance_key(
@@ -62,11 +58,9 @@ impl<S: KVStorage> GenesisBuilder<S> {
         treasury_compliance_key: Ed25519PublicKey,
     ) -> Result<()> {
         let layout = self.layout()?;
-        self.set_with_namespace(
-            &layout.diem_root,
-            TREASURY_COMPLIANCE_KEY,
-            treasury_compliance_key,
-        )
+        self.with_namespace_mut(&layout.diem_root)
+            .set(TREASURY_COMPLIANCE_KEY, treasury_compliance_key)
+            .map_err(Into::into)
     }
 
     pub fn set_operator_key(
@@ -74,7 +68,9 @@ impl<S: KVStorage> GenesisBuilder<S> {
         operator_namespace: &str,
         operator_key: Ed25519PublicKey,
     ) -> Result<()> {
-        todo!()
+        self.with_namespace_mut(&operator_namespace)
+            .set(OPERATOR_KEY, operator_key)
+            .map_err(Into::into)
     }
 
     pub fn set_operator(
@@ -90,7 +86,9 @@ impl<S: KVStorage> GenesisBuilder<S> {
         owner_namespace: &str,
         owner_key: Ed25519PublicKey,
     ) -> Result<()> {
-        todo!()
+        self.with_namespace_mut(&owner_namespace)
+            .set(OWNER_KEY, owner_key)
+            .map_err(Into::into)
     }
 
     pub fn set_validator_config(

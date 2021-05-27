@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use diem_secure_storage::Storage;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -9,6 +10,8 @@ use std::{
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
+
+use crate::builder::GenesisBuilder;
 
 /// Layout defines the set of roles to identities within genesis. In practice, these identities
 /// will map to distinct namespaces where the expected data should be stored in the deterministic
@@ -58,14 +61,21 @@ pub struct SetLayout {
 impl SetLayout {
     pub fn execute(self) -> Result<Layout, Error> {
         let layout = Layout::from_disk(&self.path)?;
-        let data = layout.to_toml()?;
 
         let config = self
             .config
             .load()?
             .override_shared_backend(&self.backend.shared_backend)?;
-        let mut storage = config.shared_backend_with_namespace(constants::COMMON_NS.to_string());
-        storage.set(constants::LAYOUT, data)?;
+
+        if config.shared_backend.namespace().is_some() {
+            return Err(Error::CommandArgumentError(
+                "shared backend should not be namespaced when setting layout".to_owned(),
+            ));
+        }
+        let storage = Storage::from(&config.shared_backend);
+        GenesisBuilder::new(storage)
+            .set_layout(&layout)
+            .map_err(|e| Error::StorageWriteError("shared", "layout", e.to_string()))?;
 
         Ok(layout)
     }
