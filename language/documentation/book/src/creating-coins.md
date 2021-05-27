@@ -1,8 +1,4 @@
----
-id: move-tutorial-creating-coins
-title: Tutorial - Creating Coins
-sidebar_label: Creating Coins
----
+# Tutorial - Creating Coins
 
 Move is a language about resources. Resources are special types of values that cannot be copied or forgotten about; they must always be moved from one place to another.
 
@@ -127,7 +123,6 @@ We'll have to add a constructor to our module to do this.
 
 Let's create a function in `Coin.move` to create coins. We'll call our function `mint`.
 
-
 ```=
 address 0x2 {
     module Coin {
@@ -151,7 +146,6 @@ Our function takes a `u64` value and returns the constructed `Coin`.
 Remember to always re-publish your module after making changes, otherwise our script won't be able to catch those changes.
 
 With this change, we should be able to update our script `test-coin.move` to call our new constructor:
-
 
 ```=
 script {
@@ -183,7 +177,6 @@ Move is designed around the concept of resources. Resources behave like money or
 
 We can convert our `Coin` into a resource just by adding the `resource` keyword to our type definition in `Coin.move`:
 
-
 ```=
         resource struct Coin {
             value: u64,
@@ -213,13 +206,12 @@ error:
     │
  ```
 
- Now we have a different error! The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.
+Now we have a different error! The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.
 
- Let's create a a `burn` function that will destroy coins as well as a function to retrieve the value of a coin. Add the following functions to `Coin.move`:
+Let's create a a `burn` function that will destroy coins as well as a function to retrieve the value of a coin. Add the following functions to `Coin.move`:
 
-
- ```=
-         public fun value(coin: &Coin): u64 {
+```=
+        public fun value(coin: &Coin): u64 {
             coin.value
         }
 
@@ -227,7 +219,6 @@ error:
             let Coin { value: value } = coin;
             value
         }
-
 ```
 
 These are both declared public so they can be used by scripts and other modules.
@@ -242,7 +233,6 @@ Now we can write a slightly more complicated script that tests our `Coin` module
 
 ```=
 script {
-
     use 0x1::Debug;
     use 0x2::Coin;
 
@@ -253,7 +243,6 @@ script {
 
         Coin::burn(coin);
     }
-
 }
 ```
 
@@ -268,8 +257,7 @@ The only new thing in our script is the use of the standard library function `De
 
 Note that we pass references using `&` to `Debug::print` and `Coin::value`. Also, since we move `coin` into the `burn` function, it no longer exists in our script's scope and because our script compiles we can be sure that we didn't accidentally lose some money. The only way to get rid of a coin we create is to move it somewhere else.
 
-
-# Wrap Up
+## Wrap Up
 
 In this tutorial, we learned how to get the Move CLI and how to use it to publish and run Move code.
 

@@ -1,12 +1,9 @@
----
-id: move-coding-conventions
-title: Move Coding Conventions
-sidebar_label: Coding Conventions
----
+# Move Coding Conventions
 
 This section lays out some basic coding conventions for Move that the Move team has found helpful. These are only recommendations, and you should feel free to use other formatting guidelines and conventions if you have a preference for them.
 
 ## Naming
+
 - **Module names**: should be camel case, e.g., `FixedPoint32`, `Vector`
 - **Type names**: should be camel case if they are not a native type, e.g., `Coin`, `RoleId`
 - **Function names**: should be lower snake case, e.g., `destroy_empty`
@@ -17,6 +14,7 @@ This section lays out some basic coding conventions for Move that the Move team 
 - **Mixed file names**: If the file contains multiple modules and/or scripts, the file name should be lower_snake_case, where the name does not match any particular module/script inside.
 
 ## Imports
+
 - All module `use` statements should be at the top of the module.
 - Functions should be imported and used fully qualified from the module in which they are declared, and not imported at the top level.
 - Types should be imported at the top-level. Where there are name clashes, `as` should be used to rename the type locally as appropriate.
@@ -69,8 +67,8 @@ module Importer {
 - Each module, struct, resource, and public function declaration should be commented
 - Move has both doc comments `///`, regular single-line comments `//`, and block comments `/* */`
 
-
 ## Formatting
+
 The Move team plans to write an autoformatter to enforce formatting conventions. However, in the meantime:
 
 - Four space indentation should be used except for `script` and `address` blocks whose contents should not be indented

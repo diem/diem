@@ -1,8 +1,4 @@
----
-id: move-generics
-title: Generics
-sidebar_label: Generics
----
+# Generics
 
 Generics can be used to define functions and structs over different input data types. This language feature is sometimes referred to as *parametric polymorphism*. In Move, we will often use the term generics interchangeably with type parameters and type arguments.
 
@@ -39,7 +35,6 @@ struct Bar<T1, T2> {
 ```
 
 [Note that type parameters do not have to be used](#unused-type-parameters)
-
 
 ## Type Arguments
 

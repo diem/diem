@@ -1,8 +1,4 @@
----
-id: move-structs-and-resources
-title: Structs and Resources
-sidebar_label: Structs and Resources
----
+# Structs and Resources
 
 A *struct* is a user-defined data structure containing typed fields. Structs can store any non-reference type, including other structs.
 
@@ -53,7 +49,6 @@ struct B_a_z_4_2 {}
 ```
 
 This naming restriction of starting with `A` to `Z` is in place to give room for future language features. It may or may not be removed later.
-
 
 ## Using Structs
 
@@ -381,7 +376,6 @@ Recall that you are only able to deconstruct a resource within the module in whi
 ## Storing Resources in Global Storage
 
 Only resource structs can be saved directly in [persistent global storage](./global-storage-operators.md). See the [global storage](./global-storage-operators.md) chapter for more detail.
-
 
 ## Example 1: Coin
 

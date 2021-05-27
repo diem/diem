@@ -1,8 +1,4 @@
----
-id: move-uses-and-aliases
-title: Uses and Aliases
-sidebar_label: Uses and Aliases
----
+# Uses and Aliases
 
 The `use` syntax can be used to create aliases to members in other modules. `use` can be used to create aliases that last either for the entire module, or for a given expression block scope.
 

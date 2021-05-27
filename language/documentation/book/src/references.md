@@ -1,8 +1,4 @@
----
-id: move-references
-title: References
-sidebar_label: References
----
+# References
 
 Move has two types of references: immutable `&` and mutable `&mut`. Immutable references are read only, and cannot modify the underlying value (or any of its fields). Mutable references allow for modifications via a write through that reference. Move's type system enforces an ownership discipline that prevents reference errors.
 
@@ -47,13 +43,11 @@ let y: &u64 = &x;
 let z: &&u64 = &y; // will not compile
 ```
 
-
 ## Reading and Writing Through References
 
 Both mutable and immutable references can be read to produce a copy of the referenced value.
 
 Only mutable references can be written. A write `*x = v` discards the value previously stored in `x` and updates it with `v`.
-
 
 Both operations use the C-like `*` syntax. However, note that a read is an expression, whereas a write is a mutation that must occur on the left hand side of an equals.
 

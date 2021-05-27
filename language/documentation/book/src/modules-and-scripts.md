@@ -1,8 +1,4 @@
----
-id: move-modules-and-scripts
-title: Modules and Scripts
-sidebar_label: Modules and Scripts
----
+# Modules and Scripts
 
 Move has two different types of programs: ***Modules*** and ***Scripts***. Modules are libraries that define struct types along with functions that operate on these types. Struct types define the schema of Move's [global storage](./global-storage-structure.md), and module functions define the rules for updating storage. Modules themselves are also stored in global storage. Scripts are executable entrypoints similar to a `main` function in a conventional language. A script typically calls functions of a published module that perform updates to global storage. Scripts are ephemeral code snippets that are not published in global storage.
 
@@ -96,7 +92,6 @@ module FooBar42 {}
 ```
 
 Typically, module names start with an uppercase letter. A module named `MyModule` should be stored in a source file named `MyModule.move`.
-
 
 All elements inside a `module` block can appear in any order.
 Fundamentally, a module is a collection of [`types`](./structs-and-resources.md) and

@@ -1,8 +1,4 @@
----
-id: move-equality
-title: Equality
-sidebar_label: Equality
----
+# Equality
 
 Move supports two equality operations `==` and `!=`
 
@@ -155,5 +151,3 @@ use_two_foos(s1, s2);
 ```
 
 The efficiency of the `==` itself remains the same, but the `copy`s are removed and thus the program is more efficient.
-
-###### tags: `basics` `Reviewed by Legal`

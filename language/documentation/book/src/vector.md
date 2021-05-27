@@ -1,8 +1,4 @@
----
-id: move-vector
-title: Vector
-sidebar_label: Vector
----
+# Vector
 
 `vector<T>` is the only primitive collection type provided by Move. A `vector<T>` is a homogenous collection of `T`'s that can grow or shrink by pushing/popping values off the "end".
 

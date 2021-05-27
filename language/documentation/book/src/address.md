@@ -1,8 +1,4 @@
----
-id: move-address
-title: Address
-sidebar_label: Address
----
+# Address
 
 `address` is a built-in type in Move that is used to represent locations (sometimes called accounts) in global storage. An `address` value is a 128-bit (16 byte) identifier. At a given address, two things can be stored: [Modules](./modules-and-scripts.md) and [Resources](./structs-and-resources.md).
 

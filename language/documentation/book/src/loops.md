@@ -1,8 +1,4 @@
----
-id: move-while-and-loop
-title: While and Loop
-sidebar_label: While and Loop
----
+# While and Loop
 
 Move offers two constructs for looping: `while` and `loop`.
 

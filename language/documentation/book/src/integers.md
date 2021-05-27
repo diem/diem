@@ -1,8 +1,4 @@
----
-id: move-integers
-title: Integers
-sidebar_label: Integers
----
+# Integers
 
 Move supports three unsigned integer types: `u8`, `u64`, and `u128`. Values of these types range from 0 to a maximum that depends on the size of the type.
 
@@ -69,7 +65,6 @@ The integer types support the following bitwise operations that treat each numbe
 
 Bitwise operations do not abort.
 
-
 | Syntax | Operation  | Description
 |--------|------------|------------
 | `&`    | bitwise and| Performs a boolean and for each bit pairwise
@@ -100,7 +95,6 @@ Comparison operations do not abort.
 | `<=`   | less than or equal to
 | `>=`   | greater than or equal to
 
-
 ### Equality
 
 Like all [copyable](./equality.md) types in Move, all integer types support the "equal" and "not equal" operations. Both arguments need to be of the same type. If you need to compare integers of different types, you will need to [cast](#casting) one of them first.
@@ -118,7 +112,6 @@ Integer types of one size can be cast to integer types of another size. Integers
 
 Casts *do not* truncate. Casting will abort if the result is too large for the specified type
 
-
 | Syntax     | Operation                                                                       | Aborts if
 |------------|---------------------------------------------------------------------------------|---------------------------------------
 | `(e as T)`| Cast integer expression `e` into an integer type `T` | `e` is too large to represent as a `T`
@@ -130,7 +123,6 @@ For example:
 - `(x as u8)`
 - `(2u8 as u64)`
 - `(1 + 3 as u128)`
-
 
 ## Ownership
 

@@ -1,8 +1,4 @@
----
-id: move-signer
-title: Signer
-sidebar_label: Signer
----
+# Signer
 
 `signer` is a built-in Move resource type. A `signer` is a [capability](https://en.wikipedia.org/wiki/Object-capability_model) that allows the holder to act on behalf of a particular `address`. You can think of the native implementation as being:
 
@@ -48,7 +44,6 @@ script {
 
 This is useful for implementing *multi-signer scripts* that atomically act with the authority of multiple parties. For example, an extension of the script above could perform an atomic currency swap between `s1` and `s2`.
 
-
 ## `signer` Operators
 
 The `0x1::Signer` standard library module provides two utility functions over `signer` values:
@@ -57,6 +52,5 @@ The `0x1::Signer` standard library module provides two utility functions over `s
 | ---------- | ----------
 | `Signer::address_of(&signer): address` | Return the `address` wrapped by this `&signer`.
 | `Signer::borrow_address(&signer): &address` | Return a reference to the `address` wrapped by this `&signer`
-
 
 In addition, the `move_to<T>(&signer, T)` [global storage operator](./global-storage-operators.md) requires a `&signer` argument to publish a resource `T` under `signer.address`'s account. This ensures that only an authenticated user can elect to publish a resource under their `address`.

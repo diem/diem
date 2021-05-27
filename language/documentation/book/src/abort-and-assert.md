@@ -1,13 +1,8 @@
----
-id: move-abort-and-assert
-title: Abort and Assert
-sidebar_label: Abort and Assert
----
+# Abort and Assert
 
 [`return`](./functions.md) and `abort` are two control flow constructs that end execution, one for the current function and one for the entire transaction.
 
 More information on [`return` can be found in the linked section](./functions.md)
-
 
 ## `abort`
 
@@ -73,6 +68,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     (Vector::pop_back(v), Vector::pop_back(v))
 }
 ```
+
 and
 
 ```rust=
@@ -94,7 +90,8 @@ When using `abort`, it is important to understand how the `u64` code will be use
 
 Normally, after successful execution, the Move VM produces a change-set for the changes made to global storage (added/removed resources, updates to existing resources, etc).
 
-If an `abort` is reached, the VM will instead indicate an error. Included in that error will be two pieces of information
+If an `abort` is reached, the VM will instead indicate an error. Included in that error will be two pieces of information:
+
 - The module that produced the abort (address and name)
 - The abort code.
 

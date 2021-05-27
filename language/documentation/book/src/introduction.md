@@ -1,10 +1,4 @@
----
-id: move-introduction
-title: Move Introduction
-sidebar_label: Introduction
----
-
-import MoveArchitecture from 'img/docs/move-architecture.svg';
+# Introduction
 
 Welcome to Move, a next generation language for secure, sandboxed, and formally verified programming. Its first use case is for the Diem blockchain, where Move provides the foundation for its implementation. Move allows developers to write programs that flexibly manage and transfer assets, while providing the security and protections against attacks on those assets. However, Move has been developed with use cases in mind outside a blockchain context as well.
 
@@ -32,4 +26,4 @@ Currently, Move is not targeting developers who wish to create custom modules an
 
 ## Where Do I Start?
 
-Begin with understanding [modules and scripts](./modules-and-scripts.md) and then work through the [first tutorial on creating coins](./creating-coins.md). And then use the sidebar to walkthrough even more details about the language.
+Begin with understanding [modules and scripts](./modules-and-scripts.md) and then work through the [first tutorial on creating coins](./creating-coins.md).

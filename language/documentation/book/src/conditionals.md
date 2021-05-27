@@ -1,8 +1,4 @@
----
-id: move-conditionals
-title: Conditionals
-sidebar_label: Conditionals
----
+# Conditionals
 
 An `if` expression specifies that some code should only be evaluated if a certain condition is true. For example:
 
@@ -45,7 +41,6 @@ If the `else` clause is not specified, the false branch defaults to the unit val
 if (condition) true_branch // implied default: else ()
 if (condition) true_branch else ()
 ```
-
 
 Commonly, [`if` expressions](./conditionals.md) are used in conjunction with expression blocks.
 

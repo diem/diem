@@ -1,8 +1,4 @@
----
-id: move-constants
-title: Constants
-sidebar_label: Constants
----
+# Constants
 
 Constants are a way of giving a name to shared, static values inside of a `module` or `script`.
 
@@ -54,14 +50,11 @@ const ADDRESS_42: address = 0x42;
 
 Even though you can use letters `a` to `z` in a constant. The  [general style guidelines](./coding-conventions.md) are to use just uppercase letters `A` to `Z`, with underscores `_` between each word.
 
-
 This naming restriction of starting with `A` to `Z` is in place to give room for future language features. It may or may not be removed later.
-
 
 ## Visibility
 
 `public` constants are not currently supported. `const` values can be used only in the declaring module.
-
 
 ## Valid Expressions
 

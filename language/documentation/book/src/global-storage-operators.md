@@ -1,8 +1,4 @@
----
-id: move-global-storage-operators
-title: Global Storage - Operators
-sidebar_label: Global Storage Operators
----
+# Global Storage - Operators
 
 Move programs can create, delete, and update [resources](./structs-and-resources.md) in global storage using the following five instructions:
 

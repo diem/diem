@@ -1,8 +1,4 @@
----
-id: move-variables
-title: Local Variables and Scope
-sidebar_label: Variables
----
+# Local Variables and Scope
 
 Local variables in Move are lexically (statically) scoped. New variables are introduced with the keyword `let`, which will shadow any previous local with the same name. Locals are mutable and can be updated both directly and via a mutable reference.
 
@@ -128,7 +124,6 @@ let _v1 = Vector::empty(); // ERROR!
 //        ^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
 let v2: vector<u64> = Vector::empty(); // no error
 ```
-
 
 In a rarer case, the type system might not be able to infer a type for divergent code (where all the following code is unreachable). Both `return` and [`abort`](./abort-and-assert.md) are expressions and can have any type. A [`loop`](./loops.md) has type `()` if it has a `break`, but if there is no break out of the `loop`, it could have any type.
 If these types cannot be inferred, a type annotation is required. For example, this code:

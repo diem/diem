@@ -1,8 +1,4 @@
----
-id: move-functions
-title: Functions
-sidebar_label: Functions
----
+# Functions
 
 Function syntax in Move is shared between module functions and script functions. Functions inside of modules are reusable, whereas script functions are only used once to invoke a transaction.
 
@@ -140,7 +136,6 @@ module Example {
         let Balance { value } = move_from(addr); // acquires needed
         value
     }
-
 }
 }
 ```
@@ -166,7 +161,6 @@ module Example {
         let value = extract_balance(sender); // acquires needed here
         add_balance(receiver, value)
     }
-
 }
 }
 
@@ -184,7 +178,6 @@ A function can `acquire` as many resources as it needs to
 ```rust=
 address 0x42 {
 module Example {
-
     use 0x1::Vector;
 
     resource struct Balance { value: u64 }
@@ -361,7 +354,6 @@ fun double_and_add(x: u64, y: u64): u64 {
 ```
 
 The return value here is `double_x + double_y`
-
 
 ### `return` expression
 

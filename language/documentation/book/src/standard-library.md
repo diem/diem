@@ -1,8 +1,4 @@
----
-id: move-standard-library
-title: Standard Library
-sidebar_label: Standard Library
----
+# Standard Library
 
 The Move standard library exposes interfaces that implement the following functionality:
 * [Basic operations on vectors](#vector).

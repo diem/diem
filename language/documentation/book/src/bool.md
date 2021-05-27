@@ -1,8 +1,4 @@
----
-id: move-bool
-title: Bool
-sidebar_label: Bool
----
+# Bool
 
 `bool` is Move's primitive type for boolean `true` and `false` values.
 
