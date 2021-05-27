@@ -13,13 +13,16 @@ Generics are commonly used in library code, such as in Vector, to declare code t
 Both functions and structs can take a list of type parameters in their signatures, enclosed by a pair of angle brackets `<...>`.
 
 ### Generic Functions
+
 Type parameters for functions are placed after the function name and before the (value) parameter list. The following code defines a generic identity function that takes a value of any type and returns that value unchanged.
+
 ```rust
 fun id<T>(x: T): T {
     // this type annotation is unnecessary but valid
     (x: T)
 }
 ```
+
 Once defined, the type parameter `T` can be used in parameter types, return types, and inside the function body.
 
 ### Generic Structs
@@ -62,17 +65,21 @@ fun foo() {
     let Foo<bool> { x } = foo;
 }
 ```
+
 If you do not specify the type arguments, Move's [type inference](#type-inference) will supply them for you.
 
 ### Type Argument Mismatch
 
 If you specify the type arguments and they conflict with the actual values supplied, an error will be given
+
 ```rust=
 fun foo() {
     let x = id<u64>(true); // error! true is not a u64
 }
 ```
+
 and similarly
+
 ```rust=
 fun foo() {
     let foo = Foo<bool> { x: 0 }; // error! 0 is not a bool
@@ -96,7 +103,9 @@ fun foo() {
     //     ^ <bool> is inferred
 }
 ```
+
 Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.
+
 ```rust=
 address 0x2 {
 module M {
@@ -112,7 +121,9 @@ module M {
 }
 }
 ```
+
 However, the compiler will be able to infer the type if that return value is used later in that function
+
 ```rust=
 address 0x2 {
 module M {
@@ -128,13 +139,17 @@ module M {
 ```
 
 ## Unused Type Parameters
+
 Move allows unused type parameters so the following struct definition is valid:
+
 ```rust=
 struct Foo<T> {
     foo: u64
 }
 ```
+
 This can be convenient when modeling certain concepts. Here is an example:
+
 ```rust=
 address 0x2 {
 module M {
@@ -159,19 +174,25 @@ In the examples above, we have demonstrated how one can use type parameters to d
 This is where constraints come into play: they offer a way to specify what properties these unknown types have so the type system can allow operations that would otherwise be unsafe.
 
 ### Declaring Constraints
+
 Constraints can be imposed on type parameters using the following syntax.
+
 ```rust=
 // T is the name of the type parameter
 T: resource
 // or
 T: copyable
 ```
+
 - `resource` means values of the type cannot be copied and cannot be dropped
 - `copyable` means values of the type can be copied and can be dropped
 
 These two constraint are mutually exclusive so you can't have both applied to a type parameter at the same time.
+
 ### Verifying Constraints
+
 Constraints are checked at call sites so the following code won't compile.
+
 ```rust=
 struct Foo<T: resource> { x: T }
 
@@ -221,12 +242,16 @@ fun foo(): (R, R) {
 ```
 
 ### How to tell if a struct type is resource or copyable
+
 Recall that a non-generic struct type is considered resource if and only if it is explicitly marked so.
+
 ```rust=
 resource struct Foo {} // Foo is resource
 struct Bar {}          // Bar is copyable
 ```
+
 However for a generic struct type, whether it is considered resource depends on the specific type arguments used to instantiate it, unless there's an explicit `resource` marker in the struct definition.
+
 ```rust=
 struct Foo<T> {}
 resource struct Bar<T> {}
@@ -281,6 +306,7 @@ struct B<T1, T2> {
 Move allows generic functions to be called recursively. However, when used in combination with generic structs, this could create an infinite number of types in certain cases, and allowing this means adding unnecessary complexity to the compiler, vm and other language components. Therefore, such recursions are forbidden.
 
 Allowed:
+
 ```rust=
 address 0x2 {
 module M {
@@ -302,6 +328,7 @@ module M {
 ```
 
 Not allowed:
+
 ```rust=
 address 0x2 {
 module M {
@@ -316,6 +343,7 @@ module M {
 }
 }
 ```
+
 ```rust=
 address 0x2 {
 module N {
@@ -337,7 +365,9 @@ module N {
 }
 }
 ```
+
 Note, the check for type level recursions is based on a conservative analysis on the call sites and does NOT take control flow or runtime values into account.
+
 ```rust=
 address 0x2 {
 module M {
@@ -351,4 +381,5 @@ module M {
 }
 }
 ```
+
 The function in the example above will technically terminate for any given input and therefore only creating finitely many types, but it is still considered invalid by Move's type system.

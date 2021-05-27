@@ -40,6 +40,7 @@ fun f(a: &A): &u64 {
 ```
 
 Finally, note that references to references are not allowed:
+
 ```rust
 let x = 7;
 let y: &u64 = &x;
@@ -71,7 +72,9 @@ fun copy_resource_via_ref_bad(c: Coin) {
     pay(counterfeit);
 }
 ```
+
 Dually, writing via a resource reference is not allowed because it would destroy a resource value:
+
 ```rust=
 fun destroy_resource_via_ref_bad(ten_coins: Coin, c: Coin) {
     let ref = &mut ten_coins;
@@ -87,6 +90,7 @@ A mutable reference can be used in a context where an immutable reference is exp
 let x = 7;
 let y: &mut u64 = &mut x;
 ```
+
 This works because the under the hood, the compiler inserts `freeze` instructions where they are needed. Here are a few more examples of `freeze` inference in action:
 
 ```rust=
@@ -113,11 +117,12 @@ fun assignment_examples() {
     imm_ref = &x; // no inference
     imm_ref = &mut y; // inferred freeze(&mut y)
 }
-````
+```
 
 ### Subtyping
 
 With this `freeze` inference, the Move type checker can view `&mut T` as a subtype of `&T`. As shown above, this means that anywhere for any expression where a `&T` value is used, an `&mut T` value. This terminology is used in error messages to concisely indicate that a `&mut T` was needed where a `&T` was supplied. For example
+
 ```rust=
 address 0x42 {
 module Example {
@@ -138,7 +143,9 @@ module Example {
 }
 }
 ```
+
 will yield the following error messages
+
 ```
 error:
 

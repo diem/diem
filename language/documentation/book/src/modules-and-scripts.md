@@ -13,6 +13,7 @@ A Move source file (or **compilation unit**) may contain multiple modules and sc
 ### Scripts
 
 A script has the following structure:
+
 ```
 script {
     <use>*
@@ -20,10 +21,12 @@ script {
     fun <identifier><[type parameters: constraint]*>([identifier: type]*) <function_body>
 }
 ```
+
 A `script` block must start with all of its [use](./uses.md) declarations, followed by any [constants](./constants.md) and (finally) the main
 [function](./functions.md) declaration.
 The main function can have any name (i.e., it need not be called `main`), is the only function in a script block, can have any number of
 arguments, and must not return a value. Here is an example with each of these components:
+
 ```rust
 script {
     // Import the Debug module published at account address 0x1.
@@ -45,6 +48,7 @@ Scripts have very limited power--they cannot declare struct types or access glob
 ### Modules
 
 A Module has the following syntax:
+
 ```
 address <address_const> {
 module <identifier> {
@@ -54,6 +58,7 @@ module <identifier> {
 ```
 
 For example:
+
 ```rust
 address 0x42 {
 module Test {
@@ -82,11 +87,14 @@ module M { ... }
 module N { ... }
 }
 ```
+
 Module names can start with letters `a` to `z` or letters `A` to `Z`. After the first character, module names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
+
 ```rust
 module my_module {}
 module FooBar42 {}
 ```
+
 Typically, module names start with an uppercase letter. A module named `MyModule` should be stored in a source file named `MyModule.move`.
 
 

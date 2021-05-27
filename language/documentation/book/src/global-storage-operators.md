@@ -17,6 +17,7 @@ Move programs can create, delete, and update [resources](./structs-and-resources
 Each of these instructions is parameterized by a resource type `T` declared *in the current module*. This ensures that a resource can only be manipulated via the API exposed by its defining module. The instructions also take either an [`address`](./address.md) or [`&signer`](./signer.md) representing the account address where the resource of type `T` is stored.
 
 ### References to resources
+
 References to global resources returned by `borrow_global` or `borrow_global_mut` mostly behave like references to local storage: they can be extended, read, and written using ordinary [reference operators](./references.md) and passed as arguments to other function. However, there is one important difference between local and global references: **a function cannot return a reference that points into global storage**. For example, these two functions will each fail to compile:
 
 ```rust
@@ -131,6 +132,7 @@ fun call_increment(addr: address): u64 acquires Counter {
 ```
 
 However, the same function *outside* `Counter` would not need an annotation:
+
 ```rust
 address 0x43 {
 module M {
@@ -181,6 +183,7 @@ module M {
 ```
 
 Finally: redundant `acquires` are not allowed. Adding this function inside `Counter` will result in a compilation error:
+
 ```rust
 // This code will not compile because the body of the function does not use a global
 // storage instruction or invoke a function with `acquires`
@@ -194,6 +197,7 @@ For more information on `acquires`, see [Move functions](./functions.md).
 Move prohibits returning global references and requires the `acquires` annotation to prevent dangling references. This allows Move to live up to its promise of static reference safety (i.e., no dangling references, no `null` or `nil` dereferences) for all [reference](./references.md) types.
 
 This example illustrates how the Move type system uses `acquires` to prevent a dangling reference:
+
 ```rust=
 address 0x42 {
 module Dangling {
@@ -213,6 +217,7 @@ module Dangling {
 }
 }
 ```
+
 In this code, line 6 acquires a reference to the `T` stored at address `a` in global storage. The callee `remove_t` then removes the value, which makes `t_ref` a dangling reference.
 
 Fortunately, this cannot happen because the type system will reject this program. The `acquires` annotation on `remove_t` lets the type system know that line 7 is dangerous, without having to recheck or introspect the body of `remove_t` separately!

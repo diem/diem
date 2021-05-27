@@ -48,6 +48,7 @@ if (condition) true_branch else ()
 
 
 Commonly, [`if` expressions](./conditionals.md) are used in conjunction with expression blocks.
+
 ```rust
 let maximum = if (x > y) x else y;
 if (maximum < 10) {

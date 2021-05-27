@@ -9,18 +9,23 @@ The `use` syntax can be used to create aliases to members in other modules. `use
 ## Syntax
 
 There are several different syntax cases for `use`. Starting with the most simple, we have the following for creating aliases to other modules
+
 ```rust
 use <address>::<module name>;
 use <address>::<module name> as <module alias name>;
 ```
+
 For example
+
 ```rust
 use 0x1::Vector;
 use 0x1::Vector as V;
 ```
+
 `use 0x1::Vector;` introduces an alias `Vector` for `0x1::Vector`. This means that anywhere you would want to use the module name `0x1::Vector` (assuming this `use` is in scope), you could use `Vector` instead. `use 0x1::Vector;`  is equivalent to `use 0x1::Vector as Vector;`
 
 Similarly `use 0x1::Vector as V;` would let you use `V` instead of `0x1::Vector`
+
 ```rust=
 use 0x1::Vector;
 use 0x1::Vector as V;
@@ -39,11 +44,14 @@ If you want to import a specific module member (such as a function, struct, or c
 use <address>::<module name>::<module member>;
 use <address>::<module name>::<module member> as <member alias>;
 ```
+
 For example
+
 ```rust
 use 0x1::Vector::empty;
 use 0x1::Vector::empty as empty_vec;
 ```
+
 This would let you use the function `0x1::Vector::empty` without full qualification. Instead you could use `empty` and `empty_vec` respectively. Again, `use 0x1::Vector::empty;` is equivalent to `use 0x1::Vector::empty as empty;`
 
 ```rust=
@@ -59,10 +67,13 @@ fun new_vecs(): (vector<u8>, vector<u8>, vector<u8>) {
 ```
 
 If you want to add aliases for multiple module members at once, you can do so with the following syntax
+
 ```rust
 use <address>::<module name>::{<module member>, <module member> as <member alias> ... };
 ```
+
 For example
+
 ```rust=
 use 0x1::Vector::{push_back, length as len, pop_back};
 
@@ -73,15 +84,16 @@ fun swap_last_two<T>(v: &mut vector<T>) {
     push_back(v, last);
     push_back(v, second_to_last)
 }
-
 ```
 
 If you need to add an alias to the Module itself in addition to module members, you can do that in a single `use` using `Self`. `Self` is a member of sorts that refers to the module.
+
 ```rust
 use 0x1::Vector::{Self, empty};
 ```
 
 For clarity, all of the following are equivalent:
+
 ```rust
 use 0x1::Vector;
 use 0x1::Vector as Vector;
@@ -92,6 +104,7 @@ use 0x1::Vector::{Self as Vector};
 ```
 
 If needed, you can have as many aliases for any item as you like
+
 ```rust=
 use 0x1::Vector::{
     Self,
@@ -131,6 +144,7 @@ module Example {
 }
 }
 ```
+
 The aliases declared by `use` in the module usable within that module.
 
 Additionally, the aliases introduced cannot conflict with other module members. See [Uniqueness](#uniqueness) for more details
@@ -138,6 +152,7 @@ Additionally, the aliases introduced cannot conflict with other module members. 
 ## Inside an expression
 
 You can add `use` declarations to the beginning of any expression block
+
 ```rust=
 address 0x42 {
 module Example {
@@ -153,7 +168,9 @@ module Example {
 }
 }
 ```
+
 As with `let`, the aliases introduced by `use` in an expression block are removed at the end of that block.
+
 ```rust=
 address 0x42 {
 module Example {
@@ -172,7 +189,9 @@ module Example {
 }
 }
 ```
+
 Attempting to use the alias after the block ends will result in an error
+
 ```rust=
 fun example(): vector<u8> {
     let result = {
@@ -189,6 +208,7 @@ fun example(): vector<u8> {
 ```
 
 Any `use` must be the first item in the block. If the `use` comes after any expression or `let`, it will result in a parsing error
+
 ```rust=
 {
     let x = 0;
@@ -224,6 +244,7 @@ module Example {
 Inside a given scope, all aliases introduced by `use` declarations must be unique.
 
 For a module, this means aliases introduced by `use` cannot overla
+
 ```rust=
 address 0x42 {
 module Example {
@@ -241,6 +262,7 @@ module Example {
 ```
 
 And, they cannot overlap with any of the module's other members
+
 ```rust=
 address 0x42 {
 module Data {
@@ -311,6 +333,7 @@ module Example {
 ## Unused Use or Alias
 
 An unused `use` will result in an error
+
 ```rust=
 address 0x42 {
 module Example {

@@ -12,9 +12,11 @@ More information on [`return` can be found in the linked section](./functions.md
 ## `abort`
 
 `abort` is an expression that takes one argument: an **abort code** of type `u64`. For example:
+
 ```rust
 abort 42
 ```
+
 The `abort` expression halts execution the current function and reverts all changes made to global state by the current transaction. There is no mechanism for "catching" or otherwise handling an `abort`.
 
 Luckily, in Move transactions are all or nothing, meaning any changes to global storage are made all at once only if the transaction succeeds. Because of this transactional commitment of changes, after an abort there is no need to worry about backing out changes. While this approach is lacking in flexibility, it is incredibly simple and predictable.
@@ -22,6 +24,7 @@ Luckily, in Move transactions are all or nothing, meaning any changes to global 
 Similar to [`return`](./functions.md), `abort` is useful for exiting control flow when some condition cannot be met.
 
 In this example, the function will pop two items off of the vector, but will abort early if the vector does not have two items
+
 ```rust=
 use 0x1::Vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
@@ -32,6 +35,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 ```
 
 This is even more useful deep inside a control-flow construct. For example, this function checks that all numbers in the vector are less than the specified `bound`. And aborts otherwise
+
 ```rust=
 use 0x1::Vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
@@ -48,13 +52,17 @@ fun check_vec(v: &vector<u64>, bound: u64) {
 ### `assert`
 
 `assert` is a builtin, macro-like operation provided by the Move compiler. It takes two arguments, a condition of type `bool` and a code of type `u64`
+
 ```rust
 assert(condition: bool, code: u64)
 ```
+
 The operation does not exist at the bytecode level, and is replaced inside the compiler with
+
 ```rust
 if (condition) () else abort code
 ```
+
 The `abort` examples above can be rewritten using `assert`
 
 ```rust=
@@ -66,6 +74,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 }
 ```
 and
+
 ```rust=
 use 0x1::Vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
@@ -90,6 +99,7 @@ If an `abort` is reached, the VM will instead indicate an error. Included in tha
 - The abort code.
 
 For example
+
 ```rust=
 address 0x2 {
 module Example {
@@ -105,11 +115,13 @@ script {
     }
 }
 ```
+
 If a transaction, such as the script `always_aborts` above, calls `0x2::Example::aborts`, the VM would produce an error that indicated the module `0x2::Example` and the code `42`.
 
 This can be useful for having multiple aborts being grouped together inside a module.
 
 In this example, the module has two separate error codes used in multiple functions
+
 ```rust=
 address 0x42 {
 module Example {
@@ -149,11 +161,13 @@ module Example {
 The `abort i` expression can have any type! This is because both constructs break from the normal control flow, so they never need to evaluate to the value of that type.
 
 The following are not useful, but they will type check
+
 ```rust
 let y: address = abort 0;
 ```
 
 This behavior can be helpful in situations where you have a branching instruction that produces a value on some branches, but not all. For example:
+
 ```rust
 let b =
     if (x == 0) false

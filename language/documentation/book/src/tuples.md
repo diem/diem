@@ -59,6 +59,7 @@ The only operation that can be done on tuples currently is destructuring.
 For tuples of any size, they can be destructured in either a `let` binding or in an assignment.
 
 For example:
+
 ```rust=
 address 0x42 {
 module Example {
@@ -97,6 +98,7 @@ For more details, see [Move Variables](./variables.md).
 Along with references, tuples are the only types that have subtyping in Move. Tuples do have subtyping only in the sense that subtype with references (in a covariant way).
 
 For example
+
 ```rust=
 let x: &u64 = &0;
 let y: &mut u64 = &mut 1;

@@ -51,13 +51,17 @@ fun destroy_resource_vector<T: resource>(vec: vector<T>) {
     Vector::destroy_empty(vec) // deleting this line will cause a compiler error
 }
 ```
+
 This error would also happen for an unconstrained `T` as the type *might* be a resource.
+
 ```rust
 fun destroy_vector<T>(vec: vector<T>) {
     Vector::destroy_empty(vec) // deleting this line will cause a compiler error
 }
 ```
+
 But no error would occur for dropping a vector that contains `copyable` elements
+
 ```rust
 fun destroy_copyable_vector<T: copyable>(vec: vector<T>) {
     // valid!

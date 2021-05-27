@@ -22,6 +22,7 @@ This section lays out some basic coding conventions for Move that the Move team 
 - Types should be imported at the top-level. Where there are name clashes, `as` should be used to rename the type locally as appropriate.
 
 For example, if there is a module
+
 ```rust=
 module Foo {
     resource struct Foo { }
@@ -62,7 +63,6 @@ module Importer {
 ....
 }
 ```
-
 
 ## Comments
 
