@@ -1,17 +1,24 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{data_cache::MoveStorage, runtime::VMRuntime, session::Session};
+use crate::{
+    data_cache::MoveStorage, native_functions::NativeFunction, runtime::VMRuntime, session::Session,
+};
+use move_binary_format::errors::{Location, VMResult};
+use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 
 pub struct MoveVM {
     runtime: VMRuntime,
 }
 
 impl MoveVM {
-    pub fn new() -> Self {
-        Self {
-            runtime: VMRuntime::new(),
-        }
+    pub fn new<I>(natives: I) -> VMResult<Self>
+    where
+        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+    {
+        Ok(Self {
+            runtime: VMRuntime::new(natives).map_err(|err| err.finish(Location::Undefined))?,
+        })
     }
 
     /// Create a new Session backed by the given storage.

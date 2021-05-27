@@ -22,5 +22,5 @@ language-e2e-tests = { path = "../../testing-infra/e2e-tests" }
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
 move-model = { path = "../../move-model" }
-move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
+move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-types = { path = "../../move-vm/types" }

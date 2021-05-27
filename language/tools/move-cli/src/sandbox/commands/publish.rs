@@ -54,7 +54,7 @@ pub fn publish(
 
     // use the the publish_module API frm the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
         let mut gas_status = get_gas_status(None)?;
         let log_context = NoContextLog::new();
         let mut session = vm.new_session(state);

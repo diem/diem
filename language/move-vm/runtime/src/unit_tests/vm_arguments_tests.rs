@@ -257,7 +257,7 @@ fn call_script_with_args_ty_args_signers(
     ty_args: Vec<TypeTag>,
     signers: Vec<AccountAddress>,
 ) -> VMResult<()> {
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(vec![]).unwrap();
     let remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
@@ -283,7 +283,7 @@ fn call_script_function_with_args_ty_args_signers(
     ty_args: Vec<TypeTag>,
     signers: Vec<AccountAddress>,
 ) -> VMResult<()> {
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(vec![]).unwrap();
     let mut remote_view = RemoteStore::new();
     let id = module.self_id();
     remote_view.add_module(module);
@@ -759,7 +759,7 @@ fn call_missing_item() {
     let id = &module.self_id();
     let function_name = IdentStr::new("foo").unwrap();
     // mising module
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(vec![]).unwrap();
     let mut remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);

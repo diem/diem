@@ -4,7 +4,7 @@
 use crate::{
     loader::{Function, Loader, Resolver},
     logging::LogContext,
-    native_functions::FunctionContext,
+    native_functions::NativeContext,
     trace,
 };
 use diem_logger::prelude::*;
@@ -269,9 +269,9 @@ impl<'a> Interpreter<'a> {
         for _ in 0..expected_args {
             arguments.push_front(self.operand_stack.pop()?);
         }
-        let mut native_context = FunctionContext::new(self, data_store, gas_status, resolver);
+        let mut native_context = NativeContext::new(self, data_store, gas_status, resolver);
         let native_function = function.get_native()?;
-        let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
+        let result = native_function(&mut native_context, ty_args, arguments)?;
         gas_status.deduct_gas(result.cost)?;
         let return_values = result
             .result
@@ -610,7 +610,7 @@ impl Stack {
 }
 
 /// A call stack.
-#[derive(Debug)]
+// #[derive(Debug)]
 struct CallStack(Vec<Frame>);
 
 impl CallStack {
@@ -642,7 +642,7 @@ impl CallStack {
 
 /// A `Frame` is the execution context for a function. It holds the locals of the function and
 /// the function itself.
-#[derive(Debug)]
+// #[derive(Debug)]
 struct Frame {
     pc: u16,
     locals: Locals,

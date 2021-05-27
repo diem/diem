@@ -22,7 +22,7 @@ diem-state-view = { path = "../../../storage/state-view" }
 diem-types = { path = "../../../types", features = ["fuzzing"] }
 diem-writeset-generator = { path = "../../diem-tools/writeset-transaction-generator" }
 move-core-types = { path = "../../move-core/types" }
-move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
+move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-types = { path = "../../move-vm/types" }
 move-binary-format = { path = "../../move-binary-format" }
 vm-genesis = { path = "../../tools/vm-genesis" }

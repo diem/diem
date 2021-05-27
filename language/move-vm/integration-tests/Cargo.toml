@@ -22,3 +22,4 @@ move-lang = { path = "../../move-lang" }
 move-vm-runtime = { path = "../runtime" }
 move-vm-types = { path = "../types" }
 move-vm-test-utils = { path = "../test-utils" }
+move-stdlib = { path = "../../move-stdlib" }

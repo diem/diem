@@ -82,7 +82,10 @@ fn test_malformed_resource() {
     m.serialize(&mut blob).unwrap();
     storage.publish_or_overwrite_module(m.self_id(), blob);
 
-    let vm = MoveVM::new();
+    let vm = MoveVM::new(move_stdlib::natives::all_natives(
+        AccountAddress::from_hex_literal("0x1").unwrap(),
+    ))
+    .unwrap();
 
     let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
@@ -177,7 +180,7 @@ fn test_malformed_module() {
     {
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(m.self_id(), blob.clone());
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
         sess.execute_function(
             &module_id,
@@ -203,7 +206,7 @@ fn test_malformed_module() {
         blob[3] = 0xef;
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(m.self_id(), blob);
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
         let err = sess
             .execute_function(
@@ -245,7 +248,7 @@ fn test_unverifiable_module() {
         m.serialize(&mut blob).unwrap();
         storage.publish_or_overwrite_module(m.self_id(), blob);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -271,7 +274,7 @@ fn test_unverifiable_module() {
         m.serialize(&mut blob).unwrap();
         storage.publish_or_overwrite_module(m.self_id(), blob);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -326,7 +329,7 @@ fn test_missing_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -346,7 +349,7 @@ fn test_missing_module_dependency() {
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -401,7 +404,7 @@ fn test_malformed_module_denpency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m.clone());
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -427,7 +430,7 @@ fn test_malformed_module_denpency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -483,7 +486,7 @@ fn test_unverifiable_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n.clone());
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(
@@ -510,7 +513,7 @@ fn test_unverifiable_module_dependency() {
         storage.publish_or_overwrite_module(m.self_id(), blob_m);
         storage.publish_or_overwrite_module(n.self_id(), blob_n);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -567,7 +570,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
         let storage = BogusStorage {
             bad_status_code: *error_code,
         };
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
         let err = sess
@@ -636,7 +639,10 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         };
         let storage = DeltaStorage::new(&storage, &delta);
 
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(move_stdlib::natives::all_natives(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+        ))
+        .unwrap();
         let mut sess = vm.new_session(&storage);
 
         sess.execute_function(

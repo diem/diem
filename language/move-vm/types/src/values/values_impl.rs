@@ -1533,11 +1533,7 @@ pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
 pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
 pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
 
-fn check_elem_layout(
-    _context: &impl NativeContext,
-    ty: &Type,
-    v: &Container,
-) -> PartialVMResult<()> {
+fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
     match (ty, v) {
         (Type::U8, Container::VecU8(_))
         | (Type::U64, Container::VecU64(_))
@@ -1576,9 +1572,9 @@ fn check_elem_layout(
 }
 
 impl VectorRef {
-    pub fn len(&self, type_param: &Type, context: &impl NativeContext) -> PartialVMResult<Value> {
+    pub fn len(&self, type_param: &Type) -> PartialVMResult<Value> {
         let c = self.0.container();
-        check_elem_layout(context, type_param, c)?;
+        check_elem_layout(type_param, c)?;
 
         let len = match c {
             Container::VecU8(r) => r.borrow().len(),
@@ -1593,14 +1589,9 @@ impl VectorRef {
         Ok(Value::u64(len as u64))
     }
 
-    pub fn push_back(
-        &self,
-        e: Value,
-        type_param: &Type,
-        context: &impl NativeContext,
-    ) -> PartialVMResult<()> {
+    pub fn push_back(&self, e: Value, type_param: &Type) -> PartialVMResult<()> {
         let c = self.0.container();
-        check_elem_layout(context, type_param, c)?;
+        check_elem_layout(type_param, c)?;
 
         match c {
             Container::VecU8(r) => r.borrow_mut().push(e.value_as()?),
@@ -1622,10 +1613,9 @@ impl VectorRef {
         idx: usize,
         cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
-        context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
         let c = self.0.container();
-        check_elem_layout(context, type_param, c)?;
+        check_elem_layout(type_param, c)?;
         if idx >= c.len() {
             return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
         }
@@ -1639,10 +1629,9 @@ impl VectorRef {
         &self,
         cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
-        context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
         let c = self.0.container();
-        check_elem_layout(context, type_param, c)?;
+        check_elem_layout(type_param, c)?;
 
         macro_rules! err_pop_empty_vec {
             () => {
@@ -1691,10 +1680,9 @@ impl VectorRef {
         idx2: usize,
         cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
-        context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
         let c = self.0.container();
-        check_elem_layout(context, type_param, c)?;
+        check_elem_layout(type_param, c)?;
 
         macro_rules! swap {
             ($v: expr) => {{
@@ -1727,7 +1715,6 @@ impl Vector {
     pub fn empty(
         cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
-        _context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
         let container = match type_param {
             Type::U8 => Value::vector_u8(iter::empty::<u8>()),
@@ -1757,9 +1744,8 @@ impl Vector {
         self,
         cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
-        context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
-        check_elem_layout(context, type_param, &self.0)?;
+        check_elem_layout(type_param, &self.0)?;
 
         let is_empty = match &self.0 {
             Container::VecU8(r) => r.borrow().is_empty(),
@@ -2327,7 +2313,7 @@ pub mod debug {
  *   is to involve an explicit representation of the type layout.
  *
  **************************************************************************************/
-use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
+use crate::loaded_data::runtime_types::Type;
 use serde::{
     de::Error as DeError,
     ser::{Error as SerError, SerializeSeq, SerializeTuple},

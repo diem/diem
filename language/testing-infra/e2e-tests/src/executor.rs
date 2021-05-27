@@ -463,7 +463,7 @@ impl FakeExecutor {
     ) {
         let write_set = {
             let mut gas_status = GasStatus::new_unmetered();
-            let vm = MoveVM::new();
+            let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
             let log_context = NoContextLog::new();
@@ -500,7 +500,7 @@ impl FakeExecutor {
         args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
         let mut gas_status = GasStatus::new_unmetered();
-        let vm = MoveVM::new();
+        let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
         let log_context = NoContextLog::new();

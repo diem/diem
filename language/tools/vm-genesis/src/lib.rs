@@ -95,7 +95,7 @@ pub fn encode_genesis_change_set(
     }
     let data_cache = StateViewCache::new(&state_view);
 
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
     let mut session = move_vm.new_session(&data_cache);
     let log_context = NoContextLog::new();
 

@@ -14,6 +14,7 @@ use bytecode_interpreter::{
 use colored::*;
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_core_types::{
+    account_address::AccountAddress,
     effects::ChangeSet,
     gas_schedule::{CostTable, GasAlgebra, GasCost, GasUnits},
     identifier::IdentStr,
@@ -172,7 +173,10 @@ impl SharedTestingConfig {
         function_name: &str,
         test_info: &TestCase,
     ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(move_stdlib::natives::all_natives(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+        ))
+        .unwrap();
         let mut session = move_vm.new_session(&self.starting_storage_state);
         let mut gas_meter = GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound));
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set

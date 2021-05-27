@@ -3,7 +3,7 @@
 
 use crate::{
     logging::{expect_no_verification_errors, LogContext},
-    native_functions::NativeFunction,
+    native_functions::{NativeFunction, NativeFunctions},
 };
 use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
 use diem_crypto::HashValue;
@@ -145,6 +145,7 @@ impl ModuleCache {
 
     fn insert(
         &mut self,
+        natives: &NativeFunctions,
         id: ModuleId,
         module: CompiledModule,
         log_context: &impl LogContext,
@@ -155,7 +156,7 @@ impl ModuleCache {
 
         // we need this operation to be transactional, if an error occurs we must
         // leave a clean state
-        self.add_module(&module, log_context)?;
+        self.add_module(natives, &module, log_context)?;
         match Module::new(module, self) {
             Ok(module) => Ok(Arc::clone(self.modules.insert(id, module))),
             Err((err, module)) => {
@@ -172,6 +173,7 @@ impl ModuleCache {
 
     fn add_module(
         &mut self,
+        natives: &NativeFunctions,
         module: &CompiledModule,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
@@ -188,7 +190,7 @@ impl ModuleCache {
             })?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
-            let function = Function::new(findex, func, module);
+            let function = Function::new(natives, findex, func, module);
             self.functions.push(Arc::new(function));
         }
         Ok(())
@@ -419,14 +421,16 @@ pub(crate) struct Loader {
     scripts: RwLock<ScriptCache>,
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
+    natives: NativeFunctions,
 }
 
 impl Loader {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(natives: NativeFunctions) -> Self {
         Self {
             scripts: RwLock::new(ScriptCache::new()),
             module_cache: RwLock::new(ModuleCache::new()),
             type_cache: RwLock::new(TypeCache::new()),
+            natives,
         }
     }
 
@@ -668,7 +672,7 @@ impl Loader {
         log_context: &impl LogContext,
     ) -> VMResult<()> {
         bytecode_verifier::verify_module(&module)?;
-        Self::check_natives(&module)?;
+        self.check_natives(&module)?;
 
         let deps = module.immediate_dependencies();
         let loaded_imm_deps = if verify_no_missing_modules {
@@ -713,8 +717,8 @@ impl Loader {
     }
 
     // All native functions must be known to the loader
-    fn check_natives(module: &CompiledModule) -> VMResult<()> {
-        fn check_natives_impl(module: &CompiledModule) -> PartialVMResult<()> {
+    fn check_natives(&self, module: &CompiledModule) -> VMResult<()> {
+        fn check_natives_impl(loader: &Loader, module: &CompiledModule) -> PartialVMResult<()> {
             for (idx, native_function) in module
                 .function_defs()
                 .iter()
@@ -723,18 +727,20 @@ impl Loader {
             {
                 let fh = module.function_handle_at(native_function.function);
                 let mh = module.module_handle_at(fh.module);
-                NativeFunction::resolve(
-                    module.address_identifier_at(mh.address),
-                    module.identifier_at(mh.name).as_str(),
-                    module.identifier_at(fh.name).as_str(),
-                )
-                .ok_or_else(|| {
-                    verification_error(
-                        StatusCode::MISSING_DEPENDENCY,
-                        IndexKind::FunctionHandle,
-                        idx as TableIndex,
+                loader
+                    .natives
+                    .resolve(
+                        module.address_identifier_at(mh.address),
+                        module.identifier_at(mh.name).as_str(),
+                        module.identifier_at(fh.name).as_str(),
                     )
-                })?;
+                    .ok_or_else(|| {
+                        verification_error(
+                            StatusCode::MISSING_DEPENDENCY,
+                            IndexKind::FunctionHandle,
+                            idx as TableIndex,
+                        )
+                    })?;
             }
             // TODO: fix check and error code if we leave something around for native structs.
             // For now this generates the only error test cases care about...
@@ -749,7 +755,7 @@ impl Loader {
             }
             Ok(())
         }
-        check_natives_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+        check_natives_impl(self, module).map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
     //
@@ -852,10 +858,10 @@ impl Loader {
 
         let module = deserialize_and_verify_module(self, bytes, data_store, log_context)
             .map_err(|err| expect_no_verification_errors(err, log_context))?;
-        let module_ref = self
-            .module_cache
-            .write()
-            .insert(id.clone(), module, log_context)?;
+        let module_ref =
+            self.module_cache
+                .write()
+                .insert(&self.natives, id.clone(), module, log_context)?;
 
         // friendship is an upward edge in the dependencies DAG, so it has to be checked after the
         // module is put into cache, otherwise it is a chicken-and-egg problem.
@@ -1383,12 +1389,14 @@ impl Module {
 // more appropriate to execution.
 // When code executes, indexes in instructions are resolved against runtime structures
 // (rather then "compiled") to make available data needed for execution
-#[derive(Debug)]
+// #[derive(Debug)]
 struct Script {
     // primitive pools
     script: CompiledScript,
 
     // types as indexes into the Loader type list
+    // REVIEW: why is this unused?
+    #[allow(dead_code)]
     struct_refs: Vec<usize>,
 
     // functions as indexes into the Loader function list
@@ -1522,7 +1530,8 @@ enum Scope {
 }
 
 // A runtime function
-#[derive(Debug)]
+// #[derive(Debug)]
+// https://github.com/rust-lang/rust/issues/70263
 pub(crate) struct Function {
     file_format_version: u32,
     index: FunctionDefinitionIndex,
@@ -1538,6 +1547,7 @@ pub(crate) struct Function {
 
 impl Function {
     fn new(
+        natives: &NativeFunctions,
         index: FunctionDefinitionIndex,
         def: &FunctionDefinition,
         module: &CompiledModule,
@@ -1546,7 +1556,7 @@ impl Function {
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
         let native = if def.is_native() {
-            NativeFunction::resolve(
+            natives.resolve(
                 module_id.address(),
                 module_id.name().as_str(),
                 name.as_str(),

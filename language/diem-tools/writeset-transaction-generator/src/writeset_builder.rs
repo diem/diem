@@ -99,7 +99,7 @@ pub fn build_changeset<S: StateView, F>(state_view: &S, procedure: F) -> ChangeS
 where
     F: FnOnce(&mut GenesisSession<RemoteStorage<S>>),
 {
-    let move_vm = MoveVM::new();
+    let move_vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
     let (changeset, events) = {
         let state_view_storage = RemoteStorage::new(state_view);
         let mut session = GenesisSession(move_vm.new_session(&state_view_storage));

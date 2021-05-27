@@ -1691,9 +1691,12 @@ dependencies = [
  "move-lang",
  "move-prover",
  "move-stdlib",
+ "move-vm-runtime",
+ "move-vm-types",
  "once_cell",
  "rayon",
  "sha2",
+ "smallvec",
  "tempfile",
  "transaction-builder-generator",
  "walkdir",
@@ -2471,6 +2474,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "diem-crypto",
+ "diem-framework",
  "diem-framework-releases",
  "diem-logger",
  "diem-metrics",
@@ -2481,6 +2485,7 @@ dependencies = [
  "mirai-annotations",
  "move-binary-format",
  "move-core-types",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
@@ -4480,6 +4485,7 @@ dependencies = [
  "datatest-stable",
  "diem-framework-releases",
  "diem-types",
+ "diem-vm",
  "diem-workspace-hack",
  "difference",
  "disassembler",
@@ -4731,12 +4737,19 @@ dependencies = [
 name = "move-stdlib"
 version = "0.1.0"
 dependencies = [
+ "diem-crypto",
  "diem-workspace-hack",
  "dir-diff",
  "docgen",
  "log",
+ "move-binary-format",
+ "move-core-types",
  "move-prover",
  "move-unit-test",
+ "move-vm-runtime",
+ "move-vm-types",
+ "sha2",
+ "smallvec",
  "tempfile",
  "walkdir",
 ]
@@ -4775,25 +4788,11 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-lang",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
  "tempfile",
-]
-
-[[package]]
-name = "move-vm-natives"
-version = "0.1.0"
-dependencies = [
- "diem-crypto",
- "diem-workspace-hack",
- "mirai-annotations",
- "move-binary-format",
- "move-core-types",
- "move-vm-types",
- "once_cell",
- "sha2",
- "smallvec",
 ]
 
 [[package]]
@@ -4812,7 +4811,6 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-lang",
- "move-vm-natives",
  "move-vm-types",
  "once_cell",
  "parking_lot",

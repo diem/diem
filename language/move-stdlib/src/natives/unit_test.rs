@@ -3,28 +3,24 @@
 
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_schedule::ONE_GAS_UNIT;
-#[allow(unused_imports)]
-use move_vm_types::values::{values_impl::debug::print_reference, Reference};
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
-    loaded_data::runtime_types::Type,
-    natives::function::{NativeContext, NativeResult},
-    values::Value,
+    loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
 
 use move_core_types::account_address::AccountAddress;
 
-#[cfg(feature = "testing")]
 pub fn native_create_signers_for_testing(
-    _context: &mut impl NativeContext,
+    _context: &mut NativeContext,
     ty_args: Vec<Type>,
-    mut arguments: VecDeque<Value>,
+    mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.is_empty());
-    debug_assert!(arguments.len() == 1);
+    debug_assert!(args.len() == 1);
 
-    let num_signers = pop_arg!(arguments, u64);
+    let num_signers = pop_arg!(args, u64);
     let signers = Value::vector_for_testing_only(
         (0..num_signers).map(|i| Value::signer(AccountAddress::new((i as u128).to_le_bytes()))),
     );

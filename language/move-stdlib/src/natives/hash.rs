@@ -3,10 +3,12 @@
 
 use diem_crypto::HashValue;
 use move_binary_format::errors::PartialVMResult;
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeContext, NativeResult},
+    natives::function::{native_gas, NativeResult},
+    pop_arg,
     values::Value,
 };
 use sha2::{Digest, Sha256};
@@ -14,7 +16,7 @@ use smallvec::smallvec;
 use std::collections::VecDeque;
 
 pub fn native_sha2_256(
-    context: &impl NativeContext,
+    context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -37,7 +39,7 @@ pub fn native_sha2_256(
 }
 
 pub fn native_sha3_256(
-    context: &impl NativeContext,
+    context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {

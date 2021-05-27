@@ -6,6 +6,7 @@ use crate::{
     interpreter::Interpreter,
     loader::Loader,
     logging::LogContext,
+    native_functions::{NativeFunction, NativeFunctions},
     session::Session,
 };
 use diem_logger::prelude::*;
@@ -18,7 +19,7 @@ use move_binary_format::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    identifier::IdentStr,
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     value::{MoveTypeLayout, MoveValue},
     vm_status::StatusCode,
@@ -41,10 +42,13 @@ fn is_signer_reference(s: &Type) -> bool {
 }
 
 impl VMRuntime {
-    pub(crate) fn new() -> Self {
-        VMRuntime {
-            loader: Loader::new(),
-        }
+    pub(crate) fn new<I>(natives: I) -> PartialVMResult<Self>
+    where
+        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+    {
+        Ok(VMRuntime {
+            loader: Loader::new(NativeFunctions::new(natives)?),
+        })
     }
 
     pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S> {

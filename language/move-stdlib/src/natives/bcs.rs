@@ -3,10 +3,12 @@
 
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::vm_status::sub_status::NFE_BCS_SERIALIZATION_FAILURE;
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeContext, NativeResult},
+    natives::function::{native_gas, NativeResult},
+    pop_arg,
     values::{values_impl::Reference, Value},
 };
 use smallvec::smallvec;
@@ -14,7 +16,7 @@ use std::collections::VecDeque;
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
-    context: &mut impl NativeContext,
+    context: &mut NativeContext,
     mut ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {

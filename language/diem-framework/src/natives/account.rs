@@ -3,17 +3,19 @@
 
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::account_address::AccountAddress;
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeContext, NativeResult},
+    natives::function::{native_gas, NativeResult},
+    pop_arg,
     values::Value,
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
 
 pub fn native_create_signer(
-    context: &mut impl NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -28,7 +30,7 @@ pub fn native_create_signer(
 /// NOTE: this function will be deprecated after the Diem v3 release, but must
 /// remain for replaying old transactions
 pub fn native_destroy_signer(
-    context: &mut impl NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {

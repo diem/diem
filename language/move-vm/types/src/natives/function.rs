@@ -16,40 +16,14 @@
 //! This module contains the declarations and utilities to implement a native
 //! function.
 
-use crate::{gas_schedule::NativeCostIndex, loaded_data::runtime_types::Type, values::Value};
-use move_binary_format::errors::PartialVMResult;
-use move_core_types::{
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits},
-    value::MoveTypeLayout,
+use crate::{gas_schedule::NativeCostIndex, values::Value};
+use move_core_types::gas_schedule::{
+    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits,
 };
 use smallvec::SmallVec;
-use std::fmt::Write;
 
 pub use move_binary_format::errors::PartialVMError;
 pub use move_core_types::vm_status::StatusCode;
-
-/// `NativeContext` - Native function context.
-///
-/// This is the API, the "privileges", a native function is given.
-/// Normally a native function will only need the `CostTable`.
-/// The set of native functions and their linkage is entirely inside the MoveVM
-/// runtime.
-pub trait NativeContext {
-    /// Prints stack trace.
-    fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()>;
-    /// Gets cost table ref.
-    fn cost_table(&self) -> &CostTable;
-    /// Saves contract event. Returns true if successful
-    fn save_event(
-        &mut self,
-        guid: Vec<u8>,
-        count: u64,
-        ty: Type,
-        val: Value,
-    ) -> PartialVMResult<bool>;
-    /// Get the a data layout via the type.
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
-}
 
 /// Result of a native function execution requires charges for execution cost.
 ///

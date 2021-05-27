@@ -48,7 +48,7 @@ impl Adapter {
         ];
         Self {
             store,
-            vm: Arc::new(MoveVM::new()),
+            vm: Arc::new(MoveVM::new(vec![]).unwrap()),
             functions,
         }
     }

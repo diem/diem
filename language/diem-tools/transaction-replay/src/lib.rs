@@ -309,7 +309,7 @@ impl DiemDebugger {
     where
         F: FnOnce(&mut Session<DeltaStorage<RemoteStorage<DebuggerStateView>>>) -> VMResult<()>,
     {
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let state_view_storage = RemoteStorage::new(&state_view);
         let move_changes = override_changeset.unwrap_or_else(MoveChanges::new);

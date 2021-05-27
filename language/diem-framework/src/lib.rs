@@ -17,6 +17,7 @@ use std::{
 
 pub use move_stdlib::{COMPILED_EXTENSION, ERROR_DESC_EXTENSION, MOVE_EXTENSION};
 
+pub mod natives;
 pub mod release;
 
 const MODULES_DIR: &str = "modules";

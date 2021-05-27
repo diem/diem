@@ -18,6 +18,7 @@ structopt = "0.3.21"
 
 bcs = "0.1.2"
 bytecode-verifier = { path = "../../bytecode-verifier" }
+diem-vm = { path = "../../diem-vm" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
 disassembler = { path = "../disassembler" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
@@ -27,7 +28,7 @@ move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-lang = { path = "../../move-lang" }
 move-vm-types = { path = "../../move-vm/types" }
-move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
+move-vm-runtime = { path = "../../move-vm/runtime" }
 read-write-set = { path = "../read-write-set" }
 resource-viewer = { path = "../resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }

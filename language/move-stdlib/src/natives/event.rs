@@ -3,17 +3,19 @@
 
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_schedule::GasAlgebra;
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeContext, NativeResult},
+    natives::function::{native_gas, NativeResult},
+    pop_arg,
     values::Value,
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
 
-pub fn native_emit_event(
-    context: &mut impl NativeContext,
+pub fn native_write_to_event_store(
+    context: &mut NativeContext,
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {

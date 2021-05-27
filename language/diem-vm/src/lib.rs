@@ -112,6 +112,7 @@ pub mod foreign_contracts;
 
 mod diem_vm;
 mod errors;
+pub mod natives;
 pub mod transaction_metadata;
 
 pub mod diem_transaction_executor;

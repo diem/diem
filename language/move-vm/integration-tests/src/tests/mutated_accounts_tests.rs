@@ -42,7 +42,7 @@ fn mutated_accounts() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     storage.publish_or_overwrite_module(module_id.clone(), blob);
 
-    let vm = MoveVM::new();
+    let vm = MoveVM::new(vec![]).unwrap();
     let mut sess = vm.new_session(&storage);
 
     let mut gas_status = GasStatus::new_unmetered();

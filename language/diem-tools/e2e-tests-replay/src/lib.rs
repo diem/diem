@@ -33,6 +33,7 @@ use diem_types::{
 };
 use diem_vm::{
     convert_changeset_and_events,
+    natives::diem_natives,
     script_to_script_function::remapping,
     system_module_names::{
         BLOCK_PROLOGUE, DIEM_BLOCK_MODULE, SCRIPT_PROLOGUE_NAME, USER_EPILOGUE_NAME,
@@ -284,7 +285,7 @@ impl<'env> CrossRunner<'env> {
         if self.flags.verbose_vm {
             env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, MOVE_VM_TRACING_LOG_FILENAME);
         }
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_natives()).unwrap();
         let mut session = move_vm.new_session(&self.move_vm_state);
         let move_vm_return_values = execute_function_via_session(
             &mut session,
@@ -346,7 +347,7 @@ impl<'env> CrossRunner<'env> {
         }
 
         // execute via move VM
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_natives()).unwrap();
         let mut session = move_vm.new_session(&self.move_vm_state);
         let move_vm_return_values = execute_script_function_via_session(
             &mut session,
@@ -508,7 +509,7 @@ impl<'env> TraceReplayer<'env> {
         .collect();
 
         // execute
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_natives()).unwrap();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(
@@ -548,7 +549,7 @@ impl<'env> TraceReplayer<'env> {
         let gas_currency_ty =
             type_tag_for_currency_code(from_currency_code_string(gas_currency).unwrap());
 
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_natives()).unwrap();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(
@@ -621,7 +622,7 @@ impl<'env> TraceReplayer<'env> {
         txn_meta: TransactionMetadata,
         script_fun: ScriptFunction,
     ) -> VMResult<(ChangeSet, Vec<Event>)> {
-        let move_vm = MoveVM::new();
+        let move_vm = MoveVM::new(diem_natives()).unwrap();
         let mut session = move_vm.new_session(&self.data_store);
         let mut xrunner = if self.flags.xrun {
             Some(CrossRunner::new(

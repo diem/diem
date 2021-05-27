@@ -6,6 +6,7 @@ use crate::{
     counters::*,
     data_cache::RemoteStorage,
     errors::{convert_epilogue_error, convert_prologue_error, expect_only_successful_execution},
+    natives::diem_natives,
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
@@ -54,7 +55,8 @@ pub struct DiemVMImpl {
 impl DiemVMImpl {
     #[allow(clippy::new_without_default)]
     pub fn new<S: StateView>(state: &S) -> Self {
-        let inner = MoveVM::new();
+        let inner = MoveVM::new(diem_natives())
+            .expect("should be able to create Move VM; check if there are duplicated natives");
         let mut vm = Self {
             move_vm: Arc::new(inner),
             on_chain_config: None,
@@ -70,7 +72,8 @@ impl DiemVMImpl {
         on_chain_config: VMConfig,
         publishing_option: VMPublishingOption,
     ) -> Self {
-        let inner = MoveVM::new();
+        let inner = MoveVM::new(diem_natives())
+            .expect("should be able to create Move VM; check if there are duplicated natives");
         Self {
             move_vm: Arc::new(inner),
             on_chain_config: Some(on_chain_config),

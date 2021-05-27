@@ -3,17 +3,19 @@
 
 use diem_crypto::{ed25519, traits::*};
 use move_binary_format::errors::PartialVMResult;
+use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeContext, NativeResult},
+    natives::function::{native_gas, NativeResult},
+    pop_arg,
     values::Value,
 };
 use smallvec::smallvec;
 use std::{collections::VecDeque, convert::TryFrom};
 
 pub fn native_ed25519_publickey_validation(
-    context: &impl NativeContext,
+    context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -34,7 +36,7 @@ pub fn native_ed25519_publickey_validation(
 }
 
 pub fn native_ed25519_signature_verification(
-    context: &impl NativeContext,
+    context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {

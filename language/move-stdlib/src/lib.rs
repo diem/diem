@@ -8,6 +8,8 @@ use std::path::PathBuf;
 mod tests;
 pub mod utils;
 
+pub mod natives;
+
 pub const MOVE_EXTENSION: &str = "move";
 pub const COMPILED_EXTENSION: &str = "mv";
 pub const ERROR_DESC_EXTENSION: &str = "errmap";
