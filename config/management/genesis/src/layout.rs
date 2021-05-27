@@ -1,7 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use crate::builder::GenesisBuilder;
+use diem_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
+use diem_secure_storage::Storage;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -58,14 +60,21 @@ pub struct SetLayout {
 impl SetLayout {
     pub fn execute(self) -> Result<Layout, Error> {
         let layout = Layout::from_disk(&self.path)?;
-        let data = layout.to_toml()?;
 
         let config = self
             .config
             .load()?
             .override_shared_backend(&self.backend.shared_backend)?;
-        let mut storage = config.shared_backend_with_namespace(constants::COMMON_NS.to_string());
-        storage.set(constants::LAYOUT, data)?;
+
+        // In order to not break cli compatibility we need to clear the namespace set via cli since
+        // it was previously ignored.
+        let mut shared_backend = config.shared_backend;
+        shared_backend.clear_namespace();
+
+        let storage = Storage::from(&shared_backend);
+        GenesisBuilder::new(storage)
+            .set_layout(&layout)
+            .map_err(|e| Error::StorageWriteError("shared", "layout", e.to_string()))?;
 
         Ok(layout)
     }
