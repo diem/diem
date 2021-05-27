@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
+use crate::{interpreter::Interpreter, loader::Resolver};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     account_address::AccountAddress, gas_schedule::CostTable, language_storage::CORE_CODE_ADDRESS,
@@ -127,20 +127,20 @@ impl NativeFunction {
     }
 }
 
-pub(crate) struct FunctionContext<'a, L: LogContext> {
-    interpreter: &'a mut Interpreter<L>,
+pub struct FunctionContext<'a, 'b> {
+    interpreter: &'a mut Interpreter<'b>,
     data_store: &'a mut dyn DataStore,
     gas_status: &'a GasStatus<'a>,
     resolver: &'a Resolver<'a>,
 }
 
-impl<'a, L: LogContext> FunctionContext<'a, L> {
+impl<'a, 'b> FunctionContext<'a, 'b> {
     pub(crate) fn new(
-        interpreter: &'a mut Interpreter<L>,
+        interpreter: &'a mut Interpreter<'b>,
         data_store: &'a mut dyn DataStore,
         gas_status: &'a mut GasStatus,
         resolver: &'a Resolver<'a>,
-    ) -> FunctionContext<'a, L> {
+    ) -> Self {
         FunctionContext {
             interpreter,
             data_store,
@@ -150,7 +150,7 @@ impl<'a, L: LogContext> FunctionContext<'a, L> {
     }
 }
 
-impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
+impl<'a, 'b> NativeContext for FunctionContext<'a, 'b> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())

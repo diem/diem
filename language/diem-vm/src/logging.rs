@@ -70,6 +70,10 @@ impl LogContext for AdapterLogSchema {
     fn alert(&self) {
         CRITICAL_ERRORS.inc();
     }
+
+    fn as_super(&self) -> &dyn Schema {
+        self
+    }
 }
 
 #[derive(Clone, Copy, Serialize)]
