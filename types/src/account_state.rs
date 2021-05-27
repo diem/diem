@@ -154,7 +154,7 @@ impl AccountState {
         } else if self.0.contains_key(&DiemIdDomainManager::resource_path()) {
             match self.get_resource::<DiemIdDomainManager>() {
                 Ok(Some(diem_id_domain_manager)) => Ok(Some(AccountRole::TreasuryCompliance {
-                    diem_id_domain_manager: Some(diem_id_domain_manager),
+                    diem_id_domain_manager,
                 })),
                 _ => Ok(None),
             }

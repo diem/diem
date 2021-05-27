@@ -1200,13 +1200,12 @@ impl From<AccountRole> for AccountRoleView {
                     preburn_queues,
                 }
             }
-            //Some(*diem_id_domain_manager.diem_id_domain_events().key())
             AccountRole::TreasuryCompliance {
                 diem_id_domain_manager,
             } => AccountRoleView::TreasuryCompliance {
-                diem_id_domain_events_key: diem_id_domain_manager.map(|diem_id_domain_manager| {
-                    *diem_id_domain_manager.diem_id_domain_events().key()
-                }),
+                diem_id_domain_events_key: Some(
+                    *diem_id_domain_manager.diem_id_domain_events().key(),
+                ),
             },
         }
     }

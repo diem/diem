@@ -22,7 +22,7 @@ pub enum AccountRole {
         designated_dealer: DesignatedDealer,
     },
     TreasuryCompliance {
-        diem_id_domain_manager: Option<DiemIdDomainManager>,
+        diem_id_domain_manager: DiemIdDomainManager,
     },
     Unknown,
     // TODO: add other roles
