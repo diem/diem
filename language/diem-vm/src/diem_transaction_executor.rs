@@ -209,15 +209,22 @@ impl DiemVM {
                         ),
                     }
                 }
-                TransactionPayload::ScriptFunction(script_fn) => session.execute_script_function(
-                    script_fn.module(),
-                    script_fn.function(),
-                    script_fn.ty_args().to_vec(),
-                    script_fn.args().to_vec(),
-                    vec![txn_data.sender()],
-                    gas_status,
-                    log_context,
-                ),
+                TransactionPayload::ScriptFunction(script_fn) => {
+                    let diem_version = self.0.get_diem_version()?;
+                    let mut senders = vec![txn_data.sender()];
+                    if diem_version >= DIEM_VERSION_3 {
+                        senders.extend(txn_data.secondary_signers());
+                    }
+                    session.execute_script_function(
+                        script_fn.module(),
+                        script_fn.function(),
+                        script_fn.ty_args().to_vec(),
+                        script_fn.args().to_vec(),
+                        senders,
+                        gas_status,
+                        log_context,
+                    )
+                }
                 TransactionPayload::Module(_) | TransactionPayload::WriteSet(_) => {
                     return Err(VMStatus::Error(StatusCode::UNREACHABLE));
                 }
