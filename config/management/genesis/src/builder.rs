@@ -8,7 +8,12 @@ use diem_global_constants::{
     CONSENSUS_KEY, DIEM_ROOT_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, OWNER_KEY,
     SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
-use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use diem_management::{
+    config::ConfigPath,
+    constants::{self, VALIDATOR_OPERATOR},
+    error::Error,
+    secure_backend::SharedBackend,
+};
 use diem_secure_storage::{CryptoStorage, KVStorage, Namespaced, Storage};
 use diem_types::chain_id::ChainId;
 use serde::{de::DeserializeOwned, Serialize};
@@ -73,12 +78,10 @@ impl<S: KVStorage> GenesisBuilder<S> {
             .map_err(Into::into)
     }
 
-    pub fn set_operator(
-        &mut self,
-        validator_namespace: &str,
-        operator_namespace: &str,
-    ) -> Result<()> {
-        todo!()
+    pub fn set_operator(&mut self, validator: &str, operator: &str) -> Result<()> {
+        self.with_namespace_mut(validator)
+            .set(VALIDATOR_OPERATOR, operator)
+            .map_err(Into::into)
     }
 
     pub fn set_owner_key(
