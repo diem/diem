@@ -3,29 +3,17 @@
 
 use crate::layout::Layout;
 use anyhow::Result;
-use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use diem_global_constants::{
-    CONSENSUS_KEY, DIEM_ROOT_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, OWNER_KEY,
-    SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
-};
-use diem_management::{
-    config::ConfigPath,
-    constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR},
-    error::Error,
-    secure_backend::SharedBackend,
-};
-use diem_secure_storage::{CryptoStorage, KVStorage, Namespaced, Storage};
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_global_constants::{DIEM_ROOT_KEY, OPERATOR_KEY, OWNER_KEY, TREASURY_COMPLIANCE_KEY};
+use diem_management::constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR};
+use diem_secure_storage::{KVStorage, Namespaced};
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address,
-    account_address::AccountAddress,
     chain_id::ChainId,
-    transaction::{
-        RawTransaction, ScriptFunction, SignedTransaction, Transaction, TransactionPayload,
-    },
-    waypoint::Waypoint,
+    transaction::{ScriptFunction, Transaction, TransactionPayload},
 };
-use serde::{de::DeserializeOwned, Serialize};
+
 use vm_genesis::{OperatorAssignment, OperatorRegistration};
 
 pub struct GenesisBuilder<S> {

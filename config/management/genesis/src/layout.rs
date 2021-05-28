@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use diem_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
 use diem_secure_storage::Storage;
 use serde::{Deserialize, Serialize};
 use std::{
