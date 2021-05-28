@@ -13,6 +13,9 @@
 #[cfg(test)]
 mod accumulator_test;
 
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod mock;
+
 use super::MerkleTreeInternalNode;
 use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES};
 use anyhow::{ensure, format_err, Result};

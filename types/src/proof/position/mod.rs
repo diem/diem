@@ -31,7 +31,7 @@ use std::fmt;
 #[cfg(test)]
 mod position_test;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Position(u64);
 // invariant Position.0 < u64::max_value() - 1
 
@@ -48,7 +48,7 @@ impl Position {
         (!self.0).trailing_zeros()
     }
 
-    fn is_leaf(self) -> bool {
+    pub fn is_leaf(self) -> bool {
         self.0 & 1 == 0
     }
 
