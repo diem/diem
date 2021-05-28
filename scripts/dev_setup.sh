@@ -14,12 +14,6 @@
 # fast fail.
 set -eo pipefail
 
-set -x
-
-function echoerr() {
-  cat <<< "$@" 1>&2;
-}
-
 SHELLCHECK_VERSION=0.7.1
 HADOLINT_VERSION=1.17.4
 SCCACHE_VERSION=0.2.16-alpha.0
@@ -33,6 +27,8 @@ Z3_VERSION=4.8.9
 CVC4_VERSION=aac53f51
 DOTNET_VERSION=3.1
 BOOGIE_VERSION=2.8.32
+PYRE_CHECK_VERSION=0.0.59
+NUMPY_VERSION=1.20.1
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -108,13 +104,13 @@ function install_rustup {
   BATCH_MODE=$1
   # Install Rust
   if [[ "${BATCH_MODE}" == "false" ]]; then
-     echo "Installing Rust......"
+    echo "Installing Rust......"
   fi
   VERSION="$(rustup --version || true)"
   if [ -n "$VERSION" ]; then
-	   if [[ "${BATCH_MODE}" == "false" ]]; then
-        echo "Rustup is already installed, version: $VERSION"
-     fi
+	  if [[ "${BATCH_MODE}" == "false" ]]; then
+      echo "Rustup is already installed, version: $VERSION"
+    fi
   else
 	  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
     PATH="${HOME}/.cargo/bin:${PATH}"
@@ -313,18 +309,16 @@ function install_lcov {
   if [[ "$PACKAGE_MANAGER" == "apk" ]]; then
     apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/testing lcov
   fi
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
     install_pkg lcov "$PACKAGE_MANAGER"
   fi
-  if [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
-    install_pkg lcov "$PACKAGE_MANAGER"
-  fi
-  if [[ "$PACKAGE_MANAGER" == "pacman" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-    install_pkg git "$PACKAGE_MANAGER"
-    git clone https://aur.archlinux.org/lcov.git
-    cd lcov;
-    makepkg -si --noconfirm
-    cd ../
+  if [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+    echo nope no lcov for you.
+    echo You can try installing yourself with:
+    echo install_pkg git "$PACKAGE_MANAGER"
+    echo cd lcov;
+    echo git clone https://aur.archlinux.org/lcov.git
+    echo makepkg -si --noconfirm
   fi
 }
 
@@ -496,7 +490,7 @@ function install_golang {
       "${PRE_COMMAND[@]}" apt-get install -y golang-1.14-go/buster-backports
       "${PRE_COMMAND[@]}" ln -sf /usr/lib/go-1.14 /usr/lib/golang
     elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-      apk add --no-cache git make musl-dev go
+      apk --update add --no-cache git make musl-dev go
     else
       install_pkg golang "$PACKAGE_MANAGER"
     fi
@@ -768,6 +762,8 @@ if [[ "$INSTALL_CODEGEN" == "true" ]]; then
     install_pkg python3-all-dev "$PACKAGE_MANAGER"
     install_pkg python3-setuptools "$PACKAGE_MANAGER"
     install_pkg python3-pip "$PACKAGE_MANAGER"
+  elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
+    install_pkg python3-dev "$PACKAGE_MANAGER"
   else
     install_pkg python3 "$PACKAGE_MANAGER"
   fi
@@ -775,8 +771,12 @@ if [[ "$INSTALL_CODEGEN" == "true" ]]; then
   install_pkg npm "$PACKAGE_MANAGER"
   install_java
   install_golang
-  "${PRE_COMMAND[@]}" python3 -m pip install pyre-check==0.0.59
-  "${PRE_COMMAND[@]}" python3 -m pip install numpy==1.20.1
+  if [[ "$PACKAGE_MANAGER" != "apk" ]]; then
+    # depends on wheels which needs glibc which doesn't work on alpine's python.
+    # Only invested a hour or so in this, a work around may exist.
+    "${PRE_COMMAND[@]}" python3 -m pip install pyre-check=="${PYRE_CHECK_VERSION}"
+  fi
+  "${PRE_COMMAND[@]}" python3 -m pip install numpy=="${NUMPY_VERSION}"
 fi
 
 if [[ "${BATCH_MODE}" == "false" ]]; then
