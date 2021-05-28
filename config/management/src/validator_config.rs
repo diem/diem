@@ -13,6 +13,7 @@ use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
+use diem_secure_storage::{CryptoStorage, KVStorage};
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     chain_id::ChainId,
@@ -110,6 +111,76 @@ impl ValidatorConfig {
         Ok(txn)
     }
 }
+
+// pub fn build_validator_config_transaction<S>(
+//     mut storage: S,
+//     sequence_number: u64,
+//     fullnode_address: NetworkAddress,
+//     validator_address: NetworkAddress,
+//     reconfigure: bool,
+//     disable_address_validation: bool,
+// ) -> Result<Transaction, Error>
+// where
+//     S: CryptoStorage + KVStorage,
+// {
+//     if !disable_address_validation {
+//         // Verify addresses
+//         validate_address("validator address", &validator_address)?;
+//         validate_address("fullnode address", &fullnode_address)?;
+//     }
+
+//     let owner_account = storage.account_address(OWNER_ACCOUNT)?;
+
+//     let consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
+//     let fullnode_network_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
+//     let validator_network_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
+
+//     // Build Validator address including protocols and encryption
+//     // Append ln-noise-ik and ln-handshake protocols to base network addresses
+//     // and encrypt the validator address.
+//     let validator_address =
+//         validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
+//     let encryptor = config.validator_backend().encryptor();
+//     let validator_addresses = encryptor
+//         .encrypt(
+//             &[validator_address],
+//             owner_account,
+//             sequence_number + if reconfigure { 1 } else { 0 },
+//         )
+//         .map_err(|e| {
+//             Error::UnexpectedError(format!("Error encrypting validator address: {}", e))
+//         })?;
+
+//     // Build Fullnode address including protocols
+//     let fullnode_address =
+//         fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
+
+//     // Generate the validator config script
+//     let transaction_callback = if reconfigure {
+//         transaction_builder::encode_set_validator_config_and_reconfigure_script_function
+//     } else {
+//         transaction_builder::encode_register_validator_config_script_function
+//     };
+//     let validator_config_script = transaction_callback(
+//         owner_account,
+//         consensus_key.to_bytes().to_vec(),
+//         validator_addresses,
+//         bcs::to_bytes(&vec![fullnode_address]).unwrap(),
+//     )
+//     .into_script_function();
+
+//     // Create and sign the validator-config transaction
+//     let raw_txn = build_raw_transaction(
+//         config.chain_id,
+//         storage.account_address(OPERATOR_ACCOUNT)?,
+//         sequence_number,
+//         validator_config_script,
+//     );
+//     let signed_txn = storage.sign(OPERATOR_KEY, "validator-config", raw_txn)?;
+//     let txn = Transaction::UserTransaction(signed_txn);
+
+//     Ok(txn)
+// }
 
 /// Validates an address to have a DNS/IP and a port, as well as to be resolvable
 pub fn validate_address(

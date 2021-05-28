@@ -168,30 +168,26 @@ impl<S: KVStorage> GenesisBuilder<S> {
     }
 
     pub fn validator_config(&self, operator: &str) -> Result<ScriptFunction> {
-        if let Ok(txn) = self
-            .with_namespace(operator)
-            .get::<ScriptFunction>(VALIDATOR_CONFIG)
+        self.with_namespace(operator)
+            .get::<Transaction>(VALIDATOR_CONFIG)
             .map(|r| r.value)
-        {
-            Ok(txn)
-        } else {
-            let txn = self
-                .with_namespace(operator)
-                .get::<Transaction>(VALIDATOR_CONFIG)
-                .map(|r| r.value)?;
-            let txn = if let Transaction::UserTransaction(txn) = txn {
-                txn
-            } else {
-                return Err(anyhow::anyhow!("Invalid Validator Config"));
-            };
-            if let TransactionPayload::ScriptFunction(txn) =
-                txn.into_raw_transaction().into_payload()
-            {
-                Ok(txn)
-            } else {
-                Err(anyhow::anyhow!("Invalid Validator Config"))
-            }
-        }
+            .map(|txn| {
+                if let Transaction::UserTransaction(txn) = txn {
+                    Some(txn)
+                } else {
+                    None
+                }
+            })?
+            .and_then(|txn| {
+                if let TransactionPayload::ScriptFunction(txn) =
+                    txn.into_raw_transaction().into_payload()
+                {
+                    Some(txn)
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| anyhow::anyhow!("Invalid Validator Config"))
     }
 
     /// Produces a set of OperatorRegistrations from the remote storage.
