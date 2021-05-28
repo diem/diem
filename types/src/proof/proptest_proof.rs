@@ -7,6 +7,7 @@
 use crate::proof::{
     definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccumulatorConsistencyProof, AccumulatorProof,
     AccumulatorRangeProof, SparseMerkleLeafNode, SparseMerkleProof, SparseMerkleRangeProof,
+    TransactionAccumulatorSummary,
 };
 use diem_crypto::{
     hash::{
@@ -145,6 +146,26 @@ impl Arbitrary for SparseMerkleRangeProof {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         vec(arb_sparse_merkle_sibling(), 0..=256)
             .prop_map(Self::new)
+            .boxed()
+    }
+}
+
+impl Arbitrary for TransactionAccumulatorSummary {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        let arb_version = 0u64..=256;
+        arb_version
+            .prop_map(|version| {
+                let num_leaves = version + 1;
+                let num_subtrees = num_leaves.count_ones() as u64;
+                let mock_subtrees = (0..num_subtrees)
+                    .map(HashValue::from_u64)
+                    .collect::<Vec<_>>();
+                let consistency_proof = AccumulatorConsistencyProof::new(mock_subtrees);
+                Self::try_from_genesis_proof(consistency_proof, version).unwrap()
+            })
             .boxed()
     }
 }

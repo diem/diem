@@ -12,7 +12,7 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Context, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use diem_crypto::hash::TestOnlyHasher;
 use diem_crypto::{
@@ -262,6 +262,95 @@ where
         );
 
         Ok(())
+    }
+}
+
+/// An in-memory accumulator for storing a summary of the core transaction info
+/// accumulator. It is a summary in the sense that it only stores maximally
+/// frozen subtree nodes rather than storing all leaves and internal nodes.
+///
+/// Light clients and light nodes use this type to store their currently verified
+/// view of the transaction accumulator. When verifying state proofs, these clients
+/// attempt to extend their accumulator summary with an [`AccumulatorConsistencyProof`]
+/// to verifiably ratchet their trusted view of the accumulator to a newer state.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TransactionAccumulatorSummary(InMemoryAccumulator<TransactionAccumulatorHasher>);
+
+impl TransactionAccumulatorSummary {
+    pub fn new(accumulator: InMemoryAccumulator<TransactionAccumulatorHasher>) -> Result<Self> {
+        ensure!(
+            !accumulator.is_empty(),
+            "empty accumulator: we can't verify consistency proofs from an empty accumulator",
+        );
+        Ok(Self(accumulator))
+    }
+
+    pub fn version(&self) -> Version {
+        self.0.version()
+    }
+
+    pub fn root_hash(&self) -> HashValue {
+        self.0.root_hash()
+    }
+
+    /// Verify that this accumulator summary is "consistent" with the given
+    /// [`LedgerInfo`], i.e., they both have the same version and accumulator
+    /// root hash.
+    pub fn verify_consistency(&self, ledger_info: &LedgerInfo) -> Result<()> {
+        ensure!(
+            ledger_info.version() == self.version(),
+            "ledger info and accumulator must be at the same version: \
+             ledger info version={}, accumulator version={}",
+            ledger_info.version(),
+            self.version(),
+        );
+        ensure!(
+            ledger_info.transaction_accumulator_hash() == self.root_hash(),
+            "ledger info root hash and accumulator root hash must match: \
+             ledger info root hash={}, accumulator root hash={}",
+            ledger_info.transaction_accumulator_hash(),
+            self.root_hash(),
+        );
+        Ok(())
+    }
+
+    /// Try to build an accumulator summary using a consistency proof starting
+    /// from pre-genesis.
+    pub fn try_from_genesis_proof(
+        genesis_proof: AccumulatorConsistencyProof,
+        target_version: Version,
+    ) -> Result<Self> {
+        let num_txns = target_version.saturating_add(1);
+        Ok(Self(InMemoryAccumulator::new(
+            genesis_proof.into_subtrees(),
+            num_txns,
+        )?))
+    }
+
+    /// Try to extend an existing accumulator summary with a consistency proof
+    /// starting from our current version. Then validate that the resulting
+    /// accumulator summary is consistent with the given target [`LedgerInfo`].
+    pub fn try_extend_with_proof(
+        &self,
+        consistency_proof: &AccumulatorConsistencyProof,
+        target_li: &LedgerInfo,
+    ) -> Result<Self> {
+        ensure!(
+            target_li.version() >= self.0.version(),
+            "target ledger info version ({}) must be newer than our current accumulator \
+             summary version ({})",
+            target_li.version(),
+            self.0.version(),
+        );
+        let num_new_txns = target_li.version() - self.0.version();
+        let new_accumulator = Self(
+            self.0
+                .append_subtrees(consistency_proof.subtrees(), num_new_txns)?,
+        );
+        new_accumulator
+            .verify_consistency(target_li)
+            .context("accumulator is not consistent with the target ledger info after applying consistency proof")?;
+        Ok(new_accumulator)
     }
 }
 

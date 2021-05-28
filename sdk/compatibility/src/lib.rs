@@ -7,14 +7,14 @@
 
 use anyhow::Result;
 use diem_sdk::{
-    crypto::hash::{HashValue, TransactionAccumulatorHasher},
+    crypto::HashValue,
     transaction_builder::{
         stdlib::{self, ScriptCall},
         Currency, DualAttestationMessage,
     },
     types::{
         account_address::AccountAddress,
-        proof::{accumulator::InMemoryAccumulator, AccumulatorConsistencyProof},
+        proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
         transaction::Script,
         AccountKey,
     },
@@ -76,9 +76,8 @@ fn get_accumulator_consistency_proof() -> Result<()> {
         .get_accumulator_consistency_proof(None, Some(metadata.version))?
         .into_inner();
     let proof = AccumulatorConsistencyProof::try_from(&proof_view)?;
-    let num_txns = metadata.version + 1;
     let accumulator =
-        InMemoryAccumulator::<TransactionAccumulatorHasher>::new(proof.into_subtrees(), num_txns)?;
+        TransactionAccumulatorSummary::try_from_genesis_proof(proof, metadata.version)?;
 
     // the root hashes should match up
     assert_eq!(metadata.accumulator_root_hash, accumulator.root_hash());

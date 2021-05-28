@@ -32,7 +32,7 @@ pub use self::definition::{
     AccountStateProof, AccumulatorConsistencyProof, AccumulatorExtensionProof, AccumulatorProof,
     AccumulatorRangeProof, EventAccumulatorProof, EventProof, SparseMerkleProof,
     SparseMerkleRangeProof, TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
-    TransactionInfoWithProof, TransactionListProof,
+    TransactionAccumulatorSummary, TransactionInfoWithProof, TransactionListProof,
 };
 
 #[cfg(any(test, feature = "fuzzing"))]

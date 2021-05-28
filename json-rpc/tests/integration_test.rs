@@ -3,7 +3,7 @@
 
 use serde_json::json;
 
-use diem_crypto::hash::{CryptoHash, HashValue, TransactionAccumulatorHasher};
+use diem_crypto::hash::{CryptoHash, HashValue};
 use diem_json_rpc_types::views::{AccumulatorConsistencyProofView, EventView};
 use diem_transaction_builder::stdlib::{
     self, encode_rotate_authentication_key_with_nonce_admin_script,
@@ -19,8 +19,8 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
     proof::{
-        accumulator::InMemoryAccumulator, AccumulatorConsistencyProof,
-        TransactionAccumulatorRangeProof,
+        AccumulatorConsistencyProof, TransactionAccumulatorRangeProof,
+        TransactionAccumulatorSummary,
     },
     transaction::{ChangeSet, Transaction, TransactionInfo, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -1485,12 +1485,10 @@ fn create_test_cases() -> Vec<Test> {
                 let metadata_root_hash = HashValue::from_str(metadata["accumulator_root_hash"].as_str().unwrap()).unwrap();
                 let version = metadata["version"].as_u64().unwrap();
 
-                // parse the consistency proof
+                // parse the consistency proof and build the accumulator
                 let proof_view = serde_json::from_value::<AccumulatorConsistencyProofView>(proof_view.clone()).unwrap();
                 let proof = AccumulatorConsistencyProof::try_from(&proof_view).unwrap();
-
-                // build the accumulator summary from the frozen subtrees
-                let accumulator = InMemoryAccumulator::<TransactionAccumulatorHasher>::new(proof.into_subtrees(), version + 1).unwrap();
+                let accumulator = TransactionAccumulatorSummary::try_from_genesis_proof(proof, version).unwrap();
 
                 // root hash from metadata and the computed root hash from the
                 // accumulator summary should match
