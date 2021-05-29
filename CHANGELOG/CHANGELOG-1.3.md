@@ -6,6 +6,7 @@
 
 **Fixed bugs:**
 
+- \[cli\] Fix the logic for fetching diem_root account in the cli. [\#8136](https://github.com/diem/diem/pull/8136)
 - \[Bug\] VFN crashes after 1.1 -\> 1.2 upgrade [\#8140](https://github.com/diem/diem/issues/8140)
 
 
@@ -26,6 +27,7 @@
 - \[transaction-replay\] Implement an api for fetching annotated event data [\#8276](https://github.com/diem/diem/pull/8276)
 - \[writeset-generator\] Create the writeset patch for diem-framework-1.2.0-rc0 release [\#8082](https://github.com/diem/diem/pull/8082)
 - \[diem framework\] remove DiemAccount::destroy\_signer + associated native function [\#8163](https://github.com/diem/diem/pull/8163)
+- \[writeset-generator\] Fix a few minor issues for writeset generator tool [\#8446](https://github.com/diem/diem/pull/8446)
 
 **[JSON RPC/Client]**
 - String type for DiemID [\#8362](https://github.com/diem/diem/pull/8362) ([sunmilee](https://github.com/sunmilee))
@@ -40,6 +42,7 @@
 **[Move]**
 
 - Updated to version 1.3 of Move: see the Move release notes for details
+- [diem-vm] Implement prefetching logic for account blobs [\#8248](https://github.com/diem/diem/pull/8248)
 
 **[Network]**
 - \[network\] Remove rate-limit key from metrics [\#8142](https://github.com/diem/diem/pull/8142)
