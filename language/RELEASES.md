@@ -1,3 +1,111 @@
+# Move Version 1.3
+
+Version 1.3 of Move (released along with Diem Core version 1.3) introduces some syntax changes
+to the Move language so that you may need to update Move source code when moving to this release.
+The bytecode format remains the same as in version 1.2.
+
+## Highlights
+
+The main highlight of this release is a new language feature for unit testing.
+This provides an easy way to test individual functions and features in Move.
+More details are available in the unit testing [change description](changes/4-unit-testing.md).
+
+## Move Language
+
+In addition to the new unit testing feature, this release includes a few other changes to the
+Move language:
+
+* Added new module address syntax, e.g., `module 0x1::M`, to specify the address of a module
+from within Move code
+([#7915](https://github.com/diem/diem/pull/7915)).
+This replaces the compiler's `--sender` option to specify the address on the command line.
+
+* The syntax for an address value is changed to `@` followed by a number
+([#8285](https://github.com/diem/diem/pull/8285)).
+Previously an account address value was specified
+as a hexadecimal value with an `0x` prefix, and hexadecimal values could not be
+used as ordinary integer numbers. With this change, addresses and numbers can be
+specified as either decimal and hexadecimal values, and the `@` prefix distinguishes
+the address values.
+
+* Introduced a general syntax for attributes in Move
+([#8169](https://github.com/diem/diem/pull/8169)).
+Move attributes are based on the Rust attribute syntax, which is in turn based on
+the standards found in ECMA-334 and ECMA-335. Attributes can currently be attached to
+address blocks, modules, scripts, and any module top level member. They are currently
+used for unit testing, and other attributes may be defined in the future.
+
+## Compiler
+
+* Removed the compiler's `--sender` option. Instead of specifying the address on the command line,
+you can use the new module address syntax in the Move code
+([#7915](https://github.com/diem/diem/pull/7915)).
+* Fixed crashes during internal testing with a precompiled standard library
+when error messages reference the precompiled files
+([#8344](https://github.com/diem/diem/pull/8344)).
+
+## Prover
+
+The syntax for specifications in Move is still in development and is
+documented separately from the rest of the language. This release includes a
+number of changes for Move specifications:
+
+* Extended and renamed builtin functions
+* New `let` binding semantics (`let x = E` and `let post y = E`)
+* Support for axiom for constraining uninterpreted specification functions
+* New `choose x where p` and `choose min i where p` expression forms
+* New invariant syntax (`module M { invariant p; }`) for global invariants
+* New syntax for function and struct specifications (`spec f` instead of `spec fun f`)
+* New syntax for specification modules which can be put into separate files
+* Removed `succeeds_if`
+* Removed `invariant module`
+* Removed `type<T>()` expression
+
+In addition to the specification changes, the Move Prover has been improved with
+bug fixes and some larger changes, including:
+
+* Overhauled handling of global invariants
+* Changed to perform monomorphization of generics in the Prover backend and memory model,
+which has helped the Prover run faster and avoid timeouts.
+
+## Standard Library
+
+* Added a `BitVector` module
+([#8315](https://github.com/diem/diem/pull/8315)).
+* Added a `Vault` module for capability-based secure storage
+([#8396](https://github.com/diem/diem/pull/8396)).
+
+## VM
+
+* Renamed `gas_schedule::CostStrategy` to `GasStatus` and cleaned up some of its APIs
+([#7797](https://github.com/diem/diem/pull/7797)).
+* Encapsulated both the `ChangeSet` and `AccountChangeSet` types so that their fields must be
+accessed by API functions, which also enforce a new invariant that the `AccountChangeSet` is
+not empty
+([#8288](https://github.com/diem/diem/pull/8288)).
+* Added a missing bounds check in the bytecode verifier for the `self_module_handle_idx` field
+([#8389](https://github.com/diem/diem/pull/8389)).
+
+## Miscellaneous
+
+* Fixed the Move disassembler to work correctly with abilities
+([#8128](https://github.com/diem/diem/pull/8128)).
+* Renamed the `vm` Rust crate to `move-binary-format`,
+which is a much better description of its contents.
+([#8161](https://github.com/diem/diem/pull/8161)).
+* Removed a number of dependencies on Diem crates,
+continuing our effort to make Move usable apart from Diem.
+* Added an `ident_str!` macro to create const `IdentStr` values
+([#8300](https://github.com/diem/diem/pull/8300)).
+* Refactored the `MoveResource` trait to add a separate `MoveStructType` trait
+([#8346](https://github.com/diem/diem/pull/8346)).
+* Added back the Move language documentation files, now in the `mdBook` format
+([#8450](https://github.com/diem/diem/pull/8450)).
+* Fixed the Move script binding generator so that the generated code is valid
+when there are no transaction scripts or script functions
+([#8465](https://github.com/diem/diem/pull/8465)).
+
+
 # Move Version 1.2
 
 Version 1.2 of Move (released along with Diem Core version 1.2) includes several new language features, a new version of the bytecode format, significant improvements to the Move Prover, and numerous bug fixes.
