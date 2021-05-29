@@ -1,0 +1,29 @@
+name: weekly
+
+on:
+  schedule:
+    # this script will run each Monday at 14:14
+    - cron: "14 14 * * 1"
+
+jobs:
+  dep-report:
+    runs-on: ubuntu-latest
+    container:
+      image: diem/build_environment:main
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+            # fetch full history
+            fetch-depth: 0
+      - uses: ./.github/actions/build-setup
+      - name: Install cargo-guppy
+        run: cargo install --git https://github.com/facebookincubator/cargo-guppy --branch main cargo-guppy
+      - name: Produce report
+        run: ./scripts/weekly-dep-report.sh ${GITHUB_REPOSITORY} main >> ${MESSAGE_PAYLOAD_FILE}
+      - name: "Send Message"
+        uses: ./.github/actions/slack-file
+        with:
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          webhook: ${{ secrets.WEBHOOK_DEPENDENCY_CHANGES }}
