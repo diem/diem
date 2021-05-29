@@ -10,12 +10,13 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
 };
 use reqwest::Url;
-use std::time::Duration;
+use std::{convert::TryFrom, time::Duration};
 
 /// A client connection to an AdmissionControl (AC) service. `DiemClient` also
 /// handles verifying the server's responses, retrying on non-fatal failures, and
@@ -41,10 +42,16 @@ pub struct DiemClient {
     latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
 }
 
+type StateProof = (
+    LedgerInfoWithSignatures,
+    EpochChangeProof,
+    AccumulatorConsistencyProof,
+);
+
 impl DiemClient {
     /// Construct a new Client instance.
     pub fn new(url: Url, waypoint: Waypoint) -> Result<Self> {
-        let initial_trusted_state = TrustedState::from(waypoint);
+        let initial_trusted_state = TrustedState::from_epoch_waypoint(waypoint);
         let client = BlockingClient::new(url.to_string());
 
         Ok(DiemClient {
@@ -127,21 +134,40 @@ impl DiemClient {
 
     /// Retrieves and checks the state proof
     pub fn update_and_verify_state_proof(&mut self) -> Result<()> {
-        let state_proof = self
-            .client
-            .get_state_proof(self.trusted_state().version())
-            .map(Response::into_inner)?;
+        let current_version = self.trusted_state.version();
 
-        self.verify_state_proof(state_proof)
+        let maybe_accumulator = if self.trusted_state.accumulator_summary().is_none() {
+            let consistency_proof_view = self
+                .client
+                .get_accumulator_consistency_proof(None, Some(current_version))
+                .map(Response::into_inner)?;
+            let consistency_proof = AccumulatorConsistencyProof::try_from(&consistency_proof_view)?;
+            let accumulator = TransactionAccumulatorSummary::try_from_genesis_proof(
+                consistency_proof,
+                current_version,
+            )?;
+            Some(accumulator)
+        } else {
+            None
+        };
+
+        let state_proof_view = self
+            .client
+            .get_state_proof(self.trusted_state.version())
+            .map(Response::into_inner)?;
+        let state_proof = StateProof::try_from(&state_proof_view)?;
+
+        self.verify_state_proof(&state_proof, maybe_accumulator.as_ref())
     }
 
-    fn verify_state_proof(&mut self, state_proof: views::StateProofView) -> Result<()> {
+    fn verify_state_proof(
+        &mut self,
+        state_proof: &StateProof,
+        maybe_accumulator: Option<&TransactionAccumulatorSummary>,
+    ) -> Result<()> {
         let state = self.trusted_state();
 
-        let li: LedgerInfoWithSignatures =
-            bcs::from_bytes(&state_proof.ledger_info_with_signatures)?;
-        let epoch_change_proof: EpochChangeProof =
-            bcs::from_bytes(&state_proof.epoch_change_proof)?;
+        let (li, epoch_change_proof, consistency_proof) = state_proof;
 
         // check ledger info version
         ensure!(
@@ -152,7 +178,12 @@ impl DiemClient {
         );
 
         // trusted_state_change
-        match state.verify_and_ratchet(&li, &epoch_change_proof)? {
+        match state.verify_and_ratchet(
+            &li,
+            &epoch_change_proof,
+            &consistency_proof,
+            maybe_accumulator,
+        )? {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,

@@ -20,7 +20,7 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::AccumulatorConsistencyProof,
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::Version,
     trusted_state::TrustedState,
     waypoint::Waypoint,
@@ -37,6 +37,7 @@ use std::{
 // TODO(philiphayes): fill out rest of the methods
 // TODO(philiphayes): all clients should validate chain id (allow users to trust-on-first-use or pre-configure)
 // TODO(philiphayes): we could abstract the async client so VerifyingClient takes a dyn Trait?
+// TODO(philiphayes): probably shouldn't ratchet inner client state unless the trusted state ratchets
 
 // TODO(philiphayes): we should really add a real StateProof type (not alias) that
 // collects these types together. StateProof isn't a very descriptive name though...
@@ -105,41 +106,131 @@ impl<S: Storage> VerifyingClient<S> {
     /// `Ok(true)` if, after verification, we still need to sync more. Returns
     /// `Ok(false)` if we have finished syncing.
     pub async fn sync_one_step(&self) -> Result<bool> {
-        let (state_proof_view, state) = self
-            .inner
-            .get_state_proof(self.version())
-            .await?
-            .into_parts();
+        let request_trusted_state = self.trusted_state();
+        let need_initial_accumulator = request_trusted_state.accumulator_summary().is_none();
+        let current_version = request_trusted_state.version();
+
+        // request a state proof from remote and an optional initial transaction
+        // accumulator if we're just starting out from an epoch waypoint.
+        let (state_proof, maybe_accumulator) = self
+            .get_state_proof_and_maybe_accumulator(current_version, need_initial_accumulator)
+            .await?;
+
+        // try to ratchet our trusted state using the state proof
+        self.verify_and_ratchet(
+            &request_trusted_state,
+            &state_proof,
+            maybe_accumulator.as_ref(),
+        )?;
+
+        // return true if we need to sync more epoch changes
+        Ok(state_proof.1.more)
+    }
+
+    async fn get_state_proof_and_maybe_accumulator(
+        &self,
+        current_version: Version,
+        need_initial_accumulator: bool,
+    ) -> Result<(StateProof, Option<TransactionAccumulatorSummary>)> {
+        let (state_proof_view, state, maybe_consistency_proof_view) = if !need_initial_accumulator {
+            // just request the state proof, since we don't need the initial accumulator
+            let (state_proof_view, state) = self
+                .inner
+                .get_state_proof(current_version)
+                .await?
+                .into_parts();
+            (state_proof_view, state, None)
+        } else {
+            // request both a state proof and an initial accumulator from genesis
+            // to the current version.
+            let batch = vec![
+                MethodRequest::get_accumulator_consistency_proof(None, Some(current_version)),
+                MethodRequest::get_state_proof(current_version),
+            ];
+            let resps = self.inner.batch(batch).await?;
+            let mut resps_iter = resps.into_iter();
+
+            // inner client guarantees us that # responses matches # requests
+            let (resp1, state1) = resps_iter.next().unwrap()?.into_parts();
+            let (resp2, state2) = resps_iter.next().unwrap()?.into_parts();
+
+            if state1 != state2 {
+                return Err(Error::rpc_response(format!(
+                    "expected batch response states equal: state1={:?}, state2={:?}",
+                    state1, state2
+                )));
+            }
+
+            let consistency_proof_view = resp1.try_into_get_accumulator_consistency_proof()?;
+            let state_proof_view = resp2.try_into_get_state_proof()?;
+            (state_proof_view, state1, Some(consistency_proof_view))
+        };
+
+        // deserialize responses
         let state_proof = StateProof::try_from(&state_proof_view).map_err(Error::decode)?;
+        let maybe_accumulator = maybe_consistency_proof_view
+            .map(|consistency_proof_view| {
+                let consistency_proof =
+                    AccumulatorConsistencyProof::try_from(&consistency_proof_view)
+                        .map_err(Error::decode)?;
+                TransactionAccumulatorSummary::try_from_genesis_proof(
+                    consistency_proof,
+                    current_version,
+                )
+                .map_err(Error::invalid_proof)
+            })
+            .transpose()?;
 
         // check the response metadata matches the state proof
         verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
 
-        // try to ratchet our trusted state using the state proof
-        self.verify_and_ratchet(&state_proof)?;
-
-        Ok(state_proof.1.more)
+        Ok((state_proof, maybe_accumulator))
     }
 
     /// Verify and ratchet forward our trusted state using a state proof.
-    pub fn verify_and_ratchet(&self, state_proof: &StateProof) -> Result<()> {
-        let (latest_li, epoch_change_proof, _) = state_proof;
+    pub fn verify_and_ratchet(
+        &self,
+        request_trusted_state: &TrustedState,
+        state_proof: &StateProof,
+        maybe_accumulator: Option<&TransactionAccumulatorSummary>,
+    ) -> Result<()> {
+        let (latest_li, epoch_change_proof, consistency_proof) = state_proof;
 
-        // TODO(philiphayes): stale error case
-        let trusted_state = self.trusted_state();
-        let change = trusted_state
-            .verify_and_ratchet(latest_li, epoch_change_proof)
+        // Check that the response is not stale w.r.t. our current trusted state.
+        // We can't do anything with a stale response, so we just have to throw
+        // it out and retry.
+        let resp_version = latest_li.ledger_info().version();
+        let curr_version = self.version();
+        if resp_version < curr_version {
+            return Err(Error::stale(format!(
+                "recevied stale state proof whose version ({}) is behind our current trusted version ({})",
+                resp_version,
+                curr_version,
+            )));
+        }
+
+        // Actually verify the state proof.
+        //
+        // Note: now that we're also verifying the accumulator consistency proof,
+        // we have to verifying from the trusted state when we made the request
+        // rather than our current trusted state, since a consistency proof can't
+        // be applied to any other version than the requested version.
+        let change = request_trusted_state
+            .verify_and_ratchet(
+                latest_li,
+                epoch_change_proof,
+                consistency_proof,
+                maybe_accumulator,
+            )
             .map_err(Error::invalid_proof)?;
 
+        // Try to compare-and-swap the new trusted state into the state store.
         if let Some(new_state) = change.new_state() {
             self.trusted_state_store
                 .write()
                 .unwrap()
                 .ratchet(new_state)?;
         }
-
-        // TODO(philiphayes): verify the accumulator consistency proof; no-one
-        // seems to actually verify this anywhere?
 
         Ok(())
     }
@@ -231,6 +322,16 @@ impl<S: Storage> VerifyingClient<S> {
         &self,
         requests: Vec<MethodRequest>,
     ) -> Result<Vec<Result<Response<MethodResponse>>>> {
+        let request_trusted_state = self.trusted_state();
+
+        // if we haven't built an accumulator yet, we need to do a sync first.
+        if request_trusted_state.accumulator_summary().is_none() {
+            // TODO(philiphayes): sync fallback
+            return Err(Error::unknown(
+                "our client is too far behind, we need to sync",
+            ));
+        }
+
         // transform each request into verifying sub-request batches
         let batch = VerifyingBatch::from_batch(requests);
 
@@ -252,7 +353,7 @@ impl<S: Storage> VerifyingClient<S> {
         verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
 
         // try to ratchet our trusted state using the state proof
-        self.verify_and_ratchet(&state_proof)?;
+        self.verify_and_ratchet(&request_trusted_state, &state_proof, None)?;
 
         // remote says we're too far behind and need to sync. we have to throw
         // out the batch since we can't verify any proofs
@@ -798,7 +899,14 @@ impl<S: Storage> TrustedStateStore<S> {
     }
 
     fn ratchet(&mut self, new_state: TrustedState) -> Result<()> {
-        if new_state.version() > self.trusted_state.version() {
+        if new_state.version() < self.version() {
+            return Err(Error::stale(format!(
+                "new trusted state version ({}) is stale when CAS'ing into the state store, current version: {}",
+                new_state.version(),
+                self.version(),
+            )));
+        }
+        if new_state.version() > self.version() {
             self.trusted_state = new_state;
             let trusted_state_bytes = bcs::to_bytes(&self.trusted_state).map_err(Error::decode)?;
             self.storage.set(TRUSTED_STATE_KEY, trusted_state_bytes)?;

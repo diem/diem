@@ -375,6 +375,10 @@ impl AccumulatorConsistencyProof {
         Self { subtrees }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.subtrees.is_empty()
+    }
+
     /// Returns the subtrees.
     pub fn subtrees(&self) -> &[HashValue] {
         &self.subtrees

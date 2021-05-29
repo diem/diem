@@ -5,36 +5,41 @@ use crate::{
     epoch_change::{EpochChangeProof, Verifier},
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::Version,
     waypoint::Waypoint,
 };
 use anyhow::{bail, ensure, format_err, Result};
+use diem_crypto::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
-/// `TrustedState` keeps track of our latest trusted state, including the latest
-/// verified version and the latest verified validator set.
+/// `TrustedState` keeps track of light clients' latest, trusted view of the
+/// ledger state. Light clients can use proofs from a state proof to "ratchet"
+/// their view forward to a newer state.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct TrustedState {
-    /// The latest verified state is a waypoint either from a ledger info inside
-    /// an epoch or an epoch change ledger info.
-    verified_state: Waypoint,
-    /// The current verifier. If we're starting up fresh, this is probably a
-    /// waypoint from our config. Otherwise, this is generated from the validator
-    /// set in the last known epoch change ledger info.
-    verifier: TrustedStateVerifier,
-}
-
-/// The different epoch change [`Verifier`]s represented as an enum so we can
-/// easily serialize the parent [`TrustedState`].
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub enum TrustedStateVerifier {
+pub enum TrustedState {
+    /// The current trusted state is an epoch waypoint, which is a commitment to
+    /// an epoch change ledger info. Most light clients will start here when
+    /// syncing for the first time.
     EpochWaypoint(Waypoint),
-    EpochState(EpochState),
+    /// The current trusted state is inside a verified epoch (which includes the
+    /// validator set inside that epoch).
+    EpochState {
+        /// The current trusted version and a commitment to a ledger info inside
+        /// the current trusted epoch.
+        waypoint: Waypoint,
+        /// The current epoch and validator set inside that epoch.
+        epoch_state: EpochState,
+        /// The current verified view of the transaction accumulator. Note that this
+        /// is not the complete accumulator; rather, it is a summary containing only
+        /// the frozen subtrees at the currently verified state version. We use the
+        /// accumulator summary to verify accumulator consistency proofs when
+        /// applying state proofs.
+        accumulator: TransactionAccumulatorSummary,
+    },
 }
 
 /// `TrustedStateChange` is the result of attempting to ratchet to a new trusted
@@ -56,17 +61,75 @@ pub enum TrustedStateChange<'a> {
 }
 
 impl TrustedState {
+    /// Create an initial trusted state from a trusted epoch waypoint constructed
+    /// from an epoch-change ledger info.
+    ///
+    /// Note: we can't actually guarantee this waypoint is actually an epoch
+    /// waypoint, but the sync will always fail to verify it's not.
+    pub fn from_epoch_waypoint(epoch_waypoint: Waypoint) -> Self {
+        Self::EpochWaypoint(epoch_waypoint)
+    }
+
+    /// Try to create a trusted state from an epoch-change ledger info and an
+    /// accumulator summary at the same version.
+    ///
+    /// Fails if the ledger info is not actually an epoch-change ledger info or
+    /// if the accumulator summary is not consistent with the ledger info.
+    pub fn try_from_epoch_change_li(
+        epoch_change_li: &LedgerInfo,
+        accumulator: TransactionAccumulatorSummary,
+    ) -> Result<Self> {
+        // Ensure the accumulator and ledger info are at the same version/root hash.
+        accumulator.verify_consistency(epoch_change_li)?;
+
+        let epoch_state = epoch_change_li.next_epoch_state().cloned().ok_or_else(|| {
+            format_err!("No EpochState in LedgerInfo; it must not be on an epoch boundary")
+        })?;
+
+        Ok(Self::EpochState {
+            waypoint: Waypoint::new_epoch_boundary(epoch_change_li)?,
+            epoch_state,
+            accumulator,
+        })
+    }
+
+    pub fn is_epoch_waypoint(&self) -> bool {
+        matches!(self, Self::EpochWaypoint(_))
+    }
+
     pub fn version(&self) -> Version {
-        self.verified_state.version()
+        self.waypoint().version()
     }
 
     pub fn waypoint(&self) -> Waypoint {
-        self.verified_state
+        match self {
+            Self::EpochWaypoint(waypoint) => *waypoint,
+            Self::EpochState { waypoint, .. } => *waypoint,
+        }
     }
 
-    /// Verify and ratchet forward our trusted state using a `EpochChangeProof`
-    /// (that moves us into the latest epoch) and a `LedgerInfoWithSignatures`
-    /// inside that epoch.
+    pub fn accumulator_root_hash(&self) -> Option<HashValue> {
+        match self {
+            Self::EpochWaypoint(_) => None,
+            Self::EpochState { accumulator, .. } => Some(accumulator.root_hash()),
+        }
+    }
+
+    pub fn accumulator_summary(&self) -> Option<&TransactionAccumulatorSummary> {
+        match self {
+            Self::EpochWaypoint(_) => None,
+            Self::EpochState { accumulator, .. } => Some(accumulator),
+        }
+    }
+
+    /// Verify and ratchet forward our trusted state using an [`EpochChangeProof`]
+    /// (that moves us into the latest epoch), a [`LedgerInfoWithSignatures`]
+    /// inside that epoch, and an [`AccumulatorConsistencyProof`] from our current
+    /// version to that last verifiable ledger info.
+    ///
+    /// If our current trusted state doesn't have an accumulator summary yet
+    /// (for example, a client may be starting with an epoch waypoint), then an
+    /// initial accumulator summary must be provided.
     ///
     /// For example, a client sends a `GetStateProof` request to an upstream
     /// FullNode and receives some epoch change proof along with a latest
@@ -93,19 +156,43 @@ impl TrustedState {
         &self,
         latest_li: &'a LedgerInfoWithSignatures,
         epoch_change_proof: &'a EpochChangeProof,
+        consistency_proof: &'a AccumulatorConsistencyProof,
+        initial_accumulator: Option<&'a TransactionAccumulatorSummary>,
     ) -> Result<TrustedStateChange<'a>> {
-        let res_version = latest_li.ledger_info().version();
+        // Abort early if the response is stale.
+        let curr_version = self.version();
+        let target_version = latest_li.ledger_info().version();
         ensure!(
-            res_version >= self.version(),
-            "The target latest ledger info is stale and behind our current trusted version",
+            target_version >= curr_version,
+            "The target latest ledger info version is stale ({}) and behind our current trusted version ({})",
+            target_version, curr_version,
         );
 
-        if self
-            .verifier
-            .epoch_change_verification_required(latest_li.ledger_info().next_block_epoch())
-        {
+        let curr_accumulator = match self {
+            // If we're verifying from an epoch waypoint, the user needs to provide
+            // an initial accumulator. Note that we assume this accumulator is
+            // untrusted.
+            Self::EpochWaypoint(_) => {
+                // When verifying from a waypoint, we need to check that the initial
+                // untrusted accumulator is consistent with the received waypoint
+                // ledger info.
+                let curr_accumulator = initial_accumulator
+                    .expect("Client must provide an initial untrusted accumulator when verifying from a waypoint");
+                let waypoint_li = epoch_change_proof
+                    .ledger_info_with_sigs
+                    .first()
+                    .ok_or_else(|| format_err!("Empty epoch change proof"))?
+                    .ledger_info();
+                curr_accumulator.verify_consistency(waypoint_li)?;
+                curr_accumulator
+            }
+            // Otherwise, we should already have a _trusted_ accumulator.
+            Self::EpochState { accumulator, .. } => accumulator,
+        };
+
+        if self.epoch_change_verification_required(latest_li.ledger_info().next_block_epoch()) {
             // Verify the EpochChangeProof to move us into the latest epoch.
-            let epoch_change_li = epoch_change_proof.verify(&self.verifier)?;
+            let epoch_change_li = epoch_change_proof.verify(self)?;
             let new_epoch_state = epoch_change_li
                 .ledger_info()
                 .next_epoch_state()
@@ -119,23 +206,28 @@ impl TrustedState {
             // If the latest ledger info is in the same epoch as the new verifier, verify it and
             // use it as latest state, otherwise fallback to the epoch change ledger info.
             let new_epoch = new_epoch_state.epoch;
-            let new_verifier = TrustedStateVerifier::EpochState(new_epoch_state);
 
             let verified_ledger_info = if epoch_change_li == latest_li {
                 latest_li
             } else if latest_li.ledger_info().epoch() == new_epoch {
-                new_verifier.verify(latest_li)?;
+                new_epoch_state.verify(latest_li)?;
                 latest_li
             } else if latest_li.ledger_info().epoch() > new_epoch && epoch_change_proof.more {
                 epoch_change_li
             } else {
                 bail!("Inconsistent epoch change proof and latest ledger info");
             };
-            let verified_state = Waypoint::new_any(verified_ledger_info.ledger_info());
+            let new_waypoint = Waypoint::new_any(verified_ledger_info.ledger_info());
 
-            let new_state = TrustedState {
-                verified_state,
-                verifier: new_verifier,
+            // Try to extend our accumulator summary and check that it's consistent
+            // with the target ledger info.
+            let new_accumulator = curr_accumulator
+                .try_extend_with_proof(consistency_proof, verified_ledger_info.ledger_info())?;
+
+            let new_state = TrustedState::EpochState {
+                waypoint: new_waypoint,
+                epoch_state: new_epoch_state,
+                accumulator: new_accumulator,
             };
 
             Ok(TrustedStateChange::Epoch {
@@ -143,22 +235,40 @@ impl TrustedState {
                 latest_epoch_change_li: epoch_change_li,
             })
         } else {
+            let (curr_waypoint, curr_epoch_state) = match self {
+                Self::EpochWaypoint(_) => {
+                    bail!("EpochWaypoint can only verify an epoch change ledger info")
+                }
+                Self::EpochState {
+                    waypoint,
+                    epoch_state,
+                    ..
+                } => (waypoint, epoch_state),
+            };
+
             // The EpochChangeProof is empty, stale, or only gets us into our
             // current epoch. We then try to verify that the latest ledger info
-            // is this epoch.
+            // is inside this epoch.
             let new_waypoint = Waypoint::new_any(latest_li.ledger_info());
-            if new_waypoint.version() == self.verified_state.version() {
+            if new_waypoint.version() == curr_waypoint.version() {
                 ensure!(
-                    new_waypoint == self.verified_state,
+                    &new_waypoint == curr_waypoint,
                     "LedgerInfo doesn't match verified state"
                 );
                 Ok(TrustedStateChange::NoChange)
             } else {
-                self.verifier.verify(latest_li)?;
+                // Verify the target ledger info, which should be inside the current epoch.
+                curr_epoch_state.verify(latest_li)?;
 
-                let new_state = TrustedState {
-                    verified_state: new_waypoint,
-                    verifier: self.verifier.clone(),
+                // Try to extend our accumulator summary and check that it's consistent
+                // with the target ledger info.
+                let new_accumulator = curr_accumulator
+                    .try_extend_with_proof(consistency_proof, latest_li.ledger_info())?;
+
+                let new_state = Self::EpochState {
+                    waypoint: new_waypoint,
+                    epoch_state: curr_epoch_state.clone(),
+                    accumulator: new_accumulator,
                 };
 
                 Ok(TrustedStateChange::Version { new_state })
@@ -167,51 +277,31 @@ impl TrustedState {
     }
 }
 
-impl From<Waypoint> for TrustedState {
-    fn from(waypoint: Waypoint) -> Self {
-        Self {
-            verified_state: waypoint,
-            verifier: TrustedStateVerifier::EpochWaypoint(waypoint),
-        }
-    }
-}
-
-impl TryFrom<&LedgerInfo> for TrustedState {
-    type Error = anyhow::Error;
-
-    fn try_from(ledger_info: &LedgerInfo) -> Result<Self> {
-        let epoch_state = ledger_info.next_epoch_state().cloned().ok_or_else(|| {
-            format_err!("No EpochState in LedgerInfo; it must not be on an epoch boundary")
-        })?;
-
-        Ok(Self {
-            verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
-            verifier: TrustedStateVerifier::EpochState(epoch_state),
-        })
-    }
-}
-
-impl Verifier for TrustedStateVerifier {
+impl Verifier for TrustedState {
     fn verify(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
         match self {
-            Self::EpochWaypoint(inner) => Verifier::verify(inner, ledger_info),
-            Self::EpochState(inner) => Verifier::verify(inner, ledger_info),
+            Self::EpochWaypoint(waypoint) => Verifier::verify(waypoint, ledger_info),
+            Self::EpochState { epoch_state, .. } => Verifier::verify(epoch_state, ledger_info),
         }
     }
 
     fn epoch_change_verification_required(&self, epoch: u64) -> bool {
         match self {
-            Self::EpochWaypoint(inner) => {
-                Verifier::epoch_change_verification_required(inner, epoch)
+            Self::EpochWaypoint(waypoint) => {
+                Verifier::epoch_change_verification_required(waypoint, epoch)
             }
-            Self::EpochState(inner) => Verifier::epoch_change_verification_required(inner, epoch),
+            Self::EpochState { epoch_state, .. } => {
+                Verifier::epoch_change_verification_required(epoch_state, epoch)
+            }
         }
     }
 
     fn is_ledger_info_stale(&self, ledger_info: &LedgerInfo) -> bool {
         match self {
-            Self::EpochWaypoint(inner) => Verifier::is_ledger_info_stale(inner, ledger_info),
-            Self::EpochState(inner) => Verifier::is_ledger_info_stale(inner, ledger_info),
+            Self::EpochWaypoint(waypoint) => Verifier::is_ledger_info_stale(waypoint, ledger_info),
+            Self::EpochState { epoch_state, .. } => {
+                Verifier::is_ledger_info_stale(epoch_state, ledger_info)
+            }
         }
     }
 }
@@ -222,5 +312,13 @@ impl<'a> TrustedStateChange<'a> {
             Self::Version { new_state } | Self::Epoch { new_state, .. } => Some(new_state),
             Self::NoChange => None,
         }
+    }
+
+    pub fn is_epoch_change(&self) -> bool {
+        matches!(self, Self::Epoch { .. })
+    }
+
+    pub fn is_no_change(&self) -> bool {
+        matches!(self, Self::NoChange)
     }
 }

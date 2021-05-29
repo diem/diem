@@ -14,7 +14,10 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
-    proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
+    proof::{
+        definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof,
+        TransactionAccumulatorSummary,
+    },
     transaction::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
         Version,
@@ -347,6 +350,23 @@ pub trait DbReader: Send + Sync {
         _ledger_version: Version,
     ) -> Result<AccumulatorConsistencyProof> {
         unimplemented!()
+    }
+
+    /// A convenience function for building a [`TransactionAccumulatorSummary`]
+    /// at the given `ledger_version`.
+    ///
+    /// Note: this is roughly equivalent to calling
+    /// `DbReader::get_accumulator_consistency_proof(None, ledger_version)`.
+    fn get_accumulator_summary(
+        &self,
+        ledger_version: Version,
+    ) -> Result<TransactionAccumulatorSummary> {
+        let genesis_consistency_proof =
+            self.get_accumulator_consistency_proof(None, ledger_version)?;
+        TransactionAccumulatorSummary::try_from_genesis_proof(
+            genesis_consistency_proof,
+            ledger_version,
+        )
     }
 }
 

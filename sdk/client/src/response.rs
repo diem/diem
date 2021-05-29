@@ -155,6 +155,18 @@ impl MethodResponse {
         }
     }
 
+    pub fn try_into_get_accumulator_consistency_proof(
+        self,
+    ) -> Result<AccumulatorConsistencyProofView, Error> {
+        match self {
+            MethodResponse::GetAccumulatorConsistencyProof(proof) => Ok(proof),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetAccumulatorConsistencyProof found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
+
     pub fn try_into_get_account(self) -> Result<Option<AccountView>, Error> {
         match self {
             MethodResponse::GetAccount(account_view) => Ok(account_view),

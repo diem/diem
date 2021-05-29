@@ -58,7 +58,11 @@ cfg_async_or_blocking! {
                     return Err(Error::chain_id(state.chain_id, resp_state.chain_id));
                 }
                 if resp_state < state {
-                    return Err(Error::stale(state, resp_state));
+                    return Err(Error::stale(format!(
+                        "received response with stale metadata: {:?}, expected a response more recent than: {:?}",
+                        resp_state,
+                        state,
+                    )));
                 }
             }
             *state_writer = Some(resp_state.clone());

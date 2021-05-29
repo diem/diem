@@ -47,7 +47,7 @@ impl Environment {
         let client = Client::new(url);
 
         let genesis_waypoint = env.validator_swarm.config.waypoint;
-        let trusted_state = TrustedState::from(genesis_waypoint);
+        let trusted_state = TrustedState::from_epoch_waypoint(genesis_waypoint);
         let storage = InMemoryStorage::new();
         let verifying_client =
             VerifyingClient::new_with_state(client.clone(), trusted_state, storage);

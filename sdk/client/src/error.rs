@@ -121,11 +121,8 @@ impl Error {
         )
     }
 
-    pub(crate) fn stale(expected: &super::State, recieved: &super::State) -> Self {
-        Self::new(
-            Kind::StaleResponse,
-            Some(format!("expected: {:?} recieved: {:?}", expected, recieved)),
-        )
+    pub(crate) fn stale<E: Into<BoxError>>(e: E) -> Self {
+        Self::new(Kind::StaleResponse, Some(e))
     }
 
     cfg_async! {

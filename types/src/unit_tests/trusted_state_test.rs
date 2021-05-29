@@ -7,6 +7,7 @@ use crate::{
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    proof::accumulator::mock::MockTransactionAccumulator,
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
     validator_signer::ValidatorSigner,
@@ -20,7 +21,7 @@ use proptest::{
     prelude::*,
     sample::Index,
 };
-use std::{collections::BTreeMap, convert::TryFrom};
+use std::collections::BTreeMap;
 
 // hack strategy to generate a length from `impl Into<SizeRange>`
 fn arb_length(size_range: impl Into<SizeRange>) -> impl Strategy<Value = usize> {
@@ -83,9 +84,10 @@ fn sign_ledger_info(
         .collect()
 }
 
-fn new_mock_ledger_info(
+fn mock_ledger_info(
     epoch: u64,
     version: Version,
+    root_hash: HashValue,
     next_epoch_state: Option<EpochState>,
 ) -> LedgerInfo {
     LedgerInfo::new(
@@ -93,7 +95,7 @@ fn new_mock_ledger_info(
             epoch,
             0,                 /* round */
             HashValue::zero(), /* id */
-            HashValue::zero(), /* executed_state_id */
+            root_hash,         /* executed_state_id */
             version,
             0, /* timestamp_usecs */
             next_epoch_state,
@@ -123,6 +125,8 @@ fn arb_update_proof(
         Vec<LedgerInfoWithSignatures>,
         // The latest ledger info inside the last epoch
         LedgerInfoWithSignatures,
+        // A mock accumulator consistent with the generated ledger infos
+        MockTransactionAccumulator,
     ),
 > {
     // helpful diagram:
@@ -178,6 +182,12 @@ fn arb_update_proof(
                     *pre_genesis_vset = vec![];
                 }
 
+                // build a mock accumulator with fake txn hashes up to the last
+                // version. we'll ensure that all ledger infos have appropriate
+                // root hash values for their version.
+                let end_version = start_version + version_deltas.iter().sum::<usize>() as u64;
+                let accumulator = MockTransactionAccumulator::with_version(end_version);
+
                 let mut epoch = start_epoch;
                 let mut version = start_version;
                 let num_epoch_changes = vsets.len() - 1;
@@ -190,7 +200,9 @@ fn arb_update_proof(
                     .zip(version_deltas)
                     .map(|((curr_vset, next_vset), version_delta)| {
                         let next_vset = into_epoch_state(epoch + 1, next_vset);
-                        let ledger_info = new_mock_ledger_info(epoch, version, Some(next_vset));
+                        let root_hash = accumulator.get_root_hash(version);
+                        let ledger_info =
+                            mock_ledger_info(epoch, version, root_hash, Some(next_vset));
                         let signatures = sign_ledger_info(&curr_vset[..], &ledger_info);
 
                         epoch += 1;
@@ -203,11 +215,17 @@ fn arb_update_proof(
                 // this will always succeed, since
                 // n >= 0, |vsets| = n + 1 ==> |vsets| >= 1
                 let last_vset = vsets.last().unwrap();
-                let latest_ledger_info = new_mock_ledger_info(epoch, version, None);
+                let root_hash = accumulator.get_root_hash(version);
+                let latest_ledger_info = mock_ledger_info(epoch, version, root_hash, None);
                 let signatures = sign_ledger_info(&last_vset[..], &latest_ledger_info);
                 let latest_ledger_info_with_sigs =
                     LedgerInfoWithSignatures::new(latest_ledger_info, signatures);
-                (vsets, ledger_infos_with_sigs, latest_ledger_info_with_sigs)
+                (
+                    vsets,
+                    ledger_infos_with_sigs,
+                    latest_ledger_info_with_sigs,
+                    accumulator,
+                )
             })
     })
 }
@@ -222,7 +240,7 @@ proptest! {
 
     #[test]
     fn test_ratchet_from(
-        (_vsets, lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             10,   /* start epoch */
             123,  /* start version */
             1..3, /* version delta */
@@ -233,7 +251,7 @@ proptest! {
         let first_epoch_change_li = lis_with_sigs.first().unwrap();
         let waypoint = Waypoint::new_epoch_boundary(first_epoch_change_li.ledger_info())
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
-        let trusted_state = TrustedState::from(waypoint);
+        let trusted_state = TrustedState::from_epoch_waypoint(waypoint);
 
         let expected_latest_version = latest_li.ledger_info().version();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
@@ -241,9 +259,14 @@ proptest! {
             .as_ref()
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_state());
 
+        let initial_accumulator = accumulator.get_accumulator_summary(trusted_state.version());
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            expected_latest_version,
+        );
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, Some(&initial_accumulator))
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
@@ -261,7 +284,7 @@ proptest! {
 
     #[test]
     fn test_ratchet_version_only(
-        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, mut lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             1..3, /* version delta */
@@ -271,14 +294,22 @@ proptest! {
     ) {
         // Assume we have already ratcheted into this epoch
         let epoch_change_li = lis_with_sigs.remove(0);
-        let trusted_state = TrustedState::try_from(epoch_change_li.ledger_info()).unwrap();
+        let start_version = epoch_change_li.ledger_info().version();
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            epoch_change_li.ledger_info(),
+            accumulator.get_accumulator_summary(start_version),
+        ).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
 
         // Use an empty epoch change proof
         let change_proof = EpochChangeProof::new(vec![], false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            expected_latest_version,
+        );
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
@@ -293,55 +324,8 @@ proptest! {
     }
 
     #[test]
-    fn test_ratchet_with_partial_trusted_prefix(
-        (_vsets, lis_with_sigs, latest_li) in arb_update_proof(
-            1,    /* start epoch */
-            1,    /* start version */
-            1..3, /* version delta */
-            1..5, /* epoch changes */
-            1..5, /* validators per epoch */
-        ),
-        trusted_prefix_end_idx in any::<Index>(),
-    ) {
-        // Let's say we ratcheted to an intermediate epoch concurrently while this
-        // update request was fulfilled. If the response still has a fresher state,
-        // we should be able to use that and just skip the already trusted prefix.
-        let idx = trusted_prefix_end_idx.index(lis_with_sigs.len());
-        let intermediate_ledger_info = lis_with_sigs[idx].ledger_info();
-        let trusted_state = TrustedState::try_from(intermediate_ledger_info).unwrap();
-
-        let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
-        let expected_validator_set = expected_latest_epoch_change_li
-            .as_ref()
-            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_state());
-
-        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
-        let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
-            .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
-
-        match trusted_state_change {
-            TrustedStateChange::Epoch {
-                new_state,
-                latest_epoch_change_li,
-            } => {
-                assert_eq!(new_state.version(), expected_latest_version);
-                assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
-            }
-            TrustedStateChange::Version {
-                new_state,
-            } => {
-                assert_eq!(new_state.version(), expected_latest_version);
-            }
-            _ => (),
-        };
-    }
-
-    #[test]
     fn test_ratchet_fails_with_gap_in_proof(
-        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, mut lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             3,    /* version delta */
@@ -352,21 +336,29 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::try_from(initial_li).unwrap();
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            initial_li,
+            accumulator.get_accumulator_summary(initial_li.version()),
+        ).unwrap();
 
         // materialize index and remove an epoch change in the proof to add a gap
         let li_gap_idx = li_gap_idx.index(lis_with_sigs.len() - 1);
         lis_with_sigs.remove(li_gap_idx);
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            latest_li.ledger_info().version(),
+        );
+        // should fail since there's a missing epoch change li in the change proof.
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should always return Err with an invalid change proof");
     }
 
     #[test]
     fn test_ratchet_succeeds_with_more(
-        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, mut lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             3,    /* version delta */
@@ -376,29 +368,35 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::try_from(initial_li).unwrap();
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            initial_li,
+            accumulator.get_accumulator_summary(initial_li.version()),
+        ).unwrap();
 
         // remove the last LI from the proof
         lis_with_sigs.pop();
 
-        let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
+        let expected_latest_epoch_change_li = lis_with_sigs.last().unwrap().clone();
         let expected_latest_version = expected_latest_epoch_change_li
-            .as_ref()
-            .unwrap()
             .ledger_info()
             .version();
-        let expected_validator_set = expected_latest_epoch_change_li
-            .as_ref()
-            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_epoch_state());
 
+        // ratcheting with more = false should fail, since the state proof claims
+        // we're done syncing epoch changes but doesn't get us all the way to the
+        // latest ledger info
         let mut change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            expected_latest_version,
+        );
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should return Err when more is false and there's a gap");
 
+        // ratcheting with more = true is fine
         change_proof.more = true;
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect("Should succeed with more in EpochChangeProof");
 
         match trusted_state_change {
@@ -407,8 +405,7 @@ proptest! {
                 latest_epoch_change_li,
             } => {
                 assert_eq!(new_state.version(), expected_latest_version);
-                assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
+                assert_eq!(latest_epoch_change_li, &expected_latest_epoch_change_li);
             }
             _ => panic!("Unexpected ratchet result"),
         };
@@ -416,7 +413,7 @@ proptest! {
 
     #[test]
     fn test_ratchet_fails_with_invalid_signature(
-        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, mut lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             1,    /* version delta */
@@ -427,7 +424,15 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::try_from(initial_li).unwrap();
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            initial_li,
+            accumulator.get_accumulator_summary(initial_li.version()),
+        ).unwrap();
+
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            latest_li.ledger_info().version(),
+        );
 
         // Swap in a bad ledger info without signatures
         let li_with_sigs = bad_li_idx.get(&lis_with_sigs);
@@ -439,13 +444,13 @@ proptest! {
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should always return Err with an invalid change proof");
     }
 
     #[test]
-    fn test_ratchet_fails_with_latest_li_invalid_signature(
-        (_vsets, mut lis_with_sigs, latest_li) in arb_update_proof(
+    fn test_ratchet_fails_with_invalid_latest_li(
+        (_vsets, mut lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             1,    /* version delta */
@@ -455,40 +460,59 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::try_from(initial_li).unwrap();
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            initial_li,
+            accumulator.get_accumulator_summary(initial_li.version()),
+        ).unwrap();
+
         let good_li = latest_li.ledger_info();
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(
+            Some(trusted_state.version()),
+            good_li.version(),
+        );
+        let sigs = latest_li.signatures();
 
-        if good_li.version() == trusted_state.version() {
-            // Verifying a latest ledger info (inside the last epoch) with
-            // invalid data should fail.
-            let bad_li = LedgerInfoWithSignatures::new(
-                LedgerInfo::new(
-                    BlockInfo::new(
-                        good_li.epoch(),
-                        0,                 /* round */
-                        HashValue::zero(), /* id */
-                        HashValue::zero(), /* executed_state_id */
-                        good_li.version(),
-                        42, /* bad timestamp_usecs */
-                        None,
-                    ),
-                    HashValue::zero(),
+        // Verifying latest ledger infos with mismatched data and signatures should fail
+        let bad_li_1 = LedgerInfoWithSignatures::new(
+            LedgerInfo::new(
+                BlockInfo::new(
+                    good_li.epoch(),
+                    0,                 /* round */
+                    HashValue::zero(), /* id */
+                    HashValue::zero(), /* executed_state_id */
+                    good_li.version(),
+                    42, /* bad timestamp_usecs */
+                    None,
                 ),
-                BTreeMap::new(),
-            );
+                HashValue::zero(),
+            ),
+            sigs.clone(),
+        );
+        let bad_li_2 = LedgerInfoWithSignatures::new(
+            mock_ledger_info(good_li.epoch(), good_li.version(), HashValue::zero(), None),
+            sigs.clone(),
+        );
+        let bad_li_3 = LedgerInfoWithSignatures::new(
+            mock_ledger_info(999, good_li.version(), good_li.transaction_accumulator_hash(), None),
+            sigs.clone(),
+        );
+        let bad_li_4 = LedgerInfoWithSignatures::new(
+            mock_ledger_info(good_li.epoch(), 999, good_li.transaction_accumulator_hash(), None),
+            sigs.clone(),
+        );
+        let bad_li_5 = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
 
-            trusted_state.verify_and_ratchet(&bad_li, &change_proof)
-                .expect_err("Should always return Err with a invalid latest li");
+        let mut bad_sigs = sigs.clone();
+        *bad_sigs.values_mut().next().unwrap() = Ed25519Signature::dummy_signature();
+        let bad_li_6 = LedgerInfoWithSignatures::new(good_li.clone(), bad_sigs);
 
-            // Verifying a latest ledger info with the same data should be a NoChange.
-            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
-            assert!(matches!(trusted_state.verify_and_ratchet(&no_sig, &change_proof), Ok(TrustedStateChange::NoChange)));
-        } else {
-            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
-            trusted_state.verify_and_ratchet(&no_sig, &change_proof)
-                .expect_err("Should always return Err with a invalid latest li");
-        }
+        trusted_state.verify_and_ratchet(&bad_li_1, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet(&bad_li_2, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet(&bad_li_3, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet(&bad_li_4, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet(&bad_li_5, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet(&bad_li_6, &change_proof, &consistency_proof, None).unwrap_err();
     }
 }
 
@@ -497,7 +521,7 @@ proptest! {
 
     #[test]
     fn test_stale_ratchet(
-        (_vsets, lis_with_sigs, latest_li) in arb_update_proof(
+        (_vsets, lis_with_sigs, latest_li, accumulator) in arb_update_proof(
             1,    /* start epoch */
             1,    /* start version */
             1..3, /* version delta */
@@ -507,12 +531,21 @@ proptest! {
     ) {
         // We've ratched beyond the response change proof, so attempting to ratchet
         // that change proof should just return `TrustedStateChange::Stale`.
-        let epoch_change_li = new_mock_ledger_info(123 /* epoch */, 456 /* version */, Some(EpochState::empty()));
-        let trusted_state = TrustedState::try_from(&epoch_change_li).unwrap();
+        let future_version = 456;
+        let future_accumulator = MockTransactionAccumulator::with_version(future_version);
+        let root_hash = future_accumulator.get_root_hash(future_version);
+        let epoch_change_li = mock_ledger_info(123 /* epoch */, future_version, root_hash, Some(EpochState::empty()));
+        let trusted_state = TrustedState::try_from_epoch_change_li(
+            &epoch_change_li,
+            future_accumulator.get_accumulator_summary(future_version),
+        ).unwrap();
 
+        let start_version = lis_with_sigs.first().unwrap().ledger_info().version();
+        let end_version = latest_li.ledger_info().version();
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
+        let consistency_proof = accumulator.get_consistency_proof(Some(start_version), end_version);
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
+            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Expected stale change, got valid change");
     }
 }
