@@ -120,7 +120,7 @@ impl DbReader for StorageClient {
         unimplemented!()
     }
 
-    fn get_txn_by_account(
+    fn get_account_transaction(
         &self,
         _address: AccountAddress,
         _seq_num: u64,

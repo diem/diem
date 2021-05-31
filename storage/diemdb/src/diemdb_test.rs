@@ -351,7 +351,7 @@ fn verify_committed_transactions(
             .unwrap();
 
         let txn_with_proof = db
-            .get_txn_by_account(txn.sender(), txn.sequence_number(), ledger_version, true)
+            .get_account_transaction(txn.sender(), txn.sequence_number(), ledger_version, true)
             .unwrap()
             .expect("Should exist.");
         txn_with_proof

@@ -253,7 +253,7 @@ pub trait DbReader: Send + Sync {
     /// ../diemdb/struct.DiemDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
-    fn get_txn_by_account(
+    fn get_account_transaction(
         &self,
         address: AccountAddress,
         seq_num: u64,

@@ -72,7 +72,7 @@ impl DiemValidatorInterface for DBDebuggerInterface {
     ) -> Result<Option<Version>> {
         Ok(self
             .0
-            .get_txn_by_account(account, seq, self.get_latest_version()?, false)?
+            .get_account_transaction(account, seq, self.get_latest_version()?, false)?
             .map(|info| info.version))
     }
 }

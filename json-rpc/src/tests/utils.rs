@@ -135,7 +135,7 @@ impl DbReader for MockDiemDB {
         ))
     }
 
-    fn get_txn_by_account(
+    fn get_account_transaction(
         &self,
         address: AccountAddress,
         seq_num: u64,

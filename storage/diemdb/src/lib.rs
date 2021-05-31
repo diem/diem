@@ -630,14 +630,14 @@ impl DbReader for DiemDB {
 
     /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
     /// the transaction with given `seq_num` doesn't exist, returns `None`.
-    fn get_txn_by_account(
+    fn get_account_transaction(
         &self,
         address: AccountAddress,
         seq_num: u64,
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>> {
-        gauged_api("get_txn_by_account", || {
+        gauged_api("get_account_transaction", || {
             self.transaction_store
                 .lookup_transaction_by_account(address, seq_num, ledger_version)?
                 .map(|version| {

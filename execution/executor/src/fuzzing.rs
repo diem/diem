@@ -139,7 +139,7 @@ impl DbReader for FakeDb {
         Ok(Some(StartupInfo::new_for_testing()))
     }
 
-    fn get_txn_by_account(
+    fn get_account_transaction(
         &self,
         _address: AccountAddress,
         _seq_num: u64,
