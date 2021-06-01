@@ -9,7 +9,7 @@ mod error;
 mod github;
 mod in_memory;
 mod kv_storage;
-mod namespaced_storage;
+mod namespaced;
 mod on_disk;
 mod policy;
 mod storage;
@@ -22,7 +22,7 @@ pub use crate::{
     github::GitHubStorage,
     in_memory::InMemoryStorage,
     kv_storage::{GetResponse, KVStorage},
-    namespaced_storage::Namespaced,
+    namespaced::Namespaced,
     on_disk::OnDiskStorage,
     policy::{Capability, Identity, Permission, Policy},
     storage::Storage,

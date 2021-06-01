@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    namespaced_storage::NAMESPACE_SEPARATOR, CryptoStorage, Error, GetResponse, KVStorage,
+    namespaced::NAMESPACE_SEPARATOR, CryptoStorage, Error, GetResponse, KVStorage,
     PublicKeyResponse,
 };
 use chrono::DateTime;
