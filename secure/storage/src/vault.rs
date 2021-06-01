@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoStorage, Error, GetResponse, KVStorage, PublicKeyResponse};
+use crate::{
+    namespaced_storage::NAMESPACE_SEPARATOR, CryptoStorage, Error, GetResponse, KVStorage,
+    PublicKeyResponse,
+};
 use chrono::DateTime;
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
@@ -18,6 +21,8 @@ use std::{
 
 #[cfg(any(test, feature = "testing"))]
 use diem_vault_client::ReadResponse;
+
+const TRANSIT_NAMESPACE_SEPARATOR: &str = "__";
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Diem. This
 /// version currently matches the behavior of OnDiskStorage and InMemoryStorage. In the future,
@@ -129,11 +134,13 @@ impl VaultStorage {
     }
 
     fn crypto_name(&self, name: &str) -> String {
-        name.replace('/', "__")
+        name.replace(NAMESPACE_SEPARATOR, TRANSIT_NAMESPACE_SEPARATOR)
     }
 
     fn unnamespaced<'a>(&self, name: &'a str) -> &'a str {
-        name.rsplit_once('/').map(|(_, key)| key).unwrap_or(name)
+        name.rsplit_once(NAMESPACE_SEPARATOR)
+            .map(|(_, key)| key)
+            .unwrap_or(name)
     }
 }
 
@@ -534,8 +541,8 @@ pub mod policy {
 
         fn ns_seperator(&self) -> &str {
             match self {
-                VaultEngine::KVSecrets => "/",
-                VaultEngine::Transit => "__",
+                VaultEngine::KVSecrets => NAMESPACE_SEPARATOR,
+                VaultEngine::Transit => TRANSIT_NAMESPACE_SEPARATOR,
             }
         }
     }

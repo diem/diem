@@ -8,6 +8,8 @@ use diem_crypto::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
+pub const NAMESPACE_SEPARATOR: &str = "/";
+
 /// This provides a light wrapper around KV storages to support a namespace. That namespace is
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
 /// key of bar becomes "foo/bar". Without a namespace, the key would just be "bar".
@@ -41,7 +43,7 @@ impl<S> Namespaced<S> {
     }
 
     fn namespaced(&self, name: &str) -> String {
-        format!("{}/{}", self.namespace, name)
+        format!("{}{}{}", self.namespace, NAMESPACE_SEPARATOR, name)
     }
 }
 
