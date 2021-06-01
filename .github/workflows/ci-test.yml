@@ -11,13 +11,13 @@ defaults:
     shell: bash
 
 env:
-  max_threads: 16
+  max_threads: 1
   nextest_tries: 3
   pre_command: cd /opt/git/diem/
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     outputs:
       changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
       changes-base-git-rev: ${{ steps.changes.outputs.changes-base-git-rev }}
@@ -123,8 +123,8 @@ jobs:
           pattern: "^documentation|^developers.diem.com"
 
   dev-setup-sh-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
@@ -138,7 +138,7 @@ jobs:
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
   build-images:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-18.04
     needs: prepare
     if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' }}
     outputs:
@@ -276,7 +276,7 @@ jobs:
     runs-on: self-hosted
     needs: [prepare, build-images, need-base-images]
     if: ${{ always() && needs.build-images.result=='success' && needs.prepare.outputs.test-land-blocking == 'true' }}
-    timeout-minutes: 45
+    #timeout-minutes: 45
     steps:
       - name: Launch cluster test
         # NOTE Remember to update PR comment payload if cti cmd is updated.
@@ -447,8 +447,8 @@ jobs:
             }
 
   non-rust-lint:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 10
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 10
     needs: prepare
     if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
     container:
@@ -468,8 +468,8 @@ jobs:
         uses: ./.github/actions/docker-checks
 
   lint:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs: prepare
     #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -497,8 +497,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   unit-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 50
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 50
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'pull_request' }}
     container:
@@ -535,8 +535,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   unit-test-sccache:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 50
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 50
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'push' }}
     environment:
@@ -579,8 +579,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   codegen-unit-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 60
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 60
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'pull_request' }}
     container:
@@ -611,8 +611,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   codegen-unit-test-sccache:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 60
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 60
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'push' }}
     environment: Sccache
@@ -646,8 +646,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   e2e-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 40
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 40
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -725,8 +725,8 @@ jobs:
           webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}
 
   docker-compose-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-docker-compose == 'true' }}
     steps:
@@ -764,8 +764,8 @@ jobs:
           FAUCET_URL: "http://127.0.0.1:8000"
 
   crypto-unit-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 20
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -790,8 +790,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   helm-test:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 20
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 20
     needs: prepare
     if: ${{ needs.prepare.outputs.test-helm == 'true' }}
     steps:
@@ -860,8 +860,8 @@ jobs:
 
   # Compile (but don't run) the benchmarks, to insulate against bit rot
   build-benchmarks:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -883,8 +883,8 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   build-dev:
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -911,8 +911,8 @@ jobs:
 
   perf-benchmarks:
     name: run-perf-benchmarks
-    runs-on: ubuntu-latest-xl
-    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    #timeout-minutes: 30
     needs:
       - prepare
       - build-benchmarks
