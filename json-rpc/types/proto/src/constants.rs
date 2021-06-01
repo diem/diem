@@ -13,6 +13,7 @@ pub const ACCOUNT_ROLE_UNKNOWN: &str = "unknown";
 pub const ACCOUNT_ROLE_CHILD_VASP: &str = "child_vasp";
 pub const ACCOUNT_ROLE_PARENT_VASP: &str = "parent_vasp";
 pub const ACCOUNT_ROLE_DESIGNATED_DEALER: &str = "designated_dealer";
+pub const ACCOUNT_ROLE_TREASURY_COMPLIANCE: &str = "treasury_compliance";
 
 // EventData#type field values
 pub const EVENT_DATA_UNKNOWN: &str = "unknown";

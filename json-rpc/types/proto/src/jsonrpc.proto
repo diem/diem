@@ -177,6 +177,11 @@ message EventData {
    * Hex-encoded BCS bytes of the event data.
    */
   string bytes = 21;
+
+  // diemiddomain event only
+  bool removed = 22 [json_name="removed"];
+  string domain = 23 [json_name="domain"];
+  string address = 24 [json_name="address"];
 }
 
 message Metadata {

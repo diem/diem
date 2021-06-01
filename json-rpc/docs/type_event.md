@@ -162,7 +162,7 @@ Event emitted under TC account when a diem id domain is added or removed from pa
 |-----------------|--------|--------------------------------|
 | type            | string | Constant string "diemiddomain"|
 | address | string | On-chain account address of parent VASP |
-| domain         | u64    | Diem ID domain string of the account |
+| domain         | string    | Diem ID domain string of the account |
 | removed         | boolean    | Whether a domain was added or removed |
 
 #### unknown
