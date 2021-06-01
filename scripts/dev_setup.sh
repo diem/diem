@@ -19,6 +19,7 @@ HADOLINT_VERSION=1.17.4
 SCCACHE_VERSION=0.2.16-alpha.0
 #If installing sccache from a git repp set url@revision.
 SCCACHE_GIT='https://github.com/diem/sccache.git@ef50d87a58260c30767520045e242ccdbdb965af'
+GUPPY_GIT='https://github.com/facebookincubator/cargo-guppy@39ec940f36b0a0df96a330243d127cbe2db9f919'
 KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
@@ -368,6 +369,14 @@ function install_sccache {
     else
       cargo install sccache --version="${SCCACHE_VERSION}" --features s3;
     fi
+  fi
+}
+
+function install_cargo_guppy {
+  if ! command -v cargo-guppy &> /dev/null; then
+    git_repo=$( echo "$GUPPY_GIT" | cut -d "@" -f 1 );
+    git_hash=$( echo "$GUPPY_GIT" | cut -d "@" -f 2 );
+    cargo install cargo-guppy --git "$git_repo" --rev "$git_hash";
   fi
 }
 
@@ -741,6 +750,7 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   rustup component add rustfmt
   rustup component add clippy
 
+  install_cargo_guppy
   install_sccache
   install_grcov
   install_pkg git "$PACKAGE_MANAGER"

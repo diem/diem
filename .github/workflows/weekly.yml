@@ -18,10 +18,8 @@ jobs:
             # fetch full history
             fetch-depth: 0
       - uses: ./.github/actions/build-setup
-      - name: Install cargo-guppy
-        run: cargo install --git https://github.com/facebookincubator/cargo-guppy --branch main cargo-guppy
       - name: Produce report
-        run: ./scripts/weekly-dep-report.sh ${GITHUB_REPOSITORY} main >> ${MESSAGE_PAYLOAD_FILE}
+        run: ./scripts/weekly-dep-report.sh ${GITHUB_REPOSITORY} main | tee ${MESSAGE_PAYLOAD_FILE}
       - name: "Send Message"
         uses: ./.github/actions/slack-file
         with:

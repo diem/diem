@@ -27,6 +27,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v kubectl)" ] \
     && [ -x "$(command -v rustup)" ] \
     && [ -x "$(command -v cargo)" ] \
+    && [ -x "$(command -v cargo-guppy)" ] \
     && [ -x "$(command -v sccache)" ] \
     && [ -x "$(command -v grcov)" ] \
     && [ -x "$(command -v helm)" ] \
