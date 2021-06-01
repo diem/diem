@@ -463,7 +463,8 @@ jobs:
           shellcheck scripts/dev_setup.sh && \
           shellcheck scripts/dockerhub_prune.sh && \
           shellcheck docker/build_push.sh && \
-          shellcheck docker/docker_republish.sh
+          shellcheck docker/docker_republish.sh && \
+          shellcheck scripts/weekly-dep-report.sh
       - name: docker lints
         uses: ./.github/actions/docker-checks
 
