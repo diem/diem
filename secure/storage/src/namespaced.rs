@@ -47,6 +47,17 @@ impl<S> Namespaced<S> {
     }
 }
 
+impl<'a, S> Namespaced<&'a S>
+where
+    S: KVStorage,
+{
+    /// This is a small hack in order to allow for calling KVStorage::get from a Namespaced created
+    /// from an `&S` and not an `S`
+    pub fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
+        self.inner.get(&self.namespaced(key))
+    }
+}
+
 impl<S: KVStorage> KVStorage for Namespaced<S> {
     fn available(&self) -> Result<(), Error> {
         self.inner.available()
