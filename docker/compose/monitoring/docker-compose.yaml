@@ -1,5 +1,4 @@
-# To start the services, run
-# `docker-compose -f docker-compose.mon.yaml up -d`
+# To start the services, run `docker-compose up -d`
 version: "3.8"
 services:
   prometheus:

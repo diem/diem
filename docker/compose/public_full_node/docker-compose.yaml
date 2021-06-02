@@ -31,7 +31,9 @@
 #
 # Monitoring:
 # If you want to install the monitoring components for your fullnode
-# you can symlink the ../monitoring folder into this directory, and run
+# you can symlink the ../monitoring folder into this directory.
+# Note that you will need to rename the monitoring docker-compose.yaml file to avoid duplication.
+# e.g. rename it to docker-compose.mon.yaml and run:
 # `docker-compose -f docker-compose.yaml -f docker-compose.mon.yaml up -d`
 # Dashboard can be accessed locally by loading localhost:3000 on your browser
 version: "3.8"
