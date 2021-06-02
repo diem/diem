@@ -39,6 +39,7 @@ pub enum Tok {
     Equal,
     EqualEqual,
     EqualEqualGreater,
+    LessEqualEqualGreater,
     Greater,
     GreaterEqual,
     GreaterGreater,
@@ -112,6 +113,7 @@ impl fmt::Display for Tok {
             Equal => "=",
             EqualEqual => "==",
             EqualEqualGreater => "==>",
+            LessEqualEqualGreater => "<==>",
             Greater => ">",
             GreaterEqual => ">=",
             GreaterGreater => ">>",
@@ -362,7 +364,9 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
             }
         }
         '<' => {
-            if text.starts_with("<=") {
+            if text.starts_with("<==>") {
+                (Tok::LessEqualEqualGreater, 4)
+            } else if text.starts_with("<=") {
                 (Tok::LessEqual, 2)
             } else if text.starts_with("<<") {
                 (Tok::LessLess, 2)

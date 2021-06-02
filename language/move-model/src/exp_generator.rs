@@ -127,6 +127,11 @@ pub trait ExpGenerator<'env> {
         self.mk_bool_call(Operation::Implies, vec![arg1, arg2])
     }
 
+    /// Make an iff expression.
+    fn mk_iff(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(Operation::Iff, vec![arg1, arg2])
+    }
+
     /// Make a numerical expression for some of the builtin constants.
     fn mk_builtin_num_const(&self, oper: Operation) -> Exp {
         assert!(matches!(

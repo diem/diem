@@ -1038,6 +1038,7 @@ fn get_precedence(token: Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1
         Tok::EqualEqualGreater => 2,
+        Tok::LessEqualEqualGreater => 2,
         Tok::PipePipe => 3,
         Tok::AmpAmp => 4,
         Tok::EqualEqual => 5,
@@ -1124,6 +1125,7 @@ fn parse_binop_exp(tokens: &mut Lexer, lhs: Exp, min_prec: u32) -> Result<Exp, E
             Tok::Percent => BinOp_::Mod,
             Tok::PeriodPeriod => BinOp_::Range,
             Tok::EqualEqualGreater => BinOp_::Implies,
+            Tok::LessEqualEqualGreater => BinOp_::Iff,
             _ => panic!("Unexpected token that is not a binary operator"),
         };
         let sp_op = spanned(tokens.file_name(), op_start_loc, op_end_loc, op);

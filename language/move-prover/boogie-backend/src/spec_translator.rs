@@ -696,6 +696,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Shl => self.translate_primitive_call("$shl", args),
             Operation::Shr => self.translate_primitive_call("$shr", args),
             Operation::Implies => self.translate_logical_op("==>", args),
+            Operation::Iff => self.translate_logical_op("<==>", args),
             Operation::And => self.translate_logical_op("&&", args),
             Operation::Or => self.translate_logical_op("||", args),
             Operation::Lt => self.translate_rel_op("<", args),

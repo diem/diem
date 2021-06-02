@@ -75,6 +75,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
         declare_bin(Range, Operation::Range, num_t, range_t);
 
         declare_bin(Implies, Operation::Implies, bool_t, bool_t);
+        declare_bin(Iff, Operation::Iff, bool_t, bool_t);
         declare_bin(And, Operation::And, bool_t, bool_t);
         declare_bin(Or, Operation::Or, bool_t, bool_t);
 

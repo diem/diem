@@ -935,7 +935,7 @@ fn exp_(context: &mut Context, initial_ne: N::Exp) -> T::Exp {
                             (Type_::bool(loc), Type_::bool(loc))
                         }
 
-                        Range | Implies => panic!("specification operator unexpected"),
+                        Range | Implies | Iff => panic!("specification operator unexpected"),
                     };
                     let binop =
                         T::exp(ty, sp(loc, TE::BinopExp(el, bop, Box::new(operand_ty), er)));

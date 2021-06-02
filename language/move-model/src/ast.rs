@@ -740,6 +740,7 @@ pub enum Operation {
     Shl,
     Shr,
     Implies,
+    Iff,
     And,
     Or,
     Eq,

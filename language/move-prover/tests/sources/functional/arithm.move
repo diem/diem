@@ -50,8 +50,8 @@ module 0x42::TestArithmetic {
         (c, d)
     }
     spec bool_ops {
-        ensures result_1 == (a > b && a >= b);
-        ensures result_2 == (a < b || a <= b);
+        ensures result_1 <==> (a > b && a >= b);
+        ensures result_2 <==> (a < b || a <= b);
     }
 
     // succeeds.
