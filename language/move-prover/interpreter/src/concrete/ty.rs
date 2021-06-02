@@ -4,7 +4,6 @@
 use std::fmt;
 
 use bytecode::stackless_bytecode::Constant;
-use move_binary_format::file_format::TypeParameterIndex;
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
@@ -16,6 +15,10 @@ use move_model::{
 };
 
 use crate::shared::ident::StructIdent;
+
+// avoid dependency to `move_binary_format::file_format`
+pub type TypeParameterIndex = u16;
+pub type CodeOffset = u16;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum IntType {

@@ -15,7 +15,7 @@ use bytecode::{
         Operation,
     },
 };
-use move_binary_format::{errors::Location, file_format::CodeOffset};
+use move_binary_format::errors::Location;
 use move_core_types::{
     account_address::AccountAddress,
     vm_status::{sub_status, StatusCode},
@@ -32,7 +32,7 @@ use crate::{
         settings::InterpreterSettings,
         ty::{
             convert_model_base_type, convert_model_local_type, convert_model_partial_struct_type,
-            convert_model_struct_type, BaseType, Type,
+            convert_model_struct_type, BaseType, CodeOffset, Type,
         },
         value::{EvalState, GlobalState, LocalSlot, Pointer, TypedValue},
     },

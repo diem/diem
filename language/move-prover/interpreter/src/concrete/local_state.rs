@@ -3,15 +3,12 @@
 
 use std::collections::BTreeMap;
 
-use move_binary_format::{
-    errors::{Location, PartialVMError, VMError},
-    file_format::CodeOffset,
-};
+use move_binary_format::errors::{Location, PartialVMError, VMError};
 use move_core_types::vm_status::StatusCode;
 use move_model::ast::TempIndex;
 
 use crate::concrete::{
-    ty::Type,
+    ty::{CodeOffset, Type},
     value::{LocalSlot, Pointer, TypedValue},
 };
 
