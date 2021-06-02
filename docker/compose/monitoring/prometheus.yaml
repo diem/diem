@@ -15,4 +15,4 @@ scrape_configs:
   - job_name: 'diem'
     scrape_interval: 120s
     static_configs:
-      - targets: ['fullnode:9101']
+      - targets: ['fullnode:9101', 'validator:9101']

@@ -79,3 +79,11 @@ services:
 volumes:
   prom_db:
   grafana_db:
+
+# Uncomment this if you're using the monitoring compose with custom networks
+# This will allow containers to join a pre-existing network
+#
+# networks:
+#   default:
+#     external: true
+#     name: "diem-docker-compose-shared"

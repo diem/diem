@@ -12,6 +12,15 @@
 # * Validator images can be found at https://hub.docker.com/r/devnet/validator/tags
 # * Faucet images can be found at https://hub.docker.com/r/devnet/faucet/tags
 
+# Monitoring:
+# If you want to install the monitoring components for your validator-testnet
+# you can symlink the ../monitoring folder into this directory.
+# Note that you will need to rename the monitoring docker-compose.yaml file to avoid duplication.
+# e.g. rename it to docker-compose.mon.yaml
+# You will also need to configure the network in the monitoring compose file,
+# so that the container can join the same network and talk to each other.
+# To start both validator and monitoring, run `docker-compose -f docker-compose.yaml -f docker-compose.mon.yaml up -d`
+
 version: "3.8"
 services:
   validator:
@@ -30,6 +39,8 @@ services:
     command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
     ports:
       - "8080:8080"
+    expose:
+      - 9101
 
   faucet:
     image: "diem/faucet:${IMAGE_TAG:-devnet}"
