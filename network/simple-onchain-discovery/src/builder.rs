@@ -6,6 +6,7 @@ use channel::diem_channel;
 use diem_config::network_id::NetworkContext;
 use diem_crypto::x25519::PublicKey;
 use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::Storage;
 use diem_types::on_chain_config::OnChainConfigPayload;
 use network::connectivity_manager::ConnectivityRequest;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl ValidatorSetChangeListenerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
         expected_pubkey: PublicKey,
-        encryptor: Encryptor,
+        encryptor: Encryptor<Storage>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> ValidatorSetChangeListenerBuilder {

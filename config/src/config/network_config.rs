@@ -160,7 +160,7 @@ impl NetworkConfig {
         }
     }
 
-    pub fn encryptor(&self) -> Encryptor {
+    pub fn encryptor(&self) -> Encryptor<Storage> {
         if let Some(backend) = self.network_address_key_backend.as_ref() {
             let storage = backend.into();
             Encryptor::new(storage)

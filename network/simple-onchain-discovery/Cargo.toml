@@ -21,6 +21,7 @@ diem-config = { path = "../../config"}
 diem-crypto = {path = "../../crypto/crypto"}
 diem-logger = {path = "../../common/logger"}
 diem-metrics = {path = "../../common/metrics"}
+diem-secure-storage = { path = "../../secure/storage" }
 diem-network-address-encryption = {path = "../../config/management/network-address-encryption"}
 diem-types = {path = "../../types"}
 diem-workspace-hack = { path = "../../common/workspace-hack" }

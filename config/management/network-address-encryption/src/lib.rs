@@ -37,34 +37,24 @@ pub enum Error {
     VersionNotFound(KeyVersion),
 }
 
-pub struct Encryptor {
-    storage: Storage,
+pub struct Encryptor<S> {
+    storage: S,
     cached_keys: RwLock<Option<ValidatorKeys>>,
 }
 
-impl Encryptor {
-    pub fn new(storage: Storage) -> Self {
+impl<S> Encryptor<S> {
+    pub fn new(storage: S) -> Self {
         Self {
             storage,
             cached_keys: RwLock::new(None),
         }
     }
+}
 
-    /// This generates an empty encryptor for use in scenarios where encryption is not necessary.
-    /// Any encryption operations (e.g., encrypt / decrypt) will return errors.
-    pub fn empty() -> Self {
-        let storage = Storage::InMemoryStorage(diem_secure_storage::InMemoryStorage::new());
-        Encryptor::new(storage)
-    }
-
-    /// This generates an encryptor for use in testing scenarios. The encryptor is
-    /// initialized with a test network encryption key.
-    pub fn for_testing() -> Self {
-        let mut encryptor = Self::empty();
-        encryptor.initialize_for_testing().unwrap();
-        encryptor
-    }
-
+impl<S> Encryptor<S>
+where
+    S: KVStorage,
+{
     pub fn add_key(&mut self, version: KeyVersion, key: Key) -> Result<(), Error> {
         let mut keys = self.read()?;
         keys.keys.insert(version, StorageKey(key));
@@ -126,19 +116,6 @@ impl Encryptor {
         Ok(addrs)
     }
 
-    pub fn initialize(&mut self) -> Result<(), Error> {
-        self.write(&ValidatorKeys::default())
-    }
-
-    pub fn initialize_for_testing(&mut self) -> Result<(), Error> {
-        self.initialize()?;
-        self.add_key(
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            TEST_SHARED_VAL_NETADDR_KEY,
-        )?;
-        self.set_current_version(TEST_SHARED_VAL_NETADDR_KEY_VERSION)
-    }
-
     fn read(&self) -> Result<ValidatorKeys, Error> {
         let result = self
             .storage
@@ -165,6 +142,36 @@ impl Encryptor {
         self.storage
             .set(VALIDATOR_NETWORK_ADDRESS_KEYS, keys)
             .map_err(|e| e.into())
+    }
+
+    pub fn initialize(&mut self) -> Result<(), Error> {
+        self.write(&ValidatorKeys::default())
+    }
+}
+
+impl Encryptor<Storage> {
+    /// This generates an empty encryptor for use in scenarios where encryption is not necessary.
+    /// Any encryption operations (e.g., encrypt / decrypt) will return errors.
+    pub fn empty() -> Self {
+        let storage = Storage::InMemoryStorage(diem_secure_storage::InMemoryStorage::new());
+        Encryptor::new(storage)
+    }
+
+    /// This generates an encryptor for use in testing scenarios. The encryptor is
+    /// initialized with a test network encryption key.
+    pub fn for_testing() -> Self {
+        let mut encryptor = Self::empty();
+        encryptor.initialize_for_testing().unwrap();
+        encryptor
+    }
+
+    pub fn initialize_for_testing(&mut self) -> Result<(), Error> {
+        self.initialize()?;
+        self.add_key(
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            TEST_SHARED_VAL_NETADDR_KEY,
+        )?;
+        self.set_current_version(TEST_SHARED_VAL_NETADDR_KEY_VERSION)
     }
 }
 

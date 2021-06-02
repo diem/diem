@@ -24,6 +24,7 @@ use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::Storage;
 use diem_time_service::TimeService;
 use diem_types::{chain_id::ChainId, network_address::NetworkAddress};
 use network::{
@@ -345,7 +346,11 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_validator_set_listener(&mut self, pubkey: PublicKey, encryptor: Encryptor) -> &mut Self {
+    fn add_validator_set_listener(
+        &mut self,
+        pubkey: PublicKey,
+        encryptor: Encryptor<Storage>,
+    ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");

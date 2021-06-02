@@ -4970,6 +4970,7 @@ dependencies = [
  "diem-logger",
  "diem-metrics",
  "diem-network-address-encryption",
+ "diem-secure-storage",
  "diem-types",
  "diem-workspace-hack",
  "futures",

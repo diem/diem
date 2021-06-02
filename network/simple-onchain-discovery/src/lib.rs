@@ -13,6 +13,7 @@ use diem_metrics::{
     IntCounterVec, IntGaugeVec,
 };
 use diem_network_address_encryption::{Encryptor, Error as EncryptorError};
+use diem_secure_storage::Storage;
 use diem_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
 use futures::{sink::SinkExt, StreamExt};
 use network::{
@@ -72,7 +73,7 @@ pub static NETWORK_KEY_MISMATCH: Lazy<IntGaugeVec> = Lazy::new(|| {
 pub struct ValidatorSetChangeListener {
     network_context: Arc<NetworkContext>,
     expected_pubkey: PublicKey,
-    encryptor: Encryptor,
+    encryptor: Encryptor<Storage>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 }
@@ -85,7 +86,7 @@ pub fn gen_simple_discovery_reconfig_subscription(
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
 fn extract_validator_set_updates(
     network_context: Arc<NetworkContext>,
-    encryptor: &Encryptor,
+    encryptor: &Encryptor<Storage>,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
     let is_validator = network_context.network_id().is_validator_network();
@@ -142,7 +143,7 @@ impl ValidatorSetChangeListener {
     pub fn new(
         network_context: Arc<NetworkContext>,
         expected_pubkey: PublicKey,
-        encryptor: Encryptor,
+        encryptor: Encryptor<Storage>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {

@@ -22,7 +22,7 @@ pub struct StorageWrapper {
 }
 
 impl StorageWrapper {
-    pub fn encryptor(self) -> Encryptor {
+    pub fn encryptor(self) -> Encryptor<Storage> {
         Encryptor::new(self.storage)
     }
 

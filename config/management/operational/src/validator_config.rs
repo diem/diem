@@ -8,6 +8,7 @@ use diem_global_constants::{
 };
 use diem_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
 use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::Storage;
 use diem_types::{
     account_address::AccountAddress,
     network_address::{NetworkAddress, Protocol},
@@ -308,7 +309,7 @@ impl DecryptedValidatorConfig {
     pub fn from_validator_config_resource(
         config_resource: &diem_types::validator_config::ValidatorConfigResource,
         account_address: AccountAddress,
-        encryptor: &Encryptor,
+        encryptor: &Encryptor<Storage>,
     ) -> Result<Self, Error> {
         let config = config_resource.validator_config.as_ref().ok_or_else(|| {
             Error::JsonRpcReadError("validator-config", "not present".to_string())
@@ -322,7 +323,7 @@ impl DecryptedValidatorConfig {
     pub fn from_validator_config(
         config: &diem_types::validator_config::ValidatorConfig,
         account_address: AccountAddress,
-        encryptor: &Encryptor,
+        encryptor: &Encryptor<Storage>,
     ) -> Result<Self, Error> {
         let fullnode_network_addresses = fullnode_addresses(config)?;
         let validator_network_addresses = validator_addresses(config, account_address, encryptor)
@@ -357,7 +358,7 @@ pub fn fullnode_addresses(
 pub fn validator_addresses(
     config: &diem_types::validator_config::ValidatorConfig,
     account_address: AccountAddress,
-    encryptor: &Encryptor,
+    encryptor: &Encryptor<Storage>,
 ) -> Result<Vec<NetworkAddress>, Error> {
     encryptor
         .decrypt(&config.validator_network_addresses, account_address)

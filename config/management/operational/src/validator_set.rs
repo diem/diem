@@ -8,6 +8,7 @@ use crate::{
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::Storage;
 use diem_types::{
     account_address::AccountAddress, network_address::NetworkAddress, validator_info::ValidatorInfo,
 };
@@ -47,7 +48,7 @@ impl ValidatorSet {
 }
 
 pub fn decode_validator_set(
-    encryptor: Encryptor,
+    encryptor: Encryptor<Storage>,
     client: JsonRpcClientWrapper,
     account_address: Option<AccountAddress>,
 ) -> Result<Vec<DecryptedValidatorInfo>, Error> {
@@ -89,7 +90,7 @@ pub fn validator_set_full_node_addresses(
 
 pub fn validator_set_validator_addresses(
     client: JsonRpcClientWrapper,
-    encryptor: &Encryptor,
+    encryptor: &Encryptor<Storage>,
     account_address: Option<AccountAddress>,
 ) -> Result<Vec<(String, AccountAddress, Vec<NetworkAddress>)>, Error> {
     validator_set_addresses(client, account_address, |info| {
