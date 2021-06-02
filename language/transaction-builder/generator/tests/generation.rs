@@ -16,21 +16,28 @@ fn get_diem_registry() -> Registry {
     serde_yaml::from_str::<Registry>(content.as_str()).unwrap()
 }
 
-fn get_stdlib_script_abis() -> Vec<ScriptABI> {
+fn get_tx_script_abis() -> Vec<ScriptABI> {
     // This is also a custom rule in diem/x.toml.
     let legacy_path = Path::new("../../diem-framework/releases/legacy/script_abis");
+    buildgen::read_abis(&[legacy_path]).expect("reading legacy ABI files should not fail")
+}
+
+fn get_script_fun_abis() -> Vec<ScriptABI> {
     let new_abis = Path::new("../../diem-framework/releases/artifacts/current/script_abis");
-    let mut abis =
-        buildgen::read_abis(&[legacy_path]).expect("reading legacy ABI files should not fail");
-    abis.extend(
-        buildgen::read_abis(&[new_abis])
-            .expect("reading new ABI files should not fail")
-            .into_iter(),
-    );
+    buildgen::read_abis(&[new_abis]).expect("reading new ABI files should not fail")
+}
+
+fn get_stdlib_script_abis() -> Vec<ScriptABI> {
+    let mut abis = get_tx_script_abis();
+    abis.extend(get_script_fun_abis().into_iter());
     abis
 }
 
 const EXPECTED_OUTPUT: &str = "224 1 161 28 235 11 1 0 0 0 7 1 0 2 2 2 4 3 6 16 4 22 2 5 24 29 7 53 96 8 149 1 16 0 0 0 1 1 0 0 2 0 1 0 0 3 2 3 1 1 0 4 1 3 0 1 5 1 6 12 1 8 0 5 6 8 0 5 3 10 2 10 2 0 5 6 12 5 3 10 2 10 2 1 9 0 11 68 105 101 109 65 99 99 111 117 110 116 18 87 105 116 104 100 114 97 119 67 97 112 97 98 105 108 105 116 121 27 101 120 116 114 97 99 116 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 8 112 97 121 95 102 114 111 109 27 114 101 115 116 111 114 101 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 4 1 12 11 0 17 0 12 5 14 5 10 1 10 2 11 3 11 4 56 0 11 5 17 2 2 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 3 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 1 135 214 18 0 0 0 0 0 4 0 4 0 \n3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 14 80 97 121 109 101 110 116 83 99 114 105 112 116 115 26 112 101 101 114 95 116 111 95 112 101 101 114 95 119 105 116 104 95 109 101 116 97 100 97 116 97 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 16 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 8 135 214 18 0 0 0 0 0 1 0 1 0 \n";
+
+const EXPECTED_TX_SCRIPT_OUTPUT: &str = "224 1 161 28 235 11 1 0 0 0 7 1 0 2 2 2 4 3 6 16 4 22 2 5 24 29 7 53 96 8 149 1 16 0 0 0 1 1 0 0 2 0 1 0 0 3 2 3 1 1 0 4 1 3 0 1 5 1 6 12 1 8 0 5 6 8 0 5 3 10 2 10 2 0 5 6 12 5 3 10 2 10 2 1 9 0 11 68 105 101 109 65 99 99 111 117 110 116 18 87 105 116 104 100 114 97 119 67 97 112 97 98 105 108 105 116 121 27 101 120 116 114 97 99 116 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 8 112 97 121 95 102 114 111 109 27 114 101 115 116 111 114 101 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 4 1 12 11 0 17 0 12 5 14 5 10 1 10 2 11 3 11 4 56 0 11 5 17 2 2 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 3 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 1 135 214 18 0 0 0 0 0 4 0 4 0 \n";
+
+const EXPECTED_SCRIPT_FUN_OUTPUT: &str = "3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 14 80 97 121 109 101 110 116 83 99 114 105 112 116 115 26 112 101 101 114 95 116 111 95 112 101 101 114 95 119 105 116 104 95 109 101 116 97 100 97 116 97 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 16 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 8 135 214 18 0 0 0 0 0 1 0 1 0 \n";
 
 // Cannot run this test in the CI of Diem.
 #[test]
@@ -116,10 +123,8 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     assert!(status.success());
 }
 
-#[test]
-fn test_that_rust_code_compiles() {
+fn test_rust(abis: &[ScriptABI], demo_file: &str, expected_output: &str) {
     let registry = get_diem_registry();
-    let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
     let installer = serdegen::rust::Installer::new(dir.path().to_path_buf());
@@ -156,11 +161,7 @@ test = false
     let mut source = std::fs::File::create(&source_path).unwrap();
     buildgen::rust::output(&mut source, &abis, /* local types */ false).unwrap();
 
-    std::fs::copy(
-        "examples/rust/stdlib_demo.rs",
-        stdlib_dir_path.join("src/stdlib_demo.rs"),
-    )
-    .unwrap();
+    std::fs::copy(demo_file, stdlib_dir_path.join("src/stdlib_demo.rs")).unwrap();
 
     // Use a stable `target` dir to avoid downloading and recompiling crates everytime.
     let target_dir = std::env::current_dir().unwrap().join("../../target");
@@ -179,7 +180,25 @@ test = false
     assert!(output.status.success());
     assert_eq!(
         std::str::from_utf8(&output.stdout).unwrap(),
-        EXPECTED_OUTPUT
+        expected_output
+    );
+}
+
+#[test]
+fn test_that_rust_tx_script_code_compiles() {
+    test_rust(
+        &get_tx_script_abis(),
+        "examples/rust/tx_script_demo.rs",
+        EXPECTED_TX_SCRIPT_OUTPUT,
+    );
+}
+
+#[test]
+fn test_that_rust_script_fun_code_compiles() {
+    test_rust(
+        &get_script_fun_abis(),
+        "examples/rust/script_fun_demo.rs",
+        EXPECTED_SCRIPT_FUN_OUTPUT,
     );
 }
 

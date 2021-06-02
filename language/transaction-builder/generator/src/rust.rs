@@ -25,6 +25,9 @@ use std::{
 /// If `local_types` is true, we generate a file suitable for the Diem codebase itself
 /// rather than using serde-generated, standalone definitions.
 pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Result<()> {
+    if abis.is_empty() {
+        return Ok(());
+    }
     let mut emitter = RustEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
         local_types,
@@ -33,8 +36,15 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Res
     emitter.output_preamble()?;
     emitter.output_script_call_enum_with_imports(abis)?;
 
-    emitter.output_transaction_script_impl(&common::transaction_script_abis(abis))?;
-    emitter.output_script_function_impl(&common::script_function_abis(abis))?;
+    let tx_script_abis = common::transaction_script_abis(abis);
+    let script_function_abis = common::script_function_abis(abis);
+
+    if !tx_script_abis.is_empty() {
+        emitter.output_transaction_script_impl(&tx_script_abis)?;
+    }
+    if !script_function_abis.is_empty() {
+        emitter.output_script_function_impl(&script_function_abis)?;
+    }
 
     for abi in abis {
         emitter.output_script_encoder_function(abi)?;
@@ -44,11 +54,15 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Res
         emitter.output_script_decoder_function(abi)?;
     }
 
-    emitter.output_transaction_script_decoder_map(&common::transaction_script_abis(abis))?;
-    emitter.output_script_function_decoder_map(&common::script_function_abis(abis))?;
+    if !tx_script_abis.is_empty() {
+        emitter.output_transaction_script_decoder_map(&tx_script_abis)?;
+    }
+    if !script_function_abis.is_empty() {
+        emitter.output_script_function_decoder_map(&script_function_abis)?;
+    }
     emitter.output_decoding_helpers(abis)?;
 
-    for abi in &common::transaction_script_abis(abis) {
+    for abi in &tx_script_abis {
         emitter.output_code_constant(abi)?;
     }
     Ok(())
