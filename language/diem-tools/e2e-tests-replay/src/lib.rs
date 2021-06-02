@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env, fs,
@@ -25,6 +25,7 @@ use diem_types::{
         from_currency_code_string, reserved_vm_address, type_tag_for_currency_code, ACCOUNT_MODULE,
     },
     block_metadata::BlockMetadata,
+    on_chain_config::DiemVersion,
     transaction::{
         Script, ScriptFunction, Transaction, TransactionArgument, TransactionOutput,
         TransactionPayload, TransactionStatus, WriteSetPayload,
@@ -66,6 +67,8 @@ const MOVE_VM_TRACING_LOG_FILENAME: &str = "move_vm_trace.log";
 //**************************************************************************************************
 
 pub struct ReplayFlags {
+    /// Filter based on which diem version the trace was executed under
+    pub diem_version: DiemVersion,
     /// Filters on which trace (and steps) to run
     pub filters: BTreeMap<String, BTreeSet<usize>>,
     /// Maximum number of steps per trace to replay
@@ -85,19 +88,25 @@ pub struct ReplayFlags {
 }
 
 impl ReplayFlags {
-    fn should_replay_trace(&self, test: &str, step: Option<usize>) -> bool {
+    fn should_replay_trace(&self, test: &str, step: Option<usize>) -> Result<bool> {
+        let (name, vnum) = match test.rsplit_once("::") {
+            None => bail!("Invalid test name: {}", test),
+            Some((name, version)) => (name, version.parse::<u64>()?),
+        };
+        if vnum != self.diem_version.major {
+            return Ok(false);
+        }
+
         if self.filters.is_empty() {
-            return true;
+            return Ok(true);
         }
         for (k, v) in &self.filters {
-            if test.contains(k) {
-                if v.is_empty() {
-                    return true;
-                }
-                return step.map_or(true, |s| v.contains(&s));
+            if name.contains(k) {
+                let result = v.is_empty() || step.map_or(true, |s| v.contains(&s));
+                return Ok(result);
             }
         }
-        false
+        Ok(false)
     }
 }
 
@@ -861,7 +870,7 @@ fn replay_trace<P: AsRef<Path>>(
     let wks = wks.as_ref();
 
     let test_name = fs::read_to_string(wks.join(TRACE_FILE_NAME))?;
-    if !flags.should_replay_trace(&test_name, None) {
+    if !flags.should_replay_trace(&test_name, None)? {
         return Ok(());
     }
     if flags.verbose_trace_meta {
@@ -882,7 +891,7 @@ fn replay_trace<P: AsRef<Path>>(
 
     // iterate over each transaction blocks
     for blk_seq in 0..num_blks {
-        if !flags.should_replay_trace(&test_name, Some(blk_seq)) {
+        if !flags.should_replay_trace(&test_name, Some(blk_seq))? {
             continue;
         }
 
