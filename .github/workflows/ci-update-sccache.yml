@@ -39,7 +39,7 @@ jobs:
           invert: "true"
       - uses: ./.github/actions/build-setup
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-      - uses: actions/cache@v2.1.5
+      - uses: actions/cache@v2.1.6
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
         with:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"

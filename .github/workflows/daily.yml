@@ -184,7 +184,7 @@ jobs:
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.5
+      - uses: actions/cache@v2.1.6
         with:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
