@@ -1,6 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! The type system in move-model is a fat type system that is designed to cover all cases that can
+//! possibly appear in the whole bytecode transformation pipeline. Natually, this means that some
+//! types are no longer applicable when the Move program reaches the end of the transformation.
+//!
+//! The type system for the interpreter is a strict subset of what is offered in the move-model.
+//! In other word, it is slimmed down version of the type system in move-model and a very restricted
+//! set of types that are only applicable to the interpreter. Doing so enables us to write code in a
+//! more precise way. For example, a type argument can only be a `BaseType` and never a reference.
+//! Therefore, `BaseType` is preferred over `Type` for if a struct field/function argument holds
+//! a type argument (e.g., `struct FunctionContext {ty_args: Vec<BaseType>, ...}` is preferred over
+//! `ty_args: Vec<Type>`, as the former is more descriptive and less error prone).
+
 use std::fmt;
 
 use bytecode::stackless_bytecode::Constant;
