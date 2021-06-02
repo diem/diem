@@ -144,6 +144,8 @@ pub enum Error {
     NoActiveStream,
     #[error("Remote stream cleanly closed")]
     RemoteStreamClosed,
+    #[error("Overflow error: {0}")]
+    OverflowError(String),
 }
 
 pub struct NetworkClient {
@@ -499,12 +501,14 @@ impl NetworkStream {
     /// This wraps around that buffer and blocks until all the data has been pushed.
     fn write_all(&mut self, data: &[u8]) -> Result<(), Error> {
         let mut unwritten = data;
-        let mut total_written = 0;
+        let mut total_written: u8 = 0;
 
         while !unwritten.is_empty() {
             let written = self.stream.write(unwritten)?;
-            total_written += written;
-            unwritten = &data[total_written..];
+            total_written = total_written
+                .checked_add(written as u8)
+                .ok_or_else(|| Error::OverflowError(String::from("write_all::total_written")))?;
+            unwritten = &data[total_written as usize..];
         }
         Ok(())
     }
