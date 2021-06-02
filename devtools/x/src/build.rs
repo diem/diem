@@ -47,6 +47,7 @@ pub fn run(args: Box<Args>, xctx: XContext) -> Result<()> {
         direct_args: direct_args.as_slice(),
         args: &[],
         env: &[],
+        skip_sccache: false,
     };
 
     let packages = args.package_args.to_selected_packages(&xctx)?;

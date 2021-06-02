@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::CargoConfig, installer::install_if_needed, Result};
+use crate::{config::CargoConfig, installer::install_cargo_component_if_needed, Result};
 use anyhow::anyhow;
 use log::{info, warn};
 use std::{
@@ -95,7 +95,11 @@ pub fn apply_sccache_if_possible(
 
     if sccache_should_run(cargo_config, true) {
         if let Some(sccache_config) = &cargo_config.sccache {
-            if !install_if_needed(cargo_config, "sccache", &sccache_config.installer) {
+            if !install_cargo_component_if_needed(
+                cargo_config,
+                "sccache",
+                &sccache_config.installer,
+            ) {
                 return Err(anyhow!("Failed to install sccache, bailing"));
             }
             stop_sccache_server();

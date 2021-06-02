@@ -68,6 +68,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
         // Don't pass in the args (test name) -- they're for use by the test runner.
         args: &[],
         env: &[],
+        skip_sccache: false,
     };
 
     let messages = cmd.run_capture_messages(&packages)?;

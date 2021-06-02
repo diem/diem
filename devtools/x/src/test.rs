@@ -60,30 +60,55 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
 
     let generate_coverage = args.html_cov_dir.is_some() || args.html_lcov_dir.is_some();
 
-    let env_vars: &[(&str, Option<&str>)] = if generate_coverage {
-        if !xctx.installer().install_if_needed("grcov") {
+    let llvm_profile_key = "LLVM_PROFILE_FILE";
+    let llvm_profile_path: &str = "target/debug/xtest-%p-%m.profraw";
+    let llvm_profile_path_ignored = "target/debug/ignored-%p-%m.profraw";
+
+    let env_vars = if generate_coverage {
+        if !xctx
+            .installer()
+            .install_via_rustup_if_needed("llvm-tools-preview")
+        {
+            return Err(anyhow!("Could not install llvm-tools-preview"));
+        }
+        if !xctx.installer().install_via_cargo_if_needed("grcov") {
             return Err(anyhow!("Could not install grcov"));
         }
-        info!("Running \"cargo clean\" before collecting coverage");
-        let mut clean_cmd = Command::new("cargo");
-        clean_cmd.arg("clean");
-        clean_cmd.output()?;
-        &[
-            // A way to use -Z (unstable) flags with the stable compiler. See below.
+
+        let shared_envionment = vec![
             ("RUSTC_BOOTSTRAP", Some("1")),
-            // Recommend setting for grcov, avoids using the cargo cache.
-            ("CARGO_INCREMENTAL", Some("0")),
-            // language/ir-testsuite's tests will stack overflow without this setting.
-            ("RUST_MIN_STACK", Some("8388608")),
             // Recommend flags for use with grcov, with these flags removed: -Copt-level=0, -Clink-dead-code.
             // for more info see:  https://github.com/mozilla/grcov#example-how-to-generate-gcda-fiels-for-a-rust-project
-            (
-                "RUSTFLAGS",
-                Some("-Zprofile -Ccodegen-units=1 -Coverflow-checks=off"),
-            ),
-        ]
+            ("RUSTFLAGS", Some("-Zinstrument-coverage")),
+            ("RUST_MIN_STACK", Some("8388608")),
+        ];
+
+        let mut build_env_vars = shared_envionment.clone();
+        build_env_vars.push((llvm_profile_key, Some(llvm_profile_path_ignored)));
+
+        info!("Performing a seperate \"cargo build\" before running tests and collecting coverage");
+
+        let mut direct_args = Vec::new();
+        args.build_args.add_args(&mut direct_args);
+        //direct_args.push(OsString::from("--no-run"));
+        let build = CargoCommand::Build {
+            cargo_config: xctx.config().cargo_config(),
+            direct_args: direct_args.as_slice(),
+            args: &args.args,
+            env: build_env_vars.as_slice(),
+            skip_sccache: true,
+        };
+        let build_result = build.run_on_packages(&packages);
+
+        if !args.no_fail_fast && build_result.is_err() {
+            return build_result;
+        }
+
+        let mut output = shared_envionment.clone();
+        output.push((llvm_profile_key, Some(llvm_profile_path)));
+        output
     } else {
-        &[]
+        vec![]
     };
 
     let mut direct_args = Vec::new();
@@ -103,6 +128,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         direct_args: direct_args.as_slice(),
         args: &args.args,
         env: &env_vars,
+        skip_sccache: generate_coverage,
     };
 
     let cmd_result = cmd.run_on_packages(&packages);
@@ -115,13 +141,13 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         create_dir_all(&html_cov_dir)?;
         let html_cov_path = &html_cov_dir.canonicalize()?;
         info!("created {}", &html_cov_path.to_string_lossy());
-        exec_grcov(&html_cov_path)?;
+        exec_grcov(&html_cov_path, llvm_profile_path)?;
     }
     if let Some(html_lcov_dir) = &args.html_lcov_dir {
         create_dir_all(&html_lcov_dir)?;
         let html_lcov_path = &html_lcov_dir.canonicalize()?;
         info!("created {}", &html_lcov_path.to_string_lossy());
-        exec_lcov(&html_lcov_path)?;
+        exec_lcov(&html_lcov_path, llvm_profile_path)?;
         exec_lcov_genhtml(&html_lcov_path)?;
     }
     cmd_result
@@ -154,7 +180,7 @@ fn exec_lcov_genhtml(html_lcov_path: &Path) -> Result<()> {
     }
 }
 
-fn exec_lcov(html_lcov_path: &Path) -> Result<()> {
+fn exec_lcov(html_lcov_path: &Path, llvm_profile_path: &str) -> Result<()> {
     let debug_dir = project_root().join("target/debug/");
     let mut lcov_file_path = PathBuf::new();
     lcov_file_path.push(html_lcov_path);
@@ -163,6 +189,8 @@ fn exec_lcov(html_lcov_path: &Path) -> Result<()> {
     lcov_file
         .current_dir(project_root())
         //output file from coverage: gcda files
+        .arg(debug_dir.as_os_str())
+        .arg("--binary-path")
         .arg(debug_dir.as_os_str())
         //source code location
         .arg("-s")
@@ -184,6 +212,8 @@ fn exec_lcov(html_lcov_path: &Path) -> Result<()> {
         .arg(lcov_file_path);
     info!("Converting lcov.info file to html");
     info!("{:?}", lcov_file);
+    lcov_file.env("RUSTFLAGS", "-Zinstrument-coverage");
+    lcov_file.env("LLVM_PROFILE_FILE", llvm_profile_path);
     lcov_file.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     if let Some(err) = lcov_file.output().err() {
         Err(Error::new(err).context("Failed to generate lcov.info with grcov"))
@@ -192,12 +222,15 @@ fn exec_lcov(html_lcov_path: &Path) -> Result<()> {
     }
 }
 
-fn exec_grcov(html_cov_path: &Path) -> Result<()> {
+fn exec_grcov(html_cov_path: &Path, llvm_profile_path: &str) -> Result<()> {
     let debug_dir = project_root().join("target/debug/");
     let mut grcov_html = Command::new("grcov");
+    //grcov . --binary-path ./target/debug/ -s . -t html --branch --ignore-not-existing --ignore "/*" -o $HOME/output/
     grcov_html
         .current_dir(project_root())
         //output file from coverage: gcda files
+        .arg(project_root().as_os_str())
+        .arg("--binary-path")
         .arg(debug_dir.as_os_str())
         //source code location
         .arg("-s")
@@ -205,7 +238,6 @@ fn exec_grcov(html_cov_path: &Path) -> Result<()> {
         //html output
         .arg("-t")
         .arg("html")
-        .arg("--llvm")
         .arg("--branch")
         .arg("--ignore")
         .arg("/*")
@@ -218,6 +250,8 @@ fn exec_grcov(html_cov_path: &Path) -> Result<()> {
         .arg(html_cov_path);
     info!("Build grcov Html Coverage Report");
     info!("{:?}", grcov_html);
+    grcov_html.env("LLVM_PROFILE_FILE", llvm_profile_path);
+    grcov_html.env("RUSTFLAGS", "-Zinstrument-coverage");
     grcov_html.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     if let Some(err) = grcov_html.output().err() {
         Err(Error::new(err).context("Failed to generate html output with grcov"))

@@ -43,11 +43,11 @@ impl Cargo {
     pub fn new<S: AsRef<OsStr>>(
         cargo_config: &CargoConfig,
         command: S,
-        attempt_sccache: bool,
+        skip_sccache: bool,
     ) -> Self {
         let mut inner = Command::new("cargo");
         //sccache apply
-        let envs: IndexMap<OsString, Option<OsString>> = if attempt_sccache {
+        let envs: IndexMap<OsString, Option<OsString>> = if !skip_sccache {
             let result = apply_sccache_if_possible(cargo_config);
             match result {
                 Ok(env) => env
@@ -72,7 +72,7 @@ impl Cargo {
             IndexMap::new()
         };
 
-        let on_drop = if sccache_should_run(cargo_config, false) {
+        let on_drop = if !skip_sccache && sccache_should_run(cargo_config, false) {
             || {
                 log_sccache_stats();
                 stop_sccache_server();
@@ -277,12 +277,14 @@ pub enum CargoCommand<'a> {
         direct_args: &'a [OsString],
         args: &'a [OsString],
         env: &'a [(&'a str, Option<&'a str>)],
+        skip_sccache: bool,
     },
     Build {
         cargo_config: &'a CargoConfig,
         direct_args: &'a [OsString],
         args: &'a [OsString],
         env: &'a [(&'a str, Option<&'a str>)],
+        skip_sccache: bool,
     },
 }
 
@@ -295,6 +297,14 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Fix { cargo_config, .. } => cargo_config,
             CargoCommand::Test { cargo_config, .. } => cargo_config,
             CargoCommand::Build { cargo_config, .. } => cargo_config,
+        }
+    }
+
+    pub fn skip_sccache(&self) -> bool {
+        match self {
+            CargoCommand::Build { skip_sccache, .. } => *skip_sccache,
+            CargoCommand::Test { skip_sccache, .. } => *skip_sccache,
+            _ => false,
         }
     }
 
@@ -329,7 +339,7 @@ impl<'a> CargoCommand<'a> {
     }
 
     fn prepare_cargo(&self, packages: &SelectedPackages<'_>) -> Cargo {
-        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), self.skip_sccache());
         cargo
             .current_dir(project_root())
             .args(self.direct_args())

@@ -106,7 +106,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
     // Update Cargo.lock if the file on disk changed.
     if update_cargo_lock {
         info!("Workspace hack contents changed, updating Cargo.lock");
-        let mut cmd = Cargo::new(xctx.config().cargo_config(), "update", false);
+        let mut cmd = Cargo::new(xctx.config().cargo_config(), "update", true);
         cmd.args(&["--package", hakari_package.name()]);
         cmd.run()?;
     }
