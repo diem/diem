@@ -21,6 +21,19 @@ pub enum SecureBackend {
     OnDiskStorage(OnDiskStorageConfig),
 }
 
+impl SecureBackend {
+    pub fn namespace(&self) -> Option<&str> {
+        match self {
+            SecureBackend::GitHub(GitHubConfig { namespace, .. })
+            | SecureBackend::Vault(VaultConfig { namespace, .. })
+            | SecureBackend::OnDiskStorage(OnDiskStorageConfig { namespace, .. }) => {
+                namespace.as_deref()
+            }
+            SecureBackend::InMemoryStorage => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct GitHubConfig {
