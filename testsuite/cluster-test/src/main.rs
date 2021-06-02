@@ -130,7 +130,7 @@ pub async fn main() {
         println!("nnnnnnn name = {:?}, ip = {:?}, provider_id = {:?}", n.name, n.internal_ip, n.provider_id);
     }
     for n in &b {
-        println!("nnnnnnn name = {:?}, host_ip = {:?}, pod_ip = {:?}", n.name, n.host_ip, n.pod_ip);
+        println!("nnnnnnn name = {:?}, host_ip = {:?}, pod_ip = {:?}, phase = {:?}", n.name, n.host_ip, n.pod_ip, n.phase);
     }
 }
 
