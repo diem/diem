@@ -166,6 +166,7 @@ members = [
     "cli",
     "cluster-test",
     "diem-documentation-tool",
+    "diem-e2e-tests-replay",
     "diem-fuzz",
     "diem-fuzzer",
     "diem-json-rpc-client",
@@ -212,6 +213,7 @@ members = [
 
 [workspace.move-to-diem-deps]
 diem_crates_in_language = [
+    "diem-e2e-tests-replay",
     "diem-framework",
     "diem-framework-releases",
     "diem-events-fetcher",

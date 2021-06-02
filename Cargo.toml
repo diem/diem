@@ -70,6 +70,7 @@ members = [
     "language/diem-tools/diem-events-fetcher",
     "language/diem-tools/diem-read-write-set",
     "language/diem-tools/diem-validator-interface",
+    "language/diem-tools/e2e-tests-replay",
     "language/diem-tools/oncall-trainer",
     "language/diem-tools/transaction-replay",
     "language/diem-tools/writeset-transaction-generator",

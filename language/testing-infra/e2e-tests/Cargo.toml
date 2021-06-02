@@ -31,12 +31,7 @@ proptest = "1.0.0"
 proptest-derive = "0.3.0"
 diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
 diem-config = { path = "../../../config" }
-diem-framework = { path = "../../diem-framework" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-transaction-builder = { path = "../../../sdk/transaction-builder" }
 hex = "0.4.3"
-structopt = "0.3.21"
-walkdir = "2.3.1"
-bytecode-interpreter = { path = "../../move-prover/interpreter" }
-move-model = { path = "../../move-model" }

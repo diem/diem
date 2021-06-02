@@ -1,26 +1,23 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env, fs,
     path::Path,
 };
-use structopt::StructOpt;
 use walkdir::WalkDir;
 
 use bytecode_interpreter::{
     concrete::{
         runtime::{convert_move_struct_tag, convert_move_value},
-        settings::InterpreterSettings,
         ty::BaseType,
         value::GlobalState,
     },
     shared::bridge::{adapt_move_vm_change_set, adapt_move_vm_result},
     StacklessBytecodeInterpreter,
 };
-use diem_framework::diem_stdlib_files;
 use diem_types::{
     access_path::Path as AP,
     account_address::AccountAddress,
@@ -58,12 +55,51 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{KeptVMStatus, VMStatus},
 };
-use move_model::run_model_builder;
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
 const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
 const MOVE_VM_TRACING_LOG_FILENAME: &str = "move_vm_trace.log";
+
+//**************************************************************************************************
+// Structs
+//**************************************************************************************************
+
+pub struct ReplayFlags {
+    /// Filters on which trace (and steps) to run
+    pub filters: BTreeMap<String, BTreeSet<usize>>,
+    /// Maximum number of steps per trace to replay
+    pub step_limit: usize,
+    /// Cross-run and check the stackless VM
+    pub xrun: bool,
+    /// Print information per trace
+    pub verbose_trace_meta: bool,
+    /// Print information per-step in the trace
+    pub verbose_trace_step: bool,
+    /// Print information per cross-VM function invocation
+    pub verbose_trace_xrun: bool,
+    /// Enable verbose mode in the xrun VMs
+    pub verbose_vm: bool,
+    /// Print warnings
+    pub warning: bool,
+}
+
+impl ReplayFlags {
+    fn should_replay_trace(&self, test: &str, step: Option<usize>) -> bool {
+        if self.filters.is_empty() {
+            return true;
+        }
+        for (k, v) in &self.filters {
+            if test.contains(k) {
+                if v.is_empty() {
+                    return true;
+                }
+                return step.map_or(true, |s| v.contains(&s));
+            }
+        }
+        false
+    }
+}
 
 //**************************************************************************************************
 // Utilities
@@ -1018,7 +1054,7 @@ fn replay_trace<P: AsRef<Path>>(
     Ok(())
 }
 
-fn replay<P: AsRef<Path>>(
+pub fn replay<P: AsRef<Path>>(
     root: P,
     interpreter: &StacklessBytecodeInterpreter,
     flags: &ReplayFlags,
@@ -1033,117 +1069,6 @@ fn replay<P: AsRef<Path>>(
                 .ok_or_else(|| anyhow!("Cannot traverse the root directory"))?;
             replay_trace(wks, interpreter, flags)?;
         }
-    }
-    Ok(())
-}
-
-//**************************************************************************************************
-// Entrypoint
-//**************************************************************************************************
-
-#[derive(StructOpt)]
-struct ReplayArgs {
-    /// Trace files
-    #[structopt(short = "t", long = "trace")]
-    trace_files: Vec<String>,
-
-    /// Trace filters, if specified, only replay traces that passes the filter
-    #[structopt(short = "f", long = "filter")]
-    filters: Vec<String>,
-
-    /// Maximum number of steps per trace to replay
-    #[structopt(short = "l", long = "limit", default_value = "100")]
-    step_limit: usize,
-
-    /// Cross check the stackless VM against the Move VM
-    #[structopt(short = "x", long = "xrun")]
-    xrun: bool,
-
-    /// Verbose mode
-    #[structopt(short = "v", long = "verbose")]
-    verbose: Option<u64>,
-
-    /// Warning mode
-    #[structopt(short = "w", long = "warning")]
-    warning: Option<u64>,
-}
-
-struct ReplayFlags {
-    /// Filters on which trace (and steps) to run
-    filters: BTreeMap<String, BTreeSet<usize>>,
-    /// Maximum number of steps per trace to replay
-    step_limit: usize,
-    /// Cross-run and check the stackless VM
-    xrun: bool,
-    /// Print information per trace
-    verbose_trace_meta: bool,
-    /// Print information per-step in the trace
-    verbose_trace_step: bool,
-    /// Print information per cross-VM function invocation
-    verbose_trace_xrun: bool,
-    /// Enable verbose mode in the xrun VMs
-    verbose_vm: bool,
-    /// Print warnings
-    warning: bool,
-}
-
-impl ReplayFlags {
-    pub fn should_replay_trace(&self, test: &str, step: Option<usize>) -> bool {
-        if self.filters.is_empty() {
-            return true;
-        }
-        for (k, v) in &self.filters {
-            if test.contains(k) {
-                if v.is_empty() {
-                    return true;
-                }
-                return step.map_or(true, |s| v.contains(&s));
-            }
-        }
-        false
-    }
-}
-
-pub fn main() -> Result<()> {
-    let args = ReplayArgs::from_args();
-    let mut filters = BTreeMap::new();
-    for item in args.filters {
-        let tokens: Vec<&str> = item.split("::").collect();
-        if tokens.len() == 1 {
-            filters
-                .entry(tokens[0].to_string())
-                .or_insert_with(BTreeSet::new);
-        } else if tokens.len() == 2 {
-            let step: usize = tokens[1].parse()?;
-            filters
-                .entry(tokens[0].to_string())
-                .or_insert_with(BTreeSet::new)
-                .insert(step);
-        } else {
-            bail!("Invalid filter: {}", item);
-        }
-    }
-
-    let flags = ReplayFlags {
-        filters,
-        step_limit: args.step_limit,
-        xrun: args.xrun,
-        verbose_trace_meta: args.verbose.map_or(false, |level| level > 0),
-        verbose_trace_step: args.verbose.map_or(false, |level| level > 1),
-        verbose_trace_xrun: args.verbose.map_or(false, |level| level > 2),
-        verbose_vm: args.verbose.map_or(false, |level| level > 3),
-        warning: args.warning.map_or(false, |level| level > 0),
-    };
-
-    let settings = if flags.verbose_vm {
-        InterpreterSettings::verbose_default()
-    } else {
-        InterpreterSettings::default()
-    };
-    let env = run_model_builder(&diem_stdlib_files(), &[])?;
-    let interpreter = StacklessBytecodeInterpreter::new(&env, None, settings);
-    for trace in args.trace_files {
-        replay(trace, &interpreter, &flags)?;
     }
     Ok(())
 }

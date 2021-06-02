@@ -1607,6 +1607,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-e2e-tests-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "bytecode-interpreter",
+ "diem-framework",
+ "diem-types",
+ "diem-vm",
+ "diem-workspace-hack",
+ "language-e2e-tests",
+ "move-binary-format",
+ "move-core-types",
+ "move-model",
+ "move-vm-runtime",
+ "move-vm-types",
+ "structopt 0.3.21",
+ "walkdir",
+]
+
+[[package]]
 name = "diem-events-fetcher"
 version = "0.1.0"
 dependencies = [
@@ -4154,11 +4175,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytecode-interpreter",
  "compiler",
  "diem-config",
  "diem-crypto",
- "diem-framework",
  "diem-framework-releases",
  "diem-proptest-helpers",
  "diem-state-view",
@@ -4171,7 +4190,6 @@ dependencies = [
  "hex",
  "move-binary-format",
  "move-core-types",
- "move-model",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
@@ -4179,9 +4197,7 @@ dependencies = [
  "proptest-derive",
  "rand 0.8.3",
  "serde",
- "structopt 0.3.21",
  "vm-genesis",
- "walkdir",
 ]
 
 [[package]]
