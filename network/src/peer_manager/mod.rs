@@ -498,7 +498,7 @@ where
                             if !self
                                 .active_peers
                                 .contains_key(&conn.metadata.remote_peer_id)
-                                && unknown_inbound_conns > self.inbound_connection_limit
+                                && unknown_inbound_conns + 1 > self.inbound_connection_limit
                             {
                                 info!(
                                     NetworkSchema::new(&self.network_context)

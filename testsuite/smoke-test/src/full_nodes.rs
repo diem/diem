@@ -13,6 +13,7 @@ use diem_types::{
     network_address::{NetworkAddress, Protocol},
 };
 use std::{collections::HashSet, net::Ipv4Addr};
+use diem_config::config::DiscoveryMethod;
 
 // TODO: All of this convenience code below should be put in the client proxy directly, it's
 // very hard for users to know what the order of a bunch of random inputs should be
@@ -300,6 +301,7 @@ fn test_private_full_node() {
     let user_network = user_config.full_node_networks.first_mut().unwrap();
     // Disallow fallbacks to VFNs
     user_network.max_outbound_connections = 1;
+    user_network.discovery_method = DiscoveryMethod::None;
 
     // The secret sauce, add the user as a downstream to the seeds
     add_node_to_seeds(
