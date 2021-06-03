@@ -197,16 +197,52 @@ apply to all transactions and others are specific to the type of payload.
 To ensure consistent error handling, the checks should be performed in the
 order specified here.
 
+### Signature Verification
+
+The adapter performs signature verification for any transaction, regardless of
+the payload. The adapter checks if the sender and secondary signers' signatures in
+the `SignedTransaction` are consistent with their public keys and the content of the
+transaction. If not, this check fails with an `INVALID_SIGNATURE` status code.
+
+```rust
+pub enum TransactionAuthenticator {
+    /// Single signature
+    Ed25519 {
+        public_key: Ed25519PublicKey,
+        signature: Ed25519Signature,
+    },
+    /// K-of-N multisignature
+    MultiEd25519 {
+        public_key: MultiEd25519PublicKey,
+        signature: MultiEd25519Signature,
+    },
+    /// Multi-agent transaction.
+    MultiAgent {
+        sender: AccountAuthenticator,
+        secondary_signer_addresses: Vec<AccountAddress>,
+        secondary_signers: Vec<AccountAuthenticator>,
+    },
+}
+```
+
+The `TransactionAuthenticator` stored in the `SignedTransaction` is responsible for
+performing this check:
+* If the transaction is single-agent, then only the sender's signature is included
+and checked against the `RawTransaction` content.
+* If the transaction is multi-agent, then both the primary signer (sender) and the
+secondary signers' signatures are included and checked against a struct containing both
+the `RawTransaction` and a vector of secondary signers' addresses. The addresses have
+to be in the same order as
+the signatures.
+
+Note that comparing the transaction's public keys against the sender and secondary
+signer accounts' authorization keys is done separately in [Move code](#Prologue-Checks).
+
+
 ### General Checks
 
-The adapter performs the following steps for any transaction, regardless of
+Besides signature verification, the adapter performs the following steps for any transaction, regardless of
 the payload:
-
-* Check if the sender and secondary signers' signatures in the `SignedTransaction`
-is consistent with their public keys and the `RawTransaction` content. If not,
-this check fails with an `INVALID_SIGNATURE` status code. Note that comparing the
-transaction's public keys against the sender and secondary signer accounts' authorization
-keys is done separately in [Move code](#Prologue-Checks).
 
 * If secondary signers exist, check that all signers including the sender and secondary
 signers have distinct account addresses. If not, validation fails with a
