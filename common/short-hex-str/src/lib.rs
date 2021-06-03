@@ -16,10 +16,8 @@ use thiserror::Error;
 pub struct ShortHexStr([u8; ShortHexStr::LENGTH]);
 
 #[derive(Error, Debug)]
-pub enum Error {
-    #[error("Input bytes are too short")]
-    InputTooShortError,
-}
+#[error("Input bytes are too short")]
+pub struct InputTooShortError;
 
 impl ShortHexStr {
     pub const SOURCE_LENGTH: usize = 4;
@@ -29,7 +27,7 @@ impl ShortHexStr {
     ///
     /// Returns `Err(InputTooShortError)` if the input byte slice length is less
     /// than `SOURCE_LENGTH` bytes.
-    pub fn try_from_bytes(src_bytes: &[u8]) -> Result<ShortHexStr, Error> {
+    pub fn try_from_bytes(src_bytes: &[u8]) -> Result<ShortHexStr, InputTooShortError> {
         if src_bytes.len() >= ShortHexStr::SOURCE_LENGTH {
             let src_short_bytes = &src_bytes[0..ShortHexStr::SOURCE_LENGTH];
             let mut dest_bytes = [0u8; ShortHexStr::LENGTH];
@@ -40,7 +38,7 @@ impl ShortHexStr {
             hex_encode(&src_short_bytes, &mut dest_bytes);
             Ok(Self(dest_bytes))
         } else {
-            Err(Error::InputTooShortError)
+            Err(InputTooShortError)
         }
     }
 
@@ -154,7 +152,6 @@ mod test {
             let expected = hex::encode(&[byte][..]);
             assert_eq!(actual, expected.as_str());
         }
-        Ok(())
     }
 
     proptest! {
