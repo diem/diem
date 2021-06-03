@@ -1,2 +1,2 @@
-publish src/modules
-check
+sandbox publish src/modules
+sandbox link

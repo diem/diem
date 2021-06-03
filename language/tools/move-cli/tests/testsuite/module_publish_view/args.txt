@@ -1,2 +1,2 @@
-publish src -v
-view storage/0x00000000000000000000000000000042/modules/Module.mv
+sandbox publish src -v
+sandbox view storage/0x00000000000000000000000000000042/modules/Module.mv

@@ -1,2 +1,2 @@
-Command `publish src/modules --mode bare`:
-Command `run src/scripts/test.move --mode bare --dry-run`:
+Command `sandbox publish src/modules --mode bare`:
+Command `sandbox run src/scripts/test.move --mode bare --dry-run`:

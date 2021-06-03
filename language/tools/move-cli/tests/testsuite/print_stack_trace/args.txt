@@ -1,2 +1,2 @@
-publish src/modules
-run src/scripts/script.move --dry-run
+sandbox publish src/modules
+sandbox run src/scripts/script.move --dry-run

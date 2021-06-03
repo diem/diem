@@ -1,11 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod commands;
-pub mod mode;
-pub mod on_disk_state_view;
-pub mod package;
-pub mod test;
+pub mod base;
+pub mod experimental;
+pub mod sandbox;
 
 /// Default directory where saved Move resources live
 pub const DEFAULT_STORAGE_DIR: &str = "storage";

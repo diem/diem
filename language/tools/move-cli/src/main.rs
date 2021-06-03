@@ -3,9 +3,12 @@
 
 use anyhow::Result;
 use move_cli::{
-    commands,
-    mode::{Mode, ModeType},
-    test, DEFAULT_BUILD_DIR, DEFAULT_DEP_MODE, DEFAULT_SOURCE_DIR, DEFAULT_STORAGE_DIR,
+    base, experimental,
+    sandbox::{
+        self,
+        utils::mode::{Mode, ModeType},
+    },
+    DEFAULT_BUILD_DIR, DEFAULT_DEP_MODE, DEFAULT_SOURCE_DIR, DEFAULT_STORAGE_DIR,
 };
 use move_core_types::{
     language_storage::TypeTag, parser, transaction_argument::TransactionArgument,
@@ -43,19 +46,38 @@ pub struct Move {
 
 #[derive(StructOpt)]
 pub enum Command {
-    /// Type check and verify the specified script and modules against the modules in `storage`
-    #[structopt(name = "check")]
-    Check {
+    /// Compile and emit Move bytecode for the specified scripts and/or modules
+    #[structopt(name = "compile")]
+    Compile {
         /// The source files to check
         #[structopt(
             name = "PATH_TO_SOURCE_FILE",
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// If set, fail when attempting to typecheck a module that already exists in global storage
-        #[structopt(long = "no-republish")]
-        no_republish: bool,
+        /// Do not emit source map information along with the compiled bytecode
+        #[structopt(long = "no-source-maps")]
+        no_source_maps: bool,
+        /// Type check and verify the specified scripts and/or modules. Does not emit bytecode.
+        #[structopt(long = "check")]
+        check: bool,
     },
+    /// Execute a sandbox command
+    #[structopt(name = "sandbox")]
+    Sandbox {
+        #[structopt(subcommand)]
+        cmd: SandboxCommand,
+    },
+    /// (Experimental) Run static analyses on Move source or bytecode
+    #[structopt(name = "experimental")]
+    Experimental {
+        #[structopt(subcommand)]
+        cmd: ExperimentalCommand,
+    },
+}
+
+#[derive(StructOpt)]
+pub enum SandboxCommand {
     /// Compile the specified modules and publish the resulting bytecodes in global storage
     #[structopt(name = "publish")]
     Publish {
@@ -136,22 +158,23 @@ pub enum Command {
         #[structopt(name = "file")]
         file: String,
     },
-    /// (Experimental) Run static analyses on Move source or bytecode
-    #[structopt(name = "analyze")]
-    Analyze {
-        #[structopt(subcommand)]
-        cmd: AnalysisCommand,
-    },
     /// Delete all resources, events, and modules stored on disk under `storage`.
     /// Does *not* delete anything in `src`.
     Clean {},
     /// Run well-formedness checks on the `storage` and `build` directories.
     #[structopt(name = "doctor")]
     Doctor {},
+    /// Typecheck and verify the scripts and/or modules under `src`.
+    #[structopt(name = "link")]
+    Link {
+        /// If set, fail when attempting to typecheck a module that already exists in global storage
+        #[structopt(long = "no-republish")]
+        no_republish: bool,
+    },
 }
 
 #[derive(StructOpt)]
-pub enum AnalysisCommand {
+pub enum ExperimentalCommand {
     /// Perform a read/write set analysis and print the results for
     /// `module_file`::`script_name`
     #[structopt(name = "read-write-set")]
@@ -175,23 +198,79 @@ pub enum AnalysisCommand {
 
 fn main() -> Result<()> {
     let move_args = Move::from_args();
-    let mode = Mode::new(move_args.mode);
 
     match &move_args.cmd {
-        Command::Check {
+        Command::Compile {
             source_files,
-            no_republish,
+            no_source_maps,
+            check,
+        } => {
+            if *check {
+                base::commands::check(&[], false, &source_files, move_args.verbose)
+            } else {
+                base::commands::compile(
+                    &[],
+                    &move_args.build_dir,
+                    false,
+                    &source_files,
+                    !*no_source_maps,
+                    move_args.verbose,
+                )
+            }
+        }
+        Command::Sandbox { cmd } => handle_sandbox_commands(&move_args, cmd),
+        Command::Experimental { cmd } => handle_experimental_commands(&move_args, cmd),
+    }
+}
+
+fn handle_experimental_commands(
+    move_args: &Move,
+    experimental_command: &ExperimentalCommand,
+) -> Result<()> {
+    let mode = Mode::new(move_args.mode);
+    match experimental_command {
+        ExperimentalCommand::ReadWriteSet {
+            module_file,
+            fun_name,
+            signers,
+            args,
+            type_args,
+            concretize,
         } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::check(&state, !*no_republish, &source_files, move_args.verbose)
+            experimental::commands::analyze_read_write_set(
+                &state,
+                module_file,
+                fun_name,
+                signers,
+                args,
+                type_args,
+                *concretize,
+                move_args.verbose,
+            )
         }
-        Command::Publish {
+    }
+}
+
+fn handle_sandbox_commands(move_args: &Move, sandbox_command: &SandboxCommand) -> Result<()> {
+    let mode = Mode::new(move_args.mode);
+    match sandbox_command {
+        SandboxCommand::Link { no_republish } => {
+            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
+            base::commands::check(
+                &[state.interface_files_dir()?],
+                !*no_republish,
+                &[DEFAULT_SOURCE_DIR.to_string()],
+                move_args.verbose,
+            )
+        }
+        SandboxCommand::Publish {
             source_files,
             no_republish,
             ignore_breaking_changes,
         } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::publish(
+            sandbox::commands::publish(
                 &state,
                 source_files,
                 !*no_republish,
@@ -199,7 +278,7 @@ fn main() -> Result<()> {
                 move_args.verbose,
             )
         }
-        Command::Run {
+        SandboxCommand::Run {
             script_file,
             script_name,
             signers,
@@ -209,7 +288,7 @@ fn main() -> Result<()> {
             dry_run,
         } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::run(
+            sandbox::commands::run(
                 &state,
                 script_file,
                 script_name,
@@ -221,48 +300,25 @@ fn main() -> Result<()> {
                 move_args.verbose,
             )
         }
-        Command::Test {
+        SandboxCommand::Test {
             path,
             track_cov: _,
             create: true,
-        } => test::create_test_scaffold(path),
-        Command::Test {
+        } => sandbox::commands::create_test_scaffold(path),
+        SandboxCommand::Test {
             path,
             track_cov,
             create: false,
-        } => test::run_all(
+        } => sandbox::commands::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
             *track_cov,
         ),
-        Command::View { file } => {
+        SandboxCommand::View { file } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::view(&state, file)
+            sandbox::commands::view(&state, file)
         }
-        Command::Analyze {
-            cmd:
-                AnalysisCommand::ReadWriteSet {
-                    module_file,
-                    fun_name,
-                    signers,
-                    args,
-                    type_args,
-                    concretize,
-                },
-        } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::analyze_read_write_set(
-                &state,
-                module_file,
-                fun_name,
-                signers,
-                args,
-                type_args,
-                *concretize,
-                move_args.verbose,
-            )
-        }
-        Command::Clean {} => {
+        SandboxCommand::Clean {} => {
             // delete storage
             let storage_dir = Path::new(&move_args.storage_dir);
             if storage_dir.exists() {
@@ -276,9 +332,9 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Doctor {} => {
+        SandboxCommand::Doctor {} => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::doctor(&state)
+            sandbox::commands::doctor(&state)
         }
     }
 }

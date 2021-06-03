@@ -1,5 +1,5 @@
-Command `publish --mode diem`:
-Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata`:
+Command `sandbox publish --mode diem`:
+Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata`:
 Accesses:
 0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds: Read
 0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds/microseconds: Read

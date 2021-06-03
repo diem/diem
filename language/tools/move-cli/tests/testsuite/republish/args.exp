@@ -1,40 +1,40 @@
-Command `publish -v`:
+Command `sandbox publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
 Publishing a new module 00000000000000000000000000000042::M (wrote 56 bytes)
 Publishing a new module 00000000000000000000000000000043::N (wrote 56 bytes)
 Wrote 112 bytes of module ID's and code
-Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
+Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 
 
 
 }
-Command `view storage/0x00000000000000000000000000000043/modules/N.mv`:
+Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
 module 43.N {
 
 
 
 }
-Command `publish -v`:
+Command `sandbox publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
 Updating an existing module 00000000000000000000000000000042::M (wrote 56 bytes)
 Updating an existing module 00000000000000000000000000000043::N (wrote 56 bytes)
 Wrote 112 bytes of module ID's and code
-Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
+Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 
 
 
 }
-Command `view storage/0x00000000000000000000000000000043/modules/N.mv`:
+Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
 module 43.N {
 
 
 
 }
-Command `publish -v --no-republish`:
+Command `sandbox publish -v --no-republish`:
 Compiling Move modules...
 error: 
 
@@ -64,7 +64,7 @@ error:
    │        - Previously defined here
    │
 
-Command `publish -v --no-republish src/M.move`:
+Command `sandbox publish -v --no-republish src/M.move`:
 Compiling Move modules...
 error: 
 

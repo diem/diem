@@ -155,6 +155,7 @@ pub fn run_one(
         // need to clean before testing
         Command::new(cli_binary_path.clone())
             .current_dir(exe_dir)
+            .arg("sandbox")
             .arg("clean")
             .output()?;
     }
@@ -225,6 +226,7 @@ pub fn run_one(
         // run `move clean` to ensure that temporary state is cleaned up
         Command::new(cli_binary_path)
             .current_dir(exe_dir)
+            .arg("sandbox")
             .arg("clean")
             .output()?;
         // check that storage was deleted

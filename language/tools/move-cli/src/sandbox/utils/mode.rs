@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    on_disk_state_view::OnDiskStateView,
-    package::{MovePackage, SourceFilter},
+    sandbox::utils::{
+        package::{MovePackage, SourceFilter},
+        OnDiskStateView,
+    },
     DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_STORAGE_DIR,
 };
 use anyhow::{bail, Result};

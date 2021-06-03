@@ -1,1 +1,1 @@
-run script.move --mode bare
+sandbox run script.move --mode bare

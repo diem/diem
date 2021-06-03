@@ -1,11 +1,11 @@
-publish modules
-run scripts/create_offer.move --signers 0xA11CE
-run scripts/redeem_offer.move --signers 0xCA21
-run scripts/redeem_offer_bob.move --signers 0xB0B
-run scripts/reclaim_offer.move --signers 0xB0B
-clean
-run scripts/self_offer_create.move --signers 0xA11CE
-clean
-run scripts/multi_offer.move --signers 0xA11CE
-clean
-run scripts/non_existent_offer.move --signers 0xA11CE
+sandbox publish modules
+sandbox run scripts/create_offer.move --signers 0xA11CE
+sandbox run scripts/redeem_offer.move --signers 0xCA21
+sandbox run scripts/redeem_offer_bob.move --signers 0xB0B
+sandbox run scripts/reclaim_offer.move --signers 0xB0B
+sandbox clean
+sandbox run scripts/self_offer_create.move --signers 0xA11CE
+sandbox clean
+sandbox run scripts/multi_offer.move --signers 0xA11CE
+sandbox clean
+sandbox run scripts/non_existent_offer.move --signers 0xA11CE

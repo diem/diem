@@ -1,4 +1,4 @@
-Command `run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED -v`:
+Command `sandbox run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0] as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -44,7 +44,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::SlidingNonce::SlidingNonce: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 68 bytes)
     Added type 0x1::TransactionFee::TransactionFee<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 90 bytes)
 Wrote 3608 bytes of resource ID's and data
-Command `run scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
+Command `sandbox run scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 2, 0, 0, 0, 0, 0, 0, 0] as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -62,7 +62,7 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 3, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 836 bytes of resource ID's and data
-Command `run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
+Command `sandbox run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 5, 0, 0, 0, 0, 0, 0, 0] as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -80,7 +80,7 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 4, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 784 bytes of resource ID's and data
-Command `run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
+Command `sandbox run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 5, 0, 0, 0, 0, 0, 0, 0] as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -98,7 +98,7 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 5, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 784 bytes of resource ID's and data
-Command `run scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
+Command `sandbox run scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
 Compiling transaction script...
 Emitted 3 events:
 Emitted [3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 232, 3, 0, 0, 0, 0, 0, 0] as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -112,7 +112,7 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::Diem::CurrencyInfo<0x1::XUS::XUS>: [232, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 64, 66, 15, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 1, 1, 0, 0, 0, 0, 0, 0, 0, 24, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 281 bytes)
 Wrote 611 bytes of resource ID's and data
-Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
+Command `sandbox run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [188, 2, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0] as the 0th event to stream [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -125,7 +125,7 @@ Changed resource(s) under 2 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [44, 1, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Changed type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 24, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
 Wrote 510 bytes of resource ID's and data
-Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
+Command `sandbox run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [244, 1, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0] as the 0th event to stream [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
@@ -138,7 +138,7 @@ Changed resource(s) under 2 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [244, 1, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Changed type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 24, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
 Wrote 510 bytes of resource ID's and data
-Command `run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v`:
+Command `sandbox run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v`:
 Compiling transaction script...
 Emitted 3 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 170, 6, 0, 0, 0, 0, 0, 0, 0] as the 5th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -159,7 +159,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 6, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 848 bytes of resource ID's and data
-Command `run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v`:
+Command `sandbox run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 6, 0, 0, 0, 0, 0, 0, 0] as the 6th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -176,7 +176,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 7, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 593 bytes of resource ID's and data
-Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v`:
+Command `sandbox run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [100, 0, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 0] as the 0th event to stream [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 170]
@@ -189,4 +189,4 @@ Changed resource(s) under 2 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [100, 0, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Changed type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 1, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 0, 0, 0, 0, 0, 0, 0, 0, 24, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
 Wrote 510 bytes of resource ID's and data
-Command `doctor`:
+Command `sandbox doctor`:

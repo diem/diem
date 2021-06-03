@@ -1,2 +1,2 @@
-publish src/modules
-doctor
+sandbox publish src/modules
+sandbox doctor

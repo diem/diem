@@ -1,2 +1,2 @@
-Command `check script.move -v`:
+Command `compile --check script.move -v`:
 Checking Move files...

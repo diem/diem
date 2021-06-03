@@ -1,1 +1,1 @@
-check script.move -v
+compile --check script.move -v

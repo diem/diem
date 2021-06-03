@@ -1,5 +1,5 @@
-publish src/modules -v
-run src/scripts/emit.move --signers 0xA --args 5 -v
-view storage/0x0000000000000000000000000000000A/events/0.bcs
-run src/scripts/emit.move --signers 0xA --args 6 -v
-view storage/0x0000000000000000000000000000000A/events/0.bcs
+sandbox publish src/modules -v
+sandbox run src/scripts/emit.move --signers 0xA --args 5 -v
+sandbox view storage/0x0000000000000000000000000000000A/events/0.bcs
+sandbox run src/scripts/emit.move --signers 0xA --args 6 -v
+sandbox view storage/0x0000000000000000000000000000000A/events/0.bcs

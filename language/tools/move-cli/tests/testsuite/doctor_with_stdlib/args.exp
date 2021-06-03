@@ -1,2 +1,2 @@
-Command `publish src/modules`:
-Command `doctor`:
+Command `sandbox publish src/modules`:
+Command `sandbox doctor`:

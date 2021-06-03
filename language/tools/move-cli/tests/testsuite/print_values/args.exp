@@ -1,5 +1,5 @@
-Command `publish src/modules`:
-Command `run src/scripts/print_values.move --dry-run`:
+Command `sandbox publish src/modules`:
+Command `sandbox run src/scripts/print_values.move --dry-run`:
 [debug] 42
 [debug] (&) [100, 200, 300]
 [debug] (&) { false }

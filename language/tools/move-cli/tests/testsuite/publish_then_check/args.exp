@@ -1,2 +1,2 @@
-Command `publish src/modules`:
-Command `check`:
+Command `sandbox publish src/modules`:
+Command `sandbox link`:

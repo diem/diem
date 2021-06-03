@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_cli::test;
+use move_cli::sandbox::commands::test;
 
 use std::path::PathBuf;
 

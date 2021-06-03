@@ -1,6 +1,6 @@
-test dummy/test_1/args.txt
-test dummy/test_2
-test dummy
-test cov/plain --track-cov
-test cov/two-runs-same-module --track-cov
-test cov/two-runs-diff-module --track-cov
+sandbox test dummy/test_1/args.txt
+sandbox test dummy/test_2
+sandbox test dummy
+sandbox test cov/plain --track-cov
+sandbox test cov/two-runs-same-module --track-cov
+sandbox test cov/two-runs-diff-module --track-cov

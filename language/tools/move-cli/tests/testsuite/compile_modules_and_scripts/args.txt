@@ -1,2 +1,2 @@
--v check
--v publish src/modules
+-v sandbox link
+-v sandbox publish src/modules

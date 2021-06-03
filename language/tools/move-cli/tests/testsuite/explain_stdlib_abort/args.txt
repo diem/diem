@@ -1,1 +1,1 @@
-run script.move
+sandbox run script.move

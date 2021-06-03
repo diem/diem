@@ -1,10 +1,10 @@
-Command `run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED`:
-Command `run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_designated_dealer --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true`:
-Command `run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true`:
-Command `run  storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true`:
-Command `run storage/0x00000000000000000000000000000001/modules/TreasuryComplianceScripts.mv tiered_mint --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0`:
-Command `run storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x""`:
-Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --concretize --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
+Command `sandbox run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_designated_dealer --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true`:
+Command `sandbox run  storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/TreasuryComplianceScripts.mv tiered_mint --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x""`:
+Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --concretize --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
 Inferring read/write set for 50 module(s)
 0xa/0x1::AccountFreezing::FreezingBit: Read
 0xa/0x1::AccountFreezing::FreezingBit/is_frozen: Read

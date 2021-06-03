@@ -1,8 +1,8 @@
-publish -v
-view storage/0x00000000000000000000000000000042/modules/M.mv
-view storage/0x00000000000000000000000000000043/modules/N.mv
-publish -v
-view storage/0x00000000000000000000000000000042/modules/M.mv
-view storage/0x00000000000000000000000000000043/modules/N.mv
-publish -v --no-republish
-publish -v --no-republish src/M.move
+sandbox publish -v
+sandbox view storage/0x00000000000000000000000000000042/modules/M.mv
+sandbox view storage/0x00000000000000000000000000000043/modules/N.mv
+sandbox publish -v
+sandbox view storage/0x00000000000000000000000000000042/modules/M.mv
+sandbox view storage/0x00000000000000000000000000000043/modules/N.mv
+sandbox publish -v --no-republish
+sandbox publish -v --no-republish src/M.move

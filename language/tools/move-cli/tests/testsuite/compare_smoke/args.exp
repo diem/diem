@@ -1,4 +1,4 @@
-Command `publish src/modules --mode diem`:
-Command `run src/scripts/compare.move --mode diem --dry-run`:
-Command `run src/scripts/set.move --mode diem --dry-run`:
+Command `sandbox publish src/modules --mode diem`:
+Command `sandbox run src/scripts/compare.move --mode diem --dry-run`:
+Command `sandbox run src/scripts/set.move --mode diem --dry-run`:
 Execution aborted with code 999 in module 00000000000000000000000000000002::Set.

@@ -1,2 +1,2 @@
-publish src/modules
-publish src/modules
+sandbox publish src/modules
+sandbox publish src/modules

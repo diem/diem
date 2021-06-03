@@ -1,6 +1,6 @@
-Command `-v check`:
+Command `-v sandbox link`:
 Checking Move files...
-Command `-v publish src/modules`:
+Command `-v sandbox publish src/modules`:
 Compiling Move modules...
 Found and compiled 1 modules
 Publishing a new module 00000000000000000000000000000042::M (wrote 56 bytes)

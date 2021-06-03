@@ -1,3 +1,3 @@
-Command `publish src/modules --mode bare`:
-Command `run src/scripts/script.move --mode bare --signers 0xA`:
+Command `sandbox publish src/modules --mode bare`:
+Command `sandbox run src/scripts/script.move --mode bare --signers 0xA`:
 Execution failed because of a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`) in 00000000000000000000000000000002::ResourceExists::f at code offset 7

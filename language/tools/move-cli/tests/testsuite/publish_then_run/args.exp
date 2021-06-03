@@ -1,2 +1,2 @@
-Command `publish src/modules`:
-Command `run src/scripts/main.move`:
+Command `sandbox publish src/modules`:
+Command `sandbox run src/scripts/main.move`:
