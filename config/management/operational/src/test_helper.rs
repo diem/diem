@@ -9,7 +9,7 @@ use crate::{
     validator_set::DecryptedValidatorInfo,
     TransactionContext,
 };
-use diem_config::{config, config::Peer};
+use diem_config::{config, config::Peer, network_id::NetworkId};
 use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
 use diem_management::{error::Error, secure_backend::DISK};
 use diem_types::{
@@ -62,14 +62,22 @@ impl OperationalTool {
         command.account_resource()
     }
 
-    pub fn check_endpoint(&self, network_address: NetworkAddress) -> Result<String, Error> {
+    pub fn check_endpoint(
+        &self,
+        network_id: NetworkId,
+        network_address: NetworkAddress,
+    ) -> Result<String, Error> {
         let args = format!(
             "
                 {command}
                 --address {network_address}
+                --chain-id {chain_id}
+                --network-id {network_id}
             ",
             command = command(TOOL_NAME, CommandName::CheckEndpoint),
+            chain_id = self.chain_id.id(),
             network_address = network_address,
+            network_id = network_id
         );
         let command = Command::from_iter(args.split_whitespace());
         command.check_endpoint()

@@ -10,7 +10,11 @@ use diem_genesis_tool::{
 };
 use diem_logger::prelude::*;
 use diem_temppath::TempPath;
-use diem_types::{account_address::AccountAddress, PeerId};
+use diem_types::{
+    account_address::AccountAddress,
+    network_address::{NetworkAddress, Protocol},
+    PeerId,
+};
 use std::{
     collections::HashMap,
     env,
@@ -325,6 +329,33 @@ impl DiemNode {
                 HealthStatus::RpcFailure(e)
             }
         }
+    }
+
+    pub fn public_address(&self) -> NetworkAddress {
+        let network = self
+            .config
+            .full_node_networks
+            .iter()
+            .find(|network| network.network_id == NetworkId::Public)
+            .unwrap();
+        let port = network
+            .listen_address
+            .as_slice()
+            .iter()
+            .find_map(|proto| {
+                if let Protocol::Tcp(port) = proto {
+                    Some(port)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+        let key = network.identity_key().public_key();
+        NetworkAddress::from_str(&format!(
+            "/ip4/126.0.0.1/tcp/{}/ln-noise-ik/{}/ln-handshake/0",
+            port, key
+        ))
+        .unwrap()
     }
 }
 
