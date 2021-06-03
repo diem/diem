@@ -54,3 +54,40 @@ jobs:
           SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
       - uses: ./.github/actions/build-teardown
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
+
+  # In the future when the script can differentiate between target branches for each auto run then we'll
+  # update this report to differentiate branches.
+  unit-test-allure-report:
+    name: Unit Test Reports
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    environment:
+      name: Sccache
+    container:
+      image: diem/build_environment:main
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/build-setup
+        # build setup is called to ensure the latest docker image tooling is in place and the ~/.profile is called.
+      - name: Publish unit test results
+        uses: rexhoffman/actions/process-test-results@d50bbc9b0c0f7297117e429df5742601d3588fa9
+        with:
+          #used to read artifacts, annoying to need one.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "unit-test-results codegen-unit-test-results"
+          workflow_file: ci-test.yml
+          branch: auto
+          history: 20
+          recreate: false
+          allure_configuration: ./allure-configuration
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.ENV_DIEM_S3_AWS_REGION }}

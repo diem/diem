@@ -24,7 +24,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-          pattern: '^.*-test-results$'
+          pattern: "^.*-test-results$"
           extract: true
       - name: Publish unit test results
         uses: diem/publish-unit-test-result-action@07dbf21c1095745d5149a54007f28231936c9da4

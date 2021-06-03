@@ -29,6 +29,7 @@ DOTNET_VERSION=3.1
 BOOGIE_VERSION=2.8.32
 PYRE_CHECK_VERSION=0.0.59
 NUMPY_VERSION=1.20.1
+ALLURE_VERSION=2.14.0
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -491,6 +492,8 @@ function install_golang {
       "${PRE_COMMAND[@]}" ln -sf /usr/lib/go-1.14 /usr/lib/golang
     elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
       apk --update add --no-cache git make musl-dev go
+    elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
+      brew install go
     else
       install_pkg golang "$PACKAGE_MANAGER"
     fi
@@ -503,6 +506,23 @@ function install_java {
       apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/community openjdk11
     else
       install_pkg java "$PACKAGE_MANAGER"
+    fi
+}
+
+function install_allure {
+    VERSION="$(allure --version || true)"
+    if [[ "$VERSION" != "${ALLURE_VERSION}" ]]; then
+      if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+        "${PRE_COMMAND[@]}" apt-get install default-jre -y --no-install-recommends
+        export ALLURE=${HOME}/allure_"${ALLURE_VERSION}"-1_all.deb
+        curl -sL -o "$ALLURE" "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
+        dpkg -i "$ALLURE"
+        rm "$ALLURE"
+      elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
+        apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/community openjdk11
+      else
+        echo No good way to install allure 'install_pkg allure '"$PACKAGE_MANAGER"
+      fi
     fi
 }
 
@@ -550,6 +570,7 @@ Operation tools (since -o was provided):
   * kubectl
   * helm
   * aws cli
+  * allure
 EOF
   fi
 
@@ -694,7 +715,6 @@ if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
   if [[ "$BATCH_MODE" == "false" ]]; then
    echo "Installing ca-certificates......"
   fi
-  set -x
 	"${PRE_COMMAND[@]}" install_pkg ca-certificates "$PACKAGE_MANAGER"
 fi
 
@@ -746,6 +766,7 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_terraform
   install_kubectl
   install_awscli "$PACKAGE_MANAGER"
+  install_allure
 fi
 
 if [[ "$INSTALL_PROVER" == "true" ]]; then
