@@ -82,10 +82,7 @@ const HEX_CHARS_LOWER: &[u8; 16] = b"0123456789abcdef";
 /// the second character as ASCII bytes.
 #[inline(always)]
 fn byte2hex(byte: u8) -> (u8, u8) {
-    let hi = HEX_CHARS_LOWER[(byte
-        .checked_shr(4)
-        .expect("Integer Overflow at byte2hex")
-        & 0x0f) as usize];
+    let hi = HEX_CHARS_LOWER[((byte >> 4) & 0x0f) as usize];
     let lo = HEX_CHARS_LOWER[(byte & 0x0f) as usize];
     (hi, lo)
 }
@@ -93,13 +90,7 @@ fn byte2hex(byte: u8) -> (u8, u8) {
 /// Hex encode a byte slice into the destination byte slice.
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) {
-    debug_checked_precondition!(
-        dst.len()
-            == src
-                .len()
-                .checked_mul(2)
-                .expect("Integer Overflow at hex_encode")
-    );
+    debug_checked_precondition!(dst.len() == 2 * src.len());
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
         let (hi, lo) = byte2hex(*byte);
