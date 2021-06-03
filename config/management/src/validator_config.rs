@@ -5,6 +5,7 @@ use crate::{
     config::{Config, ConfigPath},
     error::Error,
     secure_backend::ValidatorBackend,
+    storage::to_x25519,
     transaction::build_raw_transaction,
 };
 use core::str::FromStr;
@@ -13,11 +14,14 @@ use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
+use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
+    account_address::AccountAddress,
     chain_id::ChainId,
     network_address::{NetworkAddress, Protocol},
-    transaction::Transaction,
+    transaction::{SignedTransaction, Transaction},
 };
 use std::net::{Ipv4Addr, ToSocketAddrs};
 use structopt::StructOpt;
@@ -48,67 +52,121 @@ impl ValidatorConfig {
         reconfigure: bool,
         disable_address_validation: bool,
     ) -> Result<Transaction, Error> {
-        if !disable_address_validation {
-            // Verify addresses
-            validate_address("validator address", &validator_address)?;
-            validate_address("fullnode address", &fullnode_address)?;
-        }
-
         let config = self.config()?;
-        let mut storage = config.validator_backend();
+        let storage = Storage::from(&config.validator_backend);
+        let chain_id = config.chain_id;
 
-        let owner_account = storage.account_address(OWNER_ACCOUNT)?;
-
-        let consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
-        let fullnode_network_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
-        let validator_network_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
-
-        // Build Validator address including protocols and encryption
-        // Append ln-noise-ik and ln-handshake protocols to base network addresses
-        // and encrypt the validator address.
-        let validator_address =
-            validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
-        let encryptor = config.validator_backend().encryptor();
-        let validator_addresses = encryptor
-            .encrypt(
-                &[validator_address],
-                owner_account,
-                sequence_number + if reconfigure { 1 } else { 0 },
-            )
-            .map_err(|e| {
-                Error::UnexpectedError(format!("Error encrypting validator address: {}", e))
-            })?;
-
-        // Build Fullnode address including protocols
-        let fullnode_address =
-            fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-
-        // Generate the validator config script
-        let transaction_callback = if reconfigure {
-            transaction_builder::encode_set_validator_config_and_reconfigure_script_function
-        } else {
-            transaction_builder::encode_register_validator_config_script_function
-        };
-        let validator_config_script = transaction_callback(
-            owner_account,
-            consensus_key.to_bytes().to_vec(),
-            validator_addresses,
-            bcs::to_bytes(&vec![fullnode_address]).unwrap(),
-        )
-        .into_script_function();
-
-        // Create and sign the validator-config transaction
-        let raw_txn = build_raw_transaction(
-            config.chain_id,
-            storage.account_address(OPERATOR_ACCOUNT)?,
+        build_validator_config_transaction(
+            storage,
+            chain_id,
             sequence_number,
-            validator_config_script,
-        );
-        let signed_txn = storage.sign(OPERATOR_KEY, "validator-config", raw_txn)?;
-        let txn = Transaction::UserTransaction(signed_txn);
-
-        Ok(txn)
+            fullnode_address,
+            validator_address,
+            reconfigure,
+            disable_address_validation,
+        )
+        .map_err(|e| {
+            Error::UnexpectedError(format!(
+                "Error building validator config transaction: {}",
+                e
+            ))
+        })
     }
+}
+
+/// Requires that the validator storage has the following keys set:
+/// * OWNER_ACCOUNT
+/// * CONSENSUS_KEY
+/// * FULLNODE_NETWORK_KEY
+/// * VALIDATOR_NETWORK_KEY
+/// * VALIDATOR_NETWORK_ADDRESS_KEYS - For encrypting network addresses
+/// * OPERATOR_ACCOUNT
+/// * OPERATOR_KEY
+pub fn build_validator_config_transaction<S: KVStorage + CryptoStorage>(
+    mut validator_storage: S,
+    chain_id: ChainId,
+    sequence_number: u64,
+    fullnode_address: NetworkAddress,
+    validator_address: NetworkAddress,
+    reconfigure: bool,
+    disable_address_validation: bool,
+) -> anyhow::Result<Transaction> {
+    if !disable_address_validation {
+        // Verify addresses
+        validate_address("validator address", &validator_address)?;
+        validate_address("fullnode address", &fullnode_address)?;
+    }
+
+    let owner_account = validator_storage
+        .get::<AccountAddress>(OWNER_ACCOUNT)
+        .map(|v| v.value)?;
+    let operator_account = validator_storage
+        .get::<AccountAddress>(OPERATOR_ACCOUNT)
+        .map(|v| v.value)?;
+
+    let consensus_key = validator_storage
+        .get_public_key(CONSENSUS_KEY)
+        .map(|v| v.public_key)?;
+    let fullnode_network_key = validator_storage
+        .get_public_key(FULLNODE_NETWORK_KEY)
+        .map(|v| v.public_key)
+        .map_err(|e| Error::UnexpectedError(e.to_string()))
+        .and_then(to_x25519)?;
+    let validator_network_key = validator_storage
+        .get_public_key(VALIDATOR_NETWORK_KEY)
+        .map(|v| v.public_key)
+        .map_err(|e| Error::UnexpectedError(e.to_string()))
+        .and_then(to_x25519)?;
+
+    // Build Validator address including protocols and encryption
+    // Append ln-noise-ik and ln-handshake protocols to base network addresses
+    // and encrypt the validator address.
+    let validator_address =
+        validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
+    let encryptor = Encryptor::new(&mut validator_storage);
+    let validator_addresses = encryptor
+        .encrypt(
+            &[validator_address],
+            owner_account,
+            sequence_number + if reconfigure { 1 } else { 0 },
+        )
+        .map_err(|e| {
+            Error::UnexpectedError(format!("Error encrypting validator address: {}", e))
+        })?;
+
+    // Build Fullnode address including protocols
+    let fullnode_address =
+        fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
+
+    // Generate the validator config script
+    let transaction_callback = if reconfigure {
+        transaction_builder::encode_set_validator_config_and_reconfigure_script_function
+    } else {
+        transaction_builder::encode_register_validator_config_script_function
+    };
+    let validator_config_script = transaction_callback(
+        owner_account,
+        consensus_key.to_bytes().to_vec(),
+        validator_addresses,
+        bcs::to_bytes(&vec![fullnode_address]).unwrap(),
+    )
+    .into_script_function();
+
+    // Create and sign the validator-config transaction
+    let raw_txn = build_raw_transaction(
+        chain_id,
+        operator_account,
+        sequence_number,
+        validator_config_script,
+    );
+    let public_key = validator_storage
+        .get_public_key(OPERATOR_KEY)
+        .map(|v| v.public_key)?;
+    let signature = validator_storage.sign(OPERATOR_KEY, &raw_txn)?;
+    let signed_txn = SignedTransaction::new(raw_txn, public_key, signature);
+    let txn = Transaction::UserTransaction(signed_txn);
+
+    Ok(txn)
 }
 
 /// Validates an address to have a DNS/IP and a port, as well as to be resolvable
