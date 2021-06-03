@@ -23,6 +23,7 @@ pub fn get_websocket_routes(
     config: &StreamConfig,
     content_length_limit: u64,
     diem_db: Arc<dyn DbReader>,
+    connection_manager: Option<ConnectionManager>,
 ) -> (BoxedFilter<(impl Reply,)>, ConnectionManager) {
     let sub_config = Arc::new(SubscriptionConfig {
         fetch_size: config.subscription_fetch_size,
@@ -30,10 +31,12 @@ pub fn get_websocket_routes(
         queue_size: config.send_queue_size,
     });
 
-    let connection_manager = ConnectionManager::new(diem_db.clone(), sub_config);
+    let connection_manager = match connection_manager {
+        None => ConnectionManager::new(diem_db.clone(), sub_config),
+        Some(cm) => cm,
+    };
 
     let cm2 = connection_manager.clone();
-
     let ws_route = warp::path("v1")
         .and(warp::path("stream"))
         .and(warp::path("ws"))
@@ -41,7 +44,7 @@ pub fn get_websocket_routes(
         .and(warp::body::content_length_limit(content_length_limit))
         .and(warp::filters::header::header::<String>("user-agent"))
         .and(warp::ws())
-        .and(warp::any().map(move || connection_manager.clone()))
+        .and(warp::any().map(move || cm2.clone()))
         .and(warp::any().map(move || content_length_limit as usize))
         .and(warp::header::headers_cloned())
         .and(warp::filters::addr::remote())
@@ -65,11 +68,15 @@ pub fn get_websocket_routes(
         }))
         .boxed();
 
-    (ws_route, cm2)
+    (ws_route, connection_manager)
 }
 
+/// The `ContextWrapperMapper` exists so we can pass websocket specific connection context along
+/// It's responsible for mapping between the message types expected by the warp websocket implementation,
+/// and the internal `ClientConnectionManager` responsible for subscription messages
 #[derive(Clone)]
 pub struct ContextWrapperMapper {
+    pub content_length_limit: usize,
     pub context: ConnectionContext,
 }
 
@@ -89,17 +96,44 @@ impl ContextWrapperMapper {
 
         match result {
             Ok(msg) => {
-                // TODO: HANDLE PING + CLOSE MESSAGES
-                // TODO: DROP MESSAGES THAT ARE TOO BIG
+                // Silently drop messages that are too big
+                if msg.as_bytes().len() > self.content_length_limit {
+                    debug!(
+                        "Received websocket message that was too big from {:?}",
+                        self.context.remote_addr
+                    );
+                    return Ok(None);
+                }
+
+                // tungstenite already auto-responds to `Ping`s with a `Pong`,
+                // so this just prevents accidentally sending extra pings.
+                // We ignore pong messages here
+                if msg.is_ping() || msg.is_pong() {
+                    return Ok(None);
+                }
+
+                // Returning an error allows the `ConnectionManager` to process the disconnect
+                if msg.is_close() {
+                    return Err(anyhow::format_err!("Received close message"));
+                }
+
                 match msg.to_str() {
                     Ok(s) => Ok(Some(s.to_string())),
-                    // Just silently ignore messages that aren't text
-                    Err(_) => Ok(None),
+                    // Silently drop messages that aren't text
+                    Err(_) => {
+                        debug!(
+                            "Received unhandled '{}' websocket message from {:?}",
+                            message_type_to_string(&msg),
+                            self.context.remote_addr
+                        );
+                        Ok(None)
+                    }
                 }
             }
             Err(e) => Err(anyhow::Error::from(e)),
         }
     }
+
     // Outgoing messages
     fn string_result_to_message(&self, result: Result<String, anyhow::Error>) -> Message {
         counters::MESSAGES_SENT
@@ -111,7 +145,6 @@ impl ContextWrapperMapper {
             .inc();
         match result {
             Ok(item) => Message::text(item),
-            // TODO: this aint right
             Err(_e) => Message::close(),
         }
     }
@@ -149,20 +182,19 @@ pub async fn handle_websocket_stream(
                     mpsc::channel::<Result<String, anyhow::Error>>(cm.config.queue_size);
 
                 let cwm = Arc::new(ContextWrapperMapper {
+                    content_length_limit,
                     context: context.clone(),
                 });
 
-                // TODO: REAP CONNECTIONS WITHOUT SUBSCRIPTIONS AND THOSE THAT HAVEN'T ACCEPTED A MESSAGE IN A WHILE
                 // Incoming
                 let cwm_i = cwm.clone();
-                let mapped_from_client_ws = from_client_ws
-                    .map(move |result| cwm_i.clone().message_result_to_string(result));
+                let mapped_from_client_ws =
+                    from_client_ws.map(move |result| cwm_i.message_result_to_string(result));
 
                 // Outgoing
-                let cwm_o = cwm.clone();
                 tokio::task::spawn(
                     ReceiverStream::new(to_client_rcv)
-                        .map(move |result| Ok(cwm_o.string_result_to_message(result)))
+                        .map(move |result| Ok(cwm.string_result_to_message(result)))
                         .forward(to_client_ws)
                         .map(move |result: Result<(), warp::Error>| {
                             debug!(
@@ -179,8 +211,28 @@ pub async fn handle_websocket_stream(
                 );
 
                 // This will keep running until the connection is closed
-                cm.client_connection(to_client, Box::new(mapped_from_client_ws), context, false)
+                cm.client_connection(to_client, Box::new(mapped_from_client_ws), context, true)
                     .await;
             }
         }))
+}
+
+pub fn message_type_to_string(msg: &Message) -> &str {
+    if msg.is_ping() {
+        return "ping";
+    }
+    if msg.is_pong() {
+        return "pong";
+    }
+    if msg.is_close() {
+        return "close";
+    }
+    if msg.is_binary() {
+        return "binary";
+    }
+    if msg.is_text() {
+        return "text";
+    }
+    // This should never happen
+    "unknown"
 }

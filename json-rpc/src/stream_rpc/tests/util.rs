@@ -1,10 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::Arc;
+use std::{
+    future::Future,
+    sync::{mpsc::sync_channel, Arc},
+};
 
 // use proptest::prelude::*;
-use warp::test::WsClient;
+use warp::{test::WsClient, ws::Message};
 
 use diem_config::config::StreamConfig;
 
@@ -12,10 +15,11 @@ use crate::{
     stream_rpc::{
         connection::{ClientConnection, ConnectionManager},
         json_rpc::JsonRpcResponse,
-        transport::{sse::get_sse_routes, websocket::get_websocket_routes},
+        transport::websocket::get_websocket_routes,
     },
     tests::utils::{mock_db, MockDiemDB},
 };
+use tokio::runtime::Handle;
 
 pub fn make_ws_config(fetch_size: u64, queue_size: usize, poll_interval_ms: u64) -> StreamConfig {
     StreamConfig {
@@ -28,16 +32,18 @@ pub fn make_ws_config(fetch_size: u64, queue_size: usize, poll_interval_ms: u64)
 
 pub async fn connect_to_ws(
     db: Arc<MockDiemDB>,
-    config: StreamConfig,
+    config: &StreamConfig,
+    cm: Option<ConnectionManager>,
 ) -> (WsClient, ConnectionManager) {
-    let (routes, cm) = get_websocket_routes(&config, 1024 * 10, db.clone());
+    let (routes, cm) = get_websocket_routes(config, 1024 * 10, db.clone(), cm);
     let ws_client = warp::test::ws()
         .path("/v1/stream/ws")
         .header("user-agent", "diem-client-sdk-python / 0.1.22")
-        .header("Content-Length", "500")
+        .header("Content-Length", "1500")
         .handshake(routes)
         .await
         .expect("handshake");
+
     (ws_client, cm)
 }
 
@@ -45,27 +51,38 @@ pub async fn ws_test_setup(
     fetch_size: u64,
     queue_size: usize,
     poll_interval_ms: u64,
-) -> (Arc<MockDiemDB>, WsClient, ConnectionManager) {
+) -> (Arc<MockDiemDB>, StreamConfig) {
     diem_logger::DiemLogger::init_for_testing();
     let db = Arc::new(mock_db());
     let config = make_ws_config(fetch_size, queue_size, poll_interval_ms);
-    let (ws_client, cm) = connect_to_ws(db.clone(), config).await;
-    (db, ws_client, cm)
+    (db, config)
 }
 
-pub async fn verify_ok(client: &mut WsClient) -> u64 {
-    let msg = client.recv().await.unwrap();
-    println!("Message: {:?}", &msg);
-    let resp: JsonRpcResponse =
-        serde_json::from_str(msg.to_str().expect("ok msg response")).unwrap();
-    let res = resp.result.expect("ok response result");
+/// Verifies the subscription "OK" response is correct
+pub fn verify_ok(msg: Message, name: &str) -> u64 {
+    let msg_str = msg
+        .to_str()
+        .unwrap_or_else(|_| panic!("{}: ok msg response", &name));
+
+    let resp: JsonRpcResponse = serde_json::from_str(msg_str)
+        .unwrap_or_else(|_| panic!("{}: could not parse response. {:?}", &name, msg));
+
+    let res = resp.result;
+    assert!(res.is_some(), "{}: result is None. {:?}", &name, msg);
+
+    let res = res.unwrap();
+
+    let status = res.get("status");
+    assert!(status.is_some(), "{}: status is None. {:?}", &name, msg);
+
     assert_eq!(
-        res.get("status")
-            .expect("ok response status")
-            .as_str()
-            .unwrap(),
-        "OK"
+        status.unwrap().as_str().unwrap(),
+        "OK",
+        "{}: status is not 'OK'. {:?}",
+        &name,
+        msg
     );
+
     res.get("transaction_version")
         .expect("OK transaction version")
         .as_u64()
@@ -82,11 +99,44 @@ pub fn get_latest_client(cm: &ConnectionManager) -> ClientConnection {
 }
 
 pub fn num_tasks(client: &ClientConnection) -> usize {
-    client.running_tasks.tasks.lock().len()
+    client.tasks.lock().len()
 }
 
-pub async fn close_ws(mut ws_client: WsClient) {
+/// This is primarily to ensure that the websocket transport responds to `close` correctly
+/// And passes the appropriate signal along to the `ConnectionManager`
+/// Dropping the ws_client is enough to actually close the connection
+pub async fn close_ws(mut ws_client: WsClient, name: &str) {
     ws_client.send(warp::ws::Message::close()).await;
-    ws_client.recv_closed().await.expect("connection closed");
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    ws_client
+        .recv_closed()
+        .await
+        .unwrap_or_else(|err| panic!("{}: connection not closed. {:?}", name, err));
+
     tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+}
+
+pub async fn next_message(ws_client: &mut WsClient, name: &str) -> warp::filters::ws::Message {
+    timeout(100, ws_client.recv(), name)
+        .await
+        .unwrap_or_else(|e| panic!("{}: message not ok. {:?}", name, e))
+}
+
+pub async fn timeout<F: Future<Output = T>, T>(duration_millis: u64, future: F, name: &str) -> T {
+    tokio::time::timeout(std::time::Duration::from_millis(duration_millis), future)
+        .await
+        .unwrap_or_else(|_| panic!("{}: Timed out", name))
+}
+
+pub fn sync_async<T, Fut>(handle: &Handle, f: Fut) -> T
+where
+    Fut: Future<Output = T> + Send + 'static,
+    T: Send + 'static,
+{
+    let (tx, rx) = sync_channel(1);
+    handle.spawn(async move {
+        let res = f.await;
+        let _ = tx.send(res);
+    });
+    rx.recv().unwrap()
 }

@@ -76,7 +76,7 @@ impl ConnectionManager {
         client_sender: StreamSender,
         mut client_rcv: BoxConnectionStream,
         connection_context: ConnectionContext,
-        unidirectional: bool,
+        bidirectional: bool,
     ) {
         let client_id = self.next_user_id();
         let client = ClientConnection::new(
@@ -114,7 +114,7 @@ impl ConnectionManager {
             }
         });
 
-        // TODO: REAP IDLE CONNECTIONS
+        // TODO: reap idle connections without any subscriptions or which haven't accepted a message in a while?
         let task_client = client.clone();
         let task_db = self.get_db();
         let recv_task = tokio::task::spawn(async move {
@@ -140,16 +140,18 @@ impl ConnectionManager {
             }
         });
 
-        // If the source is unidirectional, i.e SSE, then we don't use "unable to receive additional  messages"
-        // as our check for whether a client has disconnected or not
-        if unidirectional {
-            send_task.await.ok();
-            recv_task.abort();
-        } else {
+        if bidirectional {
             tokio::select! {
                 _ = send_task => (),
                 _ = recv_task => (),
             }
+        } else {
+            // If the source is unidirectional, i.e SSE, then we don't use "unable to receive additional messages"
+            // as our check for whether a client has disconnected or not
+            send_task.await.ok();
+            // If we're here and not bidirectional, the client has closed the connection and we are
+            // free to disconnect
+            recv_task.abort();
         }
         self.disconnect(client_id);
         debug!(

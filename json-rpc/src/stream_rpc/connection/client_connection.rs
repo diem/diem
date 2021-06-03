@@ -17,49 +17,12 @@ use diem_logger::debug;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
-#[derive(Debug)]
-pub struct RunningTasks {
-    pub tasks: Mutex<HashMap<Id, Task>>,
-    pub client_id: u64,
-}
-
-impl RunningTasks {
-    pub fn new(client_id: u64) -> Self {
-        Self {
-            tasks: Mutex::new(HashMap::new()),
-            client_id,
-        }
-    }
-
-    pub fn stop(&self, id: &Id) -> Option<()> {
-        let mut lock = self.tasks.lock();
-        if let Some(task) = lock.get(id) {
-            task.abort();
-            lock.remove(&id);
-            Some(())
-        } else {
-            None
-        }
-    }
-
-    pub fn stop_all(&self) {
-        let mut tasks = self.tasks.lock();
-        debug!(
-            "Aborting {} tasks for Client#{}",
-            tasks.len(),
-            &self.client_id
-        );
-        tasks.iter().for_each(|(_id, task)| task.abort());
-        tasks.clear();
-    }
-}
-
 // This will get cloned for every subscription, so lets keep it light :-)
 #[derive(Debug, Clone)]
 pub struct ClientConnection {
     pub id: u64,
     pub sender: StreamSender,
-    pub running_tasks: Arc<RunningTasks>,
+    pub tasks: Arc<Mutex<HashMap<Id, Task>>>,
     pub connection_context: Arc<ConnectionContext>,
     pub config: Arc<SubscriptionConfig>,
 }
@@ -74,18 +37,22 @@ impl ClientConnection {
         Self {
             id,
             sender,
-            running_tasks: Arc::new(RunningTasks::new(id)),
+            tasks: Arc::new(Mutex::new(HashMap::new())),
             connection_context: Arc::new(connection_context),
             config,
         }
     }
 
+    /// When we disconnect a client, ensure we kill all of the asynchronous tasks (subscriptions)
     pub fn disconnect(&self) {
-        self.running_tasks.stop_all();
+        let mut tasks = self.tasks.lock();
+        debug!("Aborting {} tasks for Client#{}", tasks.len(), &self.id);
+        tasks.iter().for_each(|(_id, task)| task.abort());
+        tasks.clear();
     }
 
     pub async fn send_raw(&self, message: String) -> anyhow::Result<()> {
-        if self.is_closed() {
+        if self.sender.is_closed() {
             anyhow::bail!("Client#{} is closed", self.id);
         }
         match self.sender.send(Ok(message)).await {
@@ -116,36 +83,31 @@ impl ClientConnection {
 
     pub async fn send_error(
         &self,
-        id: Option<Id>,
-        error: Option<JsonRpcError>,
-    ) -> anyhow::Result<()> {
-        self.send_response(JsonRpcResponse::error(id, error)).await
-    }
-
-    pub async fn send_error_with_metrics(
-        &self,
         method: Option<Method>,
         id: Option<Id>,
-        error: Option<JsonRpcError>,
+        error: JsonRpcError,
     ) -> anyhow::Result<()> {
         counters::INVALID_REQUESTS
             .with_label_values(&[
                 self.connection_context.transport.as_str(),
                 method.map_or("unknown", |m| m.as_str()),
-                error.as_ref().map_or("unknown", |e| e.code_as_str()),
+                error.code_as_str(),
                 self.connection_context.sdk_info.language.as_str(),
                 &self.connection_context.sdk_info.version.to_string(),
             ])
             .inc();
-        self.send_error(id, error).await
+        self.send_response(JsonRpcResponse::error(id, error)).await
     }
 
     pub fn unsubscribe(&self, id: &Id) -> Option<()> {
-        self.running_tasks.stop(id)
-    }
-
-    pub fn is_closed(&self) -> bool {
-        self.sender.is_closed()
+        let mut lock = self.tasks.lock();
+        if let Some(task) = lock.get(id) {
+            task.abort();
+            lock.remove(&id);
+            Some(())
+        } else {
+            None
+        }
     }
 
     pub async fn received_message(&self, db: Arc<dyn DbReader>, message: String) {
@@ -161,13 +123,9 @@ impl ClientConnection {
                     "subscription request"
                 );
                 if let Err(err) = self.handle_rpc_request(db, &mut request) {
-                    self.send_error_with_metrics(
-                        Some(request.method_request.method()),
-                        Some(request.id),
-                        Some(err),
-                    )
-                    .await
-                    .ok();
+                    self.send_error(Some(request.method_request.method()), Some(request.id), err)
+                        .await
+                        .ok();
                 }
             }
             Err((err, method, id)) => {
@@ -186,9 +144,7 @@ impl ClientConnection {
                     method.map_or("unknown", |m| m.as_str()),
                     counters::RpcResult::Error,
                 );
-                self.send_error_with_metrics(method, id, Some(err))
-                    .await
-                    .ok();
+                self.send_error(method, id, err).await.ok();
             }
         }
     }
@@ -212,7 +168,7 @@ impl ClientConnection {
         db: Arc<dyn DbReader>,
         request: &mut JsonRpcRequest,
     ) -> Result<(), JsonRpcError> {
-        let mut tasks = self.running_tasks.tasks.lock();
+        let mut tasks = self.tasks.lock();
         if tasks.contains_key(&request.id) {
             debug!(
                 "Client#{} already has a subscription for '{}'",

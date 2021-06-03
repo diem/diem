@@ -5,99 +5,219 @@ use crate::{
     stream_rpc::{
         json_rpc::JsonRpcResponse,
         tests::util::{
-            close_ws, connect_to_ws, get_latest_client, num_clients, num_tasks, verify_ok,
-            ws_test_setup,
+            close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks,
+            sync_async, verify_ok, ws_test_setup,
         },
     },
     tests::utils::create_db_and_runtime,
 };
+use futures::{SinkExt, StreamExt};
+use reqwest::Url;
 use serde_json::json;
-use storage_interface::DbReader;
+use std::convert::TryFrom;
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{http, Message},
+};
 
 #[tokio::test]
-async fn test_websocket_getting_transactions() {
-    let (_db, mut ws_client, cm) = ws_test_setup(5, 10, 300).await;
+async fn test_websocket_call_and_response() {
+    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
 
-    let json_str = serde_json::json!({"id": "client-generated-id", "method": "subscribe_to_transactions", "params": {"starting_version": 0}, "jsonrpc": "2.0"}).to_string();
-    ws_client.send_text(json_str).await;
-    let transaction_version = verify_ok(&mut ws_client).await;
+    let calls = vec![
+        (
+            "subscribe_to_transactions: invalid request",
+            json!({"id": "client-generated-id", "method": "subscribe_to_transactions", "params": {"starting_version": "not a number"}, "jsonrpc": "2.0"}).to_string(),
+            json!({"jsonrpc":"2.0","id":"client-generated-id","error":{"code":-32602,"message":"Invalid params for method 'subscribe_to_transactions'","data":null}}).to_string(),
+        ),
+        (
+            "subscribe_to_events: get events data",
+            json!({"id": "client-generated-id", "method": "subscribe_to_events", "params": {"event_key": 1337}, "jsonrpc": "2.0"}).to_string(),
+            json!({"jsonrpc":"2.0","id":"client-generated-id","error":{"code":-32602,"message":"Invalid params for method 'subscribe_to_events'","data":null}}).to_string(),
+        ),
+    ];
 
-    assert_eq!(num_clients(&cm), 1);
-    let client = get_latest_client(&cm);
-    assert_eq!(num_tasks(&client), 1);
+    for (name, request, expected) in calls {
+        let (mut ws_client, cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+        assert_eq!(num_clients(&cm), 1);
 
-    let mut current_version = 0;
-    for _ in 0..(transaction_version - 1) {
-        let msg = ws_client.recv().await.unwrap();
-        let resp: JsonRpcResponse = serde_json::from_str(msg.to_str().expect("response")).unwrap();
-        assert!(resp.error.is_none());
-        assert_eq!(resp.id.unwrap().to_string(), "\"client-generated-id\"");
-        let resp_version = resp
-            .result
-            .expect("response result")
-            .get("version")
-            .expect("response result version")
-            .as_u64()
-            .expect("response result version to u64");
-        assert_eq!(current_version, resp_version);
-        current_version += 1;
+        ws_client.send_text(request).await;
+        let result = next_message(&mut ws_client, &name).await;
+        assert_eq!(result.to_str().unwrap(), expected);
     }
-
-    assert_eq!(current_version, transaction_version - 1);
-
-    close_ws(ws_client).await;
-
-    assert_eq!(num_clients(&cm), 0);
-    assert_eq!(num_tasks(&client), 0);
 }
 
+#[tokio::test]
+async fn test_invalid_params() {
+    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+
+    let endpoint_names = vec!["subscribe_to_transactions", "subscribe_to_events"];
+
+    for endpoint_name in endpoint_names {
+        let name = format!("{}: invalid param", &endpoint_name);
+        let request = json!({"id": "client-generated-id", "method": &endpoint_name, "params": {"not_a_param": 0}, "jsonrpc": "2.0"}).to_string();
+        let expected = json!({"jsonrpc":"2.0","id":"client-generated-id","error":{"code":-32602,"message":format!("Invalid params for method '{}'", &endpoint_name),"data":null}}).to_string();
+        let (mut ws_client, _cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+        ws_client.send_text(request).await;
+        let result = next_message(&mut ws_client, &name).await;
+        assert_eq!(result.to_str().unwrap(), expected);
+
+        let name = format!("{}: malformed json", &endpoint_name);
+        let request = "{\"id\": \"client-generated-id\" ";
+        let expected = json!({"jsonrpc":"2.0","error":{"code":-32604,"message":"Invalid request format","data":null}}).to_string();
+        let (mut ws_client, _cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+        ws_client.send_text(request).await;
+        let result = next_message(&mut ws_client, &name).await;
+        assert_eq!(result.to_str().unwrap(), expected);
+    }
+}
+
+#[tokio::test]
+async fn test_websocket_fetching_data() {
+    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+
+    let (_, ev) = mock_db.events.get(0).unwrap();
+    let first_event_key = ev.key().to_string();
+    let num_events = mock_db
+        .events
+        .iter()
+        .filter(|(_, ev)| ev.key().to_string() == first_event_key)
+        .count();
+
+    let calls = vec![
+        (
+            "subscribe_to_transactions: get transaction data",
+            json!({"id": "client-generated-id", "method": "subscribe_to_transactions", "params": {"starting_version": 0}, "jsonrpc": "2.0"}),
+            mock_db.all_txns.len(),
+        ),
+        (
+            "subscribe_to_events: get events data",
+            json!({"id": "client-generated-id", "method": "subscribe_to_events", "params": {"event_key": first_event_key, "event_seq_num": 0}, "jsonrpc": "2.0"}),
+            num_events,
+        ),
+    ];
+
+    for (name, request, expected_number) in calls {
+        let (mut ws_client, cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+        assert_eq!(num_clients(&cm), 1);
+
+        ws_client.send_text(request.to_string()).await;
+        let sub_result = next_message(&mut ws_client, &name).await;
+        let _transaction_version = verify_ok(sub_result, &name);
+
+        let client = get_latest_client(&cm);
+        assert_eq!(num_tasks(&client), 1);
+
+        for i in 0..(expected_number) {
+            let msg = next_message(&mut ws_client, &format!("{} get message {}", &name, i)).await;
+            let resp: JsonRpcResponse =
+                serde_json::from_str(msg.to_str().expect("response")).unwrap();
+            assert!(resp.error.is_none());
+            assert_eq!(resp.id.unwrap().to_string(), "\"client-generated-id\"");
+        }
+
+        close_ws(ws_client, &name).await;
+
+        assert_eq!(num_clients(&cm), 0);
+        assert_eq!(num_tasks(&client), 0);
+    }
+}
+
+#[tokio::test]
+async fn test_multiple_subscriptions_and_response() {
+    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+
+    let calls = vec![
+        (
+            "subscribe_to_transactions: invalid request",
+            json!({"id": "client-generated-id", "method": "subscribe_to_transactions", "params": {"starting_version": "not a number"}, "jsonrpc": "2.0"}).to_string(),
+            json!({"jsonrpc":"2.0","id":"client-generated-id","error":{"code":-32602,"message":"Invalid params for method 'subscribe_to_transactions'","data":null}}).to_string(),
+        ),
+        (
+            "subscribe_to_events: get events data",
+            json!({"id": "client-generated-id", "method": "subscribe_to_events", "params": {"event_key": 1337}, "jsonrpc": "2.0"}).to_string(),
+            json!({"jsonrpc":"2.0","id":"client-generated-id","error":{"code":-32602,"message":"Invalid params for method 'subscribe_to_events'","data":null}}).to_string(),
+        ),
+    ];
+
+    for (name, request, expected) in calls {
+        let (mut ws_client, cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+        assert_eq!(num_clients(&cm), 1);
+
+        ws_client.send_text(request).await;
+        let result = next_message(&mut ws_client, &name).await;
+        assert_eq!(result.to_str().unwrap(), expected);
+    }
+}
+
+#[tokio::test]
+async fn test_websocket_can_connect_and_disconnect() {
+    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (ws_client1, cm) = connect_to_ws(mock_db.clone(), &config, None).await;
+    assert_eq!(num_clients(&cm), 1);
+    let (ws_client2, _) = connect_to_ws(mock_db.clone(), &config, Some(cm.clone())).await;
+    assert_eq!(num_clients(&cm), 2);
+    close_ws(ws_client1, "").await;
+    assert_eq!(num_clients(&cm), 1);
+    close_ws(ws_client2, "").await;
+    assert_eq!(num_clients(&cm), 0);
+}
+
+/// This is heavier test as it spins up a fullnode
+/// It exists primarily to ensure that the warp routing is set up correctly,
+/// and the stream endpoint is functional (i.e http->ws upgrade).
+/// The test can not be async as `create_db_and_runtime` spawns its own runtime,
+/// which conflicts with the one `#[tokio::test]` attempts to spawn.
 #[test]
 fn test_websocket_requests() {
-    /*
-    let (mock_db, _runtime, url, _) = create_db_and_runtime();
-    let client = reqwest::blocking::Client::new();
-    let version = mock_db.version;
-    let timestamp = mock_db.get_block_timestamp(version).unwrap();
+    let (mock_db, runtime, url, _) = create_db_and_runtime();
+
+    let parsed = Url::parse(&url).expect("Invalid websocket address");
+    let wss_url = format!(
+        "ws://{}:{}/v1/stream/ws",
+        parsed.host().expect("Could not parse host"),
+        parsed.port().expect("Could not parse port")
+    );
 
     let calls = vec![(
-        "get_account_state_with_proof: ledger version is too large",
-        json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", null, version+1], "id": 1}),
-        json!({
-            "error": {
-                "code": -32602,
-                "message": format!("Invalid param ledger_version should be <= known latest version {}", version),
-                "data": null
-            },
-            "id": 1,
-            "jsonrpc": "2.0",
-            "diem_ledger_timestampusec": timestamp,
-            "diem_ledger_version": version
-        }),
+        "subscribe_to_transactions: can subscribe to transactions",
+        json!({"id": "client-generated-id-1", "method": "subscribe_to_transactions", "params": {"starting_version": 0}, "jsonrpc": "2.0"}),
+        json!({"jsonrpc": "2.0", "id": "client-generated-id-1", "result": {"status": "OK", "transaction_version": mock_db.version}}),
     )];
-    for (name, request, expected) in calls {
-        // connect_to_ws()
-        let resp = client.post(&url).json(&request).send().unwrap();
-        assert_eq!(resp.status(), 200);
-        let headers = resp.headers().clone();
-        assert_eq!(
-            headers
-                .get("X-Diem-Ledger-Version")
-                .unwrap()
-                .to_str()
-                .unwrap(),
-            version.to_string()
-        );
-        assert_eq!(
-            headers
-                .get("X-Diem-Ledger-TimestampUsec")
-                .unwrap()
-                .to_str()
-                .unwrap(),
-            timestamp.to_string()
-        );
 
-        let resp_json: serde_json::Value = resp.json().unwrap();
-        assert_eq!(expected, resp_json, "test: {}", name);
+    for (name, request, expected) in calls {
+        let http_request = http::Request::builder()
+            .method(http::method::Method::GET)
+            .uri(http::uri::Uri::try_from(&wss_url).unwrap())
+            .header("user-agent", "diem-client-sdk-python / 0.1.22")
+            .header("Content-Length", "1500")
+            .body(())
+            .unwrap();
+
+        let ws_stream = sync_async(runtime.handle(), async move {
+            let (ws_stream, _) = connect_async(http_request)
+                .await
+                .expect("Could not create websocket connection");
+            ws_stream
+        });
+
+        let (mut tx, mut rx) = ws_stream.split();
+        sync_async(runtime.handle(), async move {
+            tx.send(Message::text(request.to_string())).await
+        })
+        .unwrap_or_else(|e| panic!("{}: Could not send websocket request. {:?}", &name, e));
+
+        let response = sync_async(runtime.handle(), async move { rx.next().await })
+            .unwrap_or_else(|| panic!("{}: Expected 'Some' response", &name))
+            .unwrap_or_else(|_| panic!("{}: Expected no error response", &name))
+            .to_string();
+
+        assert_eq!(
+            serde_json::to_string(&serde_json::from_str::<JsonRpcResponse>(&response).unwrap())
+                .unwrap(),
+            expected.to_string(),
+            "test: {}",
+            name
+        );
     }
-        */
 }

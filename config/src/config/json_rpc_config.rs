@@ -46,6 +46,7 @@ impl JsonRpcConfig {
     }
 }
 
+/// This API is experimental and subject to change
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StreamConfig {

@@ -6,14 +6,12 @@ use diem_logger::debug;
 #[derive(Clone)]
 pub enum Transport {
     Websocket,
-    SSE,
 }
 
 impl Transport {
     pub fn as_str(&self) -> &'static str {
         match self {
             Transport::Websocket => "websocket",
-            Transport::SSE => "sse",
         }
     }
 }
@@ -24,15 +22,18 @@ impl std::fmt::Debug for Transport {
     }
 }
 
+/// Attempts to get the remote address from a `FORWARDED` header,
+/// falling back to using the socket address (if available)
 pub fn get_remote_addr(
     headers: &warp::http::HeaderMap,
     remote_addr: Option<&std::net::SocketAddr>,
 ) -> Option<String> {
     match headers.get(warp::http::header::FORWARDED) {
         Some(forward) => match forward.to_str() {
+            // Warp should already have rejected any invalid `FORWARDED` headers.
+            // This does not mean the `FORWARDED` header makes any sense: just that it's a valid header value
             Ok(forward) => Some(forward.to_string()),
-            // A lot of things external to the node would have to go wrong for this to ever occur
-            // Or the node is fully exposed to 'creative' clients passing their own `FORWARDED` header
+            // This should never happen
             Err(e) => {
                 debug!("Unable to parse 'FORWARDED' header to string, falling back to remote_addr '{:?}', {}", &remote_addr, e);
                 remote_addr.map(|v| v.to_string())

@@ -112,12 +112,12 @@ impl JsonRpcResponse {
         }
     }
 
-    pub fn error(id: Option<Id>, error: Option<JsonRpcError>) -> Self {
+    pub fn error(id: Option<Id>, error: JsonRpcError) -> Self {
         Self {
             jsonrpc: JsonRpcVersion::V2,
             id,
             result: None,
-            error,
+            error: Some(error),
         }
     }
 }
