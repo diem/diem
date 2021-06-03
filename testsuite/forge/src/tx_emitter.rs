@@ -32,7 +32,7 @@ use tokio::{runtime::Handle, task::JoinHandle, time};
 
 /// Max transactions per account in mempool
 const MAX_TXN_BATCH_SIZE: usize = 100;
-const TXN_EXPIRATION_SECONDS: i64 = 150;
+const TXN_EXPIRATION_SECONDS: i64 = 10;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
@@ -63,7 +63,7 @@ impl EmitJobRequest {
     pub fn default(json_rpc_clients: Vec<JsonRpcClient>) -> Self {
         Self {
             json_rpc_clients,
-            accounts_per_client: 15,
+            accounts_per_client: 1,
             workers_per_endpoint: None,
             thread_params: EmitThreadParams::default(),
         }
@@ -347,7 +347,7 @@ impl<'t> TxEmitter<'t> {
         println!("Minting additional {} accounts", num_accounts);
 
         // For each seed account, create a future and transfer diem from that seed account to new accounts
-        let account_futures = seed_accounts
+        /*let account_futures = seed_accounts
             .into_iter()
             .enumerate()
             .map(|(i, seed_account)| {
@@ -369,9 +369,22 @@ impl<'t> TxEmitter<'t> {
             .map_err(|e| format_err!("Failed to mint accounts {}", e))?
             .into_iter()
             .flatten()
-            .collect();
+            .collect();*/
 
-        self.accounts.append(&mut minted_accounts);
+        for seed_account in seed_accounts {
+            let mut cur = create_new_accounts(
+                seed_account,
+                num_new_child_accounts,
+                coins_per_account,
+                20,
+                req.json_rpc_clients[0].clone(),
+                txn_factory.clone(),
+                self.from_rng(self.rng.clone()),
+            ).await?;
+            self.accounts.append(&mut cur);
+        }
+
+        // self.accounts.append(&mut minted_accounts);
         assert!(
             self.accounts.len() >= num_accounts,
             "Something wrong in mint_account, wanted to mint {}, only have {}",
@@ -391,7 +404,7 @@ impl<'t> TxEmitter<'t> {
                 // We want to have equal numbers of threads for each endpoint, so that they are equally loaded
                 // Otherwise things like flamegrap/perf going to show different numbers depending on which endpoint is chosen
                 // Also limiting number of threads as max 10 per endpoint for use cases with very small number of nodes or use --peers
-                min(10, max(1, target_threads / req.json_rpc_clients.len()))
+                min(1, max(1, target_threads / req.json_rpc_clients.len()))
             }
         };
         let num_clients = req.json_rpc_clients.len() * workers_per_endpoint;
@@ -405,6 +418,7 @@ impl<'t> TxEmitter<'t> {
             req.accounts_per_client, num_accounts
         );
         self.mint_accounts(&req, num_accounts).await?;
+        println!("mint is done out side");
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address()).collect();
@@ -413,7 +427,11 @@ impl<'t> TxEmitter<'t> {
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(StatsAccumulator::default());
         let tokio_handle = Handle::current();
+        let mut i = 0;
         for client in req.json_rpc_clients {
+            if i > 2 {
+                break;
+            }
             for _ in 0..workers_per_endpoint {
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
@@ -432,7 +450,9 @@ impl<'t> TxEmitter<'t> {
                 };
                 let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
+                println!("hhhhh pushes worker i = {}", i);
             }
+            i += 1;
         }
         info!("Tx emitter workers started");
         Ok(EmitJob {
@@ -573,7 +593,7 @@ fn is_sequence_equal(accounts: &[LocalAccount], sequence_numbers: &[u64]) -> boo
     true
 }
 
-async fn query_sequence_numbers(
+pub(crate) async fn query_sequence_numbers(
     client: &JsonRpcClient,
     addresses: &[AccountAddress],
 ) -> Result<Vec<u64>> {
@@ -617,6 +637,7 @@ async fn create_new_accounts<R>(
 where
     R: ::rand_core::RngCore + ::rand_core::CryptoRng,
 {
+    println!("hhhh get inside create new account");
     let mut i = 0;
     let mut accounts = vec![];
     while i < num_new_accounts {
@@ -641,6 +662,7 @@ where
         i += batch.len();
         accounts.append(&mut batch);
     }
+    println!("hhhh completed {}", accounts.len());
     Ok(accounts)
 }
 

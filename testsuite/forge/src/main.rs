@@ -18,10 +18,15 @@ fn main() -> Result<()> {
     let tests = ForgeConfig {
         public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
-        network_tests: &[&RestartValidator, &EmitTransaction],
+        network_tests: &[&EmitTransaction],
     };
 
-    forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()))
+    //forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()));
+    // let k8s_fac = K8sFactory::new();
+    // k8s_fac.launch_swarm(4);
+    forge_main(tests, K8sFactory::new());
+
+    Ok(())
 }
 
 //TODO Make public test later
@@ -194,9 +199,10 @@ impl NetworkTest for EmitTransaction {
             .collect_vec();
         let mut emitter = TxEmitter::new(ctx.swarm().chain_info(), rng);
         let rt = Runtime::new().unwrap();
-        let _stats = rt
+        let stats = rt
             .block_on(emitter.emit_txn_for(duration, EmitJobRequest::default(validator_clients)))
             .unwrap();
+        println!("{:?}", stats);
 
         Ok(())
     }

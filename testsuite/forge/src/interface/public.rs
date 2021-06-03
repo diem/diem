@@ -30,7 +30,7 @@ impl<'t> PublicUsageContext<'t> {
     }
 
     pub fn client(&self) -> BlockingClient {
-        BlockingClient::new(self.public_info.json_rpc_url)
+        BlockingClient::new(&self.public_info.json_rpc_url)
     }
 
     pub fn core(&self) -> &CoreContext {
@@ -130,13 +130,13 @@ impl Fund for Coffer<'_> {
 }
 
 pub struct PublicInfo<'t> {
-    json_rpc_url: &'t str,
+    json_rpc_url: String,
     chain_id: ChainId,
     coffer: Coffer<'t>,
 }
 
 impl<'t> PublicInfo<'t> {
-    pub fn new(json_rpc_url: &'t str, chain_id: ChainId, coffer: Coffer<'t>) -> Self {
+    pub fn new(json_rpc_url: String, chain_id: ChainId, coffer: Coffer<'t>) -> Self {
         Self {
             json_rpc_url,
             chain_id,

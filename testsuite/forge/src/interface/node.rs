@@ -39,7 +39,7 @@ pub trait Node {
     fn json_rpc_client(&self) -> JsonRpcClient;
 
     /// Return a NodeDebugClient for this Node
-    fn debug_client(&self) -> &NodeDebugClient;
+    fn debug_client(&self) -> NodeDebugClient;
 
     /// Query a Metric for from this Node
     fn get_metric(&mut self, metric_name: &str) -> Option<i64>;

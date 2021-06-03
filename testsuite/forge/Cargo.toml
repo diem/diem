@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = { version = "1.0", features = ["backtrace"] }
+base64 = "0.13.0"
 futures = "0.3.12"
 itertools = "0.10.0"
 rand = "0.8.3"
@@ -33,3 +34,5 @@ diem-types = { path = "../../types", features = ["fuzzing"] }
 diem-retrier = { path = "../../common/retrier" }
 diem-client = { path = "../../sdk/client"}
 cluster-test = { path = "../cluster-test" }
+kube = "0.51.0"
+k8s-openapi = { version = "0.11.0", default-features = false, features = ["v1_15"] }

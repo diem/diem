@@ -131,14 +131,14 @@ impl Swarm for LocalSwarm {
         AdminInfo::new(
             &mut self.root_account,
             &mut self.treasury_compliance_account,
-            &self.url,
+            self.url.clone(),
             self.chain_id,
         )
     }
 
     fn public_info(&mut self) -> PublicInfo<'_> {
         PublicInfo::new(
-            &self.url,
+            self.url.clone(),
             self.chain_id,
             Coffer::TreasuryCompliance {
                 transaction_factory: TransactionFactory::new(ChainId::test()),
@@ -154,7 +154,7 @@ impl Swarm for LocalSwarm {
             &mut self.root_account,
             &mut self.treasury_compliance_account,
             &mut self.designated_dealer_account,
-            &self.url,
+            self.url.clone(),
             self.chain_id,
         )
     }
@@ -227,8 +227,13 @@ impl Node for DiemNode {
         JsonRpcClient::new(self.json_rpc_endpoint().to_string())
     }
 
-    fn debug_client(&self) -> &NodeDebugClient {
-        self.debug_client()
+    fn debug_client(&self) -> NodeDebugClient {
+        NodeDebugClient::new(
+            "localhost",
+            self.config()
+                .debug_interface
+                .admission_control_node_debug_port,
+        )
     }
 
     fn get_metric(&mut self, metric_name: &str) -> Option<i64> {

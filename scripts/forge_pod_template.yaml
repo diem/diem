@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {pod_name}
+  labels:
+    app: forge
+spec:
+  restartPolicy: Never
+  serviceAccountName: diem-testnet
+  tolerations:
+    - key: "forge"
+      operator: "Exists"
+      effect: "NoSchedule"
+  containers:
+    - name: main
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/diem/forge:{forge_image_tag}
+      imagePullPolicy: Always
+      command: [timeout, "{timeout_secs}", forge]
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: ["forge"]
+          topologyKey: "kubernetes.io/hostname"

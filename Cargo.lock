@@ -3115,6 +3115,7 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "base64",
  "cluster-test",
  "debug-interface",
  "diem-client",
@@ -3129,6 +3130,8 @@ dependencies = [
  "futures",
  "generate-key",
  "itertools 0.10.0",
+ "k8s-openapi",
+ "kube",
  "rand 0.8.3",
  "rand_core 0.6.2",
  "reqwest",
