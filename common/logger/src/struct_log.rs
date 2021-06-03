@@ -11,7 +11,7 @@ use std::{
     io,
     io::Write,
     net::{TcpStream, ToSocketAddrs},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const WRITE_TIMEOUT_MS: u64 = 2000;
@@ -25,6 +25,7 @@ pub(crate) struct TcpWriter {
     endpoint: String,
     /// The `TCPStream` to write to, which will be `None` when disconnected
     stream: Option<TcpStream>,
+    last_connection_attempt: Option<Instant>,
 }
 
 impl TcpWriter {
@@ -32,6 +33,7 @@ impl TcpWriter {
         Self {
             endpoint,
             stream: None,
+            last_connection_attempt: None,
         }
     }
 
@@ -41,21 +43,30 @@ impl TcpWriter {
 
     /// Ensure that we get a connection, no matter how long it takes
     /// This will block until there is a connection
-    fn refresh_connection(&mut self) {
-        loop {
+    fn refresh_connection(&mut self) -> io::Result<()> {
+        // Only refresh the connection once a second
+        if self
+            .last_connection_attempt
+            .map(|t| t.elapsed() > Duration::from_millis(1000))
+            .unwrap_or(true)
+        {
+            self.last_connection_attempt = Some(Instant::now());
             match self.connect() {
                 Ok(stream) => {
                     self.stream = Some(stream);
-                    return;
+                    Ok(())
                 }
                 Err(e) => {
                     eprintln!("[Logging] Failed to connect: {}", e);
                     STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
+                    Err(e)
                 }
             }
-
-            // Sleep a second so this doesn't just spin as fast as possible
-            std::thread::sleep(Duration::from_millis(1000));
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                "unable to refresh connection",
+            ))
         }
     }
 
@@ -94,7 +105,7 @@ impl Write for TcpWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         // Refresh the connection if it's missing
         if self.stream.is_none() {
-            self.refresh_connection();
+            self.refresh_connection()?;
         }
 
         // Attempt to write, and if it fails clear underlying stream
