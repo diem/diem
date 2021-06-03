@@ -142,10 +142,11 @@ pub enum Error {
     NetworkError(#[from] std::io::Error),
     #[error("No active stream")]
     NoActiveStream,
-    #[error("Remote stream cleanly closed")]
-    RemoteStreamClosed,
     #[error("Overflow error: {0}")]
     OverflowError(String),
+    #[error("Remote stream cleanly closed")]
+    RemoteStreamClosed,
+
 }
 
 pub struct NetworkClient {
@@ -507,7 +508,7 @@ impl NetworkStream {
             let written = self.stream.write(unwritten)?;
             total_written = total_written
                 .checked_add(written as u8)
-                .ok_or_else(|| Error::OverflowError(String::from("write_all::total_written")))?;
+                .ok_or_else(|| Error::OverflowError("write_all::total_written".into()))?;
             unwritten = &data[total_written as usize..];
         }
         Ok(())
