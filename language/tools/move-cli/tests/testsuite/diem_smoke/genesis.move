@@ -32,6 +32,7 @@ script {
         let instruction_schedule = Vector::empty();
         let native_schedule = Vector::empty();
         let chain_id = 0;
+        let initial_diem_version = 1;
 
         DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 
@@ -55,15 +56,9 @@ script {
 
         TransactionFee::initialize(tc_account);
 
-        DiemSystem::initialize_validator_set(
-            dr_account,
-        );
-        DiemVersion::initialize(
-            dr_account,
-        );
-        DualAttestation::initialize(
-            dr_account,
-        );
+        DiemSystem::initialize_validator_set(dr_account);
+        DiemVersion::initialize(dr_account, initial_diem_version);
+        DualAttestation::initialize(dr_account);
         DiemBlock::initialize_block_metadata(dr_account);
 
         let dr_rotate_key_cap = DiemAccount::extract_key_rotation_capability(dr_account);

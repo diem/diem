@@ -32,6 +32,7 @@ script {
         let instruction_schedule = Vector::empty();
         let native_schedule = Vector::empty();
         let chain_id = 0;
+        let initial_diem_version = 1;
 
         DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 
@@ -58,9 +59,7 @@ script {
         DiemSystem::initialize_validator_set(
             dr_account,
         );
-        DiemVersion::initialize(
-            dr_account,
-        );
+        DiemVersion::initialize(dr_account, initial_diem_version);
         DualAttestation::initialize(
             dr_account,
         );

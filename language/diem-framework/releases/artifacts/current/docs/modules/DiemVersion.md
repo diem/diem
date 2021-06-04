@@ -74,7 +74,7 @@ Tried to set an invalid major version for the VM. Major versions must be strictl
 Publishes the DiemVersion config. Must be called during Genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(dr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(dr_account: &signer, initial_version: u64)
 </code></pre>
 
 
@@ -83,14 +83,12 @@ Publishes the DiemVersion config. Must be called during Genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(
-    dr_account: &signer,
-) {
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(dr_account: &signer, initial_version: u64) {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config">DiemConfig::publish_new_config</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;(
         dr_account,
-        <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: 1 },
+        <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: initial_version },
     );
 }
 </code></pre>
@@ -109,7 +107,7 @@ Must abort if the signer does not have the DiemRoot role [[H10]][PERMISSION].
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_PublishNewConfigAbortsIf">DiemConfig::PublishNewConfigAbortsIf</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;;
-<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_PublishNewConfigEnsures">DiemConfig::PublishNewConfigEnsures</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;{payload: <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: 1 }};
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_PublishNewConfigEnsures">DiemConfig::PublishNewConfigEnsures</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;{payload: <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: initial_version }};
 </code></pre>
 
 

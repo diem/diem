@@ -16,14 +16,12 @@ module DiemVersion {
     const EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
 
     /// Publishes the DiemVersion config. Must be called during Genesis.
-    public fun initialize(
-        dr_account: &signer,
-    ) {
+    public fun initialize(dr_account: &signer, initial_version: u64) {
         DiemTimestamp::assert_genesis();
         Roles::assert_diem_root(dr_account);
         DiemConfig::publish_new_config<DiemVersion>(
             dr_account,
-            DiemVersion { major: 1 },
+            DiemVersion { major: initial_version },
         );
     }
     spec initialize {
@@ -32,7 +30,7 @@ module DiemVersion {
 
         include DiemTimestamp::AbortsIfNotGenesis;
         include DiemConfig::PublishNewConfigAbortsIf<DiemVersion>;
-        include DiemConfig::PublishNewConfigEnsures<DiemVersion>{payload: DiemVersion { major: 1 }};
+        include DiemConfig::PublishNewConfigEnsures<DiemVersion>{payload: DiemVersion { major: initial_version }};
     }
 
     /// Allows Diem root to update the major version to a larger version.

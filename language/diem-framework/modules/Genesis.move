@@ -33,6 +33,7 @@ module Genesis {
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
         chain_id: u8,
+        initial_diem_version: u64,
     ) {
         let dr_account = &dr_account;
         let tc_account = &tc_account;
@@ -50,29 +51,25 @@ module Genesis {
         // Currency setup
         XUS::initialize(dr_account, tc_account);
 
-        XDX::initialize(
-            dr_account,
-            tc_account,
-        );
+        XDX::initialize(dr_account, tc_account);
 
         AccountFreezing::initialize(dr_account);
-
         TransactionFee::initialize(tc_account);
 
-        DiemSystem::initialize_validator_set(
-            dr_account,
-        );
-        DiemVersion::initialize(
-            dr_account,
-        );
-        DualAttestation::initialize(
-            dr_account,
-        );
+        DiemSystem::initialize_validator_set(dr_account);
+        DiemVersion::initialize(dr_account, initial_diem_version);
+        DualAttestation::initialize(dr_account);
         DiemBlock::initialize_block_metadata(dr_account);
 
+        // Rotate auth keys for DiemRoot and TreasuryCompliance accounts to the given
+        // values
         let dr_rotate_key_cap = DiemAccount::extract_key_rotation_capability(dr_account);
         DiemAccount::rotate_authentication_key(&dr_rotate_key_cap, dr_auth_key);
         DiemAccount::restore_key_rotation_capability(dr_rotate_key_cap);
+
+        let tc_rotate_key_cap = DiemAccount::extract_key_rotation_capability(tc_account);
+        DiemAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
+        DiemAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
         DiemTransactionPublishingOption::initialize(
             dr_account,
@@ -85,10 +82,6 @@ module Genesis {
             instruction_schedule,
             native_schedule,
         );
-
-        let tc_rotate_key_cap = DiemAccount::extract_key_rotation_capability(tc_account);
-        DiemAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
-        DiemAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
         // After we have called this function, all invariants which are guarded by
         // `DiemTimestamp::is_operating() ==> ...` will become active and a verification condition.

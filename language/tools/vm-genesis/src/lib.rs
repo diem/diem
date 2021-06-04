@@ -51,7 +51,6 @@ use transaction_builder::encode_create_designated_dealer_script_function;
 const GENESIS_SEED: [u8; 32] = [42; 32];
 
 const GENESIS_MODULE_NAME: &str = "Genesis";
-const DIEM_VERSION_MODULE_NAME: &str = "DiemVersion";
 
 pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
@@ -261,21 +260,7 @@ fn create_and_initialize_main_accounts(
             MoveValue::vector_u8(instr_gas_costs),
             MoveValue::vector_u8(native_gas_costs),
             MoveValue::U8(chain_id.id()),
-        ]),
-    );
-
-    // Bump the Diem Framework version number
-    exec_function(
-        session,
-        log_context,
-        DIEM_VERSION_MODULE_NAME,
-        "set",
-        vec![],
-        serialize_values(&vec![
-            MoveValue::Signer(root_diem_root_address),
-            MoveValue::U64(
-                /* Diem Framework major version number */ DIEM_MAX_KNOWN_VERSION.major,
-            ),
+            MoveValue::U64(DIEM_MAX_KNOWN_VERSION.major),
         ]),
     );
 

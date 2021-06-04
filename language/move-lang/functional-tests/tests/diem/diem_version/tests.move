@@ -3,7 +3,7 @@ script{
 use 0x1::DiemVersion;
 fun main(account: signer) {
     let account = &account;
-    DiemVersion::initialize(account);
+    DiemVersion::initialize(account, 1);
 }
 }
 // check: "Keep(ABORTED { code: 1,"

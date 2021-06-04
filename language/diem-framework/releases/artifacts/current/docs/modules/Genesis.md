@@ -39,7 +39,7 @@ when executing from a fresh state.
 Initializes the Diem framework.
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: signer, tc_account: signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: signer, tc_account: signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64)
 </code></pre>
 
 
@@ -58,6 +58,7 @@ Initializes the Diem framework.
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
     chain_id: u8,
+    initial_diem_version: u64,
 ) {
     <b>let</b> dr_account = &dr_account;
     <b>let</b> tc_account = &tc_account;
@@ -75,29 +76,25 @@ Initializes the Diem framework.
     // Currency setup
     <a href="XUS.md#0x1_XUS_initialize">XUS::initialize</a>(dr_account, tc_account);
 
-    <a href="XDX.md#0x1_XDX_initialize">XDX::initialize</a>(
-        dr_account,
-        tc_account,
-    );
+    <a href="XDX.md#0x1_XDX_initialize">XDX::initialize</a>(dr_account, tc_account);
 
     <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(dr_account);
-
     <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account);
 
-    <a href="DiemSystem.md#0x1_DiemSystem_initialize_validator_set">DiemSystem::initialize_validator_set</a>(
-        dr_account,
-    );
-    <a href="DiemVersion.md#0x1_DiemVersion_initialize">DiemVersion::initialize</a>(
-        dr_account,
-    );
-    <a href="DualAttestation.md#0x1_DualAttestation_initialize">DualAttestation::initialize</a>(
-        dr_account,
-    );
+    <a href="DiemSystem.md#0x1_DiemSystem_initialize_validator_set">DiemSystem::initialize_validator_set</a>(dr_account);
+    <a href="DiemVersion.md#0x1_DiemVersion_initialize">DiemVersion::initialize</a>(dr_account, initial_diem_version);
+    <a href="DualAttestation.md#0x1_DualAttestation_initialize">DualAttestation::initialize</a>(dr_account);
     <a href="DiemBlock.md#0x1_DiemBlock_initialize_block_metadata">DiemBlock::initialize_block_metadata</a>(dr_account);
 
+    // Rotate auth keys for DiemRoot and TreasuryCompliance accounts <b>to</b> the given
+    // values
     <b>let</b> dr_rotate_key_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(dr_account);
     <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&dr_rotate_key_cap, dr_auth_key);
     <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(dr_rotate_key_cap);
+
+    <b>let</b> tc_rotate_key_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(tc_account);
+    <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, tc_auth_key);
+    <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
 
     <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_initialize">DiemTransactionPublishingOption::initialize</a>(
         dr_account,
@@ -110,10 +107,6 @@ Initializes the Diem framework.
         instruction_schedule,
         native_schedule,
     );
-
-    <b>let</b> tc_rotate_key_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(tc_account);
-    <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, tc_auth_key);
-    <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
 
     // After we have called this function, all invariants which are guarded by
     // `<a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; ...` will become active and a verification condition.
