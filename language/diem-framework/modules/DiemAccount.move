@@ -288,7 +288,8 @@ module DiemAccount {
         payee: address,
         to_deposit: Diem<Token>,
         metadata: vector<u8>,
-        metadata_signature: vector<u8>
+        metadata_signature: vector<u8>,
+        dual_attestation: bool,
     ) acquires DiemAccount, Balance, AccountOperationsCapability {
         DiemTimestamp::assert_operating();
         AccountFreezing::assert_not_frozen(payee);
@@ -304,10 +305,13 @@ module DiemAccount {
             Errors::invalid_argument(EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
         );
 
-        // Check that the payment complies with dual attestation rules
-        DualAttestation::assert_payment_ok<Token>(
-            payer, payee, deposit_value, copy metadata, metadata_signature
-        );
+        if (dual_attestation) {
+            // Check that the payment complies with dual attestation rules
+            DualAttestation::assert_payment_ok<Token>(
+                payer, payee, deposit_value, copy metadata, metadata_signature
+            );
+        };
+
         // Ensure that this deposit is compliant with the account limits on
         // this account.
         if (should_track_limits_for_account<Token>(payer, payee, false)) {
@@ -356,12 +360,12 @@ module DiemAccount {
         include DepositOverflowAbortsIf<Token>{amount: amount};
         include DepositEnsures<Token>{amount: amount};
         include DepositEmits<Token>{amount: amount};
+        include dual_attestation ==> DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
     }
     spec schema DepositAbortsIf<Token> {
         payer: address;
         payee: address;
         amount: u64;
-        metadata_signature: vector<u8>;
         metadata: vector<u8>;
         include DepositAbortsIfRestricted<Token>;
         include AccountFreezing::AbortsIfFrozen{account: payee};
@@ -377,11 +381,9 @@ module DiemAccount {
         payer: address;
         payee: address;
         amount: u64;
-        metadata_signature: vector<u8>;
         metadata: vector<u8>;
         include DiemTimestamp::AbortsIfNotOperating;
         aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
-        include DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
         include
             spec_should_track_limits_for_account<Token>(payer, payee, false) ==>
             AccountLimits::UpdateDepositLimitsAbortsIf<Token> {
@@ -428,7 +430,7 @@ module DiemAccount {
         );
         // Use the reserved address as the payer because the funds did not come from an existing
         // balance
-        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
+        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"", false)
     }
 
     spec tiered_mint {
@@ -450,7 +452,7 @@ module DiemAccount {
         tier_index: u64;
         include DesignatedDealer::TieredMintAbortsIf<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
         include DepositAbortsIf<Token>{payer: CoreAddresses::VM_RESERVED_ADDRESS(),
-            payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
+            payee: designated_dealer_address, amount: mint_amount, metadata: x""};
         include DepositOverflowAbortsIf<Token>{payee: designated_dealer_address, amount: mint_amount};
     }
     spec schema TieredMintEnsures<Token> {
@@ -488,7 +490,7 @@ module DiemAccount {
         let coin = Diem::cancel_burn<Token>(account, preburn_address, amount);
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
-        deposit(preburn_address, preburn_address, coin, x"", x"")
+        deposit(preburn_address, preburn_address, coin, x"", x"", false)
     }
     spec cancel_burn {
         include CancelBurnAbortsIf<Token>;
@@ -512,7 +514,6 @@ module DiemAccount {
             payee: preburn_address,
             amount: amount,
             metadata: x"",
-            metadata_signature: x""
         };
         include DepositOverflowAbortsIf<Token>{payee: preburn_address, amount: amount};
     }
@@ -793,12 +794,55 @@ module DiemAccount {
             payee,
             withdraw_from(cap, payee, amount, copy metadata),
             metadata,
-            metadata_signature
+            metadata_signature,
+            true
         );
     }
+
+    /// Withdraw `amount` Diem<Token> from the address embedded in `WithdrawCapability` and
+    /// deposits it into the `payee`'s account balance.
+    /// The included `metadata` will appear in the `SentPaymentEvent` and `ReceivedPaymentEvent`.
+    /// As `payee` is also signer of the transaction, no metadata signature is required for dual attestation.
+    public fun pay_by_signers<Token: store>(
+        cap: &WithdrawCapability,
+        payee: &signer,
+        amount: u64,
+        metadata: vector<u8>,
+    ) acquires DiemAccount, Balance, AccountOperationsCapability {
+        let payee_address = Signer::address_of(payee);
+        deposit<Token>(
+            *&cap.account_address,
+            payee_address,
+            withdraw_from(cap, payee_address, amount, copy metadata),
+            metadata,
+            x"",
+            false
+        );
+    }
+
     spec pay_from {
         pragma opaque;
+
         let payer = cap.account_address;
+        include PayFromWithoutDualAttestation<Token>;
+        include DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
+    }
+
+    spec pay_by_signers {
+        pragma opaque;
+
+        include PayFromWithoutDualAttestation<Token>{
+            payer: cap.account_address,
+            payee: Signer::spec_address_of(payee)
+        };
+    }
+
+    spec schema PayFromWithoutDualAttestation<Token> {
+        payer: address;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+
         modifies global<DiemAccount>(payer);
         modifies global<DiemAccount>(payee);
         modifies global<Balance<Token>>(payer);
@@ -823,12 +867,12 @@ module DiemAccount {
         include PayFromEnsures<Token>{payer};
         include PayFromEmits<Token>;
     }
+
     spec schema PayFromAbortsIf<Token> {
         cap: WithdrawCapability;
         payee: address;
         amount: u64;
         metadata: vector<u8>;
-        metadata_signature: vector<u8>;
         include DepositAbortsIf<Token>{payer: cap.account_address};
         include cap.account_address != payee ==> DepositOverflowAbortsIf<Token>;
         include WithdrawFromAbortsIf<Token>;
@@ -838,7 +882,6 @@ module DiemAccount {
         payee: address;
         amount: u64;
         metadata: vector<u8>;
-        metadata_signature: vector<u8> ;
         let payer = cap.account_address;
         include DepositAbortsIfRestricted<Token>{payer: cap.account_address};
         include WithdrawFromBalanceNoLimitsAbortsIf<Token>{payer, balance: global<Balance<Token>>(payer)};
@@ -2223,7 +2266,7 @@ module DiemAccount {
         /// only `Self::withdraw_from` and its helper and clients can withdraw [[H19]][PERMISSION].
         apply BalanceNotDecrease<Token> to *<Token>
             except withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
-                preburn, pay_from, epilogue_common, epilogue, failure_epilogue, success_epilogue;
+                preburn, pay_from, pay_by_signers, epilogue_common, epilogue, failure_epilogue, success_epilogue;
     }
 
     spec schema BalanceNotDecrease<Token> {

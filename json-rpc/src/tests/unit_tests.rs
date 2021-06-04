@@ -780,11 +780,11 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_accumulator_consistency_proof: client_known_version is greater than ledger_version",
-            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [10, 5], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [version, version-1], "id": 1}),
             json!({
                 "error": {
                     "code": -32600,
-                    "message": "Invalid Request: client_known_version(10) should be <= ledger_version(5)".to_string(),
+                    "message": format!("Invalid Request: client_known_version({}) should be <= ledger_version({})", version, version-1),
                     "data": null
                 },
                 "id": 1,

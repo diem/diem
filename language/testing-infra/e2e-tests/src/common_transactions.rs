@@ -6,9 +6,12 @@
 use crate::account::Account;
 use compiler::Compiler;
 use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_transaction_builder::stdlib::encode_peer_to_peer_by_signers_script_function;
 use diem_types::{
     account_config,
-    transaction::{RawTransaction, Script, SignedTransaction, TransactionArgument},
+    transaction::{
+        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
+    },
 };
 use move_core_types::language_storage::TypeTag;
 use once_cell::sync::Lazy;
@@ -101,37 +104,6 @@ pub static MULTI_AGENT_SWAP_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
             &bob_withdrawal_cap, move(alice_addr), move(amount_xdx), h\"\", h\"\"
         );
         DiemAccount.restore_withdraw_capability(move(bob_withdrawal_cap));
-        return;
-    }
-";
-
-    let compiler = Compiler {
-        address: account_config::CORE_CODE_ADDRESS,
-        skip_stdlib_deps: false,
-        extra_deps: vec![],
-    };
-    compiler
-        .into_script_blob("file_name", code)
-        .expect("Failed to compile")
-});
-
-pub static MULTI_AGENT_P2P_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
-    let code = "
-    import 0x1.DiemAccount;
-    import 0x1.Signer;
-    import 0x1.XUS;
-
-    // Alice and Bob agree on the value of amount_xus and amount_xdx off-chain.
-    main(alice: signer, bob: signer, amount: u64) {
-        let alice_withdrawal_cap: DiemAccount.WithdrawCapability;
-        let bob_addr: address;
-
-        alice_withdrawal_cap = DiemAccount.extract_withdraw_capability(&alice);
-        bob_addr = Signer.address_of(&bob);
-        DiemAccount.pay_from<XUS.XUS>(
-            &alice_withdrawal_cap, move(bob_addr), move(amount), h\"\", h\"\"
-        );
-        DiemAccount.restore_withdraw_capability(move(alice_withdrawal_cap));
         return;
     }
 ";
@@ -324,13 +296,15 @@ pub fn multi_agent_p2p_txn(
     seq_num: u64,
     amount: u64,
 ) -> SignedTransaction {
-    let args: Vec<TransactionArgument> = vec![TransactionArgument::U64(amount)];
-
     // get a SignedTransaction
     payer
         .transaction()
         .secondary_signers(vec![payee.clone()])
-        .script(Script::new(MULTI_AGENT_P2P_SCRIPT.to_vec(), vec![], args))
+        .payload(encode_peer_to_peer_by_signers_script_function(
+            account_config::xus_tag(),
+            amount,
+            vec![],
+        ))
         .sequence_number(seq_num)
         .sign_multi_agent()
 }
@@ -390,9 +364,8 @@ pub fn multi_agent_swap_script(xus_amount: u64, xdx_amount: u64) -> Script {
     Script::new(MULTI_AGENT_SWAP_SCRIPT.to_vec(), vec![], args)
 }
 
-pub fn multi_agent_p2p_script(amount: u64) -> Script {
-    let args: Vec<TransactionArgument> = vec![TransactionArgument::U64(amount)];
-    Script::new(MULTI_AGENT_P2P_SCRIPT.to_vec(), vec![], args)
+pub fn multi_agent_p2p_script_function(amount: u64) -> TransactionPayload {
+    encode_peer_to_peer_by_signers_script_function(account_config::xus_tag(), amount, vec![])
 }
 
 pub fn multi_agent_mint_script(mint_amount: u64, tier_index: u64) -> Script {

@@ -18,7 +18,7 @@ use diem_logger::prelude::*;
 use diem_sdk::{transaction_builder::TransactionFactory, types::LocalAccount};
 use diem_transaction_builder::stdlib::encode_update_diem_version_script;
 use diem_types::{chain_id::ChainId, transaction::TransactionPayload};
-use language_e2e_tests::common_transactions::multi_agent_p2p_script;
+use language_e2e_tests::common_transactions::multi_agent_p2p_script_function;
 use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
 
@@ -105,7 +105,7 @@ impl Experiment for ValidatorVersioning {
         // TODO: In the future we may want to pass this functor as an argument to the experiment
         // to make versioning test extensible.
         // Define a multi-agent p2p transaction.
-        let txn_payload = TransactionPayload::Script(multi_agent_p2p_script(10));
+        let txn_payload = multi_agent_p2p_script_function(10);
 
         let tx_factory =
             TransactionFactory::new(ChainId::test()).with_transaction_expiration_time(420);

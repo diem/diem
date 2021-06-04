@@ -1350,6 +1350,34 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
+            name: "multi-agent payment script meets dual attestation limit",
+            run: |env: &mut testing::Env| {
+                let sender = env.vasps[0].children[0].clone();
+                let receiver = env.vasps[1].children[0].clone();
+                let sender_balance = env.get_balance(&sender, "XUS");
+                let receiver_balance = env.get_balance(&receiver, "XUS");
+
+                let limit = env.get_metadata()["dual_attestation_limit"].as_u64().unwrap();
+                let amount = limit + 1;
+                let txn = env.multi_agent_payment_txn((0, 0), (1, 0), amount);
+
+                let txn_view = env.submit_and_wait(txn);
+
+                let events = txn_view["events"].as_array().unwrap();
+                assert_eq!(events.len(), 2);
+                assert_eq!(events[0]["data"]["type"], "sentpayment");
+                assert_eq!(events[1]["data"]["type"], "receivedpayment");
+                for event in events.iter() {
+                    assert_eq!(event["data"]["amount"], json!({"amount": amount, "currency": "XUS"}));
+                    assert_eq!(event["data"]["sender"], format!("{:x}", &sender.address));
+                    assert_eq!(event["data"]["receiver"], format!("{:x}", &receiver.address));
+                }
+
+                assert_eq!(sender_balance - amount, env.get_balance(&sender, "XUS"));
+                assert_eq!(receiver_balance + amount, env.get_balance(&receiver, "XUS"));
+            },
+        },
+        Test {
             name: "multi-agent transaction with rotate_authentication_key_with_nonce_admin script function",
             run: |env: &mut testing::Env| {
                 let root = env.root.clone();

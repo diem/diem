@@ -136,6 +136,25 @@ impl Env {
         self.create_txn(&self.vasps[sender.0].children[sender.1], script)
     }
 
+    pub fn multi_agent_payment_txn(
+        &mut self,
+        sender: (usize, usize),
+        receiver: (usize, usize),
+        amount: u64,
+    ) -> SignedTransaction {
+        let script =
+            diem_transaction_builder::stdlib::encode_peer_to_peer_by_signers_script_function(
+                xus_tag(),
+                amount,
+                vec![],
+            );
+        self.create_multi_agent_txn(
+            &self.vasps[sender.0].children[sender.1],
+            vec![&self.vasps[receiver.0].children[receiver.1]],
+            script,
+        )
+    }
+
     pub fn get_account_sequence(&self, address: String) -> Result<u64> {
         let resp = self.send("get_account", json!([address]));
         if let Some(result) = resp.result {
@@ -243,6 +262,23 @@ impl Env {
         )
     }
 
+    pub fn get_balance(&self, account: &Account, currency: &str) -> u64 {
+        let address = format!("{:x}", &account.address);
+        let resp = self.send("get_account", json!([address]));
+        let account = resp.result.unwrap();
+        let balances = account["balances"].as_array().unwrap();
+        for balance in balances.iter() {
+            if balance["currency"].as_str().unwrap() == currency {
+                return balance["amount"].as_u64().unwrap();
+            }
+        }
+        0
+    }
+
+    pub fn get_metadata(&self) -> Value {
+        self.send("get_metadata", json!([])).result.unwrap()
+    }
+
     pub fn wait_for_txn(&self, txn: &SignedTransaction) -> Value {
         let txn_hash = diem_types::transaction::Transaction::UserTransaction(txn.clone())
             .hash()
@@ -275,7 +311,13 @@ impl Env {
         let headers = resp.headers().clone();
         let json: serde_json::Value = resp.json().unwrap();
         if !self.allow_execution_failures {
-            assert_eq!(json.get("error"), None);
+            assert_eq!(
+                json.get("error"),
+                None,
+                "request: {}\njson: {}",
+                request,
+                json
+            );
         }
         let rpc_resp: JsonRpcResponse =
             serde_json::from_value(json).expect("should be valid JsonRpcResponse");

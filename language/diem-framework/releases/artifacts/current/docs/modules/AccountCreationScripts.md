@@ -192,7 +192,6 @@ This is emitted on the new Child VASPS's <code><a href="DiemAccount.md#0x1_DiemA
         payee: child_address,
         amount: child_initial_balance,
         metadata: x"",
-        metadata_signature: x""
     };
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateChildVASPAccountEnsures">DiemAccount::CreateChildVASPAccountEnsures</a>&lt;CoinType&gt;{
     parent_addr: parent_addr,

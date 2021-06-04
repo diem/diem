@@ -2163,6 +2163,57 @@ pub enum ScriptFunctionCall {
     InitializeDiemConsensusConfig { sliding_nonce: u64 },
 
     /// # Summary
+    /// Transfers a given number of coins in a specified currency from one account to another by multi-agent transaction.
+    /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
+    /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
+    /// agreed to receive the coins.  This transaction can be sent by any account that can hold a
+    /// balance, and to any account that can hold a balance. Both accounts must hold balances in the
+    /// currency being transacted.
+    ///
+    /// # Technical Description
+    ///
+    /// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
+    /// `metadata`.
+    /// Dual attestation is not applied to this script as payee is also a signer of the transaction.
+    /// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
+    ///
+    /// # Events
+    /// Successful execution of this script emits two events:
+    /// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
+    /// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
+    ///
+    /// # Parameters
+    /// | Name                 | Type         | Description                                                                                                                  |
+    /// | ------               | ------       | -------------                                                                                                                |
+    /// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
+    /// | `payer`              | `signer`     | The signer of the sending account that coins are being transferred from.                                                     |
+    /// | `payee`              | `signer`     | The signer of the receiving account that the coins are being transferred to.                                                 |
+    /// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                     | Description                                                                                                                         |
+    /// | ----------------           | --------------                                   | -------------                                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`       | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`             | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`             | `amount` is zero.                                                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`             | No account exists at the `payee` address.                                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+    /// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`        | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+    ///
+    /// # Related Scripts
+    /// * `AccountCreationScripts::create_child_vasp_account`
+    /// * `AccountCreationScripts::create_parent_vasp_account`
+    /// * `AccountAdministrationScripts::add_currency_to_account`
+    /// * `PaymentScripts::peer_to_peer_with_metadata`
+    PeerToPeerBySigners {
+        currency: TypeTag,
+        amount: u64,
+        metadata: Bytes,
+    },
+
+    /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
     /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
     /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
@@ -2216,6 +2267,7 @@ pub enum ScriptFunctionCall {
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
+    /// * `PaymentScripts::peer_to_peer_by_signers`
     PeerToPeerWithMetadata {
         currency: TypeTag,
         payee: AccountAddress,
@@ -3457,6 +3509,11 @@ impl ScriptFunctionCall {
             InitializeDiemConsensusConfig { sliding_nonce } => {
                 encode_initialize_diem_consensus_config_script_function(sliding_nonce)
             }
+            PeerToPeerBySigners {
+                currency,
+                amount,
+                metadata,
+            } => encode_peer_to_peer_by_signers_script_function(currency, amount, metadata),
             PeerToPeerWithMetadata {
                 currency,
                 payee,
@@ -4576,6 +4633,70 @@ pub fn encode_initialize_diem_consensus_config_script_function(
 }
 
 /// # Summary
+/// Transfers a given number of coins in a specified currency from one account to another by multi-agent transaction.
+/// Transfers over a specified amount defined on-chain that are between two different VASPs, or
+/// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
+/// agreed to receive the coins.  This transaction can be sent by any account that can hold a
+/// balance, and to any account that can hold a balance. Both accounts must hold balances in the
+/// currency being transacted.
+///
+/// # Technical Description
+///
+/// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
+/// `metadata`.
+/// Dual attestation is not applied to this script as payee is also a signer of the transaction.
+/// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
+///
+/// # Events
+/// Successful execution of this script emits two events:
+/// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
+/// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
+///
+/// # Parameters
+/// | Name                 | Type         | Description                                                                                                                  |
+/// | ------               | ------       | -------------                                                                                                                |
+/// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
+/// | `payer`              | `signer`     | The signer of the sending account that coins are being transferred from.                                                     |
+/// | `payee`              | `signer`     | The signer of the receiving account that the coins are being transferred to.                                                 |
+/// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                     | Description                                                                                                                         |
+/// | ----------------           | --------------                                   | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`       | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`             | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`             | `amount` is zero.                                                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`             | No account exists at the `payee` address.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+/// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`        | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+///
+/// # Related Scripts
+/// * `AccountCreationScripts::create_child_vasp_account`
+/// * `AccountCreationScripts::create_parent_vasp_account`
+/// * `AccountAdministrationScripts::add_currency_to_account`
+/// * `PaymentScripts::peer_to_peer_with_metadata`
+pub fn encode_peer_to_peer_by_signers_script_function(
+    currency: TypeTag,
+    amount: u64,
+    metadata: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("PaymentScripts").to_owned(),
+        ),
+        ident_str!("peer_to_peer_by_signers").to_owned(),
+        vec![currency],
+        vec![
+            bcs::to_bytes(&amount).unwrap(),
+            bcs::to_bytes(&metadata).unwrap(),
+        ],
+    ))
+}
+
+/// # Summary
 /// Transfers a given number of coins in a specified currency from one account to another.
 /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
 /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
@@ -4629,6 +4750,7 @@ pub fn encode_initialize_diem_consensus_config_script_function(
 /// * `AccountCreationScripts::create_child_vasp_account`
 /// * `AccountCreationScripts::create_parent_vasp_account`
 /// * `AccountAdministrationScripts::add_currency_to_account`
+/// * `PaymentScripts::peer_to_peer_by_signers`
 pub fn encode_peer_to_peer_with_metadata_script_function(
     currency: TypeTag,
     payee: AccountAddress,
@@ -7696,6 +7818,20 @@ fn decode_initialize_diem_consensus_config_script_function(
     }
 }
 
+fn decode_peer_to_peer_by_signers_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::PeerToPeerBySigners {
+            currency: script.ty_args().get(0)?.clone(),
+            amount: bcs::from_bytes(script.args().get(0)?).ok()?,
+            metadata: bcs::from_bytes(script.args().get(1)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_peer_to_peer_with_metadata_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -8483,6 +8619,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "SystemAdministrationScriptsinitialize_diem_consensus_config".to_string(),
             Box::new(decode_initialize_diem_consensus_config_script_function),
+        );
+        map.insert(
+            "PaymentScriptspeer_to_peer_by_signers".to_string(),
+            Box::new(decode_peer_to_peer_by_signers_script_function),
         );
         map.insert(
             "PaymentScriptspeer_to_peer_with_metadata".to_string(),

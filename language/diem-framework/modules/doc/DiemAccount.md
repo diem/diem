@@ -32,6 +32,7 @@ before and after every transaction.
 -  [Function `extract_withdraw_capability`](#0x1_DiemAccount_extract_withdraw_capability)
 -  [Function `restore_withdraw_capability`](#0x1_DiemAccount_restore_withdraw_capability)
 -  [Function `pay_from`](#0x1_DiemAccount_pay_from)
+-  [Function `pay_by_signers`](#0x1_DiemAccount_pay_by_signers)
 -  [Function `rotate_authentication_key`](#0x1_DiemAccount_rotate_authentication_key)
     -  [Access Control](#@Access_Control_2)
 -  [Function `extract_key_rotation_capability`](#0x1_DiemAccount_extract_key_rotation_capability)
@@ -995,7 +996,7 @@ Depending on the <code>is_withdrawal</code> flag passed in we determine whether 
 Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>payee</code> with the attached <code>metadata</code>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>&lt;Token: store&gt;(payer: address, payee: address, to_deposit: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>&lt;Token: store&gt;(payer: address, payee: address, to_deposit: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;Token&gt;, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;, dual_attestation: bool)
 </code></pre>
 
 
@@ -1009,7 +1010,8 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
     payee: address,
     to_deposit: <a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&gt;,
     metadata: vector&lt;u8&gt;,
-    metadata_signature: vector&lt;u8&gt;
+    metadata_signature: vector&lt;u8&gt;,
+    dual_attestation: bool,
 ) <b>acquires</b> <a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>, <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>, <a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_operating">DiemTimestamp::assert_operating</a>();
     <a href="AccountFreezing.md#0x1_AccountFreezing_assert_not_frozen">AccountFreezing::assert_not_frozen</a>(payee);
@@ -1025,10 +1027,13 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
         <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a>)
     );
 
-    // Check that the payment complies <b>with</b> dual attestation rules
-    <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">DualAttestation::assert_payment_ok</a>&lt;Token&gt;(
-        payer, payee, deposit_value, <b>copy</b> metadata, metadata_signature
-    );
+    <b>if</b> (dual_attestation) {
+        // Check that the payment complies <b>with</b> dual attestation rules
+        <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">DualAttestation::assert_payment_ok</a>&lt;Token&gt;(
+            payer, payee, deposit_value, <b>copy</b> metadata, metadata_signature
+        );
+    };
+
     // Ensure that this deposit is compliant <b>with</b> the account limits on
     // this account.
     <b>if</b> (<a href="DiemAccount.md#0x1_DiemAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>)) {
@@ -1086,6 +1091,7 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;{amount: amount};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt;{amount: amount};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEmits">DepositEmits</a>&lt;Token&gt;{amount: amount};
+<b>include</b> dual_attestation ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Token&gt;{value: amount};
 </code></pre>
 
 
@@ -1098,7 +1104,6 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
     payer: address;
     payee: address;
     amount: u64;
-    metadata_signature: vector&lt;u8&gt;;
     metadata: vector&lt;u8&gt;;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIfRestricted">DepositAbortsIfRestricted</a>&lt;Token&gt;;
     <b>include</b> <a href="AccountFreezing.md#0x1_AccountFreezing_AbortsIfFrozen">AccountFreezing::AbortsIfFrozen</a>{account: payee};
@@ -1130,11 +1135,9 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
     payer: address;
     payee: address;
     amount: u64;
-    metadata_signature: vector&lt;u8&gt;;
     metadata: vector&lt;u8&gt;;
     <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
     <b>aborts_if</b> amount == 0 <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-    <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Token&gt;{value: amount};
     <b>include</b>
         <a href="DiemAccount.md#0x1_DiemAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>) ==&gt;
         <a href="AccountLimits.md#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">AccountLimits::UpdateDepositLimitsAbortsIf</a>&lt;Token&gt; {
@@ -1217,7 +1220,7 @@ Sender should be treasury compliance account and receiver authorized DD.
     );
     // Use the reserved address <b>as</b> the payer because the funds did not come from an existing
     // balance
-    <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), designated_dealer_address, coin, x"", x"")
+    <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), designated_dealer_address, coin, x"", x"", <b>false</b>)
 }
 </code></pre>
 
@@ -1255,7 +1258,7 @@ Sender should be treasury compliance account and receiver authorized DD.
     tier_index: u64;
     <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintAbortsIf">DesignatedDealer::TieredMintAbortsIf</a>&lt;Token&gt;{dd_addr: designated_dealer_address, amount: mint_amount};
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{payer: <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(),
-        payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
+        payee: designated_dealer_address, amount: mint_amount, metadata: x""};
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;{payee: designated_dealer_address, amount: mint_amount};
 }
 </code></pre>
@@ -1341,7 +1344,7 @@ The balance of designated dealer increases by <code>amount</code>.
     <b>let</b> coin = <a href="Diem.md#0x1_Diem_cancel_burn">Diem::cancel_burn</a>&lt;Token&gt;(account, preburn_address, amount);
     // record both sender and recipient <b>as</b> `preburn_address`: the coins are moving from
     // `preburn_address`'s `Preburn` <b>resource</b> <b>to</b> its balance
-    <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>(preburn_address, preburn_address, coin, x"", x"")
+    <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>(preburn_address, preburn_address, coin, x"", x"", <b>false</b>)
 }
 </code></pre>
 
@@ -1382,7 +1385,6 @@ The balance of designated dealer increases by <code>amount</code>.
         payee: preburn_address,
         amount: amount,
         metadata: x"",
-        metadata_signature: x""
     };
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;{payee: preburn_address, amount: amount};
 }
@@ -1930,7 +1932,8 @@ attestation protocol
         payee,
         <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">withdraw_from</a>(cap, payee, amount, <b>copy</b> metadata),
         metadata,
-        metadata_signature
+        metadata_signature,
+        <b>true</b>
     );
 }
 </code></pre>
@@ -1946,29 +1949,102 @@ attestation protocol
 
 <pre><code><b>pragma</b> opaque;
 <b>let</b> payer = cap.account_address;
-<b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
-<b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee);
-<b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
-<b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
-<b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer));
-<b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
-<b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(payer);
-<b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(payee);
-<b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
-<b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
-<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
-    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
-<b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events,
-                            <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events));
-<b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events,
-                            <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events));
-<b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events,
-                            <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events));
-<b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events,
-                            <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events));
-<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">PayFromAbortsIf</a>&lt;Token&gt;;
-<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEnsures">PayFromEnsures</a>&lt;Token&gt;{payer};
-<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEmits">PayFromEmits</a>&lt;Token&gt;;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromWithoutDualAttestation">PayFromWithoutDualAttestation</a>&lt;Token&gt;;
+<b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Token&gt;{value: amount};
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemAccount_pay_by_signers"></a>
+
+## Function `pay_by_signers`
+
+Withdraw <code>amount</code> Diem<Token> from the address embedded in <code><a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a></code> and
+deposits it into the <code>payee</code>'s account balance.
+The included <code>metadata</code> will appear in the <code><a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">SentPaymentEvent</a></code> and <code><a href="DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a></code>.
+As <code>payee</code> is also signer of the transaction, no metadata signature is required for dual attestation.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_pay_by_signers">pay_by_signers</a>&lt;Token: store&gt;(cap: &<a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">DiemAccount::WithdrawCapability</a>, payee: &signer, amount: u64, metadata: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_pay_by_signers">pay_by_signers</a>&lt;Token: store&gt;(
+    cap: &<a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>,
+    payee: &signer,
+    amount: u64,
+    metadata: vector&lt;u8&gt;,
+) <b>acquires</b> <a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>, <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>, <a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    <b>let</b> payee_address = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(payee);
+    <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>&lt;Token&gt;(
+        *&cap.account_address,
+        payee_address,
+        <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">withdraw_from</a>(cap, payee_address, amount, <b>copy</b> metadata),
+        metadata,
+        x"",
+        <b>false</b>
+    );
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromWithoutDualAttestation">PayFromWithoutDualAttestation</a>&lt;Token&gt;{
+    payer: cap.account_address,
+    payee: <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payee)
+};
+</code></pre>
+
+
+
+
+<a name="0x1_DiemAccount_PayFromWithoutDualAttestation"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromWithoutDualAttestation">PayFromWithoutDualAttestation</a>&lt;Token&gt; {
+    payer: address;
+    payee: address;
+    amount: u64;
+    metadata: vector&lt;u8&gt;;
+    <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
+    <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee);
+    <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
+    <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
+    <b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer));
+    <b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
+    <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(payer);
+    <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(payee);
+    <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
+    <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
+    <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
+        == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
+    <b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events,
+                                <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events));
+    <b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events,
+                                <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events));
+    <b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events,
+                                <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events));
+    <b>ensures</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event_spec_guid_eq">Event::spec_guid_eq</a>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events,
+                                <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events));
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">PayFromAbortsIf</a>&lt;Token&gt;;
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEnsures">PayFromEnsures</a>&lt;Token&gt;{payer};
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEmits">PayFromEmits</a>&lt;Token&gt;;
+}
 </code></pre>
 
 
@@ -1982,7 +2058,6 @@ attestation protocol
     payee: address;
     amount: u64;
     metadata: vector&lt;u8&gt;;
-    metadata_signature: vector&lt;u8&gt;;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{payer: cap.account_address};
     <b>include</b> cap.account_address != payee ==&gt; <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;Token&gt;;
@@ -2000,7 +2075,6 @@ attestation protocol
     payee: address;
     amount: u64;
     metadata: vector&lt;u8&gt;;
-    metadata_signature: vector&lt;u8&gt; ;
     <b>let</b> payer = cap.account_address;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIfRestricted">DepositAbortsIfRestricted</a>&lt;Token&gt;{payer: cap.account_address};
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromBalanceNoLimitsAbortsIf">WithdrawFromBalanceNoLimitsAbortsIf</a>&lt;Token&gt;{payer, balance: <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer)};
@@ -4818,7 +4892,7 @@ only <code><a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">Self::withdraw
 
 <pre><code><b>apply</b> <a href="DiemAccount.md#0x1_DiemAccount_BalanceNotDecrease">BalanceNotDecrease</a>&lt;Token&gt; <b>to</b> *&lt;Token&gt;
     <b>except</b> withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
-        preburn, pay_from, epilogue_common, epilogue, failure_epilogue, success_epilogue;
+        preburn, pay_from, pay_by_signers, epilogue_common, epilogue, failure_epilogue, success_epilogue;
 </code></pre>
 
 

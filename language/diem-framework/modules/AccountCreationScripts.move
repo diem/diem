@@ -104,7 +104,6 @@ module AccountCreationScripts {
                 payee: child_address,
                 amount: child_initial_balance,
                 metadata: x"",
-                metadata_signature: x""
             };
         include DiemAccount::CreateChildVASPAccountEnsures<CoinType>{
             parent_addr: parent_addr,
