@@ -415,7 +415,7 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
     let output2 = executor
         .execute_block((block2_id, block2.clone()), block1_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output2, block2_id, vec![&signer]);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, &output2, block2_id, vec![&signer]);
     executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();

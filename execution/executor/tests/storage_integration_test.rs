@@ -379,7 +379,7 @@ fn test_change_publishing_option_to_custom() {
         .execute_block((block2_id, block2.clone()), executor.committed_block_id())
         .unwrap();
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output2, block2_id, vec![&signer]);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, &output2, block2_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();

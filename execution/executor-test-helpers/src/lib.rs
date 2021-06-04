@@ -56,7 +56,7 @@ pub fn gen_block_id(index: u8) -> HashValue {
 
 pub fn gen_ledger_info_with_sigs(
     epoch: u64,
-    output: StateComputeResult,
+    output: &StateComputeResult,
     commit_block_id: HashValue,
     signer: Vec<&ValidatorSigner>,
 ) -> LedgerInfoWithSignatures {
