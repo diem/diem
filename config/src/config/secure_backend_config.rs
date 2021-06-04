@@ -32,6 +32,17 @@ impl SecureBackend {
             SecureBackend::InMemoryStorage => None,
         }
     }
+
+    pub fn clear_namespace(&mut self) {
+        match self {
+            SecureBackend::GitHub(GitHubConfig { namespace, .. })
+            | SecureBackend::Vault(VaultConfig { namespace, .. })
+            | SecureBackend::OnDiskStorage(OnDiskStorageConfig { namespace, .. }) => {
+                *namespace = None;
+            }
+            SecureBackend::InMemoryStorage => {}
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
