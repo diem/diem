@@ -1,13 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{execution_correctness::ExecutionCorrectness, id_and_transactions_from_block};
+use crate::execution_correctness::ExecutionCorrectness;
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use diem_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
 use diem_infallible::Mutex;
-use diem_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
-};
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{BlockExecutor, Error, StateComputeResult};
 use std::{boxed::Box, sync::Arc};
 
@@ -53,9 +51,10 @@ impl ExecutionCorrectness for LocalClient {
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
         let mut local = self.internal.lock();
-        let mut result = local
-            .block_executor
-            .execute_block(id_and_transactions_from_block(&block), parent_block_id)?;
+        let mut result = local.block_executor.execute_block(
+            (block.id(), block.transactions_to_execute()),
+            parent_block_id,
+        )?;
         if let Some(prikey) = local.prikey.as_ref() {
             let vote_proposal = VoteProposal::new(
                 result.extension_proof(),
@@ -72,7 +71,7 @@ impl ExecutionCorrectness for LocalClient {
         &mut self,
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
+    ) -> Result<(), Error> {
         self.internal
             .lock()
             .block_executor

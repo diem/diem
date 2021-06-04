@@ -3,7 +3,7 @@
 
 use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
-use consensus_types::block::Block;
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -13,7 +13,7 @@ use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
 use state_sync::client::StateSyncClient;
-use std::boxed::Box;
+use std::{boxed::Box, sync::Arc};
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
@@ -66,20 +66,29 @@ impl StateComputer for ExecutionProxy {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     async fn commit(
         &self,
-        block_ids: Vec<HashValue>,
+        blocks: &[Arc<ExecutedBlock>],
         finality_proof: LedgerInfoWithSignatures,
     ) -> Result<(), ExecutionError> {
-        let (committed_txns, reconfig_events) = monitor!(
+        let mut block_ids = Vec::new();
+        let mut txns = Vec::new();
+        let mut reconfig_events = Vec::new();
+
+        for block in blocks {
+            block_ids.push(block.id());
+            txns.extend(block.transactions_to_commit());
+            reconfig_events.extend(block.compute_result().reconfig_events().to_vec());
+        }
+
+        monitor!(
             "commit_block",
             self.execution_correctness_client
                 .lock()
                 .commit_blocks(block_ids, finality_proof)?
         );
+
         if let Err(e) = monitor!(
             "notify_state_sync",
-            self.synchronizer
-                .commit(committed_txns, reconfig_events)
-                .await
+            self.synchronizer.commit(txns, reconfig_events).await
         ) {
             error!(error = ?e, "Failed to notify state synchronizer");
         }

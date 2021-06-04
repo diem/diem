@@ -3,10 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use consensus_types::block::Block;
-use diem_crypto::HashValue;
-use diem_types::transaction::Transaction;
-
 mod execution_correctness;
 mod execution_correctness_manager;
 mod local;
@@ -22,16 +18,3 @@ pub use crate::{
 
 #[cfg(test)]
 mod tests;
-
-fn id_and_transactions_from_block(block: &Block) -> (HashValue, Vec<Transaction>) {
-    let id = block.id();
-    let mut transactions = vec![Transaction::BlockMetadata(block.into())];
-    transactions.extend(
-        block
-            .payload()
-            .unwrap_or(&vec![])
-            .iter()
-            .map(|txn| Transaction::UserTransaction(txn.clone())),
-    );
-    (id, transactions)
-}

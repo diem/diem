@@ -212,14 +212,13 @@ fn test_executor_commit_twice() {
         .execute_block((block1_id, block1_txns), parent_block_id)
         .unwrap();
     let ledger_info = gen_ledger_info(5, output1.root_hash(), block1_id, 1);
-    let res = executor
+    executor
         .commit_blocks(vec![block1_id], ledger_info.clone())
         .unwrap();
     // commit with the same ledger info again.
-    let res_retry = executor
+    executor
         .commit_blocks(vec![block1_id], ledger_info)
         .unwrap();
-    assert_eq!(res, res_retry);
 }
 
 #[test]

@@ -146,14 +146,10 @@ fn test_reconfiguration() {
         vm_output.has_reconfiguration(),
         "StateComputeResult does not see a reconfiguration"
     );
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, vm_output, block_id, vec![&signer]);
-    let (_, reconfig_events) = executor
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, &vm_output, block_id, vec![&signer]);
+    executor
         .commit_blocks(vec![block_id], ledger_info_with_sigs)
         .unwrap();
-    assert!(
-        !reconfig_events.is_empty(),
-        "expected reconfiguration event"
-    );
 
     let (li, _epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
@@ -325,14 +321,10 @@ fn test_change_publishing_option_to_custom() {
         "StateComputeResult has a new validator set"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
-    let (_, reconfig_events) = executor
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, &output1, block1_id, vec![&signer]);
+    executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
-    assert!(
-        !reconfig_events.is_empty(),
-        "executor commit should return reconfig events for reconfiguration"
-    );
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
@@ -380,13 +372,9 @@ fn test_change_publishing_option_to_custom() {
         .unwrap();
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, &output2, block2_id, vec![&signer]);
-    let (_, reconfig_events) = executor
+    executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
-    assert!(
-        reconfig_events.is_empty(),
-        "expect executor to reutrn no reconfig events"
-    );
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(current_version).unwrap();

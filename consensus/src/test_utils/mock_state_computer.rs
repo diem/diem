@@ -5,7 +5,7 @@ use crate::{
     error::StateSyncError, state_replication::StateComputer, test_utils::mock_storage::MockStorage,
 };
 use anyhow::{format_err, Result};
-use consensus_types::{block::Block, common::Payload};
+use consensus_types::{block::Block, common::Payload, executed_block::ExecutedBlock};
 use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -56,13 +56,14 @@ impl StateComputer for MockStateComputer {
             None,
             vec![],
             vec![],
+            vec![],
         );
         Ok(result)
     }
 
     async fn commit(
         &self,
-        block_ids: Vec<HashValue>,
+        blocks: &[Arc<ExecutedBlock>],
         commit: LedgerInfoWithSignatures,
     ) -> Result<(), Error> {
         self.consensus_db
@@ -70,11 +71,11 @@ impl StateComputer for MockStateComputer {
 
         // mock sending commit notif to state sync
         let mut txns = vec![];
-        for block_id in block_ids {
+        for block in blocks {
             let mut payload = self
                 .block_cache
                 .lock()
-                .remove(&block_id)
+                .remove(&block.id())
                 .ok_or_else(|| format_err!("Cannot find block"))?;
             txns.append(&mut payload);
         }
@@ -119,12 +120,13 @@ impl StateComputer for EmptyStateComputer {
             None,
             vec![],
             vec![],
+            vec![],
         ))
     }
 
     async fn commit(
         &self,
-        _block_ids: Vec<HashValue>,
+        _blocks: &[Arc<ExecutedBlock>],
         _commit: LedgerInfoWithSignatures,
     ) -> Result<(), Error> {
         Ok(())

@@ -68,15 +68,11 @@ pub trait BlockExecutor: Send {
     /// and only `C` and `E` have signatures, we will send `A`, `B` and `C` in the first batch,
     /// then `D` and `E` later in the another batch.
     /// Commits a block and all its ancestors in a batch manner.
-    ///
-    /// Returns `Ok(Result<Vec<Transaction>, Vec<ContractEvents>)` if successful,
-    /// where Vec<Transaction> is a vector of transactions that were kept from the submitted blocks, and
-    /// Vec<ContractEvents> is a vector of reconfiguration events in the submitted blocks
     fn commit_blocks(
         &mut self,
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error>;
+    ) -> Result<(), Error>;
 }
 
 pub trait TransactionReplayer: Send {
@@ -128,6 +124,8 @@ pub struct StateComputeResult {
 
     /// The signature of the VoteProposal corresponding to this block.
     signature: Option<Ed25519Signature>,
+
+    reconfig_events: Vec<ContractEvent>,
 }
 
 impl StateComputeResult {
@@ -140,6 +138,7 @@ impl StateComputeResult {
         epoch_state: Option<EpochState>,
         compute_status: Vec<TransactionStatus>,
         transaction_info_hashes: Vec<HashValue>,
+        reconfig_events: Vec<ContractEvent>,
     ) -> Self {
         Self {
             root_hash,
@@ -150,6 +149,7 @@ impl StateComputeResult {
             epoch_state,
             compute_status,
             transaction_info_hashes,
+            reconfig_events,
             signature: None,
         }
     }
@@ -204,6 +204,10 @@ impl StateComputeResult {
 
     pub fn has_reconfiguration(&self) -> bool {
         self.epoch_state.is_some()
+    }
+
+    pub fn reconfig_events(&self) -> &[ContractEvent] {
+        &self.reconfig_events
     }
 
     pub fn signature(&self) -> &Option<Ed25519Signature> {

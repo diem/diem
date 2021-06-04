@@ -633,12 +633,8 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // 5. Cache maintenance.
         let output_trees = output.executed_trees().clone();
         if let Some(ledger_info_with_sigs) = &ledger_info_to_commit {
-            self.cache.update_block_tree_root(
-                output_trees,
-                ledger_info_with_sigs.ledger_info(),
-                vec![],
-                vec![],
-            );
+            self.cache
+                .update_block_tree_root(output_trees, ledger_info_with_sigs.ledger_info());
         } else {
             self.cache.update_synced_trees(output_trees);
         }
@@ -817,7 +813,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         &mut self,
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
+    ) -> Result<(), Error> {
         let _timer = DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
@@ -843,7 +839,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         }
 
         if num_txns_in_li == num_persistent_txns {
-            return Ok(self.cache.committed_txns_and_events());
+            return Ok(());
         }
 
         // All transactions that need to go to storage. In the above example, this means all the
@@ -945,14 +941,10 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             block.output().executed_trees().state_tree().prune()
         }
 
-        self.cache.prune(
-            ledger_info_with_sigs.ledger_info(),
-            committed_txns.clone(),
-            reconfig_events.clone(),
-        )?;
+        self.cache.prune(ledger_info_with_sigs.ledger_info())?;
 
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok((committed_txns, reconfig_events))
+        Ok(())
     }
 }
 

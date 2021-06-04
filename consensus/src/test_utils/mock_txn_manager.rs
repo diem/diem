@@ -74,6 +74,7 @@ impl TxnManager for MockTransactionManager {
                 compute_results.epoch_state().clone(),
                 mock_transaction_status(block.payload().map_or(0, |txns| txns.len())),
                 compute_results.transaction_info_hashes().clone(),
+                compute_results.reconfig_events().to_vec(),
             );
             assert!(self
                 .mempool_proxy

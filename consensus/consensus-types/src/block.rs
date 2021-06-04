@@ -10,9 +10,14 @@ use anyhow::{bail, ensure, format_err};
 use diem_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use diem_infallible::duration_since_epoch;
 use diem_types::{
-    account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
-    epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,
-    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress,
+    block_info::BlockInfo,
+    block_metadata::BlockMetadata,
+    epoch_state::EpochState,
+    ledger_info::LedgerInfo,
+    transaction::{Transaction, Version},
+    validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -281,6 +286,18 @@ impl Block {
             "Block id mismatch the hash"
         );
         Ok(())
+    }
+
+    pub fn transactions_to_execute(&self) -> Vec<Transaction> {
+        std::iter::once(Transaction::BlockMetadata(self.into()))
+            .chain(
+                self.payload()
+                    .unwrap_or(&Vec::new())
+                    .iter()
+                    .cloned()
+                    .map(Transaction::UserTransaction),
+            )
+            .collect()
     }
 }
 

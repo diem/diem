@@ -235,14 +235,10 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
     let output1 = executor
         .execute_block((block1_id, block1.clone()), parent_block_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
-    let (_, reconfig_events) = executor
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, &output1, block1_id, vec![&signer]);
+    executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
-    assert!(
-        reconfig_events.is_empty(),
-        "expected no reconfiguration event from executor commit"
-    );
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();

@@ -1100,6 +1100,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "executor-types",
+ "itertools 0.10.0",
  "mirai-annotations",
  "proptest",
  "serde",

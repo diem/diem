@@ -156,6 +156,7 @@ impl BlockStore {
             None,                     /* epoch_state */
             vec![],                   /* compute_status */
             vec![],                   /* txn_infos */
+            vec![],                   /* reconfig_events */
         );
 
         let executed_root_block = ExecutedBlock::new(
@@ -215,10 +216,7 @@ impl BlockStore {
             .unwrap_or_else(Vec::new);
 
         self.state_computer
-            .commit(
-                blocks_to_commit.iter().map(|b| b.id()).collect(),
-                finality_proof,
-            )
+            .commit(&blocks_to_commit, finality_proof)
             .await
             .expect("Failed to persist commit");
         update_counters_for_committed_blocks(&blocks_to_commit);

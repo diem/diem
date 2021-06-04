@@ -3,9 +3,7 @@
 
 use consensus_types::block::Block;
 use diem_crypto::HashValue;
-use diem_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
-};
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error, StateComputeResult};
 
 /// Interface for ExecutionCorrectness.
@@ -26,5 +24,5 @@ pub trait ExecutionCorrectness: Send {
         &mut self,
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error>;
+    ) -> Result<(), Error>;
 }

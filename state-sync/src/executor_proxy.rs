@@ -742,14 +742,10 @@ mod tests {
         // Commit block
         let ledger_info_with_sigs =
             gen_ledger_info_with_sigs(block_id.into(), &output, block_hash, vec![]);
-        let (_, reconfig_events) = block_executor
+        block_executor
             .commit_blocks(vec![block_hash], ledger_info_with_sigs.clone())
             .unwrap();
-        assert!(
-            !reconfig_events.is_empty(),
-            "Expected reconfig events from block commit!"
-        );
 
-        (reconfig_events, ledger_info_with_sigs)
+        (output.reconfig_events().to_vec(), ledger_info_with_sigs)
     }
 }

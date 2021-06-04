@@ -30,7 +30,7 @@ pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25
     }
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, &result, block_id, vec![&signer]);
-    let (_, _) = executor
+    executor
         .commit_blocks(vec![block_id], ledger_info_with_sigs)
         .unwrap();
 }
