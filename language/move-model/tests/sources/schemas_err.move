@@ -85,4 +85,10 @@ module 0x42::M {
         include true ==> 23;
         include Condition || Condition;
     }
+
+    fun var_in_fun_not_schema(x: u64): u64 { x }
+    spec var_in_fun_not_schema {
+        // TODO uncomment the following line to see the panic
+        // include UndeclaredVar;
+    }
 }
