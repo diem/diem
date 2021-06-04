@@ -16,7 +16,7 @@ use std::{
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
 /// By design, the lower part of EventKey is the same as account address.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventKey([u8; EventKey::LENGTH]);
 
@@ -138,6 +138,32 @@ impl<'de> de::Deserialize<'de> for EventKey {
     }
 }
 
+impl fmt::LowerHex for EventKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+
+        for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for EventKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:x}", self)
+    }
+}
+
+impl fmt::Debug for EventKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "EventKey({:x})", self)
+    }
+}
+
 impl TryFrom<&[u8]> for EventKey {
     type Error = EventKeyParseError;
 
@@ -206,27 +232,6 @@ impl EventHandle {
         }
     }
 }
-
-impl fmt::LowerHex for EventKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-
-        for byte in &self.0 {
-            write!(f, "{:02x}", byte)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl fmt::Display for EventKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:x}", self)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::EventKey;
