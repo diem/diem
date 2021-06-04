@@ -1,0 +1,16 @@
+error: undeclared `M::x`
+
+   ┌── tests/sources/use_erroneous_schema.move:5:17 ───
+   │
+ 5 │         ensures x > 0;
+   │                 ^
+   │
+
+error: no matching declaration of `<`
+
+    ┌── tests/sources/use_erroneous_schema.move:13:17 ───
+    │
+ 13 │         ensures 2 < true;
+    │                 ^^^^^^^^
+    │
+    = outruled candidate `<(num, num): bool` (expected `num` but found `bool` for argument 2)

@@ -324,7 +324,9 @@ pub trait ExpRewriterFunctions {
                     exp
                 }
             }
-            Invalid(..) => unreachable!(),
+            // This can happen since we are calling the rewriter during type checking, and
+            // we may have encountered an error which is represented as an Invalid expression.
+            Invalid(id) => Invalid(*id).into_exp(),
         }
     }
 
