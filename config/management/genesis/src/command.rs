@@ -22,6 +22,8 @@ pub enum Command {
     OwnerKey(crate::key::OwnerKey),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(crate::layout::SetLayout),
+    #[structopt(about = "Submits the initial set of Move modules to be published in genesis")]
+    SetMoveModules(crate::move_modules::SetMoveModules),
     #[structopt(about = "Sets the validator operator chosen by the owner")]
     SetOperator(crate::validator_operator::ValidatorOperator),
     #[structopt(about = "Submits an Ed25519PublicKey for the treasury root")]
@@ -41,6 +43,7 @@ pub enum CommandName {
     OperatorKey,
     OwnerKey,
     SetLayout,
+    SetMoveModules,
     SetOperator,
     TreasuryComplianceKey,
     ValidatorConfig,
@@ -57,6 +60,7 @@ impl From<&Command> for CommandName {
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SetMoveModules(_) => CommandName::SetMoveModules,
             Command::SetOperator(_) => CommandName::SetOperator,
             Command::TreasuryComplianceKey(_) => CommandName::TreasuryComplianceKey,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
@@ -75,6 +79,7 @@ impl std::fmt::Display for CommandName {
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
+            CommandName::SetMoveModules => "set-move-modules",
             CommandName::SetOperator => "set-operator",
             CommandName::TreasuryComplianceKey => "treasury-compliance-key",
             CommandName::ValidatorConfig => "validator-config",
@@ -96,6 +101,7 @@ impl Command {
             Command::OperatorKey(_) => self.operator_key().map(|_| "Success!".to_string()),
             Command::OwnerKey(_) => self.owner_key().map(|_| "Success!".to_string()),
             Command::SetLayout(_) => self.set_layout().map(|_| "Success!".to_string()),
+            Command::SetMoveModules(_) => self.set_move_modules().map(|_| "Success!".to_string()),
             Command::SetOperator(_) => self.set_operator().map(|_| "Success!".to_string()),
             Command::TreasuryComplianceKey(_) => self
                 .treasury_compliance_key()
@@ -131,6 +137,10 @@ impl Command {
 
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
         execute_command!(self, Command::SetLayout, CommandName::SetLayout)
+    }
+
+    pub fn set_move_modules(self) -> Result<crate::move_modules::MoveModules, Error> {
+        execute_command!(self, Command::SetMoveModules, CommandName::SetMoveModules)
     }
 
     pub fn set_operator(self) -> Result<String, Error> {

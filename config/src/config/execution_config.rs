@@ -63,7 +63,9 @@ impl Default for ExecutionConfig {
 
 impl ExecutionConfig {
     pub fn load(&mut self, root_dir: &RootPath) -> Result<(), Error> {
+        println!("attempting to load genesis file");
         if !self.genesis_file_location.as_os_str().is_empty() {
+            println!("foud nonemtpy");
             let path = root_dir.full_path(&self.genesis_file_location);
             let mut file = File::open(&path).map_err(|e| Error::IO("genesis".into(), e))?;
             let mut buffer = vec![];

@@ -26,6 +26,8 @@ pub struct Genesis {
     #[structopt(flatten)]
     pub backend: SharedBackend,
     #[structopt(long)]
+    pub modules: Vec<PathBuf>,
+    #[structopt(long)]
     pub path: Option<PathBuf>,
 }
 
