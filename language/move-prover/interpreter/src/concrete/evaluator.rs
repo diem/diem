@@ -1,14 +1,19 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use itertools::Itertools;
 use num::{BigInt, ToPrimitive, Zero};
 use std::{cell::Cell, collections::BTreeMap, rc::Rc};
 
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
 use move_core_types::account_address::AccountAddress;
 use move_model::{
-    ast::{Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, SpecFunDecl, TempIndex, Value},
+    ast::{
+        Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind, SpecFunDecl, TempIndex,
+        Value,
+    },
     model::{FieldId, ModuleEnv, ModuleId, NodeId, SpecFunId, StructId},
+    ty as MTy,
 };
 
 use crate::{
@@ -16,10 +21,10 @@ use crate::{
         local_state::LocalState,
         player,
         settings::InterpreterSettings,
-        ty::{convert_model_base_type, BaseType},
+        ty::{convert_model_base_type, convert_model_struct_type, BaseType, StructInstantiation},
         value::{BaseValue, EvalState, GlobalState, TypedValue},
     },
-    shared::variant::choose_variant,
+    shared::{ident::StructIdent, variant::choose_variant},
 };
 
 //**************************************************************************************************
@@ -195,9 +200,8 @@ impl<'env> Evaluator<'env> {
                 self.evaluate_if_then_else(cond, t_exp, f_exp)?
             }
             ExpData::Invoke(_, def, args) => self.evaluate_invocation(def, args)?,
-            ExpData::Quant(..) => {
-                // TODO (to avoid test case failure)
-                return Err(BigInt::zero());
+            ExpData::Quant(_, kind, ranges, _triggers, constraint, body) => {
+                self.evaluate_quantifier(*kind, ranges, constraint.as_ref(), body)?
             }
             ExpData::Invalid(_) => unreachable!(),
             // should not appear in this context
@@ -568,6 +572,120 @@ impl<'env> Evaluator<'env> {
             self.global_state,
         );
         evaluator.evaluate(stmt)
+    }
+
+    fn prepare_range(&self, exp: &Exp) -> EvalResult<Vec<BaseValue>> {
+        let env = self.target.global_env();
+        let vals = match exp.as_ref() {
+            // case: range
+            ExpData::Call(_, Operation::Range, _) | ExpData::Call(_, Operation::RangeVec, _) => {
+                let (lower, upper) = self.unroll_range(exp)?;
+                let mut vals = vec![];
+                let mut i = lower;
+                while i < upper {
+                    vals.push(BaseValue::Int(i.clone()));
+                    i += 1;
+                }
+                vals
+            }
+            // case: type domain
+            ExpData::Call(node_id, Operation::TypeDomain, _) => match env.get_node_type(*node_id) {
+                MTy::Type::TypeDomain(ty) => self.unroll_type_domain(&ty),
+                _ => unreachable!(),
+            },
+            // case: resource domain
+            ExpData::Call(node_id, Operation::ResourceDomain, _) => {
+                match env.get_node_type(*node_id) {
+                    MTy::Type::ResourceDomain(module_id, struct_id, inst_opt) => match inst_opt {
+                        None => {
+                            let struct_env = env.get_struct(module_id.qualified(struct_id));
+                            let struct_ident = StructIdent::new(&struct_env);
+                            self.unroll_resource_domain_by_ident(&struct_ident)
+                        }
+                        Some(ty_args) => {
+                            let struct_inst = convert_model_struct_type(
+                                env,
+                                module_id,
+                                struct_id,
+                                &ty_args,
+                                self.ty_args,
+                            );
+                            self.unroll_resource_domain_by_inst(&struct_inst)
+                        }
+                    },
+                    _ => unreachable!(),
+                }
+            }
+            // cont.
+            _ => match env.get_node_type(exp.node_id()) {
+                // case: vector
+                MTy::Type::Vector(_) => self.evaluate(exp)?.into_vector(),
+                _ => unreachable!(),
+            },
+        };
+        Ok(vals)
+    }
+
+    fn evaluate_quantifier(
+        &self,
+        kind: QuantKind,
+        ranges: &[(LocalVarDecl, Exp)],
+        constraint: Option<&Exp>,
+        body: &Exp,
+    ) -> EvalResult<BaseValue> {
+        let env = self.target.global_env();
+
+        let mut var_vec = vec![];
+        let mut vals_vec = vec![];
+        for (r_var, r_exp) in ranges {
+            var_vec.push(r_var);
+            let r_vals = self.prepare_range(r_exp)?;
+            vals_vec.push(r_vals);
+        }
+
+        let mut loop_results = vec![];
+        for val_vec in vals_vec.into_iter().multi_cartesian_product() {
+            let mut exp_state = ExpState::default();
+            for (var, val) in var_vec.iter().zip(val_vec.into_iter()) {
+                if cfg!(debug_assertions) {
+                    assert!(var.binding.is_none());
+                }
+                let name = env.symbol_pool().string(var.name).to_string();
+                exp_state.add_var(name, val);
+            }
+
+            let evaluator = Evaluator::new(
+                self.holder,
+                self.target,
+                self.ty_args,
+                self.level.get(),
+                exp_state,
+                self.eval_state,
+                self.local_state,
+                self.global_state,
+            );
+            let run_body = match constraint {
+                None => true,
+                Some(c_exp) => evaluator.evaluate(c_exp)?.into_bool(),
+            };
+            if run_body {
+                loop_results.push(evaluator.evaluate(body)?);
+            }
+        }
+
+        let quant_result = match kind {
+            QuantKind::Forall => {
+                let v = loop_results.into_iter().all(|r| r.into_bool());
+                BaseValue::mk_bool(v)
+            }
+            QuantKind::Exists => {
+                let v = loop_results.into_iter().any(|r| r.into_bool());
+                BaseValue::mk_bool(v)
+            }
+            // TODO (mengxu) support choose operators
+            QuantKind::Choose | QuantKind::ChooseMin => unimplemented!(),
+        };
+        Ok(quant_result)
     }
 
     //
@@ -1115,6 +1233,26 @@ impl<'env> Evaluator<'env> {
             _ => unreachable!(),
         };
         Ok(range)
+    }
+
+    fn unroll_type_domain(&self, ty: &MTy::Type) -> Vec<BaseValue> {
+        match ty {
+            MTy::Type::Primitive(MTy::PrimitiveType::Address) => self
+                .eval_state
+                .all_addresses()
+                .into_iter()
+                .map(BaseValue::Address)
+                .collect(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn unroll_resource_domain_by_inst(&self, inst: &StructInstantiation) -> Vec<BaseValue> {
+        self.eval_state.all_resources_by_inst(inst)
+    }
+
+    fn unroll_resource_domain_by_ident(&self, ident: &StructIdent) -> Vec<BaseValue> {
+        self.eval_state.all_resources_by_ident(ident)
     }
 
     //

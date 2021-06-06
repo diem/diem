@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use num::{BigInt, ToPrimitive};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use move_core_types::{
     account_address::AccountAddress,
@@ -1189,5 +1189,50 @@ impl EvalState {
                 }
             }
         }
+    }
+
+    /// Return all addresses in the state
+    pub fn all_addresses(&self) -> BTreeSet<AccountAddress> {
+        self.saved_memory
+            .values()
+            .map(|v1| v1.values().map(|v2| v2.values().map(|v3| v3.keys())))
+            .flatten()
+            .flatten()
+            .flatten()
+            .copied()
+            .collect()
+    }
+
+    /// Return all resources with instantiation matching
+    pub fn all_resources_by_inst(&self, inst: &StructInstantiation) -> Vec<BaseValue> {
+        let mut resources = vec![];
+        for v1 in self.saved_memory.values() {
+            match v1.get(&inst.ident) {
+                None => (),
+                Some(v2) => match v2.get(inst) {
+                    None => (),
+                    Some(v3) => {
+                        resources.extend(v3.values().cloned());
+                    }
+                },
+            }
+        }
+        resources
+    }
+
+    /// Return all resources with identity matching
+    pub fn all_resources_by_ident(&self, ident: &StructIdent) -> Vec<BaseValue> {
+        let mut resources = vec![];
+        for v1 in self.saved_memory.values() {
+            match v1.get(ident) {
+                None => (),
+                Some(v2) => {
+                    for v3 in v2.values() {
+                        resources.extend(v3.values().cloned());
+                    }
+                }
+            }
+        }
+        resources
     }
 }

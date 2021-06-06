@@ -624,6 +624,7 @@ dependencies = [
  "datatest-stable",
  "diem-crypto",
  "diem-workspace-hack",
+ "itertools 0.10.0",
  "move-binary-format",
  "move-core-types",
  "move-model",
