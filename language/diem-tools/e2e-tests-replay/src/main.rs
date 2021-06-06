@@ -34,6 +34,10 @@ struct ReplayArgs {
     #[structopt(short = "x", long = "xrun")]
     xrun: bool,
 
+    /// Cross check the stackless VM against the Move VM without invoking the expression checker
+    #[structopt(short = "X", long = "xrun-shallow", conflicts_with = "xrun")]
+    xrun_shallow: bool,
+
     /// Verbose mode
     #[structopt(short = "v", long = "verbose")]
     verbose: Option<u64>,
@@ -77,11 +81,15 @@ pub fn main() -> Result<()> {
         warning: args.warning.map_or(false, |level| level > 0),
     };
 
-    let settings = if flags.verbose_vm {
+    let mut settings = if flags.verbose_vm {
         InterpreterSettings::verbose_default()
     } else {
         InterpreterSettings::default()
     };
+    if args.xrun_shallow {
+        settings.no_expr_check = true;
+    }
+
     let env = run_model_builder(&diem_stdlib_files(), &[])?;
     let interpreter = StacklessBytecodeInterpreter::new(&env, None, settings);
     for trace in args.trace_files {

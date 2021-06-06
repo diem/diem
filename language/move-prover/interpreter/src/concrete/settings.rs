@@ -3,6 +3,8 @@
 
 #[derive(Default, Clone)]
 pub struct InterpreterSettings {
+    /// skip expression checking
+    pub no_expr_check: bool,
     /// dump stepwise bytecode
     pub verbose_stepwise: bool,
     /// dump bytecode trace
@@ -17,6 +19,7 @@ impl InterpreterSettings {
             verbose_stepwise: true,
             verbose_bytecode: true,
             verbose_expression: true,
+            ..Default::default()
         }
     }
 }

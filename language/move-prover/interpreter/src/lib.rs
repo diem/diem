@@ -56,6 +56,9 @@ pub struct InterpreterOptions {
     #[structopt(long = "ty-args", parse(try_from_str = parse_type_tag))]
     pub ty_args: Vec<TypeTag>,
 
+    /// Skip checking of expressions
+    #[structopt(long = "no-expr-check")]
+    pub no_expr_check: bool,
     /// Level of verbosity
     #[structopt(short = "v", long = "verbose")]
     pub verbose: Option<u64>,
@@ -107,6 +110,7 @@ pub fn interpret_with_options(
 
     // collect settings
     let settings = InterpreterSettings {
+        no_expr_check: options.no_expr_check,
         verbose_stepwise: options.verbose.map_or(false, |level| level > 0),
         verbose_bytecode: options.verbose.map_or(false, |level| level > 1),
         verbose_expression: options.verbose.map_or(false, |level| level > 2),
@@ -201,7 +205,7 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
         let mut new_global_state = global_state.clone();
 
         // execute and convert results
-        let vm = Runtime::new(&self.targets);
+        let vm = Runtime::new(self.env, &self.targets);
         let vm_result = vm.execute(fun_env, ty_args, args, &mut new_global_state);
         let serialized_vm_result = vm_result.map(|rets| {
             rets.into_iter()

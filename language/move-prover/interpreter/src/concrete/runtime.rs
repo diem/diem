@@ -16,6 +16,7 @@ use move_model::{
 use crate::{
     concrete::{
         player,
+        settings::InterpreterSettings,
         ty::{
             convert_model_base_type, BaseType, IntType, PrimitiveType, StructField,
             StructInstantiation,
@@ -28,6 +29,7 @@ use crate::{
 /// A stackless bytecode runtime in charge of pre- and post-execution checking, conversion, and
 /// monitoring. The main, step-by-step interpretation loop is delegated to the `Player` instance.
 pub struct Runtime<'env> {
+    env: &'env GlobalEnv,
     functions: &'env FunctionTargetsHolder,
 }
 
@@ -37,8 +39,8 @@ impl<'env> Runtime<'env> {
     //
 
     /// Construct a runtime with all information pre-loaded.
-    pub fn new(functions: &'env FunctionTargetsHolder) -> Self {
-        Self { functions }
+    pub fn new(env: &'env GlobalEnv, functions: &'env FunctionTargetsHolder) -> Self {
+        Self { env, functions }
     }
 
     /// Execute a function (identified by `fun_id`) with given type arguments, arguments, and a
@@ -74,12 +76,16 @@ impl<'env> Runtime<'env> {
         args: &[TypedValue],
         global_state: &mut GlobalState,
     ) -> VMResult<Vec<TypedValue>> {
+        let settings = self
+            .env
+            .get_extension::<InterpreterSettings>()
+            .unwrap_or_default();
         player::entrypoint(
             self.functions,
             fun_target,
             ty_args,
             args.to_vec(),
-            /* skip_specs */ false,
+            settings.no_expr_check,
             /* level */ 1,
             global_state,
         )
