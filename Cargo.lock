@@ -4444,6 +4444,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-bytecode-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-workspace-hack",
+ "move-binary-format",
+ "move-core-types",
+ "petgraph",
+]
+
+[[package]]
 name = "move-bytecode-viewer"
 version = "0.1.0"
 dependencies = [
@@ -4475,13 +4486,13 @@ dependencies = [
  "disassembler",
  "include_dir",
  "move-binary-format",
+ "move-bytecode-utils",
  "move-core-types",
  "move-coverage",
  "move-lang",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
- "petgraph",
  "read-write-set",
  "resource-viewer",
  "structopt 0.3.21",
@@ -6021,6 +6032,7 @@ dependencies = [
  "bytecode",
  "diem-workspace-hack",
  "move-binary-format",
+ "move-bytecode-utils",
  "move-core-types",
  "move-model",
  "move-vm-runtime",
@@ -8203,6 +8215,7 @@ dependencies = [
  "diem-vm",
  "diem-workspace-hack",
  "move-binary-format",
+ "move-bytecode-utils",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",

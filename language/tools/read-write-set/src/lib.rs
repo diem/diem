@@ -6,6 +6,7 @@ pub mod dynamic_analysis;
 use crate::dynamic_analysis::ConcretizedSecondaryIndexes;
 use anyhow::{bail, Result};
 use move_binary_format::file_format::CompiledModule;
+use move_bytecode_utils::Modules;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -30,6 +31,16 @@ pub struct ReadWriteSetAnalysis {
 /// vector than its parents), and all dependencies of each module must be
 /// included.
 pub fn analyze<'a>(
+    modules: impl IntoIterator<Item = &'a CompiledModule>,
+) -> Result<ReadWriteSetAnalysis> {
+    let module_map = Modules::new(modules);
+    let dep_graph = module_map.compute_dependency_graph();
+    let topo_order = dep_graph.compute_topological_order()?;
+    analyze_sorted(topo_order)
+}
+
+/// Like analyze_unsorted, but assumes that `modules` is already topologically sorted
+pub fn analyze_sorted<'a>(
     modules: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<ReadWriteSetAnalysis> {
     let env = move_model::run_bytecode_model_builder(modules)?;

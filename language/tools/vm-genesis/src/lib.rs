@@ -30,6 +30,7 @@ use diem_types::{
 };
 use diem_vm::{convert_changeset_and_events, data_cache::StateViewCache};
 use move_binary_format::CompiledModule;
+use move_bytecode_utils::Modules;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -93,17 +94,17 @@ pub fn encode_genesis_change_set(
     treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
-    stdlib_modules: &[Vec<u8>],
+    stdlib_module_bytes: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> ChangeSet {
-    let mut stdlib_module_tuples: Vec<(ModuleId, &Vec<u8>)> = Vec::new();
+    let mut stdlib_modules = Vec::new();
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
-    for module in stdlib_modules {
-        let module_id = CompiledModule::deserialize(module).unwrap().self_id();
-        state_view.add_module(&module_id, &module);
-        stdlib_module_tuples.push((module_id, module));
+    for module_bytes in stdlib_module_bytes {
+        let module = CompiledModule::deserialize(module_bytes).unwrap();
+        state_view.add_module(&module.self_id(), &module_bytes);
+        stdlib_modules.push(module)
     }
     let data_cache = StateViewCache::new(&state_view);
 
@@ -148,7 +149,11 @@ pub fn encode_genesis_change_set(
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, &log_context, stdlib_module_tuples);
+    publish_stdlib(
+        &mut session,
+        &log_context,
+        Modules::new(stdlib_modules.iter()),
+    );
     let (changeset2, events2) = session.finish().unwrap();
 
     changeset1.squash(changeset2).unwrap();
@@ -453,16 +458,20 @@ fn create_and_initialize_owners_operators(
 fn publish_stdlib(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    stdlib: Vec<(ModuleId, &Vec<u8>)>,
+    stdlib: Modules,
 ) {
-    let genesis_removed = stdlib
-        .iter()
-        .filter(|(module_id, _bytes)| module_id.name().as_str() != GENESIS_MODULE_NAME);
-    for (module_id, bytes) in genesis_removed {
-        assert!(module_id.name().as_str() != GENESIS_MODULE_NAME);
+    let dep_graph = stdlib.compute_dependency_graph();
+    for module in dep_graph.compute_topological_order().unwrap() {
+        let module_id = module.self_id();
+        if module_id.name().as_str() == GENESIS_MODULE_NAME {
+            // Do not publish the Genesis module
+            continue;
+        }
+        let mut bytes = vec![];
+        module.serialize(&mut bytes).unwrap();
         session
             .publish_module(
-                (*bytes).clone(),
+                bytes,
                 *module_id.address(),
                 &mut GasStatus::new_unmetered(),
                 log_context,

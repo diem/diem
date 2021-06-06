@@ -108,6 +108,7 @@ members = [
     "language/testing-infra/test-generation",
     "language/tools/disassembler",
     "language/tools/genesis-viewer",
+    "language/tools/move-bytecode-utils",
     "language/tools/move-bytecode-viewer",
     "language/tools/move-cli",
     "language/tools/move-coverage",

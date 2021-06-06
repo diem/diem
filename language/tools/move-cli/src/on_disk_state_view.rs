@@ -19,12 +19,10 @@ use move_core_types::{
 };
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::MoveStorage;
-use petgraph::graphmap::DiGraphMap;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::{btree_map, BTreeMap},
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -396,19 +394,15 @@ impl OnDiskStateView {
         self.iter_paths(move |p| self.is_event_path(p))
     }
 
-    /// Build the code cache based on all modules in the self.storage_dir.
+    /// Build all modules in the self.storage_dir.
     /// Returns an Err if a module does not deserialize.
-    pub fn get_code_cache(&self) -> Result<CodeCache> {
-        let mut modules = BTreeMap::new();
-        for path in self.module_paths() {
-            let module = CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
-                .map_err(|e| anyhow!("Failed to deserialized module: {:?}", e))?;
-            let id = module.self_id();
-            if modules.insert(id.clone(), module).is_some() {
-                bail!("Duplicate module {:?}", id)
-            }
-        }
-        Ok(CodeCache(modules))
+    pub fn get_all_modules(&self) -> Result<Vec<CompiledModule>> {
+        self.module_paths()
+            .map(|path| {
+                CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
+                    .map_err(|e| anyhow!("Failed to deserialized module: {:?}", e))
+            })
+            .collect::<Result<Vec<CompiledModule>>>()
     }
 }
 
@@ -432,107 +426,6 @@ impl Default for OnDiskStateView {
     fn default() -> Self {
         OnDiskStateView::create(Path::new(DEFAULT_BUILD_DIR), Path::new(DEFAULT_STORAGE_DIR))
             .expect("Failure creating OnDiskStateView")
-    }
-}
-
-/// Holds a closure of modules and provides operations against the closure (e.g., finding all
-/// dependencies of a module).
-pub struct CodeCache(BTreeMap<ModuleId, CompiledModule>);
-
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-struct ModuleIndex(usize);
-
-/// Directed graph capturing dependencies between modules
-pub struct DependencyGraph<'a> {
-    modules: Vec<&'a CompiledModule>,
-    graph: DiGraphMap<ModuleIndex, ()>,
-}
-
-impl<'a> DependencyGraph<'a> {
-    /// Return an iterator over the modules in `self` in topological order--modules with least deps first
-    pub fn get_topologically_sorted_modules(
-        &self,
-    ) -> Result<impl Iterator<Item = &CompiledModule>> {
-        match petgraph::algo::toposort(&self.graph, None) {
-            Err(_) => bail!("Circular dependency detected"),
-            Ok(ordered_idxs) => Ok(ordered_idxs.into_iter().map(move |idx| self.modules[idx.0])),
-        }
-    }
-
-    pub fn modules(&self) -> &Vec<&CompiledModule> {
-        &self.modules
-    }
-}
-
-impl CodeCache {
-    pub fn all_modules(&self) -> Vec<&CompiledModule> {
-        self.0.values().collect()
-    }
-
-    pub fn get_dependency_graph(&self) -> DependencyGraph {
-        let modules = self.all_modules();
-        let mut reverse_modules = BTreeMap::new();
-        for (i, m) in modules.iter().enumerate() {
-            reverse_modules.insert(m.self_id(), ModuleIndex(i));
-        }
-        let mut graph = DiGraphMap::new();
-        for module in &modules {
-            let module_idx: ModuleIndex = *reverse_modules.get(&module.self_id()).unwrap();
-            let deps = module.immediate_dependencies();
-            if deps.is_empty() {
-                graph.add_node(module_idx);
-            } else {
-                for dep in deps {
-                    let dep_idx = *reverse_modules.get(&dep).unwrap();
-                    graph.add_edge(dep_idx, module_idx, ());
-                }
-            }
-        }
-        DependencyGraph { modules, graph }
-    }
-
-    pub fn get_module(&self, module_id: &ModuleId) -> Result<&CompiledModule> {
-        self.0
-            .get(module_id)
-            .ok_or_else(|| anyhow!("Cannot find module {}", module_id))
-    }
-
-    pub fn get_immediate_module_dependencies(
-        &self,
-        module: &CompiledModule,
-    ) -> Result<Vec<&CompiledModule>> {
-        module
-            .immediate_dependencies()
-            .into_iter()
-            .map(|module_id| self.get_module(&module_id))
-            .collect::<Result<Vec<_>>>()
-    }
-
-    pub fn get_all_module_dependencies(
-        &self,
-        module: &CompiledModule,
-    ) -> Result<BTreeMap<ModuleId, &CompiledModule>> {
-        fn get_all_module_dependencies_recursive<'a>(
-            all_deps: &mut BTreeMap<ModuleId, &'a CompiledModule>,
-            module_id: ModuleId,
-            loader: &'a CodeCache,
-        ) -> Result<()> {
-            if let btree_map::Entry::Vacant(entry) = all_deps.entry(module_id) {
-                let module = loader.get_module(entry.key())?;
-                let next_deps = module.immediate_dependencies();
-                entry.insert(module);
-                for next in next_deps {
-                    get_all_module_dependencies_recursive(all_deps, next, loader)?;
-                }
-            }
-            Ok(())
-        }
-
-        let mut all_deps = BTreeMap::new();
-        for dep in module.immediate_dependencies() {
-            get_all_module_dependencies_recursive(&mut all_deps, dep, self)?;
-        }
-        Ok(all_deps)
     }
 }
 

@@ -1,8 +1,8 @@
 [package]
-name = "read-write-set"
+name = "move-bytecode-utils"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Read/write set inference for Move bytecode programs"
+description = "Libraries for working with sets of Move bytecode modules"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
@@ -13,9 +13,5 @@ edition = "2018"
 anyhow = "1.0.38"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
-move-bytecode-utils = { path = "../move-bytecode-utils" }
 move-core-types = { path = "../../move-core/types" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
-move-model = { path = "../../move-model" }
-prover_bytecode = { path = "../../move-prover/bytecode", package="bytecode" }
-resource-viewer = { path = "../resource-viewer" }
+petgraph = "0.5.1"

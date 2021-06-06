@@ -89,16 +89,14 @@ pub(crate) fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_files, compiled_units) =
         move_compile_and_report(&diem_stdlib_files(), &[], None, Flags::empty()).unwrap();
     let mut modules = BTreeMap::new();
-    for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
+    for compiled_unit in compiled_units {
         let name = compiled_unit.name();
         match compiled_unit {
             CompiledUnit::Module { module, .. } => {
                 verify_module(&module).expect("stdlib module failed to verify");
                 dependencies::verify_module(&module, modules.values())
                     .expect("stdlib module dependency failed to verify");
-                // Tag each module with its index in the module dependency order. Needed for
-                // when they are deserialized and verified later on.
-                modules.insert(format!("{:0>3}_{}", i, name), module);
+                modules.insert(name, module);
             }
             CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
         }

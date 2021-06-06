@@ -9,6 +9,7 @@ use move_binary_format::{
     file_format::{AbilitySet, CompiledModule, CompiledScript, SignatureToken},
     normalized,
 };
+use move_bytecode_utils::Modules;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
@@ -523,7 +524,8 @@ fn explain_publish_error(
                 module_id
             );
             // find all cycles with an iterative DFS
-            let code_cache = state.get_code_cache()?;
+            let all_modules = state.get_all_modules()?;
+            let code_cache = Modules::new(&all_modules);
 
             let mut stack = vec![];
             let mut state = BTreeMap::new();
@@ -724,13 +726,17 @@ pub fn doctor(state: &OnDiskStateView) -> Result<()> {
     }
 
     // verify and link each module
-    let code_cache = state.get_code_cache()?;
-    for module in code_cache.all_modules() {
+    let all_modules = state.get_all_modules()?;
+    let code_cache = Modules::new(&all_modules);
+
+    for module in &all_modules {
         if bytecode_verifier::verify_module(module).is_err() {
             bail!("Failed to verify module {:?}", module.self_id())
         }
 
-        let imm_deps = code_cache.get_immediate_module_dependencies(module)?;
+        let imm_deps = code_cache
+            .get_immediate_dependencies(&module.self_id())
+            .unwrap();
         if bytecode_verifier::dependencies::verify_module(module, imm_deps).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
@@ -743,14 +749,14 @@ pub fn doctor(state: &OnDiskStateView) -> Result<()> {
             |module_id| {
                 code_cache
                     .get_module(module_id)
-                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
                     .map(|m| m.immediate_dependencies())
+                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
             },
             |module_id| {
                 code_cache
                     .get_module(module_id)
-                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
                     .map(|m| m.immediate_friends())
+                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
             },
         );
         if let Err(cyclic_check_error) = cyclic_check_result {
@@ -805,15 +811,16 @@ pub fn analyze_read_write_set(
         .map_err(|e| anyhow!("Error deserializing module: {:?}", e))?
         .self_id();
     let fun_id = Identifier::new(function.to_string())?;
-    let code_cache = state.get_code_cache()?;
-    let dep_graph = code_cache.get_dependency_graph();
+    let all_modules = state.get_all_modules()?;
+    let code_cache = Modules::new(&all_modules);
+    let dep_graph = code_cache.compute_dependency_graph();
     if verbose {
         println!(
             "Inferring read/write set for {:?} module(s)",
-            dep_graph.modules().len()
+            all_modules.len()
         )
     }
-    let modules = dep_graph.get_topologically_sorted_modules()?;
+    let modules = dep_graph.compute_topological_order()?;
     let rw = read_write_set::analyze(modules)?;
     if let Some(fenv) = rw.get_function_env(&module_id, &fun_id) {
         if concretize {
