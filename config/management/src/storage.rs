@@ -22,6 +22,13 @@ pub struct StorageWrapper {
 }
 
 impl StorageWrapper {
+    pub fn new(storage_name: &'static str, storage: Storage) -> Self {
+        Self {
+            storage_name,
+            storage,
+        }
+    }
+
     pub fn encryptor(self) -> Encryptor<Storage> {
         Encryptor::new(self.storage)
     }
