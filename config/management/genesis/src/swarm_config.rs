@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::validator_builder::ValidatorBuilder;
 use anyhow::Result;
 use diem_config::config::{NodeConfig, OnDiskStorageConfig};
 use diem_crypto::ed25519::Ed25519PrivateKey;
@@ -58,5 +59,16 @@ impl SwarmConfig {
             root_storage: root_storage_config,
             waypoint: configs[0].base.waypoint.waypoint(),
         })
+    }
+}
+
+impl BuildSwarm for ValidatorBuilder {
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        let (root_keys, validators) = self.clone().build()?;
+
+        Ok((
+            validators.into_iter().map(|v| v.config).collect(),
+            root_keys.root_key,
+        ))
     }
 }
