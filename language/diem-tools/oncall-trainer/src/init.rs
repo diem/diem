@@ -58,13 +58,14 @@ impl NodeInfo {
 
         // Build a single validator network
         let template = NodeConfig::default_for_validator();
-        let builder =
-            diem_genesis_tool::config_builder::ValidatorBuilder::new(1, template, &config_path)
-                .randomize_first_validator_ports(true);
+        let builder = diem_genesis_tool::validator_builder::ValidatorBuilder::new(&config_path)
+            .num_validators(1)
+            .template(template)
+            .randomize_first_validator_ports(true);
         let test_config =
             diem_genesis_tool::swarm_config::SwarmConfig::build(&builder, &config_path).unwrap();
 
-        let mut log_file = config_path.clone();
+        let mut log_file = config_path;
         log_file.push("validator.log");
         let log = File::create(log_file.as_path()).unwrap();
 
