@@ -4,7 +4,7 @@
 use diem_config::config::RocksdbConfig;
 use diem_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
 use diem_temppath::TempPath;
-use diem_types::{chain_id::ChainId, waypoint::Waypoint};
+use diem_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use executor::db_bootstrapper;
@@ -34,12 +34,16 @@ impl CreateWaypoint {
 
         let genesis = genesis_helper.execute()?;
 
-        let path = TempPath::new();
-        let diemdb = DiemDB::open(&path, false, None, RocksdbConfig::default())
-            .map_err(|e| Error::UnexpectedError(e.to_string()))?;
-        let db_rw = DbReaderWriter::new(diemdb);
-
-        db_bootstrapper::generate_waypoint::<DiemVM>(&db_rw, &genesis)
-            .map_err(|e| Error::UnexpectedError(e.to_string()))
+        create_genesis_waypoint(&genesis)
     }
+}
+
+pub fn create_genesis_waypoint(genesis: &Transaction) -> Result<Waypoint, Error> {
+    let path = TempPath::new();
+    let diemdb = DiemDB::open(&path, false, None, RocksdbConfig::default())
+        .map_err(|e| Error::UnexpectedError(e.to_string()))?;
+    let db_rw = DbReaderWriter::new(diemdb);
+
+    db_bootstrapper::generate_waypoint::<DiemVM>(&db_rw, &genesis)
+        .map_err(|e| Error::UnexpectedError(e.to_string()))
 }
