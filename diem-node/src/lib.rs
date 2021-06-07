@@ -126,9 +126,10 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     maybe_config.push("validator_node_template.yaml");
     let template = NodeConfig::load_config(maybe_config)
         .unwrap_or_else(|_| NodeConfig::default_for_validator());
-    let builder =
-        diem_genesis_tool::config_builder::ValidatorBuilder::new(1, template, &config_path)
-            .randomize_first_validator_ports(random_ports);
+    let builder = diem_genesis_tool::validator_builder::ValidatorBuilder::new(&config_path)
+        .num_validators(1)
+        .template(template)
+        .randomize_first_validator_ports(random_ports);
     let test_config =
         diem_genesis_tool::swarm_config::SwarmConfig::build(&builder, &config_path).unwrap();
 
@@ -137,7 +138,7 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     log_file.push("validator.log");
 
     // Build a waypoint file so that clients / docker can grab it easily
-    let mut waypoint_file_path = config_path.clone();
+    let mut waypoint_file_path = config_path;
     waypoint_file_path.push("waypoint.txt");
     std::io::Write::write_all(
         &mut std::fs::File::create(&waypoint_file_path).unwrap(),
