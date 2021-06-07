@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use diem_config::config::NodeConfig;
+use diem_config::config::{NodeConfig, OnDiskStorageConfig};
 use diem_crypto::ed25519::Ed25519PrivateKey;
+use diem_global_constants::{DIEM_ROOT_KEY, TREASURY_COMPLIANCE_KEY};
+use diem_secure_storage::{CryptoStorage, OnDiskStorage};
 use diem_types::waypoint::Waypoint;
 use std::{
     fs::File,
@@ -19,6 +21,7 @@ pub trait BuildSwarm {
 pub struct SwarmConfig {
     pub config_files: Vec<PathBuf>,
     pub diem_root_key_path: PathBuf,
+    pub root_storage: OnDiskStorageConfig,
     pub waypoint: Waypoint,
 }
 
@@ -42,9 +45,17 @@ impl SwarmConfig {
         let mut key_file = File::create(&diem_root_key_path)?;
         key_file.write_all(&serialized_keys)?;
 
+        let mut root_storage_config = OnDiskStorageConfig::default();
+        root_storage_config.path = output_dir.join("root-storage.json");
+        let mut root_storage = OnDiskStorage::new(root_storage_config.path());
+        root_storage.import_private_key(DIEM_ROOT_KEY, diem_root_key)?;
+        let diem_root_key = root_storage.export_private_key(DIEM_ROOT_KEY).unwrap();
+        root_storage.import_private_key(TREASURY_COMPLIANCE_KEY, diem_root_key)?;
+
         Ok(SwarmConfig {
             config_files,
             diem_root_key_path,
+            root_storage: root_storage_config,
             waypoint: configs[0].base.waypoint.waypoint(),
         })
     }
