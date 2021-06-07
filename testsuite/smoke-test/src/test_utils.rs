@@ -171,9 +171,8 @@ pub mod diem_swarm_utils {
     }
 
     /// Loads the diem root's storage backend identified by the node index in the given swarm.
-    pub fn load_diem_root_storage(swarm: &DiemSwarm, node_index: usize) -> SecureBackend {
-        let (node_config, _) = load_node_config(swarm, node_index);
-        fetch_backend_storage(&node_config, Some("diem_root".to_string()))
+    pub fn load_diem_root_storage(swarm: &DiemSwarm, _node_index: usize) -> SecureBackend {
+        SecureBackend::OnDiskStorage(swarm.config.root_storage.clone())
     }
 
     /// Loads the node config for the validator at the specified index. Also returns the node
