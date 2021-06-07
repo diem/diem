@@ -1039,7 +1039,7 @@ fn create_test_cases() -> Vec<Test> {
                         },
                         {
                             "data":{
-                                "created_address":"b5b333aabbf92e78524e2129b722eaca",
+                                "created_address": "652f27413456938eaa059f65231647cc",
                                 "role_id":3,
                                 "type":"createaccount"
                             },

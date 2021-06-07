@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use diem_config::config::NodeConfig;
-use diem_genesis_tool::{config_builder::ValidatorBuilder, swarm_config::BuildSwarm};
+use diem_genesis_tool::{swarm_config::BuildSwarm, validator_builder::ValidatorBuilder};
 use diem_logger::prelude::FileWriter;
 
 pub struct Node {
@@ -24,7 +24,9 @@ impl Node {
 
         let config_path = node_dir.join("node.yaml");
 
-        let builder = ValidatorBuilder::new(1, NodeConfig::default_for_validator(), node_dir);
+        let builder = ValidatorBuilder::new(node_dir)
+            .num_validators(1)
+            .template(NodeConfig::default_for_validator());
         let (mut configs, root_key) = builder.build_swarm()?;
         let mut config = configs.pop().unwrap();
         config.set_data_dir(node_dir.to_path_buf());
