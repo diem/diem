@@ -58,6 +58,8 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+    environment:
+      name: Sccache
     env:
       CODECOV_OUTPUT: codecov
       MESSAGE_PAYLOAD_FILE: /tmp/message
@@ -67,9 +69,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.DIEM_S3_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.DIEM_S3_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.DIEM_S3_AWS_REGION }}
+          aws-access-key-id: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.ENV_DIEM_S3_AWS_REGION }}
       - name: produce coverage
         run: cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 16 || true
       - name: Push Coverage Reports to S3
