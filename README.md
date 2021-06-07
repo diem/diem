@@ -9,6 +9,7 @@
 [![Diem Rust Crate Documentation (main)](https://img.shields.io/badge/docs-main-59f)](https://diem.github.io/diem/)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
+[![test history](https://img.shields.io/badge/Test-History-green)](https://ci-artifacts.diem.com/testhistory/diem/diem/auto/ci-test.yml/index.html)
 
 Diem Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
