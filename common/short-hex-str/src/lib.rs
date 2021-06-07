@@ -18,7 +18,7 @@ pub struct ShortHexStr([u8; ShortHexStr::LENGTH]);
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Input bytes are too short")]
-    InputTooShortError(),
+    InputTooShortError,
     #[error("Overflow error: {0}")]
     OverflowError(String),
 }
@@ -42,7 +42,7 @@ impl ShortHexStr {
             hex_encode(&src_short_bytes, &mut dest_bytes)?;
             Ok(Self(dest_bytes))
         } else {
-            Err(Error::InputTooShortError())
+            Err(Error::InputTooShortError)
         }
     }
 
@@ -97,13 +97,11 @@ fn byte2hex(byte: u8) -> Result<(u8, u8), Error> {
 /// Hex encode a byte slice into the destination byte slice.
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) -> Result<(), Error> {
-    debug_checked_precondition!(
-        dst.len()
-            == src
-                .len()
-                .checked_mul(2)
-                .ok_or_else(|| Error::OverflowError("hex_encode::src".into()))?
-    );
+    let expected_length = src
+        .len()
+        .checked_mul(2)
+        .ok_or_else(|| Error::OverflowError("hex_encode::src".into()))?;
+    debug_checked_precondition!(dst.len() == expected_length);
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
         let (hi, lo) = byte2hex(*byte)?;
