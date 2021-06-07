@@ -52,36 +52,44 @@ impl Verify {
             .load()?
             .override_validator_backend(&self.backend.validator_backend)?;
         let validator_storage = config.validator_backend();
-        let mut buffer = String::new();
 
-        writeln!(buffer, "Data stored in SecureStorage:").unwrap();
-        write_break(&mut buffer);
-        writeln!(buffer, "Keys").unwrap();
-        write_break(&mut buffer);
-
-        write_ed25519_key(&validator_storage, &mut buffer, CONSENSUS_KEY);
-        write_x25519_key(&validator_storage, &mut buffer, FULLNODE_NETWORK_KEY);
-        write_ed25519_key(&validator_storage, &mut buffer, OWNER_KEY);
-        write_ed25519_key(&validator_storage, &mut buffer, OPERATOR_KEY);
-        write_ed25519_key(&validator_storage, &mut buffer, VALIDATOR_NETWORK_KEY);
-
-        write_break(&mut buffer);
-        writeln!(buffer, "Data").unwrap();
-        write_break(&mut buffer);
-
-        write_string(&validator_storage, &mut buffer, OPERATOR_ACCOUNT);
-        write_string(&validator_storage, &mut buffer, OWNER_ACCOUNT);
-        write_safety_data(&validator_storage, &mut buffer, SAFETY_DATA);
-        write_waypoint(&validator_storage, &mut buffer, WAYPOINT);
-
-        write_break(&mut buffer);
-
-        if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(validator_storage, &mut buffer, genesis_path)?;
-        }
-
-        Ok(buffer)
+        verify_genesis(validator_storage, self.genesis_path.as_deref())
     }
+}
+
+pub fn verify_genesis(
+    validator_storage: Storage,
+    genesis_path: Option<&Path>,
+) -> Result<String, Error> {
+    let mut buffer = String::new();
+
+    writeln!(buffer, "Data stored in SecureStorage:").unwrap();
+    write_break(&mut buffer);
+    writeln!(buffer, "Keys").unwrap();
+    write_break(&mut buffer);
+
+    write_ed25519_key(&validator_storage, &mut buffer, CONSENSUS_KEY);
+    write_x25519_key(&validator_storage, &mut buffer, FULLNODE_NETWORK_KEY);
+    write_ed25519_key(&validator_storage, &mut buffer, OWNER_KEY);
+    write_ed25519_key(&validator_storage, &mut buffer, OPERATOR_KEY);
+    write_ed25519_key(&validator_storage, &mut buffer, VALIDATOR_NETWORK_KEY);
+
+    write_break(&mut buffer);
+    writeln!(buffer, "Data").unwrap();
+    write_break(&mut buffer);
+
+    write_string(&validator_storage, &mut buffer, OPERATOR_ACCOUNT);
+    write_string(&validator_storage, &mut buffer, OWNER_ACCOUNT);
+    write_safety_data(&validator_storage, &mut buffer, SAFETY_DATA);
+    write_waypoint(&validator_storage, &mut buffer, WAYPOINT);
+
+    write_break(&mut buffer);
+
+    if let Some(genesis_path) = genesis_path {
+        compare_genesis(validator_storage, &mut buffer, genesis_path)?;
+    }
+
+    Ok(buffer)
 }
 
 fn write_assert(buffer: &mut String, name: &str, value: bool) {
