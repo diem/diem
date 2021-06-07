@@ -146,7 +146,6 @@ pub enum Error {
     OverflowError(String),
     #[error("Remote stream cleanly closed")]
     RemoteStreamClosed,
-
 }
 
 pub struct NetworkClient {
