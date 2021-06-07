@@ -713,14 +713,19 @@ fn optional_flag(flag: &'static str, enable_flag: bool) -> String {
 /// TODO: Support other types of storage
 fn backend_args(backend: &config::SecureBackend) -> Result<String, Error> {
     match backend {
-        config::SecureBackend::OnDiskStorage(config) => Ok(format!(
-            "backend={backend};\
-            path={path};\
-            namespace={namespace}",
-            backend = DISK,
-            namespace = config.namespace.clone().unwrap(),
-            path = config.path.to_str().unwrap(),
-        )),
+        config::SecureBackend::OnDiskStorage(config) => {
+            let mut s = format!(
+                "backend={backend};\
+                 path={path}",
+                backend = DISK,
+                path = config.path.to_str().unwrap(),
+            );
+            if let Some(namespace) = config.namespace.as_ref() {
+                s.push_str(&format!(";namespace={}", namespace));
+            }
+
+            Ok(s)
+        }
         _ => Err(Error::UnexpectedError("Storage isn't on disk".to_string())),
     }
 }
