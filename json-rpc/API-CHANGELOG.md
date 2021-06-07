@@ -13,6 +13,12 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-06-07 `get_account_transactions` on a non-existent account returns empty list istead of error
+
+This change makes `get_account_transactions` consistent with `get_account_transaction`,
+which returns nothing on a non-existent account and removes an extra internal DB
+call that is no longer needed.
+
 ## 2021-06-01 Add `get_accumulator_consistency_proof` API
 
 This API allows light clients to build their initial transaction accumulator summary

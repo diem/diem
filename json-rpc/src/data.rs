@@ -9,20 +9,17 @@ use crate::{
         TransactionView, TransactionsWithProofsView,
     },
 };
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use diem_crypto::HashValue;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{diem_root_address, resources::dual_attestation::Limit, AccountResource},
+    account_config::{diem_root_address, resources::dual_attestation::Limit},
     account_state::AccountState,
     chain_id::ChainId,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
 };
-use std::{
-    cmp::min,
-    convert::{TryFrom, TryInto},
-};
+use std::convert::{TryFrom, TryInto};
 use storage_interface::{DbReader, Order};
 
 pub fn get_account_state(
@@ -133,22 +130,21 @@ pub fn get_account_transaction(
     db: &dyn DbReader,
     ledger_version: u64,
     account: AccountAddress,
-    sequence_number: u64,
+    seq_num: u64,
     include_events: bool,
 ) -> Result<Option<TransactionView>, JsonRpcError> {
-    let tx =
-        db.get_account_transaction(account, sequence_number, include_events, ledger_version)?;
-
-    if let Some(tx) = tx {
-        Ok(Some(TransactionView::try_from_tx_and_events(
-            tx.version,
-            tx.transaction,
-            tx.proof.transaction_info,
-            tx.events.unwrap_or_default(),
-        )?))
-    } else {
-        Ok(None)
-    }
+    let tx = db
+        .get_account_transaction(account, seq_num, include_events, ledger_version)?
+        .map(|tx| {
+            TransactionView::try_from_tx_and_events(
+                tx.version,
+                tx.transaction,
+                tx.proof.transaction_info,
+                tx.events.unwrap_or_default(),
+            )
+        })
+        .transpose()?;
+    Ok(tx)
 }
 
 /// Returns all account transactions
@@ -156,45 +152,29 @@ pub fn get_account_transactions(
     db: &dyn DbReader,
     ledger_version: u64,
     account: AccountAddress,
-    start: u64,
+    start_seq_num: u64,
     limit: u64,
     include_events: bool,
 ) -> Result<Vec<TransactionView>, JsonRpcError> {
-    let account_state = db.get_latest_account_state(account)?.ok_or_else(|| {
-        JsonRpcError::invalid_request_with_msg(format!(
-            "could not find account by address {}",
-            account
-        ))
-    })?;
-    let account_seq = AccountResource::try_from(&account_state)?.sequence_number();
-
-    if start >= account_seq {
-        return Ok(vec![]);
-    }
-
-    let mut all_txs = vec![];
-    let end = min(
-        start
-            .checked_add(limit)
-            .ok_or_else(|| format_err!("overflow!"))?,
-        account_seq,
-    );
-
-    for seq in start..end {
-        let tx = db
-            .get_account_transaction(account, seq, include_events, ledger_version)?
-            .ok_or_else(|| format_err!("Can not find transaction for seq {}!", seq))?;
-
-        let tx_view = TransactionView::try_from_tx_and_events(
-            tx.version,
-            tx.transaction,
-            tx.proof.transaction_info,
-            tx.events.unwrap_or_default(),
-        )?;
-        all_txs.push(tx_view);
-    }
-
-    Ok(all_txs)
+    let txs = db
+        .get_account_transactions(
+            account,
+            start_seq_num,
+            limit,
+            include_events,
+            ledger_version,
+        )?
+        .into_iter()
+        .map(|tx| {
+            TransactionView::try_from_tx_and_events(
+                tx.version,
+                tx.transaction,
+                tx.proof.transaction_info,
+                tx.events.unwrap_or_default(),
+            )
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(txs)
 }
 
 /// Returns events by given access path

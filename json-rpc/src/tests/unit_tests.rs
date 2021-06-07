@@ -655,22 +655,6 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
-            "get_account_transactions: account not found",
-            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["00000000000000000000000000000033", 1, 2, false], "id": 1}),
-            json!({
-                "error": {
-                    "code": -32600,
-                    "message": "Invalid Request: could not find account by address 00000000000000000000000000000033",
-                    "data": null
-                },
-                "id": 1,
-                "jsonrpc": "2.0",
-                "diem_chain_id": ChainId::test().id(),
-                "diem_ledger_timestampusec": timestamp,
-                "diem_ledger_version": version
-            }),
-        ),
-        (
             "get_account_transactions: invalid start param",
             json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", false, 2, false], "id": 1}),
             json!({
@@ -780,11 +764,11 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "get_accumulator_consistency_proof: client_known_version is greater than ledger_version",
-            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [version, version-1], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [version+1, version], "id": 1}),
             json!({
                 "error": {
                     "code": -32600,
-                    "message": format!("Invalid Request: client_known_version({}) should be <= ledger_version({})", version, version-1),
+                    "message": format!("Invalid Request: client_known_version({}) should be <= ledger_version({})", version+1, version),
                     "data": null
                 },
                 "id": 1,

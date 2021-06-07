@@ -140,56 +140,66 @@ impl DbReader for MockDiemDB {
         address: AccountAddress,
         seq_num: u64,
         include_events: bool,
-        _ledger_version: u64,
+        ledger_version: u64,
     ) -> Result<Option<TransactionWithProof>, Error> {
-        Ok(self
-            .all_txns
-            .iter()
-            .enumerate()
-            .find(|(_, (x, _))| {
-                if let Ok(t) = x.as_signed_user_txn() {
-                    t.sender() == address && t.sequence_number() == seq_num
-                } else {
-                    false
-                }
-            })
-            .map(|(v, (x, status))| TransactionWithProof {
-                version: v as u64,
-                transaction: x.clone(),
-                events: if include_events {
-                    Some(
-                        self.events
-                            .iter()
-                            .filter(|(ev, _)| *ev == v as u64)
-                            .map(|(_, e)| e)
-                            .cloned()
-                            .collect(),
-                    )
-                } else {
-                    None
-                },
-                proof: TransactionInfoWithProof::new(
-                    TransactionAccumulatorProof::new(vec![]),
-                    TransactionInfo::new(
-                        Default::default(),
-                        Default::default(),
-                        Default::default(),
-                        0,
-                        status.clone(),
-                    ),
-                ),
-            }))
+        let txs =
+            self.get_account_transactions(address, seq_num, 1, include_events, ledger_version)?;
+        assert!(txs.len() <= 1);
+        Ok(txs.into_iter().next())
     }
 
     fn get_account_transactions(
         &self,
-        _address: AccountAddress,
-        _start_seq_num: u64,
-        _limit: u64,
-        _include_events: bool,
-        _ledger_version: u64,
+        address: AccountAddress,
+        start_seq_num: u64,
+        limit: u64,
+        include_events: bool,
+        ledger_version: u64,
     ) -> Result<Vec<TransactionWithProof>> {
-        unimplemented!()
+        let end_seq_num = start_seq_num + limit;
+        let seq_num_range = start_seq_num..end_seq_num;
+
+        self.all_txns
+            .iter()
+            .enumerate()
+            .filter(|(v, (tx, _))| {
+                if *v as u64 > ledger_version {
+                    false
+                } else if let Ok(tx) = tx.as_signed_user_txn() {
+                    tx.sender() == address && seq_num_range.contains(&tx.sequence_number())
+                } else {
+                    false
+                }
+            })
+            .map(|(v, (tx, status))| {
+                let txn_with_proof = TransactionWithProof {
+                    version: v as u64,
+                    transaction: tx.clone(),
+                    events: if include_events {
+                        let events = self
+                            .events
+                            .iter()
+                            .filter(|(ev, _)| *ev == v as u64)
+                            .map(|(_, e)| e.clone())
+                            .collect();
+                        Some(events)
+                    } else {
+                        None
+                    },
+                    proof: TransactionInfoWithProof::new(
+                        TransactionAccumulatorProof::new(vec![]),
+                        TransactionInfo::new(
+                            Default::default(),
+                            Default::default(),
+                            Default::default(),
+                            0,
+                            status.clone(),
+                        ),
+                    ),
+                };
+                Ok(txn_with_proof)
+            })
+            .collect()
     }
 
     fn get_transactions(
