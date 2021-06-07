@@ -77,7 +77,7 @@ jobs:
       - uses: ./.github/actions/build-setup
         # build setup is called to ensure the latest docker image tooling is in place and the ~/.profile is called.
       - name: Publish unit test results
-        uses: rexhoffman/actions/process-test-results@78f868bd1170a959f0a9864e33df725690b45b9a
+        uses: diem/actions/process-test-results@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           #used to read artifacts, annoying to need one.
           token: ${{ secrets.GITHUB_TOKEN }}
