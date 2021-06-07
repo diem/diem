@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_json_rpc_types::response::JsonRpcResponse;
+use std::cmp::max;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct State {
     pub chain_id: u8,
     pub version: u64,
@@ -51,21 +52,44 @@ cfg_async_or_blocking! {
             self.last_known_state.lock().unwrap().clone()
         }
 
-        pub(crate) fn update_state(&self, resp_state: &State) -> Result<()> {
-            let mut state_writer = self.last_known_state.lock().unwrap();
-            if let Some(state) = &*state_writer {
-                if state.chain_id != resp_state.chain_id {
-                    return Err(Error::chain_id(state.chain_id, resp_state.chain_id));
-                }
-                if resp_state < state {
+        pub(crate) fn update_state(&self, ignore_stale: bool, req_state: Option<&State>, resp_state: &State) -> Result<()> {
+            // Ensure the response is fulfilled at a more recent ledger version than
+            // when we made the request, though not necessarily the globally most
+            // recent version.
+            if let Some(req_state) = req_state {
+                if !ignore_stale && resp_state < req_state {
                     return Err(Error::stale(format!(
                         "received response with stale metadata: {:?}, expected a response more recent than: {:?}",
                         resp_state,
-                        state,
+                        req_state,
                     )));
                 }
             }
-            *state_writer = Some(resp_state.clone());
+
+            let mut state_writer = self.last_known_state.lock().unwrap();
+            let curr_state = &*state_writer;
+
+            assert!(
+                req_state <= curr_state.as_ref(),
+                "request state is not an ancestor state of the current latest state: \
+                 request state: {:?}, current state: {:?}",
+                req_state,
+                curr_state,
+            );
+
+            // Compute the most recent state
+            let new_state = if let Some(curr_state) = curr_state {
+                // For now, trust-on-first-use for the chain id
+                if curr_state.chain_id != resp_state.chain_id {
+                    return Err(Error::chain_id(curr_state.chain_id, resp_state.chain_id));
+                }
+                max(curr_state, resp_state)
+            } else {
+                resp_state
+            };
+
+            // Store the new state
+            *state_writer = Some(new_state.clone());
             Ok(())
         }
     }

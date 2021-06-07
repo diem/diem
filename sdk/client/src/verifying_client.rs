@@ -37,7 +37,6 @@ use std::{
 // TODO(philiphayes): fill out rest of the methods
 // TODO(philiphayes): all clients should validate chain id (allow users to trust-on-first-use or pre-configure)
 // TODO(philiphayes): we could abstract the async client so VerifyingClient takes a dyn Trait?
-// TODO(philiphayes): probably shouldn't ratchet inner client state unless the trusted state ratchets
 
 // TODO(philiphayes): we should really add a real StateProof type (not alias) that
 // collects these types together. StateProof isn't a very descriptive name though...
@@ -48,6 +47,32 @@ type StateProof = (
     AccumulatorConsistencyProof,
 );
 
+/// The `VerifyingClient` is a [Diem JSON-RPC client] that verifies Diem's
+/// cryptographic proofs when it makes API calls.
+///
+/// ## Concurrency
+///
+/// When issuing multiple concurrent requests with the `VerifyingClient`, we guarantee:
+///
+/// 1. Each response batch is fulfilled and verified at a ledger version that
+///    is greater than or equal to the current trusted version _at the time we
+///    made the request batch_, though not necessarily the globally most
+///    recent trusted ledger version.
+///
+/// 2. Requests made serially within a single thread of execution appear
+///    strictly ordered, i.e., they were fulfilled and verified at
+///    monotonically increasing ledger versions (`v1 <= v2 <= ...`).
+///
+/// Consequently, without any other effort, multiple concurrent requests may have
+/// responses that appear inconsistent or out-of-order. For example, naively
+/// making concurrent `get_account(..)` requests will (most likely) show accounts
+/// at different ledger versions; even further, the first response you receive may
+/// show a more recent ledger version than the second response.
+///
+/// To avoid this issue, users should pin a concurrent batch of requests to the
+/// same ledger version if they want to avoid an inconsistent ledger view.
+///
+/// [Diem JSON-RPC client]: https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md
 #[derive(Clone, Debug)]
 pub struct VerifyingClient<S> {
     inner: Client,
@@ -187,7 +212,8 @@ impl<S: Storage> VerifyingClient<S> {
         Ok((state_proof, maybe_accumulator))
     }
 
-    /// Verify and ratchet forward our trusted state using a state proof.
+    /// Verify and ratchet forward a request's trusted state using a state proof
+    /// and potentially persisting the new trusted state if it is the newest.
     pub fn verify_and_ratchet(
         &self,
         request_trusted_state: &TrustedState,
@@ -196,25 +222,10 @@ impl<S: Storage> VerifyingClient<S> {
     ) -> Result<()> {
         let (latest_li, epoch_change_proof, consistency_proof) = state_proof;
 
-        // Check that the response is not stale w.r.t. our current trusted state.
-        // We can't do anything with a stale response, so we just have to throw
-        // it out and retry.
-        let resp_version = latest_li.ledger_info().version();
-        let curr_version = self.version();
-        if resp_version < curr_version {
-            return Err(Error::stale(format!(
-                "recevied stale state proof whose version ({}) is behind our current trusted version ({})",
-                resp_version,
-                curr_version,
-            )));
-        }
-
-        // Actually verify the state proof.
-        //
-        // Note: now that we're also verifying the accumulator consistency proof,
-        // we have to verifying from the trusted state when we made the request
-        // rather than our current trusted state, since a consistency proof can't
-        // be applied to any other version than the requested version.
+        // Verify the response's state proof starting from the trusted state when
+        // we first made the request. If successful, this means the potential new
+        // trusted state is at least a descendent of the request trusted state,
+        // though not necessarily the globally most-recent trusted state.
         let change = request_trusted_state
             .verify_and_ratchet(
                 latest_li,
@@ -225,6 +236,9 @@ impl<S: Storage> VerifyingClient<S> {
             .map_err(Error::invalid_proof)?;
 
         // Try to compare-and-swap the new trusted state into the state store.
+        // If the client is issuing muiltiple concurrent requests, the potential
+        // new trusted state might not be newer than the current trusted state,
+        // in which case we just don't persist this change.
         if let Some(new_state) = change.new_state() {
             self.trusted_state_store
                 .write()
@@ -899,19 +913,13 @@ impl<S: Storage> TrustedStateStore<S> {
     }
 
     fn ratchet(&mut self, new_state: TrustedState) -> Result<()> {
-        if new_state.version() < self.version() {
-            return Err(Error::stale(format!(
-                "new trusted state version ({}) is stale when CAS'ing into the state store, current version: {}",
-                new_state.version(),
-                self.version(),
-            )));
-        }
+        // We only need to store the potential new trusted state if it's actually
+        // ahead of what we have stored locally.
         if new_state.version() > self.version() {
             self.trusted_state = new_state;
             let trusted_state_bytes = bcs::to_bytes(&self.trusted_state).map_err(Error::decode)?;
             self.storage.set(TRUSTED_STATE_KEY, trusted_state_bytes)?;
         }
-
         Ok(())
     }
 }

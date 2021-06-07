@@ -314,9 +314,10 @@ impl BlockingClient {
         request: &JsonRpcRequest,
         ignore_stale: bool,
     ) -> Result<Response<T>> {
+        let req_state = self.last_known_state();
         let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request)?;
 
-        let (id, state, result) = validate(&self.state, &resp, ignore_stale)?;
+        let (id, state, result) = validate(&self.state, req_state.as_ref(), &resp, ignore_stale)?;
 
         if request.id() != id {
             return Err(Error::rpc_response("invalid response id"));
@@ -331,11 +332,12 @@ impl BlockingClient {
         requests: Vec<MethodRequest>,
     ) -> Result<Vec<Result<Response<MethodResponse>>>> {
         let request: Vec<JsonRpcRequest> = requests.into_iter().map(JsonRpcRequest::new).collect();
+        let req_state = self.last_known_state();
         let resp: BatchResponse = self.send_impl(&request)?;
 
         let resp = resp.success()?;
 
-        validate_batch(&self.state, &request, resp)
+        validate_batch(&self.state, req_state.as_ref(), &request, resp)
     }
 
     // Executes the specified request method using the given parameters by contacting the JSON RPC
