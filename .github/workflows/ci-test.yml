@@ -44,12 +44,12 @@ jobs:
         run: ./scripts/git-checks.sh
       - id: changes
         name: determine changes
-        uses: diem/actions/changes@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/changes@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           workflow-file: ci-test.yml
       - id: need-build-images
         name: find changes need image build.
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: '^documentation\|^developers.diem.com'
           invert: "true"
@@ -91,34 +91,34 @@ jobs:
           echo "::set-output name=name::$(echo $output)";
       - id: rust-changes
         name: find rust/cargo changes.
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: '^documentation\|^docker\|^scripts\|^developers.diem.com'
           invert: "true"
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: 'Dockerfile$\|.*.sh$|^developers.diem.com'
       - id: helm-changes
         name: find helm changes
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: '^.github\|^helm\|^developers.diem.com'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: 'docker/ci\|scripts/dev_setup.sh'
       - id: docker-compose-changes
         name: find changes that should trigger docker compose testing.
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: "^documentation"
           invert: "true"
       - id: website-changes
         name: find website changes.
-        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           pattern: "^documentation|^developers.diem.com"
 
@@ -156,7 +156,7 @@ jobs:
           fetch-depth: 0 #get all the history!!!
       - id: changes
         name: determine changes
-        uses: diem/actions/changes@0e2c66f81f92149dfdfe791a753d28ce9f808eda
+        uses: diem/actions/changes@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
           workflow-file: docker-publish.yml
       - name: setup_aws_ecr_login
