@@ -139,8 +139,8 @@ impl DbReader for MockDiemDB {
         &self,
         address: AccountAddress,
         seq_num: u64,
+        include_events: bool,
         _ledger_version: u64,
-        fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>, Error> {
         Ok(self
             .all_txns
@@ -156,7 +156,7 @@ impl DbReader for MockDiemDB {
             .map(|(v, (x, status))| TransactionWithProof {
                 version: v as u64,
                 transaction: x.clone(),
-                events: if fetch_events {
+                events: if include_events {
                     Some(
                         self.events
                             .iter()
@@ -179,6 +179,17 @@ impl DbReader for MockDiemDB {
                     ),
                 ),
             }))
+    }
+
+    fn get_account_transactions(
+        &self,
+        _address: AccountAddress,
+        _start_seq_num: u64,
+        _limit: u64,
+        _include_events: bool,
+        _ledger_version: u64,
+    ) -> Result<Vec<TransactionWithProof>> {
+        unimplemented!()
     }
 
     fn get_transactions(

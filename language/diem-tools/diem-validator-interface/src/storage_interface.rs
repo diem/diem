@@ -70,9 +70,10 @@ impl DiemValidatorInterface for DBDebuggerInterface {
         account: AccountAddress,
         seq: u64,
     ) -> Result<Option<Version>> {
+        let ledger_version = self.get_latest_version()?;
         Ok(self
             .0
-            .get_account_transaction(account, seq, self.get_latest_version()?, false)?
+            .get_account_transaction(account, seq, false, ledger_version)?
             .map(|info| info.version))
     }
 }

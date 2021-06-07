@@ -257,31 +257,31 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let t1 = db
         .reader
-        .get_account_transaction(genesis_account, 0, current_version, false)
+        .get_account_transaction(genesis_account, 0, false, current_version)
         .unwrap();
     verify_committed_txn_status(t1.as_ref(), &block1[3]).unwrap();
 
     let t2 = db
         .reader
-        .get_account_transaction(genesis_account, 1, current_version, false)
+        .get_account_transaction(genesis_account, 1, false, current_version)
         .unwrap();
     verify_committed_txn_status(t2.as_ref(), &block1[4]).unwrap();
 
     let t3 = db
         .reader
-        .get_account_transaction(genesis_account, 2, current_version, false)
+        .get_account_transaction(genesis_account, 2, false, current_version)
         .unwrap();
     verify_committed_txn_status(t3.as_ref(), &block1[5]).unwrap();
 
     let tn = db
         .reader
-        .get_account_transaction(genesis_account, 3, current_version, false)
+        .get_account_transaction(genesis_account, 3, false, current_version)
         .unwrap();
     assert!(tn.is_none());
 
     let t4 = db
         .reader
-        .get_account_transaction(account1, 0, current_version, true)
+        .get_account_transaction(account1, 0, true, current_version)
         .unwrap();
     verify_committed_txn_status(t4.as_ref(), &block1[6]).unwrap();
     // We requested the events to come back from this one, so verify that they did
@@ -289,13 +289,13 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let t5 = db
         .reader
-        .get_account_transaction(account2, 0, current_version, false)
+        .get_account_transaction(account2, 0, false, current_version)
         .unwrap();
     verify_committed_txn_status(t5.as_ref(), &block1[7]).unwrap();
 
     let t6 = db
         .reader
-        .get_account_transaction(account1, 1, current_version, true)
+        .get_account_transaction(account1, 1, true, current_version)
         .unwrap();
     verify_committed_txn_status(t6.as_ref(), &block1[8]).unwrap();
 
@@ -397,7 +397,7 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let account4_transaction = db
         .reader
-        .get_account_transaction(account4, 0, current_version, true)
+        .get_account_transaction(account4, 0, true, current_version)
         .unwrap();
     assert!(account4_transaction.is_none());
 
@@ -435,13 +435,13 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let t7 = db
         .reader
-        .get_account_transaction(account1, 2, current_version, false)
+        .get_account_transaction(account1, 2, false, current_version)
         .unwrap();
     verify_committed_txn_status(t7.as_ref(), &block2[0]).unwrap();
 
     let t20 = db
         .reader
-        .get_account_transaction(account1, 15, current_version, false)
+        .get_account_transaction(account1, 15, false, current_version)
         .unwrap();
     verify_committed_txn_status(t20.as_ref(), &block2[13]).unwrap();
 

@@ -11,6 +11,7 @@ use diem_crypto::hash::CryptoHash;
 #[allow(unused_imports)]
 use diem_jellyfish_merkle::node_type::{Node, NodeKey};
 use diem_temppath::TempPath;
+use diem_types::transaction::Transaction;
 #[allow(unused_imports)]
 use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
@@ -20,6 +21,7 @@ use diem_types::{
     proof::SparseMerkleLeafNode,
     vm_status::{KeptVMStatus, StatusCode},
 };
+use itertools::Itertools;
 use proptest::prelude::*;
 use std::collections::HashMap;
 
@@ -317,6 +319,71 @@ fn group_events_by_event_key(
     event_key_to_events.into_iter().collect()
 }
 
+fn verify_account_txns(
+    db: &DiemDB,
+    expected_txns_by_account: HashMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>>,
+    ledger_info: &LedgerInfo,
+) {
+    let actual_txns_by_account = expected_txns_by_account
+        .iter()
+        .map(|(account, txns_and_events)| {
+            let first_seq_num = if let Some((txn, _)) = txns_and_events.first() {
+                txn.as_signed_user_txn().unwrap().sequence_number()
+            } else {
+                return (*account, Vec::new());
+            };
+
+            let last_txn = &txns_and_events.last().unwrap().0;
+            let last_seq_num = last_txn.as_signed_user_txn().unwrap().sequence_number();
+
+            let txns_with_proofs = db
+                .get_account_transactions(
+                    *account,
+                    first_seq_num,
+                    last_seq_num + 1,
+                    true, /* include_events */
+                    ledger_info.version(),
+                )
+                .unwrap();
+
+            let txns_and_events = txns_with_proofs
+                .into_iter()
+                .map(|txn_with_proof| {
+                    let seq_num = txn_with_proof
+                        .transaction
+                        .as_signed_user_txn()
+                        .unwrap()
+                        .sequence_number();
+                    txn_with_proof
+                        .verify_user_txn(ledger_info, txn_with_proof.version, *account, seq_num)
+                        .unwrap();
+                    (txn_with_proof.transaction, txn_with_proof.events.unwrap())
+                })
+                .collect::<Vec<_>>();
+
+            (*account, txns_and_events)
+        })
+        .collect::<HashMap<_, _>>();
+
+    assert_eq!(actual_txns_by_account, expected_txns_by_account);
+}
+
+fn group_txns_by_account(
+    txns_to_commit: &[TransactionToCommit],
+) -> HashMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>> {
+    let mut account_to_txns = HashMap::new();
+    for txn in txns_to_commit {
+        if let Ok(signed_txn) = txn.transaction().as_signed_user_txn() {
+            let account = signed_txn.sender();
+            account_to_txns
+                .entry(account)
+                .or_insert_with(Vec::new)
+                .push((txn.transaction().clone(), txn.events().to_vec()));
+        }
+    }
+    account_to_txns
+}
+
 fn verify_committed_transactions(
     db: &DiemDB,
     txns_to_commit: &[TransactionToCommit],
@@ -351,9 +418,19 @@ fn verify_committed_transactions(
             .unwrap();
 
         let txn_with_proof = db
-            .get_account_transaction(txn.sender(), txn.sequence_number(), ledger_version, true)
+            .get_account_transaction(txn.sender(), txn.sequence_number(), true, ledger_version)
             .unwrap()
             .expect("Should exist.");
+        txn_with_proof
+            .verify_user_txn(ledger_info, cur_ver, txn.sender(), txn.sequence_number())
+            .unwrap();
+
+        let txn_with_proof = db
+            .get_account_transactions(txn.sender(), txn.sequence_number(), 1, true, ledger_version)
+            .unwrap()
+            .into_iter()
+            .exactly_one()
+            .unwrap();
         txn_with_proof
             .verify_user_txn(ledger_info, cur_ver, txn.sender(), txn.sequence_number())
             .unwrap();
@@ -387,6 +464,9 @@ fn verify_committed_transactions(
         ledger_info,
         is_latest,
     );
+
+    // Fetch and verify batch transactions by account
+    verify_account_txns(db, group_txns_by_account(txns_to_commit), ledger_info);
 }
 
 proptest! {

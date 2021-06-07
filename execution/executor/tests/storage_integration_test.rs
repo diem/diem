@@ -166,7 +166,7 @@ fn test_reconfiguration() {
 
     let t3 = db
         .reader
-        .get_account_transaction(operator_account, 0, current_version, true)
+        .get_account_transaction(operator_account, 0, true, current_version)
         .unwrap();
     verify_committed_txn_status(t3.as_ref(), &txn_block[2]).unwrap();
 
@@ -357,13 +357,13 @@ fn test_change_publishing_option_to_custom() {
     // Transaction 1 is committed as it's in the allowlist
     let txn1 = db
         .reader
-        .get_account_transaction(treasury_compliance_account, 0, current_version, false)
+        .get_account_transaction(treasury_compliance_account, 0, false, current_version)
         .unwrap();
     verify_committed_txn_status(txn1.as_ref(), &block1[0]).unwrap();
     // Transaction 2, 3 are rejected
     assert!(db
         .reader
-        .get_account_transaction(validator_account, 0, current_version, false)
+        .get_account_transaction(validator_account, 0, false, current_version)
         .unwrap()
         .is_none());
 
@@ -407,13 +407,13 @@ fn test_change_publishing_option_to_custom() {
     // Transaction 2 is committed.
     let txn2 = db
         .reader
-        .get_account_transaction(validator_account, 0, current_version, false)
+        .get_account_transaction(validator_account, 0, false, current_version)
         .unwrap();
     verify_committed_txn_status(txn2.as_ref(), &block2[0]).unwrap();
     // Transaction 3 is committed.
     let txn3 = db
         .reader
-        .get_account_transaction(validator_account, 1, current_version, false)
+        .get_account_transaction(validator_account, 1, false, current_version)
         .unwrap();
     verify_committed_txn_status(txn3.as_ref(), &block2[1]).unwrap();
 }

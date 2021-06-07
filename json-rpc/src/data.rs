@@ -137,7 +137,7 @@ pub fn get_account_transaction(
     include_events: bool,
 ) -> Result<Option<TransactionView>, JsonRpcError> {
     let tx =
-        db.get_account_transaction(account, sequence_number, ledger_version, include_events)?;
+        db.get_account_transaction(account, sequence_number, include_events, ledger_version)?;
 
     if let Some(tx) = tx {
         Ok(Some(TransactionView::try_from_tx_and_events(
@@ -182,7 +182,7 @@ pub fn get_account_transactions(
 
     for seq in start..end {
         let tx = db
-            .get_account_transaction(account, seq, ledger_version, include_events)?
+            .get_account_transaction(account, seq, include_events, ledger_version)?
             .ok_or_else(|| format_err!("Can not find transaction for seq {}!", seq))?;
 
         let tx_view = TransactionView::try_from_tx_and_events(

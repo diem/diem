@@ -124,9 +124,20 @@ impl DbReader for StorageClient {
         &self,
         _address: AccountAddress,
         _seq_num: u64,
-        _ledger_version: u64,
-        _fetch_events: bool,
+        _include_events: bool,
+        _ledger_version: Version,
     ) -> Result<Option<TransactionWithProof>> {
+        unimplemented!()
+    }
+
+    fn get_account_transactions(
+        &self,
+        _address: AccountAddress,
+        _start_seq_num: u64,
+        _limit: u64,
+        _include_events: bool,
+        _ledger_version: Version,
+    ) -> Result<Vec<TransactionWithProof>> {
         unimplemented!()
     }
 

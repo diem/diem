@@ -37,7 +37,7 @@ proptest! {
                 .expect("All should be user transactions here.");
             prop_assert_eq!(
                 store
-                    .lookup_transaction_by_account(
+                    .get_account_transaction_version(
                         user_txn.sender(),
                         user_txn.sequence_number(),
                         ledger_version

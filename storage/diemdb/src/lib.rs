@@ -628,22 +628,48 @@ impl DbReader for DiemDB {
         })
     }
 
-    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
-    /// the transaction with given `seq_num` doesn't exist, returns `None`.
     fn get_account_transaction(
         &self,
         address: AccountAddress,
         seq_num: u64,
+        include_events: bool,
         ledger_version: Version,
-        fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>> {
         gauged_api("get_account_transaction", || {
             self.transaction_store
-                .lookup_transaction_by_account(address, seq_num, ledger_version)?
-                .map(|version| {
-                    self.get_transaction_with_proof(version, ledger_version, fetch_events)
+                .get_account_transaction_version(address, seq_num, ledger_version)?
+                .map(|txn_version| {
+                    self.get_transaction_with_proof(txn_version, ledger_version, include_events)
                 })
                 .transpose()
+        })
+    }
+
+    fn get_account_transactions(
+        &self,
+        address: AccountAddress,
+        start_seq_num: u64,
+        limit: u64,
+        include_events: bool,
+        ledger_version: Version,
+    ) -> Result<Vec<TransactionWithProof>> {
+        gauged_api("get_account_transactions", || {
+            error_if_too_many_requested(limit, MAX_LIMIT)?;
+
+            self.transaction_store
+                .get_account_transaction_version_iter(
+                    address,
+                    start_seq_num,
+                    limit,
+                    ledger_version,
+                )?
+                .map(|result| {
+                    let (_seq_num, txn_version) = result?;
+                    // TODO(philiphayes): check seq_num? are we guaranteed only user
+                    // signed txns here?
+                    self.get_transaction_with_proof(txn_version, ledger_version, include_events)
+                })
+                .collect::<Result<Vec<_>>>()
         })
     }
 

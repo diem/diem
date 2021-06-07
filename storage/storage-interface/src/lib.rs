@@ -253,13 +253,28 @@ pub trait DbReader: Send + Sync {
     /// ../diemdb/struct.DiemDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
+    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
+    /// the transaction with given `seq_num` doesn't exist, returns `None`.
     fn get_account_transaction(
         &self,
         address: AccountAddress,
         seq_num: u64,
+        include_events: bool,
         ledger_version: Version,
-        fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>>;
+
+    /// Returns the list of transactions sent by an account with `address` starting
+    /// at sequence number `seq_num`. Will return no more than `limit` transactions.
+    /// Will ignore transactions with `txn.version > ledger_version`. Optionally
+    /// fetch events for each transaction when `fetch_events` is `true`.
+    fn get_account_transactions(
+        &self,
+        address: AccountAddress,
+        seq_num: u64,
+        limit: u64,
+        include_events: bool,
+        ledger_version: Version,
+    ) -> Result<Vec<TransactionWithProof>>;
 
     /// Returns proof of new state for a given ledger info with signatures relative to version known
     /// to client

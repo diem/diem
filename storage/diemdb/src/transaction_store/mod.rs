@@ -28,7 +28,7 @@ impl TransactionStore {
     }
 
     /// Gets the version of a transaction by the sender `address` and `sequence_number`.
-    pub fn lookup_transaction_by_account(
+    pub fn get_account_transaction_version(
         &self,
         address: AccountAddress,
         sequence_number: u64,
@@ -46,7 +46,6 @@ impl TransactionStore {
         Ok(None)
     }
 
-    #[allow(dead_code)]
     /// Gets an iterator that yields `(sequence_number, version)` for each
     /// transaction sent by an account, starting at `start_seq_num`, and returning
     /// at most `num_versions` results with `version <= ledger_version`
