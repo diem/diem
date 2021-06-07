@@ -414,7 +414,6 @@ fn test_insert_waypoint() {
 
     // Get the current waypoint from storage
     let current_waypoint: Waypoint = storage.get(WAYPOINT).unwrap().value;
-    storage.get::<Waypoint>(GENESIS_WAYPOINT).unwrap_err();
 
     // Insert a new waypoint and genesis waypoint into storage
     let inserted_waypoint =

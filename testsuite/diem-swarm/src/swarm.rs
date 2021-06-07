@@ -5,8 +5,9 @@ use anyhow::{Context, Result};
 use debug_interface::NodeDebugClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_genesis_tool::{
-    config_builder::{FullnodeBuilder, FullnodeType, ValidatorBuilder},
+    config_builder::{FullnodeBuilder, FullnodeType},
     swarm_config::SwarmConfig,
+    validator_builder::ValidatorBuilder,
 };
 use diem_logger::prelude::*;
 use diem_temppath::TempPath;
@@ -488,7 +489,9 @@ impl DiemSwarm {
         let node_config = template.unwrap_or_else(NodeConfig::default_for_validator);
 
         let config_path = &swarm_config_dir.as_ref().to_path_buf();
-        let builder = ValidatorBuilder::new(num_nodes, node_config, &swarm_config_dir);
+        let builder = ValidatorBuilder::new(&config_path)
+            .num_validators(num_nodes)
+            .template(node_config);
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
