@@ -16,8 +16,12 @@ use thiserror::Error;
 pub struct ShortHexStr([u8; ShortHexStr::LENGTH]);
 
 #[derive(Error, Debug)]
-#[error("Input bytes are too short")]
-pub struct InputTooShortError;
+pub enum Error {
+    #[error("Input bytes are too short")]
+    InputTooShortError,
+    #[error("Overflow error: {0}")]
+    OverflowError(String),
+}
 
 impl ShortHexStr {
     pub const SOURCE_LENGTH: usize = 4;
@@ -25,9 +29,9 @@ impl ShortHexStr {
 
     /// Format a new `ShortHexStr` from a byte slice.
     ///
-    /// Returns `Err(InputTooShortError)` if the input byte slice length is less
+    /// Returns `Err(Error::InputTooShortError)` if the input byte slice length is less
     /// than `SOURCE_LENGTH` bytes.
-    pub fn try_from_bytes(src_bytes: &[u8]) -> Result<ShortHexStr, InputTooShortError> {
+    pub fn try_from_bytes(src_bytes: &[u8]) -> Result<ShortHexStr, Error> {
         if src_bytes.len() >= ShortHexStr::SOURCE_LENGTH {
             let src_short_bytes = &src_bytes[0..ShortHexStr::SOURCE_LENGTH];
             let mut dest_bytes = [0u8; ShortHexStr::LENGTH];
@@ -35,10 +39,10 @@ impl ShortHexStr {
             // We include a tiny hex encode here instead of using the `hex` crate's
             // `encode_to_slice`, since the compiler seems unable to inline across
             // the crate boundary.
-            hex_encode(&src_short_bytes, &mut dest_bytes);
+            hex_encode(&src_short_bytes, &mut dest_bytes)?;
             Ok(Self(dest_bytes))
         } else {
-            Err(InputTooShortError)
+            Err(Error::InputTooShortError)
         }
     }
 
@@ -81,22 +85,30 @@ const HEX_CHARS_LOWER: &[u8; 16] = b"0123456789abcdef";
 /// Format a byte as hex. Returns a tuple containing the first character and then
 /// the second character as ASCII bytes.
 #[inline(always)]
-fn byte2hex(byte: u8) -> (u8, u8) {
-    let hi = HEX_CHARS_LOWER[((byte >> 4) & 0x0f) as usize];
+fn byte2hex(byte: u8) -> Result<(u8, u8), Error> {
+    let hi = HEX_CHARS_LOWER[(byte
+        .checked_shr(4)
+        .ok_or_else(|| Error::OverflowError("byte2hex::byte".into()))?
+        & 0x0f) as usize];
     let lo = HEX_CHARS_LOWER[(byte & 0x0f) as usize];
-    (hi, lo)
+    Ok((hi, lo))
 }
 
 /// Hex encode a byte slice into the destination byte slice.
 #[inline(always)]
-fn hex_encode(src: &[u8], dst: &mut [u8]) {
-    debug_checked_precondition!(dst.len() == 2 * src.len());
+fn hex_encode(src: &[u8], dst: &mut [u8]) -> Result<(), Error> {
+    let expected_length = src
+        .len()
+        .checked_mul(2)
+        .ok_or_else(|| Error::OverflowError("hex_encode::src".into()))?;
+    debug_checked_precondition!(dst.len() == expected_length);
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
-        let (hi, lo) = byte2hex(*byte);
+        let (hi, lo) = byte2hex(*byte)?;
         out[0] = hi;
         out[1] = lo;
     }
+    Ok(())
 }
 
 pub trait AsShortHexStr {
@@ -129,7 +141,7 @@ mod test {
     fn test_hex_encode() {
         let src = [0x12_u8, 0x34, 0xfe, 0xba];
         let mut actual = [0u8; 8];
-        hex_encode(&src, &mut actual);
+        hex_encode(&src, &mut actual).unwrap();
         let expected = b"1234feba";
         assert_eq!(&actual, expected);
     }
@@ -137,7 +149,7 @@ mod test {
     #[test]
     fn test_byte2hex_equivalence() {
         for byte in 0..=u8::MAX {
-            let (hi, lo) = byte2hex(byte);
+            let (hi, lo) = byte2hex(byte).unwrap();
             let formatted_bytes = [hi, lo];
             let actual = str::from_utf8(&formatted_bytes[..]).unwrap();
             let expected = hex::encode(&[byte][..]);

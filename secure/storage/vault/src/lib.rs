@@ -46,6 +46,8 @@ pub enum Error {
     MissingField(String),
     #[error("404: Not Found: {0}/{1}")]
     NotFound(String, String),
+    #[error("Overflow error: {0}")]
+    OverflowError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
     #[error("Synthetic error returned: {0}")]
@@ -369,7 +371,13 @@ impl Client {
 
         // Trim keys if too many versions exist
         if (max_version - min_version) >= MAX_NUM_KEY_VERSIONS {
-            let min_available_version = max_version - MAX_NUM_KEY_VERSIONS + 1;
+            // let min_available_version = max_version - MAX_NUM_KEY_VERSIONS + 1;
+            let min_available_version = max_version
+                .checked_sub(MAX_NUM_KEY_VERSIONS)
+                .and_then(|n| n.checked_add(1))
+                .ok_or_else(|| {
+                    Error::OverflowError("trim_key_versions::min_available_version".into())
+                })?;
             self.set_minimum_encrypt_decrypt_version(name, min_available_version)?;
             self.set_minimum_available_version(name, min_available_version)?;
         };
