@@ -16,7 +16,7 @@ mod waypoint;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod config_builder;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 mod storage_helper;
 #[cfg(any(test, feature = "testing"))]
 pub mod swarm_config;
