@@ -10,7 +10,7 @@ use crate::{
     TransactionContext,
 };
 use diem_config::{config, config::Peer, network_id::NetworkId};
-use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
+use diem_crypto::{ed25519::Ed25519PublicKey, traits::ValidCryptoMaterialStringExt, x25519};
 use diem_management::{error::Error, secure_backend::DISK};
 use diem_types::{
     account_address::AccountAddress, chain_id::ChainId, network_address::NetworkAddress,
@@ -64,7 +64,7 @@ impl OperationalTool {
 
     pub fn check_endpoint(
         &self,
-        network_id: NetworkId,
+        network_id: &NetworkId,
         network_address: NetworkAddress,
     ) -> Result<String, Error> {
         let args = format!(
@@ -81,6 +81,29 @@ impl OperationalTool {
         );
         let command = Command::from_iter(args.split_whitespace());
         command.check_endpoint()
+    }
+
+    pub fn check_endpoint_with_key(
+        &self,
+        network_id: &NetworkId,
+        network_address: NetworkAddress,
+        private_key: &x25519::PrivateKey,
+    ) -> Result<String, Error> {
+        let args = format!(
+            "
+                {command}
+                --address {network_address}
+                --chain-id {chain_id}
+                --network-id {network_id}
+                --private-key {private_key}
+            ",
+            command = command(TOOL_NAME, CommandName::CheckEndpoint),
+            chain_id = self.chain_id.id(),
+            network_address = network_address,
+            network_id = network_id,
+            private_key = private_key.to_encoded_string().unwrap(),
+        );
+        Command::from_iter(args.split_whitespace()).check_endpoint()
     }
 
     pub fn create_account(

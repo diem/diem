@@ -3,7 +3,10 @@
 
 use anyhow::{Context, Result};
 use debug_interface::NodeDebugClient;
-use diem_config::{config::NodeConfig, network_id::NetworkId};
+use diem_config::{
+    config::{NetworkConfig, NodeConfig},
+    network_id::NetworkId,
+};
 use diem_genesis_tool::{
     config_builder::{FullnodeBuilder, FullnodeType},
     swarm_config::SwarmConfig,
@@ -333,31 +336,63 @@ impl DiemNode {
     }
 
     pub fn public_address(&self) -> NetworkAddress {
-        let network = self
-            .config
+        self.network_address(&NetworkId::Public)
+    }
+
+    pub fn network_address(&self, network_id: &NetworkId) -> NetworkAddress {
+        network_address(&self.config, network_id)
+    }
+}
+
+pub fn network_address(node_config: &NodeConfig, network_id: &NetworkId) -> NetworkAddress {
+    let network = network(node_config, network_id);
+
+    let port = network
+        .listen_address
+        .as_slice()
+        .iter()
+        .find_map(|proto| {
+            if let Protocol::Tcp(port) = proto {
+                Some(port)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+    let key = network.identity_key().public_key();
+    NetworkAddress::from_str(&format!(
+        "/ip4/127.0.0.1/tcp/{}/ln-noise-ik/{}/ln-handshake/0",
+        port, key
+    ))
+    .unwrap()
+}
+
+pub fn network<'a>(node_config: &'a NodeConfig, network_id: &NetworkId) -> &'a NetworkConfig {
+    match network_id {
+        NetworkId::Validator => node_config.validator_network.as_ref().unwrap(),
+        _ => node_config
             .full_node_networks
             .iter()
             .find(|network| network.network_id == NetworkId::Public)
-            .unwrap();
-        let port = network
-            .listen_address
-            .as_slice()
-            .iter()
-            .find_map(|proto| {
-                if let Protocol::Tcp(port) = proto {
-                    Some(port)
-                } else {
-                    None
-                }
-            })
-            .unwrap();
-        let key = network.identity_key().public_key();
-        NetworkAddress::from_str(&format!(
-            "/ip4/126.0.0.1/tcp/{}/ln-noise-ik/{}/ln-handshake/0",
-            port, key
-        ))
-        .unwrap()
+            .unwrap(),
     }
+}
+
+pub fn modify_network_config<Fn: FnOnce(&mut NetworkConfig)>(
+    node_config: &mut NodeConfig,
+    network_id: &NetworkId,
+    modifier: Fn,
+) {
+    let network = match network_id {
+        NetworkId::Validator => node_config.validator_network.as_mut().unwrap(),
+        _ => node_config
+            .full_node_networks
+            .iter_mut()
+            .find(|network| network.network_id == NetworkId::Public)
+            .unwrap(),
+    };
+
+    modifier(network)
 }
 
 pub enum HealthStatus {
