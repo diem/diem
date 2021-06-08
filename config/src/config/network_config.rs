@@ -61,6 +61,7 @@ pub struct NetworkConfig {
     // `DiscoveryMethod::None` disables discovery and dialing out (unless you have
     // seed peers configured).
     pub discovery_method: DiscoveryMethod,
+    pub discovery_methods: Vec<DiscoveryMethod>,
     pub identity: Identity,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
@@ -107,6 +108,7 @@ impl NetworkConfig {
     pub fn network_with_id(network_id: NetworkId) -> NetworkConfig {
         let mut config = Self {
             discovery_method: DiscoveryMethod::None,
+            discovery_methods: Vec::new(),
             identity: Identity::None,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             mutual_authentication: false,
@@ -157,6 +159,20 @@ impl NetworkConfig {
             identity
         } else {
             panic!("Invalid identity found, expected a storage identity.");
+        }
+    }
+
+    pub fn discovery_methods(&self) -> Vec<&DiscoveryMethod> {
+        // TODO: This is a backwards compatibility feature.  Deprecate discovery_method
+        if self.discovery_method != DiscoveryMethod::None && !self.discovery_methods.is_empty() {
+            panic!("Can't specify discovery_method and discovery_methods")
+        } else if self.discovery_method != DiscoveryMethod::None {
+            vec![&self.discovery_method]
+        } else {
+            self.discovery_methods
+                .iter()
+                .filter(|method| &&DiscoveryMethod::None != method)
+                .collect()
         }
     }
 
