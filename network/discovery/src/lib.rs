@@ -17,7 +17,6 @@ use std::pin::Pin;
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 
-pub mod builder;
 mod counters;
 mod validator_set;
 
