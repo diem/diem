@@ -3,7 +3,7 @@
 
 # Module `0x1::Errors`
 
-Module defining error codes used in Move aborts throughout the framework.
+Module defining structured error codes in Move aborts.
 
 A <code>u64</code> error code is constructed from two values:
 
@@ -23,7 +23,6 @@ framework evolves.
 -  [Function `make`](#0x1_Errors_make)
 -  [Function `invalid_state`](#0x1_Errors_invalid_state)
 -  [Function `requires_address`](#0x1_Errors_requires_address)
--  [Function `requires_role`](#0x1_Errors_requires_role)
 -  [Function `requires_capability`](#0x1_Errors_requires_capability)
 -  [Function `not_published`](#0x1_Errors_not_published)
 -  [Function `already_published`](#0x1_Errors_already_published)
@@ -107,7 +106,7 @@ is exhausted.
 
 <a name="0x1_Errors_NOT_PUBLISHED"></a>
 
-A resource is required but not published. Example: access to non-existing AccountLimits resource.
+A resource is required but not published. Example: access to non-existing account resource.
 
 
 <pre><code><b>const</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>: u8 = 5;
@@ -132,17 +131,6 @@ The signer of a transaction does not have a required capability.
 
 
 <pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
-</code></pre>
-
-
-
-<a name="0x1_Errors_REQUIRES_ROLE"></a>
-
-The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-which requires the signer to have the role of treasury compliance.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>: u8 = 3;
 </code></pre>
 
 
@@ -253,42 +241,6 @@ A function to create an error from from a category and a reason.
 <pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>;
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_Errors_requires_role"></a>
-
-## Function `requires_role`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64 { <a href="Errors.md#0x1_Errors_make">make</a>(<a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>, reason) }
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque = <b>true</b>;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>;
 </code></pre>
 
 

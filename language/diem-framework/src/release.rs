@@ -4,7 +4,9 @@
 use crate::{path_in_crate, save_binary};
 use log::LevelFilter;
 use move_binary_format::{compatibility::Compatibility, normalized::Module, CompiledModule};
-use move_core_types::language_storage::ModuleId;
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
+};
 use std::{
     collections::BTreeMap,
     fs::{create_dir_all, remove_dir_all, File},
@@ -241,16 +243,19 @@ fn build_error_code_map(output_path: impl AsRef<Path>) {
     let output_path = output_path.as_ref();
     //assert!(output_path.is_file());
     recreate_dir(&output_path.parent().unwrap());
+    let mut errmap_options = errmapgen::ErrmapOptions::default();
+    errmap_options.output_file = output_path.to_string_lossy().to_string();
+    errmap_options.error_category_modules.insert(ModuleId::new(
+        AccountAddress::from_hex_literal("0x1").unwrap(),
+        Identifier::new("DiemErrors").unwrap(),
+    ));
 
     let options = move_prover::cli::Options {
         move_sources: crate::diem_stdlib_files(),
         move_deps: vec![],
         verbosity_level: LevelFilter::Warn,
         run_errmapgen: true,
-        errmapgen: errmapgen::ErrmapOptions {
-            output_file: output_path.to_string_lossy().to_string(),
-            ..Default::default()
-        },
+        errmapgen: errmap_options,
         ..Default::default()
     };
     options.setup_logging_for_test();

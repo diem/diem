@@ -1,6 +1,6 @@
 address 0x1 {
 
-/// Module defining error codes used in Move aborts throughout the framework.
+/// Module defining structured error codes in Move aborts.
 ///
 /// A `u64` error code is constructed from two values:
 ///
@@ -34,14 +34,10 @@ module Errors {
     /// which publishes a resource under a particular address.
     const REQUIRES_ADDRESS: u8 = 2;
 
-    /// The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-    /// which requires the signer to have the role of treasury compliance.
-    const REQUIRES_ROLE: u8 = 3;
-
     /// The signer of a transaction does not have a required capability.
     const REQUIRES_CAPABILITY: u8 = 4;
 
-    /// A resource is required but not published. Example: access to non-existing AccountLimits resource.
+    /// A resource is required but not published. Example: access to non-existing account resource.
     const NOT_PUBLISHED: u8 = 5;
 
     /// Attempting to publish a resource that is already published. Example: calling an initialization function
@@ -73,13 +69,6 @@ module Errors {
         pragma opaque = true;
         aborts_if false;
         ensures result == REQUIRES_ADDRESS;
-    }
-
-    public fun requires_role(reason: u64): u64 { make(REQUIRES_ROLE, reason) }
-    spec requires_role {
-        pragma opaque = true;
-        aborts_if false;
-        ensures result == REQUIRES_ROLE;
     }
 
     public fun requires_capability(reason: u64): u64 { make(REQUIRES_CAPABILITY, reason) }

@@ -1488,14 +1488,14 @@ pub enum ScriptFunctionCall {
     /// | `domain`     | `vector<u8>` | The domain to be added.                                                                         |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                             | Description                                                                                                                            |
-    /// | ----------------           | --------------                           | -------------                                                                                                                          |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
+    /// | Error Category              | Error Reason                             | Description                                                                                                                            |
+    /// | ----------------            | --------------                           | -------------                                                                                                                          |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
     AddDiemIdDomain {
         address: AccountAddress,
         domain: Bytes,
@@ -1567,19 +1567,19 @@ pub enum ScriptFunctionCall {
     /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                                                               |
-    /// | ----------------           | --------------                               | -------------                                                                                                                             |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
-    /// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
+    /// | Error Category              | Error Reason                                 | Description                                                                                                                               |
+    /// | ----------------            | --------------                               | -------------                                                                                                                             |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
+    /// | 0                           | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
+    /// | `Errors::LIMIT_EXCEEDED`    | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -1786,12 +1786,12 @@ pub enum ScriptFunctionCall {
     /// | `child_initial_balance` | `u64`        | The initial balance in `CoinType` to give the child account when it's created.                                                              |
     ///
     /// # Common Abort Conditions
-    /// | Error Category              | Error Reason                                             | Description                                                                              |
-    /// | ----------------            | --------------                                           | -------------                                                                            |
+    /// | Error Category              | Error Reason                                            | Description                                                                              |
+    /// | ----------------            | --------------                                          | -------------                                                                            |
     /// | `Errors::INVALID_ARGUMENT`  | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`            | The `auth_key_prefix` was not of length 32.                                              |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`                                    | The sending account wasn't a Parent VASP account.                                        |
-    /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                                        | The `child_address` address is already taken.                                            |
-    /// | `Errors::LIMIT_EXCEEDED`    | `VASP::ETOO_MANY_CHILDREN`                               | The sending account has reached the maximum number of allowed child accounts.            |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EPARENT_VASP`                                   | The sending account wasn't a Parent VASP account.                                        |
+    /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                                       | The `child_address` address is already taken.                                            |
+    /// | `Errors::LIMIT_EXCEEDED`    | `VASP::ETOO_MANY_CHILDREN`                              | The sending account has reached the maximum number of allowed child accounts.            |
     /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `CoinType` is not a registered currency on-chain.                                    |
     /// | `Errors::INVALID_STATE`     | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for the sending account has already been extracted.            |
     /// | `Errors::NOT_PUBLISHED`     | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | The sending account doesn't have a balance in `CoinType`.                                |
@@ -1854,8 +1854,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                  | The `Currency` is not a registered currency on-chain.                                      |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `addr` address is already taken.                                                       |
     ///
     /// # Related Scripts
@@ -1889,7 +1889,7 @@ pub enum ScriptFunctionCall {
     /// | Error Category              | Error Reason              | Description                                                                    |
     /// | ----------------            | --------------            | -------------                                                                  |
     /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
     CreateDiemIdDomains {},
 
     /// # Summary
@@ -1929,8 +1929,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `CoinType` is not a registered currency on-chain.                                      |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                  | The `CoinType` is not a registered currency on-chain.                                      |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
     /// # Related Scripts
@@ -2018,8 +2018,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                          |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                          |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
     /// # Related Scripts
@@ -2071,8 +2071,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                          |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                          |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
     /// # Related Scripts
@@ -2120,16 +2120,16 @@ pub enum ScriptFunctionCall {
     /// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                |
-    /// | ----------------           | --------------                               | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`        | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`                | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_TC`         | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
-    /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                              |
+    /// | Error Category              | Error Reason                                | Description                                                                                |
+    /// | ----------------            | --------------                              | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`              | A `SlidingNonce` resource is not published under `tc_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`              | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`              | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`     | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`       | The sending account is not the Treasury Compliance account.                                |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`               | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_TC`        | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
+    /// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                               |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::unfreeze_account`
@@ -2252,16 +2252,16 @@ pub enum ScriptFunctionCall {
     /// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
     ///
     /// # Common Abort Conditions
-    /// | Error Category           | Error Reason                                             | Description                                                                             |
-    /// | ----------------         | --------------                                           | -------------                                                                           |
-    /// | `Errors::NOT_PUBLISHED`  | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                      |
-    /// | `Errors::INVALID_STATE`  | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                     |
-    /// | `Errors::LIMIT_EXCEEDED` | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                  |
-    /// | `Errors::NOT_PUBLISHED`  | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                            |
-    /// | `Errors::NOT_PUBLISHED`  | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
-    /// | `Errors::INVALID_STATE`  | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
-    /// | `Errors::NOT_PUBLISHED`  | `Roles::EROLE_ID`                                        | The `account` did not have a role assigned to it.                                       |
-    /// | `Errors::REQUIRES_ROLE`  | `Roles::EDESIGNATED_DEALER`                              | The `account` did not have the role of DesignatedDealer.                                |
+    /// | Error Category              | Error Reason                                            | Description                                                                            |
+    /// | ----------------            | --------------                                          | -------------                                                                          |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                     |
+    /// | `Errors::INVALID_STATE`     | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                    |
+    /// | `Errors::LIMIT_EXCEEDED`    | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                 |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                           |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
+    /// | `Errors::INVALID_STATE`     | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
+    /// | `Errors::NOT_PUBLISHED`     | `Roles::EROLE_ID`                                       | The `account` did not have a role assigned to it.                                      |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDESIGNATED_DEALER`                             | The `account` did not have the role of DesignatedDealer.                               |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
@@ -2359,7 +2359,7 @@ pub enum ScriptFunctionCall {
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                             | Description                                                                                                                            |
     /// | ----------------           | --------------                           | -------------                                                                                                                          |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `DiemErrors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
     /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
     /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
@@ -2391,18 +2391,18 @@ pub enum ScriptFunctionCall {
     /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                     |
-    /// | ----------------           | --------------                          | -------------                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                |
-    /// | 0                          | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR` | The validator to be removed is not in the validator set.                                        |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                              |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
+    /// | Error Category              | Error Reason                            | Description                                                                                     |
+    /// | ----------------            | --------------                          | -------------                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                 |
+    /// | 0                           | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR`  | The validator to be removed is not in the validator set.                                        |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                               |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                               |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`       | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -2688,13 +2688,13 @@ pub enum ScriptFunctionCall {
     /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                   | Description                                                                                           |
-    /// | ----------------           | --------------                                 | -------------                                                                                         |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
+    /// | Error Category              | Error Reason                                   | Description                                                                                           |
+    /// | ----------------            | --------------                                 | -------------                                                                                         |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`              | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -2733,13 +2733,13 @@ pub enum ScriptFunctionCall {
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-    /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-    /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+    /// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+    /// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+    /// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -2778,18 +2778,18 @@ pub enum ScriptFunctionCall {
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-    /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-    /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+    /// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+    /// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+    /// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -2839,19 +2839,19 @@ pub enum ScriptFunctionCall {
     /// | `tier_index`                | `u64`     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
     ///
     /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                                 | Description                                                                                                                  |
-    /// | ----------------              | --------------                               | -------------                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                            |
-    /// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`        | `tc_account` is not the Treasury Compliance account.                                                                         |
-    /// | `Errors::REQUIRES_ROLE`       | `Roles::ETREASURY_COMPLIANCE`                | `tc_account` is not the Treasury Compliance account.                                                                         |
-    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT`     | `mint_amount` is zero.                                                                                                       |
-    /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
-    /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
-    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
+    /// | Error Category                | Error Reason                             | Description                                                                                                                  |
+    /// | ----------------              | --------------                           | -------------                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`           | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`           | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`           | The `sliding_nonce` is too far in the future.                                                                                |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`  | The `sliding_nonce` has been previously recorded.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                         |
+    /// | `DiemErrors::REQUIRES_ROLE`   | `Roles::ETREASURY_COMPLIANCE`            | `tc_account` is not the Treasury Compliance account.                                                                         |
+    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT` | `mint_amount` is zero.                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`              | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                 | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                   |
+    /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`             | Minting is not currently allowed for `CoinType` coins.                                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`   | The depositing of the funds would exceed the `account`'s account limits.                                                     |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_designated_dealer`
@@ -3009,17 +3009,17 @@ pub enum ScriptFunctionCall {
     /// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                |
-    /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
-    /// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
-    /// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+    /// | Error Category              | Error Reason                            | Description                                                                                |
+    /// | ----------------            | --------------                          | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+    /// | `Errors::LIMIT_EXCEEDED`    | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::update_dual_attestation_limit`
@@ -3703,14 +3703,14 @@ pub fn encode_add_currency_to_account_script_function(currency: TypeTag) -> Tran
 /// | `domain`     | `vector<u8>` | The domain to be added.                                                                         |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                             | Description                                                                                                                            |
-/// | ----------------           | --------------                           | -------------                                                                                                                          |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
-/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
-/// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
-/// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
+/// | Error Category              | Error Reason                             | Description                                                                                                                            |
+/// | ----------------            | --------------                           | -------------                                                                                                                          |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+/// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+/// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+/// | `Errors::INVALID_ARGUMENT`  | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
+/// | `Errors::INVALID_ARGUMENT`  | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
 pub fn encode_add_diem_id_domain_script_function(
     address: AccountAddress,
     domain: Vec<u8>,
@@ -3807,19 +3807,19 @@ pub fn encode_add_recovery_rotation_capability_script_function(
 /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                 | Description                                                                                                                               |
-/// | ----------------           | --------------                               | -------------                                                                                                                             |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
-/// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
-/// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
-/// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
-/// | `Errors::LIMIT_EXCEEDED`   | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
+/// | Error Category              | Error Reason                                 | Description                                                                                                                               |
+/// | ----------------            | --------------                               | -------------                                                                                                                             |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
+/// | 0                           | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
+/// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
+/// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
+/// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
+/// | `Errors::LIMIT_EXCEEDED`    | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_validator_account`
@@ -4077,12 +4077,12 @@ pub fn encode_cancel_burn_with_amount_script_function(
 /// | `child_initial_balance` | `u64`        | The initial balance in `CoinType` to give the child account when it's created.                                                              |
 ///
 /// # Common Abort Conditions
-/// | Error Category              | Error Reason                                             | Description                                                                              |
-/// | ----------------            | --------------                                           | -------------                                                                            |
+/// | Error Category              | Error Reason                                            | Description                                                                              |
+/// | ----------------            | --------------                                          | -------------                                                                            |
 /// | `Errors::INVALID_ARGUMENT`  | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`            | The `auth_key_prefix` was not of length 32.                                              |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`                                    | The sending account wasn't a Parent VASP account.                                        |
-/// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                                        | The `child_address` address is already taken.                                            |
-/// | `Errors::LIMIT_EXCEEDED`    | `VASP::ETOO_MANY_CHILDREN`                               | The sending account has reached the maximum number of allowed child accounts.            |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EPARENT_VASP`                                   | The sending account wasn't a Parent VASP account.                                        |
+/// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                                       | The `child_address` address is already taken.                                            |
+/// | `Errors::LIMIT_EXCEEDED`    | `VASP::ETOO_MANY_CHILDREN`                              | The sending account has reached the maximum number of allowed child accounts.            |
 /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `CoinType` is not a registered currency on-chain.                                    |
 /// | `Errors::INVALID_STATE`     | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for the sending account has already been extracted.            |
 /// | `Errors::NOT_PUBLISHED`     | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | The sending account doesn't have a balance in `CoinType`.                                |
@@ -4160,8 +4160,8 @@ pub fn encode_create_child_vasp_account_script_function(
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
 /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                  | The `Currency` is not a registered currency on-chain.                                      |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `addr` address is already taken.                                                       |
 ///
 /// # Related Scripts
@@ -4211,7 +4211,7 @@ pub fn encode_create_designated_dealer_script_function(
 /// | Error Category              | Error Reason              | Description                                                                    |
 /// | ----------------            | --------------            | -------------                                                                  |
 /// | `Errors::ALREADY_PUBLISHED` | `DiemId::EDIEM_ID_DOMAIN` | A `DiemId::DiemIdDomains` resource has already been published under `account`. |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
 pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -4261,8 +4261,8 @@ pub fn encode_create_diem_id_domains_script_function() -> TransactionPayload {
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
 /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `CoinType` is not a registered currency on-chain.                                      |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                  | The `CoinType` is not a registered currency on-chain.                                      |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
 ///
 /// # Related Scripts
@@ -4376,8 +4376,8 @@ pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                          |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                          |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
 ///
 /// # Related Scripts
@@ -4444,8 +4444,8 @@ pub fn encode_create_validator_account_script_function(
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-/// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                          |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                          |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
 ///
 /// # Related Scripts
@@ -4508,16 +4508,16 @@ pub fn encode_create_validator_operator_account_script_function(
 /// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                 | Description                                                                                |
-/// | ----------------           | --------------                               | -------------                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`        | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`                | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_TC`         | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
-/// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                              |
+/// | Error Category              | Error Reason                                | Description                                                                                |
+/// | ----------------            | --------------                              | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`              | A `SlidingNonce` resource is not published under `tc_account`.                             |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`              | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`              | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`     | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`       | The sending account is not the Treasury Compliance account.                                |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`               | The sending account is not the Treasury Compliance account.                                |
+/// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_TC`        | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
+/// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                               |
 ///
 /// # Related Scripts
 /// * `TreasuryComplianceScripts::unfreeze_account`
@@ -4680,16 +4680,16 @@ pub fn encode_peer_to_peer_with_metadata_script_function(
 /// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
 ///
 /// # Common Abort Conditions
-/// | Error Category           | Error Reason                                             | Description                                                                             |
-/// | ----------------         | --------------                                           | -------------                                                                           |
-/// | `Errors::NOT_PUBLISHED`  | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                      |
-/// | `Errors::INVALID_STATE`  | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                     |
-/// | `Errors::LIMIT_EXCEEDED` | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                  |
-/// | `Errors::NOT_PUBLISHED`  | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                            |
-/// | `Errors::NOT_PUBLISHED`  | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
-/// | `Errors::INVALID_STATE`  | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
-/// | `Errors::NOT_PUBLISHED`  | `Roles::EROLE_ID`                                        | The `account` did not have a role assigned to it.                                       |
-/// | `Errors::REQUIRES_ROLE`  | `Roles::EDESIGNATED_DEALER`                              | The `account` did not have the role of DesignatedDealer.                                |
+/// | Error Category              | Error Reason                                            | Description                                                                            |
+/// | ----------------            | --------------                                          | -------------                                                                          |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                     |
+/// | `Errors::INVALID_STATE`     | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                    |
+/// | `Errors::LIMIT_EXCEEDED`    | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                 |
+/// | `Errors::NOT_PUBLISHED`     | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                           |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
+/// | `Errors::INVALID_STATE`     | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
+/// | `Errors::NOT_PUBLISHED`     | `Roles::EROLE_ID`                                       | The `account` did not have a role assigned to it.                                      |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDESIGNATED_DEALER`                             | The `account` did not have the role of DesignatedDealer.                               |
 ///
 /// # Related Scripts
 /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
@@ -4824,7 +4824,7 @@ pub fn encode_register_validator_config_script_function(
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                             | Description                                                                                                                            |
 /// | ----------------           | --------------                           | -------------                                                                                                                          |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+/// | `DiemErrors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
 /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
 /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
@@ -4869,18 +4869,18 @@ pub fn encode_remove_diem_id_domain_script_function(
 /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                            | Description                                                                                     |
-/// | ----------------           | --------------                          | -------------                                                                                   |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                |
-/// | 0                          | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR` | The validator to be removed is not in the validator set.                                        |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                              |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                              |
-/// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
+/// | Error Category              | Error Reason                            | Description                                                                                     |
+/// | ----------------            | --------------                          | -------------                                                                                   |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                 |
+/// | 0                           | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
+/// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR`  | The validator to be removed is not in the validator set.                                        |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                               |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                               |
+/// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`       | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_validator_account`
@@ -5287,13 +5287,13 @@ pub fn encode_set_gas_constants_script_function(
 /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                   | Description                                                                                           |
-/// | ----------------           | --------------                                 | -------------                                                                                         |
-/// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
-/// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
-/// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
-/// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
+/// | Error Category              | Error Reason                                   | Description                                                                                           |
+/// | ----------------            | --------------                                 | -------------                                                                                         |
+/// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
+/// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
+/// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
+/// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`              | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_validator_account`
@@ -5347,13 +5347,13 @@ pub fn encode_set_validator_config_and_reconfigure_script_function(
 /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-/// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-/// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-/// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-/// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-/// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+/// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+/// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+/// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+/// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+/// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+/// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_validator_account`
@@ -5405,18 +5405,18 @@ pub fn encode_set_validator_operator_script_function(
 /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-/// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
-/// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-/// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-/// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-/// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+/// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+/// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                              |
+/// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+/// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+/// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+/// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_validator_account`
@@ -5480,19 +5480,19 @@ pub fn encode_set_validator_operator_with_nonce_admin_script_function(
 /// | `tier_index`                | `u64`     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
 ///
 /// # Common Abort Conditions
-/// | Error Category                | Error Reason                                 | Description                                                                                                                  |
-/// | ----------------              | --------------                               | -------------                                                                                                                |
-/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                            |
-/// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`        | `tc_account` is not the Treasury Compliance account.                                                                         |
-/// | `Errors::REQUIRES_ROLE`       | `Roles::ETREASURY_COMPLIANCE`                | `tc_account` is not the Treasury Compliance account.                                                                         |
-/// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT`     | `mint_amount` is zero.                                                                                                       |
-/// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
-/// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
-/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
+/// | Error Category                | Error Reason                             | Description                                                                                                                  |
+/// | ----------------              | --------------                           | -------------                                                                                                                |
+/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`           | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`           | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`           | The `sliding_nonce` is too far in the future.                                                                                |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`  | The `sliding_nonce` has been previously recorded.                                                                            |
+/// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                         |
+/// | `DiemErrors::REQUIRES_ROLE`   | `Roles::ETREASURY_COMPLIANCE`            | `tc_account` is not the Treasury Compliance account.                                                                         |
+/// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT` | `mint_amount` is zero.                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`              | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                 | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                   |
+/// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`             | Minting is not currently allowed for `CoinType` coins.                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`   | The depositing of the funds would exceed the `account`'s account limits.                                                     |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_designated_dealer`
@@ -5723,17 +5723,17 @@ pub fn encode_update_dual_attestation_limit_script_function(
 /// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                            | Description                                                                                |
-/// | ----------------           | --------------                          | -------------                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
-/// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
-/// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+/// | Error Category              | Error Reason                            | Description                                                                                |
+/// | ----------------            | --------------                          | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+/// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
+/// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
+/// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+/// | `Errors::LIMIT_EXCEEDED`    | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
 ///
 /// # Related Scripts
 /// * `TreasuryComplianceScripts::update_dual_attestation_limit`
