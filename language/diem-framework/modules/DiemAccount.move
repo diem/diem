@@ -422,6 +422,7 @@ module DiemAccount {
         mint_amount: u64,
         tier_index: u64,
     ) acquires DiemAccount, Balance, AccountOperationsCapability {
+        Roles::assert_treasury_compliance(tc_account);
         let coin = DesignatedDealer::tiered_mint<Token>(
             tc_account, mint_amount, designated_dealer_address, tier_index
         );
@@ -663,6 +664,7 @@ module DiemAccount {
         cap: &WithdrawCapability,
         amount: u64
     ) acquires Balance, AccountOperationsCapability, DiemAccount {
+        Roles::assert_designated_dealer(dd);
         DiemTimestamp::assert_operating();
         Diem::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
     }
@@ -973,6 +975,8 @@ module DiemAccount {
     spec add_currencies_for_account {
         let new_account_addr = Signer::spec_address_of(new_account);
         aborts_if !Roles::spec_can_hold_balance_addr(new_account_addr) with Errors::INVALID_ARGUMENT;
+        aborts_if exists<Balance<Token>>(new_account_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if !exists_at(new_account_addr) with Errors::NOT_PUBLISHED;
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_addr};
         include AddCurrencyForAccountEnsures<Token>{addr: new_account_addr};
     }
@@ -981,7 +985,6 @@ module DiemAccount {
         addr: address;
         add_all_currencies: bool;
         include Diem::AbortsIfNoCurrency<Token>;
-        aborts_if exists<Balance<Token>>(addr) with Errors::ALREADY_PUBLISHED;
         include add_all_currencies && !exists<Balance<XUS>>(addr)
             ==> Diem::AbortsIfNoCurrency<XUS>;
         include add_all_currencies && !exists<Balance<XDX>>(addr)
@@ -1005,10 +1008,10 @@ module DiemAccount {
     ///
     /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
     fun make_account(
-        new_account: signer,
+        new_account: &signer,
         auth_key_prefix: vector<u8>,
     ) acquires AccountOperationsCapability {
-        let new_account_addr = Signer::address_of(&new_account);
+        let new_account_addr = Signer::address_of(new_account);
         // cannot create an account at the reserved address 0x0
         assert(
             new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(),
@@ -1020,10 +1023,10 @@ module DiemAccount {
         );
 
         // Construct authentication key.
-        let authentication_key = create_authentication_key(&new_account, auth_key_prefix);
+        let authentication_key = create_authentication_key(new_account, auth_key_prefix);
 
         // Publish AccountFreezing::FreezingBit (initially not frozen)
-        AccountFreezing::create(&new_account);
+        AccountFreezing::create(new_account);
         // The AccountOperationsCapability is published during Genesis, so it should
         // always exist.  This is a sanity check.
         assert(
@@ -1038,7 +1041,7 @@ module DiemAccount {
         // Publishing the account resource last makes it possible to prove invariants that simplify
         // aborts_if's, etc.
         move_to(
-            &new_account,
+            new_account,
             DiemAccount {
                 authentication_key,
                 withdraw_capability: Option::some(
@@ -1049,8 +1052,8 @@ module DiemAccount {
                     KeyRotationCapability {
                         account_address: new_account_addr
                 }),
-                received_events: Event::new_event_handle<ReceivedPaymentEvent>(&new_account),
-                sent_events: Event::new_event_handle<SentPaymentEvent>(&new_account),
+                received_events: Event::new_event_handle<ReceivedPaymentEvent>(new_account),
+                sent_events: Event::new_event_handle<SentPaymentEvent>(new_account),
                 sequence_number: 0,
             }
         );
@@ -1166,7 +1169,7 @@ module DiemAccount {
                 upgrade_events: Event::new_event_handle<Self::AdminTransactionEvent>(&dr_account),
             }
         );
-        make_account(dr_account, auth_key_prefix)
+        make_account(&dr_account, auth_key_prefix)
     }
 
     spec create_diem_root_account {
@@ -1229,7 +1232,7 @@ module DiemAccount {
         SlidingNonce::publish(&new_account);
         Event::publish_generator(&new_account);
         DiemId::publish_diem_id_domain_manager(&new_account);
-        make_account(new_account, auth_key_prefix)
+        make_account(&new_account, auth_key_prefix)
     }
     spec create_treasury_compliance_account {
         pragma opaque;
@@ -1290,13 +1293,14 @@ module DiemAccount {
         human_name: vector<u8>,
         add_all_currencies: bool,
     ) acquires AccountOperationsCapability {
+        Roles::assert_treasury_compliance(creator_account);
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
         DesignatedDealer::publish_designated_dealer_credential<CoinType>(&new_dd_account, creator_account, add_all_currencies);
-        add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies);
         DualAttestation::publish_credential(&new_dd_account, creator_account, human_name);
-        make_account(new_dd_account, auth_key_prefix)
+        make_account(&new_dd_account, auth_key_prefix);
+        add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies)
     }
 
     spec create_designated_dealer {
@@ -1340,14 +1344,15 @@ module DiemAccount {
         human_name: vector<u8>,
         add_all_currencies: bool
     ) acquires AccountOperationsCapability {
+        Roles::assert_treasury_compliance(creator_account);
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
         Event::publish_generator(&new_account);
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
         DiemId::publish_diem_id_domains(&new_account);
-        add_currencies_for_account<Token>(&new_account, add_all_currencies);
-        make_account(new_account, auth_key_prefix)
+        make_account(&new_account, auth_key_prefix);
+        add_currencies_for_account<Token>(&new_account, add_all_currencies)
     }
 
     spec create_parent_vasp_account {
@@ -1389,6 +1394,7 @@ module DiemAccount {
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
     ) acquires AccountOperationsCapability {
+        Roles::assert_parent_vasp_role(parent);
         let new_account = create_signer(new_account_address);
         Roles::new_child_vasp_role(parent, &new_account);
         VASP::publish_child_vasp_credential(
@@ -1396,8 +1402,8 @@ module DiemAccount {
             &new_account,
         );
         Event::publish_generator(&new_account);
-        add_currencies_for_account<Token>(&new_account, add_all_currencies);
-        make_account(new_account, auth_key_prefix)
+        make_account(&new_account, auth_key_prefix);
+        add_currencies_for_account<Token>(&new_account, add_all_currencies)
     }
     spec create_child_vasp_account {
         include CreateChildVASPAccountAbortsIf<Token>;
@@ -1450,20 +1456,23 @@ module DiemAccount {
 
     /// Add a balance of `Token` type to the sending account
     public fun add_currency<Token: store>(account: &signer) {
+        let addr = Signer::address_of(account);
         // aborts if `Token` is not a currency type in the system
         Diem::assert_is_currency<Token>();
+        assert(exists_at(addr), Errors::not_published(EACCOUNT));
         // Check that an account with this role is allowed to hold funds
         assert(
             Roles::can_hold_balance(account),
             Errors::invalid_argument(EROLE_CANT_STORE_BALANCE)
         );
         // aborts if this account already has a balance in `Token`
-        let addr = Signer::address_of(account);
         assert(!exists<Balance<Token>>(addr), Errors::already_published(EADD_EXISTING_CURRENCY));
 
         move_to(account, Balance<Token>{ coin: Diem::zero<Token>() })
     }
     spec add_currency {
+        /// An account must exist at the address
+        aborts_if !exists_at(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
         include AddCurrencyAbortsIf<Token>;
         include AddCurrencyEnsures<Token>{addr: Signer::spec_address_of(account)};
     }
@@ -2058,12 +2067,13 @@ module DiemAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) acquires AccountOperationsCapability {
+        Roles::assert_diem_root(dr_account);
         let new_account = create_signer(new_account_address);
         // The dr_account account is verified to have the diem root role in `Roles::new_validator_role`
         Roles::new_validator_role(dr_account, &new_account);
         Event::publish_generator(&new_account);
         ValidatorConfig::publish(&new_account, dr_account, human_name);
-        make_account(new_account, auth_key_prefix)
+        make_account(&new_account, auth_key_prefix)
     }
 
     spec create_validator_account {
@@ -2098,12 +2108,13 @@ module DiemAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) acquires AccountOperationsCapability {
+        Roles::assert_diem_root(dr_account);
         let new_account = create_signer(new_account_address);
         // The dr_account is verified to have the diem root role in `Roles::new_validator_operator_role`
         Roles::new_validator_operator_role(dr_account, &new_account);
         Event::publish_generator(&new_account);
         ValidatorOperatorConfig::publish(&new_account, dr_account, human_name);
-        make_account(new_account, auth_key_prefix)
+        make_account(&new_account, auth_key_prefix)
     }
 
     spec create_validator_operator_account {
@@ -2273,6 +2284,10 @@ module DiemAccount {
 
         /// Every address that has a published account has a published FreezingBit
         invariant forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);
+
+        /// Balances can only be published underneath addresses where an account exists
+        invariant forall token: type: forall addr: address where exists<Balance<token>>(addr):
+            exists_at(addr);
     }
 
     /// # Helper Functions and Schemas

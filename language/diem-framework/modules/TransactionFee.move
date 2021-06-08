@@ -57,6 +57,7 @@ module TransactionFee {
     /// (1) configuring `tc_account` to accept `CoinType`
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `tc_account`
     public fun add_txn_fee_currency<CoinType: store>(tc_account: &signer) {
+        Roles::assert_treasury_compliance(tc_account);
         Diem::assert_is_currency<CoinType>();
         assert(
             !is_coin_initialized<CoinType>(),

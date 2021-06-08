@@ -1141,6 +1141,7 @@ a value equal to <code>amount</code>.
     preburn_address: address,
     amount: u64,
 ): <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt; <b>acquires</b> <a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>, <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>, <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a> {
+    <a href="Diem.md#0x1_Diem_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_requires_capability">Errors::requires_capability</a>(<a href="Diem.md#0x1_Diem_EBURN_CAPABILITY">EBURN_CAPABILITY</a>));
     <a href="Diem.md#0x1_Diem_cancel_burn_with_capability">cancel_burn_with_capability</a>(
@@ -3053,6 +3054,7 @@ accounts.
     currency_code: vector&lt;u8&gt;,
 ) {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <b>let</b> (mint_cap, burn_cap) =
         <a href="Diem.md#0x1_Diem_register_currency">register_currency</a>&lt;CoinType&gt;(
             dr_account,

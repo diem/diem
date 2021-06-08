@@ -6,6 +6,7 @@ module XUS {
     use 0x1::Diem;
     use 0x1::DiemTimestamp;
     use 0x1::FixedPoint32;
+    use 0x1::Roles;
 
     /// The type tag representing the `XUS` currency on-chain.
     struct XUS has store { }
@@ -16,6 +17,8 @@ module XUS {
         tc_account: &signer,
     ) {
         DiemTimestamp::assert_genesis();
+        Roles::assert_treasury_compliance(tc_account);
+        Roles::assert_diem_root(dr_account);
         Diem::register_SCS_currency<XUS>(
             dr_account,
             tc_account,

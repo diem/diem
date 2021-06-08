@@ -365,6 +365,7 @@ module Diem {
         preburn_address: address,
         amount: u64,
     ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, PreburnQueue {
+        assert_is_currency<CoinType>();
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         cancel_burn_with_capability(
@@ -1304,6 +1305,7 @@ module Diem {
         currency_code: vector<u8>,
     ) {
         Roles::assert_treasury_compliance(tc_account);
+        Roles::assert_diem_root(dr_account);
         let (mint_cap, burn_cap) =
             register_currency<CoinType>(
                 dr_account,
