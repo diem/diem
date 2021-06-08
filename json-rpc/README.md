@@ -7,6 +7,11 @@ There are two types of clients, and thus two types of APIs:
 * verifying clients. These clients verify the cryptographic proofs accompanying responses from the server.
 * non-verifying clients. Such clients completely trust the full node they query. If the server decides to lie about the data contained in a response, the client wouldn't know it. This mode is used when a client runs their own full node.
 
+There are also two types of endpoints:
+* Standard: JSON-RPC over HTTP `POST` requests. One response per request.
+* Streaming: JSON-RPC over various transport options (currently: websockets). One or more responses per request,
+             over a persistent connection.
+
 ## Usage and versioning
 
 Refer to the [specification](https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md).
