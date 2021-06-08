@@ -4984,7 +4984,7 @@ dependencies = [
  "futures",
  "netcore",
  "network",
- "network-simple-onchain-discovery",
+ "network-discovery",
  "rand 0.8.3",
  "serde",
  "subscription-service",
@@ -4992,7 +4992,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "network-simple-onchain-discovery"
+name = "network-discovery"
 version = "0.1.0"
 dependencies = [
  "anyhow",
