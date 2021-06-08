@@ -3,7 +3,7 @@
 
 use channel::diem_channel::{self, Receiver};
 use diem_config::{
-    config::{Peer, PeerRole},
+    config::{Peer, PeerRole, PeerSet},
     network_id::NetworkContext,
 };
 use diem_crypto::x25519::PublicKey;
@@ -15,7 +15,7 @@ use diem_metrics::{
 use diem_network_address_encryption::{Encryptor, Error as EncryptorError};
 use diem_secure_storage::Storage;
 use diem_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
-use futures::{sink::SinkExt, StreamExt};
+use futures::{sink::SinkExt, Stream, StreamExt};
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
     counters::inc_by_with_context,
@@ -23,8 +23,14 @@ use network::{
 };
 use once_cell::sync::Lazy;
 use short_hex_str::AsShortHexStr;
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+};
 use subscription_service::ReconfigSubscription;
+use tokio::runtime::Handle;
 
 pub mod builder;
 
@@ -67,6 +73,62 @@ pub static NETWORK_KEY_MISMATCH: Lazy<IntGaugeVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+/// A generic listener for network peer discovery
+pub struct DiscoveryChangeListener {
+    discovery_source: DiscoverySource,
+    network_context: Arc<NetworkContext>,
+    update_channel: channel::Sender<ConnectivityRequest>,
+    source_stream: DiscoveryChangeStream,
+}
+
+enum DiscoveryChangeStream {}
+
+impl Stream for DiscoveryChangeStream {
+    type Item = PeerSet;
+
+    fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        todo!()
+    }
+}
+
+impl DiscoveryChangeListener {
+    pub fn start(self, executor: &Handle) {
+        executor.spawn(Box::pin(self).run());
+    }
+
+    async fn run(mut self: Pin<Box<Self>>) {
+        info!(
+            NetworkSchema::new(&self.network_context),
+            "{} Starting {} Discovery", self.network_context, self.discovery_source
+        );
+
+        while let Some(update) = self.source_stream.next().await {
+            trace!(
+                NetworkSchema::new(&self.network_context),
+                "{} Sending update: {:?}",
+                self.network_context,
+                update
+            );
+            let request = ConnectivityRequest::UpdateDiscoveredPeers(self.discovery_source, update);
+            if let Err(error) = self.update_channel.try_send(request) {
+                inc_by_with_context(&DISCOVERY_COUNTS, &self.network_context, "send_failure", 1);
+                warn!(
+                    NetworkSchema::new(&self.network_context),
+                    "{} Failed to send update {:?}", self.network_context, error
+                );
+            }
+        }
+        warn!(
+            NetworkSchema::new(&self.network_context),
+            "{} {} Discovery actor terminated", &self.network_context, self.discovery_source
+        );
+    }
+
+    pub fn discovery_source(&self) -> DiscoverySource {
+        self.discovery_source
+    }
+}
 
 /// Listener which converts published  updates from the OnChainConfig to ConnectivityRequests
 /// for the ConnectivityManager.
