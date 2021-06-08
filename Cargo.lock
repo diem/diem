@@ -6680,6 +6680,7 @@ name = "sdk-compatibility"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-sdk",
  "diem-workspace-hack",
  "once_cell",

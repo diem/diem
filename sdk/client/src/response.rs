@@ -4,9 +4,9 @@
 use super::Method;
 use crate::{
     views::{
-        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
-        EventView, EventWithProofView, MetadataView, StateProofView, TransactionView,
-        TransactionsWithProofsView,
+        AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
+        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
     },
     Error, State,
 };
@@ -72,6 +72,7 @@ pub enum MethodResponse {
     GetAccumulatorConsistencyProof(AccumulatorConsistencyProofView),
     GetAccountStateWithProof(AccountStateWithProofView),
     GetTransactionsWithProofs(Option<TransactionsWithProofsView>),
+    GetAccountTransactionsWithProofs(AccountTransactionsWithProofView),
     GetEventsWithProofs(Vec<EventWithProofView>),
 }
 
@@ -105,6 +106,9 @@ impl MethodResponse {
             Method::GetTransactionsWithProofs => {
                 MethodResponse::GetTransactionsWithProofs(serde_json::from_value(json)?)
             }
+            Method::GetAccountTransactionsWithProofs => {
+                MethodResponse::GetAccountTransactionsWithProofs(serde_json::from_value(json)?)
+            }
             Method::GetEventsWithProofs => {
                 MethodResponse::GetEventsWithProofs(serde_json::from_value(json)?)
             }
@@ -130,6 +134,9 @@ impl MethodResponse {
             }
             MethodResponse::GetAccountStateWithProof(_) => Method::GetAccountStateWithProof,
             MethodResponse::GetTransactionsWithProofs(_) => Method::GetTransactionsWithProofs,
+            MethodResponse::GetAccountTransactionsWithProofs(_) => {
+                Method::GetAccountTransactionsWithProofs
+            }
             MethodResponse::GetEventsWithProofs(_) => Method::GetEventsWithProofs,
         }
     }

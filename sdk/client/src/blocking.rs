@@ -11,9 +11,9 @@ use crate::{
     error::WaitForTransactionError,
     move_deserialize::{self, Event},
     views::{
-        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
-        EventView, EventWithProofView, MetadataView, StateProofView, TransactionView,
-        TransactionsWithProofsView,
+        AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
+        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
     },
     Error, Result, Retry, State,
 };
@@ -253,6 +253,23 @@ impl BlockingClient {
             start_version,
             limit,
             include_events,
+        ))
+    }
+
+    pub fn get_account_transactions_with_proofs(
+        &self,
+        address: AccountAddress,
+        start_seq: u64,
+        limit: u64,
+        include_events: bool,
+        ledger_version: Option<u64>,
+    ) -> Result<Response<AccountTransactionsWithProofView>> {
+        self.send(MethodRequest::get_account_transactions_with_proofs(
+            address,
+            start_seq,
+            limit,
+            include_events,
+            ledger_version,
         ))
     }
 

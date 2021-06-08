@@ -81,6 +81,7 @@ pub enum Method {
     GetAccumulatorConsistencyProof,
     GetAccountStateWithProof,
     GetTransactionsWithProofs,
+    GetAccountTransactionsWithProofs,
     GetEventsWithProofs,
 }
 

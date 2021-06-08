@@ -14,8 +14,9 @@ use diem_sdk::{
     },
     types::{
         account_address::AccountAddress,
+        ledger_info::LedgerInfoWithSignatures,
         proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-        transaction::Script,
+        transaction::{AccountTransactionsWithProof, Script},
         AccountKey,
     },
 };
@@ -305,6 +306,60 @@ fn get_account_by_version() -> Result<()> {
         .get_account_by_version(account.address(), state_1.version)?
         .into_inner();
     assert_eq!(account_view_1, account_view_5);
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn get_account_transactions_with_proofs() -> Result<()> {
+    let env = Environment::from_env();
+    let client = env.client();
+
+    // create and fund some accounts
+    let mut account_1 = env.random_account();
+    let account_2 = env.random_account();
+
+    env.coffer()
+        .fund(Currency::XUS, account_1.authentication_key(), 1000)?;
+    env.coffer()
+        .fund(Currency::XUS, account_2.authentication_key(), 1000)?;
+
+    // generate some transaction activity
+    let num_txns = 3;
+    for _ in 0..num_txns {
+        let txn = account_1.sign_with_transaction_builder(env.transaction_factory().peer_to_peer(
+            Currency::XUS,
+            account_2.address(),
+            100,
+        ));
+
+        client.submit(&txn)?;
+        client.wait_for_signed_transaction(&txn, None, None)?;
+    }
+
+    // get a ledger info so we can verify proofs
+    let li_view = client
+        .get_state_proof(0)?
+        .into_inner()
+        .ledger_info_with_signatures;
+    let latest_li = bcs::from_bytes::<LedgerInfoWithSignatures>(li_view.as_ref())?;
+    let ledger_version = latest_li.ledger_info().version();
+
+    // request the sending account's transactions and verify the proofs
+    let txns_view = client
+        .get_account_transactions_with_proofs(
+            account_1.address(),
+            0,
+            100,
+            true,
+            Some(ledger_version),
+        )?
+        .into_inner();
+    let txns = AccountTransactionsWithProof::try_from(&txns_view)?;
+
+    assert_eq!(num_txns, txns.len());
+    txns.verify(latest_li.ledger_info(), account_1.address(), 0)?;
 
     Ok(())
 }
