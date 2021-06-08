@@ -24,8 +24,8 @@ use diem_types::{
         TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
     transaction::{
-        Script, ScriptFunction, Transaction, TransactionArgument, TransactionInfo,
-        TransactionListWithProof, TransactionPayload,
+        AccountTransactionsWithProof, Script, ScriptFunction, Transaction, TransactionArgument,
+        TransactionInfo, TransactionListWithProof, TransactionPayload,
     },
     vm_status::KeptVMStatus,
 };
@@ -916,6 +916,38 @@ impl TryFrom<&TransactionsProofsView> for TransactionListProof {
             )?,
             transaction_infos: bcs::from_bytes(&view.transaction_infos)?,
         })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct AccountTransactionsWithProofView {
+    pub serialized_txns_with_proofs: Vec<BytesView>,
+}
+
+impl TryFrom<&AccountTransactionsWithProof> for AccountTransactionsWithProofView {
+    type Error = Error;
+
+    fn try_from(txns: &AccountTransactionsWithProof) -> Result<Self, Self::Error> {
+        Ok(Self {
+            serialized_txns_with_proofs: txns
+                .inner()
+                .iter()
+                .map(|txn_with_proof| Ok(BytesView::new(bcs::to_bytes(txn_with_proof)?)))
+                .collect::<Result<Vec<_>>>()?,
+        })
+    }
+}
+
+impl TryFrom<&AccountTransactionsWithProofView> for AccountTransactionsWithProof {
+    type Error = Error;
+
+    fn try_from(view: &AccountTransactionsWithProofView) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            view.serialized_txns_with_proofs
+                .iter()
+                .map(|txn_bytes| bcs::from_bytes(txn_bytes.as_ref()))
+                .collect::<Result<Vec<_>, _>>()?,
+        ))
     }
 }
 

@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-06-08 Add `get_account_transactions_with_proofs` API
+
+This new API allows verifying client users to get transactions under an account
+along with the corresponding proofs needed to verify the response.
+
 ## 2021-06-07 `get_account_transactions` on a non-existent account returns empty list istead of error
 
 This change makes `get_account_transactions` consistent with `get_account_transaction`,

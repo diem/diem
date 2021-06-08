@@ -4,7 +4,9 @@
 use serde_json::json;
 
 use diem_crypto::hash::{CryptoHash, HashValue};
-use diem_json_rpc_types::views::{AccumulatorConsistencyProofView, EventView};
+use diem_json_rpc_types::views::{
+    AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView,
+};
 use diem_transaction_builder::stdlib::{
     self, encode_rotate_authentication_key_with_nonce_admin_script,
     encode_rotate_authentication_key_with_nonce_admin_script_function,
@@ -22,7 +24,10 @@ use diem_types::{
         AccumulatorConsistencyProof, TransactionAccumulatorRangeProof,
         TransactionAccumulatorSummary,
     },
-    transaction::{ChangeSet, Transaction, TransactionInfo, TransactionPayload, WriteSetPayload},
+    transaction::{
+        AccountTransactionsWithProof, ChangeSet, Transaction, TransactionInfo, TransactionPayload,
+        WriteSetPayload,
+    },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use std::{
@@ -1085,6 +1090,21 @@ fn create_test_cases() -> Vec<Test> {
                 for txn in txns.as_array().unwrap() {
                     assert_eq!(txn["events"], json!([]));
                 }
+            },
+        },
+        Test {
+            name: "get_account_transactions_with_proofs",
+            run: |env: &mut testing::Env| {
+                let sender = &env.vasps[0].children[0];
+                let response = env.send(
+                    "get_account_transactions_with_proofs",
+                    json!([sender.address.to_string(), 0, 1000, false]),
+                );
+                // Just check that the responses deserialize correctly, we'll let
+                // the verifying client smoke tests handle the proof checking.
+                let value = response.result.unwrap();
+                let view = serde_json::from_value::<AccountTransactionsWithProofView>(value).unwrap();
+                let _txns = AccountTransactionsWithProof::try_from(&view).unwrap();
             },
         },
         Test {

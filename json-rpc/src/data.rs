@@ -4,9 +4,10 @@
 use crate::{
     errors::JsonRpcError,
     views::{
-        AccountStateWithProofView, AccountView, AccumulatorConsistencyProofView, CurrencyInfoView,
-        EventView, EventWithProofView, MetadataView, StateProofView, TransactionListView,
-        TransactionView, TransactionsWithProofsView,
+        AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
+        MetadataView, StateProofView, TransactionListView, TransactionView,
+        TransactionsWithProofsView,
     },
 };
 use anyhow::Result;
@@ -128,10 +129,10 @@ pub fn get_transactions_with_proofs(
 /// Returns account transaction by account and sequence_number
 pub fn get_account_transaction(
     db: &dyn DbReader,
-    ledger_version: u64,
     account: AccountAddress,
     seq_num: u64,
     include_events: bool,
+    ledger_version: u64,
 ) -> Result<Option<TransactionView>, JsonRpcError> {
     let tx = db
         .get_account_transaction(account, seq_num, include_events, ledger_version)?
@@ -150,11 +151,11 @@ pub fn get_account_transaction(
 /// Returns all account transactions
 pub fn get_account_transactions(
     db: &dyn DbReader,
-    ledger_version: u64,
     account: AccountAddress,
     start_seq_num: u64,
     limit: u64,
     include_events: bool,
+    ledger_version: u64,
 ) -> Result<Vec<TransactionView>, JsonRpcError> {
     let txs = db
         .get_account_transactions(
@@ -176,6 +177,23 @@ pub fn get_account_transactions(
         })
         .collect::<Result<Vec<_>>>()?;
     Ok(txs)
+}
+
+/// Return a serialized list of an account's transactions along with a proof for
+/// each transaction.
+pub fn get_account_transactions_with_proofs(
+    db: &dyn DbReader,
+    account: AccountAddress,
+    start: u64,
+    limit: u64,
+    include_events: bool,
+    ledger_version: u64,
+) -> Result<AccountTransactionsWithProofView, JsonRpcError> {
+    let acct_txns_with_proof =
+        db.get_account_transactions(account, start, limit, include_events, ledger_version)?;
+    Ok(AccountTransactionsWithProofView::try_from(
+        &acct_txns_with_proof,
+    )?)
 }
 
 /// Returns events by given access path

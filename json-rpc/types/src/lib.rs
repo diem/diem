@@ -55,6 +55,7 @@ pub enum Method {
     GetAccumulatorConsistencyProof,
     GetAccountStateWithProof,
     GetTransactionsWithProofs,
+    GetAccountTransactionsWithProofs,
     GetEventsWithProofs,
 }
 
@@ -74,6 +75,7 @@ impl Method {
             Method::GetAccumulatorConsistencyProof => "get_accumulator_consistency_proof",
             Method::GetAccountStateWithProof => "get_account_state_with_proof",
             Method::GetTransactionsWithProofs => "get_transactions_with_proofs",
+            Method::GetAccountTransactionsWithProofs => "get_account_transactions_with_proofs",
             Method::GetEventsWithProofs => "get_events_with_proofs",
         }
     }

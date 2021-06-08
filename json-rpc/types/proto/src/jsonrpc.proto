@@ -428,3 +428,11 @@ message AccumulatorConsistencyProof {
   // hex-encoded bcs bytes
   string ledger_consistency_proof = 1 [json_name="ledger_consistency_proof"];
 }
+
+/**
+ * This is for the experimental API get_account_transactions_with_proofs response. It is unstable and likely to be changed.
+ */
+message AccountTransactionsWithProof {
+    // list of hex-encoded bcs bytes
+    repeated string serialized_txns_with_proofs = 1 [json_name="serialized_txns_with_proofs"];
+}

@@ -715,6 +715,52 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_account_transactions_with_proofs: start param is too big",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions_with_proofs", "params": ["0000000000000000000000000A550C18", version+1, 2, false], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version,
+                "result": {
+                    "serialized_txns_with_proofs": []
+                }
+            }),
+        ),
+        (
+            "get_account_transactions_with_proofs: limit is too large",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions_with_proofs", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", 1, 1001, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid Request: page size = 1001, exceed limit 1000",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions_with_proofs: ledger_version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions_with_proofs", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", 1, 5, false, version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param ledger_version should be <= known latest version {}", version),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
             "get_state_proof: invalid known_version",
             json!({"jsonrpc": "2.0", "method": "get_state_proof", "params": ["invalid"], "id": 1}),
             json!({
