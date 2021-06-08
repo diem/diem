@@ -14,7 +14,9 @@ use storage_interface::DbReader;
 
 use crate::stream_rpc::{
     connection::{ConnectionContext, ConnectionManager},
-    counters, logging,
+    counters,
+    errors::Error,
+    logging,
     subscriptions::SubscriptionConfig,
     transport::util::{get_remote_addr, Transport},
 };
@@ -73,7 +75,7 @@ pub fn get_websocket_routes(
 
 /// The `ContextWrapperMapper` exists so we can pass websocket specific connection context along
 /// It's responsible for mapping between the message types expected by the warp websocket implementation,
-/// and the internal `ClientConnectionManager` responsible for subscription messages
+/// and the internal `ClientConnectionManager` responsible for handling subscriptions
 #[derive(Clone)]
 pub struct ContextWrapperMapper {
     pub content_length_limit: usize,
@@ -85,7 +87,7 @@ impl ContextWrapperMapper {
     pub fn message_result_to_string(
         &self,
         result: Result<Message, warp::Error>,
-    ) -> Result<Option<String>, anyhow::Error> {
+    ) -> Result<Option<String>, Error> {
         counters::MESSAGES_RECEIVED
             .with_label_values(&[
                 self.context.transport.as_str(),
@@ -114,7 +116,7 @@ impl ContextWrapperMapper {
 
                 // Returning an error allows the `ConnectionManager` to process the disconnect
                 if msg.is_close() {
-                    return Err(anyhow::format_err!("Received close message"));
+                    return Err(Error::ClientWantsToDisconnect);
                 }
 
                 match msg.to_str() {
@@ -130,12 +132,12 @@ impl ContextWrapperMapper {
                     }
                 }
             }
-            Err(e) => Err(anyhow::Error::from(e)),
+            Err(e) => Err(Error::TransportError(e.to_string())),
         }
     }
 
     // Outgoing messages
-    fn string_result_to_message(&self, result: Result<String, anyhow::Error>) -> Message {
+    fn string_result_to_message(&self, result: Result<String, Error>) -> Message {
         counters::MESSAGES_SENT
             .with_label_values(&[
                 self.context.transport.as_str(),
@@ -179,7 +181,7 @@ pub async fn handle_websocket_stream(
 
                 let (to_client_ws, from_client_ws) = socket.split();
                 let (to_client, to_client_rcv) =
-                    mpsc::channel::<Result<String, anyhow::Error>>(cm.config.queue_size);
+                    mpsc::channel::<Result<String, Error>>(cm.config.queue_size);
 
                 let cwm = Arc::new(ContextWrapperMapper {
                     content_length_limit,

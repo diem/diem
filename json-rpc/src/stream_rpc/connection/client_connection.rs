@@ -6,6 +6,7 @@ use crate::{
     stream_rpc::{
         connection::{ConnectionContext, StreamSender, Task},
         counters,
+        errors::Error,
         json_rpc::{JsonRpcRequest, JsonRpcResponse, Method},
         logging,
         subscriptions::SubscriptionConfig,
@@ -17,7 +18,10 @@ use diem_logger::debug;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
-// This will get cloned for every subscription, so lets keep it light :-)
+const UNKNOWN: &str = "unknown";
+
+/// The `ClientConnection` is the interface between a transport, and subscriptions
+/// This will get cloned for every subscription, so lets keep it light :-)
 #[derive(Debug, Clone)]
 pub struct ClientConnection {
     pub id: u64,
@@ -46,14 +50,18 @@ impl ClientConnection {
     /// When we disconnect a client, ensure we kill all of the asynchronous tasks (subscriptions)
     pub fn disconnect(&self) {
         let mut tasks = self.tasks.lock();
-        debug!("Aborting {} tasks for Client#{}", tasks.len(), &self.id);
+        debug!(
+            "Disconnecting: terminating {} tasks for Client#{}",
+            tasks.len(),
+            &self.id
+        );
         tasks.iter().for_each(|(_id, task)| task.abort());
         tasks.clear();
     }
 
-    pub async fn send_raw(&self, message: String) -> anyhow::Result<()> {
+    pub async fn send_raw(&self, message: String) -> Result<(), Error> {
         if self.sender.is_closed() {
-            anyhow::bail!("Client#{} is closed", self.id);
+            return Err(Error::ClientAlreadyClosed(self.id));
         }
         match self.sender.send(Ok(message)).await {
             Ok(_) => Ok(()),
@@ -64,18 +72,18 @@ impl ClientConnection {
         }
     }
 
-    pub async fn send_response(&self, message: JsonRpcResponse) -> anyhow::Result<()> {
+    pub async fn send_response(&self, message: JsonRpcResponse) -> Result<(), Error> {
         if let Ok(response) = serde_json::to_string(&message) {
             return self.send_raw(response).await;
         }
-        anyhow::bail!("Could not convert {:?} to string", message)
+        Err(Error::CouldNotStringifyMessage(format!("{:?}", message)))
     }
 
     pub async fn send_success<T: serde::Serialize>(
         &self,
         id: Id,
         message: &T,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Error> {
         let message = serde_json::to_value(message).unwrap();
         self.send_response(JsonRpcResponse::result(Some(id), Some(message)))
             .await
@@ -86,11 +94,11 @@ impl ClientConnection {
         method: Option<Method>,
         id: Option<Id>,
         error: JsonRpcError,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Error> {
         counters::INVALID_REQUESTS
             .with_label_values(&[
                 self.connection_context.transport.as_str(),
-                method.map_or("unknown", |m| m.as_str()),
+                method.map_or(UNKNOWN, |m| m.as_str()),
                 error.code_as_str(),
                 self.connection_context.sdk_info.language.as_str(),
                 &self.connection_context.sdk_info.version.to_string(),
@@ -102,10 +110,18 @@ impl ClientConnection {
     pub fn unsubscribe(&self, id: &Id) -> Option<()> {
         let mut lock = self.tasks.lock();
         if let Some(task) = lock.get(id) {
+            debug!(
+                "Unsubscribing: terminating task '{}' for Client#{}",
+                &id, &self.id
+            );
             task.abort();
             lock.remove(&id);
             Some(())
         } else {
+            debug!(
+                "Unsubscribing: No such task '{}' for Client#{}",
+                &id, &self.id
+            );
             None
         }
     }
@@ -141,7 +157,7 @@ impl ClientConnection {
                 );
                 metric_subscription_rpc_received(
                     &self,
-                    method.map_or("unknown", |m| m.as_str()),
+                    method.map_or(UNKNOWN, |m| m.as_str()),
                     counters::RpcResult::Error,
                 );
                 self.send_error(method, id, err).await.ok();

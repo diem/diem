@@ -57,7 +57,7 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Method::Submit => "submit",
             Method::GetMetadata => "get_metadata",

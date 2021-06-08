@@ -16,7 +16,7 @@ use crate::stream_rpc::{
 };
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct JsonRpcRequest {
     jsonrpc: JsonRpcVersion,
     #[serde(flatten)]
@@ -91,7 +91,7 @@ impl FromStr for JsonRpcRequest {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct JsonRpcResponse {
     pub jsonrpc: JsonRpcVersion,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -128,7 +128,7 @@ impl From<JsonRpcResponse> for serde_json::Value {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SubscribeToTransactionsParams {
     pub starting_version: u64,
@@ -138,7 +138,7 @@ pub struct SubscribeToTransactionsParams {
     pub(crate) latest_version: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SubscribeToEventsParams {
     pub event_key: EventKey,
@@ -148,13 +148,13 @@ pub struct SubscribeToEventsParams {
     pub(crate) latest_event: u64,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SubscriptionResult {
     #[serde(rename = "OK")]
     OK,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SubscribeResult {
     pub status: SubscriptionResult,
@@ -170,7 +170,7 @@ impl SubscribeResult {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "method", content = "params")]
 pub enum MethodRequest {
@@ -226,7 +226,7 @@ impl MethodRequest {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Method {
     SubscribeToTransactions,
