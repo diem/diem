@@ -164,6 +164,7 @@ pub fn get_account_transactions(
             include_events,
             ledger_version,
         )?
+        .into_inner()
         .into_iter()
         .map(|tx| {
             TransactionView::try_from_tx_and_events(

@@ -16,7 +16,10 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
+    transaction::{
+        AccountTransactionsWithProof, TransactionListWithProof, TransactionToCommit,
+        TransactionWithProof, Version,
+    },
 };
 use serde::de::DeserializeOwned;
 use std::net::SocketAddr;
@@ -137,7 +140,7 @@ impl DbReader for StorageClient {
         _limit: u64,
         _include_events: bool,
         _ledger_version: Version,
-    ) -> Result<Vec<TransactionWithProof>> {
+    ) -> Result<AccountTransactionsWithProof> {
         unimplemented!()
     }
 

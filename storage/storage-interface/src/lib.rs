@@ -19,8 +19,8 @@ use diem_types::{
         TransactionAccumulatorSummary,
     },
     transaction::{
-        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
-        Version,
+        AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
+        TransactionToCommit, TransactionWithProof, Version,
     },
 };
 use itertools::Itertools;
@@ -274,7 +274,7 @@ pub trait DbReader: Send + Sync {
         limit: u64,
         include_events: bool,
         ledger_version: Version,
-    ) -> Result<Vec<TransactionWithProof>>;
+    ) -> Result<AccountTransactionsWithProof>;
 
     /// Returns proof of new state for a given ledger info with signatures relative to version known
     /// to client

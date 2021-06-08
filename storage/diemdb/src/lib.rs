@@ -71,8 +71,8 @@ use diem_types::{
         TransactionListProof,
     },
     transaction::{
-        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
-        Version, PRE_GENESIS_VERSION,
+        AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
+        TransactionToCommit, TransactionWithProof, Version, PRE_GENESIS_VERSION,
     },
 };
 use itertools::{izip, zip_eq};
@@ -652,11 +652,12 @@ impl DbReader for DiemDB {
         limit: u64,
         include_events: bool,
         ledger_version: Version,
-    ) -> Result<Vec<TransactionWithProof>> {
+    ) -> Result<AccountTransactionsWithProof> {
         gauged_api("get_account_transactions", || {
             error_if_too_many_requested(limit, MAX_LIMIT)?;
 
-            self.transaction_store
+            let txns_with_proofs = self
+                .transaction_store
                 .get_account_transaction_version_iter(
                     address,
                     start_seq_num,
@@ -669,7 +670,9 @@ impl DbReader for DiemDB {
                     // signed txns here?
                     self.get_transaction_with_proof(txn_version, ledger_version, include_events)
                 })
-                .collect::<Result<Vec<_>>>()
+                .collect::<Result<Vec<_>>>()?;
+
+            Ok(AccountTransactionsWithProof::new(txns_with_proofs))
         })
     }
 

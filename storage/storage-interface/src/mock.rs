@@ -16,7 +16,9 @@ use diem_types::{
     event::{EventHandle, EventKey},
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionWithProof, Version},
+    transaction::{
+        AccountTransactionsWithProof, TransactionListWithProof, TransactionWithProof, Version,
+    },
 };
 use move_core_types::move_resource::MoveResource;
 use std::convert::TryFrom;
@@ -103,7 +105,7 @@ impl DbReader for MockDbReader {
         _limit: u64,
         _include_events: bool,
         _ledger_version: Version,
-    ) -> Result<Vec<TransactionWithProof>> {
+    ) -> Result<AccountTransactionsWithProof> {
         unimplemented!()
     }
 

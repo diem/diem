@@ -29,8 +29,8 @@ use diem_types::{
         TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
     transaction::{
-        SignedTransaction, Transaction, TransactionInfo, TransactionListWithProof,
-        TransactionWithProof, Version,
+        AccountTransactionsWithProof, SignedTransaction, Transaction, TransactionInfo,
+        TransactionListWithProof, TransactionWithProof, Version,
     },
     vm_status::KeptVMStatus,
 };
@@ -145,7 +145,7 @@ impl DbReader for MockDiemDB {
         let txs =
             self.get_account_transactions(address, seq_num, 1, include_events, ledger_version)?;
         assert!(txs.len() <= 1);
-        Ok(txs.into_iter().next())
+        Ok(txs.into_inner().into_iter().next())
     }
 
     fn get_account_transactions(
@@ -155,11 +155,12 @@ impl DbReader for MockDiemDB {
         limit: u64,
         include_events: bool,
         ledger_version: u64,
-    ) -> Result<Vec<TransactionWithProof>> {
+    ) -> Result<AccountTransactionsWithProof> {
         let end_seq_num = start_seq_num + limit;
         let seq_num_range = start_seq_num..end_seq_num;
 
-        self.all_txns
+        let txns_with_proofs = self
+            .all_txns
             .iter()
             .enumerate()
             .filter(|(v, (tx, _))| {
@@ -199,7 +200,8 @@ impl DbReader for MockDiemDB {
                 };
                 Ok(txn_with_proof)
             })
-            .collect()
+            .collect::<Result<Vec<_>>>()?;
+        Ok(AccountTransactionsWithProof::new(txns_with_proofs))
     }
 
     fn get_transactions(

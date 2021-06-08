@@ -14,8 +14,8 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{
-        Transaction, TransactionListWithProof, TransactionOutput, TransactionToCommit,
-        TransactionWithProof, Version,
+        AccountTransactionsWithProof, Transaction, TransactionListWithProof, TransactionOutput,
+        TransactionToCommit, TransactionWithProof, Version,
     },
     vm_status::VMStatus,
 };
@@ -156,7 +156,7 @@ impl DbReader for FakeDb {
         _limit: u64,
         _include_events: bool,
         _ledger_version: Version,
-    ) -> Result<Vec<TransactionWithProof>> {
+    ) -> Result<AccountTransactionsWithProof> {
         unimplemented!()
     }
 

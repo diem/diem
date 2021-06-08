@@ -1068,6 +1068,14 @@ impl TransactionListWithProof {
         Self::new(vec![], None, None, TransactionListProof::new_empty())
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.transactions.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.transactions.len()
+    }
+
     /// Verifies the transaction list with the proofs, both carried on `self`.
     ///
     /// Two things are ensured if no error is raised:
@@ -1118,19 +1126,63 @@ impl TransactionListWithProof {
         Ok(())
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.transactions.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.transactions.len()
-    }
-
     fn display_option_version(version: Option<Version>) -> String {
         match version {
             Some(v) => format!("{}", v),
             None => String::from("absent"),
         }
+    }
+}
+
+/// A list of transactions under an account that are contiguous by sequence number
+/// and include proofs.
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct AccountTransactionsWithProof(pub Vec<TransactionWithProof>);
+
+impl AccountTransactionsWithProof {
+    pub fn new(txns_with_proofs: Vec<TransactionWithProof>) -> Self {
+        Self(txns_with_proofs)
+    }
+
+    pub fn new_empty() -> Self {
+        Self::new(Vec::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn inner(&self) -> &[TransactionWithProof] {
+        &self.0
+    }
+
+    pub fn into_inner(self) -> Vec<TransactionWithProof> {
+        self.0
+    }
+
+    /// 1. Verify all transactions against this ledger info
+    /// 2. Verify that all transactions were sent by `account`
+    /// 3. Verify that the transactions are contiguous by sequence number, starting
+    ///    at `start_seq_num`.
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        account: AccountAddress,
+        start_seq_num: u64,
+    ) -> Result<()> {
+        self.0
+            .iter()
+            .enumerate()
+            .try_for_each(|(seq_num_offset, txn_with_proof)| {
+                let expected_seq_num = start_seq_num.saturating_add(seq_num_offset as u64);
+                let version = txn_with_proof.version;
+                txn_with_proof.verify_user_txn(ledger_info, version, account, expected_seq_num)
+            })
     }
 }
 

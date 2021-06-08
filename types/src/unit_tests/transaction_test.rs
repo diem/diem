@@ -6,8 +6,9 @@ use crate::{
     account_config::XUS_NAME,
     chain_id::ChainId,
     transaction::{
-        metadata, GovernanceRole, RawTransaction, Script, SignedTransaction, Transaction,
-        TransactionInfo, TransactionListWithProof, TransactionPayload, TransactionWithProof,
+        metadata, AccountTransactionsWithProof, GovernanceRole, RawTransaction, Script,
+        SignedTransaction, Transaction, TransactionInfo, TransactionListWithProof,
+        TransactionPayload, TransactionWithProof,
     },
 };
 use bcs::test_helpers::assert_canonical_encode_decode;
@@ -111,22 +112,25 @@ proptest! {
 }
 
 proptest! {
-#![proptest_config(ProptestConfig::with_cases(10))]
+    #![proptest_config(ProptestConfig::with_cases(10))]
 
-#[test]
-fn transaction_list_with_proof_bcs_roundtrip(txn_list in any::<TransactionListWithProof>()) {
-    assert_canonical_encode_decode(txn_list);
-}
+    #[test]
+    fn transaction_list_with_proof_bcs_roundtrip(txn_list in any::<TransactionListWithProof>()) {
+        assert_canonical_encode_decode(txn_list);
+    }
 
+    #[test]
+    fn transaction_bcs_roundtrip(txn in any::<Transaction>()) {
+        assert_canonical_encode_decode(txn);
+    }
 
-#[test]
-fn transaction_bcs_roundtrip(txn in any::<Transaction>()) {
-    assert_canonical_encode_decode(txn);
-}
+    #[test]
+    fn transaction_with_proof_bcs_roundtrip(txn_with_proof in any::<TransactionWithProof>()) {
+        assert_canonical_encode_decode(txn_with_proof);
+    }
 
-
-#[test]
-fn transaction_with_proof_bcs_roundtrip(txn_with_proof in any::<TransactionWithProof>()) {
-    assert_canonical_encode_decode(txn_with_proof);
-}
+    #[test]
+    fn acct_txns_with_proof_bcs_roundtrip(acct_txns_with_proof in any::<AccountTransactionsWithProof>()) {
+        assert_canonical_encode_decode(acct_txns_with_proof);
+    }
 }

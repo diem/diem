@@ -21,7 +21,6 @@ use diem_types::{
     proof::SparseMerkleLeafNode,
     vm_status::{KeptVMStatus, StatusCode},
 };
-use itertools::Itertools;
 use proptest::prelude::*;
 use std::collections::HashMap;
 
@@ -327,41 +326,36 @@ fn verify_account_txns(
     let actual_txns_by_account = expected_txns_by_account
         .iter()
         .map(|(account, txns_and_events)| {
+            let account = *account;
             let first_seq_num = if let Some((txn, _)) = txns_and_events.first() {
                 txn.as_signed_user_txn().unwrap().sequence_number()
             } else {
-                return (*account, Vec::new());
+                return (account, Vec::new());
             };
 
             let last_txn = &txns_and_events.last().unwrap().0;
             let last_seq_num = last_txn.as_signed_user_txn().unwrap().sequence_number();
 
-            let txns_with_proofs = db
+            let acct_txns_with_proof = db
                 .get_account_transactions(
-                    *account,
+                    account,
                     first_seq_num,
                     last_seq_num + 1,
                     true, /* include_events */
                     ledger_info.version(),
                 )
                 .unwrap();
+            acct_txns_with_proof
+                .verify(ledger_info, account, first_seq_num)
+                .unwrap();
 
-            let txns_and_events = txns_with_proofs
+            let txns_and_events = acct_txns_with_proof
+                .into_inner()
                 .into_iter()
-                .map(|txn_with_proof| {
-                    let seq_num = txn_with_proof
-                        .transaction
-                        .as_signed_user_txn()
-                        .unwrap()
-                        .sequence_number();
-                    txn_with_proof
-                        .verify_user_txn(ledger_info, txn_with_proof.version, *account, seq_num)
-                        .unwrap();
-                    (txn_with_proof.transaction, txn_with_proof.events.unwrap())
-                })
+                .map(|txn_with_proof| (txn_with_proof.transaction, txn_with_proof.events.unwrap()))
                 .collect::<Vec<_>>();
 
-            (*account, txns_and_events)
+            (account, txns_and_events)
         })
         .collect::<HashMap<_, _>>();
 
@@ -425,15 +419,13 @@ fn verify_committed_transactions(
             .verify_user_txn(ledger_info, cur_ver, txn.sender(), txn.sequence_number())
             .unwrap();
 
-        let txn_with_proof = db
+        let acct_txns_with_proof = db
             .get_account_transactions(txn.sender(), txn.sequence_number(), 1, true, ledger_version)
-            .unwrap()
-            .into_iter()
-            .exactly_one()
             .unwrap();
-        txn_with_proof
-            .verify_user_txn(ledger_info, cur_ver, txn.sender(), txn.sequence_number())
+        acct_txns_with_proof
+            .verify(ledger_info, txn.sender(), txn.sequence_number())
             .unwrap();
+        assert_eq!(acct_txns_with_proof.len(), 1);
 
         let txn_list_with_proof = db
             .get_transactions(cur_ver, 1, ledger_version, true /* fetch_events */)
@@ -441,6 +433,7 @@ fn verify_committed_transactions(
         txn_list_with_proof
             .verify(ledger_info, Some(cur_ver))
             .unwrap();
+        assert_eq!(txn_list_with_proof.len(), 1);
 
         // Fetch and verify account states.
         for (addr, expected_blob) in txn_to_commit.account_states() {
