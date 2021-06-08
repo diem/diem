@@ -384,6 +384,13 @@ impl NetworkBuilder {
                     simple_discovery_reconfig_rx,
                 )
             }
+            DiscoveryMethod::File(path, interval_duration) => DiscoveryChangeListener::file(
+                self.network_context.clone(),
+                conn_mgr_reqs_tx,
+                path,
+                *interval_duration,
+                self.time_service.clone(),
+            ),
             DiscoveryMethod::None => return,
         };
 

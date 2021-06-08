@@ -18,14 +18,18 @@ use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 
 mod counters;
+mod file;
 mod validator_set;
 
-use crate::validator_set::ValidatorSetStream;
+use crate::{file::FileStream, validator_set::ValidatorSetStream};
 use diem_network_address_encryption::Encryptor;
 use diem_secure_storage::Storage;
+use diem_time_service::TimeService;
 use std::{
+    path::Path,
     sync::Arc,
     task::{Context, Poll},
+    time::Duration,
 };
 
 /// A union type for all implementations of `DiscoveryChangeListenerTrait`
@@ -38,6 +42,7 @@ pub struct DiscoveryChangeListener {
 
 enum DiscoveryChangeStream {
     ValidatorSet(ValidatorSetStream),
+    File(FileStream),
 }
 
 impl Stream for DiscoveryChangeStream {
@@ -46,6 +51,7 @@ impl Stream for DiscoveryChangeStream {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
             Self::ValidatorSet(stream) => Pin::new(stream).poll_next(cx),
+            Self::File(stream) => Pin::new(stream).poll_next(cx),
         }
     }
 }
@@ -66,6 +72,27 @@ impl DiscoveryChangeListener {
         ));
         DiscoveryChangeListener {
             discovery_source: DiscoverySource::OnChainValidatorSet,
+            network_context,
+            update_channel,
+            source_stream,
+        }
+    }
+
+    pub fn file(
+        network_context: Arc<NetworkContext>,
+        update_channel: channel::Sender<ConnectivityRequest>,
+        file_path: &Path,
+        interval_duration: Duration,
+        time_service: TimeService,
+    ) -> Self {
+        let source_stream = DiscoveryChangeStream::File(FileStream::new(
+            network_context.clone(),
+            file_path,
+            interval_duration,
+            time_service,
+        ));
+        DiscoveryChangeListener {
+            discovery_source: DiscoverySource::File,
             network_context,
             update_channel,
             source_stream,

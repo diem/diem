@@ -22,7 +22,9 @@ use short_hex_str::AsShortHexStr;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
+    path::PathBuf,
     string::ToString,
+    time::Duration,
 };
 
 // TODO: We could possibly move these constants somewhere else, but since they are defaults for the
@@ -301,6 +303,7 @@ impl NetworkConfig {
 #[serde(rename_all = "snake_case")]
 pub enum DiscoveryMethod {
     Onchain,
+    File(PathBuf, Duration),
     None,
 }
 
