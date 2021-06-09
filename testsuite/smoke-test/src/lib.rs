@@ -20,6 +20,9 @@ mod genesis;
 mod key_manager;
 
 #[cfg(test)]
+mod network;
+
+#[cfg(test)]
 mod operational_tooling;
 
 #[cfg(test)]

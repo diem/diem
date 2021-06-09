@@ -7081,6 +7081,7 @@ dependencies = [
  "regex",
  "rust_decimal",
  "rusty-fork",
+ "serde_yaml",
  "tokio",
 ]
 
