@@ -175,6 +175,50 @@ fn test_concurrent_transfers_single_node() {
     ));
 }
 
+
+/// This helper function creates 3 new accounts, mints funds, transfers funds
+/// between the accounts and verifies that these operations succeed.
+fn check_create_mint_transfer_no_compute(mut client: ClientProxy) {
+    // Create account 0, mint 10 coins and check balance
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "0", "10", "XUS"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(0.0, "XUS".to_string())],
+        client.get_balances(&["b", "0"]).unwrap(),
+    ));
+
+    // Create account 1, mint 1 coin, transfer 3 coins from account 0 to 1, check balances
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "1", "1", "XUS"], true)
+        .unwrap();
+    client
+        .transfer_coins(&["tb", "0", "1", "3", "XUS"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(0.0, "XUS".to_string())],
+        client.get_balances(&["b", "0"]).unwrap(),
+    ));
+    assert!(compare_balances(
+        vec![(0.0, "XUS".to_string())],
+        client.get_balances(&["b", "1"]).unwrap(),
+    ));
+
+    // Create account 2, mint 15 coins and check balance
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "2", "15", "XUS"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(0.0, "XUS".to_string())],
+        client.get_balances(&["b", "2"]).unwrap(),
+    ));
+}
+
+
+
 /// This helper function creates 3 new accounts, mints funds, transfers funds
 /// between the accounts and verifies that these operations succeed.
 fn check_create_mint_transfer(mut client: ClientProxy) {

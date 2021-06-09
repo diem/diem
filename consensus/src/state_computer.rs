@@ -4,7 +4,7 @@
 use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use diem_crypto::HashValue;
+use diem_crypto::{HashValue, hash::ACCUMULATOR_PLACEHOLDER_HASH};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
@@ -57,10 +57,22 @@ impl StateComputer for ExecutionProxy {
         // TODO: figure out error handling for the prologue txn
         monitor!(
             "execute_block",
-            self.execution_correctness_client
-                .lock()
-                .execute_block(block.clone(), parent_block_id)
+            Ok(StateComputeResult::new(
+                *ACCUMULATOR_PLACEHOLDER_HASH,
+                vec![],
+                0,
+                vec![],
+                0,
+                None,
+                vec![],
+                vec![],
+                vec![],
+            ))
+            //self.execution_correctness_client
+            //    .lock()
+            //    .execute_block(block.clone(), parent_block_id)
         )
+
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
