@@ -347,599 +347,533 @@ pub struct GetEventsWithProofsParams {
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn metadata() {
+        let parse_ok = |value| serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetMetadataParams>(value).unwrap_err();
+
         // Too many array params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetMetadataParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Correct number of array params
-        let value = serde_json::json!([10]);
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(json!([10]));
 
         // Correct number of array params but version is Null
-        let value = serde_json::json!([serde_json::Value::Null]);
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(json!([serde_json::Value::Null]));
 
         // Empty array still correctly deserializes since the only param is optional
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(json!([]));
 
         // Empty object still correctly deserializes since all params are optional
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(json!({}));
 
         // Even if there's no object it still deserializes correctly since all params are optional
-        let value = serde_json::Value::Null;
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(serde_json::Value::Null);
 
         // Named params
-        let value = serde_json::json!({"version": 10});
-        serde_json::from_value::<GetMetadataParams>(value).unwrap();
+        parse_ok(json!({"version": 10}));
 
         // JsonRpcRequest with no params
-        let value = serde_json::json! {{
+        parse_ok(json!({
             "jsonrpc": "2.0",
             "method": Method::GetMetadata,
             "id": 1,
-        }};
-        serde_json::from_value::<JsonRpcRequest>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_account() {
+        let parse_ok = |value| serde_json::from_value::<GetAccountParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetAccountParams>(value).unwrap_err();
         let account = "1668f6be25668c1a17cd8caf6b8d2f25";
 
         // Array without optional param
-        let value = serde_json::json!([account]);
-        serde_json::from_value::<GetAccountParams>(value).unwrap();
+        parse_ok(json!([account]));
 
         // Array with optional param
-        let value = serde_json::json!([account, 10]);
-        serde_json::from_value::<GetAccountParams>(value).unwrap();
+        parse_ok(json!([account, 10]));
 
         // Array with wrong optional param
-        let value = serde_json::json!([account, "foo"]);
-        serde_json::from_value::<GetAccountParams>(value).unwrap_err();
+        parse_err(json!([account, "foo"]));
 
         // Array with too many params
-        let value = serde_json::json!([account, 10, 1]);
-        serde_json::from_value::<GetAccountParams>(value).unwrap_err();
+        parse_err(json!([account, 10, 1]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetAccountParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetAccountParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object without optional param
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
-        });
-        serde_json::from_value::<GetAccountParams>(value).unwrap();
+        }));
 
         // Object with optional param
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "version": 10,
-        });
-        serde_json::from_value::<GetAccountParams>(value).unwrap();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "version": 10,
             "foo": 11,
-        });
-        serde_json::from_value::<GetAccountParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_transactions() {
+        let parse_ok = |value| serde_json::from_value::<GetTransactionsParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+
         // Array with all params
-        let value = serde_json::json!([10, 11, false]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap();
+        parse_ok(json!([10, 11, false]));
 
         // Array with too many params
-        let value = serde_json::json!([10, 11, false, "foo"]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!([10, 11, false, "foo"]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 11, false]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!(["foo", 11, false]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "start_version": 10,
             "limit": 10,
             "include_events": true,
-        });
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_err(json!({
             "limit": 10,
             "include_events": true,
-        });
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "start_version": 10,
             "limit": 10,
             "include_events": true,
             "foo": 11,
-        });
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_account_transaction() {
+        let parse_ok =
+            |value| serde_json::from_value::<GetAccountTransactionParams>(value).unwrap();
+        let parse_err =
+            |value| serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+
         let account = "1668f6be25668c1a17cd8caf6b8d2f25";
 
         // Array with all params
-        let value = serde_json::json!([account, 11, false]);
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap();
+        parse_ok(json!([account, 11, false]));
 
         // Array with too many params
-        let value = serde_json::json!([account, 11, false, "foo"]);
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        parse_err(json!([account, 11, false, "foo"]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 11, false]);
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        parse_err(json!(["foo", 11, false]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "sequence_number": 10,
             "include_events": true,
-        });
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_err(json!({
             "sequence_number": 10,
             "include_events": true,
-        });
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap_err();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "sequence_number": 10,
             "include_events": true,
             "foo": 11,
-        });
-        serde_json::from_value::<GetAccountTransactionParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_account_transactions() {
+        let parse_ok =
+            |value| serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap();
+        let parse_err =
+            |value| serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+
         let account = "1668f6be25668c1a17cd8caf6b8d2f25";
 
         // Array with all params
-        let value = serde_json::json!([account, 10, 11, false]);
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap();
+        parse_ok(json!([account, 10, 11, false]));
 
         // Array with too many params
-        let value = serde_json::json!([account, 10, 11, false, "foo"]);
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        parse_err(json!([account, 10, 11, false, "foo"]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 10, 11, false]);
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        parse_err(json!(["foo", 10, 11, false]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "start": 10,
             "limit": 11,
             "include_events": true,
-        });
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_err(json!({
             "include_events": true,
-        });
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap_err();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "start": 10,
             "limit": 11,
             "include_events": true,
             "foo": 11,
-        });
-        serde_json::from_value::<GetAccountTransactionsParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_events() {
+        let parse_ok = |value| serde_json::from_value::<GetEventsParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+
         let key = "13000000000000000000000000000000000000000a550c18";
 
         // Array with all params
-        let value = serde_json::json!([key, 10, 11]);
-        serde_json::from_value::<GetEventsParams>(value).unwrap();
+        parse_ok(json!([key, 10, 11]));
 
         // Array with too many params
-        let value = serde_json::json!([key, 10, 11, false]);
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        parse_err(json!([key, 10, 11, false]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 10, 11]);
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        parse_err(json!(["foo", 10, 11]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "key": key,
             "start": 10,
             "limit": 11,
-        });
-        serde_json::from_value::<GetEventsParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_err(json!({
             "start": 10,
             "limit": 11,
-        });
-        serde_json::from_value::<GetEventsParams>(value).unwrap_err();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "key": key,
             "start": 10,
             "limit": 11,
             "foo": 11,
-        });
-        serde_json::from_value::<GetEventsParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_currencies() {
-        let value = serde_json::json!([10]);
-        serde_json::from_value::<GetCurrenciesParams>(value).unwrap_err();
+        let parse_ok = |value| serde_json::from_value::<GetCurrenciesParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetCurrenciesParams>(value).unwrap_err();
 
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetCurrenciesParams>(value).unwrap();
+        parse_err(json!([10]));
+        parse_ok(json!([]));
+        parse_ok(json!({}));
+        parse_ok(serde_json::Value::Null);
 
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetCurrenciesParams>(value).unwrap();
-
-        let value = serde_json::Value::Null;
-        serde_json::from_value::<GetCurrenciesParams>(value).unwrap();
-
-        let value = serde_json::json! {{
+        let request = json!({
             "jsonrpc": "2.0",
             "method": Method::GetCurrencies,
             "id": 1,
-        }};
-        serde_json::from_value::<JsonRpcRequest>(value).unwrap();
+        });
+        serde_json::from_value::<JsonRpcRequest>(request).unwrap();
     }
 
     #[test]
     fn get_network_status() {
-        let value = serde_json::json!([10]);
-        serde_json::from_value::<GetNetworkStatusParams>(value).unwrap_err();
+        let parse_ok = |value| serde_json::from_value::<GetNetworkStatusParams>(value).unwrap();
+        let parse_err =
+            |value| serde_json::from_value::<GetNetworkStatusParams>(value).unwrap_err();
 
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetNetworkStatusParams>(value).unwrap();
+        parse_err(json!([10]));
+        parse_ok(json!([]));
+        parse_ok(json!({}));
+        parse_ok(serde_json::Value::Null);
 
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetNetworkStatusParams>(value).unwrap();
-
-        let value = serde_json::Value::Null;
-        serde_json::from_value::<GetNetworkStatusParams>(value).unwrap();
-
-        let value = serde_json::json! {{
+        let request = json!({
             "jsonrpc": "2.0",
             "method": Method::GetNetworkStatus,
             "id": 1,
-        }};
-        serde_json::from_value::<JsonRpcRequest>(value).unwrap();
+        });
+        serde_json::from_value::<JsonRpcRequest>(request).unwrap();
     }
 
     #[test]
     fn get_state_proof() {
+        let parse_ok = |value| serde_json::from_value::<GetStateProofParams>(value).unwrap();
+        let parse_err = |value| serde_json::from_value::<GetStateProofParams>(value).unwrap_err();
+
         // Array with all params
-        let value = serde_json::json!([11]);
-        serde_json::from_value::<GetStateProofParams>(value).unwrap();
+        parse_ok(json!([11]));
 
         // Array with too many params
-        let value = serde_json::json!([11, false]);
-        serde_json::from_value::<GetStateProofParams>(value).unwrap_err();
+        parse_err(json!([11, false]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo"]);
-        serde_json::from_value::<GetStateProofParams>(value).unwrap_err();
+        parse_err(json!(["foo"]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetStateProofParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetStateProofParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "version": 10,
-        });
-        serde_json::from_value::<GetStateProofParams>(value).unwrap();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "version": 10,
             "foo": 11,
-        });
-        serde_json::from_value::<GetStateProofParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_accumulator_consistency_proof() {
+        let parse = |value| serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value);
+        let parse_ok = |value| parse(value).unwrap();
+        let parse_err = |value| parse(value).unwrap_err();
+
         // Array with all params
-        let value = serde_json::json!([11, 42]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        parse_ok(json!([11, 42]));
 
         // Array with too many params
-        let value = serde_json::json!([11, 42, 7]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+        parse_err(json!([11, 42, 7]));
 
         // Array with no ledger version
-        let value = serde_json::json!([11]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        parse_ok(json!([11]));
 
         // Array with no ledger version or client known version
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        parse_ok(json!([]));
 
         // Array with wrong first param
-        let value = serde_json::json!(["foo"]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+        parse_err(json!(["foo"]));
 
         // Array with wrong second param
-        let value = serde_json::json!([123, "bar"]);
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap_err();
+        parse_err(json!([123, "bar"]));
 
         // Object with no ledger version or client known version
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        parse_ok(json!({}));
 
         // Object with no ledger version
-        let value = serde_json::json!({
+        parse_ok(json!({
             "client_known_version": 123,
-        });
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        }));
 
         // Object with no client known version
-        let value = serde_json::json!({
+        parse_ok(json!({
             "ledger_version": 123,
-        });
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        }));
 
         // Object with all params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "client_known_version": 42,
             "ledger_version": 123,
-        });
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        }));
 
         // Object with extra params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "client_known_version": 42,
             "ledger_version": 123,
             "foo": "bar",
-        });
-        serde_json::from_value::<GetAccumulatorConsistencyProofParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_account_state_with_proof() {
+        let parse = |value| serde_json::from_value::<GetAccountStateWithProofParams>(value);
+        let parse_ok = |value| parse(value).unwrap();
+        let parse_err = |value| parse(value).unwrap_err();
+
         let account = "1668f6be25668c1a17cd8caf6b8d2f25";
 
         // Array with all params
-        let value = serde_json::json!([account, 11, 12]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
+        parse_ok(json!([account, 11, 12]));
 
         // Array without optional params
-        let value = serde_json::json!([account]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
-
-        let value = serde_json::json!([account, 12]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
+        parse_ok(json!([account]));
+        parse_ok(json!([account, 12]));
 
         // Array with too many params
-        let value = serde_json::json!([account, 11, 12, "foo"]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap_err();
+        parse_err(json!([account, 11, 12, "foo"]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 11, 12]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap_err();
+        parse_err(json!(["foo", 11, 12]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "version": 10,
             "ledger_version": 10,
-        });
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "ledger_version": 10,
-        });
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "account": account,
             "version": 10,
             "ledger_version": 10,
             "foo": 11,
-        });
-        serde_json::from_value::<GetAccountStateWithProofParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_transactions_with_proofs() {
+        let parse = |value| serde_json::from_value::<GetTransactionsWithProofsParams>(value);
+        let parse_ok = |value| parse(value).unwrap();
+        let parse_err = |value| parse(value).unwrap_err();
+
         // Array with all params
-        let value = serde_json::json!([10, 11, true]);
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
+        parse_ok(json!([10, 11, true]));
 
         // Array with too many params
-        let value = serde_json::json!([10, 11, 42, false]);
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
+        parse_err(json!([10, 11, 42, false]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 11, false]);
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
+        parse_err(json!(["foo", 11, false]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetTransactionsParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "start_version": 10,
             "limit": 11,
             "include_events": true,
-        });
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "start_version": 10,
             "limit": 11,
             "include_events": true,
             "foo": "bar",
-        });
-        serde_json::from_value::<GetTransactionsWithProofsParams>(value).unwrap();
+        }));
     }
 
     #[test]
     fn get_events_with_proofs() {
+        let parse = |value| serde_json::from_value::<GetEventsWithProofsParams>(value);
+        let parse_ok = |value| parse(value).unwrap();
+        let parse_err = |value| parse(value).unwrap_err();
+
         let key = "13000000000000000000000000000000000000000a550c18";
 
         // Array with all params
-        let value = serde_json::json!([key, 10, 11]);
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap();
+        parse_ok(json!([key, 10, 11]));
 
         // Array with too many params
-        let value = serde_json::json!([key, 10, 11, false]);
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        parse_err(json!([key, 10, 11, false]));
 
         // Array with wrong param
-        let value = serde_json::json!(["foo", 10, 11]);
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        parse_err(json!(["foo", 10, 11]));
 
         // Array with too few params
-        let value = serde_json::json!([10, 11]);
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        parse_err(json!([10, 11]));
 
         // Empty array without required params should fail
-        let value = serde_json::json!([]);
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        parse_err(json!([]));
 
         // Object without required params should fail
-        let value = serde_json::json!({});
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        parse_err(json!({}));
 
         // Object params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "key": key,
             "start": 10,
             "limit": 11,
-        });
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap();
+        }));
 
         // Object without all params
-        let value = serde_json::json!({
+        parse_err(json!({
             "start": 10,
             "limit": 11,
-        });
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap_err();
+        }));
 
         // Object with more params
-        let value = serde_json::json!({
+        parse_ok(json!({
             "key": key,
             "start": 10,
             "limit": 11,
             "foo": 11,
-        });
-        serde_json::from_value::<GetEventsWithProofsParams>(value).unwrap();
+        }));
     }
 }
