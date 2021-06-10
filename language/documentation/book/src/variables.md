@@ -257,7 +257,7 @@ let T { f1: local1, f2: local2 } = &mut t;
 // local2: &mut u64
 ```
 
-This behavior can also work recursively.
+This behavior can also work with nested structs.
 
 ```rust
 address 0x42 {
