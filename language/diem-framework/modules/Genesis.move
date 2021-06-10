@@ -21,6 +21,10 @@ module Genesis {
     use 0x1::DiemVersion;
     use 0x1::TransactionFee;
     use 0x1::DiemVMConfig;
+    use 0x1::Signer;
+    use 0x1::ValidatorConfig;
+    use 0x1::ValidatorOperatorConfig;
+    use 0x1::Vector;
 
     /// Initializes the Diem framework.
     fun initialize(
@@ -87,6 +91,86 @@ module Genesis {
         // `DiemTimestamp::is_operating() ==> ...` will become active and a verification condition.
         // See also discussion at function specification.
         DiemTimestamp::set_time_has_started(dr_account);
+    }
+
+    fun create_initialize_owners_operators(
+        dr_account: signer,
+        owners: vector<signer>,
+        owner_names: vector<vector<u8>>,
+        owner_auth_keys: vector<vector<u8>>,
+        consensus_pubkeys: vector<vector<u8>>,
+        operators: vector<signer>,
+        operator_names: vector<vector<u8>>,
+        operator_auth_keys: vector<vector<u8>>,
+        validator_network_addresses: vector<vector<u8>>,
+        full_node_network_addresses: vector<vector<u8>>,
+    ) {
+        let num_owners = Vector::length(&owners);
+        let num_owner_names = Vector::length(&owner_names);
+        assert(num_owners == num_owner_names, 0);
+        let num_owner_keys = Vector::length(&owner_auth_keys);
+        assert(num_owner_names == num_owner_keys, 0);
+        let num_operators = Vector::length(&operators);
+        assert(num_owner_keys == num_operators, 0);
+        let num_operator_names = Vector::length(&operator_names);
+        assert(num_operators == num_operator_names, 0);
+        let num_operator_keys = Vector::length(&operator_auth_keys);
+        assert(num_operator_names == num_operator_keys, 0);
+        let num_validator_network_addresses = Vector::length(&validator_network_addresses);
+        assert(num_operator_keys == num_validator_network_addresses, 0);
+        let num_full_node_network_addresses = Vector::length(&full_node_network_addresses);
+        assert(num_validator_network_addresses == num_full_node_network_addresses, 0);
+
+        let i = 0;
+        let dummy_auth_key_prefix = x"00000000000000000000000000000000";
+        while (i < num_owners) {
+            let owner = Vector::borrow(&owners, i);
+            let owner_address = Signer::address_of(owner);
+            let owner_name = *Vector::borrow(&owner_names, i);
+            // create each validator account and rotate its auth key to the correct value
+            DiemAccount::create_validator_account(
+                &dr_account, owner_address, copy dummy_auth_key_prefix, owner_name
+            );
+
+            let owner_auth_key = *Vector::borrow(&owner_auth_keys, i);
+            let rotation_cap = DiemAccount::extract_key_rotation_capability(owner);
+            DiemAccount::rotate_authentication_key(&rotation_cap, owner_auth_key);
+            DiemAccount::restore_key_rotation_capability(rotation_cap);
+
+            let operator = Vector::borrow(&operators, i);
+            let operator_address = Signer::address_of(operator);
+            let operator_name = *Vector::borrow(&operator_names, i);
+            // create the operator account + rotate its auth key if it does not already exist
+            if (!DiemAccount::exists_at(operator_address)) {
+                DiemAccount::create_validator_operator_account(
+                    &dr_account, operator_address, copy dummy_auth_key_prefix, copy operator_name
+                );
+                let operator_auth_key = *Vector::borrow(&operator_auth_keys, i);
+                let rotation_cap = DiemAccount::extract_key_rotation_capability(operator);
+                DiemAccount::rotate_authentication_key(&rotation_cap, operator_auth_key);
+                DiemAccount::restore_key_rotation_capability(rotation_cap);
+            };
+            // assign the operator to its validator
+            assert(ValidatorOperatorConfig::get_human_name(operator_address) == operator_name, 0);
+            ValidatorConfig::set_operator(owner, operator_address);
+
+            // set up the validator config
+            let validator_network_address = *Vector::borrow(&validator_network_addresses, i);
+            let full_node_network_address = *Vector::borrow(&full_node_network_addresses, i);
+            let consensus_pubkey = *Vector::borrow(&consensus_pubkeys, i);
+            ValidatorConfig::set_config(
+                operator,
+                owner_address,
+                consensus_pubkey,
+                validator_network_address,
+                full_node_network_address
+            );
+
+            // add to validator to the validator sett
+            DiemSystem::add_validator(&dr_account, owner_address);
+
+            i = i + 1;
+        }
     }
 
     /// For verification of genesis, the goal is to prove that all the invariants which

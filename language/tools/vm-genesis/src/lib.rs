@@ -348,95 +348,77 @@ fn create_and_initialize_owners_operators(
     operator_registrations: &[OperatorRegistration],
 ) {
     let diem_root_address = account_config::diem_root_address();
+    let mut owners = vec![];
+    let mut owner_names = vec![];
+    let mut owner_auth_keys = vec![];
+    let mut operators = vec![];
+    let mut operator_names = vec![];
 
-    // Create accounts for each validator owner. The inputs for creating an account are the auth
-    // key prefix and account address. Internally move then computes the auth key as auth key
-    // prefix || address. Because of this, the initial auth key will be invalid as we produce the
-    // account address from the name and not the public key.
-    for (owner_key, owner_name, _op_assignment) in operator_assignments {
+    for (owner_key, owner_name, op_assign) in operator_assignments {
         let staged_owner_auth_key =
             diem_config::utils::default_validator_owner_auth_key_from_name(owner_name);
-        let owner_address = staged_owner_auth_key.derived_address();
-        let create_owner_script =
-            transaction_builder::encode_create_validator_account_script_function(
-                0,
-                owner_address,
-                staged_owner_auth_key.prefix().to_vec(),
-                owner_name.clone(),
-            )
-            .into_script_function();
-        exec_script_function(
-            session,
-            log_context,
-            diem_root_address,
-            &create_owner_script,
-        );
+        owners.push(MoveValue::Signer(staged_owner_auth_key.derived_address()));
+        owner_names.push(MoveValue::vector_u8(owner_name.clone()));
+        owner_auth_keys.push(MoveValue::vector_u8(
+            owner_key.as_ref().map_or(ZERO_AUTH_KEY.to_vec(), |k| {
+                AuthenticationKey::ed25519(&k).to_vec()
+            }),
+        ));
+        operator_names.push(MoveValue::vector_u8(
+            bcs::from_bytes(&op_assign.args()[0]).unwrap(),
+        ));
 
-        // If there is a key, make it the auth key, otherwise use a zero auth key.
-        let real_owner_auth_key = if let Some(owner_key) = owner_key {
-            AuthenticationKey::ed25519(owner_key).to_vec()
-        } else {
-            ZERO_AUTH_KEY.to_vec()
-        };
-
-        exec_script_function(
-            session,
-            log_context,
-            owner_address,
-            &transaction_builder::encode_rotate_authentication_key_script_function(
-                real_owner_auth_key,
-            )
-            .into_script_function(),
-        );
+        operators.push(MoveValue::Signer(
+            bcs::from_bytes(&op_assign.args()[1]).unwrap(),
+        ));
     }
-
-    // Create accounts for each validator operator
-    for (operator_key, operator_name, _) in operator_registrations {
+    let mut operator_auth_keys = vec![];
+    let mut consensus_pubkeys = vec![];
+    let mut validator_network_addresses = vec![];
+    let mut full_node_network_addresses = vec![];
+    // fill with dummy values
+    for _i in 0..operators.len() {
+        operator_auth_keys.push(MoveValue::U8(0));
+        consensus_pubkeys.push(MoveValue::U8(0));
+        validator_network_addresses.push(MoveValue::U8(0));
+        full_node_network_addresses.push(MoveValue::U8(0));
+    }
+    for (operator_key, operator_name, op_register) in operator_registrations {
         let operator_auth_key = AuthenticationKey::ed25519(&operator_key);
-        let operator_account = account_address::from_public_key(operator_key);
-        let create_operator_script =
-            transaction_builder::encode_create_validator_operator_account_script_function(
-                0,
-                operator_account,
-                operator_auth_key.prefix().to_vec(),
-                operator_name.clone(),
-            )
-            .into_script_function();
-        exec_script_function(
-            session,
-            log_context,
-            diem_root_address,
-            &create_operator_script,
-        );
+        let operator_index = operator_names
+            .iter()
+            .enumerate()
+            .find(|(_, x)| &MoveValue::vector_u8(operator_name.clone()) == *x)
+            .unwrap()
+            .0;
+        operator_auth_keys[operator_index] = MoveValue::vector_u8(operator_auth_key.to_vec());
+        consensus_pubkeys[operator_index] =
+            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[1]).unwrap());
+        validator_network_addresses[operator_index] =
+            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[2]).unwrap());
+        full_node_network_addresses[operator_index] =
+            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[3]).unwrap());
     }
 
-    // Set the validator operator for each validator owner
-    for (_owner_key, owner_name, op_assignment) in operator_assignments {
-        let owner_address = diem_config::utils::validator_owner_account_from_name(owner_name);
-        exec_script_function(session, log_context, owner_address, op_assignment);
-    }
-
-    // Set the validator config for each validator
-    for (operator_key, _, registration) in operator_registrations {
-        let operator_account = account_address::from_public_key(operator_key);
-        exec_script_function(session, log_context, operator_account, registration);
-    }
-
-    // Add each validator to the validator set
-    for (_owner_key, owner_name, _op_assignment) in operator_assignments {
-        let owner_address = diem_config::utils::validator_owner_account_from_name(owner_name);
-        exec_function(
-            session,
-            log_context,
-            "DiemSystem",
-            "add_validator",
-            vec![],
-            serialize_values(&vec![
-                MoveValue::Signer(diem_root_address),
-                MoveValue::Address(owner_address),
-            ]),
-        );
-    }
+    exec_function(
+        session,
+        log_context,
+        GENESIS_MODULE_NAME,
+        "create_initialize_owners_operators",
+        vec![],
+        serialize_values(&vec![
+            MoveValue::Signer(diem_root_address),
+            MoveValue::Vector(owners),
+            MoveValue::Vector(owner_names),
+            MoveValue::Vector(owner_auth_keys),
+            MoveValue::Vector(consensus_pubkeys),
+            MoveValue::Vector(operators),
+            MoveValue::Vector(operator_names),
+            MoveValue::Vector(operator_auth_keys),
+            MoveValue::Vector(validator_network_addresses),
+            MoveValue::Vector(full_node_network_addresses),
+        ]),
+    );
 }
 
 /// Publish the standard library.

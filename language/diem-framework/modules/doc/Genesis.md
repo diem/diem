@@ -11,6 +11,7 @@ when executing from a fresh state.
 
 
 -  [Function `initialize`](#0x1_Genesis_initialize)
+-  [Function `create_initialize_owners_operators`](#0x1_Genesis_create_initialize_owners_operators)
 
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
@@ -25,7 +26,11 @@ when executing from a fresh state.
 <b>use</b> <a href="DiemVMConfig.md#0x1_DiemVMConfig">0x1::DiemVMConfig</a>;
 <b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
+<b>use</b> <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
 <b>use</b> <a href="TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
+<b>use</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+<b>use</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">0x1::ValidatorOperatorConfig</a>;
+<b>use</b> <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector">0x1::Vector</a>;
 <b>use</b> <a href="XDX.md#0x1_XDX">0x1::XDX</a>;
 <b>use</b> <a href="XUS.md#0x1_XUS">0x1::XUS</a>;
 </code></pre>
@@ -136,6 +141,106 @@ Assume that this is called in genesis state (no timestamp).
 
 
 <pre><code><b>requires</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>();
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Genesis_create_initialize_owners_operators"></a>
+
+## Function `create_initialize_owners_operators`
+
+
+
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_create_initialize_owners_operators">create_initialize_owners_operators</a>(dr_account: signer, owners: vector&lt;signer&gt;, owner_names: vector&lt;vector&lt;u8&gt;&gt;, owner_auth_keys: vector&lt;vector&lt;u8&gt;&gt;, consensus_pubkeys: vector&lt;vector&lt;u8&gt;&gt;, operators: vector&lt;signer&gt;, operator_names: vector&lt;vector&lt;u8&gt;&gt;, operator_auth_keys: vector&lt;vector&lt;u8&gt;&gt;, validator_network_addresses: vector&lt;vector&lt;u8&gt;&gt;, full_node_network_addresses: vector&lt;vector&lt;u8&gt;&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_create_initialize_owners_operators">create_initialize_owners_operators</a>(
+    dr_account: signer,
+    owners: vector&lt;signer&gt;,
+    owner_names: vector&lt;vector&lt;u8&gt;&gt;,
+    owner_auth_keys: vector&lt;vector&lt;u8&gt;&gt;,
+    consensus_pubkeys: vector&lt;vector&lt;u8&gt;&gt;,
+    operators: vector&lt;signer&gt;,
+    operator_names: vector&lt;vector&lt;u8&gt;&gt;,
+    operator_auth_keys: vector&lt;vector&lt;u8&gt;&gt;,
+    validator_network_addresses: vector&lt;vector&lt;u8&gt;&gt;,
+    full_node_network_addresses: vector&lt;vector&lt;u8&gt;&gt;,
+) {
+    <b>let</b> num_owners = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&owners);
+    <b>let</b> num_owner_names = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&owner_names);
+    <b>assert</b>(num_owners == num_owner_names, 0);
+    <b>let</b> num_owner_keys = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&owner_auth_keys);
+    <b>assert</b>(num_owner_names == num_owner_keys, 0);
+    <b>let</b> num_operators = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&operators);
+    <b>assert</b>(num_owner_keys == num_operators, 0);
+    <b>let</b> num_operator_names = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&operator_names);
+    <b>assert</b>(num_operators == num_operator_names, 0);
+    <b>let</b> num_operator_keys = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&operator_auth_keys);
+    <b>assert</b>(num_operator_names == num_operator_keys, 0);
+    <b>let</b> num_validator_network_addresses = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&validator_network_addresses);
+    <b>assert</b>(num_operator_keys == num_validator_network_addresses, 0);
+    <b>let</b> num_full_node_network_addresses = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&full_node_network_addresses);
+    <b>assert</b>(num_validator_network_addresses == num_full_node_network_addresses, 0);
+
+    <b>let</b> i = 0;
+    <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
+    <b>while</b> (i &lt; num_owners) {
+        <b>let</b> owner = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&owners, i);
+        <b>let</b> owner_address = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(owner);
+        <b>let</b> owner_name = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&owner_names, i);
+        // create each validator account and rotate its auth key <b>to</b> the correct value
+        <a href="DiemAccount.md#0x1_DiemAccount_create_validator_account">DiemAccount::create_validator_account</a>(
+            &dr_account, owner_address, <b>copy</b> dummy_auth_key_prefix, owner_name
+        );
+
+        <b>let</b> owner_auth_key = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&owner_auth_keys, i);
+        <b>let</b> rotation_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(owner);
+        <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&rotation_cap, owner_auth_key);
+        <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(rotation_cap);
+
+        <b>let</b> operator = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&operators, i);
+        <b>let</b> operator_address = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator);
+        <b>let</b> operator_name = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&operator_names, i);
+        // create the operator account + rotate its auth key <b>if</b> it does not already exist
+        <b>if</b> (!<a href="DiemAccount.md#0x1_DiemAccount_exists_at">DiemAccount::exists_at</a>(operator_address)) {
+            <a href="DiemAccount.md#0x1_DiemAccount_create_validator_operator_account">DiemAccount::create_validator_operator_account</a>(
+                &dr_account, operator_address, <b>copy</b> dummy_auth_key_prefix, <b>copy</b> operator_name
+            );
+            <b>let</b> operator_auth_key = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&operator_auth_keys, i);
+            <b>let</b> rotation_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(operator);
+            <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&rotation_cap, operator_auth_key);
+            <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(rotation_cap);
+        };
+        // assign the operator <b>to</b> its validator
+        <b>assert</b>(<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_address) == operator_name, 0);
+        <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(owner, operator_address);
+
+        // set up the validator config
+        <b>let</b> validator_network_address = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&validator_network_addresses, i);
+        <b>let</b> full_node_network_address = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&full_node_network_addresses, i);
+        <b>let</b> consensus_pubkey = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&consensus_pubkeys, i);
+        <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
+            operator,
+            owner_address,
+            consensus_pubkey,
+            validator_network_address,
+            full_node_network_address
+        );
+
+        // add <b>to</b> validator <b>to</b> the validator sett
+        <a href="DiemSystem.md#0x1_DiemSystem_add_validator">DiemSystem::add_validator</a>(&dr_account, owner_address);
+
+        i = i + 1;
+    }
+}
 </code></pre>
 
 
