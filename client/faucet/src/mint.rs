@@ -15,7 +15,7 @@ use diem_sdk::{
     },
 };
 use serde::Deserialize;
-use std::{fmt, sync::Mutex};
+use std::{collections::HashMap, fmt, sync::Mutex};
 
 #[derive(Debug)]
 pub enum Response {
@@ -107,7 +107,18 @@ impl Service {
     }
 
     pub async fn process(&self, mut params: MintParams) -> Result<Response> {
+        println!("process started {}", params);
         let (tc_seq, dd_seq, receiver_seq) = self.sequences(params.receiver()).await?;
+        let mut domain_map = HashMap::new();
+        if let (Some(_diem_id_domain), Some(_is_remove_domain)) =
+            (&params.diem_id_domain, params.is_remove_domain)
+        {
+            println!("does it come here?");
+            domain_map = self.client.get_diem_id_domain_map().await?;
+            for element in domain_map.iter() {
+                println!("the value is: {}, {}", element.0, element.1);
+            }
+        }
         let txns = {
             let mut treasury_account = self.treasury_account.lock().unwrap();
             let mut dd_account = self.dd_account.lock().unwrap();
@@ -147,18 +158,19 @@ impl Service {
             if let (Some(ref diem_id_domain), Some(is_remove_domain)) =
                 (&params.diem_id_domain, params.is_remove_domain)
             {
-                let builder = if is_remove_domain {
-                    self.transaction_factory.remove_diem_id_domain(
+                if is_remove_domain {
+                    let builder = self.transaction_factory.remove_diem_id_domain(
                         params.receiver(),
                         diem_id_domain.as_str().as_bytes().to_vec(),
-                    )
-                } else {
-                    self.transaction_factory.add_diem_id_domain(
+                    );
+                    txns.push(treasury_account.sign_with_transaction_builder(builder));
+                } else if !domain_map.contains_key(diem_id_domain) {
+                    let builder = self.transaction_factory.add_diem_id_domain(
                         params.receiver(),
                         diem_id_domain.as_str().as_bytes().to_vec(),
-                    )
+                    );
+                    txns.push(treasury_account.sign_with_transaction_builder(builder));
                 };
-                txns.push(treasury_account.sign_with_transaction_builder(builder));
             }
 
             txns.push(dd_account.sign_with_transaction_builder(
