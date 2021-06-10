@@ -12,7 +12,7 @@ Move provides operators for creating and extending references as well as convert
 | ---------- | ---------- | ----------
 | `&e`       | `&T` where `e: T` and `T` is a non-reference type | Create an immutable reference to `e`
 | `&mut e`   | `&mut T` where `e: T` and `T` is a non-reference type | Create a mutable reference to `e`.
-| `&e.f`  | `&t` where `e.f: T` | Create an immutable reference to field `f` of struct `e`.
+| `&e.f`  | `&T` where `e.f: T` | Create an immutable reference to field `f` of struct `e`.
 | `&mut e.f`  | `&mut T` where `e.f: T` | Create a mutable reference to field `f` of struct`e`.
 | `freeze(e)` | `&T` where `e: &mut T` | Convert the mutable reference `e` into an immutable reference.
 
@@ -115,7 +115,7 @@ fun assignment_examples() {
 
 ### Subtyping
 
-With this `freeze` inference, the Move type checker can view `&mut T` as a subtype of `&T`. As shown above, this means that anywhere for any expression where a `&T` value is used, an `&mut T` value. This terminology is used in error messages to concisely indicate that a `&mut T` was needed where a `&T` was supplied. For example
+With this `freeze` inference, the Move type checker can view `&mut T` as a subtype of `&T`. As shown above, this means that anywhere for any expression where a `&T` value is used, a `&mut T` value can also be used. This terminology is used in error messages to concisely indicate that a `&mut T` was needed where a `&T` was supplied. For example
 
 ```rust=
 address 0x42 {
