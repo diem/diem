@@ -19,7 +19,7 @@ use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, V
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_cli::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use move_core_types::{effects::ChangeSet as MoveChanges, language_storage::TypeTag};
-use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Flags};
+use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
@@ -395,12 +395,9 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
 fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
     let cur_path = file_path.to_owned();
     let targets = &vec![cur_path];
-    let (files, units_or_errors) = move_compile(
-        targets,
-        &diem_framework::diem_stdlib_files(),
-        None,
-        Flags::empty().set_sources_shadow_deps(false),
-    )?;
+    let (files, units_or_errors) = Compiler::new(targets, &diem_framework::diem_stdlib_files())
+        .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .build()?;
     let unit = match units_or_errors {
         Err(errors) => {
             let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);

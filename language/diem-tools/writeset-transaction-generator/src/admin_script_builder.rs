@@ -8,7 +8,7 @@ use diem_types::{
     transaction::{Script, WriteSetPayload},
 };
 use handlebars::Handlebars;
-use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
+use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
 use serde::Serialize;
 use std::{collections::HashMap, io::Write, path::PathBuf};
 use tempfile::NamedTempFile;
@@ -17,13 +17,11 @@ use tempfile::NamedTempFile;
 pub const SCRIPTS_DIR_PATH: &str = "templates";
 
 pub fn compile_script(source_file_str: String) -> Vec<u8> {
-    let (_files, mut compiled_program) = move_lang::move_compile_and_report(
-        &[source_file_str],
-        &diem_framework::diem_stdlib_files(),
-        None,
-        Flags::empty().set_sources_shadow_deps(false),
-    )
-    .unwrap();
+    let (_files, mut compiled_program) =
+        Compiler::new(&[source_file_str], &diem_framework::diem_stdlib_files())
+            .set_flags(Flags::empty().set_sources_shadow_deps(false))
+            .build_and_report()
+            .unwrap();
     let mut script_bytes = vec![];
     assert!(compiled_program.len() == 1);
     match compiled_program.pop().unwrap() {

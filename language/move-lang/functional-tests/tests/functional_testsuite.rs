@@ -8,12 +8,8 @@ use functional_tests::{
     testsuite,
 };
 use move_lang::{
-    self,
-    command_line::read_bool_env_var,
-    compiled_unit::CompiledUnit,
-    errors,
-    shared::{CompilationEnv, Flags},
-    FullyCompiledProgram,
+    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors,
+    Compiler as MoveCompiler, Flags, FullyCompiledProgram, PASS_COMPILATION,
 };
 use once_cell::sync::Lazy;
 use std::{fmt, io::Write, path::Path};
@@ -44,25 +40,13 @@ impl<'a> MoveSourceCompiler<'a> {
         errors::FilesSourceText,
         Result<Vec<CompiledUnit>, errors::Errors>,
     )> {
-        let mut compilation_env = CompilationEnv::new(Flags::empty());
-        let (files, pprog_and_comments_res) =
-            move_lang::move_parse(&compilation_env, targets, &self.deps, None)?;
-        let (_comments, pprog) = match pprog_and_comments_res {
-            Err(errors) => return Ok((files, Err(errors))),
-            Ok(res) => res,
-        };
-
-        let result = match move_lang::move_continue_up_to(
-            &mut compilation_env,
-            Some(&self.pre_compiled_deps),
-            move_lang::PassResult::Parser(pprog),
-            move_lang::Pass::Compilation,
-        ) {
-            Ok(move_lang::PassResult::Compilation(units)) => Ok(units),
-            Ok(_) => unreachable!(),
-            Err(errors) => Err(errors),
-        };
-        Ok((files, result))
+        let (files, comments_and_compiler_res) = MoveCompiler::new(targets, &self.deps)
+            .set_pre_compiled_lib(&self.pre_compiled_deps)
+            .run::<PASS_COMPILATION>()?;
+        match comments_and_compiler_res {
+            Err(errors) => Ok((files, Err(errors))),
+            Ok((_comments, move_compiler)) => Ok((files, Ok(move_compiler.into_compiled_units()))),
+        }
     }
 }
 
@@ -135,10 +119,10 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
 }
 
 static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
-    let program_res = move_lang::move_construct_pre_compiled_lib(
-        &mut CompilationEnv::new(Flags::empty().set_sources_shadow_deps(false)),
+    let program_res = move_lang::construct_pre_compiled_lib(
         &diem_framework::diem_stdlib_files(),
         None,
+        Flags::empty().set_sources_shadow_deps(false),
     )
     .unwrap();
     match program_res {

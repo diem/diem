@@ -12,7 +12,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, CORE_CODE_ADDRESS},
 };
-use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
+use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -45,15 +45,15 @@ pub fn bench<M: Measurement + 'static>(c: &mut Criterion<M>, fun: &str) {
 
 // Compile `bench.move` and its dependencies
 fn compile_modules() -> Vec<CompiledModule> {
-    let (_files, compiled_units) = move_lang::move_compile_and_report(
+    let (_files, compiled_units) = Compiler::new(
         &[
             STDLIB_VECTOR_SRC_PATH.to_str().unwrap().to_owned(),
             MOVE_BENCH_SRC_PATH.to_str().unwrap().to_owned(),
         ],
         &[],
-        None,
-        Flags::empty().set_sources_shadow_deps(false),
     )
+    .set_flags(Flags::empty().set_sources_shadow_deps(false))
+    .build_and_report()
     .expect("Error compiling...");
     compiled_units
         .into_iter()

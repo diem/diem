@@ -55,11 +55,9 @@ pub fn main() -> anyhow::Result<()> {
     } = Options::from_args();
 
     let interface_files_dir = format!("{}/generated_interface_files", out_dir);
-    let (files, compiled_units) = move_lang::move_compile_and_report(
-        &source_files,
-        &dependencies,
-        Some(interface_files_dir),
-        flags,
-    )?;
+    let (files, compiled_units) = move_lang::Compiler::new(&source_files, &dependencies)
+        .set_interface_files_dir(interface_files_dir)
+        .set_flags(flags)
+        .build_and_report()?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

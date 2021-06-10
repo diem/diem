@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod compiler;
+
 pub const DEPENDENCY: &str = "dependency";
 pub const DEPENDENCY_SHORT: &str = "d";
 
@@ -21,6 +23,11 @@ pub const TEST: &str = "test";
 pub const TEST_SHORT: &str = "t";
 
 pub const COLOR_MODE_ENV_VAR: &str = "COLOR_MODE";
+
+pub const MOVE_EXTENSION: &str = "move";
+pub const MOVE_COMPILED_EXTENSION: &str = "mv";
+pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";
+pub const SOURCE_MAP_EXTENSION: &str = "mvsm";
 
 pub fn read_env_var(v: &str) -> String {
     std::env::var(v)

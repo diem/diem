@@ -5,7 +5,7 @@
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
-use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Flags};
+use move_lang::{compiled_unit::CompiledUnit, Compiler};
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
 use std::{
@@ -87,8 +87,9 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
 }
 
 pub(crate) fn build_stdlib() -> BTreeMap<String, CompiledModule> {
-    let (_files, compiled_units) =
-        move_compile_and_report(&diem_stdlib_files(), &[], None, Flags::empty()).unwrap();
+    let (_files, compiled_units) = Compiler::new(&diem_stdlib_files(), &[])
+        .build_and_report()
+        .unwrap();
     let mut modules = BTreeMap::new();
     for compiled_unit in compiled_units {
         let name = compiled_unit.name();

@@ -7,10 +7,9 @@ pub mod test_runner;
 use crate::test_runner::TestRunner;
 use move_core_types::language_storage::ModuleId;
 use move_lang::{
-    errors,
-    shared::{CompilationEnv, Flags},
+    self, errors,
     unit_test::{self, TestPlan},
-    Pass, PassResult,
+    Compiler, Flags, PASS_CFGIR,
 };
 use std::{
     io::{Result, Write},
@@ -107,41 +106,23 @@ impl UnitTestingConfig {
             source_files.push(move_stdlib::unit_testing_module_file());
         }
 
-        let mut compilation_env = CompilationEnv::new(Flags::testing());
-        let (files, pprog_and_comments_res) =
-            move_lang::move_parse(&compilation_env, &source_files, &[], None).ok()?;
-        let (_, pprog) = move_lang::unwrap_or_report_errors!(files, pprog_and_comments_res);
-        let cfgir_result = move_lang::move_continue_up_to(
-            &mut compilation_env,
-            None,
-            PassResult::Parser(pprog),
-            Pass::CFGIR,
-        );
+        let (files, comments_and_compiler_res) = Compiler::new(&source_files, &[])
+            .set_flags(Flags::testing())
+            .run::<PASS_CFGIR>()
+            .unwrap();
+        let (_, compiler) = move_lang::unwrap_or_report_errors!(files, comments_and_compiler_res);
 
-        let (test_plan, cfgir) = match move_lang::unwrap_or_report_errors!(files, cfgir_result) {
-            PassResult::CFGIR(cfgir) => (
-                unit_test::plan_builder::construct_test_plan(&mut compilation_env, &cfgir),
-                cfgir,
-            ),
-            _ => unreachable!(),
-        };
+        let (mut compiler, cfgir) = compiler.into_ast();
+        let compilation_env = compiler.compilation_env();
+        let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
 
         if let Err(errors) = compilation_env.check_errors() {
             errors::report_errors(files, errors);
         }
 
-        let compilation_result = move_lang::move_continue_up_to(
-            &mut compilation_env,
-            None,
-            PassResult::CFGIR(cfgir),
-            Pass::Compilation,
-        );
+        let compilation_result = compiler.at_cfgir(cfgir).build();
 
-        let units = match move_lang::unwrap_or_report_errors!(files, compilation_result) {
-            PassResult::Compilation(units) => units,
-            _ => unreachable!(),
-        };
-
+        let units = move_lang::unwrap_or_report_errors!(files, compilation_result);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
     }
 

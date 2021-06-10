@@ -48,6 +48,9 @@ pub fn main() -> anyhow::Result<()> {
         flags,
     } = Options::from_args();
 
-    let _files = move_lang::move_check_and_report(&source_files, &dependencies, out_dir, flags)?;
+    let _files = move_lang::Compiler::new(&source_files, &dependencies)
+        .set_interface_files_dir_opt(out_dir)
+        .set_flags(flags)
+        .check_and_report()?;
     Ok(())
 }

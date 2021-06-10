@@ -17,13 +17,13 @@ use move_binary_format::{
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::sp;
 use move_lang::{
+    self,
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
-    move_continue_up_to, move_parse,
     parser::ast::{self as P, ModuleName as ParserModuleName},
-    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Flags},
-    Pass as MovePass, PassResult as MovePassResult,
+    shared::{unique_map::UniqueMap, AddressBytes},
+    Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
 };
 use num::{BigUint, Num};
 
@@ -65,12 +65,12 @@ pub fn run_model_builder_with_compilation_flags(
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
-    let mut compilation_env = CompilationEnv::new(flags);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
-    let (files, pprog_and_comments_res) =
-        move_parse(&compilation_env, move_sources, deps_dir, None)?;
-    let (comment_map, parsed_prog) = match pprog_and_comments_res {
+    let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps_dir)
+        .set_flags(flags)
+        .run::<PASS_PARSER>()?;
+    let (comment_map, compiler) = match comments_and_compiler_res {
         Err(errors) => {
             // Add source files so that the env knows how to translate locations of parse errors
             for fname in files.keys().sorted() {
@@ -82,6 +82,7 @@ pub fn run_model_builder_with_compilation_flags(
         }
         Ok(res) => res,
     };
+    let (compiler, parsed_prog) = compiler.into_ast();
     // Add source files for targets and dependencies
     let dep_sources: BTreeSet<_> = parsed_prog
         .lib_definitions
@@ -111,18 +112,12 @@ pub fn run_model_builder_with_compilation_flags(
             lib_definitions: vec![],
         }
     };
-    let expansion_ast = match move_continue_up_to(
-        &mut compilation_env,
-        None,
-        MovePassResult::Parser(parsed_prog),
-        MovePass::Expansion,
-    ) {
+    let (compiler, expansion_ast) = match compiler.at_parser(parsed_prog).run::<PASS_EXPANSION>() {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
         }
-        Ok(MovePassResult::Expansion(eprog)) => eprog,
-        Ok(_) => unreachable!(),
+        Ok(compiler) => compiler.into_ast(),
     };
     // Extract the module/script closure
     let mut visited_modules = BTreeSet::new();
@@ -172,18 +167,15 @@ pub fn run_model_builder_with_compilation_flags(
         }
     };
     // Run the compiler fully to the compiled units
-    let units = match move_continue_up_to(
-        &mut compilation_env,
-        None,
-        MovePassResult::Expansion(expansion_ast.clone()),
-        MovePass::Compilation,
-    ) {
+    let units = match compiler
+        .at_expansion(expansion_ast.clone())
+        .run::<PASS_COMPILATION>()
+    {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
         }
-        Ok(MovePassResult::Compilation(units)) => units,
-        Ok(_) => unreachable!(),
+        Ok(compiler) => compiler.into_compiled_units(),
     };
     // Check for bytecode verifier errors (there should not be any)
     let (verified_units, errors) = compiled_unit::verify_units(units);

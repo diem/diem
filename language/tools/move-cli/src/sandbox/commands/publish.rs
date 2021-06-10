@@ -5,7 +5,7 @@ use crate::sandbox::utils::{
     explain_publish_changeset, explain_publish_error, get_gas_status,
     on_disk_state_view::OnDiskStateView,
 };
-use move_lang::{self, compiled_unit::CompiledUnit, shared::Flags};
+use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 
 use anyhow::Result;
@@ -21,12 +21,9 @@ pub fn publish(
         println!("Compiling Move modules...")
     }
 
-    let (_, compiled_units) = move_lang::move_compile_and_report(
-        files,
-        &[state.interface_files_dir()?],
-        None,
-        Flags::empty().set_sources_shadow_deps(republish),
-    )?;
+    let (_, compiled_units) = Compiler::new(files, &[state.interface_files_dir()?])
+        .set_flags(Flags::empty().set_sources_shadow_deps(republish))
+        .build_and_report()?;
 
     let num_modules = compiled_units
         .iter()

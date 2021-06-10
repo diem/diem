@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_lang::{
-    command_line::read_bool_env_var,
-    errors::*,
-    move_continue_up_to, move_parse, parser,
-    shared::{CompilationEnv, Flags},
-    unit_test, CommentMap, Pass, PassResult,
+    command_line::read_bool_env_var, errors::*, shared::Flags, unit_test, CommentMap, Compiler,
+    SteppedCompiler, PASS_CFGIR, PASS_PARSER,
 };
 use move_lang_test_utils::*;
 use std::{fs, path::Path};
@@ -87,9 +84,10 @@ fn run_test(
     let mut deps = move_stdlib::move_stdlib_files();
     deps.push(move_stdlib::unit_testing_module_file());
 
-    let compilation_env = CompilationEnv::new(flags);
-    let (files, pprog_and_comments_res) = move_parse(&compilation_env, &targets, &deps, None)?;
-    let errors = match move_check_for_errors(compilation_env, pprog_and_comments_res) {
+    let (files, comments_and_compiler_res) = Compiler::new(&targets, &deps)
+        .set_flags(flags)
+        .run::<PASS_PARSER>()?;
+    let errors = match move_check_for_errors(comments_and_compiler_res) {
         Err(errors) | Ok(errors) => errors,
     };
 
@@ -148,35 +146,18 @@ fn run_test(
 }
 
 fn move_check_for_errors(
-    mut compilation_env: CompilationEnv,
-    pprog_and_comments_res: Result<(CommentMap, parser::ast::Program), Errors>,
+    comments_and_compiler_res: Result<(CommentMap, SteppedCompiler<'_, PASS_PARSER>), Errors>,
 ) -> Result<Errors, Errors> {
-    let (_, prog) = pprog_and_comments_res?;
-    let cfgir = match move_continue_up_to(
-        &mut compilation_env,
-        None,
-        PassResult::Parser(prog),
-        Pass::CFGIR,
-    )? {
-        PassResult::CFGIR(cfgir) => cfgir,
-        _ => unreachable!(),
-    };
-
+    let (_, compiler) = comments_and_compiler_res?;
+    let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
+    let compilation_env = compiler.compilation_env();
     if compilation_env.flags().is_testing() {
-        unit_test::plan_builder::construct_test_plan(&mut compilation_env, &cfgir);
+        unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
     }
 
     compilation_env.check_errors()?;
-
-    match move_continue_up_to(
-        &mut compilation_env,
-        None,
-        PassResult::CFGIR(cfgir),
-        Pass::Compilation,
-    )? {
-        PassResult::Compilation(units) => Ok(move_lang::compiled_unit::verify_units(units).1),
-        _ => unreachable!(),
-    }
+    let units = compiler.at_cfgir(cfgir).build()?;
+    Ok(move_lang::compiled_unit::verify_units(units).1)
 }
 
 datatest_stable::harness!(move_check_testsuite, MOVE_CHECK_DIR, r".*\.move$");

@@ -3,7 +3,7 @@
 
 use anyhow::{bail, Result};
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
-use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
+use move_lang::{compiled_unit::CompiledUnit, Compiler as MoveCompiler, Flags};
 use std::{fs::File, io::Write, path::Path};
 use tempfile::tempdir;
 
@@ -16,12 +16,9 @@ pub fn compile_units(s: &str) -> Result<Vec<CompiledUnit>> {
         writeln!(file, "{}", s)?;
     }
 
-    let (_, units) = move_lang::move_compile_and_report(
-        &[file_path.to_str().unwrap().to_string()],
-        &[],
-        None,
-        Flags::empty().set_sources_shadow_deps(false),
-    )?;
+    let (_, units) = MoveCompiler::new(&[file_path.to_str().unwrap().to_string()], &[])
+        .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .build_and_report()?;
 
     dir.close()?;
 
@@ -38,12 +35,9 @@ fn expect_modules(
 }
 
 pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
-    let (_, units) = move_lang::move_compile_and_report(
-        &[path.to_str().unwrap().to_string()],
-        &[],
-        None,
-        Flags::empty().set_sources_shadow_deps(false),
-    )?;
+    let (_, units) = MoveCompiler::new(&[path.to_str().unwrap().to_string()], &[])
+        .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .build_and_report()?;
 
     expect_modules(units).collect()
 }

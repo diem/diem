@@ -345,6 +345,10 @@ impl Flags {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self == &Self::empty()
+    }
+
     pub fn is_testing(&self) -> bool {
         self.test
     }
