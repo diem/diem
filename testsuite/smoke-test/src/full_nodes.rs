@@ -8,7 +8,6 @@ use diem_config::{
     config::{DiscoveryMethod, NodeConfig, Peer, PeerRole, HANDSHAKE_VERSION},
     network_id::NetworkId,
 };
-use diem_operational_tool::test_helper::OperationalTool;
 use diem_types::{
     account_config::{testnet_dd_account_address, treasury_compliance_account_address},
     network_address::{NetworkAddress, Protocol},
@@ -378,14 +377,6 @@ fn test_private_full_node() {
         vec![(10.0, XUS.to_string())],
         get_balances(&mut validator_client, 0),
     ));
-
-    // Check that we can't connect, testing the connection limit
-    let op_tool = OperationalTool::test();
-    let mut private_swarm = private_swarm.lock();
-    let private_node = private_swarm.mut_node(0).unwrap();
-    op_tool
-        .check_endpoint(NetworkId::Public, private_node.public_address())
-        .expect_err("Shouldn't be able to connect to private node anonymously");
 }
 
 fn add_node_to_seeds(
