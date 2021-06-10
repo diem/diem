@@ -110,7 +110,7 @@ error:
    ┌── scripts/test-coin.move:6:20 ───
    │
  6 │         let coin = Coin::Coin { value: 100 };
-   │                    ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x1::Coin::Coin'.
+   │                    ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x2::Coin::Coin'.
 All structs can only be constructed in the module in which they are declared
    │
 ```
@@ -183,27 +183,20 @@ We can convert our `Coin` into a resource just by adding the `resource` keyword 
         }
 ```
 
-Let's publish our `Coin` module again and re-run our script:
+Let's clean the storage, publish our `Coin` module again and re-run our script:
 
 ```shell
+$ move clean
 $ move publish src/modules
 $ move run src/scripts/test-coin.move
 error:
 
-   ┌── scripts/test-coin.move:6:13 ───
-   │
+   ┌── src/scripts/test-coin.move:5:36 ───
+   │ 6 │         let _coin = Coin::mint(100);
+   │                                    ^ Invalid return   ·
  6 │         let _coin = Coin::mint(100);
-   │             ^^^^^ Cannot ignore resource values. The value must be used
+   │             ----- The local '_coin' still contains a resource value due to this assignment. The resource must be consumed before the function returns
    │
-
-    ┌── move_build_output/mv_interfaces/00000000000000000000000000000001/Coin.move:6:5 ───
-    │
- 11 │     native public fun mint(a0: u64): Coin::Coin;
-    │                                      ---------- The type: '0x1::Coin::Coin'
-    ·
-  6 │     resource struct Coin {
-    │     -------- Is found to be a non-copyable type here
-    │
  ```
 
 Now we have a different error! The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.
