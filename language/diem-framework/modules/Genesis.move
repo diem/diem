@@ -93,6 +93,16 @@ module Genesis {
         DiemTimestamp::set_time_has_started(dr_account);
     }
 
+    /// Sets up the initial validator set for the Diem network.
+    /// The validator "owner" accounts, their UTF-8 names, and their authentication
+    /// keys are encoded in the `owners`, `owner_names`, and `owner_auth_key` vectors.
+    /// Each validator signs consensus messages with the private key corresponding to the Ed25519
+    /// public key in `consensus_pubkeys`.
+    /// Each validator owner has its operation delegated to an "operator" (which may be
+    /// the owner). The operators, their names, and their authentication keys are encoded
+    /// in the `operators`, `operator_names`, and `operator_auth_keys` vectors.
+    /// Finally, each validator must specify the network address
+    /// (see diem/types/src/network_address/mod.rs) for itself and its full nodes.
     fun create_initialize_owners_operators(
         dr_account: signer,
         owners: vector<signer>,
@@ -154,7 +164,7 @@ module Genesis {
             assert(ValidatorOperatorConfig::get_human_name(operator_address) == operator_name, 0);
             ValidatorConfig::set_operator(owner, operator_address);
 
-            // set up the validator config
+            // use the operator account set up the validator config
             let validator_network_address = *Vector::borrow(&validator_network_addresses, i);
             let full_node_network_address = *Vector::borrow(&full_node_network_addresses, i);
             let consensus_pubkey = *Vector::borrow(&consensus_pubkeys, i);
@@ -166,7 +176,7 @@ module Genesis {
                 full_node_network_address
             );
 
-            // add to validator to the validator sett
+            // finally, add this validator to the validator set
             DiemSystem::add_validator(&dr_account, owner_address);
 
             i = i + 1;

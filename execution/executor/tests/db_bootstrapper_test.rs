@@ -268,7 +268,7 @@ fn test_pre_genesis() {
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&tmp_dir));
-    let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
+    let signer = ValidatorSigner::new(genesis.1[0].data.address, genesis.1[0].key.clone());
     let waypoint = bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
@@ -353,7 +353,7 @@ fn test_new_genesis() {
     let tmp_dir = TempPath::new();
     let db = DbReaderWriter::new(DiemDB::new_for_test(&tmp_dir));
     let waypoint = bootstrap_genesis::<DiemVM>(&db, &genesis_txn).unwrap();
-    let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
+    let signer = ValidatorSigner::new(genesis.1[0].data.address, genesis.1[0].key.clone());
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();

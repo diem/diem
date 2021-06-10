@@ -7,14 +7,13 @@ use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_global_constants::{DIEM_ROOT_KEY, OPERATOR_KEY, OWNER_KEY, TREASURY_COMPLIANCE_KEY};
 use diem_management::constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR};
 use diem_secure_storage::{KVStorage, Namespaced};
-use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
-    account_address,
     chain_id::ChainId,
-    transaction::{ScriptFunction, Transaction, TransactionPayload},
+    transaction::{
+        authenticator::AuthenticationKey, ScriptFunction, Transaction, TransactionPayload,
+    },
 };
-
-use vm_genesis::{OperatorAssignment, OperatorRegistration};
+use vm_genesis::Validator;
 
 pub struct GenesisBuilder<S> {
     storage: S,
@@ -112,31 +111,39 @@ impl<S: KVStorage> GenesisBuilder<S> {
             .map_err(Into::into)
     }
 
-    /// Produces a set of OperatorAssignments from the remote storage.
-    pub fn operator_assignments(&self) -> Result<Vec<OperatorAssignment>> {
+    pub fn validators(&self) -> Result<Vec<Validator>> {
         let layout = self.layout()?;
-
-        let mut operator_assignments = Vec::new();
-
+        let mut validators = Vec::new();
         for owner in &layout.owners {
-            let owner_key = self.owner_key(owner).ok();
-
-            let operator_name = self.operator(owner)?;
-            let operator_key = self.operator_key(&operator_name)?;
-            let operator_account = account_address::from_public_key(&operator_key);
-
-            let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script_function(
-                    operator_name.as_bytes().to_vec(),
-                    operator_account,
-                )
-                .into_script_function();
-
-            let owner_name_vec = owner.as_bytes().to_vec();
-            operator_assignments.push((owner_key, owner_name_vec, set_operator_script));
+            let name = owner.as_bytes().to_vec();
+            let address = diem_config::utils::default_validator_owner_auth_key_from_name(&name)
+                .derived_address();
+            let auth_key = self
+                .owner_key(owner)
+                .map_or(AuthenticationKey::zero(), |k| {
+                    AuthenticationKey::ed25519(&k)
+                });
+            let operator = self.operator(owner)?;
+            let operator_name = operator.as_bytes().to_vec();
+            let operator_auth_key = AuthenticationKey::ed25519(&self.operator_key(&operator)?);
+            let operator_address = operator_auth_key.derived_address();
+            let validator_config = self.validator_config(&operator)?;
+            let consensus_pubkey = bcs::from_bytes(&validator_config.args()[1])?;
+            let network_address = bcs::from_bytes(&validator_config.args()[2])?;
+            let full_node_network_address = bcs::from_bytes(&validator_config.args()[3])?;
+            validators.push(Validator {
+                address,
+                name,
+                auth_key,
+                consensus_pubkey,
+                operator_address,
+                operator_name,
+                operator_auth_key,
+                network_address,
+                full_node_network_address,
+            })
         }
-
-        Ok(operator_assignments)
+        Ok(validators)
     }
 
     pub fn set_owner_key(
@@ -188,30 +195,10 @@ impl<S: KVStorage> GenesisBuilder<S> {
         .ok_or_else(|| anyhow::anyhow!("Invalid Validator Config"))
     }
 
-    /// Produces a set of OperatorRegistrations from the remote storage.
-    pub fn operator_registrations(&self) -> Result<Vec<OperatorRegistration>> {
-        let layout = self.layout()?;
-        let mut registrations = Vec::new();
-
-        for operator in &layout.operators {
-            let operator_key = self.operator_key(operator)?;
-            let validator_config_tx = self.validator_config(operator)?;
-
-            registrations.push((
-                operator_key,
-                operator.as_bytes().to_vec(),
-                validator_config_tx,
-            ));
-        }
-
-        Ok(registrations)
-    }
-
     pub fn build(&self, chain_id: ChainId) -> Result<Transaction> {
         let diem_root_key = self.root_key()?;
         let treasury_compliance_key = self.treasury_compliance_key()?;
-        let operator_assignments = self.operator_assignments()?;
-        let operator_registrations = self.operator_registrations()?;
+        let validators = self.validators()?;
 
         // Only have an allowlist of stdlib scripts
         let script_policy = None;
@@ -219,8 +206,7 @@ impl<S: KVStorage> GenesisBuilder<S> {
         let genesis = vm_genesis::encode_genesis_transaction(
             diem_root_key,
             treasury_compliance_key,
-            &operator_assignments,
-            &operator_registrations,
+            &validators,
             script_policy,
             chain_id,
         );

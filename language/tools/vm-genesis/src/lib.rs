@@ -16,7 +16,6 @@ use diem_framework_releases::{
 };
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
-    account_address,
     account_config::{
         self,
         events::{CreateAccountEvent, NewEpochEvent},
@@ -59,28 +58,18 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
     (private_key, public_key)
 });
 
-const ZERO_AUTH_KEY: [u8; 32] = [0; 32];
-
-pub type Name = Vec<u8>;
-// Defines a validator owner and maps that to an operator
-pub type OperatorAssignment = (Option<Ed25519PublicKey>, Name, ScriptFunction);
-
-// Defines a validator operator and maps that to a validator (config)
-pub type OperatorRegistration = (Ed25519PublicKey, Name, ScriptFunction);
-
 pub fn encode_genesis_transaction(
     diem_root_key: Ed25519PublicKey,
     treasury_compliance_key: Ed25519PublicKey,
-    operator_assignments: &[OperatorAssignment],
-    operator_registrations: &[OperatorRegistration],
+    validators: &[Validator],
+
     vm_publishing_option: Option<VMPublishingOption>,
     chain_id: ChainId,
 ) -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(encode_genesis_change_set(
         &diem_root_key,
         &treasury_compliance_key,
-        operator_assignments,
-        operator_registrations,
+        validators,
         current_module_blobs(), // Must use compiled stdlib,
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
@@ -91,8 +80,7 @@ pub fn encode_genesis_transaction(
 pub fn encode_genesis_change_set(
     diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
-    operator_assignments: &[OperatorAssignment],
-    operator_registrations: &[OperatorRegistration],
+    validators: &[Validator],
     stdlib_module_bytes: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
@@ -128,12 +116,7 @@ pub fn encode_genesis_change_set(
         chain_id,
     );
     // generate the genesis WriteSet
-    create_and_initialize_owners_operators(
-        &mut session,
-        &log_context,
-        &operator_assignments,
-        &operator_registrations,
-    );
+    create_and_initialize_owners_operators(&mut session, &log_context, validators);
     reconfigure(&mut session, &log_context);
 
     if [NamedChain::TESTNET, NamedChain::DEVNET, NamedChain::TESTING]
@@ -344,8 +327,7 @@ fn create_and_initialize_testnet_minting(
 fn create_and_initialize_owners_operators(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    operator_assignments: &[OperatorAssignment],
-    operator_registrations: &[OperatorRegistration],
+    validators: &[Validator],
 ) {
     let diem_root_address = account_config::diem_root_address();
     let mut owners = vec![];
@@ -353,53 +335,22 @@ fn create_and_initialize_owners_operators(
     let mut owner_auth_keys = vec![];
     let mut operators = vec![];
     let mut operator_names = vec![];
-
-    for (owner_key, owner_name, op_assign) in operator_assignments {
-        let staged_owner_auth_key =
-            diem_config::utils::default_validator_owner_auth_key_from_name(owner_name);
-        owners.push(MoveValue::Signer(staged_owner_auth_key.derived_address()));
-        owner_names.push(MoveValue::vector_u8(owner_name.clone()));
-        owner_auth_keys.push(MoveValue::vector_u8(
-            owner_key.as_ref().map_or(ZERO_AUTH_KEY.to_vec(), |k| {
-                AuthenticationKey::ed25519(&k).to_vec()
-            }),
-        ));
-        operator_names.push(MoveValue::vector_u8(
-            bcs::from_bytes(&op_assign.args()[0]).unwrap(),
-        ));
-
-        operators.push(MoveValue::Signer(
-            bcs::from_bytes(&op_assign.args()[1]).unwrap(),
-        ));
-    }
     let mut operator_auth_keys = vec![];
     let mut consensus_pubkeys = vec![];
     let mut validator_network_addresses = vec![];
     let mut full_node_network_addresses = vec![];
-    // fill with dummy values
-    for _i in 0..operators.len() {
-        operator_auth_keys.push(MoveValue::U8(0));
-        consensus_pubkeys.push(MoveValue::U8(0));
-        validator_network_addresses.push(MoveValue::U8(0));
-        full_node_network_addresses.push(MoveValue::U8(0));
-    }
-    for (operator_key, operator_name, op_register) in operator_registrations {
-        let operator_auth_key = AuthenticationKey::ed25519(&operator_key);
-        let operator_index = operator_names
-            .iter()
-            .enumerate()
-            .find(|(_, x)| &MoveValue::vector_u8(operator_name.clone()) == *x)
-            .unwrap()
-            .0;
-        operator_auth_keys[operator_index] = MoveValue::vector_u8(operator_auth_key.to_vec());
-        consensus_pubkeys[operator_index] =
-            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[1]).unwrap());
-        validator_network_addresses[operator_index] =
-            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[2]).unwrap());
-        full_node_network_addresses[operator_index] =
-            MoveValue::vector_u8(bcs::from_bytes(&op_register.args()[3]).unwrap());
-    }
 
+    for v in validators {
+        owners.push(MoveValue::Signer(v.address));
+        owner_names.push(MoveValue::vector_u8(v.name.clone()));
+        owner_auth_keys.push(MoveValue::vector_u8(v.auth_key.to_vec()));
+        consensus_pubkeys.push(MoveValue::vector_u8(v.consensus_pubkey.clone()));
+        operators.push(MoveValue::Signer(v.operator_address));
+        operator_names.push(MoveValue::vector_u8(v.operator_name.clone()));
+        operator_auth_keys.push(MoveValue::vector_u8(v.operator_auth_key.to_vec()));
+        validator_network_addresses.push(MoveValue::vector_u8(v.network_address.clone()));
+        full_node_network_addresses.push(MoveValue::vector_u8(v.full_node_network_address.clone()));
+    }
     exec_function(
         session,
         log_context,
@@ -511,7 +462,9 @@ pub fn test_genesis_transaction() -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(changeset))
 }
 
-pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
+pub fn test_genesis_change_set_and_validators(
+    count: Option<usize>,
+) -> (ChangeSet, Vec<TestValidator>) {
     generate_test_genesis(
         &current_module_blobs(),
         VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
@@ -519,60 +472,66 @@ pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSe
     )
 }
 
+#[derive(Debug, Clone)]
 pub struct Validator {
-    pub index: usize,
-    pub key: Ed25519PrivateKey,
+    /// The Diem account address of the validator
+    pub address: AccountAddress,
+    /// UTF8-encoded name for the validator
     pub name: Vec<u8>,
+    /// Authentication key for the validator
+    pub auth_key: AuthenticationKey,
+    /// Ed25519 public key used to sign consensus messages
+    pub consensus_pubkey: Vec<u8>,
+    /// The Diem account address of the validator's operator (same as `address` if the validator is
+    /// its own operator)
     pub operator_address: AccountAddress,
-    pub owner_address: AccountAddress,
+    /// UTF8-encoded name of the operator
+    pub operator_name: Vec<u8>,
+    /// Authentication key for the operator
+    pub operator_auth_key: AuthenticationKey,
+    /// `NetworkAddress` for the validator
+    pub network_address: Vec<u8>,
+    /// `NetworkAddress` for the validator's full node
+    pub full_node_network_address: Vec<u8>,
 }
 
-impl Validator {
-    pub fn new_set(count: Option<usize>) -> Vec<Validator> {
+pub struct TestValidator {
+    pub key: Ed25519PrivateKey,
+    pub data: Validator,
+}
+
+impl TestValidator {
+    pub fn new_test_set(count: Option<usize>) -> Vec<TestValidator> {
         let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([1u8; 32]);
         (0..count.unwrap_or(10))
-            .map(|idx| Validator::gen(idx, &mut rng))
+            .map(|idx| TestValidator::gen(idx, &mut rng))
             .collect()
     }
 
-    fn gen(index: usize, rng: &mut rand::rngs::StdRng) -> Self {
+    fn gen(index: usize, rng: &mut rand::rngs::StdRng) -> TestValidator {
         let name = index.to_string().as_bytes().to_vec();
+        let address = diem_config::utils::validator_owner_account_from_name(&name);
         let key = Ed25519PrivateKey::generate(rng);
-        let operator_address = account_address::from_public_key(&key.public_key());
-        let owner_address = diem_config::utils::validator_owner_account_from_name(&name);
+        let auth_key = AuthenticationKey::ed25519(&key.public_key());
+        let consensus_pubkey = key.public_key().to_bytes().to_vec();
+        let operator_auth_key = auth_key;
+        let operator_address = operator_auth_key.derived_address();
+        let operator_name = name.clone();
+        let network_address = [0u8; 0].to_vec();
+        let full_node_network_address = [0u8; 0].to_vec();
 
-        Self {
-            index,
-            key,
+        let data = Validator {
+            address,
             name,
+            auth_key,
+            consensus_pubkey,
             operator_address,
-            owner_address,
-        }
-    }
-
-    fn operator_assignment(&self) -> OperatorAssignment {
-        let script_function = transaction_builder::encode_set_validator_operator_script_function(
-            self.name.clone(),
-            self.operator_address,
-        )
-        .into_script_function();
-        (
-            Some(self.key.public_key()),
-            self.name.clone(),
-            script_function,
-        )
-    }
-
-    fn operator_registration(&self) -> OperatorRegistration {
-        let script_function =
-            transaction_builder::encode_register_validator_config_script_function(
-                self.owner_address,
-                self.key.public_key().to_bytes().to_vec(),
-                bcs::to_bytes(&[0u8; 0]).unwrap(),
-                bcs::to_bytes(&[0u8; 0]).unwrap(),
-            )
-            .into_script_function();
-        (self.key.public_key(), self.name.clone(), script_function)
+            operator_name,
+            operator_auth_key,
+            network_address,
+            full_node_network_address,
+        };
+        Self { key, data }
     }
 }
 
@@ -580,23 +539,18 @@ pub fn generate_test_genesis(
     stdlib_modules: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     count: Option<usize>,
-) -> (ChangeSet, Vec<Validator>) {
-    let validators = Validator::new_set(count);
+) -> (ChangeSet, Vec<TestValidator>) {
+    let test_validators = TestValidator::new_test_set(count);
+    let validators_: Vec<Validator> = test_validators.iter().map(|t| t.data.clone()).collect();
+    let validators = &validators_;
 
     let genesis = encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
         &GENESIS_KEYPAIR.1,
-        &validators
-            .iter()
-            .map(|v| v.operator_assignment())
-            .collect::<Vec<_>>(),
-        &validators
-            .iter()
-            .map(|v| v.operator_registration())
-            .collect::<Vec<_>>(),
+        validators,
         stdlib_modules,
         vm_publishing_option,
         ChainId::test(),
     );
-    (genesis, validators)
+    (genesis, test_validators)
 }

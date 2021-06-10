@@ -151,6 +151,16 @@ Assume that this is called in genesis state (no timestamp).
 
 ## Function `create_initialize_owners_operators`
 
+Sets up the initial validator set for the Diem network.
+The validator "owner" accounts, their UTF-8 names, and their authentication
+keys are encoded in the <code>owners</code>, <code>owner_names</code>, and <code>owner_auth_key</code> vectors.
+Each validator signs consensus messages with the private key corresponding to the Ed25519
+public key in <code>consensus_pubkeys</code>.
+Each validator owner has its operation delegated to an "operator" (which may be
+the owner). The operators, their names, and their authentication keys are encoded
+in the <code>operators</code>, <code>operator_names</code>, and <code>operator_auth_keys</code> vectors.
+Finally, each validator must specify the network address
+(see diem/types/src/network_address/mod.rs) for itself and its full nodes.
 
 
 <pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_create_initialize_owners_operators">create_initialize_owners_operators</a>(dr_account: signer, owners: vector&lt;signer&gt;, owner_names: vector&lt;vector&lt;u8&gt;&gt;, owner_auth_keys: vector&lt;vector&lt;u8&gt;&gt;, consensus_pubkeys: vector&lt;vector&lt;u8&gt;&gt;, operators: vector&lt;signer&gt;, operator_names: vector&lt;vector&lt;u8&gt;&gt;, operator_auth_keys: vector&lt;vector&lt;u8&gt;&gt;, validator_network_addresses: vector&lt;vector&lt;u8&gt;&gt;, full_node_network_addresses: vector&lt;vector&lt;u8&gt;&gt;)
@@ -223,7 +233,7 @@ Assume that this is called in genesis state (no timestamp).
         <b>assert</b>(<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_address) == operator_name, 0);
         <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(owner, operator_address);
 
-        // set up the validator config
+        // <b>use</b> the operator account set up the validator config
         <b>let</b> validator_network_address = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&validator_network_addresses, i);
         <b>let</b> full_node_network_address = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&full_node_network_addresses, i);
         <b>let</b> consensus_pubkey = *<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&consensus_pubkeys, i);
@@ -235,7 +245,7 @@ Assume that this is called in genesis state (no timestamp).
             full_node_network_address
         );
 
-        // add <b>to</b> validator <b>to</b> the validator sett
+        // finally, add this validator <b>to</b> the validator set
         <a href="DiemSystem.md#0x1_DiemSystem_add_validator">DiemSystem::add_validator</a>(&dr_account, owner_address);
 
         i = i + 1;

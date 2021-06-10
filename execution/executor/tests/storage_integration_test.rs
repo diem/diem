@@ -70,7 +70,7 @@ fn test_reconfiguration() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
     let (_, db, mut executor, _waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
-    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
+    let signer = ValidatorSigner::new(validators[0].data.address, validators[0].key.clone());
     let validator_account = signer.author();
 
     // test the current keys in the validator's account equals to the key in the validator set
@@ -128,7 +128,7 @@ fn test_reconfiguration() {
 
     // txn3 = rotate the validator's consensus pubkey
     let operator_key = validators[0].key.clone();
-    let operator_account = validators[0].operator_address;
+    let operator_account = validators[0].data.operator_address;
 
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
     let txn3 = get_test_signed_transaction(
@@ -247,7 +247,7 @@ fn test_change_publishing_option_to_custom() {
     let treasury_compliance_account = treasury_compliance_account_address();
     let genesis_account = diem_root_address();
 
-    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
+    let signer = ValidatorSigner::new(validators[0].data.address, validators[0].key.clone());
     let validator_account = signer.author();
     let validator_privkey = signer.private_key();
     let validator_pubkey = validator_privkey.public_key();

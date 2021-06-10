@@ -367,6 +367,12 @@ impl AuthenticationKey {
         Self(bytes)
     }
 
+    /// Return an authentication key that is impossible (in expectation) to sign for--useful for
+    /// intentionally relinquishing control of an account.
+    pub const fn zero() -> Self {
+        Self([0; 32])
+    }
+
     /// The number of bytes in an authentication key.
     pub const LENGTH: usize = 32;
 

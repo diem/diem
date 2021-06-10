@@ -177,9 +177,9 @@ impl Config {
 
         // generate a validator set with |validator_accounts| validators
         let validators = if validator_accounts > 0 {
-            vm_genesis::Validator::new_set(Some(validator_accounts))
+            vm_genesis::TestValidator::new_test_set(Some(validator_accounts))
                 .into_iter()
-                .map(|v| (v.owner_address, v.key))
+                .map(|v| (v.data.address, v.key))
                 .collect()
         } else {
             vec![]

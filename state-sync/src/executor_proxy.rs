@@ -343,7 +343,7 @@ mod tests {
     use futures::{future::FutureExt, stream::StreamExt};
     use storage_interface::DbReaderWriter;
     use subscription_service::ReconfigSubscription;
-    use vm_genesis::Validator;
+    use vm_genesis::TestValidator;
 
     // TODO(joshlind): add unit tests for general executor proxy behaviour!
     // TODO(joshlind): add unit tests for subscription events.. seems like these are missing?
@@ -356,7 +356,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer, and update the validator set
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -384,7 +384,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -412,7 +412,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -463,7 +463,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -491,7 +491,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let allowlist_txn = create_new_update_diem_version_transaction(1);
 
@@ -521,7 +521,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn_1 = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -586,7 +586,7 @@ mod tests {
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
         // Create a dummy prologue transaction that will bump the timer and update the Diem version
-        let validator_account = validators[0].owner_address;
+        let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
         let reconfig_txn = create_new_update_diem_version_transaction(1);
 
@@ -622,7 +622,7 @@ mod tests {
     fn bootstrap_genesis_and_set_subscription(
         subscription: ReconfigSubscription,
         reconfig_receiver: &mut Receiver<(), OnChainConfigPayload>,
-    ) -> (Vec<Validator>, Box<Executor<DiemVM>>, ExecutorProxy) {
+    ) -> (Vec<TestValidator>, Box<Executor<DiemVM>>, ExecutorProxy) {
         // Generate a genesis change set
         let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -654,12 +654,12 @@ mod tests {
 
     /// Creates a transaction that rotates the consensus key of the given validator account.
     fn create_consensus_key_rotation_transaction(
-        validator: &Validator,
+        validator: &TestValidator,
         sequence_number: u64,
     ) -> Transaction {
         let operator_key = validator.key.clone();
         let operator_public_key = operator_key.public_key();
-        let operator_account = validator.operator_address;
+        let operator_account = validator.data.operator_address;
         let new_consensus_key = Ed25519PrivateKey::generate_for_testing().public_key();
 
         get_test_signed_transaction(
@@ -668,7 +668,7 @@ mod tests {
             operator_key,
             operator_public_key,
             Some(encode_set_validator_config_and_reconfigure_script(
-                validator.owner_address,
+                validator.data.address,
                 new_consensus_key.to_bytes().to_vec(),
                 Vec::new(),
                 Vec::new(),

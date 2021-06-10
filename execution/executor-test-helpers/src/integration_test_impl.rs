@@ -43,7 +43,7 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let parent_block_id = executor.committed_block_id();
     let signer = diem_types::validator_signer::ValidatorSigner::new(
-        validators[0].owner_address,
+        validators[0].data.address,
         validators[0].key.clone(),
     );
 

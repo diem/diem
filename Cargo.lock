@@ -1781,7 +1781,6 @@ dependencies = [
  "diem-network-address-encryption",
  "diem-secure-storage",
  "diem-temppath",
- "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
