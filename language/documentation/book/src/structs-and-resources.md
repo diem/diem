@@ -2,7 +2,7 @@
 
 A *struct* is a user-defined data structure containing typed fields. Structs can store any non-reference type, including other structs.
 
-A *resource* is a kind of struct that cannot be copied and cannot be dropped. All resource values must have ownership transferred by the end of the function. Resources are used to define global storage schemas, and Only resource structs can be saved directly into global storage.
+A *resource* is a kind of struct that cannot be copied and cannot be dropped. All resource values must have ownership transferred by the end of the function. Resources are used to define global storage schemas, and only resource structs can be saved directly into global storage.
 
 ## Defining Structs
 
@@ -151,7 +151,7 @@ module M {
 
 ### Borrowing Structs and Fields
 
-The `&` and `&mut` operator can be used to create references to structs or fields. These examples include some optional type annotations (e.g., `:& Foo`) to demonstrate the type of operations.
+The `&` and `&mut` operator can be used to create references to structs or fields. These examples include some optional type annotations (e.g., `: &Foo`) to demonstrate the type of operations.
 
 ```rust=
 let foo = Foo { x: 3, y: true };
@@ -190,7 +190,7 @@ let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&foo.x;
 let y: bool = *&foo.y;
-let foo2: Foo = *&foo.bar;
+let foo2: Foo = *&bar.foo;
 ```
 
 If the field is an implicitly copyable, the dot operator can be used to read fields of a struct without any borrowing.
@@ -213,8 +213,8 @@ However, this is not permitted for fields that contain non-primitive types, such
 ```rust=
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
-let foo2: Foo = *&foo.bar;
-let foo3: Foo = foo.bar; // error! add an explicit copy with *&
+let foo2: Foo = *&bar.foo;
+let foo3: Foo = bar.foo; // error! add an explicit copy with *&
 ```
 
 The reason behind this design decision is that copying a vector or another struct might be an expensive operation. It is important for a programmer to be aware of this copy and make others aware with the explicit syntax `*&`
@@ -235,7 +235,7 @@ The dot syntax also works via a reference to a struct
 ```rust=
 let foo = Foo { x: 3, y: true };
 let foo_ref = &mut foo;
-foo.x = foo.x + 1;
+foo_ref.x = foo_ref.x + 1;
 ```
 
 ## Privileged Struct Operations
@@ -310,9 +310,7 @@ module M {
 }
 ```
 
-Resource structs on the other hand, cannot be copied or dropped silently. This property can be very useful when modeling
-real world resources like money, as you do not want money to be duplicated or get lost
-in circulation.
+Resource structs on the other hand, cannot be copied or dropped silently. This property can be very useful when modeling real world resources like money, as you do not want money to be duplicated or get lost in circulation.
 
 ```rust=
 address 0x2 {
