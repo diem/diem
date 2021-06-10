@@ -1,24 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    network::write_peerset_to_file, smoke_test_environment::SmokeTestEnvironment,
-    test_utils::compare_balances,
-};
+use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::compare_balances};
 use cli::client_proxy::{ClientProxy, IndexAndSequence};
 use diem_client::AccountAddress;
 use diem_config::{
-    config::{DiscoveryMethod, NodeConfig, Peer, PeerRole, PersistableConfig},
+    config::{DiscoveryMethod, NodeConfig, Peer, PeerRole, HANDSHAKE_VERSION},
     network_id::NetworkId,
 };
-use diem_operational_tool::{
-    keys::{EncodingType, KeyType},
-    test_helper::OperationalTool,
+use diem_types::{
+    account_config::{testnet_dd_account_address, treasury_compliance_account_address},
+    network_address::{NetworkAddress, Protocol},
 };
-use diem_swarm::swarm::{network, network_address, network_mut};
-use diem_temppath::TempPath;
-use diem_types::account_config::{testnet_dd_account_address, treasury_compliance_account_address};
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, net::Ipv4Addr};
 
 // TODO: All of this convenience code below should be put in the client proxy directly, it's
 // very hard for users to know what the order of a bunch of random inputs should be
@@ -312,7 +306,7 @@ fn test_private_full_node() {
     add_node_to_seeds(
         &mut private_config,
         &user_config,
-        &NetworkId::Public,
+        NetworkId::Public,
         PeerRole::Downstream,
     );
 
@@ -325,7 +319,7 @@ fn test_private_full_node() {
     add_node_to_seeds(
         &mut private_config,
         vfn_swarm.lock().get_node(0).unwrap().config(),
-        &NetworkId::Public,
+        NetworkId::Public,
         PeerRole::PreferredUpstream,
     );
     env.add_public_fn_swarm(PRIVATE, 1, Some(private_config), &vfn_swarm.lock().config);
@@ -336,42 +330,12 @@ fn test_private_full_node() {
     add_node_to_seeds(
         &mut user_config,
         private_swarm.lock().get_node(0).unwrap().config(),
-        &NetworkId::Public,
+        NetworkId::Public,
         PeerRole::PreferredUpstream,
     );
     env.add_public_fn_swarm(USER, 1, Some(user_config), &private_swarm.lock().config);
     let user_swarm = env.public_swarm(USER);
-    // Add file for discovery with nothing in it
-    let discovery_file = TempPath::new();
-    discovery_file.create_as_file().unwrap();
-    let op_tool = OperationalTool::test();
-    let key_file = TempPath::new();
-    key_file.create_as_file().unwrap();
-    let _ = op_tool
-        .generate_key(KeyType::X25519, key_file.as_ref(), EncodingType::BCS)
-        .unwrap();
-    // When we add the private key, we should be able to connect
-    let peer_set = op_tool
-        .extract_peer_from_file(key_file.as_ref(), EncodingType::BCS)
-        .unwrap();
-    write_peerset_to_file(discovery_file.as_ref(), peer_set);
 
-    // Update to use the file based discovery with onchain
-    {
-        let user_swarm = user_swarm.lock();
-        let node_config_path = user_swarm.config.config_files.get(0).unwrap();
-        let mut node_config = NodeConfig::load(&node_config_path).unwrap();
-        let network = network_mut(&mut node_config, &NetworkId::Validator);
-        network.discovery_method = DiscoveryMethod::None;
-        network.discovery_methods = vec![
-            DiscoveryMethod::Onchain,
-            DiscoveryMethod::File(
-                discovery_file.as_ref().to_path_buf(),
-                Duration::from_secs(1),
-            ),
-        ];
-        node_config.save_config(node_config_path).unwrap();
-    }
     user_swarm.lock().launch();
 
     // Ensure that User node is connected to private node and only the private node
@@ -418,20 +382,40 @@ fn test_private_full_node() {
 fn add_node_to_seeds(
     dest_config: &mut NodeConfig,
     seed_config: &NodeConfig,
-    network_id: &NetworkId,
+    network_id: NetworkId,
     peer_role: PeerRole,
 ) {
-    let dest_network_config = network_mut(dest_config, network_id);
-    let seed_network_config = network(seed_config, network_id);
+    let dest_network_config = dest_config
+        .full_node_networks
+        .iter_mut()
+        .find(|network| network.network_id == network_id)
+        .unwrap();
+    let seed_network_config = seed_config
+        .full_node_networks
+        .iter()
+        .find(|network| network.network_id == network_id)
+        .unwrap();
+
     let seed_peer_id = seed_network_config.peer_id();
+    let seed_key = seed_network_config.identity_key().public_key();
 
     let seed_peer = if peer_role != PeerRole::Downstream {
         // For upstreams, we know the address, but so don't duplicate the keys in the config (lazy way)
-        let address = network_address(seed_config, network_id);
+        // TODO: This is ridiculous, we need a better way to manipulate these `NetworkAddress`s
+        let address = seed_network_config.listen_address.clone();
+        let port_protocol = address
+            .as_slice()
+            .iter()
+            .find(|protocol| matches!(protocol, Protocol::Tcp(_)))
+            .unwrap();
+        let address = NetworkAddress::from(Protocol::Ip4(Ipv4Addr::new(127, 0, 0, 1)))
+            .push(port_protocol.clone())
+            .push(Protocol::NoiseIK(seed_key))
+            .push(Protocol::Handshake(HANDSHAKE_VERSION));
+
         Peer::new(vec![address], HashSet::new(), peer_role)
     } else {
         // For downstreams, we don't know the address, but we know the keys
-        let seed_key = seed_network_config.identity_key().public_key();
         let mut seed_keys = HashSet::new();
         seed_keys.insert(seed_key);
         Peer::new(vec![], seed_keys, peer_role)

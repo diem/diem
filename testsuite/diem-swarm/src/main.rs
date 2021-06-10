@@ -76,11 +76,11 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt()
+        .launch_attempt(true)
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt()
+            .launch_attempt(true)
             .expect("Failed to launch full node swarm");
     }
 
