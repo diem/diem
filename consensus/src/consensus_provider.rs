@@ -8,6 +8,8 @@ use crate::{
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     persistent_liveness_storage::StorageWriteProxy,
     state_computer::ExecutionProxy,
+    decoupled_state_computer::DecoupledExecutionProxy,
+    state_replication::StateComputer,
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
@@ -46,10 +48,19 @@ pub fn start_consensus(
         node_config.consensus.mempool_executed_txn_timeout_ms,
     ));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
-    let state_computer = Arc::new(ExecutionProxy::new(
-        execution_correctness_manager.client(),
-        state_sync_client,
-    ));
+
+    let state_computer: Arc<dyn StateComputer> = if node_config.execution.decoupled {
+        Arc::new(DecoupledExecutionProxy::new(
+            execution_correctness_manager.client(),
+            state_sync_client,
+        ))
+    } else {
+        Arc::new(ExecutionProxy::new(
+            execution_correctness_manager.client(),
+            state_sync_client,
+        ))
+    };
+
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);

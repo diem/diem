@@ -23,6 +23,7 @@ pub struct ExecutionConfig {
     pub service: ExecutionCorrectnessService,
     pub backend: SecureBackend,
     pub network_timeout_ms: u64,
+    pub decoupled: bool,
 }
 
 impl std::fmt::Debug for ExecutionConfig {
@@ -57,6 +58,7 @@ impl Default for ExecutionConfig {
             sign_vote_proposal: true,
             // Default value of 30 seconds for the network timeout.
             network_timeout_ms: 30_000,
+            decoupled: false,  // Work in progress. Do not turn it on.
         }
     }
 }

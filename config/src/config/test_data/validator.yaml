@@ -17,6 +17,7 @@ consensus:
 
 execution:
     genesis_file_location: "relative/path/to/genesis"
+    decoupled: false
 
 full_node_networks:
     - listen_address: "/ip4/0.0.0.0/tcp/7180"

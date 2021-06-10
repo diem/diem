@@ -4,7 +4,7 @@
 use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use diem_crypto::HashValue;
+use diem_crypto::{HashValue, hash::ACCUMULATOR_PLACEHOLDER_HASH};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
@@ -17,12 +17,12 @@ use std::{boxed::Box, sync::Arc};
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
-pub struct ExecutionProxy {
+pub struct DecoupledExecutionProxy {
     execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
     synchronizer: StateSyncClient,
 }
 
-impl ExecutionProxy {
+impl DecoupledExecutionProxy {
     pub fn new(
         execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
         synchronizer: StateSyncClient,
@@ -35,7 +35,7 @@ impl ExecutionProxy {
 }
 
 #[async_trait::async_trait]
-impl StateComputer for ExecutionProxy {
+impl StateComputer for DecoupledExecutionProxy {
     fn compute(
         &self,
         // The block to be executed.
@@ -54,12 +54,21 @@ impl StateComputer for ExecutionProxy {
             "Executing block",
         );
 
-        // TODO: figure out error handling for the prologue txn
+        // Return dummy block and bypass the execution phase.
+        // This will break the e2e smoke test.
         monitor!(
             "execute_block",
-            self.execution_correctness_client
-                .lock()
-                .execute_block(block.clone(), parent_block_id)
+            Ok(StateComputeResult::new(
+                *ACCUMULATOR_PLACEHOLDER_HASH,
+                vec![],
+                0,
+                vec![],
+                0,
+                None,
+                vec![],
+                vec![],
+                vec![],
+            ))
         )
 
     }
