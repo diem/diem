@@ -105,7 +105,7 @@ let (a, b): (&u64, &u64) = (x, y);
 // (&mut u64, &mut u64) is a subtype of (&u64, &u64)
 //   since &mut u64 is a subtype of &u64
 let (c, d): (&u64, &u64) = (y, y);
-// error! (&mut u64, &mut u64) is NOT a subtype of (&u64, &mut u64)
+// error! (&u64, &mut u64) is NOT a subtype of (&mut u64, &mut u64)
 //   since &u64 is NOT a subtype of &mut u64
 let (e, f): (&mut u64, &mut u64) = (x, y);
 ```
