@@ -57,5 +57,5 @@ if (maximum < 10) {
 
 ## Grammar for Conditionals
 
-> *if-expression* → **(** *expression* **)** *expression* *else-clause*<sub>*opt*</sub>
+> *if-expression* → **if (** *expression* **)** *expression* *else-clause*<sub>*opt*</sub>
 > *else-clause* → **else** *expression*
