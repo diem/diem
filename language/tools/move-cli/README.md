@@ -396,6 +396,9 @@ Code coverage has been an important metric in software testing. In Move CLI, we
 address the need for code coverage information with an additional flag,
 `--track-cov`, that can be passed to the `move sandbox test` command.
 
+Note: To view coverage information, the Move CLI must be installed with the `--debug` flag;
+i.e., `cargo install --debug --path diem/language/tools/move-cli`.
+
 Using our running example to illustrate:
 ```shell
 $ move sandbox test readme --track-cov
