@@ -16,7 +16,7 @@ Literals for `bool` are either `true` or `false`.
 | Syntax   | Description | Equivalent Expression |
 | -------- | ----------- | --------------------- |
 | `&&` | short-circuiting logical and | `p && q` is equivalent to `if (p) q else false` |
-| <code>&#124;</code> | short-circuiting logical or |`p <code>&#124;</code> q` is equivalent to `if (p) true else q` |
+| `||` | short-circuiting logical or |`p || q` is equivalent to `if (p) true else q` |
 | `!`  | logical negation | `!p` is equivalent to `if (p) false else true` |
 
 ### Control Flow
