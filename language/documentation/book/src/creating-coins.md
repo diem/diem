@@ -193,7 +193,8 @@ error:
 
    ┌── src/scripts/test-coin.move:5:36 ───
    │ 6 │         let _coin = Coin::mint(100);
-   │                                    ^ Invalid return   ·
+   │                                    ^ Invalid return
+   ·
  6 │         let _coin = Coin::mint(100);
    │             ----- The local '_coin' still contains a resource value due to this assignment. The resource must be consumed before the function returns
    │
