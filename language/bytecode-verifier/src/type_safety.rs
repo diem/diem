@@ -4,12 +4,10 @@
 //! This module defines the transfer functions for verifying type safety of a procedure body.
 //! It does not utilize control flow, but does check each block independently
 
-use crate::{
-    binary_views::{BinaryIndexedView, FunctionView},
-    control_flow_graph::ControlFlowGraph,
-};
 use mirai_annotations::*;
 use move_binary_format::{
+    binary_views::{BinaryIndexedView, FunctionView},
+    control_flow_graph::ControlFlowGraph,
     errors::{PartialVMError, PartialVMResult},
     file_format::{
         AbilitySet, Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex,

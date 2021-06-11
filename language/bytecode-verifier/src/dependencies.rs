@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules and scripts.
-use crate::binary_views::BinaryIndexedView;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
+    binary_views::BinaryIndexedView,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         AbilitySet, Bytecode, CodeOffset, CompiledModule, CompiledScript, FunctionDefinitionIndex,

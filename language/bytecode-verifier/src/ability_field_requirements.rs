@@ -3,10 +3,9 @@
 
 //! This module implements a checker for verifying that all of the struct's fields satisfy the
 //! abilities required by the struct's abilities
-use crate::binary_views;
-use binary_views::BinaryIndexedView;
 use move_binary_format::{
     access::ModuleAccess,
+    binary_views::BinaryIndexedView,
     errors::{verification_error, Location, PartialVMResult, VMResult},
     file_format::{AbilitySet, CompiledModule, StructFieldInformation, TableIndex},
     IndexKind,

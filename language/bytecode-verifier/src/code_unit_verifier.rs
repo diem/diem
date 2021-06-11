@@ -5,14 +5,12 @@
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::{
-    acquires_list_verifier::AcquiresVerifier,
-    binary_views::{BinaryIndexedView, FunctionView},
-    control_flow, locals_safety, reference_safety,
-    stack_usage_verifier::StackUsageVerifier,
-    type_safety,
+    acquires_list_verifier::AcquiresVerifier, control_flow, locals_safety, reference_safety,
+    stack_usage_verifier::StackUsageVerifier, type_safety,
 };
 use move_binary_format::{
     access::ModuleAccess,
+    binary_views::{BinaryIndexedView, FunctionView},
     errors::{Location, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,

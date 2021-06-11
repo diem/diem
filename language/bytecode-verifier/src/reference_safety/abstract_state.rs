@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the abstract state for the type and memory safety analysis.
-use crate::{
-    absint::{AbstractDomain, JoinResult},
-    binary_views::FunctionView,
-};
+use crate::absint::{AbstractDomain, JoinResult};
 use borrow_graph::references::RefID;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use move_binary_format::{
+    binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
     file_format::{
         CodeOffset, FieldHandleIndex, FunctionDefinitionIndex, LocalIndex, Signature,

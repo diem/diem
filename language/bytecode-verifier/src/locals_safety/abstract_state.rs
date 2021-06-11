@@ -6,6 +6,7 @@
 use crate::absint::{AbstractDomain, JoinResult};
 use mirai_annotations::{checked_precondition, checked_verify};
 use move_binary_format::{
+    binary_views::{BinaryIndexedView, FunctionView},
     errors::PartialVMError,
     file_format::{AbilitySet, CodeOffset, FunctionDefinitionIndex, LocalIndex},
 };
@@ -22,7 +23,6 @@ pub(crate) enum LocalState {
     /// The local has a value
     Available,
 }
-use crate::binary_views::{BinaryIndexedView, FunctionView};
 use LocalState::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

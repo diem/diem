@@ -6,10 +6,10 @@ use bytecode_source_map::{
     mapping::SourceMapping,
     source_map::{FunctionSourceMap, SourceName},
 };
-use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use colored::*;
 use move_binary_format::{
     access::ModuleAccess,
+    control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
     file_format::{
         Ability, AbilitySet, Bytecode, CompiledModule, CompiledScript, FieldHandleIndex,
         FunctionDefinition, FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken,
