@@ -547,7 +547,7 @@ impl VerifyingBatch {
     }
 
     fn validate_responses(
-        &self,
+        self,
         start_version: Version,
         state: &State,
         state_proof: &StateProof,
@@ -577,7 +577,7 @@ impl VerifyingBatch {
 
         Ok(self
             .requests
-            .iter()
+            .into_iter()
             .map(|request| {
                 let n = request.subrequests.len();
                 let subresponses = responses_iter.by_ref().take(n).collect();
@@ -596,13 +596,15 @@ struct RequestContext<'a> {
 
     state_proof: &'a StateProof,
 
+    #[allow(dead_code)]
     request: &'a MethodRequest,
 
     #[allow(dead_code)]
     subrequests: &'a [MethodRequest],
 }
 
-type RequestCallback = fn(RequestContext<'_>, &[MethodResponse]) -> Result<MethodResponse>;
+type RequestCallback =
+    Box<dyn FnOnce(RequestContext<'_>, &[MethodResponse]) -> Result<MethodResponse>>;
 
 struct VerifyingRequest {
     request: MethodRequest,
@@ -626,7 +628,7 @@ impl VerifyingRequest {
     // TODO(philiphayes): this would be easier if the Error's were cloneable...
 
     fn validate_subresponses(
-        &self,
+        self,
         start_version: Version,
         state: &State,
         state_proof: &StateProof,
@@ -702,7 +704,7 @@ impl From<MethodRequest> for VerifyingRequest {
 fn verifying_submit(txn: String) -> VerifyingRequest {
     let request = MethodRequest::Submit((txn,));
     let subrequests = vec![request.clone()];
-    let callback: RequestCallback = |_ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(move |_ctxt, subresponses| {
         match subresponses {
             [MethodResponse::Submit] => (),
             subresponses => {
@@ -713,7 +715,7 @@ fn verifying_submit(txn: String) -> VerifyingRequest {
             }
         };
         Ok(MethodResponse::Submit)
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
@@ -722,7 +724,7 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
     let subrequests = vec![MethodRequest::GetAccountStateWithProof(
         address, version, None,
     )];
-    let callback: RequestCallback = |ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
         let account = match subresponses {
             [MethodResponse::GetAccountStateWithProof(ref account)] => account,
             subresponses => {
@@ -736,10 +738,6 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
         let account_state_with_proof =
             AccountStateWithProof::try_from(account).map_err(Error::decode)?;
 
-        let (address, version) = match ctxt.request {
-            MethodRequest::GetAccount(address, version) => (*address, *version),
-            request => panic!("programmer error: unexpected request: {:?}", request),
-        };
         let latest_li = ctxt.state_proof.0.ledger_info();
         let ledger_version = latest_li.version();
         let version = version.unwrap_or(ledger_version);
@@ -758,7 +756,7 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
             .transpose()?;
 
         Ok(MethodResponse::GetAccount(maybe_account_view))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
@@ -773,7 +771,7 @@ fn verifying_get_transactions(
         limit,
         include_events,
     )];
-    let callback: RequestCallback = |ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
         let maybe_txs_with_proofs_view = match subresponses {
             [MethodResponse::GetTransactionsWithProofs(ref txs)] => txs,
             subresponses => {
@@ -782,14 +780,6 @@ fn verifying_get_transactions(
                     subresponses,
                 )))
             }
-        };
-
-        // Extract our original request arguments.
-        let (start_version, _limit, include_events) = match ctxt.request {
-            MethodRequest::GetTransactions(start_version, limit, include_events) => {
-                (*start_version, *limit, *include_events)
-            }
-            request => panic!("programmer error: unexpected request: {:?}", request),
         };
 
         // We don't guarantee that our response contains _all_ possible transactions
@@ -828,7 +818,7 @@ fn verifying_get_transactions(
             TransactionListView::try_from(txn_list_with_proof).map_err(Error::decode)?;
 
         Ok(MethodResponse::GetTransactions(txn_list_view.0))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
@@ -847,7 +837,7 @@ fn verifying_get_account_transactions(
         include_events,
         None, /* ledger_version must be None so proofs are verifiable at the latest state */
     )];
-    let callback: RequestCallback = |ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
         let acct_txns_with_proof_view = match subresponses {
             [MethodResponse::GetAccountTransactionsWithProofs(ref txs)] => txs,
             subresponses => {
@@ -856,11 +846,6 @@ fn verifying_get_account_transactions(
                     subresponses,
                 )))
             }
-        };
-
-        let (address, start_seq_num, limit, include_events) = match ctxt.request {
-            MethodRequest::GetAccountTransactions(a, s, lim, i) => (*a, *s, *lim, *i),
-            request => panic!("programmer error: unexpected request: {:?}", request),
         };
 
         let acct_txns_with_proof =
@@ -884,7 +869,7 @@ fn verifying_get_account_transactions(
         let txs = TransactionListView::try_from(acct_txns_with_proof).map_err(Error::decode)?;
 
         Ok(MethodResponse::GetAccountTransactions(txs.0))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
@@ -892,7 +877,7 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
     let request = MethodRequest::GetEvents(key, start_seq, limit);
     let subrequests = vec![MethodRequest::GetEventsWithProofs(key, start_seq, limit)];
 
-    let callback: RequestCallback = |ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
         let event_with_proof_views = match subresponses {
             [MethodResponse::GetEventsWithProofs(ref inner)] => inner,
             subresponses => {
@@ -901,11 +886,6 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
                     subresponses,
                 )))
             }
-        };
-
-        let (key, start_seq, limit) = match ctxt.request {
-            MethodRequest::GetEvents(key, start_seq, limit) => (key, *start_seq, *limit),
-            request => panic!("programmer error: unexpected request: {:?}", request),
         };
 
         // Make sure we didn't get more than we requested. Note that remote can
@@ -935,7 +915,7 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
                 event_with_proof
                     .verify(
                         latest_li,
-                        key,
+                        &key,
                         start_seq + offset as u64,
                         txn_version,
                         event_with_proof.event_index,
@@ -951,7 +931,7 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
             .collect::<Result<Vec<_>>>()?;
 
         Ok(MethodResponse::GetEvents(event_views))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
@@ -962,7 +942,7 @@ fn verifying_get_currencies() -> VerifyingRequest {
         None,
         None,
     )];
-    let callback: RequestCallback = |ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(|ctxt, subresponses| {
         let diem_root = match subresponses {
             [MethodResponse::GetAccountStateWithProof(ref diem_root)] => diem_root,
             subresponses => {
@@ -995,14 +975,14 @@ fn verifying_get_currencies() -> VerifyingRequest {
         let currency_views = currency_infos.iter().map(CurrencyInfoView::from).collect();
 
         Ok(MethodResponse::GetCurrencies(currency_views))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
 fn verifying_get_network_status() -> VerifyingRequest {
     let request = MethodRequest::get_network_status();
     let subrequests = vec![MethodRequest::get_network_status()];
-    let callback: RequestCallback = |_ctxt, subresponses| {
+    let callback: RequestCallback = Box::new(|_ctxt, subresponses| {
         let status = match subresponses {
             [MethodResponse::GetNetworkStatus(ref status)] => *status,
             subresponses => {
@@ -1013,7 +993,7 @@ fn verifying_get_network_status() -> VerifyingRequest {
             }
         };
         Ok(MethodResponse::GetNetworkStatus(status))
-    };
+    });
     VerifyingRequest::new(request, subrequests, callback)
 }
 
