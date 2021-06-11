@@ -80,13 +80,12 @@ it:
 
 ```
 name/
-└── src
-    ├── modules # Directory containing all Move source modules
-    │   ├ ...
-    │   └── Module.move
-    └── scripts # Directory containing all Move scripts
-        ├ ...
-        └── script.move
+├── src # Directory containing all Move source modules
+│   ├ ...
+│   └── Module.move
+└── scripts # Directory containing all Move scripts
+    ├ ...
+    └── script.move
 ```
 
 Let's now create a Move project that we'll use for the code in this README and `cd` into it:
@@ -94,8 +93,8 @@ Let's now create a Move project that we'll use for the code in this README and `
 ```shell
 $ mkdir readme
 $ cd readme
-$ mkdir -p src/modules
-$ mkdir -p src/scripts
+$ mkdir src
+$ mkdir scripts
 ```
 
 ### Compiling and running scripts
@@ -111,10 +110,10 @@ fun main(account: signer) {
 }
 ```
 
-Place this in a file named `debug_script.move` under `src/scripts` and try
+Place this in a file named `debug_script.move` under `scripts` and try
 
 ```shell
-$ move sandbox run src/scripts/debug_script.move --signers 0xf
+$ move sandbox run scripts/debug_script.move --signers 0xf
 [debug] (&) { 0000000000000000000000000000000F }
 ```
 
@@ -134,14 +133,14 @@ The CLI supports passing non-`signer` arguments to `move sandbox run` via `--arg
 ### Publishing new modules
 
 When executing a transaction script you'll often want to call into different Move
-modules like in the example above with the `Debug` module. New modules can be added to the `src/modules`
+modules like in the example above with the `Debug` module. New modules can be added to the `src`
 directory in the directory where the CLI is being invoked (or a directory
 of your choosing specified via the `--source-dir` flag). The `move sandbox run`
 command will compile and publish each module source file in this directory
 before running the given script. You can also compile and publish modules
 separately if you want as well.
 
-Try saving this code in `src/modules/Test.move`:
+Try saving this code in `src/Test.move`:
 
 ```rust
 address 0x2 {
@@ -171,7 +170,7 @@ Now, try
 $ move sandbox link
 ```
 
-This will cause the CLI to compile and typecheck the modules and scripts under
+This will cause the CLI to compile and typecheck the modules under
 `src`, but it won't publish the module bytecode under `storage`. You can
 compile and publish the module by running the `move sandbox publish` command
 (here we pass the `-v` or verbose flag to get a better understanding of what's
@@ -181,7 +180,6 @@ happening):
 $ move sandbox publish -v
 Compiling Move modules...
 Found and compiled 1 modules
-Warning: Found script in specified files for publishing. But scripts cannot be published. Script found in: src/scripts/debug_script.move
 Publishing a new module 00000000000000000000000000000002::Test (wrote 253 bytes)
 Wrote 253 bytes of module ID's and code
 ```
@@ -254,7 +252,7 @@ Let's first see what this script will change without committing those
 changes first. We can do this by passing the `--dry-run` flag:
 
 ```shell
-$ move sandbox run src/scripts/test_script.move --signers 0xf -v --dry-run
+$ move sandbox run scripts/test_script.move --signers 0xf -v --dry-run
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000F:
@@ -267,7 +265,7 @@ Everything looks good, so we can run this again, but this time commit the
 changes by removing the `--dry-run` flag:
 
 ```shell
-$ move sandbox run src/scripts/test_script.move --signers 0xf -v
+$ move sandbox run scripts/test_script.move --signers 0xf -v
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000F:
@@ -323,12 +321,11 @@ adding scripts and modules to:
 ```
 readme/
 ├── args.txt
+├── scripts
+│   ├── debug_script.move
+│   └── test_script.move
 └── src
-    ├── modules
-    │   └── Test.move
-    └── scripts
-        ├── debug_script.move
-        └── test_script.move
+    └── Test.move
 ```
 
 And, where the `args.txt` file contains the following Move CLI commands:
@@ -337,12 +334,12 @@ And, where the `args.txt` file contains the following Move CLI commands:
 $ cd ..
 $ cat readme/args.txt
 ## Arg files can have comments!
-sandbox run src/scripts/debug_script.move --signers 0xf
-sandbox run src/scripts/debug_script.move --signers 0xf --mode bare
+sandbox run scripts/debug_script.move --signers 0xf
+sandbox run scripts/debug_script.move --signers 0xf --mode bare
 sandbox link
 sandbox publish
 sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
-sandbox run src/scripts/test_script.move --signers 0xf -v --mode bare
+sandbox run scripts/test_script.move --signers 0xf -v --mode bare
 sandbox view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 ```
 
@@ -385,9 +382,8 @@ $ move sandbox test new_test_name --create
 $ tree new_test_name
 new_test_name
 ├── args.txt
+├── scripts
 └── src
-    ├── modules
-    └── scripts
 ```
 
 #### Testing with code coverage tracking
@@ -433,7 +429,7 @@ tracking tools.
 
 Note that the coverage information is aggregated across multiple `run` commands
 in `args.txt`. To illustrate this, suppose that we have another test script,
-`test_unpublish_script.move`, under `readme/src/scripts` with the following
+`test_unpublish_script.move`, under `readme/scripts` with the following
 content:
 
 ```rust
@@ -448,7 +444,7 @@ fun main(account: signer) {
 We further add a new command to the end of `args.txt`
 (`args.exp` needs to be updated too).
 ```shell
-sandbox run src/scripts/test_unpublish_script.move --signers 0xf -v --mode bare
+sandbox run scripts/test_unpublish_script.move --signers 0xf -v --mode bare
 ```
 
 Now we can re-test the `readme` again
@@ -487,10 +483,10 @@ are the following:
   the `debug_script.move` example above:
 
 	```shell
-	$ move sandbox run src/scripts/debug_script.move --signers 0xf --mode bare
+	$ move sandbox run scripts/debug_script.move --signers 0xf --mode bare
 	error:
 
-	   ┌── debug_script.move:2:5 ───
+	   ┌── scripts/debug_script.move:2:5 ───
 	   │
 	 2 │ use 0x1::Debug;
 	   │     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Debug'
@@ -498,7 +494,7 @@ are the following:
 
   error:
 
-    ┌── src/scripts/debug_script.move:4:5 ───
+    ┌── scripts/debug_script.move:4:5 ───
     │
   4 │     Debug::print(&account)
     │     ^^^^^ Unbound module alias 'Debug'

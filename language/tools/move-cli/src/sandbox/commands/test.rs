@@ -307,8 +307,7 @@ pub fn create_test_scaffold(path: &str) -> anyhow::Result<()> {
         anyhow::bail!("{:#?} already exists. Remove {:#?} and re-run this command if creating it as a test directory was intentional.", path, path);
     }
 
-    let format_src_dir = |dir| format!("{}/{}", DEFAULT_SOURCE_DIR, dir);
-    let dirs = ["modules", "scripts"];
+    let dirs = [DEFAULT_SOURCE_DIR, "scripts"];
     let files = [(
         TEST_ARGS_FILENAME,
         Some("# This is a batch file. To write an expected value test that runs `move <command1> <args1>;move <command2> <args2>`, write\n\
@@ -321,7 +320,7 @@ pub fn create_test_scaffold(path: &str) -> anyhow::Result<()> {
     fs::create_dir_all(&path)?;
 
     for dir in &dirs {
-        fs::create_dir_all(&path.canonicalize()?.join(format_src_dir(dir)))?;
+        fs::create_dir_all(&path.canonicalize()?.join(dir))?;
     }
 
     for (file, possible_contents) in &files {
