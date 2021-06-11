@@ -204,6 +204,16 @@ impl MethodResponse {
         }
     }
 
+    pub fn try_into_get_account_transaction(self) -> Result<Option<TransactionView>, Error> {
+        match self {
+            MethodResponse::GetAccountTransaction(tx) => Ok(tx),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetAccountTransaction found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
+
     pub fn try_into_get_account_transactions(self) -> Result<Vec<TransactionView>, Error> {
         match self {
             MethodResponse::GetAccountTransactions(txs) => Ok(txs),

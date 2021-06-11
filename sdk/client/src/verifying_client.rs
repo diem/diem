@@ -376,10 +376,13 @@ impl<S: Storage> VerifyingClient<S> {
         seq_num: u64,
         include_events: bool,
     ) -> Result<Response<Option<TransactionView>>> {
-        // TODO(philiphayes): replace when other PR lands
-        self.inner
-            .get_account_transaction(address, seq_num, include_events)
-            .await
+        self.request(MethodRequest::get_account_transaction(
+            address,
+            seq_num,
+            include_events,
+        ))
+        .await?
+        .and_then(MethodResponse::try_into_get_account_transaction)
     }
 
     pub async fn get_account_transactions(
@@ -587,6 +590,7 @@ impl VerifyingBatch {
     }
 }
 
+#[derive(Clone, Copy)]
 struct RequestContext<'a> {
     #[allow(dead_code)]
     start_version: Version,
@@ -623,6 +627,18 @@ impl VerifyingRequest {
             subrequests,
             callback,
         }
+    }
+
+    fn map<F>(self, f: F) -> VerifyingRequest
+    where
+        F: FnOnce(RequestContext<'_>, MethodResponse) -> MethodResponse + 'static,
+    {
+        let inner = self.callback;
+        let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
+            let response = inner(ctxt, subresponses)?;
+            Ok(f(ctxt, response))
+        });
+        Self::new(self.request, self.subrequests, callback)
     }
 
     // TODO(philiphayes): this would be easier if the Error's were cloneable...
@@ -677,6 +693,9 @@ impl From<MethodRequest> for VerifyingRequest {
                 limit,
                 include_events,
             ) => verifying_get_account_transactions(address, start_seq_num, limit, include_events),
+            MethodRequest::GetAccountTransaction(address, seq_num, include_events) => {
+                verifying_get_account_transaction(address, seq_num, include_events)
+            }
             MethodRequest::GetEvents(key, start_seq, limit) => {
                 verifying_get_events(key, start_seq, limit)
             }
@@ -871,6 +890,24 @@ fn verifying_get_account_transactions(
         Ok(MethodResponse::GetAccountTransactions(txs.0))
     });
     VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_account_transaction(
+    address: AccountAddress,
+    seq_num: u64,
+    include_events: bool,
+) -> VerifyingRequest {
+    verifying_get_account_transactions(address, seq_num, 1, include_events).map(
+        |_ctxt, response| match response {
+            MethodResponse::GetAccountTransactions(txns) => {
+                MethodResponse::GetAccountTransaction(txns.into_iter().next())
+            }
+            response => panic!(
+                "expected GetAccountTransactions response, got: {:?}",
+                response
+            ),
+        },
+    )
 }
 
 fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingRequest {

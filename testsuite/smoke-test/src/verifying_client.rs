@@ -277,16 +277,18 @@ fn arb_request(
     ];
     let arb_acct_txns = (
         arb_account.clone(),
-        arb_seq_num,
+        arb_seq_num.clone(),
         arb_limit,
         arb_include_events,
     );
+    let arb_acct_txn = (arb_account.clone(), arb_seq_num, arb_include_events);
 
     prop_oneof![
         (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
         (arb_version_and_limit, arb_include_events)
             .prop_map(|((v, l), i)| MethodRequest::GetTransactions(v, l, i)),
         arb_acct_txns.prop_map(|(a, s, l, i)| MethodRequest::GetAccountTransactions(a, s, l, i)),
+        arb_acct_txn.prop_map(|(a, s, i)| MethodRequest::GetAccountTransaction(a, s, i)),
         arb_events.prop_map(|(k, s, l)| MethodRequest::GetEvents(k, s, l)),
         Just(MethodRequest::get_currencies()),
     ]
