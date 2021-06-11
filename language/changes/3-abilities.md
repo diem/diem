@@ -433,7 +433,7 @@ In short, having the option to have the question mark `?` caused there to be mor
 
 Many different names were considered for all aspects of the abilities system.
 
-* For the name “ability” itself, “traits”, “type classes”, and “interfaces” were all considered. But these items used in other programming languages are usually used to describe programmer-defined items. There is no way for programmers to define their own abilities. Additionally, abilities do not give anything that looks like dynamic dispatch. So, while those other names might be more familiar, we worried they would be too misleading.
+* For the name “ability” itself, “kinds”, “traits”, “type classes”, and “interfaces” were all considered. But these items used in other programming languages are usually used to describe programmer-defined items. There is no way for programmers to define their own abilities. Additionally, abilities do not give anything that looks like dynamic dispatch. So, while those other names might be more familiar, we worried they would be too misleading.
 * `copyable` and `dropable` and `storable` were all considered, but they felt too wordy. Shorter names felt more appropriate.
 * `mustuse` or `mustmove` were considered for `drop`, but again, the more concise name felt better even if the others were more informative.
 * `resource` was considered instead of `key`. The `key` ability is very similar to the `resource` keyword in many cases, but it felt very weird that something like a `Coin` which might have been `resource struct Coin` in the old system, would not be `struct Coin has store` and would not be a “resource”. Thus we are saving the word “resource” to be used in documentation for any time that does not have `copy` or `drop`.
