@@ -1165,23 +1165,47 @@ impl AccountTransactionsWithProof {
         self.0
     }
 
-    /// 1. Verify all transactions against this ledger info
-    /// 2. Verify that all transactions were sent by `account`
-    /// 3. Verify that the transactions are contiguous by sequence number, starting
-    ///    at `start_seq_num`.
+    /// 1. Verify all transactions are consistent with the given ledger info.
+    /// 2. All transactions were sent by `account`.
+    /// 3. The transactions are contiguous by sequence number, starting at `start_seq_num`.
+    /// 4. No more transactions than limit.
+    /// 5. Events are present when requested (and not present when not requested).
+    /// 6. Transactions are not newer than requested ledger version.
     pub fn verify(
         &self,
         ledger_info: &LedgerInfo,
         account: AccountAddress,
         start_seq_num: u64,
+        limit: u64,
+        include_events: bool,
+        ledger_version: Version,
     ) -> Result<()> {
+        ensure!(
+            self.len() as u64 <= limit,
+            "number of account transactions ({}) exceeded limit ({})",
+            self.len(),
+            limit,
+        );
+
         self.0
             .iter()
             .enumerate()
             .try_for_each(|(seq_num_offset, txn_with_proof)| {
                 let expected_seq_num = start_seq_num.saturating_add(seq_num_offset as u64);
-                let version = txn_with_proof.version;
-                txn_with_proof.verify_user_txn(ledger_info, version, account, expected_seq_num)
+                let txn_version = txn_with_proof.version;
+
+                ensure!(
+                    include_events == txn_with_proof.events.is_some(),
+                    "unexpected events or missing events"
+                );
+                ensure!(
+                    txn_version <= ledger_version,
+                    "transaction with version ({}) greater than requested ledger version ({})",
+                    txn_version,
+                    ledger_version,
+                );
+
+                txn_with_proof.verify_user_txn(ledger_info, txn_version, account, expected_seq_num)
             })
     }
 }

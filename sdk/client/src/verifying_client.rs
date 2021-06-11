@@ -22,7 +22,7 @@ use diem_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::{SignedTransaction, Transaction, Version},
+    transaction::{AccountTransactionsWithProof, SignedTransaction, Transaction, Version},
     trusted_state::TrustedState,
     waypoint::Waypoint,
 };
@@ -382,6 +382,23 @@ impl<S: Storage> VerifyingClient<S> {
             .await
     }
 
+    pub async fn get_account_transactions(
+        &self,
+        address: AccountAddress,
+        start_seq_num: u64,
+        limit: u64,
+        include_events: bool,
+    ) -> Result<Response<Vec<TransactionView>>> {
+        self.request(MethodRequest::get_account_transactions(
+            address,
+            start_seq_num,
+            limit,
+            include_events,
+        ))
+        .await?
+        .and_then(MethodResponse::try_into_get_account_transactions)
+    }
+
     pub async fn get_events(
         &self,
         key: EventKey,
@@ -652,6 +669,12 @@ impl From<MethodRequest> for VerifyingRequest {
             MethodRequest::GetTransactions(start_version, limit, include_events) => {
                 verifying_get_transactions(start_version, limit, include_events)
             }
+            MethodRequest::GetAccountTransactions(
+                address,
+                start_seq_num,
+                limit,
+                include_events,
+            ) => verifying_get_account_transactions(address, start_seq_num, limit, include_events),
             MethodRequest::GetEvents(key, start_seq, limit) => {
                 verifying_get_events(key, start_seq, limit)
             }
@@ -805,6 +828,62 @@ fn verifying_get_transactions(
             TransactionListView::try_from(txn_list_with_proof).map_err(Error::decode)?;
 
         Ok(MethodResponse::GetTransactions(txn_list_view.0))
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_account_transactions(
+    address: AccountAddress,
+    start_seq_num: u64,
+    limit: u64,
+    include_events: bool,
+) -> VerifyingRequest {
+    let request =
+        MethodRequest::GetAccountTransactions(address, start_seq_num, limit, include_events);
+    let subrequests = vec![MethodRequest::GetAccountTransactionsWithProofs(
+        address,
+        start_seq_num,
+        limit,
+        include_events,
+        None, /* ledger_version must be None so proofs are verifiable at the latest state */
+    )];
+    let callback: RequestCallback = |ctxt, subresponses| {
+        let acct_txns_with_proof_view = match subresponses {
+            [MethodResponse::GetAccountTransactionsWithProofs(ref txs)] => txs,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetAccountTransactionsWithProofs] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        let (address, start_seq_num, limit, include_events) = match ctxt.request {
+            MethodRequest::GetAccountTransactions(a, s, lim, i) => (*a, *s, *lim, *i),
+            request => panic!("programmer error: unexpected request: {:?}", request),
+        };
+
+        let acct_txns_with_proof =
+            AccountTransactionsWithProof::try_from(acct_txns_with_proof_view)
+                .map_err(Error::decode)?;
+
+        let latest_li = ctxt.state_proof.0.ledger_info();
+        let ledger_version = latest_li.version();
+
+        acct_txns_with_proof
+            .verify(
+                latest_li,
+                address,
+                start_seq_num,
+                limit,
+                include_events,
+                ledger_version,
+            )
+            .map_err(Error::invalid_proof)?;
+
+        let txs = TransactionListView::try_from(acct_txns_with_proof).map_err(Error::decode)?;
+
+        Ok(MethodResponse::GetAccountTransactions(txs.0))
     };
     VerifyingRequest::new(request, subrequests, callback)
 }

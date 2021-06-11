@@ -263,10 +263,30 @@ fn arb_request(
         })
     });
 
+    // we are not producing any transactions, so we don't need to worry about races
+    // between verifying and non-verifying queries
+    let arb_seq_num = prop_oneof! [
+        10 => Just(0u64),
+        10 => 1u64..50,
+        1 => Just(u64::MAX / 2),
+    ];
+    let arb_limit = prop_oneof! [
+        20 => 1u64..100,
+        1 => Just(0u64),
+        1 => Just(u64::MAX / 2),
+    ];
+    let arb_acct_txns = (
+        arb_account.clone(),
+        arb_seq_num,
+        arb_limit,
+        arb_include_events,
+    );
+
     prop_oneof![
         (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
         (arb_version_and_limit, arb_include_events)
             .prop_map(|((v, l), i)| MethodRequest::GetTransactions(v, l, i)),
+        arb_acct_txns.prop_map(|(a, s, l, i)| MethodRequest::GetAccountTransactions(a, s, l, i)),
         arb_events.prop_map(|(k, s, l)| MethodRequest::GetEvents(k, s, l)),
         Just(MethodRequest::get_currencies()),
     ]

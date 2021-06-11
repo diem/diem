@@ -359,7 +359,14 @@ fn get_account_transactions_with_proofs() -> Result<()> {
     let txns = AccountTransactionsWithProof::try_from(&txns_view)?;
 
     assert_eq!(num_txns, txns.len());
-    txns.verify(latest_li.ledger_info(), account_1.address(), 0)?;
+    txns.verify(
+        latest_li.ledger_info(),
+        account_1.address(),
+        0,
+        100,
+        true,
+        ledger_version,
+    )?;
 
     Ok(())
 }

@@ -157,26 +157,15 @@ pub fn get_account_transactions(
     include_events: bool,
     ledger_version: u64,
 ) -> Result<Vec<TransactionView>, JsonRpcError> {
-    let txs = db
-        .get_account_transactions(
-            account,
-            start_seq_num,
-            limit,
-            include_events,
-            ledger_version,
-        )?
-        .into_inner()
-        .into_iter()
-        .map(|tx| {
-            TransactionView::try_from_tx_and_events(
-                tx.version,
-                tx.transaction,
-                tx.proof.transaction_info,
-                tx.events.unwrap_or_default(),
-            )
-        })
-        .collect::<Result<Vec<_>>>()?;
-    Ok(txs)
+    let acct_txs = db.get_account_transactions(
+        account,
+        start_seq_num,
+        limit,
+        include_events,
+        ledger_version,
+    )?;
+    let txs = TransactionListView::try_from(acct_txs)?;
+    Ok(txs.0)
 }
 
 /// Return a serialized list of an account's transactions along with a proof for

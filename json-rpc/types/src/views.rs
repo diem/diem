@@ -823,6 +823,26 @@ impl TryFrom<TransactionListWithProof> for TransactionListView {
     }
 }
 
+impl TryFrom<AccountTransactionsWithProof> for TransactionListView {
+    type Error = Error;
+
+    fn try_from(acct_txs: AccountTransactionsWithProof) -> Result<Self, Self::Error> {
+        let txs = acct_txs
+            .into_inner()
+            .into_iter()
+            .map(|tx| {
+                TransactionView::try_from_tx_and_events(
+                    tx.version,
+                    tx.transaction,
+                    tx.proof.transaction_info,
+                    tx.events.unwrap_or_default(),
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(TransactionListView(txs))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionsWithProofsView {
     pub serialized_transactions: Vec<BytesView>,

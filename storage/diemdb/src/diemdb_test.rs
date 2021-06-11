@@ -335,18 +335,26 @@ fn verify_account_txns(
 
             let last_txn = &txns_and_events.last().unwrap().0;
             let last_seq_num = last_txn.as_signed_user_txn().unwrap().sequence_number();
+            let limit = last_seq_num + 1;
 
             let acct_txns_with_proof = db
                 .get_account_transactions(
                     account,
                     first_seq_num,
-                    last_seq_num + 1,
+                    limit,
                     true, /* include_events */
                     ledger_info.version(),
                 )
                 .unwrap();
             acct_txns_with_proof
-                .verify(ledger_info, account, first_seq_num)
+                .verify(
+                    ledger_info,
+                    account,
+                    first_seq_num,
+                    limit,
+                    true,
+                    ledger_info.version(),
+                )
                 .unwrap();
 
             let txns_and_events = acct_txns_with_proof
@@ -423,7 +431,14 @@ fn verify_committed_transactions(
             .get_account_transactions(txn.sender(), txn.sequence_number(), 1, true, ledger_version)
             .unwrap();
         acct_txns_with_proof
-            .verify(ledger_info, txn.sender(), txn.sequence_number())
+            .verify(
+                ledger_info,
+                txn.sender(),
+                txn.sequence_number(),
+                1,
+                true,
+                ledger_version,
+            )
             .unwrap();
         assert_eq!(acct_txns_with_proof.len(), 1);
 
