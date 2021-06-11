@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements the information needed in the local interpretation context, i.e., the
+//! context created and updated when interpreting a single function.
+
 use std::collections::BTreeMap;
 
 use move_binary_format::errors::{Location, PartialVMError, VMError};
@@ -21,6 +24,7 @@ pub enum AbortInfo {
 }
 
 impl AbortInfo {
+    /// Convert the AbortInfo into a VMError
     pub fn into_err(self) -> VMError {
         match self {
             Self::User(status_code, location) => PartialVMError::new(StatusCode::ABORTED)
@@ -32,6 +36,7 @@ impl AbortInfo {
         }
     }
 
+    /// Retrieve the status code as a u64
     pub fn get_status_code(&self) -> u64 {
         match self {
             Self::User(status_code, _) => *status_code,

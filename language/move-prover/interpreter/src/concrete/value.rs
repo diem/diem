@@ -1,6 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements several value representations to track values produced and consumed during
+//! the statement interpretation and expression evaluation process. The value representations are
+//! carefully designed to match the type system. In particular, `BaseValue` must match `BaseType`
+//! and `TypedValue` must match `Type` (by match, we mean each value must have a way to type it,
+//! and each type must also have a way to construct a value of this type).
+
 use num::{BigInt, ToPrimitive};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -616,6 +622,7 @@ impl TypedValue {
         }
     }
 
+    /// Retrieve an element from a vector at the given index. Return None of index out-of-bounds.
     pub fn get_vector_element(self, elem_num: usize) -> Option<TypedValue> {
         let elem_ty = self.ty.into_vector_elem();
         let val = match self.val {
@@ -634,6 +641,7 @@ impl TypedValue {
         })
     }
 
+    /// Borrow an element from a vector at the given index. Return None of index out-of-bounds.
     pub fn borrow_ref_vector_element(
         self,
         elem_num: usize,
@@ -661,6 +669,7 @@ impl TypedValue {
         })
     }
 
+    /// Push an element back to a vector
     pub fn update_ref_vector_push_back(self, elem_val: TypedValue) -> TypedValue {
         let (elem_ty, elem_val, _) = elem_val.decompose();
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
@@ -677,6 +686,7 @@ impl TypedValue {
         }
     }
 
+    /// Pop an element from the back of the vector
     pub fn update_ref_vector_pop_back(self) -> Option<(TypedValue, TypedValue)> {
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
         let elem_ty = vec_ty.into_ref_vector_elem(Some(true));
@@ -699,6 +709,7 @@ impl TypedValue {
         }
     }
 
+    /// Swap two elements in the vector
     pub fn update_ref_vector_swap(self, lhs: usize, rhs: usize) -> Option<TypedValue> {
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
         if cfg!(debug_assertions) {
@@ -717,6 +728,7 @@ impl TypedValue {
         Some(new_vec)
     }
 
+    /// Update an element in the vector, creates a new vector that contains the update
     pub fn update_ref_vector_element(self, elem_num: usize, elem_val: TypedValue) -> TypedValue {
         let (elem_ty, elem_val, _) = elem_val.decompose();
         let (vec_ty, vec_val, vec_ptr) = self.decompose();
@@ -733,6 +745,7 @@ impl TypedValue {
         }
     }
 
+    /// Unpack a struct value
     pub fn unpack_struct(self) -> Vec<TypedValue> {
         let fields = self.ty.into_struct_inst().fields;
         match self.val {
@@ -749,6 +762,7 @@ impl TypedValue {
         }
     }
 
+    /// Unpack one specific field from a struct value
     pub fn unpack_struct_field(self, field_num: usize) -> TypedValue {
         let field = self.ty.into_struct_inst().fields.remove(field_num);
         let val = match self.val {
@@ -762,6 +776,7 @@ impl TypedValue {
         }
     }
 
+    /// Unpack one specific field from a struct reference
     pub fn unpack_ref_struct_field(self, field_num: usize, is_mut_opt: Option<bool>) -> TypedValue {
         let field = self
             .ty
@@ -779,6 +794,7 @@ impl TypedValue {
         }
     }
 
+    /// Borrow one specific field from a struct reference
     pub fn borrow_ref_struct_field(
         self,
         field_num: usize,
@@ -801,6 +817,7 @@ impl TypedValue {
         }
     }
 
+    /// update one specific field from a struct reference, create a new struct reference
     pub fn update_ref_struct_field(self, field_num: usize, field_val: TypedValue) -> TypedValue {
         let (field_ty, field_val, _) = field_val.decompose();
         let (struct_ty, struct_val, struct_ptr) = self.decompose();
@@ -1135,6 +1152,8 @@ pub struct EvalState {
 }
 
 impl EvalState {
+    /// Collect resources of the (partial) instantiation type from the global state and save them
+    /// under the given memory label
     pub fn save_memory(
         &mut self,
         label: MemoryLabel,
@@ -1159,6 +1178,8 @@ impl EvalState {
             .insert(partial_inst.ident, per_struct_map);
     }
 
+    /// Load a resource with given instantiation type from the specified address, saved by the
+    /// given memory label.
     pub fn load_memory(
         &self,
         label: &MemoryLabel,
@@ -1173,6 +1194,7 @@ impl EvalState {
             .cloned()
     }
 
+    /// Populate a global state with the resources saved by the given memmory label
     pub fn register_memory(&self, label: &MemoryLabel, global_state: &mut GlobalState) {
         for inst_map in self.saved_memory.get(label).unwrap().values() {
             for (inst, account_map) in inst_map {

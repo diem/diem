@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements the expression evaluation part of the stackless bytecode interpreter.
+
 use itertools::Itertools;
 use num::{BigInt, ToPrimitive, Zero};
 use std::{cell::Cell, collections::BTreeMap, rc::Rc};
@@ -117,6 +119,7 @@ impl<'env> Evaluator<'env> {
     // entry points
     //
 
+    /// Check whether an assert expression holds
     pub fn check_assert(&self, exp: &Exp) {
         match self.evaluate(exp) {
             Ok(val) => {
@@ -134,6 +137,9 @@ impl<'env> Evaluator<'env> {
         }
     }
 
+    /// Check whether an assume expression holds, unless the assume expression represents a `let`
+    /// binding. In that case, return the `TypedValue` of the let-binding as well as the local
+    /// variable (index) the value should bind to.
     pub fn check_assume(&self, exp: &Exp) -> Option<(TempIndex, TypedValue)> {
         // NOTE: `let` bindings are translated to `Assume(Identical($t, <exp>));`. This should be
         // treated as an assignment.
@@ -169,6 +175,11 @@ impl<'env> Evaluator<'env> {
     // dispatcher
     //
 
+    /// The entrypoint to the main evaluation logic. Expression evaluation is done recursively in
+    /// a bottom-up manner, i.e., for an expression `e`, all its sub-expressions are evaluated first
+    /// before `e` is evaluated. An expression will be evaluated to to a `BaseValue` (if the process
+    /// is successful) or an error code (if the process fails, for example, due to arithmetic errors
+    /// or referring to a non-existent global resource).
     fn evaluate(&self, exp: &Exp) -> EvalResult<BaseValue> {
         let exp_level = self.level.get();
         self.level.set(exp_level + 1);

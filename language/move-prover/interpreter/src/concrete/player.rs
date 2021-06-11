@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements the statement interpretation part of the stackless bytecode interpreter.
+
 use num::{BigInt, ToPrimitive, Zero};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, convert::TryFrom, rc::Rc};
@@ -96,6 +98,7 @@ impl<'env> FunctionContext<'env> {
     // settings
     //
 
+    /// Retrieve the `InterpreterSettings` from the global environment
     pub fn get_settings(&self) -> Rc<InterpreterSettings> {
         self.target
             .global_env()

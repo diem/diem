@@ -1,6 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! This file implements the orchestration part of the stackless bytecode interpreter and also
+//! provides outside-facing interfaces for the clients of stackless bytecode interpreter. Clients
+//! of the interpreter should never directly interact with the statement player (in `player.rs`) nor
+//! the expression evaluator (in `evaluator.rs`).
+
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
