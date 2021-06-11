@@ -20,6 +20,7 @@ use move_core_types::{
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
 use move_lang::{self, MOVE_COMPILED_EXTENSION};
+use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
 
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -82,6 +83,16 @@ pub(crate) fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskSta
     )
 }
 
+// Print a struct with a specified outer indent
+fn print_struct_with_indent(value: &AnnotatedMoveStruct, indent: u64) {
+    let indent_str: String = (0..indent).map(|_| " ").collect::<String>();
+    let value_str = format!("{}", value);
+    let lines = value_str.split('\n');
+    for line in lines {
+        println!("{}{}", indent_str, line)
+    }
+}
+
 pub(crate) fn explain_execution_effects(
     changeset: &ChangeSet,
     events: &[Event],
@@ -127,23 +138,46 @@ pub(crate) fn explain_execution_effects(
                         .get_resource_bytes(*addr, struct_tag.clone())?
                         .is_some()
                     {
-                        // TODO: print resource diff
                         println!(
                             "Changed type {}: {:?} (wrote {:?} bytes)",
                             struct_tag, blob, bytes_to_write
-                        )
+                        );
+                        // Print resource diff
+                        let resource_data = state
+                            .get_resource_bytes(*addr, struct_tag.clone())?
+                            .unwrap();
+                        let resource_old = MoveValueAnnotator::new_no_stdlib(state)
+                            .view_resource(&struct_tag, &resource_data)?;
+                        println!("      Previous:");
+                        print_struct_with_indent(&resource_old, 8);
+                        let resource_new = MoveValueAnnotator::new_no_stdlib(state)
+                            .view_resource(&struct_tag, &blob)?;
+                        println!("      New:");
+                        print_struct_with_indent(&resource_new, 8)
                     } else {
-                        // TODO: nicer printing
                         println!(
                             "Added type {}: {:?} (wrote {:?} bytes)",
                             struct_tag, blob, bytes_to_write
-                        )
+                        );
+                        // Print new resource
+                        let resource = MoveValueAnnotator::new_no_stdlib(state)
+                            .view_resource(&struct_tag, &blob)?;
+                        print_struct_with_indent(&resource, 6)
                     }
                 }
-                None => println!(
-                    "Deleted type {} (wrote {:?} bytes)",
-                    struct_tag, bytes_to_write
-                ),
+                None => {
+                    println!(
+                        "Deleted type {} (wrote {:?} bytes)",
+                        struct_tag, bytes_to_write
+                    );
+                    // Print deleted resource
+                    let resource_data = state
+                        .get_resource_bytes(*addr, struct_tag.clone())?
+                        .unwrap();
+                    let resource_old = MoveValueAnnotator::new_no_stdlib(state)
+                        .view_resource(&struct_tag, &resource_data)?;
+                    print_struct_with_indent(&resource_old, 6);
+                }
             };
             total_bytes_written += bytes_to_write;
         }

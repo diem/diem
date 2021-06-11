@@ -258,6 +258,9 @@ Changed resource(s) under 1 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000F:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
+      key 0x2::Test::Resource {
+           i: 10
+      }
 Discarding changes; re-run without --dry-run if you would like to keep them.
 ```
 
@@ -271,9 +274,14 @@ Changed resource(s) under 1 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000F:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
+      key 0x2::Test::Resource {
+            i: 10
+      }
 ```
 
-We can now inspect this newly published resource using `move sandbox view` since
+While the verbose flag used above (`-v`) shows resource changes, it is also
+possible to view them manually.
+We can inspect the newly published resource using `move sandbox view` since
 the change has been committed:
 
 ```shell
