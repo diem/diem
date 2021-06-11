@@ -38,7 +38,7 @@ use crate::{
         connection::ClientConnection,
         counters,
         json_rpc::{
-            Method, SubscribeResult, SubscribeToEventsParams, SubscribeToTransactionsParams,
+            StreamMethod, SubscribeResult, SubscribeToEventsParams, SubscribeToTransactionsParams,
         },
     },
     views::{EventView, TransactionView},
@@ -72,7 +72,7 @@ pub struct SubscriptionHelper {
     pub db: Arc<dyn DbReader>,
     pub client: ClientConnection,
     pub jsonrpc_id: Id,
-    pub method: Method,
+    pub method: StreamMethod,
     backoff: JitterBackoff,
 }
 
@@ -81,7 +81,7 @@ impl SubscriptionHelper {
         db: Arc<dyn DbReader>,
         client: ClientConnection,
         jsonrpc_id: Id,
-        method: Method,
+        method: StreamMethod,
     ) -> Self {
         let poll_interval_ms = client.config.poll_interval_ms;
         Self {
@@ -253,6 +253,54 @@ impl Subscription<EventView> for SubscribeToEventsParams {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test() {}
+    use super::*;
+    use crate::{
+        stream_rpc::{
+            connection::ConnectionContext, errors::StreamError, transport::util::Transport,
+        },
+        tests::utils::mock_db,
+    };
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_subscription() {
+        let mock_db = mock_db();
+
+        let (sender, mut receiver) = mpsc::channel::<Result<String, StreamError>>(1);
+
+        let config = SubscriptionConfig {
+            fetch_size: 1,
+            poll_interval_ms: 100,
+            queue_size: 1,
+        };
+
+        let connection_context = ConnectionContext {
+            transport: Transport::Websocket,
+            sdk_info: Default::default(),
+            remote_addr: None,
+        };
+        let client_connection =
+            ClientConnection::new(1337, sender, connection_context, Arc::new(config));
+
+        let subscription_helper = SubscriptionHelper::new(
+            Arc::new(mock_db.clone()),
+            client_connection,
+            Id::Number(1010101),
+            StreamMethod::SubscribeToTransactions,
+        );
+
+        let params = SubscribeToTransactionsParams {
+            starting_version: 0,
+            include_events: Some(true),
+            latest_version: 0,
+        };
+
+        let handle = params.run(subscription_helper).unwrap();
+        let ok_msg = receiver.recv().await;
+
+        let result = ok_msg.unwrap().unwrap();
+        let expected = serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result": {"status": "OK", "transaction_version": mock_db.version}}).to_string();
+        assert_eq!(expected, result);
+        handle.abort();
+    }
 }

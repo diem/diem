@@ -29,14 +29,13 @@ only sends a `Result<String, anyhow::Error>`, which the WebSocket transport must
 This allows the transport to hide the specifics of dealing with a WebSocket connection (`ping`/`pong` messages, `close` messages, etc),
 while
 
-If the transport layer decides to pass any kind of `Error<_>` to the `ConnectionManager`, the `ConnectionManager` will
+If the transport layer decides to pass any kind of `Result::Err<_>` to the `ConnectionManager`, the `ConnectionManager` will
 terminate all client subscriptions, and ultimately disconnect the client.
-Likewise, if a transport sees an outbound `Error` it should expect (and if possible, initiate) a disconnect.
-The transport should not attempt to pass this `Error` along to the client (in all likelihood the client would not be able to receive it).
-Errors at this level indicate unrecoverable communication errors.
-At this transport level, JSON-RPC errors are indistinguishable from any other message (they are all `String`).
-
-
+Likewise, if a transport sees an outbound `Err` it should expect (and if possible, initiate) a disconnect.
+The transport should not attempt to pass this `Err` along to the client (in all likelihood the client would not be able to receive it).
+Actual `Err`s at this level indicate unrecoverable communication errors.
+At this transport level, `StreamJsonRpcError` are indistinguishable from `StreamJsonRpcResponse` or any other message (they are all JSON `String`).
+It is important to make the distinction here between JsonRpc _messages_, vs actual `Result::Err`s.
 
 ## Connection Manager
 The `ConnectionManager` is the internal interface with which transports interact.
@@ -44,7 +43,7 @@ Put simply, it accepts `String` messages
 
 For the incoming message stream (client->fullnode), the `ConnectionManager` expects a
 `Box<dyn Stream<Item = Result<Option<String>, anyhow::Error>> + Send + Unpin>`.
-If a transport sends an `Error`, the `ConnectionManager` will terminate all client subscriptions, and end the connection.
+If a transport sends an `Err`, the `ConnectionManager` will terminate all client subscriptions, and end the connection.
 
 Why the `Option<String>`? It's possible for a message to be handled during the process of mapping, and not have
 

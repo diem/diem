@@ -3,10 +3,10 @@
 
 use crate::{
     stream_rpc::{
-        json_rpc::JsonRpcResponse,
+        json_rpc::StreamJsonRpcResponse,
         tests::util::{
             close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks,
-            sync_async, verify_ok, ws_test_setup,
+            verify_ok, ws_test_setup,
         },
     },
     tests::utils::create_db_and_runtime,
@@ -110,7 +110,7 @@ async fn test_websocket_fetching_data() {
 
         for i in 0..(expected_number) {
             let msg = next_message(&mut ws_client, &format!("{} get message {}", &name, i)).await;
-            let resp: JsonRpcResponse =
+            let resp: StreamJsonRpcResponse =
                 serde_json::from_str(msg.to_str().expect("response")).unwrap();
             assert!(resp.error.is_none());
             assert_eq!(resp.id.unwrap().to_string(), "\"client-generated-id\"");
@@ -119,7 +119,6 @@ async fn test_websocket_fetching_data() {
         close_ws(ws_client, &name).await;
 
         assert_eq!(num_clients(&cm), 0);
-        assert_eq!(num_tasks(&client), 0);
     }
 }
 
@@ -194,7 +193,7 @@ fn test_websocket_requests() {
             .body(())
             .unwrap();
 
-        let ws_stream = sync_async(runtime.handle(), async move {
+        let ws_stream = runtime.handle().block_on(async move {
             let (ws_stream, _) = connect_async(http_request)
                 .await
                 .expect("Could not create websocket connection");
@@ -202,19 +201,23 @@ fn test_websocket_requests() {
         });
 
         let (mut tx, mut rx) = ws_stream.split();
-        sync_async(runtime.handle(), async move {
-            tx.send(Message::text(request.to_string())).await
-        })
-        .unwrap_or_else(|e| panic!("{}: Could not send websocket request. {:?}", &name, e));
+        runtime
+            .handle()
+            .block_on(tx.send(Message::text(request.to_string())))
+            .unwrap_or_else(|e| panic!("{}: Could not send websocket request. {:?}", &name, e));
 
-        let response = sync_async(runtime.handle(), async move { rx.next().await })
+        let response = runtime
+            .handle()
+            .block_on(rx.next())
             .unwrap_or_else(|| panic!("{}: Expected 'Some' response", &name))
             .unwrap_or_else(|_| panic!("{}: Expected no error response", &name))
             .to_string();
 
         assert_eq!(
-            serde_json::to_string(&serde_json::from_str::<JsonRpcResponse>(&response).unwrap())
-                .unwrap(),
+            serde_json::to_string(
+                &serde_json::from_str::<StreamJsonRpcResponse>(&response).unwrap()
+            )
+            .unwrap(),
             expected.to_string(),
             "test: {}",
             name

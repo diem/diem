@@ -6,7 +6,7 @@ use crate::{
     errors::is_internal_error,
     methods::{Handler, JsonRpcService},
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
-    stream_rpc::startup::get_stream_routes,
+    stream_rpc,
     util::{sdk_info_from_user_agent, SdkInfo},
 };
 use anyhow::{ensure, Result};
@@ -27,7 +27,6 @@ use std::{
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
-    filters::BoxedFilter,
     http::header,
     reject::{self, Reject},
     Filter, Reply,
@@ -165,7 +164,13 @@ pub fn bootstrap(
         .and(warp::path::end())
         .and(base_route);
 
-    let health_route = build_health_route(diem_db.clone());
+    let health_diem_db = diem_db.clone();
+    let health_route = warp::path!("-" / "healthy")
+        .and(warp::path::end())
+        .and(warp::query().map(move |params: HealthCheckParams| params))
+        .and(warp::any().map(move || health_diem_db.clone()))
+        .and(warp::any().map(SystemTime::now))
+        .and_then(health_check);
 
     // Ensure that we actually bind to the socket first before spawning the
     // server tasks. This helps in tests to prevent races where a client attempts
@@ -177,13 +182,14 @@ pub fn bootstrap(
 
     let _guard = runtime.enter();
 
-    let full_route = health_route
-        .or(route_v1.or(route_root))
-        .or(get_stream_routes(
-            &stream_config,
-            content_len_limit as u64,
-            diem_db,
-        ));
+    let full_route =
+        health_route
+            .or(route_v1.or(route_root))
+            .or(stream_rpc::startup::get_stream_routes(
+                &stream_config,
+                content_len_limit as u64,
+                diem_db,
+            ));
 
     let server = match tls_cert_path {
         None => Either::Left(warp::serve(full_route).bind(address)),
@@ -197,16 +203,6 @@ pub fn bootstrap(
     };
     runtime.handle().spawn(server);
     runtime
-}
-
-pub fn build_health_route(diem_db: Arc<dyn DbReader>) -> BoxedFilter<(impl Reply,)> {
-    warp::path!("-" / "healthy")
-        .and(warp::path::end())
-        .and(warp::query().map(move |params: HealthCheckParams| params))
-        .and(warp::any().map(move || diem_db.clone()))
-        .and(warp::any().map(SystemTime::now))
-        .and_then(health_check)
-        .boxed()
 }
 
 /// Creates JSON RPC endpoint by given node config

@@ -46,6 +46,7 @@ impl ConnectionManager {
         self.clients.read().contains_key(&client_id)
     }
 
+    #[allow(unused)]
     pub fn get_client(&self, client_id: u64) -> Option<ClientConnection> {
         self.clients.read().get(&client_id).cloned()
     }
@@ -64,19 +65,11 @@ impl ConnectionManager {
         }
     }
 
-    pub fn disconnect(&self, client_id: u64) {
-        if let Some(client) = self.get_client(client_id) {
-            client.disconnect();
-            self.clients.write().remove(&client_id);
-        }
-    }
-
     pub async fn client_connection(
         self,
         client_sender: StreamSender,
         mut client_rcv: BoxConnectionStream,
         connection_context: ConnectionContext,
-        bidirectional: bool,
     ) {
         let client_id = self.next_user_id();
         let client = ClientConnection::new(
@@ -140,20 +133,11 @@ impl ConnectionManager {
             }
         });
 
-        if bidirectional {
-            tokio::select! {
-                _ = send_task => (),
-                _ = recv_task => (),
-            }
-        } else {
-            // If the source is unidirectional, i.e SSE, then we don't use "unable to receive additional messages"
-            // as our check for whether a client has disconnected or not
-            send_task.await.ok();
-            // If we're here and not bidirectional, the client has closed the connection and we are
-            // free to disconnect
-            recv_task.abort();
+        tokio::select! {
+            _ = send_task => (),
+            _ = recv_task => (),
         }
-        self.disconnect(client_id);
+        self.clients.write().remove(&client_id);
         debug!(
             logging::ClientDisconnect {
                 transport: client.connection_context.transport.as_str(),

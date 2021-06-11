@@ -17,11 +17,11 @@ mod logging;
 
 pub mod startup;
 
-pub mod connection;
-pub mod errors;
-pub mod json_rpc;
-pub mod subscriptions;
-pub mod transport;
+mod connection;
+mod errors;
+mod json_rpc;
+mod subscriptions;
+mod transport;
 
-#[cfg(any(test, feature = "fuzzing"))]
+#[cfg(test)]
 mod tests;

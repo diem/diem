@@ -4,10 +4,10 @@
 use crate::{
     errors::JsonRpcError,
     stream_rpc::{
-        connection::{ConnectionContext, StreamSender, Task},
+        connection::{ConnectionContext, StreamSender},
         counters,
-        errors::Error,
-        json_rpc::{JsonRpcRequest, JsonRpcResponse, Method},
+        errors::StreamError,
+        json_rpc::{StreamJsonRpcRequest, StreamJsonRpcResponse, StreamMethod},
         logging,
         subscriptions::SubscriptionConfig,
     },
@@ -19,6 +19,15 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
 const UNKNOWN: &str = "unknown";
+
+#[derive(Debug)]
+pub struct Task(tokio::task::JoinHandle<()>);
+
+impl Drop for Task {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
 
 /// The `ClientConnection` is the interface between a transport, and subscriptions
 /// This will get cloned for every subscription, so lets keep it light :-)
@@ -47,21 +56,9 @@ impl ClientConnection {
         }
     }
 
-    /// When we disconnect a client, ensure we kill all of the asynchronous tasks (subscriptions)
-    pub fn disconnect(&self) {
-        let mut tasks = self.tasks.lock();
-        debug!(
-            "Disconnecting: terminating {} tasks for Client#{}",
-            tasks.len(),
-            &self.id
-        );
-        tasks.iter().for_each(|(_id, task)| task.abort());
-        tasks.clear();
-    }
-
-    pub async fn send_raw(&self, message: String) -> Result<(), Error> {
+    pub async fn send_raw(&self, message: String) -> Result<(), StreamError> {
         if self.sender.is_closed() {
-            return Err(Error::ClientAlreadyClosed(self.id));
+            return Err(StreamError::ClientAlreadyClosed(self.id));
         }
         match self.sender.send(Ok(message)).await {
             Ok(_) => Ok(()),
@@ -72,29 +69,32 @@ impl ClientConnection {
         }
     }
 
-    pub async fn send_response(&self, message: JsonRpcResponse) -> Result<(), Error> {
+    pub async fn send_response(&self, message: StreamJsonRpcResponse) -> Result<(), StreamError> {
         if let Ok(response) = serde_json::to_string(&message) {
             return self.send_raw(response).await;
         }
-        Err(Error::CouldNotStringifyMessage(format!("{:?}", message)))
+        Err(StreamError::CouldNotStringifyMessage(format!(
+            "{:?}",
+            message
+        )))
     }
 
     pub async fn send_success<T: serde::Serialize>(
         &self,
         id: Id,
         message: &T,
-    ) -> Result<(), Error> {
+    ) -> Result<(), StreamError> {
         let message = serde_json::to_value(message).unwrap();
-        self.send_response(JsonRpcResponse::result(Some(id), Some(message)))
+        self.send_response(StreamJsonRpcResponse::result(Some(id), Some(message)))
             .await
     }
 
     pub async fn send_error(
         &self,
-        method: Option<Method>,
+        method: Option<StreamMethod>,
         id: Option<Id>,
         error: JsonRpcError,
-    ) -> Result<(), Error> {
+    ) -> Result<(), StreamError> {
         counters::INVALID_REQUESTS
             .with_label_values(&[
                 self.connection_context.transport.as_str(),
@@ -104,18 +104,21 @@ impl ClientConnection {
                 &self.connection_context.sdk_info.version.to_string(),
             ])
             .inc();
-        self.send_response(JsonRpcResponse::error(id, error)).await
+        self.send_response(StreamJsonRpcResponse::error(id, error))
+            .await
     }
 
+    /// Unsubscribe a subscription for a client
+    #[allow(unused)]
     pub fn unsubscribe(&self, id: &Id) -> Option<()> {
-        let mut lock = self.tasks.lock();
-        if let Some(task) = lock.get(id) {
+        let mut tasks = self.tasks.lock();
+        if let Some(task) = tasks.get(id) {
             debug!(
                 "Unsubscribing: terminating task '{}' for Client#{}",
                 &id, &self.id
             );
-            task.abort();
-            lock.remove(&id);
+            task.0.abort();
+            tasks.remove(&id);
             Some(())
         } else {
             debug!(
@@ -127,7 +130,7 @@ impl ClientConnection {
     }
 
     pub async fn received_message(&self, db: Arc<dyn DbReader>, message: String) {
-        match JsonRpcRequest::from_str(&message) {
+        match StreamJsonRpcRequest::from_str(&message) {
             Ok(mut request) => {
                 debug!(
                     logging::SubscriptionRequestLog {
@@ -182,7 +185,7 @@ impl ClientConnection {
     fn handle_rpc_request(
         &self,
         db: Arc<dyn DbReader>,
-        request: &mut JsonRpcRequest,
+        request: &mut StreamJsonRpcRequest,
     ) -> Result<(), JsonRpcError> {
         let mut tasks = self.tasks.lock();
         if tasks.contains_key(&request.id) {
@@ -203,7 +206,7 @@ impl ClientConnection {
             .call_method(db.clone(), self.clone(), request.id.clone())
         {
             Ok(task) => {
-                tasks.insert(request.id.clone(), task);
+                tasks.insert(request.id.clone(), Task(task));
                 metric_subscription_rpc_received(
                     &self,
                     request.method_name(),

@@ -1,10 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    future::Future,
-    sync::{mpsc::sync_channel, Arc},
-};
+use std::{future::Future, sync::Arc};
 
 // use proptest::prelude::*;
 use warp::{test::WsClient, ws::Message};
@@ -14,12 +11,11 @@ use diem_config::config::StreamConfig;
 use crate::{
     stream_rpc::{
         connection::{ClientConnection, ConnectionManager},
-        json_rpc::JsonRpcResponse,
+        json_rpc::StreamJsonRpcResponse,
         transport::websocket::get_websocket_routes,
     },
     tests::utils::{mock_db, MockDiemDB},
 };
-use tokio::runtime::Handle;
 
 pub fn make_ws_config(fetch_size: u64, queue_size: usize, poll_interval_ms: u64) -> StreamConfig {
     StreamConfig {
@@ -64,7 +60,7 @@ pub fn verify_ok(msg: Message, name: &str) -> u64 {
         .to_str()
         .unwrap_or_else(|_| panic!("{}: ok msg response", &name));
 
-    let resp: JsonRpcResponse = serde_json::from_str(msg_str)
+    let resp: StreamJsonRpcResponse = serde_json::from_str(msg_str)
         .unwrap_or_else(|_| panic!("{}: could not parse response. {:?}", &name, msg));
 
     let res = resp.result;
@@ -126,17 +122,4 @@ pub async fn timeout<F: Future<Output = T>, T>(duration_millis: u64, future: F, 
     tokio::time::timeout(std::time::Duration::from_millis(duration_millis), future)
         .await
         .unwrap_or_else(|_| panic!("{}: Timed out", name))
-}
-
-pub fn sync_async<T, Fut>(handle: &Handle, f: Fut) -> T
-where
-    Fut: Future<Output = T> + Send + 'static,
-    T: Send + 'static,
-{
-    let (tx, rx) = sync_channel(1);
-    handle.spawn(async move {
-        let res = f.await;
-        let _ = tx.send(res);
-    });
-    rx.recv().unwrap()
 }

@@ -15,7 +15,7 @@ use storage_interface::DbReader;
 use crate::stream_rpc::{
     connection::{ConnectionContext, ConnectionManager},
     counters,
-    errors::Error,
+    errors::StreamError,
     logging,
     subscriptions::SubscriptionConfig,
     transport::util::{get_remote_addr, Transport},
@@ -87,7 +87,7 @@ impl ContextWrapperMapper {
     pub fn message_result_to_string(
         &self,
         result: Result<Message, warp::Error>,
-    ) -> Result<Option<String>, Error> {
+    ) -> Result<Option<String>, StreamError> {
         counters::MESSAGES_RECEIVED
             .with_label_values(&[
                 self.context.transport.as_str(),
@@ -116,7 +116,7 @@ impl ContextWrapperMapper {
 
                 // Returning an error allows the `ConnectionManager` to process the disconnect
                 if msg.is_close() {
-                    return Err(Error::ClientWantsToDisconnect);
+                    return Err(StreamError::ClientWantsToDisconnect);
                 }
 
                 match msg.to_str() {
@@ -132,12 +132,12 @@ impl ContextWrapperMapper {
                     }
                 }
             }
-            Err(e) => Err(Error::TransportError(e.to_string())),
+            Err(e) => Err(StreamError::TransportError(e.to_string())),
         }
     }
 
     // Outgoing messages
-    fn string_result_to_message(&self, result: Result<String, Error>) -> Message {
+    fn string_result_to_message(&self, result: Result<String, StreamError>) -> Message {
         counters::MESSAGES_SENT
             .with_label_values(&[
                 self.context.transport.as_str(),
@@ -181,7 +181,7 @@ pub async fn handle_websocket_stream(
 
                 let (to_client_ws, from_client_ws) = socket.split();
                 let (to_client, to_client_rcv) =
-                    mpsc::channel::<Result<String, Error>>(cm.config.queue_size);
+                    mpsc::channel::<Result<String, StreamError>>(cm.config.queue_size);
 
                 let cwm = Arc::new(ContextWrapperMapper {
                     content_length_limit,
@@ -213,7 +213,7 @@ pub async fn handle_websocket_stream(
                 );
 
                 // This will keep running until the connection is closed
-                cm.client_connection(to_client, Box::new(mapped_from_client_ws), context, true)
+                cm.client_connection(to_client, Box::new(mapped_from_client_ws), context)
                     .await;
             }
         }))
