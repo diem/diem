@@ -9,6 +9,7 @@ This directory contains the following compose configurations:
 * **client-cli**: creates a CLI client which connects to the above validator/faucet
 * **public_full_node**: creates a public fullnode, and it can be configured to connect to any existing network (e.g. testnet, Mainnet).
 * **monitoring**: creates a monitoring stack which can be used to collect metrics and virtulize it on a dashboard. This can be installed together with other compose configurations and provides simple monitoring for the deployment.
+* **data-restore**: creates a diem db-restore job to restore a data volume from provided S3 bucket. This can be used to quickly restore fullnode for an exsiting blockchain to avoid spending long time on state-sync.
 
 To use these compositions:
 1. [Download](https://docs.docker.com/install/) and install Docker and Docker Compose (comes with Docker for Mac and Windows).

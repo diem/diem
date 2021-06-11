@@ -1,0 +1,38 @@
+# This compose file can be used to restore data for a fullnode.
+# You will need to provide the restore data source in the configuration.
+version: "3.8"
+services:
+  restore:
+    image: diem/tools:devnet
+    volumes:
+      - type: volume
+        source: db
+        target: /opt/diem/data
+      - type: volume
+        source: tmp
+        target: /tmp
+      - type: bind
+        source: ./s3-public.toml
+        target: /opt/diem/etc/s3-public.toml
+        read_only: true
+    # Provide the public S3 bucket and the sub directory you want to restore data from.
+    # Diem Association provides public data backup you can use, check the offical website.
+    environment:
+      - BUCKET=<S3 bucket>
+      - SUB_DIR=<sub directory of the S3 bucket>
+      - HOME=/tmp
+      - RUST_LOG=debug
+    command: >
+      sh -c "
+      /usr/local/bin/db-restore --concurrent-downloads 2 \
+        --target-db-dir /opt/diem/data/db auto \
+        --metadata-cache-dir /tmp/diem-restore-metadata \
+        command-adapter --config /opt/diem/etc/s3-public.toml
+      "
+
+# update the db volume name to the one you want to restore if needed
+# docker-compose usually add the project name (default is the directory name) as prefix of the volume name.
+# so make sure you start this docker compose using same project name as the db you want to restore.
+volumes:
+  db:
+  tmp:
