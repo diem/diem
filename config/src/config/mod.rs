@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -233,6 +234,17 @@ impl NodeConfig {
         let mut config = config.validate_network_configs()?;
         config.set_data_dir(config.data_dir().to_path_buf());
         Ok(config)
+    }
+
+    pub fn peer_id(&self) -> Option<PeerId> {
+        match self.base.role {
+            RoleType::Validator => self.validator_network.as_ref().map(NetworkConfig::peer_id),
+            RoleType::FullNode => self
+                .full_node_networks
+                .iter()
+                .find(|config| config.network_id == NetworkId::Public)
+                .map(NetworkConfig::peer_id),
+        }
     }
 
     /// Checks `NetworkConfig` setups so that they exist on proper networks
