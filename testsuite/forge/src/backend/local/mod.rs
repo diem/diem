@@ -138,7 +138,7 @@ impl Swarm for LocalSwarm {
 
     fn public_info(&mut self) -> PublicInfo<'_> {
         PublicInfo::new(
-            &self.url,
+            self.url.clone(),
             self.chain_id,
             Coffer::TreasuryCompliance {
                 transaction_factory: TransactionFactory::new(ChainId::test()),
