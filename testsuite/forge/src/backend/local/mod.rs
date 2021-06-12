@@ -6,8 +6,6 @@ use crate::{
     Result, Swarm, Validator,
 };
 use anyhow::ensure;
-use debug_interface::NodeDebugClient;
-use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
 use diem_genesis_tool::config_builder::FullnodeType;
 use diem_sdk::{
@@ -208,16 +206,8 @@ impl Node for DiemNode {
         Url::from_str(&format!("http://{}:{}/v1", ip, port)).expect("Invalid URL.")
     }
 
-    fn json_rpc_client(&self) -> JsonRpcClient {
-        JsonRpcClient::new(self.json_rpc_endpoint().to_string())
-    }
-
-    fn debug_client(&self) -> &NodeDebugClient {
-        self.debug_client()
-    }
-
-    fn get_metric(&mut self, metric_name: &str) -> Option<i64> {
-        self.get_metric(metric_name)
+    fn debug_endpoint(&self) -> Url {
+        Url::from_str(&format!("http://localhost:{}", self.debug_port())).expect("Invalid URL.")
     }
 
     fn config(&self) -> &NodeConfig {

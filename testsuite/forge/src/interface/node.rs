@@ -4,9 +4,10 @@
 use crate::Result;
 use debug_interface::NodeDebugClient;
 use diem_client::Client as JsonRpcClient;
-use diem_config::config::NodeConfig;
+use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_sdk::types::PeerId;
-use reqwest::Url;
+use std::collections::HashMap;
+use url::Url;
 
 /// A NodeId is intended to be a unique identifier of a Node in a Swarm. Due to VFNs sharing the
 /// same PeerId as their Validator, another identifier is needed in order to distinguish between
@@ -50,14 +51,8 @@ pub trait Node {
     /// Return the URL for the JSON-RPC endpoint of this Node
     fn json_rpc_endpoint(&self) -> Url;
 
-    /// Return JSON-RPC client of this Node
-    fn json_rpc_client(&self) -> JsonRpcClient;
-
-    /// Return a NodeDebugClient for this Node
-    fn debug_client(&self) -> &NodeDebugClient;
-
-    /// Query a Metric for from this Node
-    fn get_metric(&mut self, metric_name: &str) -> Option<i64>;
+    /// Return the URL for the debug-interface for this Node
+    fn debug_endpoint(&self) -> Url;
 
     /// Return a reference to the Config this Node is using
     fn config(&self) -> &NodeConfig;
@@ -88,3 +83,70 @@ pub trait Validator: Node {}
 
 /// Trait used to represent a running FullNode
 pub trait FullNode: Node {}
+
+impl<T: ?Sized> NodeExt for T where T: Node {}
+
+pub trait NodeExt: Node {
+    /// Return JSON-RPC client of this Node
+    fn json_rpc_client(&self) -> JsonRpcClient {
+        JsonRpcClient::new(self.json_rpc_endpoint().to_string())
+    }
+
+    /// Return a NodeDebugClient for this Node
+    fn debug_client(&self) -> NodeDebugClient {
+        NodeDebugClient::from_url(self.debug_endpoint())
+    }
+
+    /// Restarts this Node by calling Node::Stop followed by Node::Start
+    fn restart(&mut self) -> Result<()> {
+        self.stop()?;
+        self.start()
+    }
+
+    /// Query a Metric for from this Node
+    fn get_metric(&self, metric_name: &str) -> Result<Option<i64>> {
+        self.debug_client().get_node_metric(metric_name)
+    }
+
+    fn get_metric_with_fields(
+        &self,
+        metric_name: &str,
+        fields: HashMap<String, String>,
+    ) -> Result<Option<i64>> {
+        let filtered: Vec<_> = self
+            .debug_client()
+            .get_node_metric_with_name(metric_name)?
+            .into_iter()
+            .flat_map(|map| map.into_iter())
+            .filter_map(|(metric, metric_value)| {
+                if fields
+                    .iter()
+                    .all(|(key, value)| metric.contains(&format!("{}={}", key, value)))
+                {
+                    Some(metric_value)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(if filtered.is_empty() {
+            None
+        } else {
+            Some(filtered.iter().sum())
+        })
+    }
+
+    fn get_connected_peers(
+        &self,
+        network_id: NetworkId,
+        direction: Option<&str>,
+    ) -> Result<Option<i64>> {
+        let mut map = HashMap::new();
+        map.insert("network_id".to_string(), network_id.to_string());
+        if let Some(direction) = direction {
+            map.insert("direction".to_string(), direction.to_string());
+        }
+        self.get_metric_with_fields("diem_connections", map)
+    }
+}

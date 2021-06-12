@@ -3159,6 +3159,7 @@ dependencies = [
  "structopt 0.3.21",
  "termcolor",
  "tokio",
+ "url",
 ]
 
 [[package]]
