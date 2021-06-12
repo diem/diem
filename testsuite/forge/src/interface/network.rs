@@ -37,7 +37,7 @@ pub struct ChainInfo<'t> {
     pub root_account: &'t mut LocalAccount,
     pub treasury_compliance_account: &'t mut LocalAccount,
     pub dd_account: &'t mut LocalAccount,
-    pub json_rpc_url: &'t str,
+    pub json_rpc_url: String,
     pub chain_id: ChainId,
 }
 
@@ -46,7 +46,7 @@ impl<'t> ChainInfo<'t> {
         root_account: &'t mut LocalAccount,
         treasury_compliance_account: &'t mut LocalAccount,
         dd_account: &'t mut LocalAccount,
-        json_rpc_url: &'t str,
+        json_rpc_url: String,
         chain_id: ChainId,
     ) -> Self {
         Self {
@@ -71,7 +71,7 @@ impl<'t> ChainInfo<'t> {
     }
 
     pub fn json_rpc(&self) -> &str {
-        self.json_rpc_url
+        &self.json_rpc_url
     }
 
     pub fn chain_id(&self) -> ChainId {
