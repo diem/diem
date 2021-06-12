@@ -212,7 +212,7 @@ impl SubmissionWorker {
 }
 
 #[derive(Debug)]
-pub struct TxEmitter<'t> {
+pub struct TxnEmitter<'t> {
     accounts: Vec<LocalAccount>,
     txn_factory: TransactionFactory,
     chain_info: ChainInfo<'t>,
@@ -220,7 +220,7 @@ pub struct TxEmitter<'t> {
     rng: ::rand::rngs::StdRng,
 }
 
-impl<'t> TxEmitter<'t> {
+impl<'t> TxnEmitter<'t> {
     pub fn new(chain_info: ChainInfo<'t>, rng: ::rand::rngs::StdRng) -> Self {
         let txn_factory = TransactionFactory::new(chain_info.chain_id());
         let client = JsonRpcClient::new(chain_info.json_rpc());
@@ -451,7 +451,7 @@ impl<'t> TxEmitter<'t> {
             let mut accounts = worker
                 .join_handle
                 .await
-                .expect("TxEmitter worker thread failed");
+                .expect("TxnEmitter worker thread failed");
             self.accounts.append(&mut accounts);
         }
         job.stats.accumulate()

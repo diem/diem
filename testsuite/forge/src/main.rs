@@ -191,7 +191,7 @@ impl NetworkTest for EmitTransaction {
             .into_iter()
             .map(|n| n.json_rpc_client())
             .collect_vec();
-        let mut emitter = TxEmitter::new(ctx.swarm().chain_info(), rng);
+        let mut emitter = TxnEmitter::new(ctx.swarm().chain_info(), rng);
         let rt = Runtime::new().unwrap();
         let _stats = rt
             .block_on(emitter.emit_txn_for(duration, EmitJobRequest::default(validator_clients)))
