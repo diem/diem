@@ -159,11 +159,10 @@ impl Test for RestartValidator {
 
 impl NetworkTest for RestartValidator {
     fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
-        let node_id = NodeId::new(0);
-        let node = ctx.swarm().validator_mut(node_id);
+        let node = ctx.swarm().validators_mut().next().unwrap();
         node.health_check().expect("node health check failed");
         node.stop()?;
-        println!("Restarting node {}", node.node_id().as_inner());
+        println!("Restarting node {}", node.peer_id());
         node.start()?;
         // wait node to recovery
         std::thread::sleep(Duration::from_millis(1000));
