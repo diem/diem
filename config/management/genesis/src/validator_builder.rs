@@ -63,6 +63,14 @@ impl ValidatorConfig {
         }
     }
 
+    pub fn config_path(&self) -> PathBuf {
+        self.directory.join("node.yaml")
+    }
+
+    fn save_config(&mut self) -> Result<()> {
+        self.config.save(self.config_path()).map_err(Into::into)
+    }
+
     fn owner(&self) -> String {
         format!("{}{}", self.name, OWNER_NS)
     }
@@ -153,9 +161,9 @@ pub struct ValidatorBuilder {
 }
 
 impl ValidatorBuilder {
-    pub fn new<T: Into<PathBuf>>(config_directory: T) -> Self {
+    pub fn new<T: AsRef<Path>>(config_directory: T) -> Self {
         Self {
-            config_directory: config_directory.into(),
+            config_directory: config_directory.as_ref().into(),
             num_validators: 1,
             randomize_first_validator_ports: true,
             template: NodeConfig::default_for_validator(),
@@ -223,6 +231,11 @@ impl ValidatorBuilder {
             );
         }
 
+        // Save the configs for each validator
+        for validator in &mut validators {
+            validator.save_config()?;
+        }
+
         Ok((root_keys, validators))
     }
 
@@ -255,6 +268,7 @@ impl ValidatorBuilder {
             validator_network_address_encryption_key_version,
         )?;
 
+        validator.config.set_data_dir(validator.directory.clone());
         let mut config = &mut validator.config;
         if index > 0 || self.randomize_first_validator_ports {
             config.randomize_ports();
