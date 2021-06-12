@@ -9,9 +9,12 @@ use diem_logger::*;
 use diem_sdk::{
     move_types::account_address::AccountAddress,
     transaction_builder::{Currency, TransactionFactory},
-    types::{account_config::XUS_NAME, LocalAccount},
+    types::{
+        account_config::XUS_NAME,
+        transaction::{authenticator::AuthenticationKey, SignedTransaction},
+        LocalAccount,
+    },
 };
-use diem_types::transaction::{authenticator::AuthenticationKey, SignedTransaction};
 use futures::future::{try_join_all, FutureExt};
 use itertools::zip;
 use rand::{

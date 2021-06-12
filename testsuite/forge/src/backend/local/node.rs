@@ -5,7 +5,7 @@ use crate::{HealthCheckError, Node, NodeExt, Validator};
 use anyhow::{anyhow, Context, Result};
 use diem_config::config::NodeConfig;
 use diem_logger::{debug, warn};
-use diem_types::{account_address::AccountAddress, PeerId};
+use diem_sdk::types::{account_address::AccountAddress, PeerId};
 use std::{
     env,
     fs::{self, OpenOptions},

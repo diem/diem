@@ -12,9 +12,8 @@ use diem_genesis_tool::validator_builder::ValidatorBuilder;
 use diem_sdk::{
     crypto::ed25519::Ed25519PrivateKey,
     transaction_builder::TransactionFactory,
-    types::{AccountKey, LocalAccount},
+    types::{chain_id::ChainId, AccountKey, LocalAccount, PeerId},
 };
-use diem_types::{chain_id::ChainId, PeerId};
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -71,8 +70,8 @@ impl AsRef<Path> for SwarmDirectory {
 
 #[derive(Debug)]
 struct ValidatorNetworkAddressEncryptionKey {
-    key: diem_types::network_address::encrypted::Key,
-    version: diem_types::network_address::encrypted::KeyVersion,
+    key: diem_sdk::types::network_address::encrypted::Key,
+    version: diem_sdk::types::network_address::encrypted::KeyVersion,
 }
 
 pub struct LocalSwarmBuilder {
