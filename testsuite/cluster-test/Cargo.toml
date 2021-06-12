@@ -54,6 +54,7 @@ diem-swarm = { path = "../diem-swarm" }
 diem-time-service = { path = "../../common/time-service" }
 diem-types = { path = "../../types", features = ["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+forge = { path = "../forge" }
 language-e2e-tests = { path = "../../language/testing-infra/e2e-tests" }
 move-core-types = { path = "../../language/move-core/types" }
 network = { path = "../../network" }

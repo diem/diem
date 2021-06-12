@@ -31,4 +31,3 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-genesis-tool = { path = "../../config/management/genesis" }
 diem-retrier = { path = "../../common/retrier" }
 diem-client = { path = "../../sdk/client"}
-cluster-test = { path = "../cluster-test" }

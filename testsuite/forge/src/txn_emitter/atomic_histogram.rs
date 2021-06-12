@@ -117,8 +117,7 @@ impl AtomicHistogramSnapshot {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::tx_emitter::*;
-    // other use:: for test only
+    use crate::TxnStats;
 
     #[test]
     pub fn test_default_atomic_histogram() {
@@ -168,7 +167,7 @@ mod test {
         for i in 1..11 {
             histogram.record_data_point(i as u64 * 100, 1);
         }
-        let stat = TxStats {
+        let stat = TxnStats {
             submitted: 0,
             committed: 10,
             expired: 0,

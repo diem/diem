@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod atomic_histogram;
 pub mod aws;
 pub mod cluster;
 pub mod cluster_builder;

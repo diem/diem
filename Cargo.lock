@@ -945,6 +945,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "flate2",
+ "forge",
  "futures",
  "generate-key",
  "hex",
@@ -3138,7 +3139,6 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "cluster-test",
  "debug-interface",
  "diem-client",
  "diem-config",

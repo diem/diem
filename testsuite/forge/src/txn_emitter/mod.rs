@@ -3,7 +3,6 @@
 
 use crate::ChainInfo;
 use anyhow::{format_err, Result};
-use cluster_test::atomic_histogram::*;
 use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_logger::*;
 use diem_sdk::{
@@ -32,6 +31,9 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::{runtime::Handle, task::JoinHandle, time};
+
+pub mod atomic_histogram;
+use atomic_histogram::*;
 
 /// Max transactions per account in mempool
 const MAX_TXN_BATCH_SIZE: usize = 100;

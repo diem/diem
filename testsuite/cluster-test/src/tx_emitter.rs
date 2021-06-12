@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
+use crate::{cluster::Cluster, instance::Instance};
 use anyhow::{format_err, Result};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -17,6 +17,7 @@ use diem_types::{
     chain_id::ChainId,
     transaction::authenticator::AuthenticationKey,
 };
+use forge::atomic_histogram::*;
 use itertools::zip;
 use rand::{
     prelude::ThreadRng,
