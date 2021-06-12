@@ -33,7 +33,7 @@ impl<'t> AdminContext<'t> {
     }
 
     pub fn client(&self) -> BlockingClient {
-        BlockingClient::new(self.admin_info.json_rpc_url)
+        BlockingClient::new(&self.admin_info.json_rpc_url)
     }
 }
 
@@ -42,7 +42,7 @@ pub struct AdminInfo<'t> {
     root_account: &'t mut LocalAccount,
     treasury_compliance_account: &'t mut LocalAccount,
 
-    json_rpc_url: &'t str,
+    json_rpc_url: String,
     chain_id: ChainId,
 }
 
@@ -50,7 +50,7 @@ impl<'t> AdminInfo<'t> {
     pub fn new(
         root_account: &'t mut LocalAccount,
         treasury_compliance_account: &'t mut LocalAccount,
-        json_rpc_url: &'t str,
+        json_rpc_url: String,
         chain_id: ChainId,
     ) -> Self {
         Self {
