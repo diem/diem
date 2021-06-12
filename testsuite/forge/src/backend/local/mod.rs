@@ -17,6 +17,9 @@ use diem_swarm::swarm::{DiemNode, DiemSwarm, HealthStatus};
 use reqwest::Url;
 use std::str::FromStr;
 
+pub mod node;
+pub mod swarm;
+
 struct LocalSwarm {
     validator_swarm: DiemSwarm,
     vfn_swarm: DiemSwarm,

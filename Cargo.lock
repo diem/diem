@@ -3157,6 +3157,7 @@ dependencies = [
  "reqwest",
  "serde_json",
  "structopt 0.3.21",
+ "tempfile",
  "termcolor",
  "tokio",
  "url",
