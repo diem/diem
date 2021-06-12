@@ -66,6 +66,8 @@ the [Diem framework documentation][FRAMEWORK] which has specifications embedded.
             - [Function Invariants](#function-invariants)
             - [Struct Invariants](#struct-invariants)
             - [Global Invariants](#global-invariants)
+                - [Disabling Invariants](#disabling-invariants)
+                - [Update Invariants](#update-invariants)
                 - [Isolated Global Invariants](#isolated-global-invariants)
                 - [Modular Verification and Global Invariants](#modular-verification-and-global-invariants)
         - [Assume and Assert Conditions in Code](#assume-and-assert-conditions-in-code)
@@ -818,6 +820,113 @@ fun decrement_ad(addr: address) acquires Counter {
     *counter.value = new_value;          // Fails verification since value can drop to zero
 }
 ```
+
+#### Disabling Invariants
+
+There are times when a global invariant holds almost everywhere,
+except for a brief interval inside a function. In current move code,
+this often occurs when something (e.g. an account) is being setup and
+several structs are published together. Almost everywhere, an
+invariant holds that all of the structs are published or none of them
+are. But the code that publishes the structs must do so sequentially.
+While they are being published, there will be a point where some are
+published and others are not.
+
+In order to verify invariants that hold except during small regions, there
+is a feature to allow users to disable invariants temporarily.
+Consider the following code fragment:
+
+```move
+fn setup() {
+    publish1();
+    publish2();
+    }
+}
+```
+where `publish1` and `publish2` publish two different structs, `T1` and `T2` at address `a`.
+
+```move
+module M {
+    invariant [global] exists<T1>(a) == exists<T2>(a)
+}
+```
+
+As written, the prover will report that the invariant is violated
+after the call to `publish1` and before the call to `publish2`.
+If either of `publish1` or `publish2` is without the other, the prover
+will also report a violation of the invariant.
+
+To prove that the invariant holds everywhere else, there is a pragma
+```move
+spec setup {
+    pragma disable_invariants_in_body;
+}
+```
+which says that invariants not required to hold while `setup` is executing,
+but are assumed to hold on entry to and exit from `setup`.
+
+This pragma changes the Prover's behavior. The invariants are assumed on
+entry to `setup`, but not proved during or after `publish1` and
+`publish2`.  Instead, all invariants that could be invalidated in the
+body of `setup` are asserted and proved at the point of return from
+`setup`.  A consequence of this processing is that the user may need
+to provide stronger post-conditions on `publish1` and `publish2` to
+make it possible to prove the invariants on exit from `setup`.
+
+Another consequence of this processing is that invariants cannot
+safely be assumed to hold during the execution of `publish1` and
+`publish2` (unless nothing in the body of `setup` changes state
+mentioned in the invariant). Therefore, if proving a post-condition
+requires the invariant to be assumed, the post-condition will fail.
+
+In the example, invariants hold at the call sites of `setup`, but not
+in the body. For `publish1`, invariants don't necessarily hold at the
+call site *or* in the body of the function.  In the example, that
+behavior is implied because `publish1` is called in a context where
+invariants are disabled.
+
+When invariants are disabled in `setup` in the above example, the
+prover cannot assume them on entry to `publish1` and `publish2`, and
+should not try to prove them on exit from those functions. The Prover
+would have the same behavior for any functions called by `publish1` or
+`publish2`.  The Prover *automatically* adopts this behavior when
+invariants are disabled in a calling function, but it is possible for
+the user to declare that a function be treated like `publish1`.
+
+For example, if `publish2` is *only* called from the setup function above,
+and we did *not* disable invariants in `setup`, we could achieve a similar
+effect by using this pragma, instead.
+
+```move
+spec setup {
+    pragma delegate_invariants_to_caller;
+}
+```
+This would only be legal if `setup` is a private or `public (friend)` function.
+The difference between this and disabling invariants in `setup` is that the
+invariants would not be assumed at the beginning of `setup` and would be proved
+after `setup` returns at each site where it is called.
+
+While both pragmas disable invariants in the body of a function, the
+difference is that `disable_invariants_in_body` assumes invariants on
+entry and proves them on exist, while `delegate_invariants_to_caller`
+does neither.
+
+There are some limitations on how these pragmas can be used.
+`disable_invariants_in_body` cannot be declared for functions where
+invariants are delegated to a caller, either explicitly via the pragma
+or implicitly because the function is called in a context where
+invariants have been disabled. (This restriction is to ensure
+consistent processing, because on pragma assumes that invariants hold
+in the calling context and the other does not).  Second, it is illegal
+for a public or script function to delegate invariant checking to its
+callers (since the Prover does not know all the call sites), *unless*
+the function cannot possibly invalidate an invariant because it
+doesn't change any of the state mentioned in `exists` and `global`
+expressions appearing in the invariant.
+
+
+#### Update Invariants
 
 The `update` form of a global invariant allows to express a relation
 between [pre-state and post-state](#pre-and-post-state) of a global state update. For example, the
