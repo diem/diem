@@ -79,7 +79,16 @@ pub trait Node {
 }
 
 /// Trait used to represent a running Validator
-pub trait Validator: Node {}
+pub trait Validator: Node {
+    fn check_connectivity(&self, expected_peers: usize) -> Result<bool> {
+        if expected_peers == 0 {
+            return Ok(true);
+        }
+
+        self.get_connected_peers(NetworkId::Validator, None)
+            .map(|maybe_n| maybe_n.map(|n| n >= expected_peers as i64).unwrap_or(false))
+    }
+}
 
 /// Trait used to represent a running FullNode
 pub trait FullNode: Node {}
