@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    AdminInfo, ChainInfo, Coffer, Factory, FullNode, Node, NodeId, PublicInfo, Result, Swarm,
-    Validator,
+    AdminInfo, ChainInfo, Coffer, Factory, FullNode, HealthCheckError, Node, NodeId, PublicInfo,
+    Result, Swarm, Validator,
 };
 use anyhow::ensure;
 use debug_interface::NodeDebugClient;
@@ -131,7 +131,7 @@ impl Swarm for LocalSwarm {
         AdminInfo::new(
             &mut self.root_account,
             &mut self.treasury_compliance_account,
-            &self.url,
+            self.url.clone(),
             self.chain_id,
         )
     }
@@ -154,7 +154,7 @@ impl Swarm for LocalSwarm {
             &mut self.root_account,
             &mut self.treasury_compliance_account,
             &mut self.designated_dealer_account,
-            &self.url,
+            self.url.clone(),
             self.chain_id,
         )
     }
@@ -192,21 +192,6 @@ impl LocalSwarm {
         true
     }
 }
-
-#[derive(Debug)]
-pub enum HealthCheckError {
-    Crashed,
-    NotStarted,
-    RpcFailure(anyhow::Error),
-}
-
-impl std::fmt::Display for HealthCheckError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::error::Error for HealthCheckError {}
 
 impl Node for DiemNode {
     fn peer_id(&self) -> PeerId {
@@ -254,8 +239,8 @@ impl Node for DiemNode {
 
     fn health_check(&mut self) -> Result<(), HealthCheckError> {
         match self.health_check() {
-            HealthStatus::Stopped => Err(HealthCheckError::NotStarted),
-            HealthStatus::Crashed(_) => Err(HealthCheckError::Crashed),
+            HealthStatus::Stopped => Err(HealthCheckError::NotRunning),
+            HealthStatus::Crashed(_) => Err(HealthCheckError::NotRunning),
             HealthStatus::RpcFailure(e) => Err(HealthCheckError::RpcFailure(e)),
             _ => Ok(()),
         }

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{HealthCheckError, Result};
+use crate::Result;
 use debug_interface::NodeDebugClient;
 use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
@@ -23,6 +23,21 @@ impl NodeId {
         self.0
     }
 }
+
+#[derive(Debug)]
+pub enum HealthCheckError {
+    NotRunning,
+    RpcFailure(anyhow::Error),
+    Unknown(anyhow::Error),
+}
+
+impl std::fmt::Display for HealthCheckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for HealthCheckError {}
 
 /// Trait used to represent a running Validator or FullNode
 pub trait Node {
