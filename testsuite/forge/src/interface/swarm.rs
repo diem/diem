@@ -17,10 +17,10 @@ pub trait Swarm {
     fn validators_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn Validator> + 'a>;
 
     /// Returns a reference to the Validator with the provided PeerId
-    fn validator(&self, id: PeerId) -> &dyn Validator;
+    fn validator(&self, id: PeerId) -> Option<&dyn Validator>;
 
     /// Returns a mutable reference to the Validator with the provided PeerId
-    fn validator_mut(&mut self, id: PeerId) -> &mut dyn Validator;
+    fn validator_mut(&mut self, id: PeerId) -> Option<&mut dyn Validator>;
 
     /// Returns an Iterator of references to all the FullNodes in the Swarm
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a>;
@@ -29,10 +29,10 @@ pub trait Swarm {
     fn full_nodes_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn FullNode> + 'a>;
 
     /// Returns a reference to the FullNode with the provided PeerId
-    fn full_node(&self, id: PeerId) -> &dyn FullNode;
+    fn full_node(&self, id: PeerId) -> Option<&dyn FullNode>;
 
     /// Returns a mutable reference to the FullNode with the provided PeerId
-    fn full_node_mut(&mut self, id: PeerId) -> &mut dyn FullNode;
+    fn full_node_mut(&mut self, id: PeerId) -> Option<&mut dyn FullNode>;
 
     /// Adds a Validator to the swarm with the provided PeerId
     fn add_validator(&mut self, id: PeerId) -> Result<PeerId>;

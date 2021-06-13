@@ -277,11 +277,11 @@ impl Swarm for LocalSwarm {
         )
     }
 
-    fn validator(&self, _id: PeerId) -> &dyn Validator {
+    fn validator(&self, _id: PeerId) -> Option<&dyn Validator> {
         todo!()
     }
 
-    fn validator_mut(&mut self, _id: PeerId) -> &mut dyn Validator {
+    fn validator_mut(&mut self, _id: PeerId) -> Option<&mut dyn Validator> {
         todo!()
     }
 
@@ -293,11 +293,11 @@ impl Swarm for LocalSwarm {
         todo!()
     }
 
-    fn full_node(&self, _id: PeerId) -> &dyn FullNode {
+    fn full_node(&self, _id: PeerId) -> Option<&dyn FullNode> {
         todo!()
     }
 
-    fn full_node_mut(&mut self, _id: PeerId) -> &mut dyn FullNode {
+    fn full_node_mut(&mut self, _id: PeerId) -> Option<&mut dyn FullNode> {
         todo!()
     }
 
