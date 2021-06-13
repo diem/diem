@@ -142,4 +142,21 @@ pub trait NodeExt: Node {
         }
         self.get_metric_with_fields("diem_connections", map)
     }
+
+    fn liveness_check(&self, seconds: u64) -> Result<()> {
+        let mut url = self.json_rpc_endpoint();
+        url.set_path("-/healthy");
+        url.set_query(Some(&format!("duration_secs={}", seconds)));
+
+        let resp = reqwest::blocking::Client::new().get(url).send()?;
+
+        if !resp.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Node {} failed a liveness check",
+                self.name()
+            ));
+        }
+
+        Ok(())
+    }
 }
