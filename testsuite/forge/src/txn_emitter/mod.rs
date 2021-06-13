@@ -3,9 +3,9 @@
 
 use crate::ChainInfo;
 use anyhow::{format_err, Result};
-use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_logger::*;
 use diem_sdk::{
+    client::{views::AmountView, Client as JsonRpcClient, MethodRequest},
     move_types::account_address::AccountAddress,
     transaction_builder::{Currency, TransactionFactory},
     types::{

@@ -3,9 +3,8 @@
 
 use crate::Result;
 use debug_interface::NodeDebugClient;
-use diem_client::Client as JsonRpcClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
-use diem_sdk::types::PeerId;
+use diem_sdk::{client::Client as JsonRpcClient, types::PeerId};
 use std::collections::HashMap;
 use url::Url;
 

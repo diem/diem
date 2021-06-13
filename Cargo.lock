@@ -3140,7 +3140,6 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "debug-interface",
- "diem-client",
  "diem-config",
  "diem-genesis-tool",
  "diem-logger",
