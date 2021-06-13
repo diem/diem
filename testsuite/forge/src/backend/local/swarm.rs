@@ -1,17 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    node::LocalNode, AdminInfo, ChainInfo, Coffer, FullNode, HealthCheckError, Node, PublicInfo,
-    Swarm, Validator,
-};
+use crate::{node::LocalNode, ChainInfo, FullNode, HealthCheckError, Node, Swarm, Validator};
 use anyhow::{anyhow, Result};
-use diem_client::BlockingClient;
 use diem_config::config::NodeConfig;
 use diem_genesis_tool::validator_builder::ValidatorBuilder;
 use diem_sdk::{
     crypto::ed25519::Ed25519PrivateKey,
-    transaction_builder::TransactionFactory,
     types::{chain_id::ChainId, AccountKey, LocalAccount, PeerId},
 };
 use std::{
@@ -315,37 +310,6 @@ impl Swarm for LocalSwarm {
 
     fn remove_full_node(&mut self, _id: PeerId) -> Result<()> {
         todo!()
-    }
-
-    fn admin_info(&mut self) -> AdminInfo<'_> {
-        AdminInfo::new(
-            &mut self.root_account,
-            &mut self.treasury_compliance_account,
-            self.validators
-                .values()
-                .map(|v| v.json_rpc_endpoint().to_string())
-                .next()
-                .unwrap(),
-            self.chain_id,
-        )
-    }
-
-    fn public_info(&mut self) -> PublicInfo<'_> {
-        let url = self
-            .validators()
-            .map(|v| v.json_rpc_endpoint().to_string())
-            .next()
-            .unwrap();
-        PublicInfo::new(
-            url.clone(),
-            self.chain_id,
-            Coffer::TreasuryCompliance {
-                transaction_factory: TransactionFactory::new(ChainId::test()),
-                json_rpc_client: BlockingClient::new(url),
-                treasury_compliance_account: &mut self.treasury_compliance_account,
-                designated_dealer_account: &mut self.designated_dealer_account,
-            },
-        )
     }
 
     fn chain_info(&mut self) -> ChainInfo<'_> {

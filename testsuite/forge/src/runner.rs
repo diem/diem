@@ -124,16 +124,20 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
 
         // Run PublicUsageTests
         for test in self.tests.public_usage_tests {
-            let mut public_ctx =
-                PublicUsageContext::new(CoreContext::from_rng(&mut rng), swarm.public_info());
+            let mut public_ctx = PublicUsageContext::new(
+                CoreContext::from_rng(&mut rng),
+                swarm.chain_info().into_public_info(),
+            );
             let result = run_test(|| test.run(&mut public_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }
 
         // Run AdminTests
         for test in self.tests.admin_tests {
-            let mut admin_ctx =
-                AdminContext::new(CoreContext::from_rng(&mut rng), swarm.admin_info());
+            let mut admin_ctx = AdminContext::new(
+                CoreContext::from_rng(&mut rng),
+                swarm.chain_info().into_admin_info(),
+            );
             let result = run_test(|| test.run(&mut admin_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }
