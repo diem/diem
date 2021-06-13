@@ -1,135 +1,521 @@
 Move prover returns: exiting with boogie verification errors
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:143:17 ───
+     │
+ 143 │                 assert forall k in 0..len(old(v)): v[k] == old(v)[k];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:135: verify_append
+     =         v = <redacted>
+     =         other = <redacted>
+     =     at tests/sources/functional/verify_vector.move:136: verify_append
+     =         o = <redacted>
+     =     at tests/sources/functional/verify_vector.move:137: verify_append
+     =     at tests/sources/functional/verify_vector.move:139: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:147: verify_append
+     =     at tests/sources/functional/verify_vector.move:138: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:144:17 ───
+     │
+ 144 │                 assert forall k in 0..len(o): o[k] == other[len(other)-1-k];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:135: verify_append
+     =         v = <redacted>
+     =         other = <redacted>
+     =     at tests/sources/functional/verify_vector.move:136: verify_append
+     =         o = <redacted>
+     =     at tests/sources/functional/verify_vector.move:137: verify_append
+     =     at tests/sources/functional/verify_vector.move:139: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:147: verify_append
+     =     at tests/sources/functional/verify_vector.move:138: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:145:17 ───
+     │
+ 145 │                 assert forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:135: verify_append
+     =         v = <redacted>
+     =         other = <redacted>
+     =     at tests/sources/functional/verify_vector.move:136: verify_append
+     =         o = <redacted>
+     =     at tests/sources/functional/verify_vector.move:137: verify_append
+     =     at tests/sources/functional/verify_vector.move:139: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:147: verify_append
+     =     at tests/sources/functional/verify_vector.move:138: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:155:9 ───
+     │
+ 155 │         ensures v[0..len(old(v))] == old(v);
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:135: verify_append
+     =         v = <redacted>
+     =         other = <redacted>
+     =     at tests/sources/functional/verify_vector.move:136: verify_append
+     =         o = <redacted>
+     =     at tests/sources/functional/verify_vector.move:137: verify_append
+     =     at tests/sources/functional/verify_vector.move:139: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:147: verify_append
+     =     at tests/sources/functional/verify_vector.move:138: verify_append
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:154
+     =     at tests/sources/functional/verify_vector.move:155
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:156:9 ───
+     │
+ 156 │         ensures v[len(old(v))..len(v)] == other;
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:135: verify_append
+     =         v = <redacted>
+     =         other = <redacted>
+     =     at tests/sources/functional/verify_vector.move:136: verify_append
+     =         o = <redacted>
+     =     at tests/sources/functional/verify_vector.move:137: verify_append
+     =     at tests/sources/functional/verify_vector.move:139: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:140: verify_append
+     =     at tests/sources/functional/verify_vector.move:141: verify_append
+     =     at tests/sources/functional/verify_vector.move:142: verify_append
+     =     at tests/sources/functional/verify_vector.move:143: verify_append
+     =     at tests/sources/functional/verify_vector.move:144: verify_append
+     =     at tests/sources/functional/verify_vector.move:145: verify_append
+     =     at tests/sources/functional/verify_vector.move:147: verify_append
+     =     at tests/sources/functional/verify_vector.move:138: verify_append
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:154
+     =     at tests/sources/functional/verify_vector.move:155
+     =     at tests/sources/functional/verify_vector.move:156
+
 error: unknown assertion failed
 
-     ┌── tests/sources/functional/verify_vector.move:255:12 ───
+     ┌── tests/sources/functional/verify_vector.move:234:12 ───
      │
- 255 │            assert !(exists x in v: x==e);
+ 234 │            assert !(exists x in v: x==e);
      │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:261
-     =     at tests/sources/functional/verify_vector.move:242: verify_contains
+     =     at tests/sources/functional/verify_vector.move:240
+     =     at tests/sources/functional/verify_vector.move:221: verify_contains
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:243: verify_contains
+     =     at tests/sources/functional/verify_vector.move:222: verify_contains
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:244: verify_contains
+     =     at tests/sources/functional/verify_vector.move:223: verify_contains
      =         len = <redacted>
-     =     at tests/sources/functional/verify_vector.move:246: verify_contains
-     =     at tests/sources/functional/verify_vector.move:247: verify_contains
-     =     at tests/sources/functional/verify_vector.move:249: verify_contains
-     =     at tests/sources/functional/verify_vector.move:245: verify_contains
-     =     at tests/sources/functional/verify_vector.move:255: verify_contains
+     =     at tests/sources/functional/verify_vector.move:225: verify_contains
+     =     at tests/sources/functional/verify_vector.move:226: verify_contains
+     =     at tests/sources/functional/verify_vector.move:228: verify_contains
+     =     at tests/sources/functional/verify_vector.move:224: verify_contains
+     =     at tests/sources/functional/verify_vector.move:234: verify_contains
 
 error: induction case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/verify_vector.move:247:16 ───
+     ┌── tests/sources/functional/verify_vector.move:226:16 ───
      │
- 247 │                assert !(exists j in 0..i: v[j]==e);
+ 226 │                assert !(exists j in 0..i: v[j]==e);
      │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:261
-     =     at tests/sources/functional/verify_vector.move:242: verify_contains
+     =     at tests/sources/functional/verify_vector.move:240
+     =     at tests/sources/functional/verify_vector.move:221: verify_contains
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:243: verify_contains
+     =     at tests/sources/functional/verify_vector.move:222: verify_contains
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:244: verify_contains
+     =     at tests/sources/functional/verify_vector.move:223: verify_contains
      =         len = <redacted>
-     =     at tests/sources/functional/verify_vector.move:246: verify_contains
-     =     at tests/sources/functional/verify_vector.move:247: verify_contains
-     =     at tests/sources/functional/verify_vector.move:249: verify_contains
-     =     at tests/sources/functional/verify_vector.move:245: verify_contains
+     =     at tests/sources/functional/verify_vector.move:225: verify_contains
+     =     at tests/sources/functional/verify_vector.move:226: verify_contains
+     =     at tests/sources/functional/verify_vector.move:228: verify_contains
+     =     at tests/sources/functional/verify_vector.move:224: verify_contains
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:247: verify_contains
+     =     at tests/sources/functional/verify_vector.move:226: verify_contains
 
 error: induction case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/verify_vector.move:213:17 ───
+     ┌── tests/sources/functional/verify_vector.move:192:17 ───
      │
- 213 │                 assert !(exists j in 0..i: v[j]==e);
+ 192 │                 assert !(exists j in 0..i: v[j]==e);
      │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:227
-     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:206
+     =     at tests/sources/functional/verify_vector.move:187: verify_index_of
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:188: verify_index_of
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:189: verify_index_of
      =         len = <redacted>
-     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:191: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:192: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:194: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:190: verify_index_of
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:192: verify_index_of
 
 error: post-condition does not hold
 
-     ┌── tests/sources/functional/verify_vector.move:224:9 ───
+     ┌── tests/sources/functional/verify_vector.move:203:9 ───
      │
- 224 │         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
+ 203 │         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:227
-     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:206
+     =     at tests/sources/functional/verify_vector.move:187: verify_index_of
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:188: verify_index_of
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:189: verify_index_of
      =         len = <redacted>
-     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:191: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:192: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:194: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:190: verify_index_of
      =         result_1 = <redacted>
      =         result_2 = <redacted>
-     =     at tests/sources/functional/verify_vector.move:223
-     =     at tests/sources/functional/verify_vector.move:224
+     =     at tests/sources/functional/verify_vector.move:202
+     =     at tests/sources/functional/verify_vector.move:203
 
 error: post-condition does not hold
 
-     ┌── tests/sources/functional/verify_vector.move:226:9 ───
+     ┌── tests/sources/functional/verify_vector.move:205:9 ───
      │
- 226 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
+ 205 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:227
-     =     at tests/sources/functional/verify_vector.move:208: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:206
+     =     at tests/sources/functional/verify_vector.move:187: verify_index_of
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:209: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:188: verify_index_of
      =         i = <redacted>
-     =     at tests/sources/functional/verify_vector.move:210: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:189: verify_index_of
      =         len = <redacted>
-     =     at tests/sources/functional/verify_vector.move:212: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:213: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:215: verify_index_of
-     =     at tests/sources/functional/verify_vector.move:211: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:191: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:192: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:194: verify_index_of
+     =     at tests/sources/functional/verify_vector.move:190: verify_index_of
      =         result_1 = <redacted>
      =         result_2 = <redacted>
-     =     at tests/sources/functional/verify_vector.move:223
-     =     at tests/sources/functional/verify_vector.move:224
-     =     at tests/sources/functional/verify_vector.move:225
-     =     at tests/sources/functional/verify_vector.move:226
+     =     at tests/sources/functional/verify_vector.move:202
+     =     at tests/sources/functional/verify_vector.move:203
+     =     at tests/sources/functional/verify_vector.move:204
+     =     at tests/sources/functional/verify_vector.move:205
 
 error: post-condition does not hold
 
-     ┌── tests/sources/functional/verify_vector.move:237:9 ───
+     ┌── tests/sources/functional/verify_vector.move:216:9 ───
      │
- 237 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
+ 216 │         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/verify_vector.move:238
-     =     at tests/sources/functional/verify_vector.move:230: verify_model_index_of
+     =     at tests/sources/functional/verify_vector.move:217
+     =     at tests/sources/functional/verify_vector.move:209: verify_model_index_of
      =         v = <redacted>
      =         e = <redacted>
-     =     at tests/sources/functional/verify_vector.move:231: verify_model_index_of
+     =     at tests/sources/functional/verify_vector.move:210: verify_model_index_of
      =         result_1 = <redacted>
      =         result_2 = <redacted>
-     =     at tests/sources/functional/verify_vector.move:232: verify_model_index_of
-     =     at tests/sources/functional/verify_vector.move:234
-     =     at tests/sources/functional/verify_vector.move:235
-     =     at tests/sources/functional/verify_vector.move:236
-     =     at tests/sources/functional/verify_vector.move:237
+     =     at tests/sources/functional/verify_vector.move:211: verify_model_index_of
+     =     at tests/sources/functional/verify_vector.move:213
+     =     at tests/sources/functional/verify_vector.move:214
+     =     at tests/sources/functional/verify_vector.move:215
+     =     at tests/sources/functional/verify_vector.move:216
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:266:17 ───
+     │
+ 266 │                 assert forall k in j..i: v[k] == old(v)[k+1];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:282
+     =     at tests/sources/functional/verify_vector.move:254: verify_remove
+     =         v = <redacted>
+     =         j = <redacted>
+     =     at tests/sources/functional/verify_vector.move:255: verify_remove
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:256: verify_remove
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:258: verify_remove
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:262: verify_remove
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+     =     at tests/sources/functional/verify_vector.move:267: verify_remove
+     =     at tests/sources/functional/verify_vector.move:268: verify_remove
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+     =     at tests/sources/functional/verify_vector.move:267: verify_remove
+     =     at tests/sources/functional/verify_vector.move:268: verify_remove
+     =     at tests/sources/functional/verify_vector.move:270: verify_remove
+     =     at tests/sources/functional/verify_vector.move:261: verify_remove
+     =     at tests/sources/functional/verify_vector.move:273: verify_remove
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:267:17 ───
+     │
+ 267 │                 assert forall k in i+1..len(v): v[k] == old(v)[k];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:282
+     =     at tests/sources/functional/verify_vector.move:254: verify_remove
+     =         v = <redacted>
+     =         j = <redacted>
+     =     at tests/sources/functional/verify_vector.move:255: verify_remove
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:256: verify_remove
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:258: verify_remove
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:262: verify_remove
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+     =     at tests/sources/functional/verify_vector.move:267: verify_remove
+     =     at tests/sources/functional/verify_vector.move:268: verify_remove
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+     =     at tests/sources/functional/verify_vector.move:267: verify_remove
+     =     at tests/sources/functional/verify_vector.move:268: verify_remove
+     =     at tests/sources/functional/verify_vector.move:270: verify_remove
+     =     at tests/sources/functional/verify_vector.move:261: verify_remove
+     =     at tests/sources/functional/verify_vector.move:273: verify_remove
+     =         i = <redacted>
+     =     at tests/sources/functional/verify_vector.move:263: verify_remove
+     =     at tests/sources/functional/verify_vector.move:264: verify_remove
+     =     at tests/sources/functional/verify_vector.move:265: verify_remove
+     =     at tests/sources/functional/verify_vector.move:266: verify_remove
+     =     at tests/sources/functional/verify_vector.move:267: verify_remove
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:108:17 ───
+     │
+ 108 │                 assert forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:100: verify_reverse
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:101: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:104: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:106: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:113: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:105: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:116: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:117: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:109:17 ───
+     │
+ 109 │                 assert forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:100: verify_reverse
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:101: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:104: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:106: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:113: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:105: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:116: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:117: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:110:17 ───
+     │
+ 110 │                 assert forall j in front_index..back_index+1: v[j] == old(v)[j];
+     │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:100: verify_reverse
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:101: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:104: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:106: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:113: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:105: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:116: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:117: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+
+error: post-condition does not hold
+
+     ┌── tests/sources/functional/verify_vector.move:122:9 ───
+     │
+ 122 │         ensures forall i in 0..len(v): v[i] == old(v)[len(v)-1-i];
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:100: verify_reverse
+     =         vlen = <redacted>
+     =     at tests/sources/functional/verify_vector.move:101: verify_reverse
+     =         front_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:104: verify_reverse
+     =         back_index = <redacted>
+     =     at tests/sources/functional/verify_vector.move:106: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:107: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:108: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:109: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:110: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:111: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:113: verify_reverse
+     =     at tests/sources/functional/verify_vector.move:105: verify_reverse
+     =         v = <redacted>
+     =     at tests/sources/functional/verify_vector.move:121
+     =     at tests/sources/functional/verify_vector.move:122

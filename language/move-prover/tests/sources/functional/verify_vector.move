@@ -95,32 +95,19 @@ module 0x42::VerifyVector {
         ensures result[0] == e;
     }
 
-    spec module {
-        /// Ghost variable `old_v` used to store the old value of the array v.
-        /// TODO: by allowing old(.) to appear in assume/assert expressions,
-        /// we can eliminate the need for old_v.
-        global old_v<Element>: vector<Element>;
-        global old_other<Element>: vector<Element>;
-    }
-
     // Reverses the order of the elements in the vector in place.
     fun verify_reverse<Element>(v: &mut vector<Element>) {
         let vlen = Vector::length(v);
         if (vlen == 0) return ();
-
-        spec {
-            /// Initialize the old vector `old_v` ghost variable
-            assume old_v<Element> == v;
-        };
 
         let front_index = 0;
         let back_index = vlen -1;
         while ({
             spec {
                 assert front_index + back_index == vlen - 1;
-                assert forall i in 0..front_index: v[i] == old_v<Element>[vlen-1-i];
-                assert forall i in 0..front_index: v[vlen-1-i] == old_v<Element>[i];
-                assert forall j in front_index..back_index+1: v[j] == old_v<Element>[j];
+                assert forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
+                assert forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
+                assert forall j in front_index..back_index+1: v[j] == old(v)[j];
                 assert len(v) == vlen;
             };
             (front_index < back_index)
@@ -131,8 +118,6 @@ module 0x42::VerifyVector {
         };
     }
     spec verify_reverse {
-        // TODO(shaz): Enable once old() in loop invariants is implemented
-        pragma verify = false;
         aborts_if false;
         ensures forall i in 0..len(v): v[i] == old(v)[len(v)-1-i];
     }
@@ -148,33 +133,27 @@ module 0x42::VerifyVector {
 
     // Moves all of the elements of the `other` vector into the `v` vector.
     fun verify_append<Element>(v: &mut vector<Element>, other: vector<Element>) {
-        spec {
-            /// Initialize the old vector `old_v` and `old_other` ghost variables
-            assume old_v<Element> == v;
-            assume old_other<Element> == other;
-        };
-        Vector::reverse(&mut other);
+        let o = &mut other;
+        Vector::reverse(o);
         while ({
             spec {
-                assert len(v) >= len(old_v<Element>);
-                assert len(other) <= len(old_other<Element>);
-                assert len(v) + len(other) == len(old_v<Element>) + len(old_other<Element>);
-                assert forall k in 0..len(old_v<Element>): v[k] == old_v<Element>[k];
-                assert forall k in 0..len(other): other[k] == old_other<Element>[len(old_other<Element>)-1-k];
-                assert forall k in len(old_v<Element>)..len(v): v[k] == old_other<Element>[k-len(old_v<Element>)];
+                assert len(v) >= len(old(v));
+                assert len(o) <= len(other);
+                assert len(v) + len(o) == len(old(v)) + len(other);
+                assert forall k in 0..len(old(v)): v[k] == old(v)[k];
+                assert forall k in 0..len(o): o[k] == other[len(other)-1-k];
+                assert forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
             };
-            !Vector::is_empty(&other)
+            !Vector::is_empty(o)
         }) {
-            Vector::push_back(v, Vector::pop_back(&mut other))
+            Vector::push_back(v, Vector::pop_back(o))
         };
         Vector::destroy_empty(other);
     }
     spec verify_append {
-        // TODO(shaz): Enable once old() in loop invariants is implemented
-        pragma verify = false;
-        ensures len(v) == old(len(v) + len(other));
+        ensures len(v) == old(len(v)) + len(other);
         ensures v[0..len(old(v))] == old(v);
-        ensures v[len(old(v))..len(v)] == old(other);
+        ensures v[len(old(v))..len(v)] == other;
     }
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
@@ -278,30 +257,24 @@ module 0x42::VerifyVector {
         // i out of bounds; abort
         if (i >= vlen) abort 10;
 
-        spec {
-            /// Initialize the old vector `old_v` ghost variable
-            assume old_v<Element> == v;
-        };
-
         vlen = vlen - 1;
         while ({
             spec {
                 assert j <= i && i <= vlen;
                 assert vlen + 1 == len(v);
-                assert v[0..j] == old_v<Element>[0..j];
-                assert forall k in j..i: v[k] == old_v<Element>[k+1];
-                assert forall k in i+1..len(v): v[k] == old_v<Element>[k];
-                assert v[i] == old_v<Element>[j];
+                assert v[0..j] == old(v)[0..j];
+                assert forall k in j..i: v[k] == old(v)[k+1];
+                assert forall k in i+1..len(v): v[k] == old(v)[k];
+                assert v[i] == old(v)[j];
             };
             i < vlen
             }) {
-            Vector::swap(v, i, { i = i + 1; i });
+            Vector::swap(v, i, i + 1);
+            i = i + 1;
         };
         Vector::pop_back(v)
     }
     spec verify_remove {
-        // TODO(shaz): Enable once old() in loop invariants is implemented
-        pragma verify = false;
         aborts_if j >= len(v);
         ensures len(v) == len(old(v)) - 1;
         ensures v[0..j] == old(v[0..j]);

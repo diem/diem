@@ -1,0 +1,41 @@
+error: invalid old(..) expression in inline spec block
+
+   ┌── tests/sources/inline_spec_err.move:9:7 ───
+   │
+ 9 │       assert old(a) == y;
+   │       ^^^^^^^^^^^^^^^^^^^
+   ·
+ 9 │       assert old(a) == y;
+   │       ------------------- only a function parameter is allowed in old(..) expressions in inline spec block
+   ·
+ 9 │       assert old(a) == y;
+   │                  - this expression is not a function parameter
+   │
+
+error: invalid old(..) expression in inline spec block
+
+    ┌── tests/sources/inline_spec_err.move:10:7 ───
+    │
+ 10 │       assert old(b) == 0;
+    │       ^^^^^^^^^^^^^^^^^^^
+    ·
+ 10 │       assert old(b) == 0;
+    │       ------------------- only a function parameter is allowed in old(..) expressions in inline spec block
+    ·
+ 10 │       assert old(b) == 0;
+    │                  - this expression is not a function parameter
+    │
+
+error: invalid old(..) expression in inline spec block
+
+    ┌── tests/sources/inline_spec_err.move:11:7 ───
+    │
+ 11 │       assert old(x != y);
+    │       ^^^^^^^^^^^^^^^^^^^
+    ·
+ 11 │       assert old(x != y);
+    │       ------------------- only a function parameter is allowed in old(..) expressions in inline spec block
+    ·
+ 11 │       assert old(x != y);
+    │                  ------ this expression is not a function parameter
+    │

@@ -99,4 +99,25 @@ module 0x42::TestAssertWithReferences {
     spec simple6 {
         ensures result == n;
     }
+
+    // This function verifies.
+    fun simple7(x: &mut u64, y: u64): u64 {
+        let a = x;
+        let b = y;
+        let c = &mut b;
+        *c = *a;
+        *a = y;
+        spec {
+            assert a == y;
+            assert x == y;
+            assert c == old(x);
+            // NOTE: cannot verify the following, write-back not propagated yet
+            // assert b == old(x);
+        };
+        let _ = c;
+        b
+    }
+    spec simple7 {
+        ensures x == y && result == old(x);
+    }
 }

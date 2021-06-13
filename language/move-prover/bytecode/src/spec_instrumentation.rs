@@ -220,6 +220,17 @@ impl<'a> Instrumenter<'a> {
         fun_env: &FunctionEnv<'a>,
         data: FunctionData,
     ) -> FunctionData {
+        // Pre-collect properties in the original function data
+        let props: Vec<_> = data
+            .code
+            .iter()
+            .filter_map(|bc| match bc {
+                Bytecode::Prop(id, PropKind::Assume, exp)
+                | Bytecode::Prop(id, PropKind::Assert, exp) => Some((*id, exp.clone())),
+                _ => None,
+            })
+            .collect();
+
         let mut builder = FunctionDataBuilder::new(fun_env, data);
 
         // Create label and locals for unified return exit point. We translate each `Ret(t..)`
@@ -253,6 +264,18 @@ impl<'a> Instrumenter<'a> {
             &ret_locals,
         );
 
+        // Translate inlined properties. This deals with elimination of `old(..)` expressions in
+        // inlined spec blocks
+        let inlined_props: BTreeMap<_, _> = props
+            .into_iter()
+            .map(|(id, prop)| {
+                (
+                    id,
+                    SpecTranslator::translate_inline_property(&mut builder, &prop),
+                )
+            })
+            .collect();
+
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
             options,
@@ -264,7 +287,7 @@ impl<'a> Instrumenter<'a> {
             abort_label,
             can_abort: false,
         };
-        instrumenter.instrument(&spec);
+        instrumenter.instrument(&spec, &inlined_props);
 
         // Run copy propagation (reaching definitions) and then assignment
         // elimination (live vars). This cleans up some redundancy created by
@@ -280,7 +303,11 @@ impl<'a> Instrumenter<'a> {
         self.builder.data.variant.is_verified()
     }
 
-    fn instrument(&mut self, spec: &TranslatedSpec) {
+    fn instrument(
+        &mut self,
+        spec: &TranslatedSpec,
+        inlined_props: &BTreeMap<AttrId, (TranslatedSpec, Exp)>,
+    ) {
         use Bytecode::*;
         use PropKind::*;
 
@@ -351,23 +378,27 @@ impl<'a> Instrumenter<'a> {
 
             // For the verification variant, we generate post-conditions. Inject any state
             // save instructions needed for this.
-            for (mem, label) in &spec.saved_memory {
-                let mem = mem.clone();
-                self.builder
-                    .emit_with(|attr_id| SaveMem(attr_id, *label, mem));
+            for translated_spec in
+                std::iter::once(spec).chain(inlined_props.values().map(|(s, _)| s))
+            {
+                for (mem, label) in &translated_spec.saved_memory {
+                    let mem = mem.clone();
+                    self.builder
+                        .emit_with(|attr_id| SaveMem(attr_id, *label, mem));
+                }
+                for (spec_var, label) in &translated_spec.saved_spec_vars {
+                    let spec_var = spec_var.clone();
+                    self.builder
+                        .emit_with(|attr_id| SaveSpecVar(attr_id, *label, spec_var));
+                }
+                let saved_params = translated_spec.saved_params.clone();
+                self.emit_save_for_old(&saved_params);
             }
-            for (spec_var, label) in &spec.saved_spec_vars {
-                let spec_var = spec_var.clone();
-                self.builder
-                    .emit_with(|attr_id| SaveSpecVar(attr_id, *label, spec_var));
-            }
-            let saved_params = spec.saved_params.clone();
-            self.emit_save_for_old(&saved_params);
         }
 
         // Instrument and generate new code
         for bc in old_code {
-            self.instrument_bytecode(spec, bc);
+            self.instrument_bytecode(spec, inlined_props, bc);
         }
 
         // Generate return and abort blocks
@@ -379,7 +410,12 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    fn instrument_bytecode(&mut self, spec: &TranslatedSpec, bc: Bytecode) {
+    fn instrument_bytecode(
+        &mut self,
+        spec: &TranslatedSpec,
+        inlined_props: &BTreeMap<AttrId, (TranslatedSpec, Exp)>,
+        bc: Bytecode,
+    ) {
         use Bytecode::*;
         use Operation::*;
 
@@ -448,6 +484,13 @@ impl<'a> Instrumenter<'a> {
                     Some(AbortAction(self.abort_label, self.abort_local)),
                 ));
                 self.can_abort = true;
+            }
+            Prop(id, kind @ PropKind::Assume, prop) | Prop(id, kind @ PropKind::Assert, prop) => {
+                let prop = match inlined_props.get(&id) {
+                    None => prop,
+                    Some((_, exp)) => exp.clone(),
+                };
+                self.builder.emit(Prop(id, kind, prop));
             }
             _ => self.builder.emit(bc),
         }

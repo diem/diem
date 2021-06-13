@@ -1360,6 +1360,37 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
             };
             cond.exp.visit(&mut visitor);
+        } else if let FunctionCode(name, _) = context {
+            // Restrict accesses to function arguments only for `old(..)` in in-spec block
+            let entry = self.parent.fun_table.get(name).expect("function defined");
+            let mut visitor = |e: &ExpData| {
+                if let ExpData::Call(_, Operation::Old, args) = e {
+                    let arg = &args[0];
+                    match args[0].as_ref() {
+                        ExpData::Temporary(_, idx) if *idx < entry.params.len() => (),
+                        _ => {
+                            let label_cond = (
+                                cond.loc.clone(),
+                                "only a function parameter is allowed in old(..) expressions \
+                                in inline spec block"
+                                    .to_owned(),
+                            );
+                            let label_exp = (
+                                self.parent.env.get_node_loc(arg.node_id()),
+                                "this expression is not a function parameter".to_owned(),
+                            );
+                            self.parent.env.diag_with_labels(
+                                Severity::Error,
+                                loc,
+                                "invalid old(..) expression in inline spec block",
+                                vec![label_cond, label_exp],
+                            );
+                            ok = false;
+                        }
+                    };
+                }
+            };
+            cond.exp.visit(&mut visitor);
         }
         ok
     }
