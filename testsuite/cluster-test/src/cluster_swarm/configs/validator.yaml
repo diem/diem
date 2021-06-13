@@ -45,9 +45,6 @@ full_node_networks:
       key: "b0f405a3e75516763c43a2ae1d70423699f34cd68fa9f8c6bb2d67aa87d0af69"
       peer_id: "d58bc7bb154b38039bc9096ce04e1237"
 
-metrics:
-  enabled: false
-
 storage:
   prune_window: 50000
 

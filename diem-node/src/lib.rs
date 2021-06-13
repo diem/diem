@@ -16,7 +16,7 @@ use diem_metrics::metric_server;
 use diem_time_service::TimeService;
 use diem_types::{
     account_config::diem_root_address, account_state::AccountState, chain_id::ChainId,
-    move_resource::MoveStorage, PeerId,
+    move_resource::MoveStorage,
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
@@ -73,17 +73,6 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     // Let's now log some important information, since the logger is set up
     info!(config = config, "Loaded DiemNode config");
 
-    if config.metrics.enabled {
-        for network in &config.full_node_networks {
-            let peer_id = network.peer_id();
-            setup_metrics(peer_id, &config);
-        }
-
-        if let Some(network) = config.validator_network.as_ref() {
-            let peer_id = network.peer_id();
-            setup_metrics(peer_id, &config);
-        }
-    }
     if fail::has_failpoints() {
         warn!("Failpoints is enabled");
         if let Some(failpoints) = &config.failpoints {
@@ -101,14 +90,6 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     while !term.load(Ordering::Acquire) {
         std::thread::park();
     }
-}
-
-fn setup_metrics(peer_id: PeerId, config: &NodeConfig) {
-    diem_metrics::dump_all_metrics_to_file_periodically(
-        &config.metrics.dir(),
-        &format!("{}.metrics", peer_id),
-        config.metrics.collection_interval_ms,
-    );
 }
 
 pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {

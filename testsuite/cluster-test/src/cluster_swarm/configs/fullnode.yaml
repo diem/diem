@@ -38,9 +38,6 @@ full_node_networks:
 mempool:
   default_failovers: 0
 
-metrics:
-  enabled: false
-
 storage:
   prune_window: 50000
 

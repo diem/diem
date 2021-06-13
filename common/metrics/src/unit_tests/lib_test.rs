@@ -4,11 +4,12 @@
 use super::super::*;
 use assert_approx_eq::assert_approx_eq;
 use once_cell::sync::Lazy;
-use prometheus::{core::Collector, proto::MetricFamily, Counter, IntCounter, Opts, Registry};
+use prometheus::{proto::MetricFamily, Counter, IntCounter, Opts, Registry};
 use rusty_fork::rusty_fork_test;
 
+const INT_COUNTER_NAME: &str = "INT_COUNTER";
 pub static INT_COUNTER: Lazy<IntCounter> =
-    Lazy::new(|| register_int_counter!("INT_COUNTER", "An integer counter").unwrap());
+    Lazy::new(|| register_int_counter!(INT_COUNTER_NAME, "An integer counter").unwrap());
 
 rusty_fork_test! {
 #[test]
@@ -18,11 +19,14 @@ fn gather_metrics_test() {
         INT_COUNTER.inc();
     }
 
-    let buffer = get_all_metrics_as_serialized_string().unwrap();
-    let log = String::from_utf8(buffer).unwrap();
-
-    assert!(log.contains(&iterations.to_string()));
-    assert!(log.contains(INT_COUNTER.collect()[0].get_name()));
+    for (metric, value) in get_all_metrics() {
+        // The metric seems to be METRIC_NAME{}, so this is intended to be agile
+        if metric.starts_with(INT_COUNTER_NAME) {
+            assert_eq!(value, iterations.to_string());
+            return;
+        }
+    }
+    panic!("Metric {} not found", INT_COUNTER_NAME);
 }
 }
 

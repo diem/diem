@@ -26,8 +26,6 @@ mod key_manager_config;
 pub use key_manager_config::*;
 mod logger_config;
 pub use logger_config::*;
-mod metrics_config;
-pub use metrics_config::*;
 mod mempool_config;
 pub use mempool_config::*;
 mod network_config;
@@ -50,6 +48,10 @@ use diem_secure_storage::{KVStorage, Storage};
 use diem_types::waypoint::Waypoint;
 pub use test_config::*;
 
+/// Represents a deprecated config that provides no field verification.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct DeprecatedConfig {}
+
 /// Config pulls in configuration information from the config file.
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
@@ -70,9 +72,9 @@ pub struct NodeConfig {
     #[serde(default)]
     pub logger: LoggerConfig,
     #[serde(default)]
-    pub metrics: MetricsConfig,
-    #[serde(default)]
     pub mempool: MempoolConfig,
+    #[serde(default)]
+    pub metrics: DeprecatedConfig,
     #[serde(default)]
     pub json_rpc: JsonRpcConfig,
     #[serde(default)]
@@ -218,7 +220,6 @@ impl NodeConfig {
         self.base.data_dir = data_dir.clone();
         self.consensus.set_data_dir(data_dir.clone());
         self.execution.set_data_dir(data_dir.clone());
-        self.metrics.set_data_dir(data_dir.clone());
         self.storage.set_data_dir(data_dir);
     }
 
