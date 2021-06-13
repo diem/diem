@@ -70,7 +70,7 @@ struct RpcResponseLog<'a> {
 #[derive(serde::Deserialize)]
 struct HealthCheckParams {
     // Health check returns 200 when this param is provided and meet the following condition:
-    //   server latest ledger info timestamp >= server current time timestamp + duration_secs
+    //   server latest ledger info timestamp >= server current time timestamp - duration_secs
     pub duration_secs: Option<u64>,
 }
 
