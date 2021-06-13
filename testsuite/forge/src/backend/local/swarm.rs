@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    node::LocalNode, AdminInfo, ChainInfo, Coffer, FullNode, HealthCheckError, Node, NodeId,
-    PublicInfo, Swarm, Validator,
+    node::LocalNode, AdminInfo, ChainInfo, Coffer, FullNode, HealthCheckError, Node, PublicInfo,
+    Swarm, Validator,
 };
 use anyhow::{anyhow, Result};
 use diem_client::BlockingClient;
@@ -277,11 +277,11 @@ impl Swarm for LocalSwarm {
         )
     }
 
-    fn validator(&self, _id: NodeId) -> &dyn Validator {
+    fn validator(&self, _id: PeerId) -> &dyn Validator {
         todo!()
     }
 
-    fn validator_mut(&mut self, _id: NodeId) -> &mut dyn Validator {
+    fn validator_mut(&mut self, _id: PeerId) -> &mut dyn Validator {
         todo!()
     }
 
@@ -293,27 +293,27 @@ impl Swarm for LocalSwarm {
         todo!()
     }
 
-    fn full_node(&self, _id: NodeId) -> &dyn FullNode {
+    fn full_node(&self, _id: PeerId) -> &dyn FullNode {
         todo!()
     }
 
-    fn full_node_mut(&mut self, _id: NodeId) -> &mut dyn FullNode {
+    fn full_node_mut(&mut self, _id: PeerId) -> &mut dyn FullNode {
         todo!()
     }
 
-    fn add_validator(&mut self, _id: NodeId) -> Result<NodeId> {
+    fn add_validator(&mut self, _id: PeerId) -> Result<PeerId> {
         todo!()
     }
 
-    fn remove_validator(&mut self, _id: NodeId) -> Result<()> {
+    fn remove_validator(&mut self, _id: PeerId) -> Result<()> {
         todo!()
     }
 
-    fn add_full_node(&mut self, _id: NodeId) -> Result<()> {
+    fn add_full_node(&mut self, _id: PeerId) -> Result<()> {
         todo!()
     }
 
-    fn remove_full_node(&mut self, _id: NodeId) -> Result<()> {
+    fn remove_full_node(&mut self, _id: PeerId) -> Result<()> {
         todo!()
     }
 

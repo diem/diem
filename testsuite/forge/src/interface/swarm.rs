@@ -1,7 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{AdminInfo, ChainInfo, FullNode, NodeId, PublicInfo, Result, Validator};
+use crate::{AdminInfo, ChainInfo, FullNode, PublicInfo, Result, Validator};
+use diem_sdk::types::PeerId;
 
 /// Trait used to represent a running network comprised of Validators and FullNodes
 pub trait Swarm {
@@ -15,11 +16,11 @@ pub trait Swarm {
     /// Returns an Iterator of mutable references to all the Validators in the Swarm
     fn validators_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn Validator> + 'a>;
 
-    /// Returns a reference to the Validator with the provided NodeId
-    fn validator(&self, id: NodeId) -> &dyn Validator;
+    /// Returns a reference to the Validator with the provided PeerId
+    fn validator(&self, id: PeerId) -> &dyn Validator;
 
-    /// Returns a mutable reference to the Validator with the provided NodeId
-    fn validator_mut(&mut self, id: NodeId) -> &mut dyn Validator;
+    /// Returns a mutable reference to the Validator with the provided PeerId
+    fn validator_mut(&mut self, id: PeerId) -> &mut dyn Validator;
 
     /// Returns an Iterator of references to all the FullNodes in the Swarm
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a>;
@@ -27,23 +28,23 @@ pub trait Swarm {
     /// Returns an Iterator of mutable references to all the FullNodes in the Swarm
     fn full_nodes_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn FullNode> + 'a>;
 
-    /// Returns a reference to the FullNode with the provided NodeId
-    fn full_node(&self, id: NodeId) -> &dyn FullNode;
+    /// Returns a reference to the FullNode with the provided PeerId
+    fn full_node(&self, id: PeerId) -> &dyn FullNode;
 
-    /// Returns a mutable reference to the FullNode with the provided NodeId
-    fn full_node_mut(&mut self, id: NodeId) -> &mut dyn FullNode;
+    /// Returns a mutable reference to the FullNode with the provided PeerId
+    fn full_node_mut(&mut self, id: PeerId) -> &mut dyn FullNode;
 
-    /// Adds a Validator to the swarm with the provided NodeId
-    fn add_validator(&mut self, id: NodeId) -> Result<NodeId>;
+    /// Adds a Validator to the swarm with the provided PeerId
+    fn add_validator(&mut self, id: PeerId) -> Result<PeerId>;
 
-    /// Removes the Validator with the provided NodeId
-    fn remove_validator(&mut self, id: NodeId) -> Result<()>;
+    /// Removes the Validator with the provided PeerId
+    fn remove_validator(&mut self, id: PeerId) -> Result<()>;
 
-    /// Adds a FullNode to the swarm with the provided NodeId
-    fn add_full_node(&mut self, id: NodeId) -> Result<()>;
+    /// Adds a FullNode to the swarm with the provided PeerId
+    fn add_full_node(&mut self, id: PeerId) -> Result<()>;
 
-    /// Removes the FullNode with the provided NodeId
-    fn remove_full_node(&mut self, id: NodeId) -> Result<()>;
+    /// Removes the FullNode with the provided PeerId
+    fn remove_full_node(&mut self, id: PeerId) -> Result<()>;
 
     /// Construct an AdminInfo from this Swarm
     fn admin_info(&mut self) -> AdminInfo<'_>;

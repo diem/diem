@@ -9,22 +9,6 @@ use diem_sdk::types::PeerId;
 use std::collections::HashMap;
 use url::Url;
 
-/// A NodeId is intended to be a unique identifier of a Node in a Swarm. Due to VFNs sharing the
-/// same PeerId as their Validator, another identifier is needed in order to distinguish between
-/// the two.
-pub struct NodeId(usize);
-
-impl NodeId {
-    pub fn new(id: usize) -> Self {
-        NodeId(id)
-    }
-
-    /// Accessor for the name of the module
-    pub fn as_inner(&self) -> usize {
-        self.0
-    }
-}
-
 #[derive(Debug)]
 pub enum HealthCheckError {
     NotRunning,
