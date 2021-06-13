@@ -134,10 +134,8 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
 
         // Run AdminTests
         for test in self.tests.admin_tests {
-            let mut admin_ctx = AdminContext::new(
-                CoreContext::from_rng(&mut rng),
-                swarm.chain_info().into_admin_info(),
-            );
+            let mut admin_ctx =
+                AdminContext::new(CoreContext::from_rng(&mut rng), swarm.chain_info());
             let result = run_test(|| test.run(&mut admin_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }

@@ -15,3 +15,5 @@ mod swarm;
 pub use swarm::*;
 mod node;
 pub use node::*;
+mod chain_info;
+pub use chain_info::*;
