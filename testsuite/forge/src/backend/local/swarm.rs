@@ -212,14 +212,10 @@ impl LocalSwarm {
                     Ok(()) => *done = true,
 
                     Err(HealthCheckError::Unknown(e)) => {
-                        return Err(anyhow!(
-                            "Diem node '{}' is not running: {}",
-                            node.node_id(),
-                            e
-                        ));
+                        return Err(anyhow!("Diem node '{}' is not running: {}", node.name(), e));
                     }
                     Err(HealthCheckError::NotRunning) => {
-                        return Err(anyhow!("Diem node '{}' is not running", node.node_id()));
+                        return Err(anyhow!("Diem node '{}' is not running", node.name()));
                     }
                     Err(HealthCheckError::RpcFailure(e)) => {
                         println!("rpc error: {}", e);

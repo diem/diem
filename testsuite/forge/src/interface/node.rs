@@ -45,8 +45,8 @@ pub trait Node {
     /// Return the PeerId of this Node
     fn peer_id(&self) -> PeerId;
 
-    /// Return the NodeId of this Node
-    fn node_id(&self) -> NodeId;
+    /// Return the human readable name of this Node
+    fn name(&self) -> &str;
 
     /// Return the URL for the JSON-RPC endpoint of this Node
     fn json_rpc_endpoint(&self) -> Url;

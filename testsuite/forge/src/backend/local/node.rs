@@ -38,7 +38,7 @@ impl Drop for Process {
 #[derive(Debug)]
 pub struct LocalNode {
     process: Option<Process>,
-    node_id: String,
+    name: String,
     peer_id: AccountAddress,
     directory: PathBuf,
     config: NodeConfig,
@@ -46,7 +46,7 @@ pub struct LocalNode {
 }
 
 impl LocalNode {
-    pub fn new(diem_node_bin_path: &Path, node_id: String, directory: PathBuf) -> Result<Self> {
+    pub fn new(diem_node_bin_path: &Path, name: String, directory: PathBuf) -> Result<Self> {
         let config_path = directory.join("node.yaml");
         let config = NodeConfig::load(&config_path)
             .with_context(|| format!("Failed to load NodeConfig from file: {:?}", config_path))?;
@@ -56,7 +56,7 @@ impl LocalNode {
 
         Ok(Self {
             process: None,
-            node_id,
+            name,
             peer_id,
             directory,
             config,
@@ -72,12 +72,12 @@ impl LocalNode {
         self.directory.join("log")
     }
 
-    pub fn node_id(&self) -> &str {
-        &self.node_id
-    }
-
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn start(&mut self) -> Result<()> {
@@ -133,13 +133,13 @@ impl LocalNode {
     }
 
     pub fn health_check(&mut self) -> Result<(), HealthCheckError> {
-        debug!("Health check on node '{}'", self.node_id);
+        debug!("Health check on node '{}'", self.name);
 
         if let Some(p) = &mut self.process {
             match p.0.try_wait() {
                 // This would mean the child process has crashed
                 Ok(Some(status)) => {
-                    debug!("Node '{}' crashed with: {}", self.node_id, status);
+                    debug!("Node '{}' crashed with: {}", self.name, status);
                     return Err(HealthCheckError::NotRunning);
                 }
 
@@ -152,7 +152,7 @@ impl LocalNode {
                 }
             }
         } else {
-            warn!("Node '{}' is stopped", self.node_id);
+            warn!("Node '{}' is stopped", self.name);
             return Err(HealthCheckError::NotRunning);
         }
 
@@ -168,8 +168,8 @@ impl Node for LocalNode {
         self.peer_id()
     }
 
-    fn node_id(&self) -> crate::NodeId {
-        todo!()
+    fn name(&self) -> &str {
+        self.name()
     }
 
     fn json_rpc_endpoint(&self) -> reqwest::Url {
