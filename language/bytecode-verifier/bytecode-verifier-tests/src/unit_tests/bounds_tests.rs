@@ -32,7 +32,10 @@ fn invalid_default_module() {
 fn invalid_self_module_handle_index() {
     let mut m = basic_test_module();
     m.self_module_handle_idx = ModuleHandleIndex(12);
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -43,7 +46,10 @@ fn invalid_type_param_in_fn_return_() {
     m.function_handles[0].return_ = SignatureIndex(1);
     m.signatures.push(Signature(vec![TypeParameter(0)]));
     assert_eq!(m.signatures.len(), 2);
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -53,7 +59,10 @@ fn invalid_type_param_in_fn_parameters() {
     let mut m = basic_test_module();
     m.function_handles[0].parameters = SignatureIndex(1);
     m.signatures.push(Signature(vec![TypeParameter(0)]));
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -64,7 +73,10 @@ fn invalid_struct_in_fn_return_() {
     m.function_handles[0].return_ = SignatureIndex(1);
     m.signatures
         .push(Signature(vec![Struct(StructHandleIndex::new(1))]));
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -75,7 +87,10 @@ fn invalid_type_param_in_field() {
     match &mut m.struct_defs[0].field_information {
         StructFieldInformation::Declared(ref mut fields) => {
             fields[0].signature.0 = TypeParameter(0);
-            m.freeze().unwrap_err();
+            assert_eq!(
+                m.freeze().unwrap_err().major_status(),
+                StatusCode::INDEX_OUT_OF_BOUNDS
+            );
         }
         _ => panic!("attempt to change a field that does not exist"),
     }
@@ -89,7 +104,10 @@ fn invalid_struct_in_field() {
     match &mut m.struct_defs[0].field_information {
         StructFieldInformation::Declared(ref mut fields) => {
             fields[0].signature.0 = Struct(StructHandleIndex::new(3));
-            m.freeze().unwrap_err();
+            assert_eq!(
+                m.freeze().unwrap_err().major_status(),
+                StatusCode::INDEX_OUT_OF_BOUNDS
+            );
         }
         _ => panic!("attempt to change a field that does not exist"),
     }
@@ -104,7 +122,10 @@ fn invalid_struct_with_actuals_in_field() {
         StructFieldInformation::Declared(ref mut fields) => {
             fields[0].signature.0 =
                 StructInstantiation(StructHandleIndex::new(0), vec![TypeParameter(0)]);
-            m.freeze().unwrap_err();
+            assert_eq!(
+                m.freeze().unwrap_err().major_status(),
+                StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH
+            );
         }
         _ => panic!("attempt to change a field that does not exist"),
     }
@@ -121,7 +142,10 @@ fn invalid_locals_id_in_call() {
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
     m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -137,7 +161,10 @@ fn invalid_type_param_in_call() {
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
     m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -154,7 +181,10 @@ fn invalid_struct_as_type_actual_in_exists() {
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
     m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -164,7 +194,10 @@ fn invalid_friend_module_address() {
         address: AddressIdentifierIndex::new(m.address_identifiers.len() as TableIndex),
         name: IdentifierIndex::new(0),
     });
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 #[test]
@@ -174,7 +207,10 @@ fn invalid_friend_module_name() {
         address: AddressIdentifierIndex::new(0),
         name: IdentifierIndex::new(m.identifiers.len() as TableIndex),
     });
-    m.freeze().unwrap_err();
+    assert_eq!(
+        m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
 }
 
 proptest! {
