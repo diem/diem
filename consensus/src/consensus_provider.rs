@@ -13,7 +13,6 @@ use crate::{
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
-use channel;
 use channel::diem_channel;
 use consensus_types::block::Block;
 use diem_config::config::NodeConfig;
