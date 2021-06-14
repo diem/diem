@@ -15,31 +15,11 @@ pub struct HttpRequestLog<'a> {
 }
 
 #[derive(Schema)]
-pub struct WebsocketDisconnect<'a> {
-    pub remote_addr: Option<std::net::SocketAddr>,
-    pub user_agent: &'a str,
+pub struct ClientConnectionLog<'a> {
+    pub transport: &'static str,
+    pub remote_addr: Option<&'a str>,
+    pub client_id: Option<u64>,
+    pub user_agent: Option<&'a str>,
     pub forwarded: Option<&'a str>,
-}
-
-#[derive(Schema)]
-pub struct ClientConnect<'a> {
-    pub transport: &'static str,
-    pub remote_addr: Option<&'a str>,
-    pub client_id: u64,
-}
-
-#[derive(Schema)]
-pub struct ClientDisconnect<'a> {
-    pub transport: &'static str,
-    pub remote_addr: Option<&'a str>,
-    pub client_id: u64,
-}
-
-#[derive(Schema)]
-pub struct SubscriptionRequestLog<'a> {
-    #[schema(display)]
-    pub transport: &'static str,
-    pub remote_addr: Option<&'a str>,
-    pub client_id: u64,
     pub rpc_method: Option<&'static str>,
 }

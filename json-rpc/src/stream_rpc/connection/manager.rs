@@ -89,18 +89,21 @@ impl ConnectionManager {
             .inc();
 
         debug!(
-            logging::ClientConnect {
+            logging::ClientConnectionLog {
                 transport: client.connection_context.transport.as_str(),
                 remote_addr: client.connection_context.remote_addr.as_deref(),
-                client_id: client.id,
+                client_id: Some(client.id),
+                user_agent: None,
+                forwarded: None,
+                rpc_method: None
             },
             "client connected"
         );
 
-        // Reap client we can no longer send to
+        // Reap client we can no longer send to it
         let send_task = tokio::task::spawn(async move {
             loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                 if client_sender.is_closed() {
                     break;
                 }
@@ -120,10 +123,13 @@ impl ConnectionManager {
                     }
                     Err(e) => {
                         debug!(
-                            logging::ClientDisconnect {
+                            logging::ClientConnectionLog {
                                 transport: task_client.connection_context.transport.as_str(),
+                                user_agent: None,
                                 remote_addr: task_client.connection_context.remote_addr.as_deref(),
-                                client_id: task_client.id,
+                                client_id: Some(task_client.id),
+                                forwarded: None,
+                                rpc_method: None
                             },
                             "client disconnect start {}", e
                         );
@@ -139,10 +145,13 @@ impl ConnectionManager {
         }
         self.clients.write().remove(&client_id);
         debug!(
-            logging::ClientDisconnect {
+            logging::ClientConnectionLog {
                 transport: client.connection_context.transport.as_str(),
+                user_agent: None,
                 remote_addr: client.connection_context.remote_addr.as_deref(),
-                client_id: client.id,
+                client_id: Some(client.id),
+                forwarded: None,
+                rpc_method: None
             },
             "client disconnected"
         );

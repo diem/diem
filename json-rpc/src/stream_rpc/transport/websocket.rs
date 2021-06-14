@@ -200,12 +200,17 @@ pub async fn handle_websocket_stream(
                         .forward(to_client_ws)
                         .map(move |result: Result<(), warp::Error>| {
                             debug!(
-                                logging::WebsocketDisconnect {
-                                    remote_addr: remote_socket,
-                                    user_agent: &user_agent,
+                                logging::ClientConnectionLog {
+                                    client_id: None,
+                                    remote_addr: remote_socket
+                                        .map(|remote_socket| remote_socket.to_string())
+                                        .as_deref(),
+                                    user_agent: Some(&user_agent),
                                     forwarded: headers
                                         .get(warp::http::header::FORWARDED)
                                         .and_then(|v| v.to_str().ok()),
+                                    transport: Transport::Websocket.as_str(),
+                                    rpc_method: None
                                 },
                                 "websocket disconnected ({:?})", result
                             )
