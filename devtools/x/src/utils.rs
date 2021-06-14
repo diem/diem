@@ -76,10 +76,14 @@ pub fn stop_sccache_server() {
             if output.status.success() {
                 info!("Stopped already running sccache.");
             } else {
-                info!("Failed to stopped already running sccache.");
-                warn!("status: {}", output.status);
-                warn!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-                warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+                let std_err = String::from_utf8_lossy(&output.stderr);
+                //sccache will fail
+                if !std_err.contains("couldn't connect to server") {
+                    warn!("Failed to stopped already running sccache.");
+                    warn!("status: {}", output.status);
+                    warn!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+                    warn!("stderr: {}", std_err);
+                }
             }
         }
         Err(error) => {
