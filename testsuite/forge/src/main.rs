@@ -1,8 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{env, path::PathBuf, process::Command};
-
 use diem_sdk::{
     client::{BlockingClient, MethodRequest},
     move_types::account_address::AccountAddress,
@@ -45,7 +43,7 @@ fn main() -> Result<()> {
     if args.local_swarm {
         forge_main(
             local_test_suite(),
-            LocalFactory::new(get_diem_node().to_str().unwrap()),
+            LocalFactory::from_workspace()?,
             &args.options,
         )
     } else {
@@ -247,53 +245,4 @@ impl NetworkTest for EmitTransaction {
 
         Ok(())
     }
-}
-
-// TODO Remove everything below here
-// The following is copied from the workspace-builder in the smoke-test crate. Its only intended to
-// be here temporarily
-fn get_diem_node() -> PathBuf {
-    let output = Command::new("cargo")
-        .current_dir(workspace_root())
-        .args(&["build", "--bin=diem-node"])
-        .output()
-        .expect("Failed to build diem-node");
-
-    if output.status.success() {
-        let bin_path = build_dir().join(format!("{}{}", "diem-node", env::consts::EXE_SUFFIX));
-        if !bin_path.exists() {
-            panic!(
-                "Can't find binary diem-node in expected path {:?}",
-                bin_path
-            );
-        }
-
-        bin_path
-    } else {
-        panic!("Faild to build diem-node");
-    }
-}
-
-// Path to top level workspace
-pub fn workspace_root() -> PathBuf {
-    let mut path = build_dir();
-    while !path.ends_with("target") {
-        path.pop();
-    }
-    path.pop();
-    path
-}
-
-// Path to the directory where build artifacts live.
-fn build_dir() -> PathBuf {
-    env::current_exe()
-        .ok()
-        .map(|mut path| {
-            path.pop();
-            if path.ends_with("deps") {
-                path.pop();
-            }
-            path
-        })
-        .expect("Can't find the build directory. Cannot continue running tests")
 }
