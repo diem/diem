@@ -272,12 +272,14 @@ impl Swarm for LocalSwarm {
         )
     }
 
-    fn validator(&self, _id: PeerId) -> Option<&dyn Validator> {
-        todo!()
+    fn validator(&self, id: PeerId) -> Option<&dyn Validator> {
+        self.validators.get(&id).map(|v| v as &dyn Validator)
     }
 
-    fn validator_mut(&mut self, _id: PeerId) -> Option<&mut dyn Validator> {
-        todo!()
+    fn validator_mut(&mut self, id: PeerId) -> Option<&mut dyn Validator> {
+        self.validators
+            .get_mut(&id)
+            .map(|v| v as &mut dyn Validator)
     }
 
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
