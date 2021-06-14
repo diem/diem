@@ -341,19 +341,19 @@ impl Node for K8sNode {
     }
 
     fn config(&self) -> &NodeConfig {
-        unimplemented!()
+        todo!()
     }
 
     fn start(&mut self) -> Result<()> {
-        unimplemented!()
+        todo!()
     }
 
     fn stop(&mut self) -> Result<()> {
-        unimplemented!()
+        todo!()
     }
 
     fn clear_storage(&mut self) -> Result<()> {
-        unimplemented!()
+        todo!()
     }
 
     fn health_check(&mut self) -> Result<(), HealthCheckError> {
@@ -435,12 +435,14 @@ fn parse_node_id(s: &str) -> Result<(usize)> {
     Ok((idx))
 }
 
+// TODO remove hard code key
 fn load_root_key() -> Ed25519PrivateKey {
     let composite_key = base64::decode(
         "iuRk67ESWWbbXqJu33GK0VGzGO3IOYYDT73lWE3WwZhuLNdkknw80heocg/Ktg4bie1ssmHx1GaJeD5j8LqBAA==").unwrap();
     Ed25519PrivateKey::try_from(composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH).unwrap()).unwrap()
 }
 
+// TODO remove hard code key
 fn load_tc_key() -> Ed25519PrivateKey {
     let composite_key = base64::decode(
         "3KaQOi6t/aeewyaHFFF6Dv4v3YZxYCM66OjGgsSK71AryFCM/32MOH/pKjbKjdnVtreNpaiHX4S4VP+akke3sg==").unwrap();
