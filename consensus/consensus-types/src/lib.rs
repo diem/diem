@@ -14,6 +14,7 @@ pub mod quorum_cert;
 pub mod safety_data;
 pub mod sync_info;
 pub mod timeout;
+pub mod timeout_2chain;
 pub mod timeout_certificate;
 pub mod vote;
 pub mod vote_data;
