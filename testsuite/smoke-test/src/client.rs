@@ -14,13 +14,7 @@ use diem_config::config::NodeConfig;
 fn test_create_mint_transfer_block_metadata() {
     let (env, client) = setup_swarm_and_client_proxy(1, 0);
 
-    if NodeConfig::default_for_validator().execution.decoupled {
-        assert!(false, "\n\nValidator.execution.decoupled = true.\nThis mode is NOT ready for e2e test.\n\n");
-        return;
-    } else {
-        // This script does 4 transactions
-        check_create_mint_transfer(client);
-    }
+    check_create_mint_transfer(client);
 
     // Test if we commit not only user transactions but also block metadata transactions,
     // assert committed version > # of user transactions

@@ -8,15 +8,19 @@ use crate::{
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     persistent_liveness_storage::StorageWriteProxy,
     state_computer::ExecutionProxy,
-    decoupled_state_computer::DecoupledExecutionProxy,
+    ordering_state_computer::OrderingStateComputer,
     state_replication::StateComputer,
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
+use channel;
 use channel::diem_channel;
+use consensus_types::block::Block;
 use diem_config::config::NodeConfig;
+use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_mempool::ConsensusRequest;
+use diem_metrics::IntGauge;
 use diem_types::on_chain_config::OnChainConfigPayload;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
@@ -24,6 +28,7 @@ use state_sync::client::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
+use diem_infallible::Mutex;
 
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
@@ -47,12 +52,18 @@ pub fn start_consensus(
         node_config.consensus.mempool_txn_pull_timeout_ms,
         node_config.consensus.mempool_executed_txn_timeout_ms,
     ));
+    let guage = IntGauge::new("D_CHANNEL_COUNTER", "counter for the decoupling execution channel").unwrap();
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
 
-    let state_computer: Arc<dyn StateComputer> = if node_config.execution.decoupled {
-        Arc::new(DecoupledExecutionProxy::new(
-            execution_correctness_manager.client(),
-            state_sync_client,
+    let state_computer: Arc<dyn StateComputer> = if node_config.consensus.decoupled {
+        let (sender, receiver) = channel::new::<(Vec<Block>, HashValue)>(
+            node_config.consensus.channel_size,
+            &guage
+        );
+        let local_blocks = Mutex::new(Vec::<Block>::new());
+        Arc::new(OrderingStateComputer::new(
+            sender,
+            local_blocks,
         ))
     } else {
         Arc::new(ExecutionProxy::new(
