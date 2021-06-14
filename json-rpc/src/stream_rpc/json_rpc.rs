@@ -5,14 +5,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::JsonRpcError;
 use diem_json_rpc_types::{request::RawJsonRpcRequest, Id, JsonRpcVersion};
-use diem_types::event::EventKey;
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::task::JoinHandle;
 
 use crate::stream_rpc::{
     connection::ClientConnection,
-    subscriptions::{Subscription, SubscriptionHelper},
+    subscription::{Subscription, SubscriptionHelper},
+    subscriptions::{
+        EventsSubscription, SubscribeToEventsParams, SubscribeToTransactionsParams,
+        TransactionsSubscription,
+    },
 };
 use std::str::FromStr;
 
@@ -107,24 +110,6 @@ impl From<StreamJsonRpcResponse> for serde_json::Value {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct SubscribeToTransactionsParams {
-    pub starting_version: u64,
-    pub include_events: Option<bool>,
-
-    #[serde(skip)]
-    pub(crate) latest_version: u64,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct SubscribeToEventsParams {
-    pub event_key: EventKey,
-    pub event_seq_num: u64,
-
-    #[serde(skip)]
-    pub(crate) latest_event: u64,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SubscriptionResult {
     #[serde(rename = "OK")]
@@ -162,15 +147,17 @@ impl StreamMethodRequest {
         jsonrpc_id: Id,
     ) -> Result<JoinHandle<()>, JsonRpcError> {
         match self {
-            StreamMethodRequest::SubscribeToTransactions(params) => params.run(
+            StreamMethodRequest::SubscribeToTransactions(params) => {
+                TransactionsSubscription::default().run(
+                    SubscriptionHelper::new(db, client, jsonrpc_id, self.method()),
+                    params,
+                )
+            }
+
+            StreamMethodRequest::SubscribeToEvents(params) => EventsSubscription::default().run(
                 SubscriptionHelper::new(db, client, jsonrpc_id, self.method()),
+                params,
             ),
-            StreamMethodRequest::SubscribeToEvents(params) => params.run(SubscriptionHelper::new(
-                db,
-                client,
-                jsonrpc_id,
-                self.method(),
-            )),
         }
     }
 

@@ -17,7 +17,7 @@ use crate::stream_rpc::{
     counters,
     errors::StreamError,
     logging,
-    subscriptions::SubscriptionConfig,
+    subscription::SubscriptionConfig,
     transport::util::{get_remote_addr, Transport},
 };
 

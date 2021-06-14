@@ -4,7 +4,7 @@
 use crate::stream_rpc::{
     connection::{BoxConnectionStream, ClientConnection, ConnectionContext, StreamSender},
     counters, logging,
-    subscriptions::SubscriptionConfig,
+    subscription::SubscriptionConfig,
 };
 use diem_infallible::RwLock;
 use diem_logger::debug;

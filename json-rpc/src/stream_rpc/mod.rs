@@ -20,6 +20,7 @@ pub mod startup;
 mod connection;
 mod errors;
 mod json_rpc;
+mod subscription;
 mod subscriptions;
 mod transport;
 

@@ -9,7 +9,7 @@ use crate::{
         errors::StreamError,
         json_rpc::{StreamJsonRpcRequest, StreamJsonRpcResponse, StreamMethod},
         logging,
-        subscriptions::SubscriptionConfig,
+        subscription::SubscriptionConfig,
     },
 };
 use diem_infallible::Mutex;

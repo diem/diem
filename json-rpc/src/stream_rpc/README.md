@@ -58,4 +58,4 @@ mpsc::Sender<Result<String, anyhow::Error>>;
 The `ClientConnection` represents the subscriptions for a given connection and contains helpers for sending data to .
 
 ## Subscriptions
-For more details on how the `Subscription` trait works, please see [./subscriptions.rs](./subscriptions.rs)
+For more details on how the `Subscription` trait works, please see [./subscriptions.rs](subscription.rs)
