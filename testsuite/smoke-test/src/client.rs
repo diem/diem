@@ -8,7 +8,6 @@ use crate::test_utils::{
 };
 use cli::client_proxy::ClientProxy;
 use diem_types::{ledger_info::LedgerInfo, waypoint::Waypoint};
-use diem_config::config::NodeConfig;
 
 #[test]
 fn test_create_mint_transfer_block_metadata() {
