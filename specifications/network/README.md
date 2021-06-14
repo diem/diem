@@ -24,10 +24,10 @@ While DiemNet does not assume a specific network topology, we will frame the spe
 
 ### Node Types
 
-* **Validator Node (V)**: A validator node is a core node type in the Diem network. The validator network is comprised of all validator nodes registered for the current epoch, as defined by the `ValidatorSet` in the [`OnChainConfig`](../consensus/spec.md#onchainconfig). For DDoS resistance and defense-in-depth purposes, a validator node SHOULD be isolated from all other node types except for other validators and the VFNs it controls.
+* **Validator Node (V)**: A validator node is a core node type in the Diem network. The validator network is comprised of all validator nodes registered for the current epoch, as defined by the `ValidatorSet` in the [`OnChainConfig`](../consensus/README.md#onchainconfig). For DDoS resistance and defense-in-depth purposes, a validator node SHOULD be isolated from all other node types except for other validators and the VFNs it controls.
 * **Validator Full Node (VFN)**: VFNs are full nodes owned and operated by one of the Diem validators. VFNs will typically connect to their validator over an internal VPC to maintain isolation of the validator node. VFNs can also service all node types on public-facing endpoints.
 * **Public Full Node (PFN)**: In contrast, PFNs are any non-validator operated full nodes that primarily interface with Diem by communicating with VFNs.
-* **Client Node (C)**: Client nodes are effectively PFNs that do not store ledger history. (TODO(philiphayes): make this consistent with the descriptions in [overview.md](../overview.md)).
+* **Client Node (C)**: Client nodes are effectively PFNs that do not store ledger history.
 
 ### Authentication Modes
 
@@ -36,8 +36,8 @@ While DiemNet does not assume a specific network topology, we will frame the spe
 
 ### Networks
 
-* **Validator Network (VN)**: The validator network is a fully-connected, mutually authenticated network consisting only of validator nodes. Non-validators (i.e., any peer without a keypair in the current epoch's validator set) are explicitly not allowed to join the validator network and other validators will reject any unauthenticated inbound connections. Validators in the Validator Network [synchronize mempools](../mempool/mempool_specification.md) of transactions, order and execute transactions with [consensus](../consensus/spec.md), and synchronize ledger states with [state sync](../state_synchronizer/state_sync_specification.md).
-* **Validator-internal Full Node Network (VFNN)**: Each validator operates a logically private network consisting of only a validator and its operated VFNs. For operational simplicity, the v1 version of each VFNN operates in a server-only authentication mode, with the Validator as the server and the VFNs as the clients. VFNs will typically forward transactions to their upstream validator via [mempool](../mempool/mempool_specification.md) and synchronize their ledger state with their upstream validator via [state sync](../state_synchronizer/state_sync_specification.md).
+* **Validator Network (VN)**: The validator network is a fully-connected, mutually authenticated network consisting only of validator nodes. Non-validators (i.e., any peer without a keypair in the current epoch's validator set) are explicitly not allowed to join the validator network and other validators will reject any unauthenticated inbound connections. Validators in the Validator Network [synchronize mempools](../mempool/README.md) of transactions, order and execute transactions with [consensus](../consensus/README.md), and synchronize ledger states with [state sync](../state_sync/README.md).
+* **Validator-internal Full Node Network (VFNN)**: Each validator operates a logically private network consisting of only a validator and its operated VFNs. For operational simplicity, the v1 version of each VFNN operates in a server-only authentication mode, with the Validator as the server and the VFNs as the clients. VFNs will typically forward transactions to their upstream validator via [mempool](../mempool/README.md) and synchronize their ledger state with their upstream validator via [state sync](../state_sync/README.md).
 * **Public Validator Full Node Network (PVFNN)**: A publicly accessible network of VFNs that services transaction submission and state queries for all node types. For instance, public clients may submit transactions to the Diem Network and synchronize their ledger states over the PVFNN.
 * **Public Full Node Network (PFNN)**: There is no public network of PFNs in Diem v1.
 
