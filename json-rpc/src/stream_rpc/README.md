@@ -8,6 +8,8 @@ Simplified flow:
 
 This document assumes the perspective of a fullnode. Any relative terms (i.e `incoming`) are therefore intended to mean `incoming to the fullnode`.
 
+Configuration for the streaming RPC endpoint is in `/config/src/config/json_rpc_config.rs`.
+
 ## Transports
 Transports handle connections to the outside world.
 Transports are responsible for mapping external representations of communication to internal representations, and vice versa.
@@ -76,4 +78,8 @@ and kills them all when the client disconnects.
 
 ## Subscriptions
 The `Subscription` trait allows for a unified way of managing subscription state, and sending data to clients.
-For more details on how the `Subscription` trait works, please see [./subscription.rs](subscription.rs)
+For more details on how the `Subscription` trait works, please see [./subscription_types.rs](subscription_types.rs)
+
+### Task Fanout
+1. Each `ConnectionManager` spawns two `tokio::Task` for each connection (one each for monitoring incoming/outgoing channels).
+2. Each `ClientConnection` then launches one `Task` per `Subscription`, which run in parallel.

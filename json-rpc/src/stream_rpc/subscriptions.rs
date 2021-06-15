@@ -4,7 +4,7 @@
 use crate::{
     data::{get_events, get_transactions},
     errors::JsonRpcError,
-    stream_rpc::subscription::{Subscription, SubscriptionHelper},
+    stream_rpc::subscription_types::{Subscription, SubscriptionHelper},
     views::{EventView, TransactionView},
 };
 use diem_logger::warn;
@@ -56,8 +56,10 @@ impl Subscription<SubscribeToTransactionsParams, TransactionView> for Transactio
         }
     }
 
-    fn on_send(&mut self, _tx: &TransactionView) {
-        self.latest_version += 1;
+    fn on_send(&mut self, tx: Option<&TransactionView>) {
+        if tx.is_some() {
+            self.latest_version += 1;
+        }
     }
 }
 
@@ -102,7 +104,9 @@ impl Subscription<SubscribeToEventsParams, EventView> for EventsSubscription {
         }
     }
 
-    fn on_send(&mut self, event: &EventView) {
-        self.latest_event = event.sequence_number + 1
+    fn on_send(&mut self, event: Option<&EventView>) {
+        if let Some(event) = event {
+            self.latest_event = event.sequence_number + 1
+        }
     }
 }

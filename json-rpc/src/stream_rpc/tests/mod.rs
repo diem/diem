@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
-mod util;
+pub(crate) mod util;
 
 #[cfg(test)]
 mod websockets;

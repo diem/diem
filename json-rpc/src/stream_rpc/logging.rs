@@ -2,7 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_logger::Schema;
+use serde::Serialize;
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StreamRpcAction<'a> {
+    ClientConnectionLog(ClientConnectionLog<'a>),
+    HttpRequestLog(HttpRequestLog<'a>),
+}
+
+#[derive(Schema)]
+pub struct StreamRpcLog<'a> {
+    action: StreamRpcAction<'a>,
+}
+
+impl<'a> StreamRpcLog<'a> {
+    pub fn new(action: StreamRpcAction<'a>) -> Self {
+        Self { action }
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[derive(Schema)]
 pub struct HttpRequestLog<'a> {
     #[schema(display)]
@@ -14,6 +35,8 @@ pub struct HttpRequestLog<'a> {
     pub forwarded: Option<&'a str>,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[derive(Schema)]
 pub struct ClientConnectionLog<'a> {
     pub transport: &'static str,

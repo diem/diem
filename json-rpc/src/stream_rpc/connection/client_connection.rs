@@ -9,7 +9,7 @@ use crate::{
         errors::StreamError,
         json_rpc::{StreamJsonRpcRequest, StreamJsonRpcResponse, StreamMethod},
         logging,
-        subscription::SubscriptionConfig,
+        subscription_types::SubscriptionConfig,
     },
 };
 use diem_infallible::Mutex;
@@ -133,14 +133,16 @@ impl ClientConnection {
         match StreamJsonRpcRequest::from_str(&message) {
             Ok(mut request) => {
                 debug!(
-                    logging::ClientConnectionLog {
-                        transport: self.connection_context.transport.as_str(),
-                        remote_addr: self.connection_context.remote_addr.as_deref(),
-                        client_id: Some(self.id),
-                        user_agent: None,
-                        forwarded: None,
-                        rpc_method: Some(request.method_name()),
-                    },
+                    logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
+                        logging::ClientConnectionLog {
+                            transport: self.connection_context.transport.as_str(),
+                            remote_addr: self.connection_context.remote_addr.as_deref(),
+                            client_id: Some(self.id),
+                            user_agent: None,
+                            forwarded: None,
+                            rpc_method: Some(request.method_name()),
+                        }
+                    )),
                     "subscription request"
                 );
                 if let Err(err) = self.handle_rpc_request(db, &mut request) {
@@ -152,14 +154,16 @@ impl ClientConnection {
             Err((err, method, id)) => {
                 // We couldn't parse the request- it's not valid json or an unknown structure
                 debug!(
-                    logging::ClientConnectionLog {
-                        transport: self.connection_context.transport.as_str(),
-                        remote_addr: self.connection_context.remote_addr.as_deref(),
-                        client_id: Some(self.id),
-                        user_agent: None,
-                        forwarded: None,
-                        rpc_method: method.map(|v| v.as_str()),
-                    },
+                    logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
+                        logging::ClientConnectionLog {
+                            transport: self.connection_context.transport.as_str(),
+                            remote_addr: self.connection_context.remote_addr.as_deref(),
+                            client_id: Some(self.id),
+                            user_agent: None,
+                            forwarded: None,
+                            rpc_method: method.map(|v| v.as_str()),
+                        }
+                    )),
                     "failed to parse subscription request ({})", &err
                 );
                 metric_subscription_rpc_received(
@@ -245,4 +249,72 @@ fn metric_subscription_rpc_received(
             &client.connection_context.sdk_info.version.to_string(),
         ])
         .inc();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stream_rpc::tests::util::{create_client_connection, timeout};
+    use serde_json;
+
+    #[tokio::test]
+    async fn test_send_raw() {
+        let (_, client_connection, mut receiver) = create_client_connection();
+        let expected = "success".to_string();
+        client_connection.send_raw(expected.clone()).await.unwrap();
+        let result = timeout(50, receiver.recv(), "get message")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(result, expected)
+    }
+
+    #[tokio::test]
+    async fn test_client_connection_success() {
+        let (mock_db, client_connection, mut receiver) = create_client_connection();
+
+        let request = serde_json::json!({"id": "client-generated-id", "method": "subscribe_to_transactions", "params": {"starting_version": 0}, "jsonrpc": "2.0"}).to_string();
+        client_connection
+            .received_message(Arc::new(mock_db.clone()), request)
+            .await;
+
+        let result = timeout(50, receiver.recv(), "message 1")
+            .await
+            .unwrap()
+            .unwrap();
+        let expected = serde_json::json!({"jsonrpc": "2.0", "id": "client-generated-id", "result": {"status": "OK", "transaction_version": mock_db.version}}).to_string();
+        assert_eq!(result, expected);
+
+        let result = timeout(50, receiver.recv(), "message 1")
+            .await
+            .unwrap()
+            .unwrap();
+
+        let result = serde_json::Value::from_str(&result)
+            .expect("could not parse json")
+            .get("result")
+            .expect("no result")
+            .get("version")
+            .expect("no version")
+            .to_string();
+
+        assert_eq!(result, "0");
+    }
+
+    #[tokio::test]
+    async fn test_client_connection_error() {
+        let (mock_db, client_connection, mut receiver) = create_client_connection();
+
+        let request = "{\"bad_json".to_string();
+        client_connection
+            .received_message(Arc::new(mock_db.clone()), request)
+            .await;
+
+        let result = timeout(50, receiver.recv(), "message 1")
+            .await
+            .unwrap()
+            .unwrap();
+        let expected = serde_json::json!({"jsonrpc": "2.0", "error": {"code": -32604, "message": "Invalid request format", "data": null}}).to_string();
+        assert_eq!(result, expected);
+    }
 }

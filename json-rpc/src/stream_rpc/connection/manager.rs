@@ -4,7 +4,7 @@
 use crate::stream_rpc::{
     connection::{BoxConnectionStream, ClientConnection, ConnectionContext, StreamSender},
     counters, logging,
-    subscription::SubscriptionConfig,
+    subscription_types::SubscriptionConfig,
 };
 use diem_infallible::RwLock;
 use diem_logger::debug;
@@ -65,6 +65,8 @@ impl ConnectionManager {
         }
     }
 
+    /// Create a `ClientConnection`, and then wait for either the sending/receiving connection to
+    /// close, before initiating cleanup
     pub async fn client_connection(
         self,
         client_sender: StreamSender,
@@ -89,18 +91,20 @@ impl ConnectionManager {
             .inc();
 
         debug!(
-            logging::ClientConnectionLog {
-                transport: client.connection_context.transport.as_str(),
-                remote_addr: client.connection_context.remote_addr.as_deref(),
-                client_id: Some(client.id),
-                user_agent: None,
-                forwarded: None,
-                rpc_method: None
-            },
+            logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
+                logging::ClientConnectionLog {
+                    transport: client.connection_context.transport.as_str(),
+                    remote_addr: client.connection_context.remote_addr.as_deref(),
+                    client_id: Some(client.id),
+                    user_agent: None,
+                    forwarded: None,
+                    rpc_method: None
+                }
+            )),
             "client connected"
         );
 
-        // Reap client we can no longer send to it
+        // Reap client if we can no longer send to it
         let send_task = tokio::task::spawn(async move {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
@@ -123,14 +127,24 @@ impl ConnectionManager {
                     }
                     Err(e) => {
                         debug!(
-                            logging::ClientConnectionLog {
-                                transport: task_client.connection_context.transport.as_str(),
-                                user_agent: None,
-                                remote_addr: task_client.connection_context.remote_addr.as_deref(),
-                                client_id: Some(task_client.id),
-                                forwarded: None,
-                                rpc_method: None
-                            },
+                            logging::StreamRpcLog::new(
+                                logging::StreamRpcAction::ClientConnectionLog(
+                                    logging::ClientConnectionLog {
+                                        transport: task_client
+                                            .connection_context
+                                            .transport
+                                            .as_str(),
+                                        user_agent: None,
+                                        remote_addr: task_client
+                                            .connection_context
+                                            .remote_addr
+                                            .as_deref(),
+                                        client_id: Some(task_client.id),
+                                        forwarded: None,
+                                        rpc_method: None
+                                    }
+                                )
+                            ),
                             "client disconnect start {}", e
                         );
                         break;
@@ -139,20 +153,26 @@ impl ConnectionManager {
             }
         });
 
+        // Wait for either the side of the stream to be closed
         tokio::select! {
             _ = send_task => (),
             _ = recv_task => (),
         }
+
+        // One of the streams has been closed, so it's time to disconnect & cleanup
         self.clients.write().remove(&client_id);
+
         debug!(
-            logging::ClientConnectionLog {
-                transport: client.connection_context.transport.as_str(),
-                user_agent: None,
-                remote_addr: client.connection_context.remote_addr.as_deref(),
-                client_id: Some(client.id),
-                forwarded: None,
-                rpc_method: None
-            },
+            logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
+                logging::ClientConnectionLog {
+                    transport: client.connection_context.transport.as_str(),
+                    user_agent: None,
+                    remote_addr: client.connection_context.remote_addr.as_deref(),
+                    client_id: Some(client.id),
+                    forwarded: None,
+                    rpc_method: None
+                }
+            )),
             "client disconnected"
         );
     }

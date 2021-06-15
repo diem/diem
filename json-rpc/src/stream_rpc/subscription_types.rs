@@ -46,21 +46,28 @@ use serde::Serialize;
 use std::{iter::Map, sync::Arc, time::Duration};
 use storage_interface::DbReader;
 use tokio::task::JoinHandle;
-use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::strategy::ExponentialBackoff;
 
 #[derive(Clone, Debug)]
 pub struct SubscriptionConfig {
     pub fetch_size: u64,
     pub poll_interval_ms: u64,
+    pub max_poll_interval_ms: u64,
     pub queue_size: usize,
 }
 
 type JitterBackoff = Map<ExponentialBackoff, fn(Duration) -> Duration>;
 
-pub fn create_backoff(poll_interval_ms: u64) -> JitterBackoff {
+/// Jitter up to 80% of the actual value
+pub fn jitter(duration: Duration) -> Duration {
+    // Generate a float from 0.8<->1.0
+    let jitter = 0.8 + rand::random::<f64>() / 5.0;
+    duration.mul_f64(jitter)
+}
+
+pub fn create_backoff(poll_interval_ms: u64, max_poll_interval_ms: u64) -> JitterBackoff {
     ExponentialBackoff::from_millis(poll_interval_ms)
-        .factor(1000)
-        .max_delay(tokio::time::Duration::from_millis(poll_interval_ms * 10))
+        .max_delay(tokio::time::Duration::from_millis(max_poll_interval_ms))
         .map(jitter)
 }
 
@@ -70,7 +77,7 @@ pub struct SubscriptionHelper {
     pub client: ClientConnection,
     pub jsonrpc_id: Id,
     pub method: StreamMethod,
-    backoff: JitterBackoff,
+    pub backoff: JitterBackoff,
 }
 
 impl SubscriptionHelper {
@@ -81,14 +88,16 @@ impl SubscriptionHelper {
         method: StreamMethod,
     ) -> Self {
         let poll_interval_ms = client.config.poll_interval_ms;
+        let max_poll_interval_ms = client.config.max_poll_interval_ms;
         Self {
             db,
             client,
             jsonrpc_id,
             method,
-            backoff: create_backoff(poll_interval_ms),
+            backoff: create_backoff(poll_interval_ms, max_poll_interval_ms),
         }
     }
+
     /// This is to be one of the first things that a new subscription task must do, to let the client
     /// know that the subscription has been created (some streams may be very sparse, or start with 0 items)
     pub async fn send_ok(&self) {
@@ -111,7 +120,8 @@ impl SubscriptionHelper {
     }
 
     pub fn reset_backoff(&mut self) {
-        self.backoff = create_backoff(self.client.config.poll_interval_ms)
+        let config = &self.client.config;
+        self.backoff = create_backoff(config.poll_interval_ms, config.max_poll_interval_ms);
     }
 
     pub async fn sleep_wiggled(&mut self) {
@@ -134,7 +144,7 @@ where
     fn init(&mut self, helper: &SubscriptionHelper, params: &ParamType)
         -> Result<(), JsonRpcError>;
     fn next(&self, helper: &SubscriptionHelper, params: &ParamType) -> Vec<ReturnType>;
-    fn on_send(&mut self, item: &ReturnType);
+    fn on_send(&mut self, item: Option<&ReturnType>);
 
     fn run(
         mut self,
@@ -157,6 +167,7 @@ where
                 );
 
                 if items.is_empty() {
+                    self.on_send(None);
                     helper.sleep_wiggled().await;
                     continue;
                 }
@@ -189,7 +200,7 @@ where
                             debug!("Client#{}: Send error: {:?}", &helper.client.id, e);
                             return;
                         }
-                        Ok(_) => self.on_send(&item),
+                        Ok(_) => self.on_send(Some(&item)),
                     };
                 }
             }
@@ -202,48 +213,110 @@ mod tests {
     use super::*;
     use crate::{
         stream_rpc::{
-            connection::ConnectionContext,
             errors::StreamError,
-            subscriptions::{SubscribeToTransactionsParams, TransactionsSubscription},
-            transport::util::Transport,
+            tests::util::{create_client_connection, timeout},
         },
-        tests::utils::mock_db,
+        tests::utils::MockDiemDB,
     };
-    use tokio::sync::mpsc;
+    use serde::{Deserialize, Serialize};
+    use std::time::Instant;
+    use tokio::sync::mpsc::Receiver;
 
-    #[tokio::test]
-    async fn test_subscription() {
-        let mock_db = mock_db();
+    #[derive(Clone, Debug, Deserialize, Serialize)]
+    pub struct SubscribeTestParams {
+        pub is_valid: bool,
+        pub items_to_send: Vec<Vec<TestView>>,
+    }
 
-        let (sender, mut receiver) = mpsc::channel::<Result<String, StreamError>>(1);
+    #[derive(Clone, Copy, Debug, Default)]
+    pub struct TestSubscription {
+        pub item_index: usize,
+    }
 
-        let config = SubscriptionConfig {
-            fetch_size: 1,
-            poll_interval_ms: 100,
-            queue_size: 1,
-        };
+    #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+    pub struct TestView {
+        pub value: u64,
+    }
 
-        let connection_context = ConnectionContext {
-            transport: Transport::Websocket,
-            sdk_info: Default::default(),
-            remote_addr: None,
-        };
-        let client_connection =
-            ClientConnection::new(1337, sender, connection_context, Arc::new(config));
+    impl Subscription<SubscribeTestParams, TestView> for TestSubscription {
+        fn init(
+            &mut self,
+            _helper: &SubscriptionHelper,
+            params: &SubscribeTestParams,
+        ) -> Result<(), JsonRpcError> {
+            // Pretend there's a problem with one of the params
+            if params.is_valid {
+                Ok(())
+            } else {
+                Err(JsonRpcError::invalid_param("not is_valid"))
+            }
+        }
 
+        fn next(
+            &self,
+            _helper: &SubscriptionHelper,
+            params: &SubscribeTestParams,
+        ) -> Vec<TestView> {
+            let items: Option<&Vec<TestView>> = params.items_to_send.get(self.item_index);
+            match items {
+                None => vec![],
+                Some(items) => items.clone(),
+            }
+        }
+
+        fn on_send(&mut self, _tx: Option<&TestView>) {
+            self.item_index += 1;
+        }
+    }
+
+    fn create_subscription_helper() -> (
+        MockDiemDB,
+        ClientConnection,
+        Receiver<Result<String, StreamError>>,
+        SubscriptionHelper,
+    ) {
+        let (mock_db, client_connection, receiver) = create_client_connection();
+
+        // The 'method' does not matter for this test (it's used for logging)
         let subscription_helper = SubscriptionHelper::new(
             Arc::new(mock_db.clone()),
-            client_connection,
+            client_connection.clone(),
             Id::Number(1010101),
             StreamMethod::SubscribeToTransactions,
         );
 
-        let params = SubscribeToTransactionsParams {
-            starting_version: 0,
-            include_events: Some(true),
+        (mock_db, client_connection, receiver, subscription_helper)
+    }
+
+    #[tokio::test]
+    async fn test_subscription() {
+        let (mock_db, _, mut receiver, subscription_helper) = create_subscription_helper();
+
+        let test_items = vec![
+            // Send two items
+            vec![TestView { value: 0 }, TestView { value: 1 }],
+            // Then don't send anything, and increase the exponential delay
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            // Send some values: the exponential delay should reset
+            vec![TestView { value: 2 }],
+            vec![TestView { value: 3 }],
+        ];
+
+        let params = SubscribeTestParams {
+            is_valid: true,
+            items_to_send: test_items,
         };
 
-        let handle = TransactionsSubscription::default()
+        let handle = TestSubscription::default()
             .run(subscription_helper, params)
             .unwrap();
         let ok_msg = receiver.recv().await;
@@ -251,6 +324,102 @@ mod tests {
         let result = ok_msg.unwrap().unwrap();
         let expected = serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result": {"status": "OK", "transaction_version": mock_db.version}}).to_string();
         assert_eq!(expected, result);
+
+        // These should have no delay
+        let expected =
+            serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 0}}).to_string();
+        let next = timeout(10, receiver.recv(), "message 0")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(expected, next);
+
+        let expected =
+            serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 1}}).to_string();
+        let next = timeout(10, receiver.recv(), "message 1")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(expected, next);
+
+        // Here we have many iterations which return nothing, so the exponential delay should kick in
+        let start = Instant::now();
+        let expected =
+            serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 2}}).to_string();
+        let next = timeout(1_000, receiver.recv(), "message 2")
+            .await
+            .unwrap()
+            .unwrap();
+        let elapsed = start.elapsed().as_millis();
+        assert_eq!(expected, next);
+        assert!(elapsed > 500);
+
+        // This one should have no delay again, due to being reset by the previous message
+        let expected =
+            serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 3}}).to_string();
+        let next = timeout(10, receiver.recv(), "message 3")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(expected, next);
         handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_init_rejects_subscription() {
+        let (_, _, mut receiver, subscription_helper) = create_subscription_helper();
+
+        let params = SubscribeTestParams {
+            is_valid: false,
+            items_to_send: vec![],
+        };
+
+        let handle = TestSubscription::default().run(subscription_helper, params);
+
+        assert!(handle.is_err());
+        let expected = serde_json::json!({"code":-32602, "message": "Invalid param not is_valid", "data": null}).to_string();
+        assert_eq!(
+            expected,
+            serde_json::to_string(&handle.err().unwrap()).unwrap()
+        );
+
+        // This is expected to be `None` as the client_connection is dropped
+        let ok_msg = receiver.recv().await;
+        assert!(ok_msg.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_sleep_jitter_await() {
+        let (_, _, _, mut subscription_helper) = create_subscription_helper();
+
+        let mut results = vec![];
+
+        let start = Instant::now();
+        let mut last: u64 = 0;
+
+        for _ in 0..10 {
+            subscription_helper.sleep_wiggled().await;
+            let elapsed = start.elapsed().as_millis() as u64;
+            results.push(elapsed - last);
+            last = elapsed;
+        }
+
+        // In the event the test fails, this println makes it much easier to debug
+        println!("jittered sleeps: {:?}", results);
+
+        // 80 Jitter makes exact comparison hard, but exponentially increasing values here should be > 1.8x the previous one
+        for i in 5..9 {
+            let prev = *results.get(i).unwrap() as f64;
+            let curr = *results.get(i + 1).unwrap() as f64 * 1.8;
+            assert!(prev < curr);
+        }
+
+        subscription_helper.reset_backoff();
+        timeout(
+            50,
+            subscription_helper.sleep_wiggled(),
+            "sleep_wiggled after reset_backoff",
+        )
+        .await;
     }
 }

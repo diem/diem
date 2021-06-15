@@ -47,6 +47,7 @@ impl JsonRpcConfig {
 }
 
 /// This API is experimental and subject to change
+/// Documentation is in /json-rpc/src/stream_rpc/README.md
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StreamConfig {
@@ -54,11 +55,13 @@ pub struct StreamConfig {
     pub subscription_fetch_size: u64,
     pub send_queue_size: usize,
     pub poll_interval_ms: u64,
+    pub max_poll_interval_ms: u64,
 }
 
 pub const DEFAULT_STREAM_RPC_SUBSCRIPTION_FETCH_SIZE: u64 = 100;
 pub const DEFAULT_STREAM_RPC_SEND_QUEUE_SIZE: usize = 100;
 pub const DEFAULT_STREAM_RPC_POLL_INTERVAL_MS: u64 = 1000;
+pub const DEFAULT_STREAM_RPC_MAX_POLL_INTERVAL_MS: u64 = 5000;
 
 impl Default for StreamConfig {
     fn default() -> StreamConfig {
@@ -67,6 +70,7 @@ impl Default for StreamConfig {
             subscription_fetch_size: DEFAULT_STREAM_RPC_SUBSCRIPTION_FETCH_SIZE,
             send_queue_size: DEFAULT_STREAM_RPC_SEND_QUEUE_SIZE,
             poll_interval_ms: DEFAULT_STREAM_RPC_POLL_INTERVAL_MS,
+            max_poll_interval_ms: DEFAULT_STREAM_RPC_MAX_POLL_INTERVAL_MS,
         }
     }
 }

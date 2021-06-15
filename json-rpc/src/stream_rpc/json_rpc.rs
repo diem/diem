@@ -11,7 +11,7 @@ use tokio::task::JoinHandle;
 
 use crate::stream_rpc::{
     connection::ClientConnection,
-    subscription::{Subscription, SubscriptionHelper},
+    subscription_types::{Subscription, SubscriptionHelper},
     subscriptions::{
         EventsSubscription, SubscribeToEventsParams, SubscribeToTransactionsParams,
         TransactionsSubscription,

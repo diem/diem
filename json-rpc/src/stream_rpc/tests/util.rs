@@ -17,12 +17,25 @@ use crate::{
     tests::utils::{mock_db, MockDiemDB},
 };
 
-pub fn make_ws_config(fetch_size: u64, queue_size: usize, poll_interval_ms: u64) -> StreamConfig {
+use crate::stream_rpc::{
+    connection::ConnectionContext, errors::StreamError, transport::util::Transport,
+};
+
+use crate::stream_rpc::subscription_types::SubscriptionConfig;
+use tokio::sync::{mpsc, mpsc::Receiver};
+
+pub fn make_ws_config(
+    fetch_size: u64,
+    queue_size: usize,
+    poll_interval_ms: u64,
+    max_poll_interval_ms: u64,
+) -> StreamConfig {
     StreamConfig {
         enabled: true,
         subscription_fetch_size: fetch_size,
         send_queue_size: queue_size,
         poll_interval_ms,
+        max_poll_interval_ms,
     }
 }
 
@@ -47,10 +60,16 @@ pub async fn ws_test_setup(
     fetch_size: u64,
     queue_size: usize,
     poll_interval_ms: u64,
+    max_poll_interval_ms: u64,
 ) -> (Arc<MockDiemDB>, StreamConfig) {
     diem_logger::DiemLogger::init_for_testing();
     let db = Arc::new(mock_db());
-    let config = make_ws_config(fetch_size, queue_size, poll_interval_ms);
+    let config = make_ws_config(
+        fetch_size,
+        queue_size,
+        poll_interval_ms,
+        max_poll_interval_ms,
+    );
     (db, config)
 }
 
@@ -122,4 +141,31 @@ pub async fn timeout<F: Future<Output = T>, T>(duration_millis: u64, future: F, 
     tokio::time::timeout(std::time::Duration::from_millis(duration_millis), future)
         .await
         .unwrap_or_else(|_| panic!("{}: Timed out", name))
+}
+
+pub fn create_client_connection() -> (
+    MockDiemDB,
+    ClientConnection,
+    Receiver<Result<String, StreamError>>,
+) {
+    let mock_db = mock_db();
+
+    let (sender, receiver) = mpsc::channel::<Result<String, StreamError>>(1);
+
+    let config = SubscriptionConfig {
+        fetch_size: 1,
+        poll_interval_ms: 2,
+        max_poll_interval_ms: 1000,
+        queue_size: 1,
+    };
+
+    let connection_context = ConnectionContext {
+        transport: Transport::Websocket,
+        sdk_info: Default::default(),
+        remote_addr: None,
+    };
+    let client_connection =
+        ClientConnection::new(1337, sender, connection_context, Arc::new(config));
+
+    (mock_db, client_connection, receiver)
 }

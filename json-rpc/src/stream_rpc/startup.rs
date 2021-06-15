@@ -15,8 +15,7 @@ pub fn get_stream_routes(
     content_length_limit: u64,
     diem_db: Arc<dyn DbReader>,
 ) -> BoxedFilter<(impl Reply,)> {
-    let (wss_routes, _cm) =
-        get_websocket_routes(config, content_length_limit, diem_db.clone(), None);
+    let wss_routes = get_websocket_routes(config, content_length_limit, diem_db.clone(), None).0;
 
     // If streaming rpc isn't enabled, return a 404
     // We do this here because we can't build routes conditionally as if/else types won't match

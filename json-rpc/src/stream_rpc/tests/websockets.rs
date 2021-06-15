@@ -22,7 +22,7 @@ use tokio_tungstenite::{
 
 #[tokio::test]
 async fn test_websocket_call_and_response() {
-    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (mock_db, config) = ws_test_setup(5, 10, 100, 1000).await;
 
     let calls = vec![
         (
@@ -49,7 +49,7 @@ async fn test_websocket_call_and_response() {
 
 #[tokio::test]
 async fn test_invalid_params() {
-    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (mock_db, config) = ws_test_setup(5, 10, 100, 1000).await;
 
     let endpoint_names = vec!["subscribe_to_transactions", "subscribe_to_events"];
 
@@ -74,7 +74,7 @@ async fn test_invalid_params() {
 
 #[tokio::test]
 async fn test_websocket_fetching_data() {
-    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (mock_db, config) = ws_test_setup(5, 10, 100, 1000).await;
 
     let (_, ev) = mock_db.events.get(0).unwrap();
     let first_event_key = ev.key().to_string();
@@ -124,7 +124,7 @@ async fn test_websocket_fetching_data() {
 
 #[tokio::test]
 async fn test_multiple_subscriptions_and_response() {
-    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (mock_db, config) = ws_test_setup(5, 10, 100, 1000).await;
 
     let calls = vec![
         (
@@ -151,7 +151,7 @@ async fn test_multiple_subscriptions_and_response() {
 
 #[tokio::test]
 async fn test_websocket_can_connect_and_disconnect() {
-    let (mock_db, config) = ws_test_setup(5, 10, 300).await;
+    let (mock_db, config) = ws_test_setup(5, 10, 100, 1000).await;
     let (ws_client1, cm) = connect_to_ws(mock_db.clone(), &config, None).await;
     assert_eq!(num_clients(&cm), 1);
     let (ws_client2, _) = connect_to_ws(mock_db.clone(), &config, Some(cm.clone())).await;

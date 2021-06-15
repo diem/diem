@@ -5,8 +5,9 @@ use anyhow::{format_err, Error, Result};
 use diem_config::{
     config::{
         RoleType, StreamConfig, DEFAULT_BATCH_SIZE_LIMIT, DEFAULT_CONTENT_LENGTH_LIMIT,
-        DEFAULT_PAGE_SIZE_LIMIT, DEFAULT_STREAM_RPC_POLL_INTERVAL_MS,
-        DEFAULT_STREAM_RPC_SEND_QUEUE_SIZE, DEFAULT_STREAM_RPC_SUBSCRIPTION_FETCH_SIZE,
+        DEFAULT_PAGE_SIZE_LIMIT, DEFAULT_STREAM_RPC_MAX_POLL_INTERVAL_MS,
+        DEFAULT_STREAM_RPC_POLL_INTERVAL_MS, DEFAULT_STREAM_RPC_SEND_QUEUE_SIZE,
+        DEFAULT_STREAM_RPC_SUBSCRIPTION_FETCH_SIZE,
     },
     utils,
 };
@@ -72,6 +73,7 @@ pub fn test_bootstrap(
         subscription_fetch_size: DEFAULT_STREAM_RPC_SUBSCRIPTION_FETCH_SIZE,
         send_queue_size: DEFAULT_STREAM_RPC_SEND_QUEUE_SIZE,
         poll_interval_ms: DEFAULT_STREAM_RPC_POLL_INTERVAL_MS,
+        max_poll_interval_ms: DEFAULT_STREAM_RPC_MAX_POLL_INTERVAL_MS,
     };
     crate::bootstrap(
         address,
