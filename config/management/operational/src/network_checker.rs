@@ -221,10 +221,7 @@ fn build_upgrade_context(
 
     // Let's make sure some protocol can be connected.  In the future we may want to allow for specifics
     let mut supported_protocols = BTreeMap::new();
-    supported_protocols.insert(
-        SUPPORTED_MESSAGING_PROTOCOL,
-        SupportedProtocols::from(ProtocolId::all().iter()),
-    );
+    supported_protocols.insert(SUPPORTED_MESSAGING_PROTOCOL, SupportedProtocols::all());
 
     // Build the noise and network handshake, without running a full Noise server with listener
     Arc::new(UpgradeContext::new(

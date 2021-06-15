@@ -15,7 +15,12 @@
 use diem_config::network_id::NetworkId;
 use diem_types::chain_id::ChainId;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
+use std::{
+    collections::BTreeMap,
+    convert::TryInto,
+    fmt,
+    iter::{FromIterator, Iterator},
+};
 use thiserror::Error;
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -87,6 +92,12 @@ impl fmt::Display for ProtocolId {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SupportedProtocols(bitvec::BitVec);
 
+impl SupportedProtocols {
+    pub fn all() -> Self {
+        ProtocolId::all().iter().copied().collect()
+    }
+}
+
 impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
     type Error = bcs::Error;
 
@@ -104,10 +115,13 @@ impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
     }
 }
 
-impl<'a, T: Iterator<Item = &'a ProtocolId>> From<T> for SupportedProtocols {
-    fn from(protocols: T) -> Self {
+impl FromIterator<ProtocolId> for SupportedProtocols {
+    fn from_iter<I>(protocols: I) -> Self
+    where
+        I: IntoIterator<Item = ProtocolId>,
+    {
         let mut bv = bitvec::BitVec::default();
-        protocols.for_each(|p| bv.set(*p as u8));
+        protocols.into_iter().for_each(|p| bv.set(p as u8));
         Self(bv)
     }
 }
