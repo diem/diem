@@ -2,22 +2,22 @@
 
 Move programs can create, delete, and update [resources](./structs-and-resources.md) in global storage using the following five instructions:
 
-| Operation                                   | Description                                                        | Aborts?                                  |
-----------------------------------------------|--------------------------------------------------------------------|-------------------------------------------
-|`move_to<T>(&signer,T)`                      | Publish `T` under `signer.address`                                 | If `signer.address` already holds a `T` |
-|`move_from<T>(address): T`                   | Remove `T` from `address` and return it                            | If `address` does not hold a `T`         |
-|`borrow_global_mut<T>(address): &mut T`      | Return a mutable reference to the `T` stored under `address`       | If `address` does not hold a `T`         |
-|`borrow_global<T>(address): &T`	             | Return an immutable reference to the `T` stored under `address`    | If `address` does not hold a `T`         |
-|`exists<T>(address): bool`                   | Return `true` if a `T` is stored under `address`                   |  Never                                      |
+| Operation                              | Description                                                     | Aborts?                                 |
+---------------------------------------- |---------------------------------------------------------------- |---------------------------------------- -
+|`move_to<T>(&signer,T)`                 | Publish `T` under `signer.address`                              | If `signer.address` already holds a `T` |
+|`move_from<T>(address): T`              | Remove `T` from `address` and return it                         | If `address` does not hold a `T`        |
+|`borrow_global_mut<T>(address): &mut T` | Return a mutable reference to the `T` stored under `address`    | If `address` does not hold a `T`        |
+|`borrow_global<T>(address): &T`         | Return an immutable reference to the `T` stored under `address` | If `address` does not hold a `T`        |
+|`exists<T>(address): bool`              | Return `true` if a `T` is stored under `address`                |  Never                                  |
 
-Each of these instructions is parameterized by a resource type `T` declared *in the current module*. This ensures that a resource can only be manipulated via the API exposed by its defining module. The instructions also take either an [`address`](./address.md) or [`&signer`](./signer.md) representing the account address where the resource of type `T` is stored.
+Each of these instructions is parameterized by a type `T` with the [`key` ability](./abilities.md). However, each type `T` *must be declared in the current module*. This ensures that a resource can only be manipulated via the API exposed by its defining module. The instructions also take either an [`address`](./address.md) or [`&signer`](./signer.md) representing the account address where the resource of type `T` is stored.
 
-### References to resources
+## References to resources
 
 References to global resources returned by `borrow_global` or `borrow_global_mut` mostly behave like references to local storage: they can be extended, read, and written using ordinary [reference operators](./references.md) and passed as arguments to other function. However, there is one important difference between local and global references: **a function cannot return a reference that points into global storage**. For example, these two functions will each fail to compile:
 
-```rust
-resource struct R { f: u64 }
+```move
+struct R has key { f: u64 }
 // will not compile
 fun ret_direct_resource_ref_bad(a: address): &R {
     borrow_global<R>(a) // error!
@@ -30,12 +30,12 @@ fun ret_resource_field_ref_bad(a: address): &u64 {
 
 Move must enforce this restriction to guarantee absence of dangling references to global storage. [This](#reference-safety-for-global-resources) section contains much more detail for the interested reader.
 
-### Global storage operators with generics
+## Global storage operators with generics
 
 Global storage operations can be applied to generic resources with both instantiated and uninstantiated generic type parameters:
 
-```rust
-resource struct Container<T> { t: T }
+```move
+struct Container<T> has key { t: T }
 
 // Publish a Container storing a type T of the caller's choosing
 fun publish_generic_container<T>(account: &signer, t: T) {
@@ -60,14 +60,13 @@ The simple `Counter` module below exercises each of the five global storage oper
 - An account that stores a `Counter` resource to reset it to zero
 - An account that stores a `Counter` resource to remove and delete it
 
-
-```rust
+```move
 address 0x42 {
 module Counter {
     use 0x1::Signer;
 
     /// Resource that wraps an integer counter
-    resource struct Counter { i: u64 }
+    struct Counter has key { i: u64 }
 
     /// Publish a `Counter` resource with value `i` under the given `account`
     public fun publish(account: &signer, i: u64) {
@@ -94,7 +93,7 @@ module Counter {
     }
 
     /// Delete the `Counter` resource under `account` and return its value
-    public fun delete(account: &Signer): u64 acquires Counter {
+    public fun delete(account: &signer): u64 acquires Counter {
         // remove the Counter resource
         let c = move_from<Counter>(Signer::address_of(account));
         // "Unpack" the `Counter` resource into its fields. This is a
@@ -114,13 +113,14 @@ module Counter {
 
 ## Annotating functions with `acquires`
 
-In the `Counter` example, you might have noticed that the`get_count`, `increment`, `reset`, and `delete` functions are annotated with `acquires Counter`. A Move function `M::f` must be annotated with `acquires T` if and only if:
+In the `Counter` example, you might have noticed that the `get_count`, `increment`, `reset`, and `delete` functions are annotated with `acquires Counter`. A Move function `M::f` must be annotated with `acquires T` if and only if:
+
 - The body of `M::f` contains a `move_from<T>`, `borrow_global_mut<T>`, or `borrow_global<T>` instruction, or
 - The body of `M::f` invokes a function `M::g` declared in the same module that is annotated with `acquires`
 
 For example, the following function inside `Counter` would need an `acquires` annotation:
 
-```rust
+```move
 // Needs `acquires` because `increment` is annotated with `acquires`
 fun call_increment(addr: address): u64 acquires Counter {
     Counter::increment(addr)
@@ -129,7 +129,7 @@ fun call_increment(addr: address): u64 acquires Counter {
 
 However, the same function *outside* `Counter` would not need an annotation:
 
-```rust
+```move
 address 0x43 {
 module M {
    use 0x42::Counter;
@@ -145,11 +145,11 @@ module M {
 
 If a function touches multiple resources, it needs multiple `acquires`:
 
-```rust=
+```move=
 address 0x42 {
 module TwoResources {
-    resource struct R1 { f: u64 }
-    resource struct R2 { g: u64 }
+    struct R1 has key { f: u64 }
+    struct R2 has key { g: u64 }
 
     fun double_acquires(a: address): u64 acquires R1, R2 {
         borrow_global<R1>(a).f + borrow_global<R2>.g
@@ -160,13 +160,13 @@ module TwoResources {
 
 The `acquires` annotation does not take generic type parameters into account:
 
-```rust=
+```move=
 address 0x42 {
 module M {
-    resource struct R<T> { t: T }
+    struct R<T> has key { t: T }
 
     // `acquires R`, not `acquires R<T>`
-    fun acquire_generic_resource(a: addr) acquires R {
+    fun acquire_generic_resource<T: store>(a: addr) acquires R {
         let _ = borrow_global<R<T>>(a);
     }
 
@@ -180,7 +180,7 @@ module M {
 
 Finally: redundant `acquires` are not allowed. Adding this function inside `Counter` will result in a compilation error:
 
-```rust
+```move
 // This code will not compile because the body of the function does not use a global
 // storage instruction or invoke a function with `acquires`
 fun redundant_acquires_bad() acquires Counter {}
@@ -194,10 +194,10 @@ Move prohibits returning global references and requires the `acquires` annotatio
 
 This example illustrates how the Move type system uses `acquires` to prevent a dangling reference:
 
-```rust=
+```move=
 address 0x42 {
 module Dangling {
-    resource struct T { f: u64 }
+    struct T has key { f: u64 }
 
     fun borrow_then_remove_bad(a: address) acquires T {
         let t_ref: &mut T = borrow_global_mut<T>(a);
@@ -220,10 +220,10 @@ Fortunately, this cannot happen because the type system will reject this program
 
 The restriction on returning global references prevents a similar, but even more insidious problem:
 
-```rust=
+```move=
 address 0x42 {
 module M1 {
-    resource struct T {}
+    struct T has key {}
 
     public fun ret_t_ref(a: address): &T acquires T {
         borrow_global<T>(a) // error! type system complains here

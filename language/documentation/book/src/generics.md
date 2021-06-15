@@ -12,7 +12,7 @@ Both functions and structs can take a list of type parameters in their signature
 
 Type parameters for functions are placed after the function name and before the (value) parameter list. The following code defines a generic identity function that takes a value of any type and returns that value unchanged.
 
-```rust
+```move
 fun id<T>(x: T): T {
     // this type annotation is unnecessary but valid
     (x: T)
@@ -25,10 +25,10 @@ Once defined, the type parameter `T` can be used in parameter types, return type
 
 Type parameters for structs are placed after the struct name, and can be used to name the types of the fields.
 
-```rust
-struct Foo<T> { x: T }
+```move
+struct Foo<T> has copy, drop { x: T }
 
-struct Bar<T1, T2> {
+struct Bar<T1, T2> has copy, drop {
     x: T1,
     y: vector<T2>,
 }
@@ -42,7 +42,7 @@ struct Bar<T1, T2> {
 
 When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.
 
-```rust=
+```move=
 fun foo() {
     let x = id<bool>(true);
 }
@@ -54,7 +54,7 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.
 
-```rust=
+```move=
 fun foo() {
     let foo = Foo<bool> { x: true };
     let Foo<bool> { x } = foo;
@@ -67,7 +67,7 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 If you specify the type arguments and they conflict with the actual values supplied, an error will be given
 
-```rust=
+```move=
 fun foo() {
     let x = id<u64>(true); // error! true is not a u64
 }
@@ -75,7 +75,7 @@ fun foo() {
 
 and similarly
 
-```rust=
+```move=
 fun foo() {
     let foo = Foo<bool> { x: 0 }; // error! 0 is not a bool
     let Foo<address> { x } = foo; // error! bool is incompatible with address
@@ -86,7 +86,7 @@ fun foo() {
 
 In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.
 
-```rust=
+```move=
 fun foo() {
     let x = id(true);
     //        ^ <bool> is inferred
@@ -101,7 +101,7 @@ fun foo() {
 
 Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.
 
-```rust=
+```move=
 address 0x2 {
 module M {
     using 0x1::Vector;
@@ -119,7 +119,7 @@ module M {
 
 However, the compiler will be able to infer the type if that return value is used later in that function
 
-```rust=
+```move=
 address 0x2 {
 module M {
     using 0x1::Vector;
@@ -137,7 +137,7 @@ module M {
 
 Move allows unused type parameters so the following struct definition is valid:
 
-```rust=
+```move=
 struct Foo<T> {
     foo: u64
 }
@@ -145,17 +145,17 @@ struct Foo<T> {
 
 This can be convenient when modeling certain concepts. Here is an example:
 
-```rust=
+```move=
 address 0x2 {
 module M {
     // Currency Specifiers
-    struct Currency1 {}
-    struct Currency2 {}
+    struct Currency1 has store {}
+    struct Currency2 has store {}
 
     // A generic coin type that can be instantiated using a currency
     // specifier type.
     //   e.g. Coin<Currency1>, Coin<Currency2> etc.
-    resource struct Coin<Currency> {
+    struct Coin<Currency> has store {
         value: u64
     }
 }
@@ -164,7 +164,7 @@ module M {
 
 ## Constraints
 
-In the examples above, we have demonstrated how one can use type parameters to define "unkonwn" types that can be plugged in by callers at a later time. This however means the type system has little information about the type and has to perform checks in a very conservative way. In some sense, the type system must assume the worst case scenario for an unconstrained generic. If for instance you were to `copy` an unconstrained generic, you could break resource safety if that type was instantiated with a resource!
+In the examples above, we have demonstrated how one can use type parameters to define "unkonwn" types that can be plugged in by callers at a later time. This however means the type system has little information about the type and has to perform checks in a very conservative way. In some sense, the type system must assume the worst case scenario for an unconstrained generic. Simply put, by default generic type parameters have no [abilities](./abilities.md).
 
 This is where constraints come into play: they offer a way to specify what properties these unknown types have so the type system can allow operations that would otherwise be unsafe.
 
@@ -172,40 +172,41 @@ This is where constraints come into play: they offer a way to specify what prope
 
 Constraints can be imposed on type parameters using the following syntax.
 
-```rust=
+```move=
 // T is the name of the type parameter
-T: resource
-// or
-T: copyable
+T: <ability> (+ <ability>)*
 ```
 
-- `resource` means values of the type cannot be copied and cannot be dropped
-- `copyable` means values of the type can be copied and can be dropped
+The `<ability>` can be any of the four [abilities](./abilities.md), and a type parameter can be constrained with multiple [abilities](./abilities.md) at once. So all of the following would be valid type parameter declarations
 
-These two constraint are mutually exclusive so you can't have both applied to a type parameter at the same time.
+```move
+T: copy
+T: copy + drop
+T: copy + drop + store + key
+```
 
 ### Verifying Constraints
 
 Constraints are checked at call sites so the following code won't compile.
 
-```rust=
-struct Foo<T: resource> { x: T }
+```move=
+struct Foo<T: key> { x: T }
 
 struct Bar { x: Foo<u8> }
-//                  ^ error! u8 is not resource
+//                  ^ error! u8 does not have 'key'
 
 struct Baz<T> { x: Foo<T> }
-//                     ^ error! T isn't necessarily resource
+//                     ^ error! T does not have 'key'
 ```
 
-```rust=
-resource struct R {}
+```move=
+struct R {}
 
 fun unsafe_consume<T>(x: T) {
-    // error! x might be an unused resource
+    // error! x does not have 'drop'
 }
 
-fun consume<T: copyable>(x: T) {
+fun consume<T: drop>(x: T) {
     // valid!
     // x will be dropped automatically
 }
@@ -213,62 +214,30 @@ fun consume<T: copyable>(x: T) {
 fun foo() {
     let r = R {};
     consume<R>(r);
-    //      ^ error! R is not copyable
+    //      ^ error! R does not have 'drop'
 }
 ```
 
-```rust=
-resource struct R {}
+```move=
+struct R {}
 
 fun unsafe_double<T>(x: T) {
     (copy x, x)
-    // error! cannot copy x as it might be a resource
+    // error! x does not have 'copy'
 }
 
-fun double<T: copyable>(x: T) {
-    (copy x, x)
+fun double<T: copy>(x: T) {
+    (copy x, x) // valid!
 }
 
 fun foo(): (R, R) {
-    let r = R{};
+    let r = R {};
     double<R>(r)
-    //     ^ error! R is not copyable
+    //     ^ error! R does not have copy
 }
 ```
 
-### How to tell if a struct type is resource or copyable
-
-Recall that a non-generic struct type is considered resource if and only if it is explicitly marked so.
-
-```rust=
-resource struct Foo {} // Foo is resource
-struct Bar {}          // Bar is copyable
-```
-
-However for a generic struct type, whether it is considered resource depends on the specific type arguments used to instantiate it, unless there's an explicit `resource` marker in the struct definition.
-
-```rust=
-struct Foo<T> {}
-resource struct Bar<T> {}
-resource struct R {}
-
-// R is a resource type by definition
-
-// Foo<u64> is a copyable type since u64 is a copyable type
-
-// Foo<vector<Foo<u64>>> is a copyable type since
-//   vector<Foo<u64>> is a copyable type since
-//     Foo<u64> is a copyable type since u64 is a copyable type
-
-// Foo<R> is a resource type since R is a resource type
-// However, Foo<R> cannot be used with global storage operations
-
-// Bar<u64> is a resource type by definition
-
-// vector<Foo<Bar<u64>>> is a resource type since
-//   Foo<Bar<u64>> is a resource type since
-//     Bar<u64> is a resource type by definition
-```
+For more information, see the abilities section on [conditional abilities and generic types](./abilities.html#conditional-abilities-and-generic-types)
 
 ## Limitations on Recursions
 
@@ -276,7 +245,7 @@ resource struct R {}
 
 Generic structs can not contain fields of the same type, either directly or indirectly, even with different type arguments. All of the following struct definitions are invalid:
 
-```rust=
+```move=
 struct Foo<T> {
     x: Foo<u64> // error! 'Foo' containing 'Foo'
 }
@@ -302,10 +271,10 @@ Move allows generic functions to be called recursively. However, when used in co
 
 Allowed:
 
-```rust=
+```move=
 address 0x2 {
 module M {
-    resource struct A<T> {}
+    struct A<T> {}
 
     // Finitely many types -- allowed.
     // foo<T> -> foo<T> -> foo<T> -> ... is valid
@@ -324,10 +293,10 @@ module M {
 
 Not allowed:
 
-```rust=
+```move=
 address 0x2 {
 module M {
-    resource struct A<T> {}
+    struct A<T> {}
 
     // Infinitely many types -- NOT allowed.
     // error!
@@ -339,10 +308,10 @@ module M {
 }
 ```
 
-```rust=
+```move=
 address 0x2 {
 module N {
-    resource struct A<T> {}
+    struct A<T> {}
 
     // Infinitely many types -- NOT allowed.
     // error!
@@ -363,10 +332,10 @@ module N {
 
 Note, the check for type level recursions is based on a conservative analysis on the call sites and does NOT take control flow or runtime values into account.
 
-```rust=
+```move=
 address 0x2 {
 module M {
-    resource struct A<T> {}
+    struct A<T> {}
 
     fun foo<T>(n: u64) {
         if (n > 0) {

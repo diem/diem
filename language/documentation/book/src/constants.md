@@ -8,13 +8,13 @@ The constant's must be known at compilation. The constant's value is stored in t
 
 Constant declarations begin with the `const` keyword, followed by a name, a type, and a value. They can exist in either a script or module
 
-```
+```text
 const <name>: <type> = <expression>;
 ```
 
 For example
 
-```rust=
+```move=
 script {
 
     const MY_ERROR_CODE: u64 = 0;
@@ -42,7 +42,7 @@ module Example {
 
 Constants must start with a capital letter `A` to `Z`. After the first letter, constant names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-```rust
+```move
 const FLAG: bool = false;
 const MY_ERROR_CODE: u64 = 0;
 const ADDRESS_42: address = 0x42;
@@ -65,7 +65,7 @@ Currently, constants are limited to the primitive types `bool`, `u8`, `u64`, `u1
 Commonly, `const`s are assigned a simple value, or literal, of their type.
 For example
 
-```rust
+```move
 const MY_BOOL: bool = false;
 const MY_ADDRESS: address = 0x70DD;
 const BYTES: vector<u8> = b"hello world";
@@ -78,7 +78,7 @@ In addition to literals, constants can include more complex expressions, as long
 
 Currently, equality operations, all boolean operations, all bitwise operations, and all arithmetic operations can be used.
 
-```rust
+```move
 const RULE: bool = true && false;
 const CAP: u64 = 10 * 100 + 1;
 const SHIFTY: u8 = {
@@ -90,7 +90,7 @@ const EQUAL: bool = 1 == 1;
 
 If the operation would result in a runtime exception, the compiler will give an error that it is unable to generate the constant's value
 
-```rust
+```move
 const DIV_BY_ZERO: u64 = 1 / 0; // error!
 const SHIFT_BY_A_LOT: u64 = 1 << 100; // error!
 const NEGATIVE_U64: u64 = 0 - 1; // error!

@@ -8,7 +8,7 @@ More information on [`return` can be found in the linked section](./functions.md
 
 `abort` is an expression that takes one argument: an **abort code** of type `u64`. For example:
 
-```rust
+```move
 abort 42
 ```
 
@@ -20,7 +20,7 @@ Similar to [`return`](./functions.md), `abort` is useful for exiting control flo
 
 In this example, the function will pop two items off of the vector, but will abort early if the vector does not have two items
 
-```rust=
+```move=
 use 0x1::Vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     if (Vector::length(v) < 2) abort 42;
@@ -31,7 +31,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 
 This is even more useful deep inside a control-flow construct. For example, this function checks that all numbers in the vector are less than the specified `bound`. And aborts otherwise
 
-```rust=
+```move=
 use 0x1::Vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
@@ -48,19 +48,19 @@ fun check_vec(v: &vector<u64>, bound: u64) {
 
 `assert` is a builtin, macro-like operation provided by the Move compiler. It takes two arguments, a condition of type `bool` and a code of type `u64`
 
-```rust
+```move
 assert(condition: bool, code: u64)
 ```
 
 The operation does not exist at the bytecode level, and is replaced inside the compiler with
 
-```rust
+```move
 if (condition) () else abort code
 ```
 
 The `abort` examples above can be rewritten using `assert`
 
-```rust=
+```move=
 use 0x1::Vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     assert(Vector::length(v) >= 2, 42); // Now uses 'assert'
@@ -71,7 +71,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 
 and
 
-```rust=
+```move=
 use 0x1::Vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
@@ -97,7 +97,7 @@ If an `abort` is reached, the VM will instead indicate an error. Included in tha
 
 For example
 
-```rust=
+```move=
 address 0x2 {
 module Example {
     public fun aborts() {
@@ -119,7 +119,7 @@ This can be useful for having multiple aborts being grouped together inside a mo
 
 In this example, the module has two separate error codes used in multiple functions
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -159,13 +159,13 @@ The `abort i` expression can have any type! This is because both constructs brea
 
 The following are not useful, but they will type check
 
-```rust
+```move
 let y: address = abort 0;
 ```
 
 This behavior can be helpful in situations where you have a branching instruction that produces a value on some branches, but not all. For example:
 
-```rust
+```move
 let b =
     if (x == 0) false
     else if (x == 1) true

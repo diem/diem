@@ -2,7 +2,7 @@
 
 An `if` expression specifies that some code should only be evaluated if a certain condition is true. For example:
 
-```rust
+```move
 if (x > 5) x = x - 5
 ```
 
@@ -10,7 +10,7 @@ The condition must be an expression of type `bool`.
 
 An `if` expression can optionally include an `else` clause to specify another expression to evaluate when the condition is false.
 
-```rust
+```move
 if (y <= 10) y = y + 1 else y = 10
 ```
 
@@ -18,13 +18,13 @@ Either the "true" branch or the "false" branch will be evaluated, but not both. 
 
 The conditional expressions may produce values so that the `if` expression has a result.
 
-```rust
+```move
 let z = if (x < 100) x else 100;
 ```
 
 The expressions in the true and false branches must have compatible types. For example:
 
-```rust=
+```move=
 // x and y must be u64 integers
 let maximum: u64 = if (x > y) x else y;
 
@@ -37,14 +37,14 @@ if (maximum >= 10) maximum;
 
 If the `else` clause is not specified, the false branch defaults to the unit value. The following are equivalent:
 
-```rust
+```move
 if (condition) true_branch // implied default: else ()
 if (condition) true_branch else ()
 ```
 
 Commonly, [`if` expressions](./conditionals.md) are used in conjunction with expression blocks.
 
-```rust
+```move
 let maximum = if (x > y) x else y;
 if (maximum < 10) {
     x = x + 10;

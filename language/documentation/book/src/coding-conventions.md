@@ -21,7 +21,7 @@ This section lays out some basic coding conventions for Move that the Move team 
 
 For example, if there is a module
 
-```rust=
+```move=
 module Foo {
     resource struct Foo { }
     const CONST_FOO: u64 = 0;
@@ -32,7 +32,7 @@ module Foo {
 
 this would be imported and used as:
 
-```rust=
+```move=
 module Bar {
     use 0x1::Foo::{Self, Foo};
 
@@ -49,7 +49,7 @@ module Bar {
 
 And, if there is a local name-clash when importing two modules:
 
-```rust=
+```move=
 module OtherFoo {
     resource struct Foo {}
     ...

@@ -2,13 +2,15 @@
 
 A *struct* is a user-defined data structure containing typed fields. Structs can store any non-reference type, including other structs.
 
-A *resource* is a kind of struct that cannot be copied and cannot be dropped. All resource values must have ownership transferred by the end of the function. Resources are used to define global storage schemas, and only resource structs can be saved directly into global storage.
+We often refer to struct values as *resources* if they cannot be copied and cannot be dropped. In this case, resource values must have ownership transferred by the end of the function. This property makes resources particularly well served for defining global storage schemas or for representing important values (such as a token).
+
+By default, structs are linear and ephemeral. By this we mean that they: cannot be copied, cannot be dropped, and cannot be stored in global storage. This means that all values have to have ownership transferred (linear) and the values must be dealt with by the end of the program's execution (ephemeral). We can relax this behavior by giving the struct [abilities](./abilities.md) which allow values to be copied or dropped and also to be stored in global storage or to define gobal storage schemas.
 
 ## Defining Structs
 
 Structs must be defined inside a module:
 
-```rust
+```move
 address 0x2 {
 module M {
     struct Foo { x: u64, y: bool }
@@ -21,28 +23,28 @@ module M {
 
 Structs cannot be recursive, so the following definition is invalid:
 
-```rust=
+```move=
 struct Foo { x: Foo }
 //              ^ error! Foo cannot contain Foo
 ```
 
-Struct definitions can be annotated with the `resource` modifier, which imposes a few additional constraints on the type, but also enables it to be used in global storage. We will cover the details later in this tutorial.
+As mentioned above: by default, a struct declaration is linear and ephemeral. So to allow the value to be used with certain operations (that copy it, drop it, store it in global storage, or use it as a storage schema), structs can be granted [abilities](./abilities.md) by annotating them with `has <ability>`:
 
-```rust=
+```move=
 address 0x2 {
 module M {
-    resource struct Foo { x: u64, y: bool }
+    struct Foo has copy, drop { x: u64, y: bool }
 }
 }
 ```
 
-Note: the term `resource struct` is a little bit cumbersome so in many places we just call it `resource`.
+For more details, see the [annotating structs](./abilities.md#annotating-structs) section.
 
 ### Naming
 
 Structs must start with a capital letter `A` to `Z`. After the first letter, constant names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-```rust
+```move
 struct Foo {}
 struct BAR {}
 struct B_a_z_4_2 {}
@@ -56,11 +58,11 @@ This naming restriction of starting with `A` to `Z` is in place to give room for
 
 Values of a struct type can be created (or "packed") by indicating the struct name, followed by value for each field:
 
-```rust=
+```move=
 address 0x2 {
 module M {
-    struct Foo { x: u64, y: bool }
-    struct Baz { foo: Foo }
+    struct Foo has drop { x: u64, y: bool }
+    struct Baz has drop { foo: Foo }
 
     fun example() {
         let foo = Foo { x: 0, y: false };
@@ -72,7 +74,7 @@ module M {
 
 If you initialize a struct field with a local variable whose name is the same as the field, you can use the following shorthand:
 
-```rust
+```move
 let baz = Baz { foo: foo };
 // is equivalent to
 let baz = Baz { foo };
@@ -84,7 +86,7 @@ This is called sometimes called "field name punning".
 
 Struct values can be destroyed by binding or assigning them patterns.
 
-```rust=
+```move=
 address 0x2 {
 module M {
     struct Foo { x: u64, y: bool }
@@ -153,7 +155,7 @@ module M {
 
 The `&` and `&mut` operator can be used to create references to structs or fields. These examples include some optional type annotations (e.g., `: &Foo`) to demonstrate the type of operations.
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let foo_ref: &Foo = &foo;
 let y: bool = foo_ref.y;          // reading a field via a reference to the struct
@@ -165,7 +167,7 @@ let x_ref_mut: &mut u64 = &mut foo.x;
 
 It is possible to borrow inner fields of nested structs.
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
@@ -174,7 +176,7 @@ let x_ref = &bar.foo.x;
 
 You can also borrow a field via a reference to a struct.
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let foo_ref = &foo;
 let x_ref = &foo_ref.x;
@@ -185,7 +187,7 @@ let x_ref = &foo_ref.x;
 
 If you need to read and copy a field's value, you can then dereference the borrowed field
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&foo.x;
@@ -193,9 +195,9 @@ let y: bool = *&foo.y;
 let foo2: Foo = *&bar.foo;
 ```
 
-If the field is an implicitly copyable, the dot operator can be used to read fields of a struct without any borrowing.
+If the field is implicitly copyable, the dot operator can be used to read fields of a struct without any borrowing. (Only scalar values with the `copy` ability are implicitly copyable.)
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
@@ -203,14 +205,14 @@ let y = foo.y;  // y == true
 
 Dot operators can be chained to access nested fields.
 
-```rust=
+```move=
 let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 ```
 
 However, this is not permitted for fields that contain non-primitive types, such a vector or another struct
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&bar.foo;
@@ -221,7 +223,7 @@ The reason behind this design decision is that copying a vector or another struc
 
 In addition reading from fields, the dot syntax can be used to modify fields, regardless of the field being a primitive type or some other struct
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
@@ -232,7 +234,7 @@ bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 
 The dot syntax also works via a reference to a struct
 
-```rust=
+```move=
 let foo = Foo { x: 3, y: true };
 let foo_ref = &mut foo;
 foo_ref.x = foo_ref.x + 1;
@@ -249,11 +251,11 @@ Following these rules, if you want to modify your struct outside the module, you
 
 However, struct *types* are always visible to another module or script:
 
-```rust=
+```move=
 // M.move
 address 0x2 {
 module M {
-    struct Foo { x: u64 }
+    struct Foo has drop { x: u64 }
 
     public fun new_foo(): Foo {
         Foo { x: 42 }
@@ -262,13 +264,13 @@ module M {
 }
 ```
 
-```rust=
+```move=
 // N.move
 address 0x2 {
 module N {
     use 0x2::M;
 
-    struct Wrapper {
+    struct Wrapper has drop {
         foo: M::Foo
     }
 
@@ -288,12 +290,61 @@ Note that structs do not have visibility modifiers (e.g., `public` or `private`)
 
 ## Ownership
 
-By default, structs can be freely copied and silently dropped.
+As mentioned above in [Defining Structs](#defining-structs), structs are by default linear and ephemeral. This means they cannot be copied or dropped. This property can be very useful when modeling real world resources like money, as you do not want money to be duplicated or get lost in circulation.
 
-```rust=
+```move=
 address 0x2 {
 module M {
     struct Foo { x: u64 }
+
+    public fun copying_resource() {
+        let foo = Foo { x: 100 };
+        let foo_copy = copy foo; // error! 'copy'-ing requires the 'copy' ability
+        let foo_ref = &foo;
+        let another_copy = *foo_ref // error! dereference requires the 'copy' ability
+    }
+
+    public fun destroying_resource1() {
+        let foo = Foo { x: 100 };
+
+        // error! when the function returns, foo still contains a value.
+        // This destruction requires the 'drop' ability
+    }
+
+    public fun destroying_resource2(f: &mut Foo) {
+        *f = Foo { x: 100 } // error!
+                            // destroying the old value via a write requires the 'drop' ability
+    }
+}
+}
+```
+
+To fix the second example (`fun dropping_resource`), you would need to manually "unpack" the resource:
+
+```move=
+address 0x2 {
+module M {
+    struct Foo { x: u64 }
+
+    public fun destroying_resource1_fixed() {
+        let foo = Foo { x: 100 };
+        let Foo { x: _ } = foo;
+    }
+}
+}
+```
+
+Recall that you are only able to deconstruct a resource within the module in which it is defined.
+This can be leveraged to enforce certain invariants in a system, for example, conservation of money.
+
+If on the other hand, your struct does not represent something valuable, you can add the abilities
+`copy` and `drop` to get a struct value that might feel more familiar from other programming
+languages:
+
+```move=
+address 0x2 {
+module M {
+    struct Foo has copy, drop { x: u64 }
 
     public fun run() {
         let foo = Foo { x: 100 };
@@ -310,82 +361,35 @@ module M {
 }
 ```
 
-Resource structs on the other hand, cannot be copied or dropped silently. This property can be very useful when modeling real world resources like money, as you do not want money to be duplicated or get lost in circulation.
-
-```rust=
-address 0x2 {
-module M {
-    resource struct Foo { x: u64 }
-
-    public fun copying_resource() {
-        let foo = Foo { x: 100 };
-        let foo_copy = copy foo; // error! resources cannot be copied
-        let foo_ref = &foo;
-        let another_copy = *foo_ref // error! resources cannot be copied
-    }
-
-    public fun destroying resource1() {
-        let foo = Foo { x: 100 };
-
-        // error! when the function returns, foo still contains a resource
-    }
-
-    public fun destroying resource2(f: &mut Foo) {
-        *f = Foo { x: 100 } // error! destroying resource
-    }
-}
-}
-```
-
-To fix the second example (`fun dropping_resource`), you will need to manually "unpack" the resource:
-
-```rust=
-address 0x2 {
-module M {
-    resource struct Foo { x: u64 }
-
-    public fun destroying_resource() {
-        let foo = Foo { x: 100 };
-        let Foo { x } = foo;
-    }
-}
-}
-```
-
-In addition, in order to enforce the said ownership rules at all times, it is required that normal structs do NOT have contain fields of resource types.
-
-```rust=
-address 0x2 {
-module M {
-    resource struct R {}
-
-    struct Foo { x: R }
-    //           ^~~~ error! Foo is not a resource so
-    //                it cannot contain R
-
-    resource struct Bar { x: R }
-    // good
-}
-}
-```
-
-Recall that you are only able to deconstruct a resource within the module in which it is defined. This can be leveraged to enforce certain invariants in a system, for example, conservation of money.
-
 ## Storing Resources in Global Storage
 
-Only resource structs can be saved directly in [persistent global storage](./global-storage-operators.md). See the [global storage](./global-storage-operators.md) chapter for more detail.
+Only structs with the `key` ability can be saved directly in [persistent global storage](./global-storage-operators.md). All values stored within those `key` structs must have the `store` abilities. See the [ability](./abilities] and [global storage](./global-storage-operators.md) chapters for more detail.
 
-## Example 1: Coin
+## Examples
 
-```rust=
+Here are two short examples of how you might use structs to represent valuable data (in the case of `Coin`) or more classical data (in the case of `Point` and `Circle`)
+
+### Example 1: Coin
+
+<!-- TODO link to access control for mint -->
+```move=
 address 0x2 {
 module M {
-    resource struct Coin {
+    // We do not want the Coin to be copied because that would be duplicating this "money",
+    // so we do not give the struct the 'copy' ability.
+    // Similarly, we do not want programmers to destroy coins, so we do not give the struct the
+    // 'drop' ability.
+    // However, we *want* users of the modules to be able to store this coin in persistent global
+    // storage, so we grant the struct the 'store' ability. This struct will only be inside of
+    // other resources inside of global storage, so we do not give the struct the 'key' ability.
+    struct Coin has store {
         value: u64,
     }
 
-    public fun zero(): Coin {
-        Coin { value: 0 }
+    public fun mint(value: u64): Coin {
+        // You would want to gate this function with some form of access control to prevent
+        // anyone using this module from minting an infinite amount of coins
+        Coin { value }
     }
 
     public fun withdraw(coin: &mut Coin, amount: u64): Coin {
@@ -408,16 +412,21 @@ module M {
         deposit(&mut coin1, coin2);
         coin1
     }
+
+    public fun destroy_zero(coin: Coin) {
+        let Coin { value } = coin;
+        assert(value == 0, 1001);
+    }
 }
 }
 ```
 
-## Example 2: Geometry
+### Example 2: Geometry
 
-```rust=
+```move=
 address 0x2 {
 module Point {
-    struct Point {
+    struct Point has copy, drop, store {
         x: u64,
         y: u64,
     }
@@ -454,12 +463,12 @@ module Point {
 }
 ```
 
-```rust=
+```move=
 address 0x2 {
 module Circle {
     use 0x2::Point::{Self, Point};
 
-    struct Circle {
+    struct Circle has copy, drop, store {
         center: Point,
         radius: u64,
     }

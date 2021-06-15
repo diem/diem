@@ -20,6 +20,7 @@
 ## Basic Concepts
 
 - [Local Variables and Scopes](variables.md)
+- [Equality](equality.md)
 - [Abort and Assert](abort-and-assert.md)
 - [Conditionals](conditionals.md)
 - [While and Loop](loops.md)
@@ -27,7 +28,7 @@
 - [Structs and Resources](structs-and-resources.md)
 - [Constants](constants.md)
 - [Generics](generics.md)
-- [Equality](equality.md)
+- [Type Abilities](abilities.md)
 - [Uses and Aliases](uses.md)
 - [Friends](friends.md)
 

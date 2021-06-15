@@ -2,7 +2,7 @@
 
 `vector<T>` is the only primitive collection type provided by Move. A `vector<T>` is a homogenous collection of `T`'s that can grow or shrink by pushing/popping values off the "end".
 
-A `vector<T>` can be instantiated with any type `T`, including resource types and other vectors. For example, `vector<u64>`, `vector<address>`, `vector<0x42::MyModule::MyResource>`, and `vector<vector<u8>>` are all valid vector types.
+A `vector<T>` can be instantiated with any type `T`. For example, `vector<u64>`, `vector<address>`, `vector<0x42::MyModule::MyResource>`, and `vector<vector<u8>>` are all valid vector types.
 
 ## Operations
 
@@ -23,7 +23,7 @@ More operations may be added overtime
 
 ## Example
 
-```rust
+```move
 use 0x1::Vector;
 
 let v = Vector::empty<u64>();
@@ -38,41 +38,35 @@ assert(Vector::pop_back(&mut v) == 5, 42);
 
 ## Destroying and copying `vector`s
 
-Some behaviors of `vector<T>` depend on whether `T` is a resource type. For example, vectors containing resources cannot be implictly discarded like `v` in the example above--they must be explicitly destroyed with `Vector::destroy_empty`.
+Some behaviors of `vector<T>` depend on the abilities of the element type, `T`. For example, vectors containing elements that do not have `drop` cannot be implicitly discarded like `v` in the example above--they must be explicitly destroyed with `Vector::destroy_empty`.
 
-Note that `Vector::destroy_empty` will abort at runtime unless `vec` contains zero elements.
+Note that `Vector::destroy_empty` will abort at runtime unless `vec` contains zero elements:
 
-```rust
-fun destroy_resource_vector<T: resource>(vec: vector<T>) {
+```move
+fun destroy_any_vector<T>(vec: vector<T>) {
     Vector::destroy_empty(vec) // deleting this line will cause a compiler error
 }
 ```
 
-This error would also happen for an unconstrained `T` as the type *might* be a resource.
+But no error would occur for dropping a vector that contains elements with `drop`:
 
-```rust
-fun destroy_vector<T>(vec: vector<T>) {
-    Vector::destroy_empty(vec) // deleting this line will cause a compiler error
-}
-```
-
-But no error would occur for dropping a vector that contains `copyable` elements
-
-```rust
-fun destroy_copyable_vector<T: copyable>(vec: vector<T>) {
+```move
+fun destroy_droppable_vector<T: drop>(vec: vector<T>) {
     // valid!
     // nothing needs to be done explicitly to destroy the vector
 }
 ```
 
-Similarly, resource vectors cannot be copied. A `vector<T>` is copyable if and only if `T` is copyable. However, even copyable vectors are never implicitly copied:
+Similarly, vectors cannot be copied unless the element type has `copy`. In other words, a `vector<T>` has `copy` if and only if `T` has `copy`. However, even copyable vectors are never implicitly copied:
 
-```rust
+```move
 let x = Vector::singleton<u64>(10);
 let y = copy x; // compiler error without the copy!
 ```
 
 Copies of large vectors can be expensive, so the compiler requires explicit `copy`'s to make it easier to see where they are happening.
+
+For more details see the sections on [type abilities](./abilities.md) and [generics](./generics.md).
 
 ## Literals
 
@@ -106,7 +100,7 @@ Each byte pair, ranging from `00` to `FF`, is interpreted as hex encoded `u8` va
 
 #### Examples
 
-```rust
+```move
 script {
 fun byte_and_hex_strings() {
     assert(b"" == x"", 0);
@@ -124,3 +118,7 @@ fun byte_and_hex_strings() {
 ### Other `vector` literals
 
 Currently, there is no support for general `vector<T>` literals in Move where `T` is not a `u8`. However, Move bytecode supports `vector<T>` constants for any primitive type `T`. We plan to add `vector<T>` literals to the source language that can compile to bytecode constants.
+
+## Ownership
+
+As mentioned [above](#destroying-and-copying-vectors), `vector` values can be copied only if the elements can be copied. In that case, the copy must be explicit via a [`copy`](./variables.md#move-and-copy) or a [dereference `*`](./references.md#reference-operators).

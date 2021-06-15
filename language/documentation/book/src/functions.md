@@ -6,7 +6,7 @@ Function syntax in Move is shared between module functions and script functions.
 
 Functions are declared with the `fun` keyword followed by the function name, type parameters, parameters, a return type, acquires annotations, and finally the function body.
 
-```
+```text
 fun <identifier><[type_parameters: constraint],*>([identifier: type],*): <return_type> <acquires [identifier],*> <function_body>
 ```
 
@@ -152,7 +152,7 @@ script {
 
 Function names can start with letters `a` to `z` or letters `A` to `Z`. After the first character, function names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-```rust
+```move
 fun FOO() {}
 fun bar_42() {}
 fun _bAZ19() {}
@@ -162,9 +162,9 @@ fun _bAZ19() {}
 
 After the name, functions can have type parameters
 
-```rust
+```move
 fun id<T>(x: T): T { x }
-fun example<T1: copyable, T2>(x: T1, y: T2): (T1, T1, T2) { (copy x, x, y) }
+fun example<T1: copy, T2>(x: T1, y: T2): (T1, T1, T2) { (copy x, x, y) }
 ```
 
 For more details, see [Move generics](./generics.md).
@@ -173,7 +173,7 @@ For more details, see [Move generics](./generics.md).
 
 Functions parameters are declared with a local variable name followed by a type annotation
 
-```rust
+```move
 fun add(x: u64, y: u64): u64 { x + y }
 ```
 
@@ -181,13 +181,13 @@ We read this as `x` has type `u64`
 
 A function does not have to have any parameters at all.
 
-```rust
+```move
 fun useless() { }
 ```
 
 This is very common for functions that create new or empty data structures
 
-```rust=
+```move=
 address 0x42 {
 module Example {
   struct Counter { count: u64 }
@@ -204,11 +204,11 @@ module Example {
 
 When a function accesses a resource using `move_from`, `borrow_global`, or `borrow_global_mut`, the function must indicate that it `acquires` that resource. This is then used by Move's type system to ensure the references into global storage are safe, specifically that there are no dangling references into global storage.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
-    resource struct Balance { value: u64 }
+    struct Balance has key { value: u64 }
 
     public fun add_balance(s: &signer, value: u64) {
         move_to(s, Balance { value })
@@ -224,11 +224,11 @@ module Example {
 
 `acquires` annotations must also be added for transitive calls within the module. Calls to these functions from another module do not need to annotated with these acquires because one module cannot access resources declared in another module--so the annotation is not needed to ensure reference safety.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
-    resource struct Balance { value: u64 }
+    struct Balance has key { value: u64 }
 
     public fun add_balance(s: &signer, value: u64) {
         move_to(s, Balance { value })
@@ -257,15 +257,15 @@ module Other {
 
 A function can `acquire` as many resources as it needs to
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     use 0x1::Vector;
 
-    resource struct Balance { value: u64 }
-    resource struct Box<T> { items: vector<T> }
+    struct Balance has key { value: u64 }
+    struct Box<T> has key { items: vector<T> }
 
-    public fun store_two<Item1, Item2>(
+    public fun store_two<Item1: store, Item2: store>(
         addr: address,
         item1: Item1,
         item2: Item2,
@@ -285,7 +285,7 @@ module Example {
 
 After the parameters, a function specifies its return type.
 
-```rust
+```move
 fun zero(): u64 { 0 }
 ```
 
@@ -293,13 +293,13 @@ Here `: u64` indicates that the function's return type is `u64`.
 
 Using tuples, a function can return multiple values
 
-```rust
+```move
 fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 ```
 
 If no return type is specified, the function has an implicit return type of unit `()`. These functions are equivalent
 
-```rust
+```move
 fun just_unit(): () { () }
 fun just_unit() { () }
 fun just_unit() { }
@@ -307,7 +307,7 @@ fun just_unit() { }
 
 `script` functions must have a return type of unit `()`
 
-```rust=
+```move=
 script {
     fun do_nothing() {
     }
@@ -320,7 +320,7 @@ As mentioned in the [tuples section](./tuples.md), these tuple "values" are virt
 
 A function's body is an expression block. The return value of the function is the last value in the sequence
 
-```rust=
+```move=
 fun example(): u64 {
     let x = 0;
     x = x + 1;
@@ -340,7 +340,7 @@ Without modifying the VM source code, a programmer cannot add new native functio
 
 Most `native` functions you will likely see are in standard library code such as `Vector`
 
-```rust=
+```move=
 address 0x1 {
 module Vector {
     native public fun empty<Element>(): vector<Element>;
@@ -353,7 +353,7 @@ module Vector {
 
 When calling a function, the name can be specified either through an alias or fully qualified
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     public fun zero(): u64 { 0 }
@@ -373,7 +373,7 @@ script {
 
 When calling a function, an argument must be given for every parameter.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     public fun takes_none(): u64 { 0 }
@@ -396,7 +396,7 @@ script {
 
 Type arguments can be either specified or inferred. Both calls are equivalent.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     public fun id<T>(x: T): T { x }
@@ -419,7 +419,7 @@ For more details, see [Move generics](./generics.md).
 
 The result of a function, its "return value", is the final value of its function body. For example
 
-```rust=
+```move=
 fun add(x: u64, y: u64): u64 {
     x + y
 }
@@ -427,7 +427,7 @@ fun add(x: u64, y: u64): u64 {
 
 [As mentioned above](#function-body), the function's body is an [expression block](./variables.md). The expression block can sequence various statements, and the final expression in the block will be be the value of that block
 
-```rust=
+```move=
 fun double_and_add(x: u64, y: u64): u64 {
     let double_x = x * 2;
     let double_y = y * 2;
@@ -441,14 +441,14 @@ The return value here is `double_x + double_y`
 
 A function implicitly returns the value that its body evaluates to. However, functions can also use the explicit `return` expression:
 
-```rust
+```move
 fun f1(): u64 { return 0 }
 fun f2(): u64 { 0 }
 ```
 
 These two functions are equivalent. In this slightly more involved example, the function subtracts two `u64` values, but returns early with `0` if the second value is too large:
 
-```rust=
+```move=
 fun safe_sub(x: u64, y: u64): u64 {
     if (y > x) return 0;
     x - y
@@ -459,7 +459,7 @@ Note that the body of this function could also have been written as `if (y > x) 
 
 However `return` really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:
 
-```rust=
+```move=
 use 0x1::Vector;
 use 0x1::Option::{Self, Option};
 fun index_of<T>(v: &vector<T>, target: &T): Option<u64> {
@@ -476,7 +476,7 @@ fun index_of<T>(v: &vector<T>, target: &T): Option<u64> {
 
 Using `return` without an argument is shorthand for `return ()`. That is, the following two functions are equivalent:
 
-```rust
+```move
 fun foo() { return }
 fun foo() { return () }
 ```

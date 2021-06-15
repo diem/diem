@@ -16,7 +16,7 @@ If a literal is too large for its specified (or inferred) size range, an error i
 
 ### Examples
 
-```rust
+```move
 // literals with explicit annotations;
 let explicit_u8 = 1u8;
 let explicit_u64 = 2u64;
@@ -97,7 +97,7 @@ Comparison operations do not abort.
 
 ### Equality
 
-Like all [copyable](./equality.md) types in Move, all integer types support the "equal" and "not equal" operations. Both arguments need to be of the same type. If you need to compare integers of different types, you will need to [cast](#casting) one of them first.
+Like all types with [`drop`](./abilities.md) in Move, all integer types support the ["equal"](./equality.md) and ["not equal"](./equality.md)  operations. Both arguments need to be of the same type. If you need to compare integers of different types, you will need to [cast](#casting) one of them first.
 
 Equality operations do not abort.
 
@@ -105,6 +105,8 @@ Equality operations do not abort.
 |--------|----------
 | `==`   | equal
 | `!=`   | not equal
+
+For more details see the section on [equality](./equality.md)
 
 ## Casting
 
@@ -126,4 +128,4 @@ For example:
 
 ## Ownership
 
-As with the other builtin scalar types, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as [`copy`](./equality.md).
+As with the other scalar values built-in to the language, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as [`copy`](./variables.md#move-and-copy).

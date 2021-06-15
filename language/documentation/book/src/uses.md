@@ -6,14 +6,14 @@ The `use` syntax can be used to create aliases to members in other modules. `use
 
 There are several different syntax cases for `use`. Starting with the most simple, we have the following for creating aliases to other modules
 
-```rust
+```move
 use <address>::<module name>;
 use <address>::<module name> as <module alias name>;
 ```
 
 For example
 
-```rust
+```move
 use 0x1::Vector;
 use 0x1::Vector as V;
 ```
@@ -22,7 +22,7 @@ use 0x1::Vector as V;
 
 Similarly `use 0x1::Vector as V;` would let you use `V` instead of `0x1::Vector`
 
-```rust=
+```move=
 use 0x1::Vector;
 use 0x1::Vector as V;
 
@@ -36,21 +36,21 @@ fun new_vecs(): (vector<u8>, vector<u8>, vector<u8>) {
 
 If you want to import a specific module member (such as a function, struct, or constant). You can use the following syntax.
 
-```rust
+```move
 use <address>::<module name>::<module member>;
 use <address>::<module name>::<module member> as <member alias>;
 ```
 
 For example
 
-```rust
+```move
 use 0x1::Vector::empty;
 use 0x1::Vector::empty as empty_vec;
 ```
 
 This would let you use the function `0x1::Vector::empty` without full qualification. Instead you could use `empty` and `empty_vec` respectively. Again, `use 0x1::Vector::empty;` is equivalent to `use 0x1::Vector::empty as empty;`
 
-```rust=
+```move=
 use 0x1::Vector::empty;
 use 0x1::Vector::empty as empty_vec;
 
@@ -64,13 +64,13 @@ fun new_vecs(): (vector<u8>, vector<u8>, vector<u8>) {
 
 If you want to add aliases for multiple module members at once, you can do so with the following syntax
 
-```rust
+```move
 use <address>::<module name>::{<module member>, <module member> as <member alias> ... };
 ```
 
 For example
 
-```rust=
+```move=
 use 0x1::Vector::{push_back, length as len, pop_back};
 
 fun swap_last_two<T>(v: &mut vector<T>) {
@@ -84,13 +84,13 @@ fun swap_last_two<T>(v: &mut vector<T>) {
 
 If you need to add an alias to the Module itself in addition to module members, you can do that in a single `use` using `Self`. `Self` is a member of sorts that refers to the module.
 
-```rust
+```move
 use 0x1::Vector::{Self, empty};
 ```
 
 For clarity, all of the following are equivalent:
 
-```rust
+```move
 use 0x1::Vector;
 use 0x1::Vector as Vector;
 use 0x1::Vector::Self;
@@ -101,7 +101,7 @@ use 0x1::Vector::{Self as Vector};
 
 If needed, you can have as many aliases for any item as you like
 
-```rust=
+```move=
 use 0x1::Vector::{
     Self,
     Self as V,
@@ -124,7 +124,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 
 Inside of a `module` all `use` declarations are usable regardless of the order of declaration.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     use 0x1::Vector;
@@ -149,7 +149,7 @@ Additionally, the aliases introduced cannot conflict with other module members. 
 
 You can add `use` declarations to the beginning of any expression block
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -167,7 +167,7 @@ module Example {
 
 As with `let`, the aliases introduced by `use` in an expression block are removed at the end of that block.
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -188,7 +188,7 @@ module Example {
 
 Attempting to use the alias after the block ends will result in an error
 
-```rust=
+```move=
 fun example(): vector<u8> {
     let result = {
         use 0x1::Vector::{empty, push_back};
@@ -205,7 +205,7 @@ fun example(): vector<u8> {
 
 Any `use` must be the first item in the block. If the `use` comes after any expression or `let`, it will result in a parsing error
 
-```rust=
+```move=
 {
     let x = 0;
     use 0x1::Vector; // ERROR!
@@ -217,7 +217,7 @@ Any `use` must be the first item in the block. If the `use` comes after any expr
 
 Aliases must follow the same rules as other module members. This means that aliases to structs or constants must start with `A` to `Z`
 
-```rust=
+```move=
 address 0x42 {
 module Data {
     struct S {}
@@ -241,7 +241,7 @@ Inside a given scope, all aliases introduced by `use` declarations must be uniqu
 
 For a module, this means aliases introduced by `use` cannot overla
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -259,7 +259,7 @@ module Example {
 
 And, they cannot overlap with any of the module's other members
 
-```rust=
+```move=
 address 0x42 {
 module Data {
     struct S {}
@@ -279,7 +279,7 @@ Inside of an expression block, they cannot overlap with each other, but they can
 
 `use` aliases inside of an expression block can shadow names (module members or aliases) from the outer scope. As with shadowing of locals, the shadowing ends at the end of the expression block;
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -330,7 +330,7 @@ module Example {
 
 An unused `use` will result in an error
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     use 0x1::Vector::{empty, push_back}; // ERROR!

@@ -1,6 +1,6 @@
 # Tutorial - Creating Coins
 
-Move is a language about resources. Resources are special types of values that cannot be copied or forgotten about; they must always be moved from one place to another.
+Move is a language about resources. Resources describe certain types of values that cannot be copied or forgotten about; they must always be moved from one place to another.
 
 Resources are a valuable tool for representing things that should be scarce like assets. For a cryptocurrency, the value of a coin that can be copied is nothing, and you'd like to know that smart contracts you write don't accidentally lose resources. Move makes resources a first class primitive in the language, and enforces many invariants useful for scarce values.
 
@@ -63,7 +63,7 @@ Our module `Coin`, and our type `Coin` both share the same name, and this is ano
 
 Here's a first draft of our `Coin` module, which we'll define in `src/modules/Coin.move`:
 
-```=
+```move=
 address 0x2 {
     module Coin {
 
@@ -78,12 +78,12 @@ address 0x2 {
 In order to publish our module, we use the Move CLI:
 
 ```shell
-$ move publish src/modules
+$ move sandbox publish src/modules
 ```
 
-To test our `Coin` module we'll createa small script that creates a value of our `Coin` type. The following code should go into `src/scripts/test-coin.move`:
+To test our `Coin` module we'll create a small script that creates a value of our `Coin` type. The following code should go into `src/scripts/test-coin.move`:
 
-```=
+```move=
 script {
 
     use 0x2::Coin::Coin;
@@ -95,7 +95,7 @@ script {
 }
 ```
 
-First, on line 3, we must import the type. Note that the full location and name of the type includes the address and the module. After this `use` statement, we may refer to the type by its short name `Coin`.
+First, on line 3, we can declare an alias for the type with a `use` statement. Note that the full location and name of the type includes the address and the module. After this `use` statement, we may refer to the type by its short name `Coin`.
 
 Scripts contain a single function definition that has no return value. The function can take any number of arguments and type arguments, but for our purposes we don't need any arguments at all.
 
@@ -104,13 +104,13 @@ On line 6, we use `let` to bind the variable `_coin` to a constructed value of 1
 Let's run our scripts `test-coin.move` with the Move CLI:
 
 ```shell
-$ move run src/scripts/test-coin.move
+$ move sandbox run src/scripts/test-coin.move
 error:
 
-   ┌── scripts/test-coin.move:6:20 ───
+   ┌── scripts/test-coin.move:6:21 ───
    │
- 6 │         let coin = Coin::Coin { value: 100 };
-   │                    ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x2::Coin::Coin'.
+ 6 │         let _coin = Coin::Coin { value: 100 };
+   │                     ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x2::Coin::Coin'.
 All structs can only be constructed in the module in which they are declared
    │
 ```
@@ -123,7 +123,7 @@ We'll have to add a constructor to our module to do this.
 
 Let's create a function in `Coin.move` to create coins. We'll call our function `mint`.
 
-```=
+```move=
 address 0x2 {
     module Coin {
 
@@ -143,11 +143,17 @@ We declare the function public to indicate that other modules and scripts are al
 
 Our function takes a `u64` value and returns the constructed `Coin`.
 
-Remember to always re-publish your module after making changes, otherwise our script won't be able to catch those changes.
+Remember to always re-publish your module after making changes with
+
+```shell
+$ move sandbox publish src/modules
+```
+
+otherwise our script won't be able to catch those changes.
 
 With this change, we should be able to update our script `test-coin.move` to call our new constructor:
 
-```=
+```move=
 script {
 
     use 0x2::Coin;
@@ -165,67 +171,77 @@ Let's run our script:
 $ move run src/scripts/test-coin.move
 ```
 
-The script didn't fail this time. There's no output since we didn't generate any. However, there is another problem you may have noticed.
-
-### Disappearing Coins
-
-After we minted a coin, where did it go?
-
-The answer is that it just disappeared into the ether. The local variable that held the coin went out of scope at the end of our script, and the coin ceased to exist. If coin had real value, this would be very bad, as it means if you weren't very careful about making sure you used the coin somehow, it might disappear and the value it represented would be lost forever.
-
-Move is designed around the concept of resources. Resources behave like money or an asset in that they can only be moved around, never copied. In addition, while we've seen that Move already restricts the construction of types, resources must have controlled destruction as well. Only the module that defines a resource type is able to destroy that type.
-
-We can convert our `Coin` into a resource just by adding the `resource` keyword to our type definition in `Coin.move`:
-
-```=
-        resource struct Coin {
-            value: u64,
-        }
-```
-
-Let's clean the storage, publish our `Coin` module again and re-run our script:
+The script still failed!
 
 ```shell
-$ move clean
-$ move publish src/modules
-$ move run src/scripts/test-coin.move
+$ move sandbox run src/scripts/test-coin.move
 error:
 
-   ┌── src/scripts/test-coin.move:5:36 ───
-   │ 6 │         let _coin = Coin::mint(100);
+   ┌── src/scripts/test-coin.move:6:36 ───
+   │
+ 6 │         let _coin = Coin::mint(100);
    │                                    ^ Invalid return
    ·
  6 │         let _coin = Coin::mint(100);
-   │             ----- The local '_coin' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │             ----- The local '_coin' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
    │
- ```
+```
 
-Now we have a different error! The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.
+By default, all `struct`s declared in Move are *resources*, that is they cannot be copied and they cannot be dropped. The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.
+
+> **Note**: If we wanted the value to be ignorable we could add `has drop` to the declaration of
+> the `Coin`. This would tell the type system that it is okay for values of type `Coin` to be
+> ignored
+>
+> ```move=
+> address 0x2 {
+>     module Coin {
+>         struct Coin has drop {
+>             value: u64,
+>         }
+>
+>         public fun mint(value: u64): Coin {
+>             Coin { value }
+>         }
+>     }
+> }
+> ```
+> Then the script from above would work just fine. However, this would not be very useful for
+> implementing coins. If the coin had real value, and you weren't very careful about making sure you
+> used the coin somehow, it might disappear and the value it represented would be lost forever.
+
+Move is designed around the concept of resources. Resources behave like money or an asset in that they can only be moved around, never copied. In addition, while we've seen that Move already restricts the construction of types, resources must have controlled destruction as well. Only the module that defines a resource type is able to destroy that type.
 
 Let's create a a `burn` function that will destroy coins as well as a function to retrieve the value of a coin. Add the following functions to `Coin.move`:
 
-```=
+```move=
         public fun value(coin: &Coin): u64 {
             coin.value
         }
 
         public fun burn(coin: Coin): u64 {
-            let Coin { value: value } = coin;
+            let Coin { value } = coin;
             value
         }
 ```
 
 These are both declared public so they can be used by scripts and other modules.
 
-Notice that `value` takes a reference to a `Coin`. This is a read-only value, but more critically, when passing a reference to a function the value is not moved. Compare this to `burn` which takes an actual `Coin` value. Calling this function with a coin will move the coin into the function and out of the caller's scope.
+Notice that the function `value` takes a reference to a `Coin`. This is a read-only value, but more critically, when passing a reference to a function the value is not moved. Compare this to `burn` which takes an actual, owned `Coin` value. Calling this function with a coin will move the coin into the function and out of the caller's scope.
 
 The `value` function simply returns the internal `u64` value. Scripts and other modules can't directly access the interior fields of a module's types, so we need public accessor functions if that data should be available outside the module.
 
 The `burn` function uses pattern matching to unpack the `Coin` into just its internal value. This essentially destroys the resource and returns a normal `u64` value. We return the value of the coin to let the caller know how much money just disappeared. (see [Structs and Resources](./structs-and-resources.md#destroying-structs-via-pattern-matching))
 
+Again, we must republish:
+
+```shell
+$ move sandbox publish src/modules
+```
+
 Now we can write a slightly more complicated script that tests our `Coin` module. We'll mint a coin, display its value, and then burn it. Add this code to `src/scripts/test-burn.move`:
 
-```=
+```move=
 script {
     use 0x1::Debug;
     use 0x2::Coin;
@@ -259,4 +275,4 @@ Move code is made of up modules, which are published at specific addresses in gl
 
 As we created our first coin, we learned the difference between normal types and resource types, and how the Move compiler and virtual machine enforce invariants about which code can construct types, access fields, and whether values can be copied and destroyed.
 
-In the next tutorial, we'll build on our coin to implement accounts with balances.
+<!-- In the next tutorial, we'll build on our coin to implement accounts with balances. -->

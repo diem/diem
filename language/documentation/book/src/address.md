@@ -12,7 +12,7 @@ You can use runtime address values (values of type `address`) to access resource
 
 ### Examples
 
-```rust
+```move
 let a1: address = 0x1; // shorthand for 0x00000000000000000000000000000001
 let a2: address = 0x42; // shorthand for 0x00000000000000000000000000000042
 let a3: address = 0xDEADBEEF; // // shorthand for 0x000000000000000000000000DEADBEEF
@@ -29,4 +29,4 @@ The only global storage operation that *does not* use `address` is `move_to`, wh
 
 ## Ownership
 
-As with the other scalar values built-in to the language, `address` values are implicitly copyable, meaning they can be copied without an explicit instruction such as [`copy`](./equality.md).
+As with the other scalar values built-in to the language, `address` values are implicitly copyable, meaning they can be copied without an explicit instruction such as [`copy`](./variables.md#move-and-copy).

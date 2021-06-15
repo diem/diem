@@ -10,7 +10,7 @@ A Move source file (or **compilation unit**) may contain multiple modules and sc
 
 A script has the following structure:
 
-```
+```text
 script {
     <use>*
     <constants>*
@@ -45,7 +45,7 @@ Scripts have very limited power--they cannot declare friends, struct types or ac
 
 A Module has the following syntax:
 
-```
+```text
 address <address_const> {
 module <identifier> {
     (<use> | <friend> | <type> | <function> | <constant>)*
@@ -58,7 +58,7 @@ For example:
 ```move
 address 0x42 {
 module Test {
-    resource struct Example { i: u64 }
+    struct Example has copy, drop { i: u64 }
 
     use 0x1::Debug;
     friend 0x42::AnotherTest;

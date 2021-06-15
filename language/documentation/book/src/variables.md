@@ -8,20 +8,20 @@ Local variables in Move are lexically (statically) scoped. New variables are int
 
 Move programs use `let` to bind variable names to values:
 
-```rust
+```move
 let x = 1;
 let y = x + x:
 ```
 
 `let` can also be used without binding a value to the local.
 
-```rust
+```move
 let x;
 ```
 
 The local can then be assigned a value later.
 
-```rust
+```move
 let x;
 if (cond) {
   x = 1
@@ -32,7 +32,7 @@ if (cond) {
 
 This can be very helpful when trying to extract a value from a loop when a default value cannot be provided.
 
-```rust
+```move
 let x;
 let cond = true;
 let i = 0;
@@ -47,18 +47,18 @@ loop {
 
 Move's type system prevents a local variable from being used before it has been assigned.
 
-```rust
+```move
 let x;
 x + x // ERROR!
 ```
 
-```rust
+```move
 let x;
 if (cond) x = 0;
 x + x // ERROR!
 ```
 
-```rust
+```move
 let x;
 while (cond) x = 0;
 x + x // ERROR!
@@ -68,7 +68,7 @@ x + x // ERROR!
 
 Variable names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, and digits `0` to `9`. Variable names must start with either an underscore `_` or a letter `a` through `z`. They *cannot* start with uppercase letters.
 
-```rust
+```move
 // all valid
 let x = e;
 let _x = e;
@@ -86,13 +86,13 @@ let Foo = e; // ERROR!
 
 The type of a local variable can almost always be inferred by Move's type system.  However, Move allows explicit type annotations that can be useful for readability, clarity, or debuggability. The syntax for adding a type annotation is:
 
-```rust
+```move
 let x: T = e; // "Variable x of type T is initialized to expression e"
 ```
 
 Some examples of explicit type annotations:
 
-```rust=
+```move=
 address 0x42 {
 module Example {
 
@@ -111,7 +111,7 @@ module Example {
 
 Note that the type annotations must always be to the right of the pattern:
 
-```rust
+```move
 let (x: &u64, y: &mut u64) = (&0, &mut 1); // ERROR! should be let (x, y): ... =
 ```
 
@@ -119,7 +119,7 @@ let (x: &u64, y: &mut u64) = (&0, &mut 1); // ERROR! should be let (x, y): ... =
 
 In some cases, a local type annotation is required if the type system cannot infer the type. This commonly occurs when the type argument for a generic type cannot be inferred. For example:
 
-```rust
+```move
 let _v1 = Vector::empty(); // ERROR!
 //        ^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
 let v2: vector<u64> = Vector::empty(); // no error
@@ -128,7 +128,7 @@ let v2: vector<u64> = Vector::empty(); // no error
 In a rarer case, the type system might not be able to infer a type for divergent code (where all the following code is unreachable). Both `return` and [`abort`](./abort-and-assert.md) are expressions and can have any type. A [`loop`](./loops.md) has type `()` if it has a `break`, but if there is no break out of the `loop`, it could have any type.
 If these types cannot be inferred, a type annotation is required. For example, this code:
 
-```rust
+```move
 let a: u8 = return ();
 let b: bool = abort 0;
 let c: signer = loop ();
@@ -147,7 +147,7 @@ Adding type annotations to this code will expose other errors about dead code or
 
 `let` can introduce more than one local at a time using tuples. The locals declared inside the parenthesis are initialized to the corresponding values from the tuple.
 
-```rust
+```move
 let () = ();
 let (x0, x1) = (0, 1);
 let (y0, y1, y2) = (0, 1, 2);
@@ -156,14 +156,14 @@ let (z0, z1, z2, z3) = (0, 1, 2, 3);
 
 The type of the expression must match the arity of the tuple pattern exactly.
 
-```rust
+```move
 let (x, y) = (0, 1, 2); // ERROR!
 let (x, y, z, q) = (0, 1, 2); // ERROR!
 ```
 
 You cannot declare more than one local with the same name in a single `let`.
 
-```rust
+```move
 let (x, x) = 0; // ERROR!
 ```
 
@@ -171,11 +171,11 @@ let (x, x) = 0; // ERROR!
 
 `let` can also introduce more than one local at a time when destructuring (or matching against) a struct. In this form, the `let` creates a set of local variables that are initialized to the values of the fields from a struct. The syntax looks like this:
 
-```rust
+```move
 struct T { f1: u64, f2: u64 }
 ```
 
-```rust
+```move
 let T { f1: local1, f2: local2 } = T { f1: 1, f2: 2 };
 // local1: u64
 // local2: u64
@@ -183,7 +183,7 @@ let T { f1: local1, f2: local2 } = T { f1: 1, f2: 2 };
 
 Here is a more complicated example:
 
-```rust
+```move
 address 0x42 {
 module Example {
     struct X { f: u64 }
@@ -206,19 +206,19 @@ module Example {
 
 Fields of structs can serve double duty, identifying the field to bind *and* the name of the variable. This is sometimes referred to as punning.
 
-```rust
+```move
 let X { f } = e;
 ```
 
 is equivalent to:
 
-```rust
+```move
 let X { f: f } = e;
 ```
 
 As shown with tuples, you cannot declare more than one local with the same name in a single `let`.
 
-```rust
+```move
 let Y { x1: x, x2: x } = e; // ERROR!
 ```
 
@@ -226,11 +226,11 @@ let Y { x1: x, x2: x } = e; // ERROR!
 
 In the examples above for structs, the bound value in the let was moved, destroying the struct value and binding its fields.
 
-```rust
+```move
 struct T { f1: u64, f2: u64 }
 ```
 
-```rust
+```move
 let T { f1: local1, f2: local2 } = T { f1: 1, f2: 2 };
 // local1: u64
 // local2: u64
@@ -241,7 +241,7 @@ In this scenario the struct value `T { f1: 1, f2: 2 }` no longer exists after th
 If you wish instead to not move and destroy the struct value, you can borrow each of its fields.
 For example:
 
-```rust
+```move
 let t = T { f1: 1, f2: 2 };
 let T { f1: local1, f2: local2 } = &t;
 // local1: &u64
@@ -250,7 +250,7 @@ let T { f1: local1, f2: local2 } = &t;
 
 And similarly with mutable references:
 
-```rust
+```move
 let t = T { f1: 1, f2: 2 };
 let T { f1: local1, f2: local2 } = &mut t;
 // local1: &mut u64
@@ -259,7 +259,7 @@ let T { f1: local1, f2: local2 } = &mut t;
 
 This behavior can also work with nested structs.
 
-```rust
+```move
 address 0x42 {
 module Example {
     struct X { f: u64 }
@@ -288,13 +288,13 @@ module Example {
 
 In `let` bindings, it is often helpful to ignore some values. Local variables that start with `_` will be ignored and not introduce a new variable
 
-```rust
+```move
 fun three(): (u64, u64, u64) {
     (0, 1, 2)
 }
 ```
 
-```rust
+```move
 let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
 assert(x1 + z1 == x2 + z2)
@@ -302,7 +302,7 @@ assert(x1 + z1 == x2 + z2)
 
 This can be necessary at times as the compiler will error on unused local variables
 
-```rust
+```move
 let (x1, y, z1) = three(); // ERROR!
 //       ^ unused local 'y'
 ```
@@ -325,7 +325,7 @@ The general term for the item that introduces the bindings is a *pattern*. The p
 
 A few concrete examples with this grammar applied:
 
-```rust
+```move
     let (x, y): (u64, u64) = (0, 1);
 //       ^                           local-variable
 //       ^                           pattern
@@ -359,26 +359,26 @@ A few concrete examples with this grammar applied:
 
 After the local is introduced (either by `let` or as a function parameter), the local can be modified via an assignment:
 
-```rust
+```move
 x = e
 ```
 
 Unlike `let` bindings, assignments are expressions. In some languages, assignments return the value that was assigned, but in Move, the type of any assignment is always `()`.
 
-```rust
+```move
 (x = e: ())
 ```
 
 Practically, assignments being expressions means that they can be used without adding a new expression block with braces (`{`...`}`).
 
-```rust
+```move
 let x = 0;
 if (cond) x = 1 else x = 2;
 ```
 
 The assignment uses the same pattern syntax scheme as `let` bindings:
 
-```rust=
+```move=
 address 0x42 {
 module Example {
     struct X { f: u64 }
@@ -403,7 +403,7 @@ module Example {
 
 Note that a local variable can only have one type, so the type of the local cannot change between assignments.
 
-```rust
+```move
 let x;
 x = 0;
 x = false; // ERROR!
@@ -413,7 +413,7 @@ x = false; // ERROR!
 
 In addition to directly modifying a local with assignment, a local can be modified via a mutable reference `&mut`.
 
-```rust
+```move
 let x = 0;
 let r = &mut x;
 *r = 1;
@@ -425,7 +425,7 @@ This is particularly useful if either:
 
 (1) You want to modify different variables depending on some condition.
 
-```rust
+```move
 let x = 0;
 let y = 1;
 let r = if (cond) &mut x else &mut y;
@@ -434,14 +434,14 @@ let r = if (cond) &mut x else &mut y;
 
 (2) You want another function to modify your local value.
 
-```rust
+```move
 let x = 0;
 modify_ref(&mut x);
 ```
 
 This sort of modification is how you modify structs and vectors!
 
-```rust
+```move
 let v = Vector::empty();
 Vector::push_back(&mut v, 100);
 assert(*Vector::borrow(&v, 0) == 100, 42)
@@ -455,7 +455,7 @@ Any local declared with `let` is available for any subsequent expression, *withi
 
 Locals cannot be used outside of the declared scope.
 
-```rust
+```move
 let x = 0;
 {
     let y = 1;
@@ -466,7 +466,7 @@ x + y // ERROR!
 
 But, locals from an outer scope *can* be used in a nested scope.
 
-```rust
+```move
 {
     let x = 0;
     {
@@ -477,7 +477,7 @@ But, locals from an outer scope *can* be used in a nested scope.
 
 Locals can be mutated in any scope where they are accessible. That mutation survives with the local, regardless of the scope that performed the mutation.
 
-```rust
+```move
 let x = 0;
 x = x + 1;
 assert(x == 1, 42);
@@ -492,7 +492,7 @@ assert(x == 2, 42);
 
 An expression block is a series of statements separated by semicolons (`;`). The resulting value of an expression block is the value of the last expression in the block.
 
-```rust
+```move
 { let x = 1; let y = 1; x + y }
 ```
 
@@ -500,19 +500,19 @@ In this example, the result of the block is `x + y`.
 
 A statement can be either a `let` declaration or an expression. Remember that assignments (`x = e`) are expressions of type `()`.
 
-```rust
+```move
 { let x; let y = 1; x = 1; x + y }
 ```
 
 Function calls are another common expression of type `()`. Function calls that modify data are commonly used as statements.
 
-```rust
+```move
 { let v = Vector::empty(); Vector::push_back(&mut v, 1); v }
 ```
 
 This is not just limited to `()` types---any expression can be used as a statement in a sequence!
 
-```rust
+```move
 {
     let x = 0;
     x + 1; // value is discarded
@@ -521,26 +521,26 @@ This is not just limited to `()` types---any expression can be used as a stateme
 }
 ```
 
-But! If the expression contains a resource, you will get an error. This is because Move's type system guarantees that no resource is dropped. (Ownership must be transferred or the resource must be explicitly destroyed within its declaring module.)
+But! If the expression contains a resource (a value without the `drop` [ability](./abilities.md)), you will get an error. This is because Move's type system guarantees that any value that is dropped has the `drop` [ability](./abilities.md). (Ownership must be transferred or the value must be explicitly destroyed within its declaring module.)
 
-```rust
+```move
 {
     let x = 0;
     Coin { value: x }; // ERROR!
-//  ^^^^^^^^^^^^^^^^^ unused resource
+//  ^^^^^^^^^^^^^^^^^ unused value without the `drop` ability
     x
 }
 ```
 
 If a final expression is not present in a block---that is, if there is a trailing semicolon `;`, there is an implicit unit `()` value. Similarly, if the expression block is empty, there is an implicit unit `()` value.
 
-```rust
+```move
 // Both are equivalent
 { x = x + 1; 1 / x; }
 { x = x + 1; 1 / x; () }
 ```
 
-```rust
+```move
 // Both are equivalent
 { }
 { () }
@@ -548,7 +548,7 @@ If a final expression is not present in a block---that is, if there is a trailin
 
 An expression block is itself an expression and can be used anyplace an expression is used. (Note: The body of a function is also an expression block, but the function body cannot be replaced by another expression.)
 
-```rust
+```move
 let my_vector: vector<vector<u8>> = {
     let v = Vector::empty();
     Vector::push_back(&mut v, b"hello");
@@ -563,7 +563,7 @@ let my_vector: vector<vector<u8>> = {
 
 If a `let` introduces a local variable with a name already in scope, that previous variable can no longer be accessed for the rest of this scope. This is called *shadowing*.
 
-```rust
+```move
 let x = 0;
 assert(x == 0, 42);
 
@@ -573,7 +573,7 @@ assert(x == 1, 42);
 
 When a local is shadowed, it does not need to retain the same type as before.
 
-```rust
+```move
 let x = 0;
 assert(x == 0, 42);
 
@@ -581,16 +581,16 @@ let x = b"hello"; // x is shadowed
 assert(x == b"hello", 42);
 ```
 
-After a local is shadowed, the value stored in the local still exists, but will no longer be accessible. This is important to keep in mind with resources, as ownership of the value must be transferred by the end of the function.
+After a local is shadowed, the value stored in the local still exists, but will no longer be accessible. This is important to keep in mind with values of types without the [`drop` ability](./abilities.md), as ownership of the value must be transferred by the end of the function.
 
-```rust
+```move
 address 0x42 {
     module Example {
-        resource struct Coin { value: u64 }
+        struct Coin has store { value: u64 }
 
         fun unused_resource(): Coin {
             let x = Coin { value: 0 }; // ERROR!
-//              ^ This local still contains a resource
+//              ^ This local still contains a value without the `drop` ability
             x.value = 1;
             let x = Coin { value: 10 };
             x
@@ -602,7 +602,7 @@ address 0x42 {
 
 When a local is shadowed inside a scope, the shadowing only remains for that scope. The shadowing is gone once that scope ends.
 
-```rust
+```move
 let x = 0;
 {
     let x = 1;
@@ -613,7 +613,7 @@ assert(x == 0, 42);
 
 Remember, locals can change type when they are shadowed.
 
-```rust
+```move
 let x = 0;
 {
     let x = b"hello";
@@ -628,17 +628,17 @@ All local variables in Move can be used in two ways, either by `move` or `copy`.
 
 `copy` will likely feel the most familiar coming from other programming languages, as it creates a new copy of the value inside of the variable to use in that expression. With `copy`, the local variable can be used more than once.
 
-```rust
+```move
 let x = 0;
 let y = copy x + 1;
 let z = copy x + 2;
 ```
 
-All non-resource values can be copied using `copy`.
+Any value with the `copy` [ability](./abilities.md) can be copied in this way.
 
 `move` takes the value out of the local variable *without* copying the data. After a `move` occurs, the local variable is unavailable.
 
-```rust
+```move
 let x = 1;
 let y = move x + 1;
 //      ------ Local was moved here
@@ -651,22 +651,22 @@ y + z
 
 Move's type system will prevent a value from being used after it is moved. This is the same safety check described in [`let` declaration](#let-bindings) that prevents local variables from being used before it is assigned a value.
 
-For more information, see [Move equality](./equality.md).
+<!-- For more information, see TODO future section on ownership and move semantics. -->
 
 ### Inference
 
 As mentioned above, the Move compiler will infer a `copy` or `move` if one is not indicated. The algorithm for doing so is quite simple:
 
-- Any copyable, scalar value is given a `copy`.
+- Any scalar value with the `copy` [ability](./abilities.md) is given a `copy`.
 - Any reference (both mutable `&mut` and immutable `&`) is given a `copy`.
     - Except under special circumstances where it is made a `move` for predictable borrow checker errors.
 - Any other value is given a `move`.
-    - This means that even though other values might be copyable, it must be done *explicitly* by the programmer.
+    - This means that even though other values might be have the `copy` [ability](./abilities.md), it must be done *explicitly* by the programmer.
     - This is to prevent accidental copies of large data structures.
 
 For example:
 
-```rust
+```move
 let s = b"hello";
 let foo = Foo { f: 0 };
 let coin = Coin { value: 0 };

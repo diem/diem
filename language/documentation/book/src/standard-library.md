@@ -20,7 +20,7 @@ well as functions defined in Move. The API for this module is as follows.
 Create an empty [`vector`](./vector.md).
 The `Element` type can be both a `resource` or `copyable` type.
 
-```rust
+```move
     native public fun empty<Element>(): vector<Element>;
 ```
 
@@ -28,7 +28,7 @@ The `Element` type can be both a `resource` or `copyable` type.
 
 Create a vector of length `1` containing the passed in `element`.
 
-```rust
+```move
     public fun singleton<Element>(e: Element): vector<Element>;
 ```
 
@@ -39,7 +39,7 @@ Destroy (deallocate) the vector `v`. Will abort if `v` is non-empty.
 resource type, and destruction of a non-empty vector would violate
 [resource conservation](./structs-and-resources.md).
 
-```rust
+```move
     native public fun destroy_empty<Element>(v: vector<Element>);
 ```
 
@@ -48,7 +48,7 @@ resource type, and destruction of a non-empty vector would violate
 Acquire an [immutable reference](./references.md) to the `i`th element of the vector `v`.  Will abort if
 the index `i` is out of bounds for the vector `v`.
 
-```rust
+```move
     native public fun borrow<Element>(v: &vector<Element>, i: u64): &Element;
 ```
 
@@ -58,7 +58,7 @@ Acquire a [mutable reference](./references.md)
 to the `i`th element of the vector `v`.  Will abort if
 the index `i` is out of bounds for the vector `v`.
 
-```rust
+```move
     native public fun borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element;
 ```
 
@@ -67,7 +67,7 @@ the index `i` is out of bounds for the vector `v`.
 Empty and destroy the `other` vector, and push each of the elements in
 the `other` vector onto the `lhs` vector in the same order as they occurred in `other`.
 
-```rust
+```move
     public fun append<Element>(lhs: &mut vector<Element>, other: vector<Element>);
 ```
 
@@ -76,7 +76,7 @@ the `other` vector onto the `lhs` vector in the same order as they occurred in `
 Push an element `e` of type `Element` onto the end of the vector `v`. May
 trigger a resizing of the underlying vector's memory.
 
-```rust
+```move
     native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
 ```
 
@@ -85,7 +85,7 @@ trigger a resizing of the underlying vector's memory.
 Pop an element from the end of the vector `v` in-place and return the owned
 value. Will abort if `v` is empty.
 
-```rust
+```move
     native public fun pop_back<Element>(v: &mut vector<Element>): Element;
 ```
 
@@ -96,7 +96,7 @@ that was previously stored at `i` in `v`. All elements occurring at indices
 greater than `i` will be shifted down by 1. Will abort if `i` is out of bounds
 for `v`.
 
-```rust
+```move
     public fun remove<Element>(v: &mut vector<Element>, i: u64): Element;
 ```
 
@@ -108,7 +108,7 @@ was previously stored at index `i`.
 This operation is O(1), but does not preserve ordering of elements in the vector.
 Aborts if the index `i` is out of bounds for the vector `v`.
 
-```rust
+```move
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element;
 ```
 
@@ -117,7 +117,7 @@ Aborts if the index `i` is out of bounds for the vector `v`.
 Swap the elements at the `i`'th and `j`'th indices in the vector `v`. Will
 abort if either of `i` or `j` are out of bounds for `v`.
 
-```rust
+```move
     native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
 ```
 
@@ -125,7 +125,7 @@ abort if either of `i` or `j` are out of bounds for `v`.
 
 Reverse the order of the elements in the vector `v` in-place.
 
-```rust
+```move
     public fun reverse<Element>(v: &mut vector<Element>);
 ```
 
@@ -135,7 +135,7 @@ Return the index of the first occurrence of an element in `v` that is
 equal to `e`. Returns `(true, index)` if such an element was found, and
 `(false, 0)` otherwise.
 
-```rust
+```move
     public fun index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64);
 ```
 
@@ -143,7 +143,7 @@ equal to `e`. Returns `(true, index)` if such an element was found, and
 
 Return if an element equal to `e` exists in the vector `v`.
 
-```rust
+```move
     public fun contains<Element>(v: &vector<Element>, e: &Element): bool;
 ```
 
@@ -151,7 +151,7 @@ Return if an element equal to `e` exists in the vector `v`.
 
 Return the length of a `vector`.
 
-```rust
+```move
     native public fun length<Element>(v: &vector<Element>): u64;
 ```
 
@@ -159,7 +159,7 @@ Return the length of a `vector`.
 
 Return whether the vector `v` is empty.
 
-```rust
+```move
     public fun is_empty<Element>(v: &vector<Element>): bool;
 ```
 
@@ -184,7 +184,7 @@ The API for the `Option` module is as as follows
 Generic type abstraction of a value that may, or may not, be present. Can contain
 a value of either `resource` or `copyable` kind.
 
-```rust
+```move
     struct Option<T>;
 ```
 
@@ -192,7 +192,7 @@ a value of either `resource` or `copyable` kind.
 
 Create an empty `Option` of that can contain a value of `Element` type.
 
-```rust
+```move
     public fun none<Element>(): Option<Element>;
 ```
 
@@ -200,7 +200,7 @@ Create an empty `Option` of that can contain a value of `Element` type.
 
 Create a non-empty `Option` type containing a value `e` of type `Element`.
 
-```rust
+```move
     public fun some<Element>(e: T): Option<Element>;
 ```
 
@@ -209,7 +209,7 @@ Create a non-empty `Option` type containing a value `e` of type `Element`.
 Return an immutable reference to the value inside the option `opt_elem`
 Will abort if `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun borrow<Element>(opt_elem: &Option<Element>): &Element;
 ```
 
@@ -219,7 +219,7 @@ Return a reference to the value inside `opt_elem` if it contains one. If
 `opt_elem` does not contain a value the passed in `default_ref` reference will be returned.
 Does not abort.
 
-```rust
+```move
     public fun borrow_with_default<Element>(opt_elem: &Option<Element>, default_ref: &Element): &Element;
 ```
 
@@ -228,7 +228,7 @@ Does not abort.
 Return a mutable reference to the value inside `opt_elem`. Will abort if
 `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun borrow_mut<Element>(opt_elem: &mut Option<Element>): &mut Element;
 ```
 
@@ -238,7 +238,7 @@ Convert an option value that contains a value to one that is empty in-place by
 removing and returning the value stored inside `opt_elem`.
 Will abort if `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun extract<Element>(opt_elem: &mut Option<Element>): Element;
 ```
 
@@ -249,7 +249,7 @@ Will return the passed in `default` value if `opt_elem` does not contain a
 value. The `Element` type that the `Option` type is instantiated with must be
 of `copyable` kind in order for this function to be callable.
 
-```rust
+```move
     public fun get_with_default<Element: copyable>(opt_elem: &Option<Element>, default: Element): Element;
 ```
 
@@ -258,7 +258,7 @@ of `copyable` kind in order for this function to be callable.
 Convert an empty option `opt_elem` to an option value that contains the value `e`.
 Will abort if `opt_elem` already contains a value.
 
-```rust
+```move
     public fun fill<Element>(opt_elem: &mut Option<Element>, e: Element);
 ```
 
@@ -267,7 +267,7 @@ Will abort if `opt_elem` already contains a value.
 Swap the value currently contained in `opt_elem` with `new_elem` and return the
 previously contained value. Will abort if `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun swap<Element>(opt_elem: &mut Option<Element>, e: Element): Element;
 ```
 
@@ -276,7 +276,7 @@ previously contained value. Will abort if `opt_elem` does not contain a value.
 Return true if `opt_elem` contains a value equal to the value of `e_ref`.
 Otherwise, `false` will be returned.
 
-```rust
+```move
     public fun contains<Element>(opt_elem: &Option<Element>, e_ref: &Element): bool;
 ```
 
@@ -284,7 +284,7 @@ Otherwise, `false` will be returned.
 
 Return `true` if `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun is_none<Element>(opt_elem: &Option<Element>): bool;
 ```
 
@@ -292,7 +292,7 @@ Return `true` if `opt_elem` does not contain a value.
 
 Return `true` if `opt_elem` contains a value.
 
-```rust
+```move
     public fun is_some<Element>(opt_elem: &Option<Element>): bool;
 ```
 
@@ -301,7 +301,7 @@ Return `true` if `opt_elem` contains a value.
 Unpack `opt_elem` and return the value that it contained.
 Will abort if `opt_elem` does not contain a value.
 
-```rust
+```move
     public fun destroy_some<Element>(opt_elem: Option<Element>): Element;
 ```
 
@@ -310,7 +310,7 @@ Will abort if `opt_elem` does not contain a value.
 Destroys the `opt_elem` value passed in. If `opt_elem` contained a value it
 will be returned otherwise, the passed in `default` value will be returned.
 
-```rust
+```move
     public fun destroy_with_default<Element: copyable>(opt_elem: Option<Element>, default: Element): Element;
 ```
 
@@ -319,7 +319,7 @@ will be returned otherwise, the passed in `default` value will be returned.
 Destroys the `opt_elem` value passed in, `opt_elem` must be empty and not
 contain a value. Will abort if `opt_elem` contains a value.
 
-```rust
+```move
     public fun destroy_none<Element>(opt_elem: Option<Element>);
 ```
 
@@ -342,70 +342,70 @@ Since error categories are globally stable, these present the most stable API an
 
 The system is in a state where the performed operation is not allowed.
 
-```rust
+```move
     const INVALID_STATE: u8 = 1;
 ```
 
 ---------------------------------------------------------------------------
 A specific account address was required to perform an operation, but a different address from what was expected was encounterd.
 
-```rust
+```move
     const REQUIRES_ADDRESS: u8 = 2;
 ```
 
 ---------------------------------------------------------------------------
 An account did not have the expected  role for this operation. Useful for Role Based Access Control (RBAC) error conditions.
 
-```rust
+```move
     const REQUIRES_ROLE: u8 = 3;
 ```
 
 ---------------------------------------------------------------------------
 An account did not not have a required capability. Useful for RBAC error conditions.
 
-```rust
+```move
     const REQUIRES_CAPABILITY: u8 = 4;
 ```
 
 ---------------------------------------------------------------------------
 A resource was expected, but did not exist under an address.
 
-```rust
+```move
     const NOT_PUBLISHED: u8 = 5;
 ```
 
 ---------------------------------------------------------------------------
 Attempted to publish a resource under an address where one was already published.
 
-```rust
+```move
     const ALREADY_PUBLISHED: u8 = 6;
 ```
 
 ---------------------------------------------------------------------------
 An argument provided for an operation was invalid.
 
-```rust
+```move
     const INVALID_ARGUMENT: u8 = 7;
 ```
 
 ---------------------------------------------------------------------------
 A limit on a value was exceeded.
 
-```rust
+```move
     const LIMIT_EXCEEDED: u8 = 8;
 ```
 
 ---------------------------------------------------------------------------
 An internal error (bug) has occurred.
 
-```rust
+```move
     const INTERNAL: u8 = 10;
 ```
 
 ---------------------------------------------------------------------------
 A custom error category for extension points.
 
-```rust
+```move
     const CUSTOM: u8 = 255;
 ```
 
@@ -415,70 +415,70 @@ A custom error category for extension points.
 
  Should be used in the case where invalid (global) state is encountered. Constructs an abort code with specified `reason` and category `INVALID_STATE`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun invalid_state(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if an account's address does not match a specific address. Constructs an abort code with specified `reason` and category `REQUIRES_ADDRESS`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun requires_address(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if a role did not match a required role when using RBAC. Constructs an abort code with specified `reason` and category `REQUIRES_ROLE`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun requires_role(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if an account did not have a required capability when using RBAC. Constructs an abort code with specified `reason` and category `REQUIRES_CAPABILITY`. Should be Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun requires_capability(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if a resource did not exist where one was expected. Constructs an abort code with specified `reason` and category `NOT_PUBLISHED`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun not_published(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if a resource already existed where one was about to be published. Constructs an abort code with specified `reason` and category `ALREADY_PUBLISHED`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun already_published(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if an invalid argument was passed to a function/operation. Constructs an abort code with specified `reason` and category `INVALID_ARGUMENT`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun invalid_argument(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if a limit on a specific value is reached, e.g., subtracting 1 from a value of 0. Constructs an abort code with specified `reason` and category `LIMIT_EXCEEDED`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun limit_exceeded(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Should be used if an internal error or bug was encountered. Constructs an abort code with specified `reason` and category `INTERNAL`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun internal(reason: u64): u64;
 ```
 
 ---------------------------------------------------------------------------
 Used for extension points, should be not used under most circumstances. Constructs an abort code with specified `reason` and category `CUSTOM`. Will abort if `reason` does not fit in 56 bits.
 
-```rust
+```move
     public fun custom(reason: u64): u64;
 ```
 
@@ -494,7 +494,7 @@ The `FixedPoint32` module defines a fixed-point numeric type with 32 integer bit
 
 Represents a fixed-point numeric number with 32 fractional bits.
 
-```rust
+```move
     struct FixedPoint32;
 ```
 
@@ -502,42 +502,42 @@ Represents a fixed-point numeric number with 32 fractional bits.
 
 Multiply a u64 integer by a fixed-point number, truncating any fractional part of the product. This will abort if the product overflows.
 
-```rust
+```move
     public fun multiply_u64(val: u64, multiplier: FixedPoint32): u64;
 ```
 
 ---------------------------------------------------------------------------
 Divide a u64 integer by a fixed-point number, truncating any fractional part of the quotient. This will abort if the divisor is zero or if the quotient overflows.
 
-```rust
+```move
     public fun divide_u64(val: u64, divisor: FixedPoint32): u64;
 ```
 
 ---------------------------------------------------------------------------
 Create a fixed-point value from a rational number specified by its numerator and denominator. Calling this function should be preferred for using `FixedPoint32::create_from_raw_value` which is also available. This will abort if the denominator is zero. It will also abort if the numerator is nonzero and the ratio is not in the range $2^{-32}\ldots2^{32}-1$. When specifying decimal fractions, be careful about rounding errors: if you round to display $N$ digits after the decimal point, you can use a denominator of $10^N$ to avoid numbers where the very small imprecision in the binary representation could change the rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
-```rust
+```move
     public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32;
 ```
 
 ---------------------------------------------------------------------------
 Create a fixedpoint value from a raw `u64` value.
 
-```rust
+```move
     public fun create_from_raw_value(value: u64): FixedPoint32;
 ```
 
 ---------------------------------------------------------------------------
 Returns `true` if the decimal value of `num` is equal to zero.
 
-```rust
+```move
     public fun is_zero(num: FixedPoint32): bool;
 ```
 
 ---------------------------------------------------------------------------
 Accessor for the raw `u64` value. Other less common operations, such as adding or subtracting `FixedPoint32` values, can be done using the raw values directly.
 
-```rust
+```move
     public fun get_raw_value(num: FixedPoint32): u64;
 ```
 

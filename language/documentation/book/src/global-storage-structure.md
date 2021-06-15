@@ -4,7 +4,7 @@ The purpose of Move programs is to [read from and write to](./global-storage-ope
 
 In pseudocode, the global storage looks something like
 
-```rust
+```move
 struct GlobalStorage {
   resources: Map<(address, ResourceType), ResourceValue>
   modules: Map<(address, ModuleName), ModuleBytecode>
