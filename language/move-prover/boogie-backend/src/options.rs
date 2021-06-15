@@ -16,7 +16,7 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-monomorphize",
 ];
 
-const MIN_BOOGIE_VERSION: &str = "2.8.32";
+const MIN_BOOGIE_VERSION: &str = "2.8.33";
 const MIN_Z3_VERSION: &str = "4.8.9";
 const EXPECTED_CVC4_VERSION: &str = "aac53f51";
 
@@ -112,7 +112,7 @@ impl Default for BoogieOptions {
             z3_exe: get_env("Z3_EXE"),
             use_cvc4: false,
             cvc4_exe: get_env("CVC4_EXE"),
-            boogie_flags: vec![],
+            boogie_flags: vec!["-proverOpt:O:strings-exp=true".to_string()],
             debug_trace: false,
             use_array_theory: false,
             generate_smt: false,
