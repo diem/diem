@@ -57,7 +57,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
 pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "
-    main<Token>(account: signer) {
+    main(account: signer) {
       return;
     }
 ";
