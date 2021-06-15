@@ -90,11 +90,11 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
 
         let mut direct_args = Vec::new();
         args.build_args.add_args(&mut direct_args);
-        //direct_args.push(OsString::from("--no-run"));
+
         let build = CargoCommand::Build {
             cargo_config: xctx.config().cargo_config(),
             direct_args: direct_args.as_slice(),
-            args: &args.args,
+            args: &[],
             env: build_env_vars.as_slice(),
             skip_sccache: true,
         };
