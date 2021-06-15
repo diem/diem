@@ -32,7 +32,7 @@ use tokio::{runtime::Handle, task::JoinHandle, time};
 
 /// Max transactions per account in mempool
 const MAX_TXN_BATCH_SIZE: usize = 100;
-const TXN_EXPIRATION_SECONDS: i64 = 10;
+const TXN_EXPIRATION_SECONDS: i64 = 30;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
@@ -63,7 +63,7 @@ impl EmitJobRequest {
     pub fn default(json_rpc_clients: Vec<JsonRpcClient>) -> Self {
         Self {
             json_rpc_clients,
-            accounts_per_client: 1,
+            accounts_per_client: 15,
             workers_per_endpoint: None,
             thread_params: EmitThreadParams::default(),
         }
@@ -404,7 +404,7 @@ impl<'t> TxEmitter<'t> {
                 // We want to have equal numbers of threads for each endpoint, so that they are equally loaded
                 // Otherwise things like flamegrap/perf going to show different numbers depending on which endpoint is chosen
                 // Also limiting number of threads as max 10 per endpoint for use cases with very small number of nodes or use --peers
-                min(1, max(1, target_threads / req.json_rpc_clients.len()))
+                min(10, max(1, target_threads / req.json_rpc_clients.len()))
             }
         };
         let num_clients = req.json_rpc_clients.len() * workers_per_endpoint;
@@ -427,11 +427,7 @@ impl<'t> TxEmitter<'t> {
         let stop = Arc::new(AtomicBool::new(false));
         let stats = Arc::new(StatsAccumulator::default());
         let tokio_handle = Handle::current();
-        let mut i = 0;
         for client in req.json_rpc_clients {
-            if i > 2 {
-                break;
-            }
             for _ in 0..workers_per_endpoint {
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
@@ -450,9 +446,7 @@ impl<'t> TxEmitter<'t> {
                 };
                 let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
-                println!("hhhhh pushes worker i = {}", i);
             }
-            i += 1;
         }
         info!("Tx emitter workers started");
         Ok(EmitJob {
