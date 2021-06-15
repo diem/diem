@@ -7,7 +7,7 @@ use crate::{
     gas_costs,
 };
 use diem_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
 };
 use diem_proptest_helpers::Index;
@@ -23,7 +23,9 @@ use proptest_derive::Arbitrary;
 #[proptest(no_params)]
 pub struct RotateKeyGen {
     sender: Index,
-    #[proptest(strategy = "ed25519::keypair_strategy()")]
+    #[proptest(
+        strategy = "diem_crypto::test_utils::uniform_keypair_strategy_with_perturbation(0)"
+    )]
     new_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 

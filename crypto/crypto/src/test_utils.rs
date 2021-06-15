@@ -98,6 +98,30 @@ where
         .no_shrink()
 }
 
+/// Produces a uniformly random keypair from a seed and the user can alter this sleed slightly.
+/// Useful for circumstances where you want two disjoint keypair generations that may interact with
+/// each other.
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn uniform_keypair_strategy_with_perturbation<Priv, Pub>(
+    perturbation: u8,
+) -> impl Strategy<Value = KeyPair<Priv, Pub>>
+where
+    Pub: Serialize + for<'a> From<&'a Priv>,
+    Priv: Serialize + Uniform,
+{
+    // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
+    // keypair to be generated, which appears to not be very useful.
+    any::<[u8; 32]>()
+        .prop_map(move |mut seed| {
+            for elem in seed.iter_mut() {
+                *elem = elem.saturating_add(perturbation);
+            }
+            let mut rng = StdRng::from_seed(seed);
+            KeyPair::<Priv, Pub>::generate(&mut rng)
+        })
+        .no_shrink()
+}
+
 /// This struct provides a means of testing signing and verification through
 /// BCS serialization and domain separation
 #[cfg(any(test, feature = "fuzzing"))]
