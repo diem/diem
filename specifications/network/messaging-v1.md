@@ -141,5 +141,3 @@ let message_bytes = noise_socket.read(length_prefix);
 // deserialize the message
 let message = bcs::from_bytes(message_bytes);
 ```
-
-(TODO(philiphayes): add streaming RPC protocol when supported)
