@@ -2,7 +2,7 @@
 
 ## Overview
 
-The [DiemNet](spec.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Diem blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawEncNetworkAddress`](network-address.md)es for validators and [`RawNetworkAddress`](network-address.md)es for VFNs.
+The [DiemNet](README.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Diem blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawEncNetworkAddress`](network-address.md)es for validators and [`RawNetworkAddress`](network-address.md)es for VFNs.
 
 ## Design Principles
 
@@ -25,7 +25,7 @@ On-chain discovery serves use cases (1) and (2) but not (3) or (4).
 
 ## On-chain Config
 
-Validator and VFN discovery information are stored in the `ValidatorSet` in the [`OnChainConfig`](../consensus/spec.md#onchainconfig).
+Validator and VFN discovery information are stored in the `ValidatorSet` in the [`OnChainConfig`](../consensus/README.md#onchainconfig).
 
 ```rust
 struct ValidatorSet {

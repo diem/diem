@@ -1,6 +1,6 @@
 # Messaging Protocol (v1)
 
-This document defines the messages and protocols for [DiemNet](spec.md) v1.
+This document defines the messages and protocols for [DiemNet](README.md) v1.
 
 ## Versioning
 

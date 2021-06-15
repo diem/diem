@@ -1,6 +1,6 @@
 # Noise Layer
 
-Communication between [DiemNet](spec.md) peers are encrypted and authenticated via the [Noise protocol framework](https://noiseprotocol.org/noise.html).
+Communication between [DiemNet](README.md) peers are encrypted and authenticated via the [Noise protocol framework](https://noiseprotocol.org/noise.html).
 This specification documents how we make use of Noise to encrypt communications in three types of network:
 
 1. **Public Full Node Network (PFN)**. Full nodes can connect to validator-operated full nodes.
@@ -73,7 +73,7 @@ A peer maintains a few variables:
 A validator maintains the follow additional variables for the VN:
 
 * **`trusted_peers`**. A mapping of peer ids to public keys which represents the current validator set.
-* **`timestamps`**. A mapping of peer ids to the last 8-byte timestamp seen from them. This value can be treated as a stateless and strictly increasing counter to avoid replay attacks (see [security considerations](#security-considerations) section).
+* **`timestamps`**. A mapping of peer ids to the last 8-byte timestamp seen from them. This value can be treated as a stateless and strictly increasing counter to avoid replay attacks (see [security considerations](noise.md#security-considerations) section).
 
 Note that no client authentication is done in the VFN as it is currently a private network.
 
@@ -130,7 +130,7 @@ Once two `CipherState`s from noise have been obtained, we define the two wrapper
   * Receive `length` bytes from the peer as `ciphertext`.
   * Call noise's `DecryptWithAd(null, ciphertext)` and return the result.
 
-## Security Consideration
+## Security Considerations
 
 ### Replay Attacks
 

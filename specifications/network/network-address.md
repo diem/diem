@@ -8,7 +8,7 @@ using [BCS] to describe the binary format and reducing the set of supported prot
 (TODO(philiphayes): include `EncNetworkAddress` spec)
 
 In particular, a `NetworkAddress` is intended to be a fully self-contained description of _how_ to dial a
-[DiemNet](spec.md) peer, describing both the base transport protocol and all subsequent connection upgrade protocols.
+[DiemNet](README.md) peer, describing both the base transport protocol and all subsequent connection upgrade protocols.
 
 ## Data Structures
 
