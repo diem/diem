@@ -502,7 +502,10 @@ function install_golang {
     elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
       apk --update add --no-cache git make musl-dev go
     elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-      brew install go
+      failed=$(brew install go || echo "failed")
+      if [[ "$failed" == "failed" ]]; then
+        brew link --overwrite go
+      fi
     else
       install_pkg golang "$PACKAGE_MANAGER"
     fi
