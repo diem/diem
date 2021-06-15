@@ -93,8 +93,19 @@ impl fmt::Display for ProtocolId {
 pub struct SupportedProtocols(bitvec::BitVec);
 
 impl SupportedProtocols {
+    /// An empty set of supported protocols
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// All known and currently supported protocols.
     pub fn all() -> Self {
         ProtocolId::all().iter().copied().collect()
+    }
+
+    /// Returns a new SupportedProtocols struct that is an intersection.
+    fn intersection(self, other: SupportedProtocols) -> SupportedProtocols {
+        SupportedProtocols(self.0 & other.0)
     }
 }
 
@@ -126,10 +137,12 @@ impl FromIterator<ProtocolId> for SupportedProtocols {
     }
 }
 
-impl SupportedProtocols {
-    /// Returns a new SupportedProtocols struct that is an intersection.
-    fn intersection(self, other: SupportedProtocols) -> SupportedProtocols {
-        SupportedProtocols(self.0 & other.0)
+impl<'a> FromIterator<&'a ProtocolId> for SupportedProtocols {
+    fn from_iter<I>(protocols: I) -> Self
+    where
+        I: IntoIterator<Item = &'a ProtocolId>,
+    {
+        Self::from_iter(protocols.into_iter().copied())
     }
 }
 
@@ -200,7 +213,7 @@ impl HandshakeMsg {
         let mut supported_protocols = BTreeMap::new();
         supported_protocols.insert(
             MessagingProtocolVersion::V1,
-            [ProtocolId::StateSyncDirectSend].iter().into(),
+            [ProtocolId::StateSyncDirectSend].iter().collect(),
         );
         Self {
             chain_id: ChainId::test(),
