@@ -8,26 +8,25 @@ use crate::{
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     persistent_liveness_storage::StorageWriteProxy,
     state_computer::ExecutionProxy,
-    ordering_state_computer::OrderingStateComputer,
+    experimental::{ordering_state_computer::OrderingStateComputer, execution_phase::ExecutionPhase, commit_phase::CommitPhase},
     state_replication::StateComputer,
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
 use channel::diem_channel;
-use consensus_types::block::Block;
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_config::config::NodeConfig;
-use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_mempool::ConsensusRequest;
 use diem_metrics::IntGauge;
 use diem_types::on_chain_config::OnChainConfigPayload;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
 use state_sync::client::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
-use diem_infallible::Mutex;
 
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
@@ -52,19 +51,38 @@ pub fn start_consensus(
         node_config.consensus.mempool_executed_txn_timeout_ms,
     ));
 
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
+
     let state_computer: Arc<dyn StateComputer> = if node_config.consensus.decoupled {
-        let guage = IntGauge::new("D_CHANNEL_COUNTER", "counter for the decoupling execution channel").unwrap();
-        let (sender, receiver) = channel::new::<(Vec<Block>, HashValue)>(
+        let guage_e = IntGauge::new("D_EXE_CHANNEL_COUNTER", "counter for the decoupling execution channel").unwrap();
+        let guage_c = IntGauge::new("D_COM_CHANNEL_COUNTER", "counter for the decoupling committing channel").unwrap();
+        let (sender_exec, receiver_exec) = channel::new::<(Vec<Block>, LedgerInfoWithSignatures)>(
             node_config.consensus.channel_size,
-            &guage
+            &guage_e
         );
-        let local_blocks = Mutex::new(Vec::<Block>::new());
+        let (sender_comm, receiver_comm) = channel::new::<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>(
+            node_config.consensus.channel_size,
+            &guage_c
+        );
+
+        let execution_phase = ExecutionPhase::new(
+            receiver_exec,
+            execution_correctness_manager.client(),
+            sender_comm,
+        );
+        let commit_phase = CommitPhase::new(
+            receiver_comm,
+            execution_correctness_manager.client(),
+            state_sync_client,
+        );
+
+        runtime.spawn(commit_phase.start());
+        runtime.spawn(execution_phase.start());
+
         Arc::new(OrderingStateComputer::new(
-            sender,
-            local_blocks,
+            sender_exec,
         ))
     } else {
-        let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
         Arc::new(ExecutionProxy::new(
             execution_correctness_manager.client(),
             state_sync_client,
@@ -92,6 +110,8 @@ pub fn start_consensus(
 
     runtime.spawn(network_task.start());
     runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
+
+
 
     debug!("Consensus started.");
     runtime

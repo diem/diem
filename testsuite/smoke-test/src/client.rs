@@ -13,6 +13,7 @@ use diem_types::{ledger_info::LedgerInfo, waypoint::Waypoint};
 fn test_create_mint_transfer_block_metadata() {
     let (env, client) = setup_swarm_and_client_proxy(1, 0);
 
+    // This script does 4 transactions
     check_create_mint_transfer(client);
 
     // Test if we commit not only user transactions but also block metadata transactions,
@@ -177,7 +178,6 @@ fn test_concurrent_transfers_single_node() {
 /// This helper function creates 3 new accounts, mints funds, transfers funds
 /// between the accounts and verifies that these operations succeed.
 fn check_create_mint_transfer(mut client: ClientProxy) {
-
     // Create account 0, mint 10 coins and check balance
     client.create_next_account(false).unwrap();
     client

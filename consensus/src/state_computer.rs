@@ -61,7 +61,6 @@ impl StateComputer for ExecutionProxy {
                 .lock()
                 .execute_block(block.clone(), parent_block_id)
         )
-
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
