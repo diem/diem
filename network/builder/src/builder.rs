@@ -40,7 +40,7 @@ use network::{
     },
     ProtocolId,
 };
-use network_simple_onchain_discovery::{
+use network_discovery::{
     builder::ValidatorSetChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
 };
 use std::{clone::Clone, collections::HashMap, sync::Arc};

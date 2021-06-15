@@ -28,7 +28,7 @@ The network component uses:
   as a fallback.
 
 Validators will only allow connections from other validators. Their identity and
-public key information is provided by the [`simple-onchain-discovery`] protocol,
+public key information is provided by the [`validator-set-discovery`] protocol,
 which updates the eligible member information on each consensus reconfiguration.
 Each member of the validator network maintains a full membership view and connects
 directly to all other validators in order to maintain a full-mesh network.
@@ -93,7 +93,7 @@ afterward using the [DiemNet Handshake Protocol].
 via Discovery. Notifies [`PeerManager`] to make outbound dials, or disconnects based
 on updates to known peers via Discovery updates.
 
-* [`simple-onchain-discovery`] &mdash; Discovers the set of peers to connect to
+* [`validator-set-discovery`] &mdash; Discovers the set of peers to connect to
 via on-chain configuration. These are the `validator_network_addresses` and
 `fullnode_network_addresses` of each [`ValidatorConfig`] in the
 [`DiemSystem::validators`] set. Notifies the [`ConnectivityManager`] of updates
@@ -115,7 +115,7 @@ configurable static timeout.
     │       ├── transport          # Composable transport API
     │       └── framing            # Read/write length prefixes to sockets
     ├── network-address            # Network addresses and encryption
-    ├── simple-onchain-discovery   # Protocol for on-chain peer discovery
+    ├── discovery                  # Protocols for peer discovery
     └── src
         ├── peer_manager           # Manage peer connections and messages to/from peers
         ├── peer                   # Handles a single peer connection's state
@@ -140,4 +140,4 @@ configurable static timeout.
 [`PeerManager`]: ./src/peer_manager/mod.rs
 [`Peer`]: ./src/peer/mod.rs
 [`ValidatorConfig`]: ../language/diem-framework/modules/doc/ValidatorConfig.md#struct-config
-[`simple-onchain-discovery`]: ./simple-onchain-discovery/src/lib.rs
+[`validator-set-discovery`]: discovery/src/lib.rs

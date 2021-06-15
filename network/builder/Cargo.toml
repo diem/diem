@@ -31,5 +31,5 @@ diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 netcore = { path = "../netcore" }
 network = { path = "../." }
-network-simple-onchain-discovery = { path = "../simple-onchain-discovery"}
+network-discovery = { path = "../discovery" }
 subscription-service = { path = "../../common/subscription-service" }

@@ -1,8 +1,8 @@
 [package]
-name = "network-simple-onchain-discovery"
+name = "network-discovery"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Diem socket bench server"
+description = "Diem Network Peer Discovery"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
