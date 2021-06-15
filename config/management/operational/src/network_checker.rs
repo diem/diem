@@ -128,7 +128,7 @@ pub struct CheckValidatorSetEndpoints {
 
 fn parse_validator_key_hex(src: &str) -> Result<Key, Error> {
     let value_slice = hex::decode(src.trim())
-        .map_err(|_| Error::CommandArgumentError(format!("Not a valid encryption key")))?;
+        .map_err(|_| Error::CommandArgumentError("Not a valid encryption key".to_string()))?;
 
     let mut value = [0; KEY_LEN];
     copy_slice_to_vec(&value_slice, &mut value)
