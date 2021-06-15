@@ -126,7 +126,7 @@ jobs:
         name: check if we should see if code coverage still works.
         uses: diem/actions/matches@78f868bd1170a959f0a9864e33df725690b45b9a
         with:
-          pattern: '^rust.toolchain\|^x.toml\|^devtools\|^.github\'
+          pattern: '^rust.toolchain\|^x.toml\|^devtools\|^.github\|common/logger'
 
   dev-setup-sh-test:
     runs-on: ubuntu-latest-xl
