@@ -117,14 +117,14 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
     }
 
     pub fn run(&self) -> Result<()> {
-        let mut summary = TestSummary::new(self.tests.number_of_tests(), 0);
+        let mut summary = TestSummary::new(self.filter_tests(self.tests.all_tests()).count(), 0);
         summary.write_starting_msg()?;
 
         let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
         let mut swarm = self.factory.launch_swarm(1);
 
         // Run PublicUsageTests
-        for test in self.tests.public_usage_tests {
+        for test in self.filter_tests(self.tests.public_usage_tests.iter()) {
             let mut public_ctx = PublicUsageContext::new(
                 CoreContext::from_rng(&mut rng),
                 swarm.chain_info().into_public_info(),
@@ -134,14 +134,14 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         }
 
         // Run AdminTests
-        for test in self.tests.admin_tests {
+        for test in self.filter_tests(self.tests.admin_tests.iter()) {
             let mut admin_ctx =
                 AdminContext::new(CoreContext::from_rng(&mut rng), swarm.chain_info());
             let result = run_test(|| test.run(&mut admin_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }
 
-        for test in self.tests.network_tests {
+        for test in self.filter_tests(self.tests.network_tests.iter()) {
             let report = TestReport::new();
             let mut network_ctx =
                 NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm, report);
@@ -156,6 +156,23 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         }
 
         Ok(())
+    }
+
+    fn filter_tests<'a, T: Test, I: Iterator<Item = T> + 'a>(
+        &'a self,
+        tests: I,
+    ) -> impl Iterator<Item = T> + 'a {
+        tests.filter(move |test| {
+            if let Some(filter) = &self.options.filter {
+                if self.options.filter_exact {
+                    test.name() == &filter[..]
+                } else {
+                    test.name().contains(&filter[..])
+                }
+            } else {
+                true
+            }
+        })
     }
 }
 
