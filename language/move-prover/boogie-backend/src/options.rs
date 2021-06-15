@@ -112,7 +112,7 @@ impl Default for BoogieOptions {
             z3_exe: get_env("Z3_EXE"),
             use_cvc4: false,
             cvc4_exe: get_env("CVC4_EXE"),
-            boogie_flags: vec!["-proverOpt:O:strings-exp=true".to_string()],
+            boogie_flags: vec![],
             debug_trace: false,
             use_array_theory: false,
             generate_smt: false,
