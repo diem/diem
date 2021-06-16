@@ -7,14 +7,14 @@ use debug_interface::NodeDebugClient;
 use diem_client::{BlockingClient, Client as JsonRpcClient};
 use diem_config::config::NodeConfig;
 use diem_logger::*;
-use diem_sdk::crypto::ed25519::{Ed25519PrivateKey, ED25519_PRIVATE_KEY_LENGTH};
+use diem_sdk::crypto::ed25519::{Ed25519PrivateKey, ED25519_PRIVATE_KEY_LENGTH, Ed25519PublicKey};
 use diem_sdk::crypto::ValidCryptoMaterialStringExt;
 use diem_sdk::move_types::account_address::AccountAddress;
 use diem_sdk::transaction_builder::TransactionFactory;
 use diem_sdk::types::{AccountKey, LocalAccount};
 use diem_types::chain_id::{ChainId, NamedChain};
 use diem_types::PeerId;
-use k8s_openapi::api::core::v1::{Pod, Service};
+use k8s_openapi::api::core::v1::{Pod, Service, Node as k8sNode};
 use kube::api::ListParams;
 use kube::{
     api::{Api, DeleteParams, PostParams},
@@ -27,6 +27,8 @@ use std::process::Command;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::runtime::Runtime;
+use cluster_test::cluster_swarm::cluster_swarm_kube::{ClusterSwarmKube, KubeNode};
+use diem_sdk::crypto::test_utils::KeyPair;
 
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 const KUBECTL_BIN: &str = "/usr/local/bin/kubectl";
@@ -66,15 +68,17 @@ impl K8sSwarm {
         let kube_client = K8sClient::try_from(config)?;
         let mut validators = vec![];
         let mut fullnodes = vec![];
-        let services = list_services(kube_client.clone()).await?;
-        for s in &services {
-            if s.name.contains(VALIDATOR_LB) {
+        let nodes = list_nodes(kube_client.clone()).await?;
+        println!("hhhhh {:?}", nodes);
+        let mut i = 0;
+        for n in &nodes {
+            if n.name.contains("val") {
                 let node = K8sNode {
                     peer_id: PeerId::random(),
-                    node_id: parse_node_id(&s.name).expect("error to parse node id"),
-                    ip: s.host_ip.clone(),
-                    port: JSON_RPC_PORT,
-                    dns: s.name.clone()
+                    node_id: i,
+                    ip: n.internal_ip.clone(),
+                    port: 8080,
+                    dns: n.name.clone()
                 };
                 println!("hhhhhh vnode peer_id = {:?}, node_id = {:?}, ip = {:?}, dns = {:?}", node.peer_id, node.node_id, node.ip, node.dns);
                 validators.push(node);
@@ -426,6 +430,13 @@ pub async fn list_services(client: K8sClient) -> Result<Vec<KubeService>> {
     services.into_iter().map(KubeService::try_from).collect()
 }
 
+async fn list_nodes(client: K8sClient) -> Result<Vec<KubeNode>> {
+    let node_api: Api<k8sNode> = Api::all(client);
+    let lp = ListParams::default().labels("nodeType=validators");
+    let nodes = node_api.list(&lp).await?.items;
+    nodes.into_iter().map(KubeNode::try_from).collect()
+}
+
 fn parse_node_id(s: &str) -> Result<(usize)> {
     let v = s.split('-').collect::<Vec<&str>>();
     if v.len() < 5 {
@@ -437,14 +448,17 @@ fn parse_node_id(s: &str) -> Result<(usize)> {
 
 // TODO remove hard code key
 fn load_root_key() -> Ed25519PrivateKey {
-    let composite_key = base64::decode(
-        "iuRk67ESWWbbXqJu33GK0VGzGO3IOYYDT73lWE3WwZhuLNdkknw80heocg/Ktg4bie1ssmHx1GaJeD5j8LqBAA==").unwrap();
-    Ed25519PrivateKey::try_from(composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH).unwrap()).unwrap()
+    get_mint_key_pair_from_file("/tmp/mint.key").private_key
 }
 
 // TODO remove hard code key
 fn load_tc_key() -> Ed25519PrivateKey {
-    let composite_key = base64::decode(
-        "3KaQOi6t/aeewyaHFFF6Dv4v3YZxYCM66OjGgsSK71AryFCM/32MOH/pKjbKjdnVtreNpaiHX4S4VP+akke3sg==").unwrap();
-    Ed25519PrivateKey::try_from(composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH).unwrap()).unwrap()
+    get_mint_key_pair_from_file("/tmp/mint.key").private_key
+}
+
+fn get_mint_key_pair_from_file(
+    mint_file: &str,
+) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+    let mint_key: Ed25519PrivateKey = generate_key::load_key(mint_file);
+    KeyPair::from(mint_key)
 }
