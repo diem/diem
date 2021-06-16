@@ -32,8 +32,8 @@ use diem_sdk::crypto::test_utils::KeyPair;
 
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 const KUBECTL_BIN: &str = "/usr/local/bin/kubectl";
-const JSON_RPC_PORT: u32 = 80;
-const VALIDATOR_LB: &str = "validator-fullnode-lb";
+const JSON_RPC_PORT: u32 = 8080;
+const VALIDATOR_LB: &str = "val";
 
 struct K8sSwarm {
     validators: Vec<K8sNode>,
@@ -68,20 +68,20 @@ impl K8sSwarm {
         let kube_client = K8sClient::try_from(config)?;
         let mut validators = vec![];
         let mut fullnodes = vec![];
-        let nodes = list_nodes(kube_client.clone()).await?;
-        println!("hhhhh {:?}", nodes);
+        let services = list_services(kube_client.clone()).await?;
         let mut i = 0;
-        for n in &nodes {
-            if n.name.contains("val") {
+        for s in &services {
+            if s.name.contains(VALIDATOR_LB) {
                 let node = K8sNode {
                     peer_id: PeerId::random(),
                     node_id: i,
-                    ip: n.internal_ip.clone(),
-                    port: 8080,
-                    dns: n.name.clone()
+                    ip: s.host_ip.clone(),
+                    port: JSON_RPC_PORT,
+                    dns: s.name.clone()
                 };
                 println!("hhhhhh vnode peer_id = {:?}, node_id = {:?}, ip = {:?}, dns = {:?}", node.peer_id, node.node_id, node.ip, node.dns);
                 validators.push(node);
+                i += 1;
             }
         }
 
