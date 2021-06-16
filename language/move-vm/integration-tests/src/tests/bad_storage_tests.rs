@@ -11,7 +11,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
-use move_vm_runtime::{data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -87,7 +87,6 @@ fn test_malformed_resource() {
     ))
     .unwrap();
 
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
 
     // Execute the first script to publish a resource Foo.
@@ -100,7 +99,6 @@ fn test_malformed_resource() {
         vec![],
         vec![TEST_ADDR],
         &mut gas_status,
-        &log_context,
     )
     .unwrap();
     let (changeset, _) = sess.finish().unwrap();
@@ -119,7 +117,6 @@ fn test_malformed_resource() {
             vec![],
             vec![TEST_ADDR],
             &mut gas_status,
-            &log_context,
         )
         .unwrap();
     }
@@ -147,7 +144,6 @@ fn test_malformed_resource() {
                 vec![],
                 vec![TEST_ADDR],
                 &mut gas_status,
-                &log_context,
             )
             .unwrap_err();
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -173,7 +169,7 @@ fn test_malformed_module() {
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
-    let log_context = NoContextLog::new();
+
     let mut gas_status = GasStatus::new_unmetered();
 
     // Publish M and call M::foo. No errors should be thrown.
@@ -182,15 +178,8 @@ fn test_malformed_module() {
         storage.publish_or_overwrite_module(m.self_id(), blob.clone());
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
-        sess.execute_function(
-            &module_id,
-            &fun_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .unwrap();
     }
 
     // Start over with a fresh storage and publish a corrupted version of M.
@@ -209,14 +198,7 @@ fn test_malformed_module() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
@@ -235,7 +217,6 @@ fn test_unverifiable_module() {
     let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
 
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
@@ -251,15 +232,8 @@ fn test_unverifiable_module() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(
-            &module_id,
-            &fun_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .unwrap();
     }
 
     // Erase the body of M::foo to make it fail verification.
@@ -278,14 +252,7 @@ fn test_unverifiable_module() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -316,7 +283,6 @@ fn test_missing_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
@@ -332,15 +298,8 @@ fn test_missing_module_dependency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(
-            &module_id,
-            &fun_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .unwrap();
     }
 
     // Publish only N and try to call N::bar. The VM should fail to find M and raise
@@ -353,14 +312,7 @@ fn test_missing_module_dependency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -391,7 +343,6 @@ fn test_malformed_module_denpency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
@@ -407,15 +358,8 @@ fn test_malformed_module_denpency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(
-            &module_id,
-            &fun_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .unwrap();
     }
 
     // Publish N and a corrupted version of M and try to call N::bar, the VM should fail to load M.
@@ -434,14 +378,7 @@ fn test_malformed_module_denpency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -470,7 +407,6 @@ fn test_unverifiable_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
@@ -489,15 +425,8 @@ fn test_unverifiable_module_dependency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(
-            &module_id,
-            &fun_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .unwrap();
     }
 
     // Publish N and an unverifiable version of M and try to call N::bar, the VM should fail to load M.
@@ -517,14 +446,7 @@ fn test_unverifiable_module_dependency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -561,7 +483,6 @@ const LIST_OF_ERROR_CODES: &[StatusCode] = &[
 
 #[test]
 fn test_storage_returns_bogus_error_when_loading_module() {
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -574,14 +495,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(
-                &module_id,
-                &fun_name,
-                vec![],
-                vec![],
-                &mut gas_status,
-                &log_context,
-            )
+            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -590,7 +504,6 @@ fn test_storage_returns_bogus_error_when_loading_module() {
 
 #[test]
 fn test_storage_returns_bogus_error_when_loading_resource() {
-    let log_context = NoContextLog::new();
     let mut gas_status = GasStatus::new_unmetered();
 
     let code = r#"
@@ -645,15 +558,8 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         .unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(
-            &m_id,
-            &foo_name,
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
-        .unwrap();
+        sess.execute_function(&m_id, &foo_name, vec![], vec![], &mut gas_status)
+            .unwrap();
 
         let err = sess
             .execute_function(
@@ -662,7 +568,6 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
                 vec![],
                 serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
                 &mut gas_status,
-                &log_context,
             )
             .unwrap_err();
 

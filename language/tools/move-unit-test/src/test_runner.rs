@@ -27,7 +27,7 @@ use move_lang::{
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
 };
 use move_model::{model::GlobalEnv, run_model_builder_with_compilation_flags};
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
@@ -185,7 +185,6 @@ impl SharedTestingConfig {
         let mut session = move_vm.new_session(&self.starting_storage_state);
         let mut gas_meter = GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound));
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set
-        let log_context = NoContextLog::new();
 
         let now = Instant::now();
         let return_result = session.execute_function(
@@ -194,7 +193,6 @@ impl SharedTestingConfig {
             vec![], // no ty args, at least for now
             serialize_values(test_info.arguments.iter()),
             &mut gas_meter,
-            &log_context,
         );
         let test_run_info = TestRunInfo::new(
             function_name.to_string(),

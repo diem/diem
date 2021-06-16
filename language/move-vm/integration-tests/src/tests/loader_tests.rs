@@ -8,7 +8,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use std::{path::PathBuf, sync::Arc, thread};
@@ -55,7 +55,6 @@ impl Adapter {
 
     fn publish_modules(&mut self, modules: Vec<CompiledModule>) {
         let mut session = self.vm.new_session(&self.store);
-        let log_context = NoContextLog::new();
         let mut gas_status = GasStatus::new_unmetered();
         for module in modules {
             let mut binary = vec![];
@@ -63,7 +62,7 @@ impl Adapter {
                 .serialize(&mut binary)
                 .unwrap_or_else(|_| panic!("failure in module serialization: {:#?}", module));
             session
-                .publish_module(binary, WORKING_ACCOUNT, &mut gas_status, &log_context)
+                .publish_module(binary, WORKING_ACCOUNT, &mut gas_status)
                 .unwrap_or_else(|_| panic!("failure publishing module: {:#?}", module));
         }
         let (changeset, _) = session.finish().expect("failure getting write set");
@@ -86,17 +85,9 @@ impl Adapter {
                 let data_store = self.store.clone();
                 children.push(thread::spawn(move || {
                     let mut gas_status = GasStatus::new_unmetered();
-                    let log_context = NoContextLog::new();
                     let mut session = vm.new_session(&data_store);
                     session
-                        .execute_function(
-                            &module_id,
-                            &name,
-                            vec![],
-                            vec![],
-                            &mut gas_status,
-                            &log_context,
-                        )
+                        .execute_function(&module_id, &name, vec![], vec![], &mut gas_status)
                         .unwrap_or_else(|_| {
                             panic!("Failure executing {:?}::{:?}", module_id, name)
                         });
@@ -110,10 +101,9 @@ impl Adapter {
 
     fn call_function(&self, module: &ModuleId, name: &IdentStr) {
         let mut gas_status = GasStatus::new_unmetered();
-        let log_context = NoContextLog::new();
         let mut session = self.vm.new_session(&self.store);
         session
-            .execute_function(module, name, vec![], vec![], &mut gas_status, &log_context)
+            .execute_function(module, name, vec![], vec![], &mut gas_status)
             .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name));
     }
 }

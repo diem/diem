@@ -256,7 +256,6 @@ existing_deps = [
     #          moved to the new repo
     ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
     ["compiler", "diem-framework-releases"],
-    ["move-vm-runtime", "diem-logger"],
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],
     ["move-cli", "diem-types"],                               # `ContractEvent`

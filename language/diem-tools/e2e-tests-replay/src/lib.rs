@@ -57,7 +57,7 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{KeptVMStatus, VMStatus},
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
 const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
@@ -399,15 +399,7 @@ fn execute_function_via_session(
     args: Vec<Vec<u8>>,
 ) -> VMResult<Vec<Vec<u8>>> {
     let mut gas_status = GasStatus::new_unmetered();
-    let log_context = NoContextLog::new();
-    session.execute_function(
-        module_id,
-        function_name,
-        ty_args,
-        args,
-        &mut gas_status,
-        &log_context,
-    )
+    session.execute_function(module_id, function_name, ty_args, args, &mut gas_status)
 }
 
 fn execute_function_via_session_and_xrunner(
@@ -433,7 +425,6 @@ fn execute_script_function_via_session(
     senders: Vec<AccountAddress>,
 ) -> VMResult<()> {
     let mut gas_status = GasStatus::new_unmetered();
-    let log_context = NoContextLog::new();
     session.execute_script_function(
         module_id,
         function_name,
@@ -441,7 +432,6 @@ fn execute_script_function_via_session(
         args,
         senders,
         &mut gas_status,
-        &log_context,
     )
 }
 

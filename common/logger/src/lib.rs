@@ -153,6 +153,7 @@ mod logger;
 mod macros;
 mod metadata;
 pub mod sample;
+pub mod tracing_adapter;
 
 mod security;
 mod struct_log;

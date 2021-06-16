@@ -3,7 +3,6 @@
 
 use crate::{
     data_cache::{MoveStorage, TransactionDataCache},
-    logging::LogContext,
     runtime::VMRuntime,
 };
 use move_binary_format::errors::*;
@@ -43,7 +42,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
         ty_args: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<Vec<Vec<u8>>> {
         self.runtime.execute_function(
             module,
@@ -52,7 +50,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
             args,
             &mut self.data_cache,
             gas_status,
-            log_context,
         )
     }
 
@@ -88,7 +85,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
         args: Vec<Vec<u8>>,
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
         self.runtime.execute_script_function(
             module,
@@ -98,7 +94,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
             senders,
             &mut self.data_cache,
             gas_status,
-            log_context,
         )
     }
 
@@ -125,7 +120,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
         args: Vec<Vec<u8>>,
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
         self.runtime.execute_script(
             script,
@@ -134,7 +128,6 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
             senders,
             &mut self.data_cache,
             gas_status,
-            log_context,
         )
     }
 
@@ -156,15 +149,9 @@ impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
         module: Vec<u8>,
         sender: AccountAddress,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
-        self.runtime.publish_module(
-            module,
-            sender,
-            &mut self.data_cache,
-            gas_status,
-            log_context,
-        )
+        self.runtime
+            .publish_module(module, sender, &mut self.data_cache, gas_status)
     }
 
     pub fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

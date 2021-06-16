@@ -38,7 +38,7 @@ use move_core_types::{
     transaction_argument::convert_txn_args,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Session};
+use move_vm_runtime::{data_cache::MoveStorage, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 use rayon::prelude::*;
 use std::{
@@ -66,7 +66,7 @@ impl DiemVM {
         txn_data: &TransactionMetadata,
         storage: &S,
         account_currency_symbol: &IdentStr,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> TransactionOutput {
         self.failed_transaction_cleanup_and_keep_vm_status(
             error_code,
@@ -86,7 +86,7 @@ impl DiemVM {
         txn_data: &TransactionMetadata,
         storage: &S,
         account_currency_symbol: &IdentStr,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> (VMStatus, TransactionOutput) {
         gas_status.set_metering(false);
         let mut session = self.0.new_session(storage);
@@ -130,7 +130,7 @@ impl DiemVM {
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         gas_status.set_metering(false);
         self.0.run_success_epilogue(
@@ -160,7 +160,7 @@ impl DiemVM {
         txn_data: &TransactionMetadata,
         payload: &TransactionPayload,
         account_currency_symbol: &IdentStr,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         fail_point!("move_adapter::execute_script_or_script_function", |_| {
             Err(VMStatus::Error(
@@ -196,7 +196,6 @@ impl DiemVM {
                             convert_txn_args(script.args()),
                             senders,
                             gas_status,
-                            log_context,
                         ),
                         Some((module, function)) => session.execute_script_function(
                             module,
@@ -205,7 +204,6 @@ impl DiemVM {
                             convert_txn_args(script.args()),
                             senders,
                             gas_status,
-                            log_context,
                         ),
                     }
                 }
@@ -222,7 +220,6 @@ impl DiemVM {
                         script_fn.args().to_vec(),
                         senders,
                         gas_status,
-                        log_context,
                     )
                 }
                 TransactionPayload::Module(_) | TransactionPayload::WriteSet(_) => {
@@ -250,7 +247,7 @@ impl DiemVM {
         txn_data: &TransactionMetadata,
         module: &Module,
         account_currency_symbol: &IdentStr,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         fail_point!("move_adapter::execute_module", |_| {
             Err(VMStatus::Error(
@@ -268,13 +265,9 @@ impl DiemVM {
         gas_status
             .charge_intrinsic_gas(txn_data.transaction_size())
             .map_err(|e| e.into_vm_status())?;
+
         session
-            .publish_module(
-                module.code().to_vec(),
-                module_address,
-                gas_status,
-                log_context,
-            )
+            .publish_module(module.code().to_vec(), module_address, gas_status)
             .map_err(|e| e.into_vm_status())?;
 
         charge_global_write_gas_usage(gas_status, &session, &txn_data.sender())?;
@@ -292,7 +285,7 @@ impl DiemVM {
         &self,
         storage: &S,
         txn: &SignatureCheckedTransaction,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> (VMStatus, TransactionOutput) {
         macro_rules! unwrap_or_discard {
             ($res: expr) => {
@@ -378,7 +371,6 @@ impl DiemVM {
         storage: &S,
         writeset_payload: &WriteSetPayload,
         txn_sender: Option<AccountAddress>,
-        log_context: &impl LogContext,
     ) -> Result<ChangeSet, Result<(VMStatus, TransactionOutput), VMStatus>> {
         let mut gas_status = GasStatus::new_unmetered();
 
@@ -406,7 +398,6 @@ impl DiemVM {
                         convert_txn_args(script.args()),
                         senders,
                         &mut gas_status,
-                        log_context,
                     ),
                     Some((module, function)) => tmp_session.execute_script_function(
                         module,
@@ -415,7 +406,6 @@ impl DiemVM {
                         convert_txn_args(script.args()),
                         senders,
                         &mut gas_status,
-                        log_context,
                     ),
                 }
                 .and_then(|_| tmp_session.finish())
@@ -453,10 +443,8 @@ impl DiemVM {
         &self,
         storage: &S,
         writeset_payload: WriteSetPayload,
-        log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-        let change_set = match self.execute_writeset(storage, &writeset_payload, None, log_context)
-        {
+        let change_set = match self.execute_writeset(storage, &writeset_payload, None) {
             Ok(cs) => cs,
             Err(e) => return e,
         };
@@ -473,7 +461,7 @@ impl DiemVM {
         &self,
         storage: &S,
         block_metadata: BlockMetadata,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         fail_point!("move_adapter::process_block_prologue", |_| {
             Err(VMStatus::Error(
@@ -503,7 +491,6 @@ impl DiemVM {
                 vec![],
                 args,
                 &mut gas_status,
-                log_context,
             )
             .map(|_return_vals| ())
             .or_else(|e| {
@@ -525,7 +512,7 @@ impl DiemVM {
         &self,
         storage: &S,
         txn: &SignatureCheckedTransaction,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         fail_point!("move_adapter::process_writeset_transaction", |_| {
             Err(VMStatus::Error(
@@ -569,17 +556,13 @@ impl DiemVM {
         storage: &S,
         writeset_payload: &WriteSetPayload,
         txn_data: TransactionMetadata,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-        let change_set = match self.execute_writeset(
-            storage,
-            writeset_payload,
-            Some(txn_data.sender()),
-            log_context,
-        ) {
-            Ok(change_set) => change_set,
-            Err(e) => return e,
-        };
+        let change_set =
+            match self.execute_writeset(storage, writeset_payload, Some(txn_data.sender())) {
+                Ok(change_set) => change_set,
+                Err(e) => return e,
+            };
 
         // Run the epilogue function.
         let mut session = self.0.new_session(storage);
@@ -771,7 +754,7 @@ impl DiemVM {
         &self,
         txn: &PreprocessedTransaction,
         data_cache: &S,
-        log_context: &impl LogContext,
+        log_context: &AdapterLogSchema,
     ) -> Result<(VMStatus, TransactionOutput, Option<String>), VMStatus> {
         Ok(match txn {
             PreprocessedTransaction::BlockMetadata(block_metadata) => {
@@ -780,11 +763,8 @@ impl DiemVM {
                 (vm_status, output, Some("block_prologue".to_string()))
             }
             PreprocessedTransaction::WaypointWriteSet(write_set_payload) => {
-                let (vm_status, output) = self.process_waypoint_change_set(
-                    data_cache,
-                    write_set_payload.clone(),
-                    log_context,
-                )?;
+                let (vm_status, output) =
+                    self.process_waypoint_change_set(data_cache, write_set_payload.clone())?;
                 (vm_status, output, Some("waypoint_write_set".to_string()))
             }
             PreprocessedTransaction::UserTransaction(txn) => {

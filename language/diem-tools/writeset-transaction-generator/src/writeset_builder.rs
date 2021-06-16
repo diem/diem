@@ -15,9 +15,7 @@ use move_core_types::{
     transaction_argument::convert_txn_args,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{
-    data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM, session::Session,
-};
+use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
 pub struct GenesisSession<'r, 'l, S>(Session<'r, 'l, S>);
@@ -40,7 +38,6 @@ impl<'r, 'l, S: MoveStorage> GenesisSession<'r, 'l, S> {
                 ty_args,
                 args,
                 &mut GasStatus::new_unmetered(),
-                &NoContextLog::new(),
             )
             .unwrap_or_else(|e| {
                 panic!(
@@ -60,7 +57,6 @@ impl<'r, 'l, S: MoveStorage> GenesisSession<'r, 'l, S> {
                 convert_txn_args(script.args()),
                 vec![sender],
                 &mut GasStatus::new_unmetered(),
-                &NoContextLog::new(),
             )
             .unwrap()
     }

@@ -21,7 +21,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     move_resource::MoveStructType,
 };
-use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Session};
+use move_vm_runtime::{data_cache::MoveStorage, session::Session};
 
 use crate::logging::AdapterLogSchema;
 
@@ -124,7 +124,7 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     transaction: &SignatureCheckedTransaction,
     remote_cache: &S,
     allow_too_new: bool,
-    log_context: &impl LogContext,
+    log_context: &AdapterLogSchema,
 ) -> Result<(u64, Identifier), VMStatus> {
     if transaction.is_multi_agent() && vm.get_diem_version()? < DIEM_VERSION_3 {
         // Multi agent is not allowed under this version

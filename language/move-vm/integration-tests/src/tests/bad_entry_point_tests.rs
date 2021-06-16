@@ -9,7 +9,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::StatusType,
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{BlankStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -24,7 +24,6 @@ fn call_non_existent_module() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
     let mut gas_status = GasStatus::new_unmetered();
-    let context = NoContextLog::new();
 
     let err = sess
         .execute_function(
@@ -33,7 +32,6 @@ fn call_non_existent_module() {
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
             &mut gas_status,
-            &context,
         )
         .unwrap_err();
 
@@ -61,7 +59,6 @@ fn call_non_existent_function() {
 
     let fun_name = Identifier::new("foo").unwrap();
     let mut gas_status = GasStatus::new_unmetered();
-    let context = NoContextLog::new();
 
     let err = sess
         .execute_function(
@@ -70,7 +67,6 @@ fn call_non_existent_function() {
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
             &mut gas_status,
-            &context,
         )
         .unwrap_err();
 

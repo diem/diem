@@ -897,7 +897,6 @@ pub fn publish_module(
     module: Vec<u8>,
     sender: AccountAddress,
     gas_status: &mut GasStatus,
-    log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
 
@@ -943,7 +942,6 @@ pub fn execute_script(
     args: Vec<Vec<u8>>,
     senders: Vec<AccountAddress>,
     gas_status: &mut GasStatus,
-    log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
 
@@ -994,7 +992,6 @@ pub fn execute_script_function(
     args: Vec<Vec<u8>>,
     senders: Vec<AccountAddress>,
     gas_status: &mut GasStatus,
-    log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
 
@@ -1026,7 +1023,6 @@ pub fn execute_function(
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
     gas_status: &mut GasStatus,
-    log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
 

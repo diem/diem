@@ -1,14 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_state_view::StateView;
 use diem_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
-use diem_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, DiemVM};
+use diem_vm::{
+    data_cache::StateViewCache, logging::AdapterLogSchema,
+    transaction_metadata::TransactionMetadata, DiemVM,
+};
 use language_e2e_tests::{
     account, common_transactions::peer_to_peer_txn, test_with_different_versions,
     versioning::CURRENT_RELEASE_VERSIONS,
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
-use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 
 #[test]
@@ -18,7 +21,7 @@ fn failed_transaction_cleanup_test() {
         let sender = executor.create_raw_account_data(1_000_000, 10);
         executor.add_account_data(&sender);
 
-        let log_context = NoContextLog::new();
+        let log_context = AdapterLogSchema::new(executor.get_state_view().id(), 0);
         let diem_vm = DiemVM::new(executor.get_state_view());
         let data_cache = StateViewCache::new(executor.get_state_view());
 

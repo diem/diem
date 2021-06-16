@@ -9,7 +9,7 @@ use move_core_types::{
     language_storage::{ModuleId, CORE_CODE_ADDRESS},
 };
 use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::BlankStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -71,7 +71,6 @@ fn execute<M: Measurement + 'static>(
     // establish running context
     let storage = BlankStorage::new();
     let sender = CORE_CODE_ADDRESS;
-    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&storage);
     let mut gas_status = GasStatus::new_unmetered();
 
@@ -81,7 +80,7 @@ fn execute<M: Measurement + 'static>(
             .serialize(&mut mod_blob)
             .expect("Module serialization error");
         session
-            .publish_module(mod_blob, sender, &mut gas_status, &log_context)
+            .publish_module(mod_blob, sender, &mut gas_status)
             .expect("Module must load");
     }
 
@@ -93,14 +92,7 @@ fn execute<M: Measurement + 'static>(
     c.bench_function(fun, |b| {
         b.iter(|| {
             session
-                .execute_function(
-                    &module_id,
-                    &fun_name,
-                    vec![],
-                    vec![],
-                    &mut gas_status,
-                    &log_context,
-                )
+                .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
                 .unwrap_or_else(|err| {
                     panic!(
                         "{:?}::{} failed with {:?}",

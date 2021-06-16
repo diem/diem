@@ -8,7 +8,7 @@ use move_core_types::{
     language_storage::ModuleId,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -46,7 +46,6 @@ fn mutated_accounts() {
     let mut sess = vm.new_session(&storage);
 
     let mut gas_status = GasStatus::new_unmetered();
-    let context = NoContextLog::new();
 
     let publish = Identifier::new("publish").unwrap();
     let flip = Identifier::new("flip").unwrap();
@@ -60,7 +59,6 @@ fn mutated_accounts() {
         vec![],
         serialize_values(&vec![MoveValue::Signer(account1)]),
         &mut gas_status,
-        &context,
     )
     .unwrap();
 
@@ -75,7 +73,6 @@ fn mutated_accounts() {
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
         &mut gas_status,
-        &context,
     )
     .unwrap();
 
@@ -87,7 +84,6 @@ fn mutated_accounts() {
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
         &mut gas_status,
-        &context,
     )
     .unwrap();
     assert_eq!(sess.num_mutated_accounts(&TEST_ADDR), 2);
@@ -102,7 +98,6 @@ fn mutated_accounts() {
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
         &mut gas_status,
-        &context,
     )
     .unwrap();
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, format_err, Result};
+use diem_state_view::StateView;
 use diem_types::{
     access_path,
     account_address::AccountAddress,
@@ -15,12 +16,15 @@ use diem_types::{
 use diem_validator_interface::{
     DBDebuggerInterface, DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
-use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
+use diem_vm::{
+    convert_changeset_and_events, data_cache::RemoteStorage, logging::AdapterLogSchema, DiemVM,
+    VMExecutor,
+};
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_cli::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use move_core_types::{effects::ChangeSet as MoveChanges, language_storage::TypeTag};
 use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use resource_viewer::{AnnotatedAccountStateBlob, AnnotatedMoveStruct, MoveValueAnnotator};
@@ -124,7 +128,6 @@ impl DiemDebugger {
         let state_view = DebuggerStateView::new(&*self.debugger, version + 1);
         let vm = DiemVM::new(&state_view);
         let cache = diem_vm::data_cache::StateViewCache::new(&state_view);
-        let log_context = NoContextLog::new();
         let sequence_number = match self
             .debugger
             .get_account_state_by_version(diem_root_address(), version)?
@@ -142,7 +145,12 @@ impl DiemDebugger {
         };
 
         let (_, output) = vm
-            .execute_writeset_transaction(&cache, &payload, txn_data, &log_context)
+            .execute_writeset_transaction(
+                &cache,
+                &payload,
+                txn_data,
+                &AdapterLogSchema::new(state_view.id(), 0),
+            )
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
         if save_write_set {
             self.save_write_sets(&output)?;
@@ -338,14 +346,12 @@ impl DiemDebugger {
         let is_version_ok = |version| {
             self.run_session_at_version(version, override_changeset.clone(), |session| {
                 let mut gas_status = GasStatus::new_unmetered();
-                let log_context = NoContextLog::new();
                 session.execute_script(
                     predicate.clone(),
                     vec![],
                     vec![],
                     vec![diem_root_address(), sender],
                     &mut gas_status,
-                    &log_context,
                 )
             })
             .map(|_| ())

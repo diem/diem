@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use crate::{data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM};
+use crate::{data_cache::MoveStorage, move_vm::MoveVM};
 use move_binary_format::{
     errors::{PartialVMResult, VMResult},
     file_format::{
@@ -259,17 +259,9 @@ fn call_script_with_args_ty_args_signers(
 ) -> VMResult<()> {
     let move_vm = MoveVM::new(vec![]).unwrap();
     let remote_view = RemoteStore::new();
-    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
     let mut gas_status = GasStatus::new_unmetered();
-    session.execute_script(
-        script,
-        ty_args,
-        args,
-        signers,
-        &mut gas_status,
-        &log_context,
-    )
+    session.execute_script(script, ty_args, args, signers, &mut gas_status)
 }
 
 fn call_script(script: Vec<u8>, args: Vec<Vec<u8>>) -> VMResult<()> {
@@ -287,7 +279,6 @@ fn call_script_function_with_args_ty_args_signers(
     let mut remote_view = RemoteStore::new();
     let id = module.self_id();
     remote_view.add_module(module);
-    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
     let mut gas_status = GasStatus::new_unmetered();
     session.execute_script_function(
@@ -297,7 +288,6 @@ fn call_script_function_with_args_ty_args_signers(
         args,
         signers,
         &mut gas_status,
-        &log_context,
     )?;
     Ok(())
 }
@@ -761,19 +751,10 @@ fn call_missing_item() {
     // mising module
     let move_vm = MoveVM::new(vec![]).unwrap();
     let mut remote_view = RemoteStore::new();
-    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
     let mut gas_status = GasStatus::new_unmetered();
     let error = session
-        .execute_script_function(
-            id,
-            function_name,
-            vec![],
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
+        .execute_script_function(id, function_name, vec![], vec![], vec![], &mut gas_status)
         .err()
         .unwrap();
     assert_eq!(error.major_status(), StatusCode::LINKER_ERROR);
@@ -783,15 +764,7 @@ fn call_missing_item() {
     remote_view.add_module(module);
     let mut session = move_vm.new_session(&remote_view);
     let error = session
-        .execute_script_function(
-            id,
-            function_name,
-            vec![],
-            vec![],
-            vec![],
-            &mut gas_status,
-            &log_context,
-        )
+        .execute_script_function(id, function_name, vec![], vec![], vec![], &mut gas_status)
         .err()
         .unwrap();
     assert_eq!(

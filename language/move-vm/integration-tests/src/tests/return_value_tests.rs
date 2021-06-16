@@ -10,7 +10,7 @@ use move_core_types::{
     value::{MoveTypeLayout, MoveValue},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -52,21 +52,14 @@ fn run(
 
     let fun_name = Identifier::new("foo").unwrap();
     let mut gas_status = GasStatus::new_unmetered();
-    let context = NoContextLog::new();
 
     let args: Vec<_> = args
         .into_iter()
         .map(|val| val.simple_serialize().unwrap())
         .collect();
 
-    let return_vals = sess.execute_function(
-        &module_id,
-        &fun_name,
-        ty_args,
-        args,
-        &mut gas_status,
-        &context,
-    )?;
+    let return_vals =
+        sess.execute_function(&module_id, &fun_name, ty_args, args, &mut gas_status)?;
 
     Ok(return_vals)
 }

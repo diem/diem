@@ -34,7 +34,6 @@ use move_binary_format::{
     },
 };
 use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
-use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::gas_schedule::GasStatus;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
@@ -105,7 +104,6 @@ fn execute_function_in_module<S: StateView>(
 
         let internals = diem_vm.internals();
 
-        let log_context = NoContextLog::new();
         internals.with_txn_data_cache(state_view, |mut txn_context| {
             let sender = AccountAddress::random();
             let mut mod_blob = vec![];
@@ -114,17 +112,10 @@ fn execute_function_in_module<S: StateView>(
                 .expect("Module serialization error");
             let mut gas_status = GasStatus::new_unmetered();
             txn_context
-                .publish_module(mod_blob, sender, &mut gas_status, &log_context)
+                .publish_module(mod_blob, sender, &mut gas_status)
                 .map_err(|e| e.into_vm_status())?;
             txn_context
-                .execute_function(
-                    &module_id,
-                    &entry_name,
-                    ty_args,
-                    args,
-                    &mut gas_status,
-                    &log_context,
-                )
+                .execute_function(&module_id, &entry_name, ty_args, args, &mut gas_status)
                 .map_err(|e| e.into_vm_status())?;
             Ok(())
         })

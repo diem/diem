@@ -13,7 +13,7 @@ use move_core_types::{
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
 use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::{anyhow, bail, Result};
 use std::{fs, path::Path};
@@ -100,7 +100,6 @@ move run` must be applied to a module inside `storage/`",
 
     let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
     let mut gas_status = get_gas_status(gas_budget)?;
-    let log_context = NoContextLog::new();
     let mut session = vm.new_session(state);
 
     let script_type_parameters = vec![];
@@ -118,7 +117,6 @@ move run` must be applied to a module inside `storage/`",
                     vm_args,
                     signer_addresses.clone(),
                     &mut gas_status,
-                    &log_context,
                 )
                 .map(|_| ())
         }
@@ -128,7 +126,6 @@ move run` must be applied to a module inside `storage/`",
             vm_args,
             signer_addresses.clone(),
             &mut gas_status,
-            &log_context,
         ),
     };
 

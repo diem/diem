@@ -6,7 +6,7 @@ use crate::sandbox::utils::{
     on_disk_state_view::OnDiskStateView,
 };
 use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::Result;
 
@@ -53,7 +53,6 @@ pub fn publish(
     if !ignore_breaking_changes {
         let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
         let mut gas_status = get_gas_status(None)?;
-        let log_context = NoContextLog::new();
         let mut session = vm.new_session(state);
 
         let mut has_error = false;
@@ -64,7 +63,7 @@ pub fn publish(
             let id = module.self_id();
             let sender = *id.address();
 
-            let res = session.publish_module(module_bytes, sender, &mut gas_status, &log_context);
+            let res = session.publish_module(module_bytes, sender, &mut gas_status);
             if let Err(err) = res {
                 explain_publish_error(err, &state, module)?;
                 has_error = true;

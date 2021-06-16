@@ -42,7 +42,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_types::gas_schedule::GasStatus;
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
@@ -466,7 +466,6 @@ impl FakeExecutor {
             let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
-            let log_context = NoContextLog::new();
             session
                 .execute_function(
                     &Self::module(module_name),
@@ -474,7 +473,6 @@ impl FakeExecutor {
                     type_params,
                     args,
                     &mut gas_status,
-                    &log_context,
                 )
                 .unwrap_or_else(|e| {
                     panic!(
@@ -503,7 +501,6 @@ impl FakeExecutor {
         let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
-        let log_context = NoContextLog::new();
         session
             .execute_function(
                 &Self::module(module_name),
@@ -511,7 +508,6 @@ impl FakeExecutor {
                 type_params,
                 args,
                 &mut gas_status,
-                &log_context,
             )
             .map_err(|e| e.into_vm_status())?;
         let (changeset, events) = session.finish().expect("Failed to generate txn effects");

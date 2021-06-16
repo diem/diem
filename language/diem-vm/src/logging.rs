@@ -6,7 +6,6 @@ use diem_crypto::HashValue;
 use diem_logger::Schema;
 use diem_state_view::StateViewId;
 use diem_types::transaction::Version;
-use move_vm_runtime::logging::LogContext;
 use serde::Serialize;
 
 #[derive(Schema, Clone)]
@@ -63,16 +62,10 @@ impl AdapterLogSchema {
             },
         }
     }
-}
 
-impl LogContext for AdapterLogSchema {
     // Increment the `CRITICAL_ERRORS` monitor event that will fire an alert
-    fn alert(&self) {
+    pub fn alert(&self) {
         CRITICAL_ERRORS.inc();
-    }
-
-    fn as_super(&self) -> &dyn Schema {
-        self
     }
 }
 

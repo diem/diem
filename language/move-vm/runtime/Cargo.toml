@@ -17,9 +17,9 @@ mirai-annotations = "1.10.1"
 once_cell = "1.7.2"
 parking_lot = "0.11.1"
 sha3 = "0.9.1"
+tracing = "0.1.26"
 
 bytecode-verifier = { path = "../../bytecode-verifier" }
-diem-logger = { path = "../../../common/logger" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-types = { path = "../types" }
@@ -29,6 +29,7 @@ move-binary-format = { path = "../../move-binary-format" }
 anyhow = "1.0.38"
 hex = "0.4.3"
 proptest = "1.0.0"
+
 
 compiler = { path = "../../compiler" }
 move-lang = { path = "../../move-lang" }

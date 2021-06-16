@@ -36,11 +36,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag, TypeTag},
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{
-    logging::{LogContext, NoContextLog},
-    move_vm::MoveVM,
-    session::Session,
-};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
@@ -97,7 +93,6 @@ pub fn encode_genesis_change_set(
 
     let move_vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
     let mut session = move_vm.new_session(&data_cache);
-    let log_context = NoContextLog::new();
 
     let xdx_ty = TypeTag::Struct(StructTag {
         address: *account_config::XDX_MODULE.address(),
@@ -108,22 +103,21 @@ pub fn encode_genesis_change_set(
 
     create_and_initialize_main_accounts(
         &mut session,
-        &log_context,
-        &diem_root_key,
+        &&diem_root_key,
         &treasury_compliance_key,
         vm_publishing_option,
         &xdx_ty,
         chain_id,
     );
     // generate the genesis WriteSet
-    create_and_initialize_owners_operators(&mut session, &log_context, validators);
-    reconfigure(&mut session, &log_context);
+    create_and_initialize_owners_operators(&mut session, validators);
+    reconfigure(&mut session);
 
     if [NamedChain::TESTNET, NamedChain::DEVNET, NamedChain::TESTING]
         .iter()
         .any(|test_chain_id| test_chain_id.id() == chain_id.id())
     {
-        create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
+        create_and_initialize_testnet_minting(&mut session, &&treasury_compliance_key);
     }
 
     let (mut changeset1, mut events1) = session.finish().unwrap();
@@ -131,11 +125,7 @@ pub fn encode_genesis_change_set(
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(
-        &mut session,
-        &log_context,
-        Modules::new(stdlib_modules.iter()),
-    );
+    publish_stdlib(&mut session, Modules::new(stdlib_modules.iter()));
     let (changeset2, events2) = session.finish().unwrap();
 
     changeset1.squash(changeset2).unwrap();
@@ -150,7 +140,7 @@ pub fn encode_genesis_change_set(
 
 fn exec_function(
     session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
+
     module_name: &str,
     function_name: &str,
     ty_args: Vec<TypeTag>,
@@ -166,7 +156,6 @@ fn exec_function(
             ty_args,
             args,
             &mut GasStatus::new_unmetered(),
-            log_context,
         )
         .unwrap_or_else(|e| {
             panic!(
@@ -180,7 +169,7 @@ fn exec_function(
 
 fn exec_script_function(
     session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
+
     sender: AccountAddress,
     script_function: &ScriptFunction,
 ) {
@@ -192,7 +181,6 @@ fn exec_script_function(
             script_function.args().to_vec(),
             vec![sender],
             &mut GasStatus::new_unmetered(),
-            log_context,
         )
         .unwrap()
 }
@@ -200,7 +188,7 @@ fn exec_script_function(
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
+
     diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
@@ -229,7 +217,6 @@ fn create_and_initialize_main_accounts(
 
     exec_function(
         session,
-        log_context,
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
@@ -253,7 +240,6 @@ fn create_and_initialize_main_accounts(
     // number 0
     exec_function(
         session,
-        log_context,
         "DiemAccount",
         "epilogue",
         vec![xdx_ty.clone()],
@@ -269,7 +255,7 @@ fn create_and_initialize_main_accounts(
 
 fn create_and_initialize_testnet_minting(
     session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
+
     public_key: &Ed25519PublicKey,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
@@ -295,24 +281,17 @@ fn create_and_initialize_testnet_minting(
     // Create the DD account
     exec_script_function(
         session,
-        log_context,
         account_config::treasury_compliance_account_address(),
         &create_dd_script,
     );
 
     // mint XUS.
     let treasury_compliance_account_address = account_config::treasury_compliance_account_address();
-    exec_script_function(
-        session,
-        log_context,
-        treasury_compliance_account_address,
-        &mint_max_xus,
-    );
+    exec_script_function(session, treasury_compliance_account_address, &mint_max_xus);
 
     let testnet_dd_account_address = account_config::testnet_dd_account_address();
     exec_script_function(
         session,
-        log_context,
         testnet_dd_account_address,
         &transaction_builder::encode_rotate_authentication_key_script_function(
             genesis_auth_key.to_vec(),
@@ -326,7 +305,6 @@ fn create_and_initialize_testnet_minting(
 /// validator config on-chain.
 fn create_and_initialize_owners_operators(
     session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
     validators: &[Validator],
 ) {
     let diem_root_address = account_config::diem_root_address();
@@ -353,7 +331,6 @@ fn create_and_initialize_owners_operators(
     }
     exec_function(
         session,
-        log_context,
         GENESIS_MODULE_NAME,
         "create_initialize_owners_operators",
         vec![],
@@ -373,11 +350,7 @@ fn create_and_initialize_owners_operators(
 }
 
 /// Publish the standard library.
-fn publish_stdlib(
-    session: &mut Session<StateViewCache>,
-    log_context: &impl LogContext,
-    stdlib: Modules,
-) {
+fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: Modules) {
     let dep_graph = stdlib.compute_dependency_graph();
     for module in dep_graph.compute_topological_order().unwrap() {
         let module_id = module.self_id();
@@ -388,21 +361,15 @@ fn publish_stdlib(
         let mut bytes = vec![];
         module.serialize(&mut bytes).unwrap();
         session
-            .publish_module(
-                bytes,
-                *module_id.address(),
-                &mut GasStatus::new_unmetered(),
-                log_context,
-            )
+            .publish_module(bytes, *module_id.address(), &mut GasStatus::new_unmetered())
             .unwrap_or_else(|e| panic!("Failure publishing module {:?}, {:?}", module_id, e));
     }
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
-fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogContext) {
+fn reconfigure(session: &mut Session<StateViewCache>) {
     exec_function(
         session,
-        log_context,
         "DiemConfig",
         "emit_genesis_reconfiguration_event",
         vec![],

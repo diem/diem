@@ -5,11 +5,9 @@ use crate::{
     data_cache::{MoveStorage, TransactionDataCache},
     interpreter::Interpreter,
     loader::Loader,
-    logging::LogContext,
     native_functions::{NativeFunction, NativeFunctions},
     session::Session,
 };
-use diem_logger::prelude::*;
 use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
@@ -27,6 +25,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type, values::Value,
 };
+use tracing::warn;
 
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
@@ -65,14 +64,13 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
         // deserialize the module. Perform bounds check. After this indexes can be
         // used with the `[]` operator
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
             Err(err) => {
-                warn!(*log_context, "[VM] module deserialization failed {:?}", err);
+                warn!("[VM] module deserialization failed {:?}", err);
                 return Err(err.finish(Location::Undefined));
             }
         };
@@ -97,9 +95,9 @@ impl VMRuntime {
         // TODO: in the future, we may want to add restrictions on module republishing, possibly by
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         if data_store.exists_module(&module_id)? {
-            let old_module_ref =
-                self.loader
-                    .load_module_expect_not_missing(&module_id, data_store, log_context)?;
+            let old_module_ref = self
+                .loader
+                .load_module_expect_not_missing(&module_id, data_store)?;
             let old_module = old_module_ref.module();
             let old_m = normalized::Module::new(old_module);
             let new_m = normalized::Module::new(&compiled_module);
@@ -114,7 +112,7 @@ impl VMRuntime {
 
         // perform bytecode and loading verification
         self.loader
-            .verify_module_for_publication(&compiled_module, data_store, log_context)?;
+            .verify_module_for_publication(&compiled_module, data_store)?;
 
         data_store.publish_module(&module_id, module)
     }
@@ -241,12 +239,9 @@ impl VMRuntime {
         senders: Vec<AccountAddress>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
         // load the script, perform verification
-        let (main, ty_args, params) =
-            self.loader
-                .load_script(&script, &ty_args, data_store, log_context)?;
+        let (main, ty_args, params) = self.loader.load_script(&script, &ty_args, data_store)?;
 
         let signers_and_args = self
             .create_signers_and_arguments(main.file_format_version(), &params, senders, args)
@@ -259,7 +254,6 @@ impl VMRuntime {
             data_store,
             gas_status,
             &self.loader,
-            log_context,
         )?;
 
         if !return_vals.is_empty() {
@@ -284,7 +278,6 @@ impl VMRuntime {
         is_script_execution: bool,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<Vec<Vec<u8>>>
     where
         F: FnOnce(&VMRuntime, u32, &[Type]) -> PartialVMResult<Vec<Value>>,
@@ -295,7 +288,6 @@ impl VMRuntime {
             &ty_args,
             is_script_execution,
             data_store,
-            log_context,
         )?;
 
         let return_layouts = return_tys
@@ -320,15 +312,8 @@ impl VMRuntime {
         let args = make_args(self, func.file_format_version(), &params)
             .map_err(|err| err.finish(Location::Undefined))?;
 
-        let return_vals = Interpreter::entrypoint(
-            func,
-            ty_args,
-            args,
-            data_store,
-            gas_status,
-            &self.loader,
-            log_context,
-        )?;
+        let return_vals =
+            Interpreter::entrypoint(func, ty_args, args, data_store, gas_status, &self.loader)?;
 
         if return_layouts.len() != return_vals.len() {
             return Err(
@@ -364,7 +349,6 @@ impl VMRuntime {
         senders: Vec<AccountAddress>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<()> {
         let return_vals = self.execute_function_impl(
             module,
@@ -376,7 +360,6 @@ impl VMRuntime {
             true,
             data_store,
             gas_status,
-            log_context,
         )?;
 
         // A script function that serves as the entry point of execution cannot have return values,
@@ -406,7 +389,6 @@ impl VMRuntime {
         args: Vec<Vec<u8>>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-        log_context: &impl LogContext,
     ) -> VMResult<Vec<Vec<u8>>> {
         self.execute_function_impl(
             module,
@@ -416,7 +398,6 @@ impl VMRuntime {
             false,
             data_store,
             gas_status,
-            log_context,
         )
     }
 }
