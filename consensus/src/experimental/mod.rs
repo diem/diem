@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(dead_code)]
-
 // [Decoupled Execution]
 //
 //                 Execution
@@ -21,9 +20,7 @@
 //                               │ Send Commit │
 //                               │ Decision    │ (Asynchronously)
 //                               └─────────────┘
-
-pub mod commit_phase;
-pub mod errors;
+#![allow(dead_code)]
 pub mod execution_phase;
 pub mod ordering_state_computer;
 
