@@ -1,11 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters::DISCOVERY_COUNTS;
+use crate::{counters::DISCOVERY_COUNTS, file::FileStream, validator_set::ValidatorSetStream};
 use channel::{diem_channel, diem_channel::Receiver};
 use diem_config::{config::PeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_logger::prelude::*;
+use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::Storage;
+use diem_time_service::TimeService;
 use diem_types::on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY};
 use futures::{Stream, StreamExt};
 use network::{
@@ -13,24 +16,19 @@ use network::{
     counters::inc_by_with_context,
     logging::NetworkSchema,
 };
-use std::pin::Pin;
+use std::{
+    path::Path,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+    time::Duration,
+};
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 
 mod counters;
 mod file;
 mod validator_set;
-
-use crate::{file::FileStream, validator_set::ValidatorSetStream};
-use diem_network_address_encryption::Encryptor;
-use diem_secure_storage::Storage;
-use diem_time_service::TimeService;
-use std::{
-    path::Path,
-    sync::Arc,
-    task::{Context, Poll},
-    time::Duration,
-};
 
 #[derive(Debug)]
 pub enum DiscoveryError {

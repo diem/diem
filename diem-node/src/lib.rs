@@ -307,10 +307,18 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         network_configs.push(network_config);
     }
 
-    let mut network_builders = Vec::new();
-
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (idx, network_config) in network_configs.into_iter().enumerate() {
+        debug!("Creating runtime for {}", network_config.network_id);
+        let runtime = Builder::new_multi_thread()
+            .thread_name(format!("network-{}", network_config.network_id))
+            .enable_all()
+            .build()
+            .expect("Failed to start runtime. Won't be able to start networking.");
+
+        // Entering here gives us a runtime to instantiate all the pieces of the builder
+        let _enter = runtime.enter();
+
         // Perform common instantiation steps
         let mut network_builder = NetworkBuilder::create(
             chain_id,
@@ -355,30 +363,11 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
         reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
-        network_builders.push(network_builder);
-    }
-
-    // Build the configured networks.
-    for network_builder in &mut network_builders {
         let network_context = network_builder.network_context();
-        debug!("Creating runtime for {}", network_context);
-        let runtime = Builder::new_multi_thread()
-            .thread_name(format!("network-{}", network_context.network_id()))
-            .enable_all()
-            .build()
-            .expect("Failed to start runtime. Won't be able to start networking.");
         network_builder.build(runtime.handle().clone());
-        network_runtimes.push(runtime);
-        debug!(
-            "Network built for network context: {}",
-            network_builder.network_context()
-        );
-    }
-
-    // Start the configured networks.
-    // TODO:  Collect all component starts at the end of this function
-    for network_builder in &mut network_builders {
         network_builder.start();
+        debug!("Network built for network context: {}", network_context);
+        network_runtimes.push(runtime);
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network

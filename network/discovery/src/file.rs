@@ -3,8 +3,8 @@
 
 use crate::DiscoveryError;
 use diem_config::config::PeerSet;
-use diem_time_service::{Sleep, TimeService, TimeServiceTrait};
-use futures::{Future, Stream};
+use diem_time_service::{Interval, TimeService, TimeServiceTrait};
+use futures::Stream;
 use std::{
     path::{Path, PathBuf},
     pin::Pin,
@@ -14,9 +14,7 @@ use std::{
 
 pub struct FileStream {
     file_path: PathBuf,
-    time_service: TimeService,
-    interval_duration: Duration,
-    delay: Option<Pin<Box<Sleep>>>,
+    interval: Pin<Box<Interval>>,
 }
 
 impl FileStream {
@@ -27,9 +25,7 @@ impl FileStream {
     ) -> Self {
         FileStream {
             file_path: file_path.to_path_buf(),
-            time_service,
-            interval_duration,
-            delay: None,
+            interval: Box::pin(time_service.interval(interval_duration)),
         }
     }
 }
@@ -39,10 +35,7 @@ impl Stream for FileStream {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         // Wait for delay, or add the delay for next call
-        if let Some(ref mut delay) = self.delay {
-            futures::ready!(Pin::new(delay).poll(cx));
-        }
-        self.delay = Some(Box::pin(self.time_service.sleep(self.interval_duration)));
+        futures::ready!(self.interval.as_mut().poll_next(cx));
 
         Poll::Ready(Some(match load_file(self.file_path.as_path()) {
             Ok(peers) => Ok(peers),
