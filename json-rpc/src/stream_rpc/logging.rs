@@ -13,25 +13,20 @@ pub enum StreamRpcAction<'a> {
 
 #[derive(Schema)]
 pub struct StreamRpcLog<'a> {
-    action: StreamRpcAction<'a>,
-}
+    pub transport: &'static str,
+    pub user_agent: Option<&'a str>,
+    pub remote_addr: Option<&'a str>,
 
-impl<'a> StreamRpcLog<'a> {
-    pub fn new(action: StreamRpcAction<'a>) -> Self {
-        Self { action }
-    }
+    pub action: StreamRpcAction<'a>,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(Schema)]
 pub struct HttpRequestLog<'a> {
-    #[schema(display)]
-    pub remote_addr: Option<std::net::SocketAddr>,
     pub path: &'a str,
     pub status: u16,
     pub referer: Option<&'a str>,
-    pub user_agent: &'a str,
     pub forwarded: Option<&'a str>,
 }
 
@@ -39,10 +34,7 @@ pub struct HttpRequestLog<'a> {
 #[serde(rename_all = "snake_case")]
 #[derive(Schema)]
 pub struct ClientConnectionLog<'a> {
-    pub transport: &'static str,
-    pub remote_addr: Option<&'a str>,
     pub client_id: Option<u64>,
-    pub user_agent: Option<&'a str>,
     pub forwarded: Option<&'a str>,
     pub rpc_method: Option<&'static str>,
 }

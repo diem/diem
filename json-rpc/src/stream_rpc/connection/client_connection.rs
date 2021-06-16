@@ -133,16 +133,18 @@ impl ClientConnection {
         match StreamJsonRpcRequest::from_str(&message) {
             Ok(mut request) => {
                 debug!(
-                    logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
-                        logging::ClientConnectionLog {
-                            transport: self.connection_context.transport.as_str(),
-                            remote_addr: self.connection_context.remote_addr.as_deref(),
-                            client_id: Some(self.id),
-                            user_agent: None,
-                            forwarded: None,
-                            rpc_method: Some(request.method_name()),
-                        }
-                    )),
+                    logging::StreamRpcLog {
+                        transport: self.connection_context.transport.as_str(),
+                        remote_addr: self.connection_context.remote_addr.as_deref(),
+                        user_agent: None,
+                        action: logging::StreamRpcAction::ClientConnectionLog(
+                            logging::ClientConnectionLog {
+                                client_id: Some(self.id),
+                                forwarded: None,
+                                rpc_method: Some(request.method_name()),
+                            }
+                        ),
+                    },
                     "subscription request"
                 );
                 if let Err(err) = self.handle_rpc_request(db, &mut request) {
@@ -154,16 +156,18 @@ impl ClientConnection {
             Err((err, method, id)) => {
                 // We couldn't parse the request- it's not valid json or an unknown structure
                 debug!(
-                    logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
-                        logging::ClientConnectionLog {
-                            transport: self.connection_context.transport.as_str(),
-                            remote_addr: self.connection_context.remote_addr.as_deref(),
-                            client_id: Some(self.id),
-                            user_agent: None,
-                            forwarded: None,
-                            rpc_method: method.map(|v| v.as_str()),
-                        }
-                    )),
+                    logging::StreamRpcLog {
+                        transport: self.connection_context.transport.as_str(),
+                        remote_addr: self.connection_context.remote_addr.as_deref(),
+                        user_agent: None,
+                        action: logging::StreamRpcAction::ClientConnectionLog(
+                            logging::ClientConnectionLog {
+                                client_id: Some(self.id),
+                                forwarded: None,
+                                rpc_method: method.map(|v| v.as_str()),
+                            }
+                        ),
+                    },
                     "failed to parse subscription request ({})", &err
                 );
                 metric_subscription_rpc_received(
@@ -255,7 +259,6 @@ fn metric_subscription_rpc_received(
 mod tests {
     use super::*;
     use crate::stream_rpc::tests::util::{create_client_connection, timeout};
-    use serde_json;
 
     #[tokio::test]
     async fn test_send_raw() {

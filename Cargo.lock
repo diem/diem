@@ -1927,6 +1927,8 @@ dependencies = [
  "diem-workspace-hack",
  "hex",
  "move-core-types",
+ "num-derive",
+ "num-traits",
  "serde",
  "serde_json",
 ]

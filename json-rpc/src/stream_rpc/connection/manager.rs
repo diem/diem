@@ -91,16 +91,18 @@ impl ConnectionManager {
             .inc();
 
         debug!(
-            logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
-                logging::ClientConnectionLog {
-                    transport: client.connection_context.transport.as_str(),
-                    remote_addr: client.connection_context.remote_addr.as_deref(),
-                    client_id: Some(client.id),
-                    user_agent: None,
-                    forwarded: None,
-                    rpc_method: None
-                }
-            )),
+            logging::StreamRpcLog {
+                transport: client.connection_context.transport.as_str(),
+                remote_addr: client.connection_context.remote_addr.as_deref(),
+                user_agent: None,
+                action: logging::StreamRpcAction::ClientConnectionLog(
+                    logging::ClientConnectionLog {
+                        client_id: Some(client.id),
+                        forwarded: None,
+                        rpc_method: None,
+                    }
+                ),
+            },
             "client connected"
         );
 
@@ -127,24 +129,18 @@ impl ConnectionManager {
                     }
                     Err(e) => {
                         debug!(
-                            logging::StreamRpcLog::new(
-                                logging::StreamRpcAction::ClientConnectionLog(
+                            logging::StreamRpcLog {
+                                transport: task_client.connection_context.transport.as_str(),
+                                remote_addr: task_client.connection_context.remote_addr.as_deref(),
+                                user_agent: None,
+                                action: logging::StreamRpcAction::ClientConnectionLog(
                                     logging::ClientConnectionLog {
-                                        transport: task_client
-                                            .connection_context
-                                            .transport
-                                            .as_str(),
-                                        user_agent: None,
-                                        remote_addr: task_client
-                                            .connection_context
-                                            .remote_addr
-                                            .as_deref(),
                                         client_id: Some(task_client.id),
                                         forwarded: None,
-                                        rpc_method: None
+                                        rpc_method: None,
                                     }
-                                )
-                            ),
+                                ),
+                            },
                             "client disconnect start {}", e
                         );
                         break;
@@ -163,16 +159,18 @@ impl ConnectionManager {
         self.clients.write().remove(&client_id);
 
         debug!(
-            logging::StreamRpcLog::new(logging::StreamRpcAction::ClientConnectionLog(
-                logging::ClientConnectionLog {
-                    transport: client.connection_context.transport.as_str(),
-                    user_agent: None,
-                    remote_addr: client.connection_context.remote_addr.as_deref(),
-                    client_id: Some(client.id),
-                    forwarded: None,
-                    rpc_method: None
-                }
-            )),
+            logging::StreamRpcLog {
+                transport: client.connection_context.transport.as_str(),
+                remote_addr: client.connection_context.remote_addr.as_deref(),
+                user_agent: None,
+                action: logging::StreamRpcAction::ClientConnectionLog(
+                    logging::ClientConnectionLog {
+                        client_id: Some(client.id),
+                        forwarded: None,
+                        rpc_method: None,
+                    }
+                ),
+            },
             "client disconnected"
         );
     }

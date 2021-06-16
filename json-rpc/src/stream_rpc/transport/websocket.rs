@@ -55,19 +55,20 @@ pub fn get_websocket_routes(
         .with(warp::cors().allow_any_origin())
         .with(warp::log::custom(|info| {
             debug!(
-                logging::StreamRpcLog::new(logging::StreamRpcAction::HttpRequestLog(
-                    logging::HttpRequestLog {
-                        remote_addr: info.remote_addr(),
+                logging::StreamRpcLog {
+                    transport: Transport::Websocket.as_str(),
+                    remote_addr: Some(&format!("{:?}", info.remote_addr())),
+                    user_agent: Some(info.user_agent().unwrap_or("")),
+                    action: logging::StreamRpcAction::HttpRequestLog(logging::HttpRequestLog {
                         path: &info.path().to_string(),
                         status: info.status().as_u16(),
                         referer: info.referer(),
-                        user_agent: info.user_agent().unwrap_or(""),
                         forwarded: info
                             .request_headers()
                             .get(warp::http::header::FORWARDED)
                             .and_then(|v| v.to_str().ok()),
-                    }
-                )),
+                    }),
+                },
                 "http request"
             )
         }))
@@ -203,22 +204,22 @@ pub async fn handle_websocket_stream(
                         .forward(to_client_ws)
                         .map(move |result: Result<(), warp::Error>| {
                             debug!(
-                                logging::StreamRpcLog::new(
-                                    logging::StreamRpcAction::ClientConnectionLog(
+                                logging::StreamRpcLog {
+                                    transport: Transport::Websocket.as_str(),
+                                    remote_addr: remote_socket
+                                        .map(|remote_socket| remote_socket.to_string())
+                                        .as_deref(),
+                                    user_agent: Some(&user_agent),
+                                    action: logging::StreamRpcAction::ClientConnectionLog(
                                         logging::ClientConnectionLog {
                                             client_id: None,
-                                            remote_addr: remote_socket
-                                                .map(|remote_socket| remote_socket.to_string())
-                                                .as_deref(),
-                                            user_agent: Some(&user_agent),
                                             forwarded: headers
                                                 .get(warp::http::header::FORWARDED)
                                                 .and_then(|v| v.to_str().ok()),
-                                            transport: Transport::Websocket.as_str(),
-                                            rpc_method: None
+                                            rpc_method: None,
                                         }
-                                    )
-                                ),
+                                    ),
+                                },
                                 "websocket disconnected ({:?})", result
                             )
                         }),

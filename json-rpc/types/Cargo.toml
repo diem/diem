@@ -20,6 +20,8 @@ diem-crypto = { path = "../../crypto/crypto", version = "0.0.2"  }
 diem-transaction-builder = { path = "../../sdk/transaction-builder", version = "0.0.2" }
 diem-types = { path = "../../types", version = "0.0.2" }
 move-core-types = { path = "../../language/move-core/types", version = "0.0.2"  }
+num-derive = "0.3.3"
+num-traits = "0.2.14"
 
 [dev-dependencies]
 diem-workspace-hack = { path = "../../common/workspace-hack" }

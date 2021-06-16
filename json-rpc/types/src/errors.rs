@@ -6,6 +6,8 @@ use diem_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     vm_status::{StatusCode, StatusType},
 };
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -52,6 +54,8 @@ pub enum ServerCode {
 }
 
 /// JSON RPC server error codes for invalid request
+#[repr(i16)]
+#[derive(FromPrimitive)]
 pub enum InvalidRequestCode {
     ParseError = -32700,
     InvalidRequest = -32600,
@@ -59,6 +63,18 @@ pub enum InvalidRequestCode {
     InvalidParams = -32602,
     // -32603 is internal error
     InvalidFormat = -32604,
+}
+
+impl InvalidRequestCode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            InvalidRequestCode::ParseError => "parse_error",
+            InvalidRequestCode::InvalidRequest => "invalid_request",
+            InvalidRequestCode::MethodNotFound => "method_not_found",
+            InvalidRequestCode::InvalidParams => "invalid_params",
+            InvalidRequestCode::InvalidFormat => "invalid_format",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -173,13 +189,9 @@ impl JsonRpcError {
     }
 
     pub fn code_as_str(&self) -> &'static str {
-        match self.code {
-            x if x == InvalidRequestCode::ParseError as i16 => "parse_error",
-            x if x == InvalidRequestCode::InvalidRequest as i16 => "invalid_request",
-            x if x == InvalidRequestCode::MethodNotFound as i16 => "method_not_found",
-            x if x == InvalidRequestCode::InvalidParams as i16 => "invalid_params",
-            x if x == InvalidRequestCode::InvalidFormat as i16 => "invalid_format",
-            _ => "unexpected_code:",
+        match InvalidRequestCode::from_i16(self.code) {
+            Some(code) => code.as_str(),
+            None => "unexpected_code",
         }
     }
 
@@ -304,6 +316,12 @@ mod tests {
             MempoolStatusCode::UnknownStatus,
             ServerCode::MempoolUnknownError,
         );
+    }
+
+    #[test]
+    fn test_code_as_str() {
+        let result = JsonRpcError::method_not_found().code_as_str();
+        assert_eq!(result, "method_not_found")
     }
 
     #[test]
