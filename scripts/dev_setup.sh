@@ -45,6 +45,7 @@ function usage {
   echo "-y installs or updates Move prover tools: z3, cvc4, dotnet, boogie"
   echo "-s installs or updates requirements to test code-generation for Move SDKs"
   echo "-v verbose mode"
+  echo "-i installs an individual tool by name"
   echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
   echo "This command must be called from the root folder of the Diem project."
 }
@@ -626,9 +627,11 @@ OPERATIONS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
 INSTALL_CODEGEN=false;
+INSTALL_INDIVIDUAL=false;
+INSTALL_PACKAGES=();
 
 #parse args
-while getopts "btopvysh" arg; do
+while getopts "btopvysh:i:" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
@@ -651,6 +654,11 @@ while getopts "btopvysh" arg; do
     s)
       INSTALL_CODEGEN="true"
       ;;
+    i)
+      INSTALL_INDIVIDUAL="true"
+      echo "$OPTARG"
+      INSTALL_PACKAGES+=("$OPTARG")
+      ;;
     *)
       usage;
       exit 0;
@@ -666,7 +674,8 @@ if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
    [[ "$OPERATIONS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
    [[ "$INSTALL_PROVER" == "false" ]] && \
-   [[ "$INSTALL_CODEGEN" == "false" ]]; then
+   [[ "$INSTALL_CODEGEN" == "false" ]] && \
+   [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
    INSTALL_BUILD_TOOLS="true"
 fi
 
@@ -780,6 +789,14 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_kubectl
   install_awscli "$PACKAGE_MANAGER"
   install_allure
+fi
+
+if [[ "$INSTALL_INDIVIDUAL" == "true" ]]; then
+  for (( i=0; i < ${#INSTALL_PACKAGES[@]}; i++ ));
+  do
+    PACKAGE=${INSTALL_PACKAGES[$i]}
+    "install_${PACKAGE}"
+  done
 fi
 
 if [[ "$INSTALL_PROVER" == "true" ]]; then

@@ -22,7 +22,13 @@ RUN IMAGE_TARGETS="test" ./docker/build-common.sh
 FROM debian:buster-20210511@sha256:acf7795dc91df17e10effee064bd229580a9c34213b4dba578d64768af5d8c51
 
 RUN apt-get update && apt-get install -y libssl1.1 openssh-client wget && apt-get clean && rm -r /var/lib/apt/lists/*
-RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
+
+RUN mkdir /diem
+COPY rust-toolchain /diem/rust-toolchain
+COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
+RUN /diem/scripts/dev_setup.sh -b -p -i helm -i kubectl
+ENV PATH "$PATH:/root/bin"
+
 RUN mkdir /etc/forge
 WORKDIR /etc/forge
 COPY --from=builder /diem/target/release/forge /usr/local/bin/forge
