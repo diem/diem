@@ -1,8 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters::{
-    DISCOVERY_COUNTS, EVENT_PROCESSING_LOOP_BUSY_DURATION_S, NETWORK_KEY_MISMATCH,
+use crate::{
+    counters::{DISCOVERY_COUNTS, EVENT_PROCESSING_LOOP_BUSY_DURATION_S, NETWORK_KEY_MISMATCH},
+    DiscoveryError,
 };
 use channel::diem_channel;
 use diem_config::{
@@ -98,12 +99,12 @@ impl ValidatorSetStream {
 }
 
 impl Stream for ValidatorSetStream {
-    type Item = PeerSet;
+    type Item = Result<PeerSet, DiscoveryError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Pin::new(&mut self.reconfig_events)
             .poll_next(cx)
-            .map(|maybe_config| maybe_config.map(|config| self.extract_updates(config)))
+            .map(|maybe_config| maybe_config.map(|config| Ok(self.extract_updates(config))))
     }
 }
 

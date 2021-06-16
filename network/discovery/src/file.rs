@@ -1,21 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_config::{config::PeerSet, network_id::NetworkContext};
-use diem_logger::prelude::*;
+use crate::DiscoveryError;
+use diem_config::config::PeerSet;
 use diem_time_service::{Sleep, TimeService, TimeServiceTrait};
 use futures::{Future, Stream};
-use network::logging::NetworkSchema;
 use std::{
     path::{Path, PathBuf},
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
 
 pub struct FileStream {
-    network_context: Arc<NetworkContext>,
     file_path: PathBuf,
     time_service: TimeService,
     interval_duration: Duration,
@@ -24,13 +21,11 @@ pub struct FileStream {
 
 impl FileStream {
     pub(crate) fn new(
-        network_context: Arc<NetworkContext>,
         file_path: &Path,
         interval_duration: Duration,
         time_service: TimeService,
     ) -> Self {
         FileStream {
-            network_context,
             file_path: file_path.to_path_buf(),
             time_service,
             interval_duration,
@@ -40,33 +35,20 @@ impl FileStream {
 }
 
 impl Stream for FileStream {
-    type Item = PeerSet;
+    type Item = Result<PeerSet, DiscoveryError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            // Wait for delay, or add the delay for next call
-            if let Some(ref mut delay) = self.delay {
-                futures::ready!(Pin::new(delay).poll(cx));
-            }
-            self.delay = Some(Box::pin(self.time_service.sleep(self.interval_duration)));
-
-            match load_file(self.file_path.as_path()) {
-                Ok(peers) => return Poll::Ready(Some(peers)),
-                Err(error) => {
-                    error!(
-                        NetworkSchema::new(&self.network_context),
-                        "{} Failed to load file: {:?}", self.network_context, error
-                    );
-                }
-            }
+        // Wait for delay, or add the delay for next call
+        if let Some(ref mut delay) = self.delay {
+            futures::ready!(Pin::new(delay).poll(cx));
         }
-    }
-}
+        self.delay = Some(Box::pin(self.time_service.sleep(self.interval_duration)));
 
-#[derive(Debug)]
-enum DiscoveryError {
-    IO(std::io::Error),
-    Parsing(String),
+        Poll::Ready(Some(match load_file(self.file_path.as_path()) {
+            Ok(peers) => Ok(peers),
+            Err(error) => Err(error),
+        }))
+    }
 }
 
 /// Loads a YAML configuration file
@@ -80,12 +62,15 @@ mod tests {
     use super::*;
     use crate::DiscoveryChangeListener;
     use channel::Receiver;
-    use diem_config::config::{Peer, PeerRole};
+    use diem_config::{
+        config::{Peer, PeerRole},
+        network_id::NetworkContext,
+    };
     use diem_temppath::TempPath;
     use diem_types::{network_address::NetworkAddress, PeerId};
     use futures::StreamExt;
     use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
-    use std::{collections::HashSet, str::FromStr};
+    use std::{collections::HashSet, str::FromStr, sync::Arc};
     use tokio::time::sleep;
 
     fn create_listener(path: Arc<TempPath>) -> Receiver<ConnectivityRequest> {

@@ -32,6 +32,12 @@ use std::{
     time::Duration,
 };
 
+#[derive(Debug)]
+pub enum DiscoveryError {
+    IO(std::io::Error),
+    Parsing(String),
+}
+
 /// A union type for all implementations of `DiscoveryChangeListenerTrait`
 pub struct DiscoveryChangeListener {
     discovery_source: DiscoverySource,
@@ -46,7 +52,7 @@ enum DiscoveryChangeStream {
 }
 
 impl Stream for DiscoveryChangeStream {
-    type Item = PeerSet;
+    type Item = Result<PeerSet, DiscoveryError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
@@ -86,7 +92,6 @@ impl DiscoveryChangeListener {
         time_service: TimeService,
     ) -> Self {
         let source_stream = DiscoveryChangeStream::File(FileStream::new(
-            network_context.clone(),
             file_path,
             interval_duration,
             time_service,
@@ -104,30 +109,44 @@ impl DiscoveryChangeListener {
     }
 
     async fn run(mut self: Pin<Box<Self>>) {
+        let network_context = self.network_context.clone();
+        let discovery_source = self.discovery_source;
+        let mut update_channel = self.update_channel.clone();
+        let source_stream = &mut self.source_stream;
         info!(
-            NetworkSchema::new(&self.network_context),
-            "{} Starting {} Discovery", self.network_context, self.discovery_source
+            NetworkSchema::new(&network_context),
+            "{} Starting {} Discovery", network_context, discovery_source
         );
 
-        while let Some(update) = self.source_stream.next().await {
-            trace!(
-                NetworkSchema::new(&self.network_context),
-                "{} Sending update: {:?}",
-                self.network_context,
-                update
-            );
-            let request = ConnectivityRequest::UpdateDiscoveredPeers(self.discovery_source, update);
-            if let Err(error) = self.update_channel.try_send(request) {
-                inc_by_with_context(&DISCOVERY_COUNTS, &self.network_context, "send_failure", 1);
+        while let Some(update) = source_stream.next().await {
+            if let Ok(update) = update {
+                trace!(
+                    NetworkSchema::new(&network_context),
+                    "{} Sending update: {:?}",
+                    network_context,
+                    update
+                );
+                let request = ConnectivityRequest::UpdateDiscoveredPeers(discovery_source, update);
+                if let Err(error) = update_channel.try_send(request) {
+                    inc_by_with_context(&DISCOVERY_COUNTS, &network_context, "send_failure", 1);
+                    warn!(
+                        NetworkSchema::new(&network_context),
+                        "{} Failed to send update {:?}", network_context, error
+                    );
+                }
+            } else {
                 warn!(
-                    NetworkSchema::new(&self.network_context),
-                    "{} Failed to send update {:?}", self.network_context, error
+                    NetworkSchema::new(&network_context),
+                    "{} {} Discovery update failed {:?}",
+                    &network_context,
+                    discovery_source,
+                    update
                 );
             }
         }
         warn!(
-            NetworkSchema::new(&self.network_context),
-            "{} {} Discovery actor terminated", &self.network_context, self.discovery_source
+            NetworkSchema::new(&network_context),
+            "{} {} Discovery actor terminated", &network_context, discovery_source
         );
     }
 
