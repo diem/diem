@@ -47,6 +47,10 @@ pub struct UnitTestingConfig {
     )]
     pub num_threads: usize,
 
+    /// Dependency files
+    #[structopt(name = "dependencies", long = "dependencies", short = "d")]
+    pub dep_files: Vec<String>,
+
     /// Report test statistics at the end of testing
     #[structopt(name = "report_statistics", short = "s", long = "statistics")]
     pub report_statistics: bool,
@@ -87,26 +91,15 @@ impl UnitTestingConfig {
             report_statistics: false,
             report_storage_on_error: false,
             source_files: vec![],
+            dep_files: vec![],
             check_stackless_vm: false,
             verbose: false,
             list: false,
         }
     }
 
-    /// Build a test plan from a unit test config
-    pub fn build_test_plan(&self) -> Option<TestPlan> {
-        let mut source_files = self.source_files.clone();
-
-        // We always need to have the unit testing module in otherwise the modules will fail to
-        // compile in test mode
-        if !source_files
-            .iter()
-            .any(|file_path| file_path.contains("UnitTest.move"))
-        {
-            source_files.push(move_stdlib::unit_testing_module_file());
-        }
-
-        let (files, comments_and_compiler_res) = Compiler::new(&source_files, &[])
+    fn compile_to_test_plan(&self, source_files: &[String], deps: &[String]) -> Option<TestPlan> {
+        let (files, comments_and_compiler_res) = Compiler::new(source_files, deps)
             .set_flags(Flags::testing())
             .run::<PASS_CFGIR>()
             .unwrap();
@@ -124,6 +117,22 @@ impl UnitTestingConfig {
 
         let units = move_lang::unwrap_or_report_errors!(files, compilation_result);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
+    }
+
+    /// Build a test plan from a unit test config
+    pub fn build_test_plan(&self) -> Option<TestPlan> {
+        let mut deps = self.dep_files.clone();
+
+        deps.push(move_stdlib::unit_testing_module_file());
+
+        let TestPlan {
+            files, module_info, ..
+        } = self.compile_to_test_plan(&deps, &[])?;
+
+        let mut test_plan = self.compile_to_test_plan(&self.source_files, &deps)?;
+        test_plan.module_info.extend(module_info.into_iter());
+        test_plan.files.extend(files.into_iter());
+        Some(test_plan)
     }
 
     /// Public entry point to Move unit testing as a library

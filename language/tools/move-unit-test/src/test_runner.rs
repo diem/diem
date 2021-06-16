@@ -13,6 +13,7 @@ use bytecode_interpreter::{
 };
 use colored::*;
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
+use move_bytecode_utils::Modules;
 use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
@@ -70,7 +71,11 @@ fn setup_test_storage<'a>(
     modules: impl Iterator<Item = &'a CompiledModule>,
 ) -> Result<InMemoryStorage> {
     let mut storage = InMemoryStorage::new();
-    for module in modules {
+    let modules = Modules::new(modules);
+    for module in modules
+        .compute_dependency_graph()
+        .compute_topological_order()?
+    {
         let module_id = module.self_id();
         let mut module_bytes = Vec::new();
         module.serialize(&mut module_bytes)?;

@@ -4771,6 +4771,7 @@ dependencies = [
  "diem-workspace-hack",
  "difference",
  "move-binary-format",
+ "move-bytecode-utils",
  "move-core-types",
  "move-lang",
  "move-lang-test-utils",

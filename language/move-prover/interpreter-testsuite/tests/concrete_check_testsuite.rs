@@ -12,13 +12,13 @@ const BASELINE_EXTENSION: &str = "exp";
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     env::set_var("NO_COLOR", "1");
 
-    let mut targets = move_stdlib_files();
-    targets.push(path.to_str().unwrap().to_owned());
+    let source_files = vec![path.to_str().unwrap().to_owned()];
     let config = UnitTestingConfig {
         instruction_execution_bound: 5000,
         filter: None,
         num_threads: 1,
-        source_files: targets,
+        source_files,
+        dep_files: move_stdlib_files(),
         check_stackless_vm: true,
         report_storage_on_error: false,
         report_statistics: false,

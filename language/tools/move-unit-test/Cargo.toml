@@ -28,6 +28,7 @@ resource-viewer = { path = "../resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }
 move-model = { path = "../../move-model" }
 bytecode-interpreter = { path = "../../move-prover/interpreter" }
+move-bytecode-utils = { path = "../move-bytecode-utils" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
