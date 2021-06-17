@@ -1,0 +1,43 @@
+Running Move unit tests
+[ FAIL    ] 0x1::MissingData::missing_data
+
+Test failures:
+
+Failures in 0x1::MissingData:
+
+┌── missing_data ──────
+│ ITE: An unknown error was reported. Location: error: 
+│ 
+│    ┌── tests/test_sources/missing_data.move:6:9 ───
+│    │
+│  6 │         borrow_global<Missing>(@0x0);
+│    │         ^^^^^^^^^^^^^
+│    ·
+│  5 │     fun missing_data() acquires Missing {
+│    │         ------------ In this function in 0x1::MissingData
+│    │
+│ 
+│ 
+│ VMError (if there is one): VMError {
+│     major_status: MISSING_DATA,
+│     sub_status: None,
+│     message: None,
+│     location: Module(
+│         ModuleId {
+│             address: 00000000000000000000000000000001,
+│             name: Identifier(
+│                 "MissingData",
+│             ),
+│         },
+│     ),
+│     indices: [],
+│     offsets: [
+│         (
+│             FunctionDefinitionIndex(0),
+│             1,
+│         ),
+│     ],
+│ }
+└──────────────────
+
+Test result: FAILED. Total tests: 1; passed: 0; failed: 1

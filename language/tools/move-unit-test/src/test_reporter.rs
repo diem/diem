@@ -144,11 +144,11 @@ impl TestFailure {
                     "{}. Expected test to abort with {} but instead it aborted with {} here",
                     message, expected_code, other_code,
                 );
-                Self::report_abort(test_plan, base_message, &self.vm_error)
+                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Aborted(message, code) => {
                 let base_message = format!("{} but it aborted with {} here", message, code);
-                Self::report_abort(test_plan, base_message, &self.vm_error)
+                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Mismatch {
                 move_vm_return_values,
@@ -172,12 +172,17 @@ impl TestFailure {
             FailureReason::Property(message) => message.clone(),
             FailureReason::Unknown(message) => {
                 format!(
-                    "{}. VMError (if there is one) is: {}",
+                    "{} Location: {}\nVMError (if there is one): {}",
                     message,
+                    TestFailure::report_error_with_location(
+                        test_plan,
+                        "".to_string(),
+                        &self.vm_error
+                    ),
                     self.vm_error
                         .as_ref()
                         .map(|err| format!("{:#?}", err))
-                        .unwrap_or_else(|| "".to_string())
+                        .unwrap_or_else(|| "".to_string()),
                 )
             }
         };
@@ -198,7 +203,7 @@ impl TestFailure {
         }
     }
 
-    fn report_abort(
+    fn report_error_with_location(
         test_plan: &TestPlan,
         base_message: String,
         vm_error: &Option<VMError>,
