@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_proptest_helpers::pick_slice_idxs;
 use move_binary_format::{
     errors::{bounds_error, PartialVMError},
     file_format::{
@@ -220,7 +219,7 @@ impl ApplyOutOfBoundsContext {
         };
         // Any signature can be a destination, not just the ones that have structs in them.
         let dst_count = self.module.kind_count(dst_kind);
-        let to_mutate = pick_slice_idxs(src_count, &mutations);
+        let to_mutate = crate::helpers::pick_slice_idxs(src_count, &mutations);
 
         mutations
             .iter()

@@ -13,7 +13,6 @@ publish = false
 move-core-types = { path = "../../move-core/types" }
 move-binary-format = { path = "../../move-binary-format" }
 proptest = "1.0.0"
-diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [features]

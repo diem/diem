@@ -3934,7 +3934,6 @@ dependencies = [
 name = "invalid-mutations"
 version = "0.1.0"
 dependencies = [
- "diem-proptest-helpers",
  "diem-workspace-hack",
  "move-binary-format",
  "move-core-types",

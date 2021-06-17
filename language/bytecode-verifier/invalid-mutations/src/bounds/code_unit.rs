@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_proptest_helpers::pick_slice_idxs;
 use move_binary_format::{
     errors::{offset_out_of_bounds, PartialVMError},
     file_format::{
@@ -172,7 +171,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         let interesting_offsets: Vec<usize> = (0..code.len())
             .filter(|bytecode_idx| is_interesting(&code[*bytecode_idx]))
             .collect();
-        let to_mutate = pick_slice_idxs(interesting_offsets.len(), &mutations);
+        let to_mutate = crate::helpers::pick_slice_idxs(interesting_offsets.len(), &mutations);
 
         // These have to be computed upfront because self.module is being mutated below.
         let constant_pool_len = self.module.constant_pool.len();
