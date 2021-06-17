@@ -1,6 +1,6 @@
 address 0x1 {
 
-/// Module defining error codes used in Move aborts throughout the framework.
+/// Module defining error codes used in Move aborts throughout the Diem Framework.
 ///
 /// A `u64` error code is constructed from two values:
 ///
@@ -12,29 +12,31 @@ address 0x1 {
 ///     number relative to the module which raised the error and can be used to obtain more information about
 ///     the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
 ///     framework evolves.
-///
-/// >TODO: determine what kind of stability guarantees we give about reasons/associated module.
 module DiemErrors {
-    /// A function to create an error from from a category and a reason.
-    fun make(category: u8, reason: u64): u64 {
-        (category as u64) + (reason << 8)
-    }
-    spec make {
-        pragma opaque = true;
-        ensures [concrete] result == category + (reason << 8);
-        aborts_if [abstract] false;
-        ensures [abstract] result == category;
-    }
+    use 0x1::Errors;
+
+    // The numbers assignes to these error categories come from the 0x1::Errors
+    // module originally and are preserved for backwards compatibility reasons.
 
     /// The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
     /// which requires the signer to have the role of treasury compliance.
     const REQUIRES_ROLE: u8 = 3;
 
-    public fun requires_role(reason: u64): u64 { make(REQUIRES_ROLE, reason) }
+    /// The signer of a transaction does not have a required capability.
+    const REQUIRES_CAPABILITY: u8 = 4;
+
+    public fun requires_role(reason: u64): u64 { Errors::make(REQUIRES_ROLE, reason) }
     spec requires_role {
         pragma opaque = true;
         aborts_if false;
         ensures result == REQUIRES_ROLE;
+    }
+
+    public fun requires_capability(reason: u64): u64 { Errors::make(REQUIRES_CAPABILITY, reason) }
+    spec requires_capability {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == REQUIRES_CAPABILITY;
     }
 }
 }

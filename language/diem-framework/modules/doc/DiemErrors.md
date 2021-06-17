@@ -3,7 +3,7 @@
 
 # Module `0x1::DiemErrors`
 
-Module defining error codes used in Move aborts throughout the framework.
+Module defining error codes used in Move aborts throughout the Diem Framework.
 
 A <code>u64</code> error code is constructed from two values:
 
@@ -16,21 +16,30 @@ number relative to the module which raised the error and can be used to obtain m
 the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
 framework evolves.
 
->TODO: determine what kind of stability guarantees we give about reasons/associated module.
-
 
 -  [Constants](#@Constants_0)
--  [Function `make`](#0x1_DiemErrors_make)
 -  [Function `requires_role`](#0x1_DiemErrors_requires_role)
+-  [Function `requires_capability`](#0x1_DiemErrors_requires_capability)
 
 
-<pre><code></code></pre>
+<pre><code><b>use</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
+</code></pre>
 
 
 
 <a name="@Constants_0"></a>
 
 ## Constants
+
+
+<a name="0x1_DiemErrors_REQUIRES_CAPABILITY"></a>
+
+The signer of a transaction does not have a required capability.
+
+
+<pre><code><b>const</b> <a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
+</code></pre>
+
 
 
 <a name="0x1_DiemErrors_REQUIRES_ROLE"></a>
@@ -43,46 +52,6 @@ which requires the signer to have the role of treasury compliance.
 </code></pre>
 
 
-
-<a name="0x1_DiemErrors_make"></a>
-
-## Function `make`
-
-A function to create an error from from a category and a reason.
-
-
-<pre><code><b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_make">make</a>(category: u8, reason: u64): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_make">make</a>(category: u8, reason: u64): u64 {
-    (category <b>as</b> u64) + (reason &lt;&lt; 8)
-}
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>pragma</b> opaque = <b>true</b>;
-<b>ensures</b> [concrete] result == category + (reason &lt;&lt; 8);
-<b>aborts_if</b> [abstract] <b>false</b>;
-<b>ensures</b> [abstract] result == category;
-</code></pre>
-
-
-
-</details>
 
 <a name="0x1_DiemErrors_requires_role"></a>
 
@@ -99,7 +68,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_requires_role">requires_role</a>(reason: u64): u64 { <a href="DiemErrors.md#0x1_DiemErrors_make">make</a>(<a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_ROLE">REQUIRES_ROLE</a>, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_requires_role">requires_role</a>(reason: u64): u64 { <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_make">Errors::make</a>(<a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_ROLE">REQUIRES_ROLE</a>, reason) }
 </code></pre>
 
 
@@ -114,6 +83,42 @@ A function to create an error from from a category and a reason.
 <pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_ROLE">REQUIRES_ROLE</a>;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemErrors_requires_capability"></a>
+
+## Function `requires_capability`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_requires_capability">requires_capability</a>(reason: u64): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemErrors.md#0x1_DiemErrors_requires_capability">requires_capability</a>(reason: u64): u64 { <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_make">Errors::make</a>(<a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>, reason) }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>;
 </code></pre>
 
 

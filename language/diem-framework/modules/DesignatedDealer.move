@@ -3,6 +3,7 @@ address 0x1 {
 /// Module providing functionality for designated dealers.
 module DesignatedDealer {
     use 0x1::Errors;
+    use 0x1::DiemErrors;
     use 0x1::Diem;
     use 0x1::Event;
     use 0x1::Roles;
@@ -179,7 +180,7 @@ module DesignatedDealer {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
         include AbortsIfNoDealer;
-        aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with DiemErrors::REQUIRES_CAPABILITY;
         include Diem::MintAbortsIf<CoinType>{value: amount};
     }
 

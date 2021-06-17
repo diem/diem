@@ -52,7 +52,7 @@ module TreasuryComplianceScripts {
     /// # Common Abort Conditions
     /// | Error Category                | Error Reason                                     | Description                                                                                                                         |
     /// | ----------------              | --------------                                   | -------------                                                                                                                       |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
     /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
@@ -72,6 +72,7 @@ module TreasuryComplianceScripts {
     spec cancel_burn_with_amount {
         use 0x1::CoreAddresses;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -104,7 +105,7 @@ module TreasuryComplianceScripts {
         };
 
         aborts_with [check]
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_ARGUMENT,
             Errors::LIMIT_EXCEEDED,
@@ -159,7 +160,7 @@ module TreasuryComplianceScripts {
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
     /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
@@ -175,6 +176,7 @@ module TreasuryComplianceScripts {
     }
     spec burn_with_amount {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -184,7 +186,7 @@ module TreasuryComplianceScripts {
 
         aborts_with [check]
             Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED;
@@ -359,7 +361,7 @@ module TreasuryComplianceScripts {
     /// | `DiemErrors::REQUIRES_ROLE`   | `Roles::ETREASURY_COMPLIANCE`            | `tc_account` is not the Treasury Compliance account.                                                                         |
     /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT` | `mint_amount` is zero.                                                                                                       |
     /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`              | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                 | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                   |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                 | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                   |
     /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`             | Minting is not currently allowed for `CoinType` coins.                                                                       |
     /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`   | The depositing of the funds would exceed the `account`'s account limits.                                                     |
     ///
@@ -395,7 +397,7 @@ module TreasuryComplianceScripts {
             Errors::INVALID_ARGUMENT,
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED,
             DiemErrors::REQUIRES_ROLE;

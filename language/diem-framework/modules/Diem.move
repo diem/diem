@@ -7,6 +7,7 @@ address 0x1 {
 module Diem {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
+    use 0x1::DiemErrors;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::RegisteredCurrencies;
@@ -296,7 +297,7 @@ module Diem {
     public fun mint<CoinType: store>(account: &signer, value: u64): Diem<CoinType>
     acquires CurrencyInfo, MintCapability {
         let addr = Signer::address_of(account);
-        assert(exists<MintCapability<CoinType>>(addr), Errors::requires_capability(EMINT_CAPABILITY));
+        assert(exists<MintCapability<CoinType>>(addr), DiemErrors::requires_capability(EMINT_CAPABILITY));
         mint_with_capability(
             value,
             borrow_global<MintCapability<CoinType>>(addr)
@@ -306,7 +307,7 @@ module Diem {
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         /// Must abort if the account does not have the MintCapability [[H1]][PERMISSION].
-        aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account)) with DiemErrors::REQUIRES_CAPABILITY;
 
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
@@ -324,7 +325,7 @@ module Diem {
         amount: u64,
     ) acquires BurnCapability, CurrencyInfo, PreburnQueue {
         let addr = Signer::address_of(account);
-        assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        assert(exists<BurnCapability<CoinType>>(addr), DiemErrors::requires_capability(EBURN_CAPABILITY));
         burn_with_capability(
             preburn_address,
             borrow_global<BurnCapability<CoinType>>(addr),
@@ -341,7 +342,7 @@ module Diem {
         preburn_address: address;
 
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with DiemErrors::REQUIRES_CAPABILITY;
         include BurnWithCapabilityAbortsIf<CoinType>;
     }
     spec schema BurnEnsures<CoinType> {
@@ -367,7 +368,7 @@ module Diem {
     ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, PreburnQueue {
         assert_is_currency<CoinType>();
         let addr = Signer::address_of(account);
-        assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        assert(exists<BurnCapability<CoinType>>(addr), DiemErrors::requires_capability(EBURN_CAPABILITY));
         cancel_burn_with_capability(
             preburn_address,
             borrow_global<BurnCapability<CoinType>>(addr),
@@ -398,7 +399,7 @@ module Diem {
         preburn_address: address;
         amount: u64;
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with DiemErrors::REQUIRES_CAPABILITY;
         include CancelBurnWithCapAbortsIf<CoinType>;
     }
 
@@ -1084,7 +1085,7 @@ module Diem {
     public fun remove_burn_capability<CoinType: store>(account: &signer): BurnCapability<CoinType>
     acquires BurnCapability {
         let addr = Signer::address_of(account);
-        assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        assert(exists<BurnCapability<CoinType>>(addr), DiemErrors::requires_capability(EBURN_CAPABILITY));
         move_from<BurnCapability<CoinType>>(addr)
     }
     spec remove_burn_capability {
@@ -1092,7 +1093,7 @@ module Diem {
     }
     spec schema AbortsIfNoBurnCapability<CoinType> {
         account: signer;
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with DiemErrors::REQUIRES_CAPABILITY;
     }
 
     /// Returns the total value of `Diem<CoinType>` that is waiting to be
