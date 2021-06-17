@@ -2000,8 +2000,9 @@ impl CompiledModuleMut {
     /// consistency. This includes bounds checks but no others.
     pub fn freeze(self) -> PartialVMResult<CompiledModule> {
         // Impossible to access self_id for location as it might not be safe due to bounds failing
-        BoundsChecker::verify(&self)?;
-        Ok(CompiledModule(self))
+        let module = CompiledModule(self);
+        BoundsChecker::verify_module(&module)?;
+        Ok(module)
     }
 }
 

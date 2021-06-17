@@ -6,8 +6,7 @@ use invalid_mutations::bounds::{
     OutOfBoundsMutation,
 };
 use move_binary_format::{
-    check_bounds::BoundsChecker, file_format::*, file_format_common,
-    proptest_types::CompiledModuleStrategyGen,
+    file_format::*, file_format_common, proptest_types::CompiledModuleStrategyGen,
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
@@ -244,7 +243,7 @@ proptest! {
             oob_context.apply()
         };
 
-        let actual_violations = BoundsChecker::verify(&module);
+        let actual_violations = module.freeze();
         prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
 
@@ -259,7 +258,7 @@ proptest! {
             context.apply()
         };
 
-        let actual_violations = BoundsChecker::verify(&module);
+        let actual_violations = module.freeze();
 
         prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
@@ -278,7 +277,7 @@ proptest! {
         };
 
         prop_assert_eq!(
-            BoundsChecker::verify(&module).map_err(|e| e.major_status()),
+            module.freeze().map_err(|e| e.major_status()),
             Err(StatusCode::NO_MODULE_HANDLES)
         );
     }
