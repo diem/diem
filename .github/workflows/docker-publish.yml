@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0 #get all the history!!!
       - id: changes
         name: determine changes
-        uses: diem/actions/changes@78f868bd1170a959f0a9864e33df725690b45b9a
+        uses: diem/actions/changes@266156eaff7ba6e1253cf7019506c7b3702f73de
         with:
           workflow-file: docker-publish.yml
       - name: setup_aws_ecr_login
