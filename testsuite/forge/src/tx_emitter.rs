@@ -13,7 +13,7 @@ use diem_sdk::{
 };
 use diem_types::transaction::{authenticator::AuthenticationKey, SignedTransaction};
 use futures::future::{try_join_all, FutureExt};
-use itertools::zip;
+use itertools::{zip, Itertools};
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng,
@@ -124,62 +124,36 @@ impl SubmissionWorker {
         let wait_duration = Duration::from_millis(self.params.wait_millis);
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests();
-            let num_requests = requests.len();
+            let mut b = vec![];
+            for req in &requests {
+                b.push(MethodRequest::submit(req).unwrap());
+            }
+            self.client.batch(b).await;
+
             let start_time = Instant::now();
             let wait_until = start_time + wait_duration;
-            let mut txn_offset_time = 0u64;
-            for request in requests {
-                let cur_time = Instant::now();
-                txn_offset_time += (cur_time - start_time).as_millis() as u64;
-                self.stats.submitted.fetch_add(1, Ordering::Relaxed);
-                let resp = self.client.submit(&request).await;
-                if let Err(e) = resp {
-                    warn!("[{:?}] Failed to submit request: {:?}", self.client, e);
-                }
-            }
             if self.params.wait_committed {
-                if let Err(uncommitted) =
-                    wait_for_accounts_sequence(&self.client, &mut self.accounts).await
-                {
-                    let total_duration = (Instant::now() - start_time).as_millis() as u64;
-                    let num_committed = (num_requests - uncommitted.len()) as u64;
-                    // To avoid negative result caused by uncommitted tx occur
-                    // Simplified from:
-                    // end_time * num_committed - (txn_offset_time/num_requests) * num_committed
-                    // to
-                    // (end_time - txn_offset_time / num_requests) * num_committed
-                    let latency = total_duration - txn_offset_time / num_requests as u64;
-                    let committed_latency = latency * num_committed as u64;
-                    self.stats
-                        .committed
-                        .fetch_add(num_committed, Ordering::Relaxed);
-                    self.stats
-                        .expired
-                        .fetch_add(uncommitted.len() as u64, Ordering::Relaxed);
-                    self.stats
-                        .latency
-                        .fetch_add(committed_latency, Ordering::Relaxed);
-                    self.stats
-                        .latencies
-                        .record_data_point(latency, num_committed);
-                    info!(
-                        "[{:?}] Transactions were not committed before expiration: {:?}",
-                        self.client, uncommitted
-                    );
-                } else {
-                    let total_duration = (Instant::now() - start_time).as_millis() as u64;
-                    let latency = total_duration - txn_offset_time / num_requests as u64;
-                    self.stats
-                        .committed
-                        .fetch_add(num_requests as u64, Ordering::Relaxed);
-                    self.stats
-                        .latency
-                        .fetch_add(latency * num_requests as u64, Ordering::Relaxed);
-                    self.stats
-                        .latencies
-                        .record_data_point(latency, num_requests as u64);
+                for req in &requests {
+                    if let Err(..) =
+                    self.client.wait_for_signed_transaction(req, None, None).await
+                    {
+                        self.stats
+                            .expired
+                            .fetch_add(1, Ordering::Relaxed);
+                    } else {
+                        let latency = (Instant::now() - start_time).as_millis() as u64;
+                        self.stats
+                            .committed
+                            .fetch_add(1, Ordering::Relaxed);
+                        self.stats
+                            .latency
+                            .fetch_add(latency, Ordering::Relaxed);
+                        self.stats
+                            .latencies
+                            .record_data_point(latency, 1);
+                    }
                 }
-            }
+            };
             let now = Instant::now();
             if wait_until > now {
                 time::sleep(wait_until - now).await;
