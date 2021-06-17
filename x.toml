@@ -69,6 +69,11 @@ name = "diem-crypto-derive"
 version = "0.1.0"
 workspace-path = "crypto/crypto-derive"
 
+[[hakari.omitted-packages]]
+name = "bytecode-interpreter-crypto"
+version = "0.1.0"
+workspace-path = "language/move-prover/interpreter/crypto"
+
 # Also exclude the devtools packages since they get compiled with a different set of options.
 [[hakari.omitted-packages]]
 name = "x"
@@ -245,7 +250,6 @@ existing_deps = [
     # Tier 0 - essential components that must be included in the first batch of crates getting
     #          moved to the new repo
     ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
-    ["bytecode-interpreter", "diem-crypto"],                  # implementation of native functions
     ["compiler", "diem-framework-releases"],
     ["move-vm-runtime", "diem-logger"],
     ["move-cli", "vm-genesis"],

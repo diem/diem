@@ -9,7 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 # diem dependencies
 bytecode = { path = "../bytecode" }
-diem-crypto = { path = "../../../crypto/crypto" }
+bytecode-interpreter-crypto = { path = "crypto" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
@@ -21,7 +21,6 @@ anyhow = "1.0.38"
 codespan-reporting = "0.8.0"
 itertools = "0.10.0"
 num = "0.4.0"
-sha2 = "0.9.3"
 serde = { version = "1.0.124", features = ["derive"] }
 structopt = "0.3.21"
 

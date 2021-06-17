@@ -619,9 +619,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytecode",
+ "bytecode-interpreter-crypto",
  "codespan-reporting",
  "datatest-stable",
- "diem-crypto",
  "diem-workspace-hack",
  "itertools 0.10.0",
  "move-binary-format",
@@ -631,8 +631,18 @@ dependencies = [
  "move-vm-runtime",
  "num 0.4.0",
  "serde",
- "sha2",
  "structopt 0.3.21",
+]
+
+[[package]]
+name = "bytecode-interpreter-crypto"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-workspace-hack",
+ "ed25519-dalek-fiat",
+ "sha2",
+ "sha3",
 ]
 
 [[package]]

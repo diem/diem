@@ -93,6 +93,7 @@ members = [
     "language/move-prover/docgen",
     "language/move-prover/errmapgen",
     "language/move-prover/interpreter",
+    "language/move-prover/interpreter/crypto",
     "language/move-prover/interpreter-testsuite",
     "language/move-prover/lab",
     "language/move-prover/test-utils",

@@ -1,0 +1,16 @@
+[package]
+name = "bytecode-interpreter-crypto"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+diem-workspace-hack = { path = "../../../../common/workspace-hack" }
+
+# external dependencies
+anyhow = "1.0.38"
+ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "serde"] }
+sha2 = "0.9.3"
+sha3 = "0.9.1"

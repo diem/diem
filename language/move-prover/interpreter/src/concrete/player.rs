@@ -4,10 +4,7 @@
 //! This file implements the statement interpretation part of the stackless bytecode interpreter.
 
 use num::{BigInt, ToPrimitive, Zero};
-use sha2::{Digest, Sha256};
-use std::{collections::BTreeMap, convert::TryFrom, rc::Rc};
-
-use diem_crypto::{ed25519, HashValue, Signature};
+use std::{collections::BTreeMap, rc::Rc};
 
 use bytecode::{
     function_target::FunctionTarget,
@@ -16,6 +13,10 @@ use bytecode::{
         AbortAction, AssignKind, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Label,
         Operation, PropKind,
     },
+};
+use bytecode_interpreter_crypto::{
+    ed25519_deserialize_public_key, ed25519_deserialize_signature, ed25519_verify_signature,
+    sha2_256_of, sha3_256_of,
 };
 use move_binary_format::errors::Location;
 use move_core_types::{
@@ -2004,7 +2005,7 @@ impl<'env> FunctionContext<'env> {
             .into_iter()
             .map(|e| e.into_u8())
             .collect();
-        let digest = Sha256::digest(&bytes).to_vec();
+        let digest = sha2_256_of(&bytes);
         let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
         TypedValue::mk_vector(elem_ty, hashed)
     }
@@ -2020,7 +2021,7 @@ impl<'env> FunctionContext<'env> {
             .into_iter()
             .map(|e| e.into_u8())
             .collect();
-        let digest = HashValue::sha3_256_of(&bytes).to_vec();
+        let digest = sha3_256_of(&bytes);
         let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
         TypedValue::mk_vector(elem_ty, hashed)
     }
@@ -2069,7 +2070,7 @@ impl<'env> FunctionContext<'env> {
             assert_eq!(self.ty_args.len(), 0);
         }
         let bytes: Vec<_> = key.into_vector().into_iter().map(|e| e.into_u8()).collect();
-        let valid = ed25519::Ed25519PublicKey::try_from(bytes.as_slice()).is_ok();
+        let valid = ed25519_deserialize_public_key(bytes.as_slice()).is_ok();
         TypedValue::mk_bool(valid)
     }
 
@@ -2088,7 +2089,7 @@ impl<'env> FunctionContext<'env> {
             .into_iter()
             .map(|e| e.into_u8())
             .collect();
-        let sig = match ed25519::Ed25519Signature::try_from(sig_bytes.as_slice()) {
+        let sig = match ed25519_deserialize_signature(sig_bytes.as_slice()) {
             Ok(sig) => sig,
             Err(_) => {
                 return TypedValue::mk_bool(false);
@@ -2100,7 +2101,7 @@ impl<'env> FunctionContext<'env> {
             .into_iter()
             .map(|e| e.into_u8())
             .collect();
-        let key = match ed25519::Ed25519PublicKey::try_from(key_bytes.as_slice()) {
+        let key = match ed25519_deserialize_public_key(key_bytes.as_slice()) {
             Ok(key) => key,
             Err(_) => {
                 return TypedValue::mk_bool(false);
@@ -2112,7 +2113,7 @@ impl<'env> FunctionContext<'env> {
             .into_iter()
             .map(|e| e.into_u8())
             .collect();
-        let verified = sig.verify_arbitrary_msg(&msg_bytes, &key).is_ok();
+        let verified = ed25519_verify_signature(&key, &sig, &msg_bytes).is_ok();
         TypedValue::mk_bool(verified)
     }
 
