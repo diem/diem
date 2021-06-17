@@ -94,7 +94,7 @@ The validator inititates a key rotation to a new network identity public key `<p
 tx: set_validator_network_addresses(["/ip4/1.2.3.4/tcp/6180/ln-noise-ik/<pubkey2>/ln-handshake/0"])
 ```
 
-(TODO(philiphayes): link to actual tx?)
+<!-- TODO(philiphayes): link to actual tx? -->
 
 When the transaction commits, the validator observes a reconfiguration with its new advertised network address. It will then begin responding to noise handshakes with the new keypair. Likewise, the node will use the new keypair when dialing out to other peers.
 

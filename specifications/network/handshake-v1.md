@@ -54,4 +54,4 @@ The `Handshake` protocol is currently symmetric, i.e., we follow the same upgrad
   * After receiving the `HandshakeMsg`, both peers MUST pick the highest intersecting `MessagingProtocolVersion` to use for all subsequent communication.
   * Peers MUST only use a `ProtocolId` that is supported by the receiver. The receiver MAY respond with an error message of type `ErrorCode::NotSupported` if it receives a message with a `ProtocolId` it did not advertise or does not support.
 
-(TODO(philiphayes): describe and implement hardening: enforce maximum number of entries in supported_protocols map, maximum length of BitVec, no duplicates)
+<!-- TODO(philiphayes): describe and implement hardening: enforce maximum number of entries in supported_protocols map, maximum length of BitVec, no duplicates -->

@@ -173,7 +173,7 @@ fn send_one_msg_and_flush(socket: TcpStream, msg: NetworkMsg) {
 }
 ```
 
-(TODO(philiphayes): describe receiving a message without over complicating...)
+<!-- TODO(philiphayes): describe receiving a message without over complicating... -->
 
 ### Connection Termination
 
@@ -181,4 +181,4 @@ Peers may crash or drop connections at any time without any warning and complian
 
 When closing a connection, peers are may perform a graceful shutdown by first draining their pending outbound messages, then sending a TCP write half-close, and finally draining inbound messages until observing the remote peer's TCP write half-close.
 
-(TODO(philiphayes): expand on graceful shutdown)
+<!-- TODO(philiphayes): expand on graceful shutdown -->
