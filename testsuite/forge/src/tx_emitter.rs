@@ -32,7 +32,7 @@ use tokio::{runtime::Handle, task::JoinHandle, time};
 
 /// Max transactions per account in mempool
 const MAX_TXN_BATCH_SIZE: usize = 100;
-const TXN_EXPIRATION_SECONDS: i64 = 30;
+const TXN_EXPIRATION_SECONDS: i64 = 150;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;

@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::*;
-use rand::SeedableRng;
+use rand::{SeedableRng, Rng};
 use std::{
     io::{self, Write},
     process,
 };
 use structopt::{clap::arg_enum, StructOpt};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use rand::rngs::OsRng;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Forged in Fire")]
@@ -119,7 +120,7 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         let mut summary = TestSummary::new(self.tests.number_of_tests(), 0);
         summary.write_starting_msg()?;
 
-        let mut rng = ::rand::rngs::StdRng::from_seed([0; 32]);
+        let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
         let mut swarm = self.factory.launch_swarm(1);
 
         // Run PublicUsageTests
