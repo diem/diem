@@ -16,9 +16,9 @@ mirai-annotations = "1.10.1"
 proptest = { version = "1.0.0", optional = true }
 proptest-derive = { version = "0.3.0", optional = true }
 ref-cast = "1.0.6"
+variant_count = "1.1.0"
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
-num-variants = { path = "../../common/num-variants" }
 
 [dev-dependencies]
 proptest = "1.0.0"

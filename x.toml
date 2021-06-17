@@ -252,7 +252,6 @@ existing_deps = [
     ["move-cli", "diem-types"],                               # `ContractEvent`
     ["move-cli", "diem-framework"],
     ["move-cli", "diem-framework-releases"],
-    ["move-binary-format", "num-variants"],                   # counting the number of bytecodes
     ["move-stdlib", "diem-crypto"],
 
     # Tier 1 - crates that can wait a little bit longer?

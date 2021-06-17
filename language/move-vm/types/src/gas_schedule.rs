@@ -147,7 +147,7 @@ pub fn new_from_instructions(
             }
         }
         debug_assert!(
-            instructions_covered == Bytecode::NUM_INSTRUCTIONS,
+            instructions_covered == Bytecode::VARIANT_COUNT,
             "all instructions must be in the cost table"
         );
     }

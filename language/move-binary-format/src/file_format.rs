@@ -41,13 +41,13 @@ use move_core_types::{
     language_storage::ModuleId,
     vm_status::StatusCode,
 };
-use num_variants::NumVariants;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use ref_cast::RefCast;
 use std::ops::BitOr;
+use variant_count::VariantCount;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -1051,10 +1051,9 @@ pub struct CodeUnit {
 ///
 /// Bytecodes operate on a stack machine and each bytecode has side effect on the stack and the
 /// instruction stream.
-#[derive(Clone, Hash, Eq, NumVariants, PartialEq)]
+#[derive(Clone, Hash, Eq, VariantCount, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
-#[num_variants = "NUM_INSTRUCTIONS"]
 pub enum Bytecode {
     /// Pop and discard the value at the top of the stack.
     /// The value on the stack must be an copyable type.

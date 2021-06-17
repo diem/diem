@@ -4445,12 +4445,12 @@ dependencies = [
  "diem-workspace-hack",
  "mirai-annotations",
  "move-core-types",
- "num-variants",
  "once_cell",
  "proptest",
  "proptest-derive",
  "ref-cast",
  "serde_json",
+ "variant_count",
 ]
 
 [[package]]
@@ -8184,6 +8184,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "variant_count"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aae2faf80ac463422992abf4de234731279c058aaf33171ca70277c98406b124"
+dependencies = [
+ "quote 1.0.9",
+ "syn 1.0.72",
 ]
 
 [[package]]
