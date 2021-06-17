@@ -2529,6 +2529,7 @@ dependencies = [
  "Inflector",
  "anyhow",
  "backtrace",
+ "block-buffer 0.9.0",
  "bstr",
  "byteorder",
  "bytes",
@@ -4808,7 +4809,6 @@ dependencies = [
  "anyhow",
  "bytecode-verifier",
  "compiler",
- "diem-crypto",
  "diem-logger",
  "diem-workspace-hack",
  "fail",
@@ -4821,6 +4821,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "proptest",
+ "sha3",
 ]
 
 [[package]]

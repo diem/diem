@@ -6,7 +6,6 @@ use crate::{
     native_functions::{NativeFunction, NativeFunctions},
 };
 use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
-use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
@@ -31,7 +30,10 @@ use move_vm_types::{
     loaded_data::runtime_types::{StructType, Type},
 };
 use parking_lot::RwLock;
+use sha3::{Digest, Sha3_256};
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
+
+type ScriptHash = [u8; 32];
 
 // A simple cache that offers both a HashMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.
@@ -72,7 +74,7 @@ where
 // Script are added in the cache once verified and so getting a script out the cache
 // does not require further verification (except for parameters and type parameters)
 struct ScriptCache {
-    scripts: BinaryCache<HashValue, Script>,
+    scripts: BinaryCache<ScriptHash, Script>,
 }
 
 impl ScriptCache {
@@ -82,13 +84,13 @@ impl ScriptCache {
         }
     }
 
-    fn get(&self, hash: &HashValue) -> Option<(Arc<Function>, Vec<Type>)> {
+    fn get(&self, hash: &ScriptHash) -> Option<(Arc<Function>, Vec<Type>)> {
         self.scripts
             .get(hash)
             .map(|script| (script.entry_point(), script.parameter_tys.clone()))
     }
 
-    fn insert(&mut self, hash: HashValue, script: Script) -> (Arc<Function>, Vec<Type>) {
+    fn insert(&mut self, hash: ScriptHash, script: Script) -> (Arc<Function>, Vec<Type>) {
         match self.get(&hash) {
             Some(cached) => cached,
             None => {
@@ -454,7 +456,9 @@ impl Loader {
         log_context: &impl LogContext,
     ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
         // retrieve or load the script
-        let hash_value = HashValue::sha3_256_of(script_blob);
+        let mut sha3_256 = Sha3_256::new();
+        sha3_256.update(script_blob);
+        let hash_value: [u8; 32] = sha3_256.finalize().into();
 
         let mut scripts = self.scripts.write();
         let (main, parameter_tys) = match scripts.get(&hash_value) {
@@ -951,7 +955,7 @@ impl Loader {
         )
     }
 
-    fn get_script(&self, hash: &HashValue) -> Arc<Script> {
+    fn get_script(&self, hash: &ScriptHash) -> Arc<Script> {
         Arc::clone(
             self.scripts
                 .read()
@@ -1412,7 +1416,11 @@ struct Script {
 }
 
 impl Script {
-    fn new(script: CompiledScript, script_hash: &HashValue, cache: &ModuleCache) -> VMResult<Self> {
+    fn new(
+        script: CompiledScript,
+        script_hash: &ScriptHash,
+        cache: &ModuleCache,
+    ) -> VMResult<Self> {
         let mut struct_refs = vec![];
         for struct_handle in script.struct_handles() {
             let struct_name = script.identifier_at(struct_handle.name);
@@ -1526,7 +1534,7 @@ impl Script {
 #[derive(Debug)]
 enum Scope {
     Module(ModuleId),
-    Script(HashValue),
+    Script(ScriptHash),
 }
 
 // A runtime function

@@ -246,7 +246,6 @@ existing_deps = [
     ["bytecode-interpreter", "diem-crypto"],                  # implementation of native functions
     ["compiler", "diem-framework-releases"],
     ["move-vm-runtime", "diem-logger"],
-    ["move-vm-runtime", "diem-crypto"],                       # using `HashValue` as keys in the script cache
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],
     ["move-cli", "diem-types"],                               # `ContractEvent`

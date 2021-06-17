@@ -14,6 +14,7 @@ edition = "2018"
 Inflector = { version = "0.11.4", features = ["default", "heavyweight", "lazy_static", "regex"] }
 anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
 backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
+block-buffer = { version = "0.9.0", default-features = false, features = ["block-padding"] }
 bstr = { version = "0.2.15", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
@@ -68,6 +69,7 @@ zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"]
 Inflector = { version = "0.11.4", features = ["default", "heavyweight", "lazy_static", "regex"] }
 anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
 backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
+block-buffer = { version = "0.9.0", default-features = false, features = ["block-padding"] }
 bstr = { version = "0.2.15", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
@@ -127,6 +129,7 @@ zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"]
 Inflector = { version = "0.11.4", features = ["default", "heavyweight", "lazy_static", "regex"] }
 anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
 backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
+block-buffer = { version = "0.9.0", default-features = false, features = ["block-padding"] }
 bstr = { version = "0.2.15", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
@@ -181,6 +184,7 @@ zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"]
 Inflector = { version = "0.11.4", features = ["default", "heavyweight", "lazy_static", "regex"] }
 anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
 backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
+block-buffer = { version = "0.9.0", default-features = false, features = ["block-padding"] }
 bstr = { version = "0.2.15", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
