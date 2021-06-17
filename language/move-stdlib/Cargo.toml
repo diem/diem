@@ -18,13 +18,13 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-vm-types = { path = "../move-vm/types" }
 move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }
-diem-crypto = { path = "../../crypto/crypto" }
 move-vm-runtime = { path = "../move-vm/runtime" }
 
 log = "0.4.14"
 walkdir = "2.3.1"
 smallvec = "1.6.1"
 sha2 = "0.9.3"
+sha3 = "0.9.1"
 
 [dev-dependencies]
 move-unit-test = { path = "../tools/move-unit-test" }

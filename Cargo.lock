@@ -4744,7 +4744,6 @@ dependencies = [
 name = "move-stdlib"
 version = "0.1.0"
 dependencies = [
- "diem-crypto",
  "diem-workspace-hack",
  "dir-diff",
  "docgen",
@@ -4756,6 +4755,7 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-types",
  "sha2",
+ "sha3",
  "smallvec",
  "tempfile",
  "walkdir",
