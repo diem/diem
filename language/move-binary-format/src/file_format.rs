@@ -1676,8 +1676,9 @@ impl CompiledScriptMut {
     /// consistency. This includes bounds checks but no others.
     #[allow(deprecated)]
     pub fn freeze(self) -> PartialVMResult<CompiledScript> {
-        let (info, fake_module) = self.into_module();
-        Ok(fake_module.freeze()?.into_script(info))
+        let script = CompiledScript(self);
+        BoundsChecker::verify_script(&script)?;
+        Ok(script)
     }
 
     /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
@@ -2215,4 +2216,8 @@ pub fn empty_script() -> CompiledScriptMut {
             code: vec![Bytecode::Ret],
         },
     }
+}
+
+pub fn basic_test_script() -> CompiledScriptMut {
+    empty_script()
 }

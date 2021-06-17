@@ -19,6 +19,11 @@ fn empty_module_no_errors() {
 }
 
 #[test]
+fn empty_script_no_errors() {
+    basic_test_script().freeze().unwrap();
+}
+
+#[test]
 fn invalid_default_module() {
     let m = CompiledModuleMut {
         version: file_format_common::VERSION_MAX,
@@ -148,6 +153,23 @@ fn invalid_locals_id_in_call() {
 }
 
 #[test]
+fn script_invalid_locals_id_in_call() {
+    use Bytecode::*;
+
+    let mut s = basic_test_script();
+    s.function_instantiations.push(FunctionInstantiation {
+        handle: FunctionHandleIndex::new(0),
+        type_parameters: SignatureIndex::new(1),
+    });
+    let func_inst_idx = FunctionInstantiationIndex(s.function_instantiations.len() as u16 - 1);
+    s.code.code = vec![CallGeneric(func_inst_idx)];
+    assert_eq!(
+        s.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
+}
+
+#[test]
 fn invalid_type_param_in_call() {
     use Bytecode::*;
     use SignatureToken::*;
@@ -162,6 +184,25 @@ fn invalid_type_param_in_call() {
     m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
     assert_eq!(
         m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
+}
+
+#[test]
+fn script_invalid_type_param_in_call() {
+    use Bytecode::*;
+    use SignatureToken::*;
+
+    let mut s = basic_test_script();
+    s.signatures.push(Signature(vec![TypeParameter(0)]));
+    s.function_instantiations.push(FunctionInstantiation {
+        handle: FunctionHandleIndex::new(0),
+        type_parameters: SignatureIndex::new(1),
+    });
+    let func_inst_idx = FunctionInstantiationIndex(s.function_instantiations.len() as u16 - 1);
+    s.code.code = vec![CallGeneric(func_inst_idx)];
+    assert_eq!(
+        s.freeze().unwrap_err().major_status(),
         StatusCode::INDEX_OUT_OF_BOUNDS
     );
 }
@@ -182,6 +223,26 @@ fn invalid_struct_as_type_actual_in_exists() {
     m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
     assert_eq!(
         m.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
+}
+
+#[test]
+fn script_invalid_struct_as_type_argument_in_exists() {
+    use Bytecode::*;
+    use SignatureToken::*;
+
+    let mut s = basic_test_script();
+    s.signatures
+        .push(Signature(vec![Struct(StructHandleIndex::new(3))]));
+    s.function_instantiations.push(FunctionInstantiation {
+        handle: FunctionHandleIndex::new(0),
+        type_parameters: SignatureIndex::new(1),
+    });
+    let func_inst_idx = FunctionInstantiationIndex(s.function_instantiations.len() as u16 - 1);
+    s.code.code = vec![CallGeneric(func_inst_idx)];
+    assert_eq!(
+        s.freeze().unwrap_err().major_status(),
         StatusCode::INDEX_OUT_OF_BOUNDS
     );
 }

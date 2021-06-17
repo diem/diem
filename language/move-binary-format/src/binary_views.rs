@@ -17,7 +17,9 @@ use crate::{
     CompiledModule,
 };
 use move_core_types::{
-    account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
     vm_status::StatusCode,
 };
 
@@ -53,10 +55,24 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn identifiers(&self) -> &[Identifier] {
+        match self {
+            BinaryIndexedView::Module(module) => module.identifiers(),
+            BinaryIndexedView::Script(script) => script.identifiers(),
+        }
+    }
+
     pub fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
         match self {
             BinaryIndexedView::Module(module) => module.identifier_at(idx),
             BinaryIndexedView::Script(script) => script.identifier_at(idx),
+        }
+    }
+
+    pub fn address_identifiers(&self) -> &[AccountAddress] {
+        match self {
+            BinaryIndexedView::Module(module) => module.address_identifiers(),
+            BinaryIndexedView::Script(script) => script.address_identifiers(),
         }
     }
 
@@ -67,10 +83,24 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn constant_pool(&self) -> &[Constant] {
+        match self {
+            BinaryIndexedView::Module(module) => module.constant_pool(),
+            BinaryIndexedView::Script(script) => script.constant_pool(),
+        }
+    }
+
     pub fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
         match self {
             BinaryIndexedView::Module(module) => module.constant_at(idx),
             BinaryIndexedView::Script(script) => script.constant_at(idx),
+        }
+    }
+
+    pub fn signatures(&self) -> &[Signature] {
+        match self {
+            BinaryIndexedView::Module(module) => module.signatures(),
+            BinaryIndexedView::Script(script) => script.signatures(),
         }
     }
 
@@ -102,6 +132,13 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn function_instantiations(&self) -> &[FunctionInstantiation] {
+        match self {
+            BinaryIndexedView::Module(module) => module.function_instantiations(),
+            BinaryIndexedView::Script(script) => script.function_instantiations(),
+        }
+    }
+
     pub fn function_instantiation_at(
         &self,
         idx: FunctionInstantiationIndex,
@@ -112,12 +149,33 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn field_handles(&self) -> Option<&[FieldHandle]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.field_handles()),
+            BinaryIndexedView::Script(_) => None,
+        }
+    }
+
     pub fn field_handle_at(&self, idx: FieldHandleIndex) -> PartialVMResult<&FieldHandle> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.field_handle_at(idx)),
             BinaryIndexedView::Script(_) => {
                 Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
+        }
+    }
+
+    pub fn friend_decls(&self) -> Option<&[ModuleHandle]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.friend_decls()),
+            BinaryIndexedView::Script(_) => None,
+        }
+    }
+
+    pub fn struct_instantiations(&self) -> Option<&[StructDefInstantiation]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.struct_instantiations()),
+            BinaryIndexedView::Script(_) => None,
         }
     }
 
@@ -133,6 +191,13 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn field_instantiations(&self) -> Option<&[FieldInstantiation]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.field_instantiations()),
+            BinaryIndexedView::Script(_) => None,
+        }
+    }
+
     pub fn field_instantiation_at(
         &self,
         idx: FieldInstantiationIndex,
@@ -145,12 +210,26 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub fn struct_defs(&self) -> Option<&[StructDefinition]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.struct_defs()),
+            BinaryIndexedView::Script(_) => None,
+        }
+    }
+
     pub fn struct_def_at(&self, idx: StructDefinitionIndex) -> PartialVMResult<&StructDefinition> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.struct_def_at(idx)),
             BinaryIndexedView::Script(_) => {
                 Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
+        }
+    }
+
+    pub fn function_defs(&self) -> Option<&[FunctionDefinition]> {
+        match self {
+            BinaryIndexedView::Module(module) => Some(module.function_defs()),
+            BinaryIndexedView::Script(_) => None,
         }
     }
 
