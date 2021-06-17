@@ -248,7 +248,6 @@ existing_deps = [
     ["compiler", "diem-framework-releases"],
     ["move-vm-runtime", "diem-logger"],
     ["move-vm-runtime", "diem-crypto"],                       # using `HashValue` as keys in the script cache
-    ["abigen", "diem-types"],                                 # ABI types
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],
     ["move-cli", "diem-types"],                               # `ContractEvent`

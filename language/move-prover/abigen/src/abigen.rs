@@ -6,11 +6,12 @@ use log::{debug, info, warn};
 
 use anyhow::bail;
 use bytecode_verifier::script_signature;
-use diem_types::transaction::{
-    ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
-};
 use heck::SnakeCase;
-use move_core_types::{identifier::IdentStr, language_storage::TypeTag};
+use move_core_types::{
+    abi::{ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI},
+    identifier::IdentStr,
+    language_storage::TypeTag,
+};
 use move_model::{
     model::{FunctionEnv, FunctionVisibility, GlobalEnv, ModuleEnv},
     ty,

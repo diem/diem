@@ -19,7 +19,6 @@ dependencies = [
  "bytecode-verifier",
  "codespan-reporting",
  "datatest-stable",
- "diem-types",
  "diem-workspace-hack",
  "heck",
  "log",

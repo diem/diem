@@ -3,6 +3,7 @@
 
 //! Core types for Move.
 
+pub mod abi;
 pub mod account_address;
 pub mod effects;
 pub mod errmap;
