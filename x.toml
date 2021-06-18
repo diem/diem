@@ -272,7 +272,6 @@ existing_deps = [
     ["resource-viewer", "diem-framework-releases"],
     ["resource-viewer", "diem-types"],
     ["resource-viewer", "diem-state-view"],
-    ["move-explain", "diem-framework-releases"],
 ]
 
 # Interesting subsets of the workspace, These are used for generating and

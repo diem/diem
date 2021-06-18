@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
+    account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
+    language_storage::ModuleId,
 };
 use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
@@ -17,6 +18,9 @@ struct Args {
     /// The abort code returned with a `MoveAbort` error
     #[structopt(long = "abort-code", short = "a")]
     abort_code: u64,
+    /// Path to the error code mapping file
+    #[structopt(long = "errmap", short = "e")]
+    errmap_path: String,
 }
 
 fn main() {
@@ -36,7 +40,11 @@ fn main() {
         Identifier::new(module_name).expect("Invalid module name encountered"),
     );
 
-    match move_explain::get_explanation(&module_id, args.abort_code) {
+    let errmap_bytes = std::fs::read(&args.errmap_path).expect("Could not load errmap from file");
+    let errmap: ErrorMapping =
+        bcs::from_bytes(&errmap_bytes).expect("Failed to deserialize errmap");
+
+    match errmap.get_explanation(&module_id, args.abort_code) {
         None => println!(
             "Unable to find a description for {}::{}",
             args.location, args.abort_code

@@ -46,7 +46,6 @@ diem-workspace-hack = { path = "../common/workspace-hack" }
 executor = { path = "../execution/executor" , optional = true}
 executor-types = { path = "../execution/executor-types" , optional = true}
 move-core-types = { path = "../language/move-core/types" }
-move-explain = { path = "../language/tools/move-explain" }
 move-vm-types = { path = "../language/move-vm/types", optional = true }
 network = { path = "../network" }
 scratchpad = { path = "../storage/scratchpad", optional = true }

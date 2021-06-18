@@ -1908,7 +1908,6 @@ dependencies = [
  "hex",
  "hyper",
  "move-core-types",
- "move-explain",
  "move-vm-types",
  "network",
  "once_cell",
@@ -4611,7 +4610,6 @@ name = "move-explain"
 version = "0.1.0"
 dependencies = [
  "bcs",
- "diem-framework-releases",
  "diem-workspace-hack",
  "move-core-types",
  "structopt 0.3.21",
