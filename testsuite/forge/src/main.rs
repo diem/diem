@@ -8,20 +8,74 @@ use diem_sdk::{
     move_types::account_address::AccountAddress,
     transaction_builder::Currency,
 };
-use forge::{forge_main, ForgeConfig, Result, *};
+use forge::{forge_main, ForgeConfig, Options, Result, *};
 use itertools::Itertools;
-use rand::SeedableRng;
+use rand_core::SeedableRng;
 use std::time::Duration;
+use structopt::StructOpt;
 use tokio::runtime::Runtime;
 
+#[derive(StructOpt, Debug)]
+struct Args {
+    #[structopt(
+        long,
+        help = "If set, tries to connect to a local swarm instead of testnet"
+    )]
+    local_swarm: bool,
+
+    // emit_tx options
+    #[structopt(long, default_value = "15")]
+    accounts_per_client: usize,
+    #[structopt(long)]
+    workers_per_ac: Option<usize>,
+    #[structopt(
+        long,
+        help = "Time to run --emit-tx for in seconds",
+        default_value = "60"
+    )]
+    duration: u64,
+    // TODO, need to remove these args once we can load from vault
+    #[structopt(long, default_value = "")]
+    pub root_key: String,
+    #[structopt(long, default_value = "")]
+    pub treasury_compliance_key: String,
+
+    #[structopt(flatten)]
+    options: Options,
+}
+
 fn main() -> Result<()> {
-    let tests = ForgeConfig {
+    let args = Args::from_args();
+
+    if args.local_swarm {
+        forge_main(
+            local_test_suite(),
+            LocalFactory::new(get_diem_node().to_str().unwrap()),
+            &args.options,
+        )
+    } else {
+        forge_main(
+            k8s_test_suite(),
+            K8sFactory::new(args.root_key.clone(), args.treasury_compliance_key.clone()),
+            &args.options,
+        )
+    }
+}
+
+fn local_test_suite() -> ForgeConfig<'static> {
+    ForgeConfig {
         public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
         network_tests: &[&RestartValidator, &EmitTransaction],
-    };
+    }
+}
 
-    forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()))
+fn k8s_test_suite() -> ForgeConfig<'static> {
+    ForgeConfig {
+        public_usage_tests: &[&FundAccount, &TransferCoins],
+        admin_tests: &[&GetMetadata],
+        network_tests: &[&EmitTransaction],
+    }
 }
 
 //TODO Make public test later
@@ -184,7 +238,7 @@ impl Test for EmitTransaction {
 impl NetworkTest for EmitTransaction {
     fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
         let duration = Duration::from_secs(10);
-        let rng = ::rand::rngs::StdRng::from_seed([0; 32]);
+        let rng = SeedableRng::from_rng(ctx.core().rng()).unwrap();
         let validator_clients = ctx
             .swarm()
             .validators()
@@ -193,9 +247,12 @@ impl NetworkTest for EmitTransaction {
             .collect_vec();
         let mut emitter = TxnEmitter::new(ctx.swarm().chain_info(), rng);
         let rt = Runtime::new().unwrap();
-        let _stats = rt
+        let stats = rt
             .block_on(emitter.emit_txn_for(duration, EmitJobRequest::default(validator_clients)))
             .unwrap();
+        ctx.report
+            .report_txn_stats(self.name().to_string(), stats, duration);
+        ctx.report.print_report();
 
         Ok(())
     }
@@ -204,7 +261,6 @@ impl NetworkTest for EmitTransaction {
 // TODO Remove everything below here
 // The following is copied from the workspace-builder in the smoke-test crate. Its only intended to
 // be here temporarily
-
 fn get_diem_node() -> PathBuf {
     let output = Command::new("cargo")
         .current_dir(workspace_root())

@@ -3212,6 +3212,7 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "base64",
  "debug-interface",
  "diem-config",
  "diem-genesis-tool",
@@ -3221,6 +3222,8 @@ dependencies = [
  "diem-workspace-hack",
  "futures",
  "itertools 0.10.0",
+ "k8s-openapi",
+ "kube",
  "rand 0.8.3",
  "rand_core 0.6.2",
  "reqwest",

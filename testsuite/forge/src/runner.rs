@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::*;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use std::{
     io::{self, Write},
     process,
 };
 use structopt::{clap::arg_enum, StructOpt};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+// TODO going to remove random seed once cluster deployment supports re-run genesis
+use rand::rngs::OsRng;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Forged in Fire")]
@@ -54,9 +56,8 @@ impl Default for Format {
     }
 }
 
-pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F) -> Result<()> {
-    let options = Options::from_args();
-    let forge = Forge::new(&options, tests, factory);
+pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F, options: &Options) -> Result<()> {
+    let forge = Forge::new(options, tests, factory);
 
     if options.list {
         forge.list()?;
@@ -119,7 +120,7 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         let mut summary = TestSummary::new(self.tests.number_of_tests(), 0);
         summary.write_starting_msg()?;
 
-        let mut rng = ::rand::rngs::StdRng::from_seed([0; 32]);
+        let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
         let mut swarm = self.factory.launch_swarm(1);
 
         // Run PublicUsageTests
@@ -141,7 +142,9 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         }
 
         for test in self.tests.network_tests {
-            let mut network_ctx = NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm);
+            let report = TestReport::new();
+            let mut network_ctx =
+                NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm, report);
             let result = run_test(|| test.run(&mut network_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }
