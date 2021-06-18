@@ -682,7 +682,6 @@ name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier",
- "diem-framework-releases",
  "diem-workspace-hack",
  "invalid-mutations",
  "move-binary-format",

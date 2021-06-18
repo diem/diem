@@ -242,7 +242,6 @@ existing_deps = [
     # Tier 0 - essential components that must be included in the first batch of crates getting
     #          moved to the new repo
     ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
-    ["bytecode-verifier-tests", "diem-framework-releases"],
     ["bytecode-interpreter", "diem-crypto"],                  # implementation of native functions
     ["compiler", "diem-framework-releases"],
     ["move-vm-runtime", "diem-logger"],
