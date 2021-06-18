@@ -213,6 +213,7 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
     } else {
         pipeline.run(env, &mut targets);
     }
+
     targets
 }
 
