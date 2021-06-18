@@ -11,6 +11,7 @@
 //! are for specs or not, and allow the older to resolve only in spec contexts.
 
 use crate::{
+    errors::Errors,
     parser::ast::{Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, Program},
     shared::*,
 };
@@ -30,7 +31,7 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
     // Report errors for misplaced members
     for m in spec_modules.values() {
-        let errors: Vec<_> = m
+        let errors: Errors = m
             .members
             .iter()
             .filter_map(|m| match m {
@@ -60,7 +61,7 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
     // Remaining spec modules could not be merged, report errors.
     for (_, m) in spec_modules {
-        compilation_env.add_error(vec![(
+        compilation_env.add_error_deprecated(vec![(
             m.name.loc(),
             "Cannot associate specification with any target module in this compilation. \
                     A module specification cannot be compiled standalone."

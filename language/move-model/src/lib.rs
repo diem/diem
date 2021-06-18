@@ -256,10 +256,11 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
         let loc = env.to_loc(&err.0);
         Label::new(loc.file_id(), loc.span(), err.1)
     };
-    for mut error in errors {
-        let primary = error.remove(0);
+    #[allow(deprecated)]
+    for mut labels in errors.into_vec() {
+        let primary = labels.remove(0);
         let diag = Diagnostic::new_error("", mk_label(env, primary))
-            .with_secondary_labels(error.into_iter().map(|e| mk_label(env, e)));
+            .with_secondary_labels(labels.into_iter().map(|e| mk_label(env, e)));
         env.add_diag(diag);
     }
 }

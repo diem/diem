@@ -100,7 +100,7 @@ impl<'a> Context<'a> {
             let ir_ident = match Self::translate_module_ident_impl(addresses, module) {
                 Ok(ident) => ident,
                 Err(e) => {
-                    env.add_error(e);
+                    env.add_error_deprecated(e);
                     continue;
                 }
             };
@@ -230,7 +230,7 @@ impl<'a> Context<'a> {
         match addr.into_addr_bytes(self.addresses, loc, case) {
             Ok(addr) => Some(addr),
             Err(e) => {
-                self.env.add_error(e);
+                self.env.add_error_deprecated(e);
                 None
             }
         }
@@ -240,7 +240,7 @@ impl<'a> Context<'a> {
         match Self::translate_module_ident_impl(&self.addresses, ident) {
             Ok(ident) => Some(ident),
             Err(e) => {
-                self.env.add_error(e);
+                self.env.add_error_deprecated(e);
                 None
             }
         }

@@ -176,7 +176,7 @@ fn module<'a>(
     petgraph_scc(&graph)
         .into_iter()
         .filter(|scc| scc_edges!(&graph, scc).any(|(_, e, _)| e == Edge::Nested))
-        .for_each(|scc| compilation_env.add_error(cycle_error(context, &graph, scc)))
+        .for_each(|scc| compilation_env.add_error_deprecated(cycle_error(context, &graph, scc)))
 }
 
 //**************************************************************************************************

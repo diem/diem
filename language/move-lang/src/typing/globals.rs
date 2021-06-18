@@ -38,7 +38,9 @@ pub fn function_body_(
                 N::BuiltinFunction_::BORROW_GLOBAL,
                 N::BuiltinFunction_::BORROW_GLOBAL_MUT
             );
-            context.env.add_error(vec![(*annotated_loc, msg)])
+            context
+                .env
+                .add_error_deprecated(vec![(*annotated_loc, msg)])
         }
     }
 }
@@ -228,7 +230,7 @@ fn check_acquire_listed<F>(
         );
         context
             .env
-            .add_error(vec![(loc, msg()), (global_type_loc, tmsg)]);
+            .add_error_deprecated(vec![(loc, msg()), (global_type_loc, tmsg)]);
     }
 }
 
@@ -281,7 +283,9 @@ where
                 ty_debug
             );
 
-            context.env.add_error(vec![(*loc, msg()), (*tloc, tmsg)]);
+            context
+                .env
+                .add_error_deprecated(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }
 
@@ -296,11 +300,13 @@ where
                  internal to the module'",
                 ty_debug
             );
-            context.env.add_error(vec![(*loc, msg()), (*tloc, tmsg)]);
+            context
+                .env
+                .add_error_deprecated(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }
         None => {
-            context.env.add_error(vec![(
+            context.env.add_error_deprecated(vec![(
                 *loc,
                 "Global storage operator cannot be used from a 'script' function",
             )]);

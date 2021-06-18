@@ -43,19 +43,19 @@ pub(crate) fn parse_program(
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
     let mut lib_definitions = Vec::new();
-    let mut errors: Errors = Vec::new();
+    let mut errors: Errors = Errors::new();
 
     for fname in targets {
-        let (defs, comments, mut es) = parse_file(&mut files, fname)?;
+        let (defs, comments, es) = parse_file(&mut files, fname)?;
         source_definitions.extend(defs);
         source_comments.insert(fname, comments);
-        errors.append(&mut es);
+        errors.extend(es);
     }
 
     for fname in deps {
-        let (defs, _, mut es) = parse_file(&mut files, fname)?;
+        let (defs, _, es) = parse_file(&mut files, fname)?;
         lib_definitions.extend(defs);
-        errors.append(&mut es);
+        errors.extend(es);
     }
 
     let res = if errors.is_empty() {
@@ -174,14 +174,14 @@ fn parse_file(
     files: &mut FilesSourceText,
     fname: &'static str,
 ) -> anyhow::Result<(Vec<parser::ast::Definition>, MatchedFileCommentMap, Errors)> {
-    let mut errors: Errors = Vec::new();
+    let mut errors = Errors::new();
     let mut f = File::open(fname)
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
     let (no_comments_buffer, comment_map) = match strip_comments_and_verify(fname, &source_buffer) {
         Err(errs) => {
-            errors.extend(errs.into_iter());
+            errors.extend(errs);
             files.insert(fname, source_buffer);
             return Ok((vec![], MatchedFileCommentMap::new(), errors));
         }

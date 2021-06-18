@@ -300,7 +300,7 @@ mod last_usage {
                                      '_{}')",
                                     v_str, v_str
                                 );
-                                context.env.add_error(vec![(l.loc, msg)]);
+                                context.env.add_error_deprecated(vec![(l.loc, msg)]);
                             }
                             if context.has_drop(v) {
                                 l.value = L::Ignore

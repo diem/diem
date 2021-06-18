@@ -173,33 +173,33 @@ impl CompiledUnit {
 
 fn verify_module(loc: Loc, cm: F::CompiledModule) -> (F::CompiledModule, Errors) {
     match move_bytecode_verifier::verifier::verify_module(&cm) {
-        Ok(_) => (cm, vec![]),
+        Ok(_) => (cm, Errors::new()),
         Err(e) => (
             cm,
-            vec![vec![(
+            Errors::from(vec![vec![(
                 loc,
                 format!("ICE failed bytecode verifier: {:#?}", e),
-            )]],
+            )]]),
         ),
     }
 }
 
 fn verify_script(loc: Loc, cs: F::CompiledScript) -> (F::CompiledScript, Errors) {
     match move_bytecode_verifier::verifier::verify_script(&cs) {
-        Ok(_) => (cs, vec![]),
+        Ok(_) => (cs, Errors::new()),
         Err(e) => (
             cs,
-            vec![vec![(
+            Errors::from(vec![vec![(
                 loc,
                 format!("ICE failed bytecode verifier: {:#?}", e),
-            )]],
+            )]]),
         ),
     }
 }
 
 pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Errors) {
     let mut new_units = vec![];
-    let mut errors = vec![];
+    let mut errors = Errors::new();
     for unit in units {
         let (unit, es) = unit.verify();
         new_units.push(unit);

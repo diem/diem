@@ -313,7 +313,9 @@ fn constant_(
     cfgir::optimize(&fake_signature, &locals, &mut cfg);
 
     if blocks.len() != 1 {
-        context.env.add_error(vec![(full_loc, CANNOT_FOLD)]);
+        context
+            .env
+            .add_error_deprecated(vec![(full_loc, CANNOT_FOLD)]);
         return None;
     }
     let mut optimized_block = blocks.remove(&start).unwrap();
@@ -322,7 +324,7 @@ fn constant_(
         let e = match cmd_ {
             C::IgnoreAndPop { exp, .. } => exp,
             _ => {
-                context.env.add_error(vec![(*cloc, CANNOT_FOLD)]);
+                context.env.add_error_deprecated(vec![(*cloc, CANNOT_FOLD)]);
                 continue;
             }
         };
@@ -341,7 +343,9 @@ fn check_constant_value(context: &mut Context, e: &H::Exp) {
     use H::UnannotatedExp_ as E;
     match &e.exp.value {
         E::Value(_) => (),
-        _ => context.env.add_error(vec![(e.exp.loc, CANNOT_FOLD)]),
+        _ => context
+            .env
+            .add_error_deprecated(vec![(e.exp.loc, CANNOT_FOLD)]),
     }
 }
 
@@ -361,7 +365,7 @@ fn move_value_from_value(context: &mut Context, sp!(loc, v_): Value) -> Option<M
         V::Address(a) => match a.into_addr_bytes(&context.addresses, loc, "address value") {
             Ok(bytes) => MV::Address(MoveAddress::new(bytes.into_bytes())),
             Err(err) => {
-                context.env.add_error(err);
+                context.env.add_error_deprecated(err);
                 return None;
             }
         },
@@ -416,9 +420,7 @@ fn function_body(
 
             let (mut cfg, infinite_loop_starts, errors) =
                 BlockCFG::new(start, &mut blocks, &block_info);
-            for e in errors {
-                context.env.add_error(e);
-            }
+            context.env.add_errors(errors);
 
             cfgir::refine_inference_and_verify(
                 context.env,

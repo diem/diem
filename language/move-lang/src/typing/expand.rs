@@ -55,7 +55,7 @@ pub fn type_(context: &mut Context, ty: &mut Type) {
             let replacement = match replacement {
                 sp!(_, Var(_)) => panic!("ICE unfold_type_base failed to expand"),
                 sp!(loc, Anything) => {
-                    context.env.add_error(vec![(
+                    context.env.add_error_deprecated(vec![(
                         ty.loc,
                         "Could not infer this type. Try adding an annotation",
                     )]);
@@ -178,7 +178,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     value=v,
                     type=fix_bt,
                 );
-                context.env.add_error(vec![
+                context.env.add_error_deprecated(vec![
                     (e.exp.loc, "Invalid numerical literal".into()),
                     (e.ty.loc, msg),
                     (e.exp.loc, fix),

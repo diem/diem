@@ -181,9 +181,9 @@ const DEAD_ERR_EXP: &str = "Invalid use of a divergent expression. The code foll
 fn dead_code_error(errors: &mut Errors, block: &BasicBlock) {
     let first_command = block.front().unwrap();
     match unreachable_loc(first_command) {
-        Some(loc) => errors.push(vec![(loc, DEAD_ERR_EXP.into())]),
+        Some(loc) => errors.add_deprecated(vec![(loc, DEAD_ERR_EXP.into())]),
         None if is_implicit_control_flow(&block) => (),
-        None => errors.push(vec![(first_command.loc, DEAD_ERR_CMD.into())]),
+        None => errors.add_deprecated(vec![(first_command.loc, DEAD_ERR_CMD.into())]),
     }
 }
 

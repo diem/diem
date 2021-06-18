@@ -34,7 +34,7 @@ pub fn verify(
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
             let error = cycle_error(&module_neighbors, cycle_ident);
-            compilation_env.add_error(error);
+            compilation_env.add_error_deprecated(error);
         }
         Ok(ordered_ids) => {
             for (order, mident) in ordered_ids.iter().rev().enumerate() {

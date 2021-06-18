@@ -148,7 +148,10 @@ criterion = "criterion is only for benchmarks"
 proptest = "proptest is only for testing and fuzzing"
 
 [workspace.direct-dep-dups]
-allow = []
+allow = [
+    "codespan",
+    "codespan-reporting",
+]
 
 [workspace.overlay]
 features = ["fuzzing"]

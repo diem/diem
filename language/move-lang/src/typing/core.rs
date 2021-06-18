@@ -245,7 +245,7 @@ impl<'env> Context<'env> {
     pub fn get_local(&mut self, loc: Loc, verb: &str, var: &Var) -> Type {
         match self.get_local_(var) {
             None => {
-                self.env.add_error(vec![(
+                self.env.add_error_deprecated(vec![(
                     loc,
                     format!("Invalid {}. Unbound local '{}'", verb, var),
                 )]);
@@ -692,7 +692,7 @@ pub fn make_field_type(
     let fields_map = match &sdef.fields {
         N::StructFields::Native(nloc) => {
             let nloc = *nloc;
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (
                     loc,
                     format!("Unbound field '{}' for native struct '{}::{}'", field, m, n),
@@ -705,7 +705,7 @@ pub fn make_field_type(
     };
     match fields_map.get(field).cloned() {
         None => {
-            context.env.add_error(vec![(
+            context.env.add_error_deprecated(vec![(
                 loc,
                 format!("Unbound field '{}' in '{}::{}'", field, m, n),
             )]);
@@ -746,7 +746,7 @@ pub fn make_constant_type(
                             outside of their module";
         context
             .env
-            .add_error(vec![(loc, msg), (defined_loc, internal_msg.into())]);
+            .add_error_deprecated(vec![(loc, msg), (defined_loc, internal_msg.into())]);
     }
 
     signature
@@ -823,7 +823,7 @@ pub fn make_function_type(
                 Visibility::SCRIPT,
                 Visibility::FRIEND
             );
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, internal_msg),
             ])
@@ -835,7 +835,7 @@ pub fn make_function_type(
                  or a '{}' function",
                 Visibility::SCRIPT
             );
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
             ])
@@ -846,7 +846,7 @@ pub fn make_function_type(
                 "This function can only be called from a 'friend' of module '{}'",
                 m
             );
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
             ])
@@ -948,7 +948,7 @@ fn solve_ability_constraint(
                 format!("'{}' constraint declared here", constraint),
             ));
         }
-        context.env.add_error(error)
+        context.env.add_error_deprecated(error)
     }
 }
 
@@ -1046,7 +1046,7 @@ fn solve_implicitly_copyable_constraint(
     let tloc = ty.loc;
     if !is_implicitly_copyable(&context.subst, &ty) {
         let ty_str = error_format(&ty, &context.subst);
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (loc, format!("{} {}", msg, fix)),
             (
                 tloc,
@@ -1101,7 +1101,7 @@ fn solve_builtin_type_constraint(
                 (loc, format!("Invalid argument to '{}'", op)),
                 (tloc, tmsg()),
             ];
-            context.env.add_error(error)
+            context.env.add_error_deprecated(error)
         }
     }
 }
@@ -1115,7 +1115,9 @@ fn solve_base_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: 
         Unit | Ref(_, _) | Apply(_, sp!(_, Multiple(_)), _) => {
             let tystr = error_format(ty, &context.subst);
             let tmsg = format!("Expected a single non-reference type, but found: {}", tystr);
-            context.env.add_error(vec![(loc, msg), (tyloc, tmsg)])
+            context
+                .env
+                .add_error_deprecated(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Param(_) | Apply(_, _, _) => (),
     }
@@ -1133,7 +1135,9 @@ fn solve_single_type_constraint(context: &mut Context, loc: Loc, msg: String, ty
                 "Expected a single type, but found expression list type: {}",
                 tystr
             );
-            context.env.add_error(vec![(loc, msg), (tyloc, tmsg)])
+            context
+                .env
+                .add_error_deprecated(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Ref(_, _) | Param(_) | Apply(_, _, _) => (),
     }
@@ -1316,7 +1320,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
     let args_len = ty_args.len();
     let arity = tparam_constraints.len();
     if args_len != arity {
-        context.env.add_error(vec![(
+        context.env.add_error_deprecated(vec![(
             loc,
             format!(
                 "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",

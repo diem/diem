@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    diag,
+    errors::diagnostic_codes::NameResolutionError,
     expansion::{
         ast::{self as E, AbilitySet, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
@@ -123,8 +125,10 @@ impl<'env> Context<'env> {
         // in the context that can be used to resolve modules, types, and functions.
         let resolved = self.scoped_functions.contains_key(m);
         if !resolved {
-            self.env
-                .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+            self.env.add_diag(diag!(
+                NameResolutionError::UnboundModule,
+                (m.loc, format!("Unbound module '{}'", m))
+            ))
         }
         resolved
     }
@@ -138,14 +142,14 @@ impl<'env> Context<'env> {
         let types = match self.scoped_types.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
         };
         match types.get(&n.value) {
             None => {
-                self.env.add_error(vec![(
+                self.env.add_error_deprecated(vec![(
                     loc,
                     format!(
                         "Invalid module access. Unbound struct '{}' in module '{}'",
@@ -169,14 +173,14 @@ impl<'env> Context<'env> {
         let functions = match self.scoped_functions.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
         };
         match functions.get(&n.value).cloned() {
             None => {
-                self.env.add_error(vec![(
+                self.env.add_error_deprecated(vec![(
                     loc,
                     format!(
                         "Invalid module access. Unbound function '{}' in module '{}'",
@@ -198,14 +202,14 @@ impl<'env> Context<'env> {
         let constants = match self.scoped_constants.get(m) {
             None => {
                 self.env
-                    .add_error(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
                 return None;
             }
             Some(members) => members,
         };
         match constants.get(&n.value).cloned() {
             None => {
-                self.env.add_error(vec![(
+                self.env.add_error_deprecated(vec![(
                     loc,
                     format!(
                         "Invalid module access. Unbound constant '{}' in module '{}'",
@@ -221,7 +225,7 @@ impl<'env> Context<'env> {
     fn resolve_unscoped_type(&mut self, n: &Name) -> Option<ResolvedType> {
         match self.unscoped_types.get(&n.value) {
             None => {
-                self.env.add_error(vec![(
+                self.env.add_error_deprecated(vec![(
                     n.loc,
                     format!("Unbound type '{}' in current scope", n),
                 )]);
@@ -247,7 +251,7 @@ impl<'env> Context<'env> {
                     None
                 }
                 Some(rt) => {
-                    self.env.add_error(vec![
+                    self.env.add_error_deprecated(vec![
                         (nloc, format!("Invalid {}. Expected a struct name", verb)),
                         rt.error_msg(&n),
                     ]);
@@ -280,7 +284,7 @@ impl<'env> Context<'env> {
             EA::Name(n) => match self.unscoped_constants.get(&n.value) {
                 None => {
                     self.env
-                        .add_error(vec![(loc, format!("Unbound constant '{}'", n))]);
+                        .add_error_deprecated(vec![(loc, format!("Unbound constant '{}'", n))]);
                     None
                 }
                 Some(_) => Some((None, ConstantName(n))),
@@ -444,13 +448,13 @@ fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Opti
         // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
         // rely on the assumption that friend modules must reside within the same account address.
         let msg = "Cannot declare modules out of the current address as a friend";
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (friend.loc, "Invalid friend declaration"),
             (mident.loc, msg),
         ]);
         None
     } else if &mident == current_mident {
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (friend.loc, "Invalid friend declaration"),
             (mident.loc, "Cannot declare the module itself as a friend"),
         ]);
@@ -516,7 +520,7 @@ fn function_acquires(
             Some(sn) => sn,
         };
         if let Some(old_loc) = acquires.insert(sn, new_loc) {
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (new_loc, "Duplicate acquires item"),
                 (old_loc, "Previously listed here"),
             ])
@@ -534,7 +538,7 @@ fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Optio
                 RT::BuiltinType => "builtin type",
                 RT::TParam(_, _) => "type parameter",
             };
-            context.env.add_error(vec![(
+            context.env.add_error_deprecated(vec![(
                 loc,
                 format!(
                     "Invalid acquires item. Expected a struct name, but got a {}",
@@ -570,7 +574,7 @@ fn acquires_type_struct(
             "Invalid acquires item. Expected a struct with the '{}' ability.",
             Ability_::KEY
         );
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (loc, msg),
             (decl_loc, "Declared without the ability here".to_string()),
         ]);
@@ -585,7 +589,7 @@ fn acquires_type_struct(
         );
         context
             .env
-            .add_error(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
+            .add_error_deprecated(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
         has_errors = true;
     }
 
@@ -673,7 +677,7 @@ fn type_parameters(
             );
             if let Err((name, old_loc)) = unique_tparams.add(name, ()) {
                 let msg = format!("Duplicate type parameter declared with name '{}'", name);
-                context.env.add_error(vec![
+                context.env.add_error_deprecated(vec![
                     (loc, msg),
                     (old_loc, "Previously defined here".to_string()),
                 ])
@@ -716,7 +720,7 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
             }
             Some(RT::TParam(_, tp)) => {
                 if !tys.is_empty() {
-                    context.env.add_error(vec![(
+                    context.env.add_error_deprecated(vec![(
                         loc,
                         "Generic type parameters cannot take type arguments",
                     )]);
@@ -755,7 +759,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
 ) -> Vec<N::Type> {
     let args_len = ty_args.len();
     if args_len != arity {
-        context.env.add_error(vec![(
+        context.env.add_error_deprecated(vec![(
             loc,
             format!(
                 "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
@@ -951,7 +955,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 }
 
                 EA::Name(n) => {
-                    context.env.add_error(vec![(
+                    context.env.add_error_deprecated(vec![(
                         n.loc,
                         format!("Unbound function '{}' in current scope", n),
                     )]);
@@ -1092,7 +1096,7 @@ fn resolve_builtin_function(
         _ => {
             context
                 .env
-                .add_error(vec![(b.loc, format!("Unbound function: '{}'", b))]);
+                .add_error_deprecated(vec![(b.loc, format!("Unbound function: '{}'", b))]);
             return None;
         }
     })
@@ -1121,7 +1125,7 @@ fn check_builtin_ty_args(
     ty_args.map(|mut args| {
         let len = args.len();
         if len != arity {
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (b.loc, format!("Invalid call to builtin function: '{}'", b)),
                 (
                     loc,

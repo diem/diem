@@ -54,7 +54,7 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
                  tabs (\\t), and line endings (\\n) are permitted.",
                 chr
             );
-            Err(vec![vec![(loc, msg)]])
+            Err(Errors::from(vec![vec![(loc, msg)]]))
         }
     }
 }
@@ -212,7 +212,7 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
                 // try to point to last real character
                 pos -= 1;
             }
-            return Err(vec![vec![
+            return Err(Errors::from(vec![vec![
                 (
                     Loc::new(fname, Span::new(pos, pos)),
                     "unclosed block comment".to_string(),
@@ -221,7 +221,7 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
                     Loc::new(fname, Span::new(comment_start_pos, comment_start_pos + 2)),
                     "begin of unclosed block comment".to_string(),
                 ),
-            ]]);
+            ]]));
         }
         State::Source | State::String => {}
     }

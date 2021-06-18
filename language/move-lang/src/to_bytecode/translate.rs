@@ -241,7 +241,8 @@ fn module(
     {
         Ok(res) => res,
         Err(e) => {
-            compilation_env.add_error(vec![(ident_loc, format!("ICE. IR ERROR: {}", e))]);
+            compilation_env
+                .add_error_deprecated(vec![(ident_loc, format!("ICE. IR ERROR: {}", e))]);
             return None;
         }
     };
@@ -300,7 +301,7 @@ fn script(
     {
         Ok(res) => res,
         Err(e) => {
-            compilation_env.add_error(vec![(loc, format!("IR ERROR: {}", e))]);
+            compilation_env.add_error_deprecated(vec![(loc, format!("IR ERROR: {}", e))]);
             return None;
         }
     };

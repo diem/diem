@@ -13,7 +13,7 @@ use std::{
 // Loc
 //**************************************************************************************************
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct Loc {
     file: &'static str,
     span: Span,

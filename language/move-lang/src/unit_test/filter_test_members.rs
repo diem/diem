@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    errors::Errors,
     parser::ast as P,
     shared::{known_attributes, AddressBytes, CompilationEnv},
 };
@@ -90,7 +91,7 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
                 P::Definition::Address(P::AddressDefinition { loc, .. })
                 | P::Definition::Script(P::Script { loc, .. }) => *loc,
             };
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                     (loc, "Compilation in test mode requires passing the UnitTest module in the Move stdlib as a dependency")
                 ]);
             return false;
@@ -147,7 +148,7 @@ fn filter_tests_from_definition(
                 .chain(function.attributes.iter())
                 .chain(specs.iter().flat_map(|spec| &spec.value.attributes));
 
-            let errors: Vec<_> = script_attributes
+            let errors: Errors = script_attributes
                 .map(|attr| {
                     test_attributes(attr).into_iter().map(|(loc, _)| {
                         let msg = "Testing attributes are not allowed in scripts.";

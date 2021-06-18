@@ -61,13 +61,17 @@ impl<'a, 'b> Context<'a, 'b> {
             local_types,
             local_states,
             signature,
-            errors: vec![],
+            errors: Errors::new(),
         }
     }
 
     fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
         self.errors
-            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+            .add_deprecated(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+    }
+
+    fn extend_errors(&mut self, errors: Errors) {
+        self.errors.extend(errors)
     }
 
     fn get_errors(self) -> Errors {
@@ -172,12 +176,12 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                             );
                             let mut error = vec![(*loc, "Invalid return".into()), (available, msg)];
                             add_drop_ability_tip(context, &mut error, ty.clone());
-                            errors.push(error);
+                            errors.add_deprecated(error);
                         }
                     }
                 }
             }
-            errors.into_iter().for_each(|error| context.error(error))
+            context.extend_errors(errors);
         }
         C::Jump { .. } => (),
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),

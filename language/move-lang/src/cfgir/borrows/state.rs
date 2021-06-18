@@ -142,7 +142,7 @@ impl BorrowState {
             }
         }
         assert!(error.len() >= 2);
-        vec![error]
+        Errors::from(vec![error])
     }
 
     const LOCAL_ROOT: RefID = RefID::new(0);
@@ -386,25 +386,25 @@ impl BorrowState {
         for (local, stored_value) in self.locals.key_cloned_iter() {
             if let Value::NonRef = stored_value {
                 let borrowed_by = self.local_borrowed_by(&local);
-                let mut local_errors =
+                let local_errors =
                     Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
                         format!("Invalid return. Local '{}' is still being borrowed.", local)
                     });
-                errors.append(&mut local_errors)
+                errors.extend(local_errors)
             }
         }
 
         // Check resources are not borrowed
         for resource in self.acquired_resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
-            let mut resource_errors =
+            let resource_errors =
                 Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
                     format!(
                         "Invalid return. Resource '{}' is still being borrowed.",
                         resource
                     )
                 });
-            errors.append(&mut resource_errors)
+            errors.extend(resource_errors)
         }
 
         // check any returned reference is not borrowed
@@ -417,8 +417,8 @@ impl BorrowState {
                          being borrowed"
                             .into()
                     };
-                    let mut es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                    errors.append(&mut es);
+                    let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
+                    errors.extend(es);
                 }
                 _ => (),
             }
@@ -440,7 +440,7 @@ impl BorrowState {
         let old_value = self.locals.remove(local).unwrap();
         self.locals.add(local.clone(), Value::NonRef).unwrap();
         match old_value {
-            Value::Ref(id) => (vec![], Value::Ref(id)),
+            Value::Ref(id) => (Errors::new(), Value::Ref(id)),
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
                 let errors =
@@ -456,7 +456,7 @@ impl BorrowState {
                 let id = *id;
                 let new_id = self.declare_new_ref(self.borrows.is_mutable(id));
                 self.add_copy(loc, id, new_id);
-                (vec![], Value::Ref(new_id))
+                (Errors::new(), Value::Ref(new_id))
             }
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
@@ -598,15 +598,15 @@ impl BorrowState {
         resources: &BTreeMap<StructName, Loc>,
         return_ty: &Type,
     ) -> (Errors, Values) {
-        let mut errors = vec![];
+        let mut errors = Errors::new();
         // Check acquires
         for resource in resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
             let borrows = &self.borrows;
             // TODO point to location of acquire
             let msg = || format!("Invalid acquiring of resource '{}'", resource);
-            let mut es = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
-            errors.append(&mut es);
+            let es = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
+            errors.extend(es);
         }
 
         // Check mutable arguments are not borrowed
@@ -619,8 +619,8 @@ impl BorrowState {
                      reference that is being borrowed"
                         .into()
                 };
-                let mut es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                errors.append(&mut es);
+                let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
+                errors.extend(es);
             });
 
         let mut all_parents = BTreeSet::new();

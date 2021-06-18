@@ -38,7 +38,7 @@ impl<'env> Context<'env> {
         let resolved = addr.clone().into_addr_bytes_opt(self.addresses);
         if resolved.is_none() {
             let msg = format!("{}. No value specified for address '{}'", case(), addr);
-            self.env.add_error(vec![(loc, msg)]);
+            self.env.add_error_deprecated(vec![(loc, msg)]);
         }
         resolved
     }
@@ -124,7 +124,7 @@ fn build_test_info(
     if !abort_attributes.is_empty() && test_attributes.is_empty() {
         let fn_msg =  "Only functions defined as a test with #[test] can also have an #[expected_failure] attribute";
         let abort_msg = "Attributed as #[expected_failure] here";
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (fn_loc, fn_msg),
             (abort_attributes.last().unwrap().loc, abort_msg),
         ])
@@ -137,7 +137,7 @@ fn build_test_info(
     // Check for duplicate #[test(...)] attributes
     if test_attributes.len() > 1 {
         let len = test_attributes.len();
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (
                 test_attributes[len - 1].loc,
                 make_duplicate_msg(known_attributes::TestingAttributes::TEST),
@@ -153,7 +153,7 @@ fn build_test_info(
     // A #[test] function cannot also be annotated #[test_only]
     if !test_only_attributes.is_empty() {
         let msg = "Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other";
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (test_only_attributes.last().unwrap().loc, msg),
             (
                 test_attributes.last().unwrap().loc,
@@ -166,7 +166,7 @@ fn build_test_info(
     // Only one abort can be specified
     if abort_attributes.len() > 1 {
         let len = abort_attributes.len();
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (
                 abort_attributes[len - 1].loc,
                 make_duplicate_msg(known_attributes::TestingAttributes::EXPECTED_FAILURE),
@@ -187,7 +187,7 @@ fn build_test_info(
             Some(value) => arguments.push(value.clone()),
             None => {
                 let missing_param_msg = "Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute";
-                context.env.add_error(vec![
+                context.env.add_error_deprecated(vec![
                     (test_attribute.loc, missing_param_msg),
                     (var.loc(), "Corresponding to this parameter"),
                     (fn_loc, in_this_test_msg),
@@ -232,7 +232,7 @@ fn parse_test_attribute(
             let value = match convert_attribute_value_to_move_value(context, attr_value) {
                 Some(move_value) => move_value,
                 None => {
-                    context.env.add_error(vec![
+                    context.env.add_error_deprecated(vec![
                         (*assign_loc, "Unsupported attribute value"),
                         (*aloc, "Assigned in this attribute"),
                     ]);
@@ -277,7 +277,7 @@ fn parse_failure_attribute(
                 "Expect an #[expected_failure({}=...)] attribute for abort code assignment",
                 known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
             );
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (assign_loc, invalid_assignment_msg.into()),
                 (*aloc, expected_msg),
             ]);
@@ -289,7 +289,9 @@ fn parse_failure_attribute(
                     "Invalid #[expected_failure(...)] attribute, expected 1 argument but found {}",
                     attrs.len()
                 );
-                context.env.add_error(vec![(*aloc, invalid_attr_msg)]);
+                context
+                    .env
+                    .add_error_deprecated(vec![(*aloc, invalid_attr_msg)]);
                 return None;
             }
             assert!(
@@ -311,7 +313,7 @@ fn parse_failure_attribute(
                         }
                         sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
                         | sp!(vloc, EAV::Value(sp!(_, EV::U128(_)))) => {
-                            context.env.add_error(vec![
+                            context.env.add_error_deprecated(vec![
                                 (
                                     *assign_loc,
                                     "Invalid value in expected failure code assignment",
@@ -321,7 +323,7 @@ fn parse_failure_attribute(
                             None
                         }
                         sp!(vloc, _) => {
-                            context.env.add_error(vec![
+                            context.env.add_error_deprecated(vec![
                                 (*vloc, "Invalid value in expected failure code assignment"),
                                 (*assign_loc, "In this assignment"),
                             ]);
@@ -334,7 +336,7 @@ fn parse_failure_attribute(
                                 "Invalid name in expected failure code assignment. Did you mean to use '{}'?",
                                 known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
                             );
-                    context.env.add_error(vec![
+                    context.env.add_error_deprecated(vec![
                         (*nmloc, invalid_name_msg),
                         (*assign_loc, "In this assignment".into()),
                     ]);
@@ -344,7 +346,7 @@ fn parse_failure_attribute(
                     let msg = "Unsupported attribute value for expected failure attribute";
                     context
                         .env
-                        .add_error(vec![(*aloc, msg), (*loc, "In this assignment")]);
+                        .add_error_deprecated(vec![(*aloc, msg), (*loc, "In this assignment")]);
                     None
                 }
             }

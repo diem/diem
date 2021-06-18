@@ -238,7 +238,7 @@ impl TestFailure {
                             (function_source_map.decl_location, msg),
                         ])
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 String::from_utf8(report_error(test_plan.files.clone(), errors)).unwrap()
             }

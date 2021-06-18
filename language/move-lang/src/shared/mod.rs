@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{command_line as cli, errors::Errors};
+use crate::{
+    command_line as cli,
+    errors::{new::Diagnostic, Errors},
+};
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
@@ -235,13 +238,17 @@ impl CompilationEnv {
     pub fn new(flags: Flags) -> Self {
         Self {
             flags,
-            errors: Vec::new(),
+            errors: Errors::new(),
         }
     }
 
-    pub fn add_error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
+    pub fn add_error_deprecated(&mut self, e: Vec<(Loc, impl Into<String>)>) {
         self.errors
-            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+            .add_deprecated(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+    }
+
+    pub fn add_diag(&mut self, diag: Diagnostic) {
+        self.errors.add(diag)
     }
 
     pub fn add_errors(&mut self, es: Errors) {

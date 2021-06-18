@@ -44,7 +44,7 @@ impl<'a, 'b> Context<'a, 'b> {
         Self {
             local_numbers,
             borrow_state,
-            errors: vec![],
+            errors: Errors::new(),
         }
     }
 
@@ -52,8 +52,8 @@ impl<'a, 'b> Context<'a, 'b> {
         self.errors
     }
 
-    fn add_errors(&mut self, mut additional: Errors) {
-        self.errors.append(&mut additional);
+    fn add_errors(&mut self, additional: Errors) {
+        self.errors.extend(additional);
     }
 }
 

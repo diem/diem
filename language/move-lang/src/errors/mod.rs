@@ -12,18 +12,27 @@ use codespan_reporting::{
     },
 };
 use move_ir_types::location::*;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::FromIterator,
+};
+
+pub mod diagnostic_codes;
+pub mod new;
 
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
 
-pub type Errors = Vec<Error>;
-pub type Error = Vec<(Loc, String)>;
-pub type ErrorSlice = [(Loc, String)];
-pub type HashableError = Vec<(&'static str, usize, usize, String)>;
+pub use new::FilesSourceText;
 
-pub type FilesSourceText = HashMap<&'static str, String>;
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
+pub struct Errors {
+    old_fmt: Vec<Error>,
+    new_fmt: new::Diagnostics,
+}
+pub type Error = Vec<(Loc, String)>;
+pub type HashableError = Vec<(&'static str, usize, usize, String)>;
 
 type FileMapping = HashMap<&'static str, FileId>;
 
@@ -56,17 +65,23 @@ pub fn report_errors_to_color_buffer(files: FilesSourceText, errors: Errors) -> 
 }
 
 fn output_errors<W: WriteColor>(writer: &mut W, sources: FilesSourceText, errors: Errors) {
-    assert!(!errors.is_empty());
-    let mut files = Files::new();
-    let mut file_mapping = HashMap::new();
-    for (fname, source) in sources.into_iter() {
-        let id = files.add(fname, source);
-        file_mapping.insert(fname, id);
+    let Errors { old_fmt, new_fmt } = errors;
+    assert!(!old_fmt.is_empty() || !new_fmt.is_empty());
+    if !new_fmt.is_empty() {
+        new::output_diagnostics(writer, &sources, new_fmt)
     }
-    render_errors(writer, &files, &file_mapping, errors);
+    if !old_fmt.is_empty() {
+        let mut files = Files::new();
+        let mut file_mapping = HashMap::new();
+        for (fname, source) in sources {
+            let id = files.add(fname, source);
+            file_mapping.insert(fname, id);
+        }
+        render_errors(writer, &files, &file_mapping, old_fmt);
+    }
 }
 
-fn hashable_error(error: &ErrorSlice) -> HashableError {
+fn hashable_error(error: &[(Loc, String)]) -> HashableError {
     error
         .iter()
         .map(|(loc, e)| {
@@ -84,7 +99,7 @@ fn render_errors<W: WriteColor>(
     writer: &mut W,
     files: &Files<String>,
     file_mapping: &FileMapping,
-    mut errors: Errors,
+    mut errors: Vec<Error>,
 ) {
     errors.sort_by(|e1, e2| {
         let loc1: &Loc = &e1[0].0;
@@ -92,7 +107,7 @@ fn render_errors<W: WriteColor>(
         loc1.cmp(loc2)
     });
     let mut seen: HashSet<HashableError> = HashSet::new();
-    for error in errors.into_iter() {
+    for error in errors {
         let hashable_error = hashable_error(&error);
         if seen.contains(&hashable_error) {
             continue;
@@ -122,4 +137,98 @@ fn render_error(files: &Files<String>, file_mapping: &FileMapping, mut error: Er
     let mut diag = Diagnostic::new_error("", mk_lbl(err));
     diag = diag.with_secondary_labels(error.into_iter().map(mk_lbl));
     diag
+}
+
+//**************************************************************************************************
+// impls
+//**************************************************************************************************
+
+impl Errors {
+    pub fn new() -> Self {
+        Self {
+            old_fmt: vec![],
+            new_fmt: new::Diagnostics::new(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.old_fmt.is_empty() && self.new_fmt.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.old_fmt.len() + self.new_fmt.len()
+    }
+
+    pub fn from_deprecated_fmt(old_fmt: Vec<Error>) -> Self {
+        Self {
+            old_fmt,
+            new_fmt: new::Diagnostics::new(),
+        }
+    }
+
+    pub fn add_deprecated(&mut self, error: Error) {
+        self.old_fmt.push(error)
+    }
+
+    pub fn add(&mut self, error: new::Diagnostic) {
+        self.new_fmt.add(error)
+    }
+
+    pub fn extend(&mut self, errors: Self) {
+        self.old_fmt.extend(errors.old_fmt);
+        self.new_fmt.extend(errors.new_fmt)
+    }
+
+    #[deprecated]
+    pub fn into_vec(self) -> Vec<Vec<(Loc, String)>> {
+        let Self { old_fmt, new_fmt } = self;
+        let mut v = old_fmt;
+
+        for err in new_fmt.0 {
+            let new::Diagnostic {
+                info: _,
+                primary_label,
+                secondary_labels,
+            } = err;
+            let mut inner_v = vec![primary_label];
+            inner_v.extend(secondary_labels);
+            v.push(inner_v)
+        }
+        v
+    }
+}
+
+impl FromIterator<new::Diagnostic> for Errors {
+    fn from_iter<I: IntoIterator<Item = new::Diagnostic>>(items: I) -> Self {
+        Self {
+            old_fmt: vec![],
+            new_fmt: new::Diagnostics::from_iter(items),
+        }
+    }
+}
+
+impl FromIterator<Error> for Errors {
+    fn from_iter<I: IntoIterator<Item = Error>>(items: I) -> Self {
+        Self {
+            old_fmt: items.into_iter().collect(),
+            new_fmt: new::Diagnostics::new(),
+        }
+    }
+}
+
+impl From<Vec<Error>> for Errors {
+    fn from(v: Vec<Error>) -> Self {
+        Self {
+            old_fmt: v,
+            new_fmt: new::Diagnostics::new(),
+        }
+    }
+}
+impl From<Vec<new::Diagnostic>> for Errors {
+    fn from(v: Vec<new::Diagnostic>) -> Self {
+        Self {
+            old_fmt: vec![],
+            new_fmt: new::Diagnostics::from(v),
+        }
+    }
 }

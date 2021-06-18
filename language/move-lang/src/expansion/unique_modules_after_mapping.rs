@@ -63,7 +63,7 @@ pub fn verify(
             };
             let msg = format!("Duplicate definition of {}", format_name(duplicate));
             let prev_msg = format!("Previously defined here as {}", format_name(orig));
-            compilation_env.add_error(vec![(duplicate.loc, msg), (orig.loc, prev_msg)]);
+            compilation_env.add_error_deprecated(vec![(duplicate.loc, msg), (orig.loc, prev_msg)]);
         }
     }
 }

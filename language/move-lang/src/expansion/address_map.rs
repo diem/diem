@@ -86,7 +86,7 @@ fn definition(context: &mut Context, def: &P::Definition) {
 
             context
                 .env
-                .add_error(vec![(loc, msg), (prev_loc, prev_msg)]);
+                .add_error_deprecated(vec![(loc, msg), (prev_loc, prev_msg)]);
         }
     }
 }

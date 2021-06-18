@@ -1676,7 +1676,7 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
             let unreachable_msg = "Any code after this expression will not be reached";
             let info_msg = "A trailing ';' in an expression block implicitly adds a '()' value \
                         after the semicolon. That '()' value will not be reachable";
-            $context.env.add_error(vec![
+            $context.env.add_error_deprecated(vec![
                 ($uloc, semi_msg),
                 ($loc, unreachable_msg),
                 ($uloc, info_msg),
@@ -1803,7 +1803,7 @@ fn check_unused_locals(
         errors.push((loc, msg));
     }
     for error in errors {
-        context.env.add_error(vec![error]);
+        context.env.add_error_deprecated(vec![error]);
     }
     for v in &unused {
         locals.remove(v);

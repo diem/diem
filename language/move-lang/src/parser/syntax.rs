@@ -2774,11 +2774,11 @@ pub fn parse_file_string(
 ) -> Result<(Vec<Definition>, BTreeMap<ByteIndex, String>), Errors> {
     let mut tokens = Lexer::new(input, file, comment_map);
     match tokens.advance() {
-        Err(err) => Err(vec![err]),
+        Err(err) => Err(Errors::from(vec![err])),
         Ok(..) => Ok(()),
     }?;
     match parse_file(&mut tokens) {
-        Err(err) => Err(vec![err]),
+        Err(err) => Err(Errors::from(vec![err])),
         Ok(def) => {
             let doc_comments = tokens.check_and_get_doc_comments()?;
             Ok((def, doc_comments))

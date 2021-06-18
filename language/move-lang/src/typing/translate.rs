@@ -149,7 +149,9 @@ fn check_primitive_script_arg(
                  non-signer types",
                 core::error_format(&signer, &Subst::empty()),
             );
-            context.env.add_error(vec![(mloc, msg), (loc, tmsg)]);
+            context
+                .env
+                .add_error_deprecated(vec![(mloc, msg), (loc, tmsg)]);
             return;
         }
     } else {
@@ -227,7 +229,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
             param_ty.clone(),
         );
         if let Err((param, prev_loc)) = declared.add(param.clone(), ()) {
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (
                     param.loc(),
                     format!("Duplicate parameter with name '{}'", param),
@@ -379,7 +381,7 @@ mod check_valid_constant {
         );
         context
             .env
-            .add_error(vec![(sloc, fmsg().into()), (loc, tmsg)]);
+            .add_error_deprecated(vec![(sloc, fmsg().into()), (loc, tmsg)]);
     }
 
     pub fn exp(context: &mut Context, e: &T::Exp) {
@@ -480,7 +482,7 @@ mod check_valid_constant {
             }
             E::Constant(_, _) => "Other constants are",
         };
-        context.env.add_error(vec![(
+        context.env.add_error_deprecated(vec![(
             *loc,
             format!("{} not supported in constants", error_case),
         )])
@@ -524,7 +526,7 @@ mod check_valid_constant {
                 "'let' declarations"
             }
         };
-        context.env.add_error(vec![(
+        context.env.add_error_deprecated(vec![(
             *loc,
             format!("{} are not supported in constants", error_case),
         )])
@@ -624,7 +626,7 @@ fn typing_error<T: Into<String>, F: FnOnce() -> T>(
             ),
         ],
     };
-    context.env.add_error(error);
+    context.env.add_error_deprecated(error);
 }
 
 fn subtype_no_report(
@@ -1095,7 +1097,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
         NE::Break => {
             if !context.in_loop() {
-                context.env.add_error(vec![(
+                context.env.add_error_deprecated(vec![(
                     eloc,
                     "Invalid usage of 'break'. 'break' can only be used inside a loop body",
                 )]);
@@ -1113,7 +1115,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
         NE::Continue => {
             if !context.in_loop() {
-                context.env.add_error(vec![(
+                context.env.add_error_deprecated(vec![(
                     eloc,
                     "Invalid usage of 'continue'. 'continue' can only be used inside a loop body",
                 )]);
@@ -1202,7 +1204,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                      the module in which they are declared",
                     &m, &n,
                 );
-                context.env.add_error(vec![(eloc, msg)])
+                context.env.add_error_deprecated(vec![(eloc, msg)])
             }
             (bt, TE::Pack(m, n, targs, tfields))
         }
@@ -1471,7 +1473,7 @@ fn lvalue(
                         ]
                     }
                 };
-                context.env.add_error(error)
+                context.env.add_error_deprecated(error)
             }
             TL::Var(var, Box::new(var_ty))
         }
@@ -1519,7 +1521,7 @@ fn lvalue(
                      deconstructed in the module in which they are declared",
                     verb, &m, &n,
                 );
-                context.env.add_error(vec![(loc, msg)])
+                context.env.add_error_deprecated(vec![(loc, msg)])
             }
             match ref_mut {
                 None => TL::Unpack(m, n, targs, tfields),
@@ -1570,7 +1572,7 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: Type, field: &Field) -> Ty
     match core::unfold_type(&context.subst, ty) {
         sp!(_, UnresolvedError) => context.error_type(loc),
         sp!(tloc, Anything) => {
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (loc, msg()),
                 (tloc, "Could not infer the type. Try annotating here".into()),
             ]);
@@ -1583,12 +1585,12 @@ fn resolve_field(context: &mut Context, loc: Loc, ty: Type, field: &Field) -> Ty
                      the struct's module",
                     field, &m, &n
                 );
-                context.env.add_error(vec![(loc, msg)])
+                context.env.add_error_deprecated(vec![(loc, msg)])
             }
             core::make_field_type(context, loc, &m, &n, targs, field)
         }
         t => {
-            context.env.add_error(vec![
+            context.env.add_error_deprecated(vec![
                 (loc, msg()),
                 (
                     t.loc,
@@ -1623,13 +1625,13 @@ fn add_field_types<T>(
             );
             context
                 .env
-                .add_error(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);
+                .add_error_deprecated(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);
             return fields.map(|f, (idx, x)| (idx, (context.error_type(f.loc()), x)));
         }
     };
     for (_, f_, _) in &fields_ty {
         if fields.get_(&f_).is_none() {
-            context.env.add_error(vec![(
+            context.env.add_error_deprecated(vec![(
                 loc,
                 format!("Missing {} for field '{}' in '{}::{}'", verb, f_, m, n),
             )])
@@ -1638,7 +1640,7 @@ fn add_field_types<T>(
     fields.map(|f, (idx, x)| {
         let fty = match fields_ty.remove(&f) {
             None => {
-                context.env.add_error(vec![(
+                context.env.add_error_deprecated(vec![(
                     loc,
                     format!("Unbound field '{}' in '{}::{}'", &f, m, n),
                 )]);
@@ -1733,7 +1735,7 @@ fn exp_dotted_to_borrow(
             };
             // lhs is immutable and current borrow is mutable
             if !lhs_mut && mut_ {
-                context.env.add_error(vec![
+                context.env.add_error_deprecated(vec![
                     (loc, "Invalid mutable borrow from an immutable reference"),
                     (tyloc, "Immutable because of this position"),
                 ])
@@ -1976,7 +1978,7 @@ fn make_arg_types<S: std::fmt::Display, F: Fn() -> S>(
             arity,
             given_len
         );
-        context.env.add_error(vec![
+        context.env.add_error_deprecated(vec![
             (loc, cmsg),
             (argloc, format!("Found {} argument(s) here", given_len)),
         ])

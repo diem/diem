@@ -21,7 +21,7 @@ impl Context {
     }
 
     fn error(&mut self, start: usize, end: usize, err_text: String) {
-        self.errors.push(vec![(
+        self.errors.add_deprecated(vec![(
             make_loc(
                 self.filename,
                 self.start_offset + 2 + start, // add 2 for the beginning of the string
