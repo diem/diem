@@ -3,7 +3,11 @@
 
 use crate::{ConsensusState, Error};
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    block::Block,
+    block_data::BlockData,
+    timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
+    vote::Vote,
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
@@ -34,4 +38,22 @@ pub trait TSafetyRules {
     /// As the holder of the private key, SafetyRules also signs what is effectively a
     /// timeout message. This returns the signature for that timeout message.
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error>;
+
+    /// Sign the timeout together with highest qc for 2-chain protocol.
+    fn sign_timeout_with_qc(
+        &mut self,
+        _timeout: &TwoChainTimeout,
+        _timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Ed25519Signature, Error> {
+        unimplemented!();
+    }
+
+    /// Sign the vote with 2-chain protocol.
+    fn construct_and_sign_vote_two_chain(
+        &mut self,
+        _vote_proposal: &MaybeSignedVoteProposal,
+        _timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Vote, Error> {
+        unimplemented!();
+    }
 }

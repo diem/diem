@@ -87,7 +87,7 @@ impl StorageHelper {
 
         // Initialize all other data in storage
         storage
-            .set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))
+            .set(SAFETY_DATA, SafetyData::new(0, 0, 0, 0, None))
             .unwrap();
         storage.set(WAYPOINT, Waypoint::default()).unwrap();
         let mut encryptor = diem_network_address_encryption::Encryptor::new(storage);

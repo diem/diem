@@ -1135,6 +1135,7 @@ dependencies = [
  "mirai-annotations",
  "proptest",
  "serde",
+ "serde_json",
  "short-hex-str",
 ]
 

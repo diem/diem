@@ -61,6 +61,11 @@ impl ConsensusState {
         self.safety_data.preferred_round
     }
 
+    /// The round of the highest QuorumCert.
+    pub fn one_chain_round(&self) -> Round {
+        self.safety_data.one_chain_round
+    }
+
     /// Last known checkpoint this should map to a LedgerInfo that contains a new ValidatorSet
     pub fn waypoint(&self) -> Waypoint {
         self.waypoint

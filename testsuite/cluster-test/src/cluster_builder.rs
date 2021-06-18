@@ -408,7 +408,7 @@ impl ClusterBuilder {
                     .map_err(|e| format_err!("Failed to create {}__{} : {}", pod_name, key, e))?;
             }
             vault_storage
-                .set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))
+                .set(SAFETY_DATA, SafetyData::new(0, 0, 0, 0, None))
                 .map_err(|e| format_err!("Failed to create {}/{}: {}", pod_name, SAFETY_DATA, e))?;
             vault_storage
                 .set(WAYPOINT, Waypoint::default())

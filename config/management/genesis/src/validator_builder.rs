@@ -341,7 +341,7 @@ impl ValidatorBuilder {
         storage.import_private_key(VALIDATOR_NETWORK_KEY, Ed25519PrivateKey::generate(rng))?;
 
         // Initialize all other data in storage
-        storage.set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))?;
+        storage.set(SAFETY_DATA, SafetyData::new(0, 0, 0, 0, None))?;
         storage.set(WAYPOINT, Waypoint::default())?;
 
         let mut encryptor = diem_network_address_encryption::Encryptor::new(storage);

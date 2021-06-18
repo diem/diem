@@ -3,7 +3,11 @@
 
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    block::Block,
+    block_data::BlockData,
+    timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
+    vote::Vote,
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
@@ -46,5 +50,25 @@ impl TSafetyRules for LocalClient {
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.internal.write().sign_timeout(timeout)
+    }
+
+    fn sign_timeout_with_qc(
+        &mut self,
+        timeout: &TwoChainTimeout,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Ed25519Signature, Error> {
+        self.internal
+            .write()
+            .sign_timeout_with_qc(timeout, timeout_cert)
+    }
+
+    fn construct_and_sign_vote_two_chain(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Vote, Error> {
+        self.internal
+            .write()
+            .construct_and_sign_vote_two_chain(vote_proposal, timeout_cert)
     }
 }

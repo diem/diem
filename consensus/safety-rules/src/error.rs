@@ -41,6 +41,12 @@ pub enum Error {
     ValidatorNotInSet(String),
     #[error("Vote proposal missing expected signature")]
     VoteProposalSignatureNotFound,
+    #[error("Does not satisfy 2-chain voting rule. Round {0}, Quorum round {1}, TC round {2},  HQC round in TC {3}")]
+    NotSafeToVote(u64, u64, u64, u64),
+    #[error("Does not satisfy 2-chain timeout rule. Round {0}, Quorum round {1}, TC round {2}, one-chain round {3}")]
+    NotSafeToTimeout(u64, u64, u64, u64),
+    #[error("Invalid TC: {0}")]
+    InvalidTimeoutCertificate(String),
 }
 
 impl From<bcs::Error> for Error {

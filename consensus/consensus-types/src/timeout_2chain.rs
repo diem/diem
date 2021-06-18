@@ -1,17 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::Author;
-use crate::quorum_cert::QuorumCert;
+use crate::{common::Author, quorum_cert::QuorumCert};
 use anyhow::{ensure, Context};
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
-use diem_types::block_info::Round;
-use diem_types::validator_signer::ValidatorSigner;
-use diem_types::validator_verifier::ValidatorVerifier;
+use diem_types::{
+    block_info::Round, validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
+};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::fmt::{Display, Formatter};
+use std::{
+    collections::BTreeMap,
+    fmt::{Display, Formatter},
+};
 
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a DiemBFT v4 timeout message.
@@ -21,7 +22,7 @@ pub struct TwoChainTimeout {
     epoch: u64,
     /// The consensus protocol executes proposals (blocks) in rounds, which monotonically increase per epoch.
     round: Round,
-    /// THe highest quorum cert the node has seen.
+    /// The highest quorum cert the signer has seen.
     quorum_cert: QuorumCert,
 }
 
@@ -51,11 +52,15 @@ impl TwoChainTimeout {
     }
 
     pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
-        signer.sign(&TimeoutSigningRepr {
+        signer.sign(&self.signing_format())
+    }
+
+    pub fn signing_format(&self) -> TimeoutSigningRepr {
+        TimeoutSigningRepr {
             epoch: self.epoch(),
             round: self.round(),
             hqc_round: self.hqc_round(),
-        })
+        }
     }
 }
 
@@ -71,9 +76,10 @@ impl Display for TwoChainTimeout {
     }
 }
 
-/// The form the node signs on, which abbreviates the quorum cert with the round number.
+/// Validators sign this structure that allows the TwoChainTimeoutCertificate to store a round number
+/// instead of a quorum cert per validator in the signatures field.
 #[derive(Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
-struct TimeoutSigningRepr {
+pub struct TimeoutSigningRepr {
     pub epoch: u64,
     pub round: Round,
     pub hqc_round: Round,
@@ -82,7 +88,7 @@ struct TimeoutSigningRepr {
 /// TimeoutCertificate is a proof that 2f+1 participants in epoch i
 /// have voted in round r and we can now move to round r+1. DiemBFT v4 requires signature to sign on
 /// the TimeoutSigningRepr and carry the TimeoutWithHighestQC with highest quorum cert among 2f+1.
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TwoChainTimeoutCertificate {
     timeout: TwoChainTimeout,
     signatures: BTreeMap<Author, (Round, Ed25519Signature)>,
@@ -144,6 +150,11 @@ impl TwoChainTimeoutCertificate {
         Ok(())
     }
 
+    /// The round of the timeout.
+    pub fn round(&self) -> Round {
+        self.timeout.round()
+    }
+
     /// The highest hqc round of the 2f+1 participants
     pub fn highest_hqc_round(&self) -> Round {
         self.timeout.hqc_round()
@@ -178,13 +189,15 @@ impl TwoChainTimeoutCertificate {
 fn test_2chain_timeout_certificate() {
     use crate::vote_data::VoteData;
     use diem_crypto::hash::CryptoHash;
-    use diem_types::block_info::BlockInfo;
-    use diem_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
-    use diem_types::validator_verifier::random_validator_verifier;
+    use diem_types::{
+        block_info::BlockInfo,
+        ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+        validator_verifier::random_validator_verifier,
+    };
 
     let num_nodes = 4;
-    let quorum_size = num_nodes * 2 / 3 + 1;
     let (signers, validators) = random_validator_verifier(num_nodes, None, false);
+    let quorum_size = validators.quorum_voting_power() as usize;
     let generate_quorum = |round, num_of_signature| {
         let vote_data = VoteData::new(BlockInfo::random(round), BlockInfo::random(0));
         let mut ledger_info = LedgerInfoWithSignatures::new(
@@ -224,7 +237,7 @@ fn test_2chain_timeout_certificate() {
         .1 = Ed25519Signature::dummy_signature();
     invalid_timeout_cert.verify(&validators).unwrap_err();
 
-    // not enough signature
+    // not enough signatures
     let mut invalid_timeout_cert = valid_timeout_cert.clone();
     invalid_timeout_cert
         .signatures
@@ -232,7 +245,7 @@ fn test_2chain_timeout_certificate() {
         .unwrap();
     invalid_timeout_cert.verify(&validators).unwrap_err();
 
-    // hqc round not match signed round
+    // hqc round does not match signed round
     let mut invalid_timeout_cert = valid_timeout_cert.clone();
     invalid_timeout_cert.timeout.quorum_cert = generate_quorum(2, quorum_size);
     invalid_timeout_cert.verify(&validators).unwrap_err();

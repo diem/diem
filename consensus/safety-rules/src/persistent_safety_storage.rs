@@ -42,7 +42,7 @@ impl PersistentSafetyStorage {
         waypoint: Waypoint,
         enable_cached_safety_data: bool,
     ) -> Self {
-        let safety_data = SafetyData::new(1, 0, 0, None);
+        let safety_data = SafetyData::new(1, 0, 0, 0, None);
         Self::initialize_(
             &mut internal_store,
             safety_data.clone(),
@@ -209,7 +209,7 @@ mod tests {
         assert_eq!(safety_data.preferred_round, 0);
 
         safety_storage
-            .set_safety_data(SafetyData::new(9, 8, 1, None))
+            .set_safety_data(SafetyData::new(9, 8, 1, 0, None))
             .unwrap();
 
         let safety_data = safety_storage.safety_data().unwrap();

@@ -1,10 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, Error, SafetyRules, TSafetyRules};
+use crate::{test_utils, test_utils::make_timeout_cert, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::block_test_utils::random_payload, common::Round, quorum_cert::QuorumCert,
-    timeout::Timeout, vote_proposal::MaybeSignedVoteProposal,
+    block::block_test_utils::random_payload,
+    common::Round,
+    quorum_cert::QuorumCert,
+    timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::{
     ed25519::Ed25519PrivateKey,
@@ -65,6 +69,8 @@ pub fn run_test_suite(safety_rules: &Callback) {
     test_reconcile_key(safety_rules);
     test_validator_not_in_set(safety_rules);
     test_key_not_in_store(safety_rules);
+    test_2chain_rules(safety_rules);
+    test_2chain_timeout(safety_rules);
 }
 
 fn test_bad_execution_output(safety_rules: &Callback) {
@@ -113,7 +119,7 @@ fn test_bad_execution_output(safety_rules: &Callback) {
     assert!(evil_a3_block.is_err());
 
     let a3_block = safety_rules.construct_and_sign_vote(&a3);
-    assert!(a3_block.is_ok());
+    a3_block.unwrap();
 }
 
 fn test_commit_rule_consecutive_rounds(safety_rules: &Callback) {
@@ -660,7 +666,6 @@ fn test_validator_not_in_set(safety_rules: &Callback) {
         Some(next_epoch_state),
         key.as_ref(),
     );
-    safety_rules.construct_and_sign_vote(&a2).unwrap();
     proof
         .ledger_info_with_sigs
         .push(a2.block().quorum_cert().ledger_info().clone());
@@ -708,7 +713,6 @@ fn test_reconcile_key(_safety_rules: &Callback) {
         Some(next_epoch_state),
         None,
     );
-    safety_rules.construct_and_sign_vote(&a2).unwrap();
     proof
         .ledger_info_with_sigs
         .push(a2.block().quorum_cert().ledger_info().clone());
@@ -769,4 +773,188 @@ fn test_key_not_in_store(safety_rules: &Callback) {
 
     let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.in_validator_set(), false);
+}
+
+fn test_2chain_rules(constructor: &Callback) {
+    // One chain round is the highest quorum cert round.
+    //
+    // build a tree of the following form:
+    //             _____    _____   _________
+    //            /     \  /     \ /         \
+    // genesis---a1  b1  b2  a2  b3  a3---a4  b4 a5---a6
+    //         \_____/ \_____/ \_____/ \_________/
+    //
+    let (mut safety_rules, signer, key) = constructor();
+    let (proof, genesis_qc) = test_utils::make_genesis(&signer);
+    let genesis_round = genesis_qc.certified_block().round();
+    let round = genesis_round;
+    safety_rules.initialize(&proof).unwrap();
+    let a1 =
+        test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer, key.as_ref());
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer, key.as_ref());
+    let b2 = make_proposal_with_parent(round + 3, &a1, None, &signer, key.as_ref());
+    let a2 = make_proposal_with_parent(round + 4, &b1, None, &signer, key.as_ref());
+    let b3 = make_proposal_with_parent(round + 5, &b2, None, &signer, key.as_ref());
+    let b4 = make_proposal_with_parent(round + 6, &b3, None, &signer, key.as_ref());
+    let a3 = make_proposal_with_parent(round + 6, &a2, None, &signer, key.as_ref());
+    let a4 = make_proposal_with_parent(round + 7, &a3, None, &signer, key.as_ref());
+    let a5 = make_proposal_with_parent(round + 8, &a3, None, &signer, key.as_ref());
+    let a6 = make_proposal_with_parent(round + 9, &a5, None, &signer, key.as_ref());
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let mut expect = |p, maybe_tc: Option<TwoChainTimeoutCertificate>, vote, commit| {
+        let result = safety_rules.construct_and_sign_vote_two_chain(p, maybe_tc.as_ref());
+        let qc = p.vote_proposal.block().quorum_cert();
+        if vote {
+            let vote = result.unwrap();
+            let id = if commit {
+                qc.certified_block().id()
+            } else {
+                HashValue::zero()
+            };
+            assert_eq!(vote.ledger_info().consensus_block_id(), id);
+            assert!(
+                safety_rules.consensus_state().unwrap().one_chain_round()
+                    >= qc.certified_block().round()
+            );
+        } else {
+            result.unwrap_err();
+        }
+    };
+    // block == qc + 1, commit
+    expect(&a1, None, true, true);
+    // block != qc + 1 && block != tc + 1
+    expect(
+        &b1,
+        Some(make_timeout_cert(
+            3,
+            b1.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        false,
+        false,
+    );
+    // block != qc + 1, no TC
+    expect(&b2, None, false, false);
+    // block = tc + 1, qc == tc.hqc
+    expect(
+        &a2,
+        Some(make_timeout_cert(
+            3,
+            a2.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        true,
+        false,
+    );
+    // block = tc + 1, qc < tc.hqc
+    expect(
+        &b3,
+        Some(make_timeout_cert(
+            4,
+            a3.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        false,
+        false,
+    );
+    // block != qc + 1, no TC
+    expect(&a3, None, false, false);
+    // block = qc + 1, with TC, commit
+    expect(
+        &a4,
+        Some(make_timeout_cert(
+            7,
+            a3.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        true,
+        true,
+    );
+    // block = tc + 1, qc > tc.hqc
+    expect(
+        &a5,
+        Some(make_timeout_cert(
+            7,
+            b4.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        true,
+        false,
+    );
+    // block = qc + 1, block != tc + 1 (tc is ignored)
+    expect(
+        &a6,
+        Some(make_timeout_cert(
+            7,
+            b4.vote_proposal.block().quorum_cert(),
+            &signer,
+        )),
+        true,
+        true,
+    );
+}
+
+fn test_2chain_timeout(constructor: &Callback) {
+    let (mut safety_rules, signer, key) = constructor();
+    let (proof, genesis_qc) = test_utils::make_genesis(&signer);
+    let genesis_round = genesis_qc.certified_block().round();
+    let round = genesis_round;
+    safety_rules.initialize(&proof).unwrap();
+    let a1 =
+        test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer, key.as_ref());
+    let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer, key.as_ref());
+    let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer, key.as_ref());
+
+    safety_rules
+        .sign_timeout_with_qc(&TwoChainTimeout::new(1, 1, genesis_qc.clone()), None)
+        .unwrap();
+    assert_eq!(
+        safety_rules
+            .sign_timeout_with_qc(&TwoChainTimeout::new(1, 2, genesis_qc.clone()), None)
+            .unwrap_err(),
+        Error::NotSafeToTimeout(2, 0, 0, 0),
+    );
+
+    assert_eq!(
+        safety_rules
+            .sign_timeout_with_qc(&TwoChainTimeout::new(2, 2, genesis_qc.clone()), None)
+            .unwrap_err(),
+        Error::IncorrectEpoch(2, 1)
+    );
+    safety_rules
+        .sign_timeout_with_qc(
+            &TwoChainTimeout::new(1, 2, genesis_qc.clone()),
+            Some(make_timeout_cert(1, &genesis_qc, &signer)).as_ref(),
+        )
+        .unwrap();
+    assert_eq!(
+        safety_rules
+            .sign_timeout_with_qc(&TwoChainTimeout::new(1, 1, genesis_qc.clone()), None)
+            .unwrap_err(),
+        Error::IncorrectLastVotedRound(1, 2)
+    );
+    // update one-chain to 2
+    safety_rules
+        .construct_and_sign_vote_two_chain(&a3, None)
+        .unwrap();
+    assert_eq!(
+        safety_rules
+            .sign_timeout_with_qc(
+                &TwoChainTimeout::new(1, 4, a3.vote_proposal.block().quorum_cert().clone(),),
+                Some(make_timeout_cert(2, &genesis_qc, &signer)).as_ref()
+            )
+            .unwrap_err(),
+        Error::NotSafeToTimeout(4, 2, 2, 2)
+    );
+    assert_eq!(
+        safety_rules
+            .sign_timeout_with_qc(
+                &TwoChainTimeout::new(1, 4, a2.vote_proposal.block().quorum_cert().clone(),),
+                Some(make_timeout_cert(3, &genesis_qc, &signer)).as_ref()
+            )
+            .unwrap_err(),
+        Error::NotSafeToTimeout(4, 1, 3, 2)
+    );
 }

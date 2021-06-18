@@ -17,6 +17,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     safety_data::SafetyData,
     timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
     vote::Vote,
     vote_data::VoteData,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
@@ -32,15 +33,18 @@ use diem_types::{
     ledger_info::LedgerInfo, waypoint::Waypoint,
 };
 use serde::Serialize;
-use std::cmp::Ordering;
+
+pub(crate) fn next_round(round: Round) -> Result<Round, Error> {
+    u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round))
+}
 
 /// @TODO consider a cache of verified QCs to cut down on verification costs
 pub struct SafetyRules {
-    persistent_storage: PersistentSafetyStorage,
-    execution_public_key: Option<Ed25519PublicKey>,
-    export_consensus_key: bool,
-    validator_signer: Option<ConfigurableValidatorSigner>,
-    epoch_state: Option<EpochState>,
+    pub(crate) persistent_storage: PersistentSafetyStorage,
+    pub(crate) execution_public_key: Option<Ed25519PublicKey>,
+    pub(crate) export_consensus_key: bool,
+    pub(crate) validator_signer: Option<ConfigurableValidatorSigner>,
+    pub(crate) epoch_state: Option<EpochState>,
 }
 
 impl SafetyRules {
@@ -69,21 +73,77 @@ impl SafetyRules {
         }
     }
 
-    fn sign<T: Serialize + CryptoHash>(&self, message: &T) -> Result<Ed25519Signature, Error> {
+    /// Validity checks
+    pub(crate) fn verify_proposal(
+        &mut self,
+        maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<VoteData, Error> {
+        let vote_proposal = &maybe_signed_vote_proposal.vote_proposal;
+        let execution_signature = maybe_signed_vote_proposal.signature.as_ref();
+
+        if let Some(public_key) = self.execution_public_key.as_ref() {
+            execution_signature
+                .ok_or(Error::VoteProposalSignatureNotFound)?
+                .verify(vote_proposal, public_key)
+                .map_err(|error| Error::InternalError(error.to_string()))?;
+        }
+
+        let proposed_block = vote_proposal.block();
+        let safety_data = self.persistent_storage.safety_data()?;
+
+        self.verify_epoch(proposed_block.epoch(), &safety_data)?;
+
+        self.verify_qc(proposed_block.quorum_cert())?;
+        proposed_block
+            .validate_signature(&self.epoch_state()?.verifier)
+            .map_err(|error| Error::InvalidProposal(error.to_string()))?;
+        proposed_block
+            .verify_well_formed()
+            .map_err(|error| Error::InvalidProposal(error.to_string()))?;
+        self.extension_check(vote_proposal)
+    }
+
+    pub(crate) fn sign<T: Serialize + CryptoHash>(
+        &self,
+        message: &T,
+    ) -> Result<Ed25519Signature, Error> {
         let signer = self.signer()?;
         signer.sign(message, &self.persistent_storage)
     }
 
-    fn signer(&self) -> Result<&ConfigurableValidatorSigner, Error> {
+    pub(crate) fn signer(&self) -> Result<&ConfigurableValidatorSigner, Error> {
         self.validator_signer
             .as_ref()
             .ok_or_else(|| Error::NotInitialized("validator_signer".into()))
     }
 
-    fn epoch_state(&self) -> Result<&EpochState, Error> {
+    pub(crate) fn epoch_state(&self) -> Result<&EpochState, Error> {
         self.epoch_state
             .as_ref()
             .ok_or_else(|| Error::NotInitialized("epoch_state".into()))
+    }
+
+    pub(crate) fn observe_qc(&self, qc: &QuorumCert, safety_data: &mut SafetyData) -> bool {
+        let mut updated = false;
+        let one_chain = qc.certified_block().round();
+        let two_chain = qc.parent_block().round();
+        if one_chain > safety_data.one_chain_round {
+            safety_data.one_chain_round = one_chain;
+            info!(
+                SafetyLogSchema::new(LogEntry::OneChainRound, LogEvent::Update)
+                    .preferred_round(safety_data.one_chain_round)
+            );
+            updated = true;
+        }
+        if two_chain > safety_data.preferred_round {
+            safety_data.preferred_round = two_chain;
+            info!(
+                SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
+                    .preferred_round(safety_data.preferred_round)
+            );
+            updated = true;
+        }
+        updated
     }
 
     /// Check if the executed result extends the parent result.
@@ -114,7 +174,7 @@ impl SafetyRules {
     /// 1) B0 <- B1 <- B2 <--
     /// 2) round(B0) + 1 = round(B1), and
     /// 3) round(B1) + 1 = round(B2).
-    pub fn construct_ledger_info(
+    fn construct_ledger_info(
         &self,
         proposed_block: &Block,
         consensus_data_hash: HashValue,
@@ -124,8 +184,6 @@ impl SafetyRules {
         let block0 = proposed_block.quorum_cert().parent_block().round();
 
         // verify 3-chain rule
-        let next_round =
-            |round: u64| u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round));
         let commit = next_round(block0)? == block1 && next_round(block1)? == block2;
 
         // create a ledger info
@@ -146,7 +204,6 @@ impl SafetyRules {
     ) -> Result<bool, Error> {
         let preferred_round = safety_data.preferred_round;
         let one_chain_round = quorum_cert.certified_block().round();
-        let two_chain_round = quorum_cert.parent_block().round();
 
         if one_chain_round < preferred_round {
             return Err(Error::IncorrectPreferredRound(
@@ -154,26 +211,7 @@ impl SafetyRules {
                 preferred_round,
             ));
         }
-
-        let updated = match two_chain_round.cmp(&preferred_round) {
-            Ordering::Greater => {
-                safety_data.preferred_round = two_chain_round;
-                info!(
-                    SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
-                        .preferred_round(safety_data.preferred_round)
-                );
-                true
-            }
-            Ordering::Less => {
-                trace!(
-                "2-chain round {} is lower than preferred round {} but 1-chain round {} is higher.",
-                two_chain_round, preferred_round, one_chain_round
-            );
-                false
-            }
-            Ordering::Equal => false,
-        };
-        Ok(updated)
+        Ok(self.observe_qc(quorum_cert, safety_data))
     }
 
     /// This verifies whether the author of one proposal is the validator signer
@@ -190,7 +228,7 @@ impl SafetyRules {
     }
 
     /// This verifies the epoch given against storage for consistent verification
-    fn verify_epoch(&self, epoch: u64, safety_data: &SafetyData) -> Result<(), Error> {
+    pub(crate) fn verify_epoch(&self, epoch: u64, safety_data: &SafetyData) -> Result<(), Error> {
         if epoch != safety_data.epoch {
             return Err(Error::IncorrectEpoch(epoch, safety_data.epoch));
         }
@@ -199,7 +237,7 @@ impl SafetyRules {
     }
 
     /// First voting rule
-    fn verify_and_update_last_vote_round(
+    pub(crate) fn verify_and_update_last_vote_round(
         &self,
         round: Round,
         safety_data: &mut SafetyData,
@@ -221,7 +259,7 @@ impl SafetyRules {
     }
 
     /// This verifies a QC has valid signatures.
-    fn verify_qc(&self, qc: &QuorumCert) -> Result<(), Error> {
+    pub(crate) fn verify_qc(&self, qc: &QuorumCert) -> Result<(), Error> {
         let epoch_state = self.epoch_state()?;
 
         qc.verify(&epoch_state.verifier)
@@ -272,6 +310,7 @@ impl SafetyRules {
             self.persistent_storage.set_waypoint(waypoint)?;
             self.persistent_storage.set_safety_data(SafetyData::new(
                 epoch_state.epoch,
+                0,
                 0,
                 0,
                 None,
@@ -340,21 +379,10 @@ impl SafetyRules {
         // Exit early if we cannot sign
         self.signer()?;
 
-        let vote_proposal = &maybe_signed_vote_proposal.vote_proposal;
-        let execution_signature = maybe_signed_vote_proposal.signature.as_ref();
-
-        if let Some(public_key) = self.execution_public_key.as_ref() {
-            execution_signature
-                .ok_or(Error::VoteProposalSignatureNotFound)?
-                .verify(vote_proposal, public_key)
-                .map_err(|error| Error::InternalError(error.to_string()))?;
-        }
-
-        let proposed_block = vote_proposal.block();
+        let vote_data = self.verify_proposal(maybe_signed_vote_proposal)?;
         let mut safety_data = self.persistent_storage.safety_data()?;
 
-        self.verify_epoch(proposed_block.epoch(), &safety_data)?;
-
+        let proposed_block = maybe_signed_vote_proposal.vote_proposal.block();
         // if already voted on this round, send back the previous vote
         // note: this needs to happen after verifying the epoch as we just check the round here
         if let Some(vote) = safety_data.last_vote.clone() {
@@ -363,11 +391,7 @@ impl SafetyRules {
             }
         }
 
-        self.verify_qc(proposed_block.quorum_cert())?;
-        proposed_block
-            .validate_signature(&self.epoch_state()?.verifier)
-            .map_err(|error| Error::InternalError(error.to_string()))?;
-
+        // Two voting rules
         self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
         self.verify_and_update_last_vote_round(
             proposed_block.block_data().round(),
@@ -375,7 +399,6 @@ impl SafetyRules {
         )?;
 
         // Construct and sign vote
-        let vote_data = self.extension_check(vote_proposal)?;
         let author = self.signer()?.author();
         let ledger_info = self.construct_ledger_info(proposed_block, vote_data.hash())?;
         let signature = self.sign(&ledger_info)?;
@@ -470,6 +493,35 @@ impl TSafetyRules for SafetyRules {
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         let cb = || self.guarded_sign_timeout(timeout);
         run_and_log(cb, |log| log.round(timeout.round()), LogEntry::SignTimeout)
+    }
+
+    fn sign_timeout_with_qc(
+        &mut self,
+        timeout: &TwoChainTimeout,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Ed25519Signature, Error> {
+        let cb = || self.guarded_sign_timeout_with_qc(timeout, timeout_cert);
+        run_and_log(
+            cb,
+            |log| log.round(timeout.round()),
+            LogEntry::SignTimeoutWithQC,
+        )
+    }
+
+    fn construct_and_sign_vote_two_chain(
+        &mut self,
+        maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Vote, Error> {
+        let round = maybe_signed_vote_proposal.vote_proposal.block().round();
+        let cb = || {
+            self.guarded_construct_and_sign_vote_two_chain(maybe_signed_vote_proposal, timeout_cert)
+        };
+        run_and_log(
+            cb,
+            |log| log.round(round),
+            LogEntry::ConstructAndSignVoteTwoChain,
+        )
     }
 }
 

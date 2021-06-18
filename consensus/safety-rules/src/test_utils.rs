@@ -10,6 +10,7 @@ use consensus_types::{
     common::{Payload, Round},
     quorum_cert::QuorumCert,
     timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
     vote::Vote,
     vote_data::VoteData,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
@@ -20,7 +21,6 @@ use diem_crypto::{
     traits::SigningKey,
     Uniform,
 };
-use diem_infallible::duration_since_epoch;
 use diem_secure_storage::{InMemoryStorage, Storage};
 use diem_types::{
     block_info::BlockInfo,
@@ -66,7 +66,7 @@ pub fn make_proposal_with_qc_and_proof(
         Block::new_proposal(
             payload,
             round,
-            duration_since_epoch().as_secs(),
+            qc.certified_block().timestamp_usecs() + 1,
             qc,
             validator_signer,
         ),
@@ -126,7 +126,7 @@ pub fn make_proposal_with_parent_and_overrides(
         parent.block().id(),
         parent_output.root_hash(),
         parent_output.version(),
-        parent.block().timestamp_usecs(),
+        parent.block().timestamp_usecs() + 1,
         None,
     );
 
@@ -196,6 +196,18 @@ pub fn make_proposal_with_parent(
         None,
         exec_key,
     )
+}
+
+pub fn make_timeout_cert(
+    round: Round,
+    hqc: &QuorumCert,
+    signer: &ValidatorSigner,
+) -> TwoChainTimeoutCertificate {
+    let timeout = TwoChainTimeout::new(1, round, hqc.clone());
+    let mut tc = TwoChainTimeoutCertificate::new(timeout.clone());
+    let signature = timeout.sign(&signer);
+    tc.add(signer.author(), timeout, signature);
+    tc
 }
 
 pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerInfo {
