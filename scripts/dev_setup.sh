@@ -795,7 +795,11 @@ if [[ "$INSTALL_INDIVIDUAL" == "true" ]]; then
   for (( i=0; i < ${#INSTALL_PACKAGES[@]}; i++ ));
   do
     PACKAGE=${INSTALL_PACKAGES[$i]}
-    "install_${PACKAGE}"
+    if ! command -v "install_${PACKAGE}" &> /dev/null; then
+      install_pkg "$PACKAGE" "$PACKAGE_MANAGER"
+    else
+      "install_${PACKAGE}"
+    fi
   done
 fi
 

@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y libssl1.1 openssh-client wget && apt-ge
 RUN mkdir /diem
 COPY rust-toolchain /diem/rust-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
-RUN /diem/scripts/dev_setup.sh -b -p -i helm -i kubectl
+RUN /diem/scripts/dev_setup.sh -b -p -i kubectl -i helm -i git -i unzip -i awscli
 ENV PATH "$PATH:/root/bin"
 
 RUN mkdir /etc/forge
