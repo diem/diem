@@ -479,49 +479,49 @@ function {:inline} $SliceVecByRange<T>(v: Vec T, r: $Range): Vec T {
 // assert that sha2/3 are injections without using global quantified axioms.
 
 
-function $Hash_sha2(val: Vec int): Vec int;
+function $1_Hash_sha2(val: Vec int): Vec int;
 
 // This says that Hash_sha2 is bijective.
-axiom (forall v1,v2: Vec int :: {$Hash_sha2(v1), $Hash_sha2(v2)}
-       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($Hash_sha2(v1), $Hash_sha2(v2)));
+axiom (forall v1,v2: Vec int :: {$1_Hash_sha2(v1), $1_Hash_sha2(v2)}
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_Hash_sha2(v1), $1_Hash_sha2(v2)));
 
-procedure $Hash_sha2_256(val: Vec int) returns (res: Vec int);
-ensures res == $Hash_sha2(val);     // returns Hash_sha2 Value
+procedure $1_Hash_sha2_256(val: Vec int) returns (res: Vec int);
+ensures res == $1_Hash_sha2(val);     // returns Hash_sha2 Value
 ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $Hash_$sha2_256(val: Vec int): Vec int {
-    $Hash_sha2(val)
+function {:inline} $1_Hash_$sha2_256(val: Vec int): Vec int {
+    $1_Hash_sha2(val)
 }
 
 // similarly for Hash_sha3
-function $Hash_sha3(val: Vec int): Vec int;
+function $1_Hash_sha3(val: Vec int): Vec int;
 
-axiom (forall v1,v2: Vec int :: {$Hash_sha3(v1), $Hash_sha3(v2)}
-       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($Hash_sha3(v1), $Hash_sha3(v2)));
+axiom (forall v1,v2: Vec int :: {$1_Hash_sha3(v1), $1_Hash_sha3(v2)}
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_Hash_sha3(v1), $1_Hash_sha3(v2)));
 
-procedure $Hash_sha3_256(val: Vec int) returns (res: Vec int);
-ensures res == $Hash_sha3(val);     // returns Hash_sha3 Value
+procedure $1_Hash_sha3_256(val: Vec int) returns (res: Vec int);
+ensures res == $1_Hash_sha3(val);     // returns Hash_sha3 Value
 ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $Hash_$sha3_256(val: Vec int): Vec int {
-    $Hash_sha3(val)
+function {:inline} $1_Hash_$sha3_256(val: Vec int): Vec int {
+    $1_Hash_sha3(val)
 }
 
 // ==================================================================================
 // Native diem_account
 
-procedure {:inline 1} $DiemAccount_create_signer(
+procedure {:inline 1} $1_DiemAccount_create_signer(
   addr: int
 ) returns (signer: int) {
     // A signer is currently identical to an address.
     signer := addr;
 }
 
-procedure {:inline 1} $DiemAccount_destroy_signer(
+procedure {:inline 1} $1_DiemAccount_destroy_signer(
   signer: int
 ) {
   return;
@@ -530,7 +530,7 @@ procedure {:inline 1} $DiemAccount_destroy_signer(
 // ==================================================================================
 // Native Signer
 
-procedure {:inline 1} $Signer_borrow_address(signer: int) returns (res: int) {
+procedure {:inline 1} $1_Signer_borrow_address(signer: int) returns (res: int) {
     res := signer;
 }
 
@@ -541,26 +541,26 @@ procedure {:inline 1} $Signer_borrow_address(signer: int) returns (res: int) {
 // currently because we verify every code path based on signature verification with
 // an arbitrary interpretation.
 
-function $Signature_$ed25519_validate_pubkey(public_key: Vec int): bool;
-function $Signature_$ed25519_verify(signature: Vec int, public_key: Vec int, message: Vec int): bool;
+function $1_Signature_$ed25519_validate_pubkey(public_key: Vec int): bool;
+function $1_Signature_$ed25519_verify(signature: Vec int, public_key: Vec int, message: Vec int): bool;
 
 // Needed because we do not have extensional equality:
 axiom (forall k1, k2: Vec int ::
-    {$Signature_$ed25519_validate_pubkey(k1), $Signature_$ed25519_validate_pubkey(k2)}
-    $IsEqual'vec'u8''(k1, k2) ==> $Signature_$ed25519_validate_pubkey(k1) == $Signature_$ed25519_validate_pubkey(k2));
+    {$1_Signature_$ed25519_validate_pubkey(k1), $1_Signature_$ed25519_validate_pubkey(k2)}
+    $IsEqual'vec'u8''(k1, k2) ==> $1_Signature_$ed25519_validate_pubkey(k1) == $1_Signature_$ed25519_validate_pubkey(k2));
 axiom (forall s1, s2, k1, k2, m1, m2: Vec int ::
-    {$Signature_$ed25519_verify(s1, k1, m1), $Signature_$ed25519_verify(s2, k2, m2)}
+    {$1_Signature_$ed25519_verify(s1, k1, m1), $1_Signature_$ed25519_verify(s2, k2, m2)}
     $IsEqual'vec'u8''(s1, s2) && $IsEqual'vec'u8''(k1, k2) && $IsEqual'vec'u8''(m1, m2)
-    ==> $Signature_$ed25519_verify(s1, k1, m1) == $Signature_$ed25519_verify(s2, k2, m2));
+    ==> $1_Signature_$ed25519_verify(s1, k1, m1) == $1_Signature_$ed25519_verify(s2, k2, m2));
 
 
-procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: Vec int) returns (res: bool) {
-    res := $Signature_$ed25519_validate_pubkey(public_key);
+procedure {:inline 1} $1_Signature_ed25519_validate_pubkey(public_key: Vec int) returns (res: bool) {
+    res := $1_Signature_$ed25519_validate_pubkey(public_key);
 }
 
-procedure {:inline 1} $Signature_ed25519_verify(
+procedure {:inline 1} $1_Signature_ed25519_verify(
         signature: Vec int, public_key: Vec int, message: Vec int) returns (res: bool) {
-    res := $Signature_$ed25519_verify(signature, public_key, message);
+    res := $1_Signature_$ed25519_verify(signature, public_key, message);
 }
 
 
@@ -579,13 +579,13 @@ procedure {:inline 1} $Signature_ed25519_verify(
 // ==================================================================================
 // Native Signer::spec_address_of
 
-function {:inline} $Signer_spec_address_of(signer: int): int
+function {:inline} $1_Signer_spec_address_of(signer: int): int
 {
     // A signer is currently identical to an address.
     signer
 }
 
-function {:inline} $Signer_$borrow_address(signer: int): int
+function {:inline} $1_Signer_$borrow_address(signer: int): int
 {
     // A signer is currently identical to an address.
     signer
@@ -604,18 +604,18 @@ function {:inline} $Signer_$borrow_address(signer: int): int
 // TODO: we should check (and abort with the right code) if a generator already exists for
 // the signer.
 
-procedure {:inline 1} $Event_publish_generator(signer: int) {
+procedure {:inline 1} $1_Event_publish_generator(signer: int) {
 }
 
 // Generic code for dealing with mutations (havoc) still requires type and memory declarations.
-type $Event_EventHandleGenerator;
-var $Event_EventHandleGenerator_$memory: $Memory $Event_EventHandleGenerator;
+type $1_Event_EventHandleGenerator;
+var $1_Event_EventHandleGenerator_$memory: $Memory $1_Event_EventHandleGenerator;
 
 // Abstract type of event handles.
-type $Event_EventHandle;
+type $1_Event_EventHandle;
 
 // Global state to implement uniqueness of event handles.
-var $Event_EventHandles: [$Event_EventHandle]bool;
+var $1_Event_EventHandles: [$1_Event_EventHandle]bool;
 
 // Universal representation of an an event. For each concrete event type, we generate a constructor.
 type {:datatype} $EventRep;
@@ -623,7 +623,7 @@ type {:datatype} $EventRep;
 // Representation of EventStore that consists of event streams.
 type {:datatype} $EventStore;
 function {:constructor} $EventStore(
-    counter: int, streams: [$Event_EventHandle]Multiset $EventRep): $EventStore;
+    counter: int, streams: [$1_Event_EventHandle]Multiset $EventRep): $EventStore;
 
 // Global state holding EventStore.
 var $es: $EventStore;
@@ -634,7 +634,7 @@ procedure {:inline 1} $InitEventStore() {
 
 function {:inline} $EventStore__is_empty(es: $EventStore): bool {
     (counter#$EventStore(es) == 0) &&
-    (forall handle: $Event_EventHandle ::
+    (forall handle: $1_Event_EventHandle ::
         (var stream := streams#$EventStore(es)[handle];
         IsEmptyMultiset(stream)))
 }
@@ -642,7 +642,7 @@ function {:inline} $EventStore__is_empty(es: $EventStore): bool {
 // This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
 function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
     $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
-        (lambda handle: $Event_EventHandle ::
+        (lambda handle: $1_Event_EventHandle ::
         SubtractMultiset(
             streams#$EventStore(es1)[handle],
             streams#$EventStore(es2)[handle])))
@@ -650,7 +650,7 @@ function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $E
 
 function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
     (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
-    (forall handle: $Event_EventHandle ::
+    (forall handle: $1_Event_EventHandle ::
         IsSubsetMultiset(
             streams#$EventStore(es1)[handle],
             streams#$EventStore(es2)[handle]

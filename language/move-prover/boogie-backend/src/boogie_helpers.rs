@@ -20,12 +20,14 @@ pub const MAX_MAKE_VEC_ARGS: usize = 4;
 
 /// Return boogie name of given module.
 pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
-    let name = env.symbol_pool().string(env.get_name().name());
-    if name.as_str() == SCRIPT_MODULE_NAME {
+    let mod_name = env.get_name();
+    let mod_sym = env.symbol_pool().string(mod_name.name());
+    if mod_sym.as_str() == SCRIPT_MODULE_NAME {
         // <SELF> is not accepted by boogie as a symbol
         "#SELF#".to_string()
     } else {
-        name.to_string()
+        // qualify module by address.
+        format!("{}_{}", mod_name.addr().to_str_radix(16), mod_sym)
     }
 }
 
