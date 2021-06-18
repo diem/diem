@@ -36,7 +36,7 @@ module ValidatorAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
+    /// | `Errors::ACCESS_DENIED`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
     /// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
     /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
     /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
@@ -82,7 +82,7 @@ module ValidatorAdministrationScripts {
         /// Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
         /// is_operating() is always true during transactions, and CapabilityHolder is published
         /// during initialization (Genesis).
-        /// Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
+        /// Reports ACCESS_DENIED if dr_account is not Diem root, but that can't happen
         /// in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
@@ -91,7 +91,7 @@ module ValidatorAdministrationScripts {
             Errors::REQUIRES_ADDRESS,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -208,7 +208,7 @@ module ValidatorAdministrationScripts {
     /// | 0                          | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
     /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR` | The validator to be removed is not in the validator set.                                        |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                              |
+    /// | `Errors::ACCESS_DENIED`    | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                              |
     /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
     ///
     /// # Related Scripts
@@ -250,7 +250,7 @@ module ValidatorAdministrationScripts {
         /// Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
         /// is_operating() is always true during transactions, and CapabilityHolder is published
         /// during initialization (Genesis).
-        /// Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
+        /// Reports ACCESS_DENIED if dr_account is not Diem root, but that can't happen
         /// in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
@@ -258,7 +258,7 @@ module ValidatorAdministrationScripts {
             Errors::NOT_PUBLISHED,
             Errors::REQUIRES_ADDRESS,
             Errors::INVALID_STATE,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -291,7 +291,7 @@ module ValidatorAdministrationScripts {
     /// | Error Category             | Error Reason                                   | Description                                                                                           |
     /// | ----------------           | --------------                                 | -------------                                                                                         |
     /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
+    /// | `Errors::ACCESS_DENIED`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
     /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
     /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
     /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
@@ -367,7 +367,7 @@ module ValidatorAdministrationScripts {
         /// for which there is no useful recovery except to resubmit the transaction.
         aborts_with [check]
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE,
+            Errors::ACCESS_DENIED,
             Errors::INVALID_ARGUMENT,
             Errors::INVALID_STATE;
 
@@ -407,7 +407,7 @@ module ValidatorAdministrationScripts {
     /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
     /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
     /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::ACCESS_DENIED`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
     /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
     /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
@@ -450,7 +450,7 @@ module ValidatorAdministrationScripts {
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
             Errors::INVALID_ARGUMENT,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         /// **Access Control:**
         /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
@@ -490,7 +490,7 @@ module ValidatorAdministrationScripts {
     /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
     /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
     /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::ACCESS_DENIED`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
     /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
     /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
@@ -535,7 +535,7 @@ module ValidatorAdministrationScripts {
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
             Errors::INVALID_ARGUMENT,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].

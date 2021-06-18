@@ -46,7 +46,7 @@ module AccountCreationScripts {
     /// | Error Category              | Error Reason                                             | Description                                                                              |
     /// | ----------------            | --------------                                           | -------------                                                                            |
     /// | `Errors::INVALID_ARGUMENT`  | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`            | The `auth_key_prefix` was not of length 32.                                              |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`                                    | The sending account wasn't a Parent VASP account.                                        |
+    /// | `Errors::ACCESS_DENIED`     | `Roles::EPARENT_VASP`                                    | The sending account wasn't a Parent VASP account.                                        |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                                        | The `child_address` address is already taken.                                            |
     /// | `Errors::LIMIT_EXCEEDED`    | `VASP::ETOO_MANY_CHILDREN`                               | The sending account has reached the maximum number of allowed child accounts.            |
     /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `CoinType` is not a registered currency on-chain.                                    |
@@ -114,7 +114,7 @@ module AccountCreationScripts {
             == old(DiemAccount::balance<CoinType>(parent_addr)) - child_initial_balance;
 
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
+            Errors::ACCESS_DENIED,
             Errors::ALREADY_PUBLISHED,
             Errors::LIMIT_EXCEEDED,
             Errors::NOT_PUBLISHED,
@@ -173,7 +173,7 @@ module AccountCreationScripts {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::ACCESS_DENIED`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
     /// # Related Scripts
@@ -205,7 +205,7 @@ module AccountCreationScripts {
     /// Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
     /// Checks that above table includes all error categories.
     /// The verifier finds an abort that is not documented, and cannot occur in practice:
-    /// * REQUIRES_ROLE comes from `Roles::assert_diem_root`. However, assert_diem_root checks the literal
+    /// * ACCESS_DENIED comes from `Roles::assert_diem_root`. However, assert_diem_root checks the literal
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_operator_account {
@@ -222,7 +222,7 @@ module AccountCreationScripts {
             Errors::NOT_PUBLISHED,
             Errors::REQUIRES_ADDRESS,
             Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -269,7 +269,7 @@ module AccountCreationScripts {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::ACCESS_DENIED`     | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                         |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
     /// # Related Scripts
@@ -301,7 +301,7 @@ module AccountCreationScripts {
     /// Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
     /// Checks that above table includes all error categories.
     /// The verifier finds an abort that is not documented, and cannot occur in practice:
-    /// * REQUIRES_ROLE comes from `Roles::assert_diem_root`. However, assert_diem_root checks the literal
+    /// * ACCESS_DENIED comes from `Roles::assert_diem_root`. However, assert_diem_root checks the literal
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_account {
@@ -318,7 +318,7 @@ module AccountCreationScripts {
             Errors::NOT_PUBLISHED,
             Errors::REQUIRES_ADDRESS,
             Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -364,7 +364,7 @@ module AccountCreationScripts {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::ACCESS_DENIED`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
     /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `CoinType` is not a registered currency on-chain.                                      |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
     ///
@@ -408,7 +408,7 @@ module AccountCreationScripts {
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
             Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -459,7 +459,7 @@ module AccountCreationScripts {
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::ACCESS_DENIED`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
     /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
     /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `addr` address is already taken.                                                       |
     ///
@@ -501,7 +501,7 @@ module AccountCreationScripts {
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
             Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            Errors::ACCESS_DENIED;
 
         include DiemAccount::MakeAccountEmits{new_account_address: addr};
 

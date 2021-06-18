@@ -179,7 +179,7 @@ module DesignatedDealer {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
         include AbortsIfNoDealer;
-        aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY;
         include Diem::MintAbortsIf<CoinType>{value: amount};
     }
 

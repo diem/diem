@@ -241,6 +241,15 @@ fn build_error_code_map(output_path: impl AsRef<Path>) {
     let output_path = output_path.as_ref();
     //assert!(output_path.is_file());
     recreate_dir(&output_path.parent().unwrap());
+    let mut category_remappings = BTreeMap::new();
+
+    // In order to preserve backwards compatibility in clients that may rely on the category name,
+    // we need to remap error category names that have been changed in the `0x1::Errors` module in the Move stdlib.
+    category_remappings.insert("ACCESS_DENIED".to_string(), "REQUIRES_ROLES".to_string());
+    category_remappings.insert(
+        "FRAMEWORK_ONLY_REQUIRES_CAPABILITY".to_string(),
+        "REQUIRES_CAPABILITY".to_string(),
+    );
 
     let options = move_prover::cli::Options {
         move_sources: crate::diem_stdlib_files(),
@@ -249,6 +258,7 @@ fn build_error_code_map(output_path: impl AsRef<Path>) {
         run_errmapgen: true,
         errmapgen: errmapgen::ErrmapOptions {
             output_file: output_path.to_string_lossy().to_string(),
+            category_remappings,
             ..Default::default()
         },
         ..Default::default()

@@ -14,7 +14,7 @@ use move_model::{
     symbol::Symbol,
 };
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, rc::Rc};
+use std::{collections::BTreeMap, convert::TryFrom, rc::Rc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrmapOptions {
@@ -24,6 +24,9 @@ pub struct ErrmapOptions {
     pub error_category_module: ModuleId,
     /// In which file to store the output
     pub output_file: String,
+    /// Remapping of one category name in the code, to a category name that will be held in the
+    /// generated error map.
+    pub category_remappings: BTreeMap<String, String>,
 }
 
 impl Default for ErrmapOptions {
@@ -35,6 +38,7 @@ impl Default for ErrmapOptions {
                 Identifier::new("Errors").unwrap(),
             ),
             output_file: "errmap".to_string(),
+            category_remappings: BTreeMap::new(),
         }
     }
 }
@@ -83,11 +87,23 @@ impl<'env> ErrmapGen<'env> {
         for named_constant in module.get_named_constants() {
             let name = self.name_string(named_constant.get_name());
             let error_category = self.get_abort_code(&named_constant)?;
+            let code_description = named_constant.get_doc().to_string();
+            let (code_description, code_name) =
+                match self.options.category_remappings.get(name.as_ref()) {
+                    Some(remapped_name) => (
+                        format!(
+                            "{} Name remapped from {} to {}.",
+                            code_description, name, remapped_name
+                        ),
+                        remapped_name.to_string(),
+                    ),
+                    None => (code_description, name.to_string()),
+                };
             self.output.add_error_category(
                 error_category,
                 ErrorDescription {
-                    code_name: name.to_string(),
-                    code_description: named_constant.get_doc().to_string(),
+                    code_name,
+                    code_description,
                 },
             )?
         }
