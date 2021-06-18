@@ -14,8 +14,9 @@ use move_vm_runtime::data_cache::MoveStorage;
 use prover_bytecode::{
     access_path::{AbsAddr, AccessPath, Offset, Root},
     access_path_trie::AccessPathTrie,
-    read_write_set_analysis::{Access, ReadWriteSetState},
+    read_write_set_analysis::ReadWriteSetState,
 };
+use read_write_set_types::Access;
 use resource_viewer::{AnnotatedMoveValue, MoveValueAnnotator};
 use std::ops::Deref;
 
