@@ -736,7 +736,7 @@ if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
   if [[ "$BATCH_MODE" == "false" ]]; then
    echo "Installing ca-certificates......"
   fi
-	"${PRE_COMMAND[@]}" install_pkg ca-certificates "$PACKAGE_MANAGER"
+	install_pkg ca-certificates "$PACKAGE_MANAGER"
 fi
 
 if [[ "$INSTALL_PROFILE" == "true" ]]; then
