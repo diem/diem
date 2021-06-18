@@ -25,7 +25,7 @@ move-vm-types = { path = "../../move-vm/types" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-test-utils = { path = "../../move-vm/test-utils" }
-resource-viewer = { path = "../../tools/resource-viewer" }
+diem-resource-viewer = { path = "../../tools/diem-resource-viewer" }
 diem-framework = { path = "../../diem-framework" }
 move-lang = { path = "../../move-lang" }
 bcs = "0.1.2"

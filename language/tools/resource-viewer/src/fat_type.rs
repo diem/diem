@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Loaded representation for runtime types.
 
-use diem_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::AbilitySet,
 };
 use move_core_types::{
+    account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     value::{MoveStructLayout, MoveTypeLayout},
+    vm_status::StatusCode,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryInto;

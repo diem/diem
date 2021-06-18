@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, format_err, Result};
+use diem_resource_viewer::{AnnotatedAccountStateBlob, AnnotatedMoveStruct, DiemValueAnnotator};
 use diem_state_view::StateView;
 use diem_types::{
     access_path,
@@ -27,7 +28,6 @@ use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
-use resource_viewer::{AnnotatedAccountStateBlob, AnnotatedMoveStruct, MoveValueAnnotator};
 use std::path::{Path, PathBuf};
 
 #[cfg(test)]
@@ -236,7 +236,7 @@ impl DiemDebugger {
         let version = self.debugger.get_latest_version()?;
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let remote_storage = RemoteStorage::new(&state_view);
-        let annotator = MoveValueAnnotator::new(&remote_storage);
+        let annotator = DiemValueAnnotator::new(&remote_storage);
         let mut events_data = vec![];
         for event in events {
             match &event.event {
@@ -259,7 +259,7 @@ impl DiemDebugger {
     ) -> Result<Option<AnnotatedAccountStateBlob>> {
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let remote_storage = RemoteStorage::new(&state_view);
-        let annotator = MoveValueAnnotator::new(&remote_storage);
+        let annotator = DiemValueAnnotator::new(&remote_storage);
         Ok(
             match self
                 .debugger
@@ -284,7 +284,7 @@ impl DiemDebugger {
         let accounts = self.debugger.get_admin_accounts(version)?;
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let remote_storage = RemoteStorage::new(&state_view);
-        let annotator = MoveValueAnnotator::new(&remote_storage);
+        let annotator = DiemValueAnnotator::new(&remote_storage);
 
         let mut result = vec![];
         for (addr, state) in accounts.into_iter() {

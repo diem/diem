@@ -6,7 +6,6 @@ use crate::{
     module_cache::ModuleCache,
 };
 use anyhow::{anyhow, Result};
-use diem_types::account_address::AccountAddress;
 use move_binary_format::{
     access::ModuleAccess,
     errors::PartialVMError,
@@ -16,6 +15,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_core_types::{
+    account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
@@ -28,15 +28,11 @@ pub(crate) struct Resolver<'a> {
 }
 
 impl<'a> Resolver<'a> {
-    pub fn new(state: &'a dyn MoveStorage, use_stdlib: bool) -> Self {
-        let cache = ModuleCache::new();
-        if use_stdlib {
-            let modules = diem_framework_releases::current_modules();
-            for module in modules {
-                cache.insert(module.self_id(), module.clone());
-            }
+    pub fn new(state: &'a dyn MoveStorage) -> Self {
+        Resolver {
+            state,
+            cache: ModuleCache::new(),
         }
-        Resolver { state, cache }
     }
 
     fn get_module(&self, address: &AccountAddress, name: &IdentStr) -> Result<Rc<CompiledModule>> {

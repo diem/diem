@@ -190,10 +190,9 @@ impl OnDiskStateView {
                     t => bail!("Expected to parse struct tag, but got {}", t),
                 };
                 match Self::get_bytes(resource_path)? {
-                    Some(resource_data) => Some(
-                        MoveValueAnnotator::new_no_stdlib(self)
-                            .view_resource(&id, &resource_data)?,
-                    ),
+                    Some(resource_data) => {
+                        Some(MoveValueAnnotator::new(self).view_resource(&id, &resource_data)?)
+                    }
                     None => None,
                 }
             }),
@@ -212,10 +211,10 @@ impl OnDiskStateView {
     }
 
     pub fn view_events(&self, events_path: &Path) -> Result<Vec<AnnotatedMoveValue>> {
-        let annotator = MoveValueAnnotator::new_no_stdlib(self);
+        let annotator = MoveValueAnnotator::new(self);
         self.get_events(events_path)?
             .iter()
-            .map(|event| annotator.view_contract_event(event))
+            .map(|event| annotator.view_value(event.type_tag(), event.event_data()))
             .collect()
     }
 

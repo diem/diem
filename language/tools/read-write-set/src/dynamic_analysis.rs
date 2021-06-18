@@ -84,7 +84,7 @@ impl ConcretizedFormals {
         env: &GlobalEnv,
     ) -> ConcretizedSecondaryIndexes {
         // TODO: check if there are no secondary indexes and return accesses if so
-        let annotator = MoveValueAnnotator::new_no_stdlib(blockchain_view);
+        let annotator = MoveValueAnnotator::new(blockchain_view);
         let mut acc = AccessPathTrie::default();
         // TODO: do not unwrap here. iter_paths doesn't support Result, so need to create an Iter instead
         // of iter_paths or return a bool inside resolve_secondary instead of using ?

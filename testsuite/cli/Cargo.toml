@@ -37,10 +37,11 @@ diem-metrics = { path = "../../common/metrics" }
 diem-types = { path = "../../types" }
 diem-temppath = { path = "../../common/temppath/" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-resource-viewer = { path = "../../language/tools/resource-viewer" }
+diem-resource-viewer = { path = "../../language/tools/diem-resource-viewer" }
 diem-framework = { path = "../../language/diem-framework" }
 diem-framework-releases = { path = "../../language/diem-framework/releases" }
 diem-transaction-builder = { path = "../../sdk/transaction-builder" }
+move-vm-test-utils = { path = "../../language/move-vm/test-utils" }
 compiler = { path = "../../language/compiler" }
 
 [dev-dependencies]

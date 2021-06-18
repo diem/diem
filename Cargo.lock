@@ -903,6 +903,7 @@ dependencies = [
  "diem-infallible",
  "diem-logger",
  "diem-metrics",
+ "diem-resource-viewer",
  "diem-temppath",
  "diem-transaction-builder",
  "diem-types",
@@ -910,11 +911,11 @@ dependencies = [
  "diem-workspace-hack",
  "generate-key",
  "hex",
+ "move-vm-test-utils",
  "num-traits",
  "once_cell",
  "proptest",
  "reqwest",
- "resource-viewer",
  "rust_decimal",
  "rustyline",
  "serde",
@@ -2251,6 +2252,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-resource-viewer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-types",
+ "diem-workspace-hack",
+ "move-binary-format",
+ "move-core-types",
+ "move-vm-runtime",
+ "resource-viewer",
+]
+
+[[package]]
 name = "diem-retrier"
 version = "0.1.0"
 dependencies = [
@@ -2432,6 +2446,7 @@ dependencies = [
  "bcs",
  "diem-framework",
  "diem-framework-releases",
+ "diem-resource-viewer",
  "diem-state-view",
  "diem-types",
  "diem-validator-interface",
@@ -2447,7 +2462,6 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
- "resource-viewer",
  "structopt 0.3.21",
  "vm-genesis",
 ]
@@ -3455,10 +3469,12 @@ version = "0.1.0"
 dependencies = [
  "bcs",
  "diem-framework-releases",
+ "diem-resource-viewer",
  "diem-types",
  "diem-workspace-hack",
  "move-binary-format",
- "resource-viewer",
+ "move-vm-runtime",
+ "move-vm-test-utils",
  "structopt 0.3.21",
  "vm-genesis",
 ]
@@ -6244,9 +6260,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "diem-framework-releases",
- "diem-state-view",
- "diem-types",
  "diem-workspace-hack",
  "hex",
  "move-binary-format",

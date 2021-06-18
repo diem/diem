@@ -14,6 +14,7 @@ use diem_crypto::{
     test_utils::KeyPair,
 };
 use diem_logger::prelude::{error, info};
+use diem_resource_viewer::{AnnotatedAccountStateBlob, DiemValueAnnotator};
 use diem_temppath::TempPath;
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
@@ -36,12 +37,12 @@ use diem_types::{
     write_set::{WriteOp, WriteSetMut},
 };
 use diem_wallet::{io_utils, WalletLibrary};
+use move_vm_test_utils::InMemoryStorage;
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
 use reqwest::Url;
-use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator, NullStateView};
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -1279,8 +1280,11 @@ impl ClientProxy {
     ) -> Result<(Option<AnnotatedAccountStateBlob>, Version)> {
         let (blob, ver) = self.client.get_account_state_blob(&address)?;
         if let Some(account_blob) = blob {
-            let state_view = NullStateView::default();
-            let annotator = MoveValueAnnotator::new(&state_view);
+            let mut storage = InMemoryStorage::new();
+            for (blob, module) in diem_framework_releases::current_modules_with_blobs() {
+                storage.publish_or_overwrite_module(module.self_id(), blob.clone())
+            }
+            let annotator = DiemValueAnnotator::new(&storage);
             let annotate_blob =
                 annotator.view_account_state(&AccountState::try_from(&account_blob)?)?;
             Ok((Some(annotate_blob), ver))

@@ -5,24 +5,19 @@ use crate::{
     fat_type::{FatStructType, FatType},
     resolver::Resolver,
 };
-use anyhow::{anyhow, bail, Result};
-use diem_state_view::StateView;
-use diem_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
-    contract_event::ContractEvent,
-};
+use anyhow::{anyhow, Result};
 use move_binary_format::{
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    errors::{Location, PartialVMError},
     file_format::{Ability, AbilitySet},
 };
 use move_core_types::{
+    account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag, TypeTag},
+    language_storage::{StructTag, TypeTag},
     value::{MoveStruct, MoveValue},
 };
 use move_vm_runtime::data_cache::MoveStorage;
 use std::{
-    collections::btree_map::BTreeMap,
     convert::TryInto,
     fmt::{Display, Formatter},
 };
@@ -30,9 +25,6 @@ use std::{
 mod fat_type;
 mod module_cache;
 mod resolver;
-
-#[derive(Debug)]
-pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
 #[derive(Clone, Debug)]
 pub struct AnnotatedMoveStruct {
@@ -81,14 +73,7 @@ pub struct MoveValueAnnotator<'a> {
 impl<'a> MoveValueAnnotator<'a> {
     pub fn new(view: &'a dyn MoveStorage) -> Self {
         Self {
-            cache: Resolver::new(view, true),
-            _data_view: view,
-        }
-    }
-
-    pub fn new_no_stdlib(view: &'a dyn MoveStorage) -> Self {
-        Self {
-            cache: Resolver::new(view, false),
+            cache: Resolver::new(view),
             _data_view: view,
         }
     }
@@ -101,17 +86,6 @@ impl<'a> MoveValueAnnotator<'a> {
             .ok()?
     }
 
-    pub fn view_access_path(
-        &self,
-        access_path: AccessPath,
-        blob: &[u8],
-    ) -> Result<AnnotatedMoveStruct> {
-        match access_path.get_struct_tag() {
-            Some(tag) => self.view_resource(&tag, blob),
-            None => bail!("Bad resource access path"),
-        }
-    }
-
     pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {
         let ty = self.cache.resolve_struct(tag)?;
         let struct_def = (&ty)
@@ -121,40 +95,13 @@ impl<'a> MoveValueAnnotator<'a> {
         self.annotate_struct(&move_struct, &ty)
     }
 
-    pub fn view_contract_event(&self, event: &ContractEvent) -> Result<AnnotatedMoveValue> {
-        let ty = self.cache.resolve_type(event.type_tag())?;
-        let move_ty = (&ty)
+    pub fn view_value(&self, ty_tag: &TypeTag, blob: &[u8]) -> Result<AnnotatedMoveValue> {
+        let ty = self.cache.resolve_type(ty_tag)?;
+        let layout = (&ty)
             .try_into()
             .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
-
-        let move_value = MoveValue::simple_deserialize(event.event_data(), &move_ty)?;
+        let move_value = MoveValue::simple_deserialize(blob, &layout)?;
         self.annotate_value(&move_value, &ty)
-    }
-
-    pub fn view_account_state(&self, state: &AccountState) -> Result<AnnotatedAccountStateBlob> {
-        let mut output = BTreeMap::new();
-        for (k, v) in state.iter() {
-            let tag = match AccessPath::new(AccountAddress::random(), k.to_vec()).get_struct_tag() {
-                Some(t) => t,
-                None => {
-                    println!("Uncached AccessPath: {:?}", k);
-                    continue;
-                }
-            };
-            let ty = self.cache.resolve_struct(&tag)?;
-            let struct_def = (&ty)
-                .try_into()
-                .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
-
-            let move_struct = MoveStruct::simple_deserialize(v.as_slice(), &struct_def)?;
-            output.insert(
-                ty.struct_tag()
-                    .map_err(|e| e.finish(Location::Undefined).into_vm_status())
-                    .unwrap(),
-                self.annotate_struct(&move_struct, &ty)?,
-            );
-        }
-        Ok(AnnotatedAccountStateBlob(output))
     }
 
     fn annotate_struct(
@@ -288,43 +235,5 @@ impl Display for AnnotatedMoveValue {
 impl Display for AnnotatedMoveStruct {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         pretty_print_struct(f, self, 0)
-    }
-}
-
-impl Display for AnnotatedAccountStateBlob {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        writeln!(f, "{{")?;
-        for v in self.0.values() {
-            write!(f, "{}", v)?;
-            writeln!(f, ",")?;
-        }
-        writeln!(f, "}}")
-    }
-}
-
-#[derive(Default)]
-pub struct NullStateView();
-
-impl StateView for NullStateView {
-    fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
-        Err(anyhow!("No data"))
-    }
-
-    fn is_genesis(&self) -> bool {
-        false
-    }
-}
-
-impl MoveStorage for NullStateView {
-    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
-        Ok(None)
-    }
-
-    fn get_resource(
-        &self,
-        _address: &AccountAddress,
-        _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        Ok(None)
     }
 }

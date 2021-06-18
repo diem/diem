@@ -146,12 +146,12 @@ pub(crate) fn explain_execution_effects(
                         let resource_data = state
                             .get_resource_bytes(*addr, struct_tag.clone())?
                             .unwrap();
-                        let resource_old = MoveValueAnnotator::new_no_stdlib(state)
+                        let resource_old = MoveValueAnnotator::new(state)
                             .view_resource(&struct_tag, &resource_data)?;
                         println!("      Previous:");
                         print_struct_with_indent(&resource_old, 8);
-                        let resource_new = MoveValueAnnotator::new_no_stdlib(state)
-                            .view_resource(&struct_tag, &blob)?;
+                        let resource_new =
+                            MoveValueAnnotator::new(state).view_resource(&struct_tag, &blob)?;
                         println!("      New:");
                         print_struct_with_indent(&resource_new, 8)
                     } else {
@@ -160,8 +160,8 @@ pub(crate) fn explain_execution_effects(
                             struct_tag, blob, bytes_to_write
                         );
                         // Print new resource
-                        let resource = MoveValueAnnotator::new_no_stdlib(state)
-                            .view_resource(&struct_tag, &blob)?;
+                        let resource =
+                            MoveValueAnnotator::new(state).view_resource(&struct_tag, &blob)?;
                         print_struct_with_indent(&resource, 6)
                     }
                 }
@@ -174,7 +174,7 @@ pub(crate) fn explain_execution_effects(
                     let resource_data = state
                         .get_resource_bytes(*addr, struct_tag.clone())?
                         .unwrap();
-                    let resource_old = MoveValueAnnotator::new_no_stdlib(state)
+                    let resource_old = MoveValueAnnotator::new(state)
                         .view_resource(&struct_tag, &resource_data)?;
                     print_struct_with_indent(&resource_old, 6);
                 }
