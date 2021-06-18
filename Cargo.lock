@@ -1056,7 +1056,6 @@ dependencies = [
  "bcs",
  "bytecode-source-map",
  "bytecode-verifier",
- "diem-framework-releases",
  "diem-workspace-hack",
  "ir-to-bytecode",
  "move-binary-format",

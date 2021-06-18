@@ -14,7 +14,6 @@ anyhow = "1.0.38"
 bytecode-verifier = { path = "../bytecode-verifier" }
 ir-to-bytecode = { path = "ir-to-bytecode" }
 bytecode-source-map = { path = "bytecode-source-map" }
-diem-framework-releases = { path = "../diem-framework/releases" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
 move-core-types = { path = "../move-core/types" }

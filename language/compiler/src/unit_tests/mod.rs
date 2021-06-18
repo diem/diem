@@ -9,5 +9,4 @@ mod branch_tests;
 mod cfg_tests;
 mod expression_tests;
 mod function_tests;
-mod import_tests;
 mod serializer_tests;

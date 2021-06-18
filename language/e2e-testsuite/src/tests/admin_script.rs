@@ -40,8 +40,7 @@ main(dr_account: signer, account: signer, auth_key_prefix: vector<u8>) {
 
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
-                skip_stdlib_deps: false,
-                extra_deps: vec![],
+                deps: diem_framework_releases::current_modules().to_vec(),
             };
             compiler
                 .into_script_blob("file_name", code)
@@ -108,8 +107,7 @@ main(dr_account: signer, account: signer, auth_key_prefix: vector<u8>) {
 
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
-                skip_stdlib_deps: false,
-                extra_deps: vec![],
+                deps: diem_framework_releases::current_modules().to_vec(),
             };
             compiler
                 .into_script_blob("file_name", code)
@@ -174,8 +172,7 @@ main(account: signer, auth_key_prefix: vector<u8>) {
 
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
-                skip_stdlib_deps: false,
-                extra_deps: vec![],
+                deps: diem_framework_releases::current_modules().to_vec(),
             };
             compiler
                 .into_script_blob("file_name", code)

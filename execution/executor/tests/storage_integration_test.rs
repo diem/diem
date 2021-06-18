@@ -304,8 +304,7 @@ fn test_change_publishing_option_to_custom() {
 
         let compiler = Compiler {
             address: diem_types::account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![],
+            deps: diem_framework_releases::current_modules().to_vec(),
         };
         compiler
             .into_script_blob("file_name", code)

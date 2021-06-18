@@ -25,9 +25,6 @@ struct Args {
     /// Account address used for publishing
     #[structopt(short = "a", long = "address")]
     pub address: String,
-    /// Do not automatically compile stdlib dependencies
-    #[structopt(long = "no-stdlib")]
-    pub no_stdlib: bool,
     /// Do not automatically run the bytecode verifier
     #[structopt(long = "no-verify")]
     pub no_verify: bool,
@@ -35,10 +32,10 @@ struct Args {
     #[structopt(parse(from_os_str))]
     pub source_path: PathBuf,
     /// Instead of compiling the source, emit a dependency list of the compiled source
-    #[structopt(short = "-l", long = "list-dependencies")]
+    #[structopt(short = "l", long = "list-dependencies")]
     pub list_dependencies: bool,
     /// Path to the list of modules that we want to link with
-    #[structopt(long = "deps")]
+    #[structopt(short = "d", long = "deps")]
     pub deps_path: Option<String>,
 
     #[structopt(long = "src-map")]
@@ -125,20 +122,14 @@ fn main() {
                     module
                 })
                 .collect()
-        } else if args.no_stdlib {
-            vec![]
         } else {
-            diem_framework_releases::current_modules().to_vec()
+            vec![]
         }
     };
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
-        let compiler = Compiler {
-            address,
-            skip_stdlib_deps: args.no_stdlib,
-            extra_deps: deps,
-        };
+        let compiler = Compiler { address, deps };
         let (compiled_script, source_map) = compiler
             .into_compiled_script_and_source_map(file_name, &source)
             .expect("Failed to compile script");

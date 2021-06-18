@@ -41,8 +41,7 @@ fn encode_add_account_limits_admin_script(execute_as: AccountAddress) -> WriteSe
 ";
         let compiler = Compiler {
             address: account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![],
+            deps: diem_framework_releases::current_modules().to_vec(),
         };
         compiler
             .into_script_blob("file_name", code)
@@ -88,8 +87,7 @@ fn encode_update_account_limit_definition_script(
 ";
         let compiler = Compiler {
             address: account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![],
+            deps: diem_framework_releases::current_modules().to_vec(),
         };
         compiler
             .into_script_blob("file_name", code)
@@ -135,8 +133,7 @@ fn encode_update_account_limit_window_info_script(
 ";
         let compiler = Compiler {
             address: account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![],
+            deps: diem_framework_releases::current_modules().to_vec(),
         };
         compiler
             .into_script_blob("file_name", code)

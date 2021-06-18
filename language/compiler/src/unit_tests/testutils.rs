@@ -135,15 +135,3 @@ pub fn compile_module_string_and_assert_error(
 pub fn count_locals(script: &CompiledScript) -> usize {
     script.signature_at(script.code().locals).0.len()
 }
-
-pub fn compile_module_string_with_stdlib(code: &str) -> Result<CompiledModule> {
-    compile_module_string_and_assert_no_error(code, stdlib())
-}
-
-pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
-    compile_script_string_and_assert_no_error(code, stdlib())
-}
-
-fn stdlib() -> Vec<CompiledModule> {
-    diem_framework_releases::current_modules().to_vec()
-}

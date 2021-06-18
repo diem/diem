@@ -37,14 +37,13 @@ FLAGS:
     -h, --help                 Prints help information
     -l, --list-dependencies    Instead of compiling the source, emit a dependency list of the compiled source
     -m, --module               Treat input file as a module (default is to treat file as a script)
-        --no-stdlib            Do not automatically compile stdlib dependencies
         --no-verify            Do not automatically run the bytecode verifier
         --src-map
     -V, --version              Prints version information
 
 OPTIONS:
     -a, --address <address>    Account address used for publishing
-        --deps <deps-path>     Path to the list of modules that we want to link with
+    -d, --deps <deps-path>     Path to the list of modules that we want to link with
 
 ARGS:
     <source-path>    Path to the Move IR source to compile
