@@ -16,3 +16,6 @@ pub use backend::*;
 
 mod txn_emitter;
 pub use txn_emitter::*;
+
+mod report;
+pub use report::*;

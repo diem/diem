@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::Test;
-use crate::{CoreContext, Result, Swarm};
+use crate::{CoreContext, Result, Swarm, TestReport};
 
 /// The testing interface which defines a test written with full control over an existing network.
 /// Tests written against this interface will have access to both the Root account as well as the
@@ -15,11 +15,16 @@ pub trait NetworkTest: Test {
 pub struct NetworkContext<'t> {
     core: CoreContext,
     swarm: &'t mut dyn Swarm,
+    pub report: TestReport,
 }
 
 impl<'t> NetworkContext<'t> {
-    pub fn new(core: CoreContext, swarm: &'t mut dyn Swarm) -> Self {
-        Self { core, swarm }
+    pub fn new(core: CoreContext, swarm: &'t mut dyn Swarm, report: TestReport) -> Self {
+        Self {
+            core,
+            swarm,
+            report,
+        }
     }
 
     pub fn swarm(&mut self) -> &mut dyn Swarm {
