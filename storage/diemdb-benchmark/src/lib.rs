@@ -66,6 +66,7 @@ fn gen_txn_to_commit<R: Rng>(
     TransactionToCommit::new(
         txn,
         states,
+        None,
         vec![], /* events */
         0,      /* gas_used */
         KeptVMStatus::Executed,

@@ -825,6 +825,7 @@ impl TransactionToCommitGen {
         TransactionToCommit::new(
             Transaction::UserTransaction(transaction),
             account_states,
+            None,
             events,
             self.gas_used,
             self.status,
