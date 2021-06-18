@@ -321,8 +321,8 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("mutas")
-                    .long("mutas")
+                Arg::with_name("mutation_add_sub")
+                    .long("mutation_add_sub")
                     .takes_value(true)
                     .value_name("COUNT")
                     .validator(is_number)
@@ -532,9 +532,11 @@ impl Options {
         if matches.is_present("mutation") {
             options.prover.mutation = true;
         }
-        if matches.is_present("mutas") {
-            options.prover.mutation_add_sub =
-                matches.value_of("mutas").unwrap().parse::<usize>()?;
+        if matches.is_present("mutation_add_sub") {
+            options.prover.mutation_add_sub = matches
+                .value_of("mutation_add_sub")
+                .unwrap()
+                .parse::<usize>()?;
         }
         if matches.is_present("verify") {
             options.prover.verify_scope = match matches.value_of("verify").unwrap() {
