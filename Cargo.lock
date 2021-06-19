@@ -639,6 +639,7 @@ name = "bytecode-interpreter-crypto"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "curve25519-dalek-fiat",
  "diem-workspace-hack",
  "ed25519-dalek-fiat",
  "sha2",

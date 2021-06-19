@@ -11,6 +11,7 @@ diem-workspace-hack = { path = "../../../../common/workspace-hack" }
 
 # external dependencies
 anyhow = "1.0.38"
+curve25519-dalek = { version = "0.1.0", package = "curve25519-dalek-fiat", default-features = false, features = ["std"] }
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "serde"] }
 sha2 = "0.9.3"
 sha3 = "0.9.1"
