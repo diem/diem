@@ -23,6 +23,7 @@ mod unit_tests;
 
 #[cfg(mirai)]
 mod tags;
+mod ecdsa_secp256r1;
 
 pub use self::traits::*;
 pub use hash::HashValue;
