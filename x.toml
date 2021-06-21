@@ -142,6 +142,9 @@ lazy_static = "use once_cell::sync::Lazy instead"
 criterion = "criterion is only for benchmarks"
 proptest = "proptest is only for testing and fuzzing"
 
+[workspace.direct-dep-dups]
+allow = []
+
 [workspace.overlay]
 features = ["fuzzing"]
 

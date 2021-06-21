@@ -4,7 +4,8 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::{
-    BannedDepsConfig, EnforcedAttributesConfig, MoveToDiemDepsConfig, OverlayConfig,
+    BannedDepsConfig, DirectDepDupsConfig, EnforcedAttributesConfig, MoveToDiemDepsConfig,
+    OverlayConfig,
 };
 use anyhow::anyhow;
 use guppy::{
@@ -223,16 +224,23 @@ impl PackageLinter for IrrelevantBuildDeps {
 /// Ensure that packages within the workspace only depend on one version of a third-party crate.
 #[derive(Debug)]
 pub struct DirectDepDups<'cfg> {
+    config: &'cfg DirectDepDupsConfig,
     hakari_package: &'cfg str,
 }
 
 impl<'cfg> DirectDepDups<'cfg> {
-    pub fn new(hakari_config: &'cfg HakariBuilderSummary) -> crate::Result<Self> {
+    pub fn new(
+        config: &'cfg DirectDepDupsConfig,
+        hakari_config: &'cfg HakariBuilderSummary,
+    ) -> crate::Result<Self> {
         let hakari_package = hakari_config
             .hakari_package
             .as_deref()
             .ok_or_else(|| anyhow!("hakari.hakari-package not defined in x.toml"))?;
-        Ok(Self { hakari_package })
+        Ok(Self {
+            config,
+            hakari_package,
+        })
     }
 }
 
@@ -271,7 +279,10 @@ impl<'cfg> ProjectLinter for DirectDepDups<'cfg> {
             // dependencies are considered.
             false
         });
-        for (direct_dep, versions) in direct_deps {
+        for (direct_dep, versions) in direct_deps
+            .iter()
+            .filter(|(d, _)| !self.config.allow.contains(&d.to_string()))
+        {
             if versions.len() > 1 {
                 let mut msg = format!("duplicate direct dependency '{}':\n", direct_dep);
                 for (version, packages) in versions {

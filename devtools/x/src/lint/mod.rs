@@ -27,7 +27,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDeps::new(&workspace_config.banned_deps),
-        &guppy::DirectDepDups::new(&core_config.hakari)?,
+        &guppy::DirectDepDups::new(&workspace_config.direct_dep_dups, &core_config.hakari)?,
         &workspace_hack::GenerateWorkspaceHack,
     ];
 
