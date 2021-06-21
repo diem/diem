@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: diem/build_environment:main
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
     environment:
       name: Sccache
     env:
@@ -101,6 +105,8 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
       ACCOUNT: ${{ secrets.TRANSACTION_REPLAY_ACCOUNT }}
@@ -142,6 +148,8 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
     env:
       DEVNET_MINT_TEST_KEY: ${{ secrets.DEVNET_MINT_TEST_KEY }}
       DEVNET_ENDPOINT: dev.testnet.diem.com
@@ -174,7 +182,7 @@ jobs:
     container:
       image: diem/build_environment:${{ matrix.target-branch }}
       volumes:
-        - "/home/runner/work/diem/diem:/opt/git/diem"
+        - "${{github.workspace}}:/opt/git/diem"
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
     strategy:
