@@ -48,6 +48,7 @@ jobs:
         uses: diem/actions/changes@266156eaff7ba6e1253cf7019506c7b3702f73de
         with:
           workflow-file: ci-test.yml
+          github-token: ${{secrets.GITHUB_TOKEN}}
       - id: need-build-images
         name: find changes need image build.
         uses: diem/actions/matches@266156eaff7ba6e1253cf7019506c7b3702f73de
