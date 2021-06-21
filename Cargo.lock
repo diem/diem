@@ -1558,6 +1558,7 @@ dependencies = [
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",
+ "futures",
  "hex",
  "ipnet",
  "move-core-types",
@@ -1565,6 +1566,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-tungstenite 0.14.0",
+ "tracing",
  "ureq",
 ]
 
@@ -1945,7 +1948,7 @@ dependencies = [
  "tokio",
  "tokio-retry",
  "tokio-stream",
- "tokio-tungstenite",
+ "tokio-tungstenite 0.14.0",
  "vm-genesis",
  "vm-validator",
  "warp",
@@ -2649,7 +2652,6 @@ dependencies = [
  "syn 1.0.72",
  "tiny-keccak",
  "tokio",
- "tokio-tungstenite",
  "tokio-util",
  "toml",
  "tracing",
@@ -7194,6 +7196,7 @@ dependencies = [
  "diem-global-constants",
  "diem-infallible",
  "diem-json-rpc",
+ "diem-json-rpc-types",
  "diem-key-manager",
  "diem-logger",
  "diem-management",
@@ -7212,6 +7215,7 @@ dependencies = [
  "diem-workspace-hack",
  "diem-writeset-generator",
  "forge",
+ "futures",
  "generate-key",
  "hex",
  "move-command-line-common",
@@ -7951,7 +7955,20 @@ dependencies = [
  "log",
  "pin-project",
  "tokio",
- "tungstenite",
+ "tungstenite 0.12.0",
+]
+
+[[package]]
+name = "tokio-tungstenite"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e96bb520beab540ab664bd5a9cfeaa1fcd846fa68c830b42e2c8963071251d2"
+dependencies = [
+ "futures-util",
+ "log",
+ "pin-project",
+ "tokio",
+ "tungstenite 0.13.0",
 ]
 
 [[package]]
@@ -8160,6 +8177,26 @@ dependencies = [
  "log",
  "rand 0.8.3",
  "sha-1 0.9.4",
+ "url",
+ "utf-8",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fe8dada8c1a3aeca77d6b51a4f1314e0f4b8e438b7b1b71e3ddaca8080e4093"
+dependencies = [
+ "base64",
+ "byteorder",
+ "bytes",
+ "http",
+ "httparse",
+ "input_buffer",
+ "log",
+ "rand 0.8.3",
+ "sha-1 0.9.4",
+ "thiserror",
  "url",
  "utf-8",
 ]
@@ -8508,7 +8545,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-stream",
- "tokio-tungstenite",
+ "tokio-tungstenite 0.13.0",
  "tokio-util",
  "tower-service",
  "tracing",
