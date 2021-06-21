@@ -1915,7 +1915,7 @@ dependencies = [
 
 [[package]]
 name = "diem-json-rpc-types"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anyhow",
  "bcs",
@@ -1929,6 +1929,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

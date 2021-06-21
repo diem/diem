@@ -6,14 +6,20 @@ use crate::{
     stream_rpc::{
         connection::{ConnectionContext, StreamSender},
         counters,
-        errors::StreamError,
-        json_rpc::{StreamJsonRpcRequest, StreamJsonRpcResponse, StreamMethod},
+        json_rpc::CallableStreamMethod,
         logging,
         subscription_types::SubscriptionConfig,
     },
 };
 use diem_infallible::Mutex;
-use diem_json_rpc_types::Id;
+use diem_json_rpc_types::{
+    stream::{
+        errors::StreamError,
+        request::{StreamJsonRpcRequest, StreamMethod},
+        response::StreamJsonRpcResponse,
+    },
+    Id,
+};
 use diem_logger::debug;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
@@ -213,10 +219,11 @@ impl ClientConnection {
             return Err(err);
         }
 
-        match request
-            .method_request
-            .call_method(db.clone(), self.clone(), request.id.clone())
-        {
+        match CallableStreamMethod(request.method_request).call_method(
+            db.clone(),
+            self.clone(),
+            request.id.clone(),
+        ) {
             Ok(task) => {
                 tasks.insert(request.id.clone(), Task(task));
                 metric_subscription_rpc_received(

@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    stream_rpc::{
-        json_rpc::StreamJsonRpcResponse,
-        tests::util::{
-            close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks,
-            verify_ok, ws_test_setup,
-        },
+    stream_rpc::tests::util::{
+        close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks,
+        verify_ok, ws_test_setup,
     },
     tests::utils::create_db_and_runtime,
 };
+use diem_json_rpc_types::stream::response::StreamJsonRpcResponse;
 use futures::{SinkExt, StreamExt};
 use reqwest::Url;
 use serde_json::json;

@@ -11,17 +11,15 @@ use diem_config::config::StreamConfig;
 use crate::{
     stream_rpc::{
         connection::{ClientConnection, ConnectionManager},
-        json_rpc::StreamJsonRpcResponse,
         transport::websocket::get_websocket_routes,
     },
     tests::utils::{mock_db, MockDiemDB},
 };
 
-use crate::stream_rpc::{
-    connection::ConnectionContext, errors::StreamError, transport::util::Transport,
-};
+use crate::stream_rpc::{connection::ConnectionContext, transport::util::Transport};
 
 use crate::stream_rpc::subscription_types::SubscriptionConfig;
+use diem_json_rpc_types::stream::{errors::StreamError, response::StreamJsonRpcResponse};
 use tokio::sync::{mpsc, mpsc::Receiver};
 
 pub fn make_ws_config(

@@ -1,6 +1,6 @@
 [package]
 name = "diem-json-rpc-types"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem JSONRPC Types"
 repository = "https://github.com/diem/diem"
@@ -22,6 +22,7 @@ diem-types = { path = "../../types", version = "0.0.2" }
 move-core-types = { path = "../../language/move-core/types", version = "0.0.2"  }
 num-derive = "0.3.3"
 num-traits = "0.2.14"
+thiserror = "1.0.24"
 
 [dev-dependencies]
 diem-workspace-hack = { path = "../../common/workspace-hack" }

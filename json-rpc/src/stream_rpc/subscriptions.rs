@@ -7,16 +7,11 @@ use crate::{
     stream_rpc::subscription_types::{Subscription, SubscriptionHelper},
     views::{EventView, TransactionView},
 };
+use diem_json_rpc_types::stream::request::{
+    SubscribeToEventsParams, SubscribeToTransactionsParams,
+};
 use diem_logger::warn;
-use diem_types::event::EventKey;
-use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct SubscribeToTransactionsParams {
-    pub starting_version: u64,
-    pub include_events: Option<bool>,
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TransactionsSubscription {
@@ -61,12 +56,6 @@ impl Subscription<SubscribeToTransactionsParams, TransactionView> for Transactio
             self.latest_version += 1;
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct SubscribeToEventsParams {
-    pub event_key: EventKey,
-    pub event_seq_num: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

@@ -34,13 +34,12 @@
 
 use crate::{
     errors::JsonRpcError,
-    stream_rpc::{
-        connection::ClientConnection,
-        counters,
-        json_rpc::{StreamMethod, SubscribeResult},
-    },
+    stream_rpc::{connection::ClientConnection, counters},
 };
-use diem_json_rpc_types::Id;
+use diem_json_rpc_types::{
+    stream::{request::StreamMethod, response::SubscribeResult},
+    Id,
+};
 use diem_logger::debug;
 use serde::Serialize;
 use std::{iter::Map, sync::Arc, time::Duration};
@@ -212,12 +211,10 @@ where
 mod tests {
     use super::*;
     use crate::{
-        stream_rpc::{
-            errors::StreamError,
-            tests::util::{create_client_connection, timeout},
-        },
+        stream_rpc::tests::util::{create_client_connection, timeout},
         tests::utils::MockDiemDB,
     };
+    use diem_json_rpc_types::stream::errors::StreamError;
     use serde::{Deserialize, Serialize};
     use std::time::Instant;
     use tokio::sync::mpsc::Receiver;
