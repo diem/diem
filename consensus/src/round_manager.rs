@@ -44,7 +44,6 @@ use serde::Serialize;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
 use diem_types::ledger_info::{LedgerInfoWithSignatures, LedgerInfo};
-use crate::network_interface::ConsensusMsg::CommitProposal;
 use consensus_types::experimental::commit_proposal::CommitProposal;
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_types::account_address::AccountAddress;
@@ -229,6 +228,8 @@ impl RoundManager {
             author,
         }
     }
+
+    pub fn author(&self) -> Author { self.author }
 
     fn create_block_retriever(&self, author: Author) -> BlockRetriever {
         BlockRetriever::new(self.network.clone(), author)
@@ -502,12 +503,12 @@ impl RoundManager {
 
     pub fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> Ed25519Signature {
         self.safety_rules
-            .sign_commit_proposal(ledger_info.clone(), &self.epoch_state.verifier).unwrap()?
+            .sign_commit_proposal(ledger_info.clone(), &self.epoch_state.verifier).unwrap()
     }
 
     pub fn generate_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<ConsensusMsg> {
         let signature = self.sign_commit_proposal(ledger_info);
-        Ok(ConsensusMsg::CommitProposal(Box::new(
+        Ok(ConsensusMsg::CommitProposalMsg(Box::new(
             CommitProposal::new_with_signature(
                 self.author,
                 ledger_info.ledger_info().clone(),
@@ -517,7 +518,8 @@ impl RoundManager {
     }
 
     pub async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
-        self.network.broadcast(self.generate_commit_proposal(ledger_info).unwrap()).await;
+        let msg = self.generate_commit_proposal(ledger_info).unwrap();
+        self.network.broadcast(msg).await;
         Ok(())
     }
 

@@ -51,11 +51,11 @@ pub enum ConsensusMsg {
     VoteMsg(Box<VoteMsg>),
     /// CommitProposal is the struct that is sent by the validator after execution to propose
     /// on the committed state hash root.
-    CommitProposal(Box<CommitProposal>),
+    CommitProposalMsg(Box<CommitProposal>),
     /// CommitDecision is the struct that is sent by the validator after collecting no fewer
     /// than 2f + 1 signatures on the commit proposal. This part is not on the critical path, but
     /// it can save slow machines to quickly confirm the execution result.
-    CommitDecision(Box<CommitDecision>),
+    CommitDecisionMsg(Box<CommitDecision>),
 }
 
 /// The interface from Network to Consensus layer.

@@ -58,6 +58,7 @@ pub fn start_consensus(
         node_config.consensus.channel_size,
         &guage_cp
     );
+    let mut commit_phase_arc : Option<Arc<CommitPhase>> = None;
     let state_computer: Arc<dyn StateComputer> = if node_config.consensus.decoupled {
         let guage_e = IntGauge::new("D_EXE_CHANNEL_COUNTER", "counter for the decoupling execution channel").unwrap();
         let guage_c = IntGauge::new("D_COM_CHANNEL_COUNTER", "counter for the decoupling committing channel").unwrap();
@@ -84,6 +85,8 @@ pub fn start_consensus(
             Arc::new(execution_proxy),
             sender_cp,
         );
+
+        commit_phase_arc = Some(Arc::new(commit_phase));
 
         runtime.spawn(commit_phase.start());
         runtime.spawn(execution_phase.start());
@@ -113,7 +116,7 @@ pub fn start_consensus(
         state_computer,
         storage,
         reconfig_events,
-        commit_phase,
+        commit_phase_arc,
     );
 
     let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);

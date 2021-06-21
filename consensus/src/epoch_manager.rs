@@ -28,7 +28,7 @@ use consensus_types::{
     common::{Author, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
-use diem_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
+use diem_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig, Error};
 use diem_infallible::duration_since_epoch;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
@@ -85,7 +85,7 @@ pub struct EpochManager {
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-    commit_phase: Arc<CommitPhase>,
+    commit_phase: Option<Arc<CommitPhase>>,
 }
 
 impl EpochManager {
@@ -99,7 +99,7 @@ impl EpochManager {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-        commit_phase: Arc<CommitPhase>,
+        commit_phase: Option<Arc<CommitPhase>>,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
@@ -479,27 +479,41 @@ impl EpochManager {
                     self.process_epoch_retrieval(*request, peer_id).await?
                 );
             }
-            ConsensusMsg::CommitProposal(request) => {
+            ConsensusMsg::CommitProposalMsg(request) => {
                 monitor!(
                     "process_commit_decision",
                     {
-                        let commit_proposal = request.unwrap();
-                        match self.processor_mut() {
-                            RoundProcessor::Normal(p) => {
-                                self.commitphase.process_commit_proposal(commit_proposal, p).await?
-                            },
-                            _ => {
-                                // recovery mode, ignore the request for now.
-                                // TODO
+                        match self.commit_phase {
+                            Some(mut cp) => {
+                                match self.processor_mut() {
+                                    RoundProcessor::Normal(p) => {
+                                        cp.process_commit_proposal(*request, p).await
+                                    },
+                                    _ => {
+                                        // recovery mode, ignore the request for now.
+                                        // TODO
+                                    }
+                                }
                             }
+                            None => {}
                         }
                     }
                 );
             }
-            ConsensusMsg::CommitDecision(request) => {
+            ConsensusMsg::CommitDecisionMsg(request) => {
                 monitor!(
                     "process_commit_decision",
-                    self.commitphase.process_commit_decision(request.unwrap()).await?
+                    match self.commit_phase {
+                        Some(cp) => {
+                            match self.processor_mut() {
+                                RoundProcessor::Normal(p) => {
+                                    cp.process_commit_decision(*request, p).await
+                                }
+                                _ => {}
+                            }
+                        }
+                        None => {}
+                    }
                 );
             }
             _ => {
@@ -572,7 +586,7 @@ impl EpochManager {
     }
 
     async fn broadcast_commit_decision(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
-        self.network_sender.broadcast(ConsensusMsg::CommitDecision(
+        self.network_sender.broadcast(ConsensusMsg::CommitDecisionMsg(
             Box::new(
                 CommitDecision::new(
                     ledger_info
@@ -614,10 +628,10 @@ impl EpochManager {
                     }
                     ledger_info = ledger_info_receiver.select_next_some() => {
                         match ledger_info {
-                            CommitPhaseMsgWrapper::CommitProposal(li) => {
+                            CommitPhaseChannelMsgWrapper::CommitProposal(li) => {
                                 monitor!("generate_commit_proposal", self.broadcast_commit_proposal(li).await)
                             }
-                            CommitPhaseMsgWrapper::CommitDecision(li) => {
+                            CommitPhaseChannelMsgWrapper::CommitDecision(li) => {
                                 monitor!("generate_commit_proposal", self.broadcast_commit_decision(li).await)
                             }
                         }

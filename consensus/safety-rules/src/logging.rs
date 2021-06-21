@@ -50,7 +50,6 @@ pub enum LogEntry {
     SignProposal,
     SignTimeout,
     SignCommitProposal,
-    SignCommitDecision,
     State,
     Waypoint,
 }
@@ -69,6 +68,7 @@ impl LogEntry {
             LogEntry::SignTimeout => "sign_timeout",
             LogEntry::State => "state",
             LogEntry::Waypoint => "waypoint",
+            LogEntry::SignCommitProposal => "sign_commit_proposal",
         }
     }
 }

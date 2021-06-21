@@ -3,28 +3,21 @@
 
 use channel::Receiver;
 use diem_infallible::Mutex;
-use diem_logger::prelude::*;
-use diem_metrics::monitor;
-use diem_types::ledger_info::{LedgerInfoWithSignatures, LedgerInfo};
-use execution_correctness::ExecutionCorrectness;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use consensus_types::executed_block::ExecutedBlock;
-use state_sync::client::StateSyncClient;
 use futures::{StreamExt, SinkExt};
-use std::collections::{HashMap, HashSet, BTreeMap, VecDeque};
-use diem_crypto::{HashValue, Signature};
+use std::collections::{HashMap, BTreeMap, VecDeque};
+use diem_crypto::HashValue;
+use crate::state_replication::StateComputer;
 use consensus_types::experimental::commit_proposal::CommitProposal;
-use consensus_types::common::Author;
-use diem_types::validator_signer::ValidatorSigner;
-use crate::network_interface::{ConsensusNetworkSender, ConsensusMsg};
-use crate::network::NetworkSender;
 use consensus_types::experimental::commit_decision::CommitDecision;
 use diem_types::account_address::AccountAddress;
 use diem_crypto::ed25519::Ed25519Signature;
 use crate::state_computer::ExecutionProxy;
 use std::sync::Arc;
 use crate::round_manager::RoundManager;
-use safety_rules::TSafetyRules;
 
+#[derive(Clone)]
 struct CacheItem {
     vecblocks: Vec<ExecutedBlock>,
     ledger_info_sig: LedgerInfoWithSignatures,
@@ -42,6 +35,7 @@ impl CacheItem {
     }
 }
 
+#[derive(Debug)]
 pub enum CommitPhaseChannelMsgWrapper {
     CommitProposal(LedgerInfoWithSignatures),
     CommitDecision(LedgerInfoWithSignatures),
@@ -67,7 +61,7 @@ impl CommitPhase {
             execution_proxy,
             local_cache: Mutex::new(HashMap::<HashValue, CacheItem>::new()),
             local_signed_cache: Mutex::new(HashMap::<HashValue, LedgerInfoWithSignatures>::new()),
-            local_queue: Muex::new(VecDeque::<CacheItem>::new()),
+            local_queue: Mutex::new(VecDeque::<CacheItem>::new()),
             commit_msg_sender,
         }
     }
@@ -85,19 +79,22 @@ impl CommitPhase {
             Ok(_) => {
                 // TODO: should we change chash to li.commit_info.executed_state_id?
                 let chash = li.consensus_data_hash();
-                let locked_local_signed_cache = self.local_signed_cache.lock().unwrap();
+                let mut locked_local_signed_cache = self.local_signed_cache.lock(); //.unwrap();
                 match locked_local_signed_cache.get(&chash) {
                     Some(_) => {
                         // ignore the proposal as we have already done this.
                     }
                     None => {
-                        let locked_local_cache = self.local_cache.lock().unwrap();
+                        let mut locked_local_cache = self.local_cache.lock(); //.unwrap();
                         match locked_local_cache.get(&chash) {
                             Some(&ci) => {
-                                ci.ledger_info_sig.insert(commit_proposal.author(), commit_proposal.signature());
-                                if round_manager_handle.verify_signature_tree(ci.ledger_info_sig()) {
-                                    locked_local_cache.remove(chash);
-                                    locked_local_signed_cache.insert(chash);
+                                ci.ledger_info_sig.signatures().insert(commit_proposal.author(), commit_proposal.signature().clone());
+                                match round_manager_handle.verify_signature_tree(&ci.ledger_info_sig) {
+                                    Ok(_) => {
+                                        locked_local_cache.remove(&chash);
+                                        locked_local_signed_cache.insert(chash, ci.ledger_info_sig);
+                                    }
+                                    None => {}
                                 }
                             }
                             None => {
@@ -110,10 +107,10 @@ impl CommitPhase {
                                 );
                                 let signature = round_manager_handle
                                     .sign_commit_proposal(ci.ledger_info_sig);
-                                ci.ledger_info_sig.insert(round_manager_handle.author(), signature);
-                                ci.ledger_info_sig.insert(commit_proposal.author(), commit_proposal.signature());
-                                if round_manager_handle.verify_signature_tree(ci.ledger_info_sig()) {
-                                    locked_local_signed_cache.insert(chash, ci.ledger_info_sig());
+                                ci.ledger_info_sig.signatures().insert(round_manager_handle.author(), signature);
+                                ci.ledger_info_sig.signatures().insert(commit_proposal.author(), commit_proposal.signature().clone());
+                                if round_manager_handle.verify_signature_tree(&ci.ledger_info_sig).is_ok() {
+                                    locked_local_signed_cache.insert(chash, ci.ledger_info_sig.clone());
                                 } else {
                                     locked_local_cache.insert(chash, ci.clone());
                                 }
@@ -124,7 +121,7 @@ impl CommitPhase {
             }
             _ => {
                 // ignore the proposal
-                /// Do we need to panic about this?
+                // Do we need to panic about this?
             }
         }
     }
@@ -142,15 +139,15 @@ impl CommitPhase {
             }
             _ => {
                 // ignore the decision
-                /// Panic?
+                // Panic?
             }
         }
     }
 
-    pub fn commit(mut self, vecblock: Vec<ExecutedBlock>, ledger_info: LedgerInfoWithSignatures){
+    pub fn commit(self, vecblock: Vec<ExecutedBlock>, ledger_info: LedgerInfoWithSignatures){
         // have to maintain the order.
-        self.execution_proxy.unwrap().commit(
-            vecblock.into_iter().map(|eb|Arc::new(eb)).collect(),
+        self.execution_proxy.commit(
+            &vecblock.into_iter().map(|eb|Arc::new(eb)).collect(),
             ledger_info,
         );
     }
@@ -176,21 +173,21 @@ impl CommitPhase {
 
                     // check local cache
                     let mut locked_local_queue = self.local_queue.lock();
-                    locked_local_queue.push_back(CacheItem(
+                    locked_local_queue.push_back(CacheItem::new(
                         vecblock,
                         ledger_info,
                     ));
                     loop {
-                        let &front = locked_local_queue.front().unwrap();
+                        let front = locked_local_queue.front().unwrap();
                         let front_chash = front.ledger_info_sig.ledger_info().consensus_data_hash();
                         match locked_signed_cache.get(&front_chash) {
                             Some(&li) => {
                                 // cancel out an item from signed_cache and an item from local_queue
-                                self.commit(front.vecblocks, front.ledger_info_sig);
+                                self.commit(front.vecblocks.clone(), front.ledger_info_sig.clone());
                                 self.commit_msg_sender.send(
                                     CommitPhaseChannelMsgWrapper::CommitDecision(li)
                                 );
-                                locked_signed_cache.remove(&cache);
+                                locked_signed_cache.remove(&chash);
                                 locked_local_queue.pop_front();
                             }
                             None => {

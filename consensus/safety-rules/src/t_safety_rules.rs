@@ -8,8 +8,6 @@ use consensus_types::{
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_types::epoch_change::EpochChangeProof;
-use consensus_types::experimental::commit_proposal::CommitProposal;
-use consensus_types::experimental::commit_decision::CommitDecision;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use diem_types::validator_verifier::ValidatorVerifier;
 

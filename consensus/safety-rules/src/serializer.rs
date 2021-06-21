@@ -11,8 +11,6 @@ use diem_infallible::RwLock;
 use diem_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use consensus_types::experimental::commit_proposal::CommitProposal;
-use consensus_types::experimental::commit_decision::CommitDecision;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use diem_types::validator_verifier::ValidatorVerifier;
 
@@ -49,6 +47,9 @@ impl SerializerService {
             }
             SafetyRulesInput::SignTimeout(timeout) => {
                 bcs::to_bytes(&self.internal.sign_timeout(&timeout))
+            }
+            SafetyRulesInput::SignCommitProposal(ledger_info, verifier) => {
+                bcs::to_bytes(&self.internal.sign_commit_proposal(*ledger_info, &verifier))
             }
         };
 

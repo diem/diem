@@ -11,7 +11,6 @@ use diem_metrics::monitor;
 use diem_types::epoch_change::EpochChangeProof;
 use safety_rules::{ConsensusState, Error, TSafetyRules};
 use std::sync::Arc;
-use consensus_types::experimental::commit_proposal::CommitProposal;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use diem_types::validator_verifier::ValidatorVerifier;
 
@@ -92,7 +91,7 @@ impl TSafetyRules for MetricsSafetyRules {
     }
 
     fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures, verifier: &ValidatorVerifier) -> Result<Ed25519Signature, Error> {
-        let mut result = monitor!("safety_rules", self.inner.sign_commit_proposal(commit_proposal));
+        let mut result = monitor!("safety_rules", self.inner.sign_commit_proposal(ledger_info, verifier));
         if let Err(Error::NotInitialized(_res)) = result {
             self.perform_initialize()?;
             result = monitor!("safety_rules", self.inner.sign_commit_proposal(ledger_info, verifier));
