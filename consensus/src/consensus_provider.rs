@@ -27,6 +27,7 @@ use state_sync::client::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
+use crate::experimental::commit_phase::CommitPhaseChannelMsgWrapper;
 
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
@@ -52,7 +53,11 @@ pub fn start_consensus(
     ));
 
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
-
+    let guage_cp = IntGauge::new("D_COMMPROPOSAL_CHANNEL_COUNTER", "counter for the committing proposals").unwrap();
+    let (sender_cp, receiver_cp) = channel::new::<CommitPhaseChannelMsgWrapper>(
+        node_config.consensus.channel_size,
+        &guage_cp
+    );
     let state_computer: Arc<dyn StateComputer> = if node_config.consensus.decoupled {
         let guage_e = IntGauge::new("D_EXE_CHANNEL_COUNTER", "counter for the decoupling execution channel").unwrap();
         let guage_c = IntGauge::new("D_COM_CHANNEL_COUNTER", "counter for the decoupling committing channel").unwrap();
@@ -70,10 +75,14 @@ pub fn start_consensus(
             execution_correctness_manager.client(),
             sender_comm,
         );
-        let commit_phase = CommitPhase::new(
-            receiver_comm,
+        let execution_proxy = ExecutionProxy::new(
             execution_correctness_manager.client(),
             state_sync_client,
+        );
+        let commit_phase = CommitPhase::new(
+            receiver_comm,
+            Arc::new(execution_proxy),
+            sender_cp,
         );
 
         runtime.spawn(commit_phase.start());
@@ -104,14 +113,13 @@ pub fn start_consensus(
         state_computer,
         storage,
         reconfig_events,
+        commit_phase,
     );
 
     let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);
 
     runtime.spawn(network_task.start());
-    runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
-
-
+    runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver, receiver_cp));
 
     debug!("Consensus started.");
     runtime

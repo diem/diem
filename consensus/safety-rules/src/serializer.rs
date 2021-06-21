@@ -11,6 +11,10 @@ use diem_infallible::RwLock;
 use diem_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use consensus_types::experimental::commit_proposal::CommitProposal;
+use consensus_types::experimental::commit_decision::CommitDecision;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::validator_verifier::ValidatorVerifier;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SafetyRulesInput {
@@ -19,6 +23,7 @@ pub enum SafetyRulesInput {
     ConstructAndSignVote(Box<MaybeSignedVoteProposal>),
     SignProposal(Box<BlockData>),
     SignTimeout(Box<Timeout>),
+    SignCommitProposal(Box<LedgerInfoWithSignatures>, Box<ValidatorVerifier>),
 }
 
 pub struct SerializerService {
@@ -103,6 +108,12 @@ impl TSafetyRules for SerializerClient {
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         let _timer = counters::start_timer("external", LogEntry::SignTimeout.as_str());
         let response = self.request(SafetyRulesInput::SignTimeout(Box::new(timeout.clone())))?;
+        bcs::from_bytes(&response)?
+    }
+
+    fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures, verifier: &ValidatorVerifier) -> Result<Ed25519Signature, Error> {
+        let _timer = counters::start_timer("external", LogEntry::SignCommitProposal.as_str());
+        let response = self.request(SafetyRulesInput::SignCommitProposal(Box::new(ledger_info.clone()), Box::new(verifier.clone())))?;
         bcs::from_bytes(&response)?
     }
 }

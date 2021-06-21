@@ -35,7 +35,7 @@ use consensus_types::{
 };
 use diem_infallible::checked;
 use diem_logger::prelude::*;
-use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
+use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier, validator_verifier::VerifyError as ValidatorVerifyError};
 use fail::fail_point;
 #[cfg(test)]
 use safety_rules::ConsensusState;
@@ -43,6 +43,11 @@ use safety_rules::TSafetyRules;
 use serde::Serialize;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
+use diem_types::ledger_info::{LedgerInfoWithSignatures, LedgerInfo};
+use crate::network_interface::ConsensusMsg::CommitProposal;
+use consensus_types::experimental::commit_proposal::CommitProposal;
+use diem_crypto::ed25519::Ed25519Signature;
+use diem_types::account_address::AccountAddress;
 
 #[derive(Serialize, Clone)]
 pub enum UnverifiedEvent {
@@ -190,6 +195,7 @@ pub struct RoundManager {
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
     sync_only: bool,
+    author: Author,
 }
 
 impl RoundManager {
@@ -204,6 +210,7 @@ impl RoundManager {
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
+        author: Author,
     ) -> Self {
         counters::OP_COUNTERS
             .gauge("sync_only")
@@ -219,6 +226,7 @@ impl RoundManager {
             txn_manager,
             storage,
             sync_only,
+            author,
         }
     }
 
@@ -478,6 +486,41 @@ impl RoundManager {
         );
         bail!("Round {} timeout, broadcast to all peers", round);
     }
+
+    pub fn verify_signature(&mut self, author: AccountAddress, ledger_info: &LedgerInfo, signature: &Ed25519Signature) -> Result<(), ValidatorVerifyError> {
+        self.epoch_state.verifier.verify(author, ledger_info, signature)
+    }
+
+    pub fn verify_signature_tree(&mut self, ledger_info: &LedgerInfoWithSignatures) -> Result<(), ValidatorVerifyError> {
+        self.epoch_state
+            .verifier
+            .verify_aggregated_struct_signature(
+                ledger_info.ledger_info(),
+                ledger_info.signatures()
+            )
+    }
+
+    pub fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> Ed25519Signature {
+        self.safety_rules
+            .sign_commit_proposal(ledger_info.clone(), &self.epoch_state.verifier).unwrap()?
+    }
+
+    pub fn generate_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<ConsensusMsg> {
+        let signature = self.sign_commit_proposal(ledger_info);
+        Ok(ConsensusMsg::CommitProposal(Box::new(
+            CommitProposal::new_with_signature(
+                self.author,
+                ledger_info.ledger_info().clone(),
+                signature,
+            )
+        )))
+    }
+
+    pub async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        self.network.broadcast(self.generate_commit_proposal(ledger_info).unwrap()).await;
+        Ok(())
+    }
+
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
     async fn process_certificates(&mut self) -> anyhow::Result<()> {
@@ -764,6 +807,8 @@ impl RoundManager {
     pub fn set_safety_rules(&mut self, safety_rules: MetricsSafetyRules) {
         self.safety_rules = safety_rules
     }
+
+    pub fn safety_rules(&mut self) -> &MetricsSafetyRules { &self.safety_rules }
 
     pub fn epoch_state(&self) -> &EpochState {
         &self.epoch_state

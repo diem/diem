@@ -49,6 +49,8 @@ pub enum LogEntry {
     PreferredRound,
     SignProposal,
     SignTimeout,
+    SignCommitProposal,
+    SignCommitDecision,
     State,
     Waypoint,
 }

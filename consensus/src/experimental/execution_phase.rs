@@ -32,14 +32,13 @@ impl ExecutionPhase {
     pub async fn start(mut self) {
         while let Some((vecblock, ledger_info)) = self.executor_channel_recv.next().await {
 
-            let executed_blocks: Vec<ExecutedBlock> = vecblock.iter().map(|b| {
-                ExecutedBlock::new(b.clone(),
-                self.execution_correctness_client.lock()
-                    .execute_block(b.clone(), b.parent_id()).unwrap()
-                )
+            let executed_blocks: Vec<ExecutedBlock> = vecblock.into_iter().map(|b| {
+                let state_compute_result = self.execution_correctness_client.lock()
+                    .execute_block(b.clone(), b.parent_id()).unwrap();
+                ExecutedBlock::new(b, state_compute_result)
             }).collect();
 
-            self.commit_channel_send.clone()
+            self.commit_channel_send
                 .send((executed_blocks, ledger_info))
                 .await
                 .map_err(|e| ExecutionError::InternalError {

@@ -42,6 +42,9 @@ use futures::{select, StreamExt};
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
+use consensus_types::experimental::commit_decision::CommitDecision;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
+use crate::experimental::commit_phase::{CommitPhase, CommitPhaseChannelMsgWrapper};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// RoundManager is used for normal event handling.
@@ -82,6 +85,7 @@ pub struct EpochManager {
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    commit_phase: Arc<CommitPhase>,
 }
 
 impl EpochManager {
@@ -95,6 +99,7 @@ impl EpochManager {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        commit_phase: Arc<CommitPhase>,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
@@ -113,6 +118,7 @@ impl EpochManager {
             safety_rules_manager,
             processor: None,
             reconfig_events,
+            commit_phase,
         }
     }
 
@@ -345,6 +351,7 @@ impl EpochManager {
             self.txn_manager.clone(),
             self.storage.clone(),
             self.config.sync_only,
+            self.author,
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));
@@ -472,6 +479,29 @@ impl EpochManager {
                     self.process_epoch_retrieval(*request, peer_id).await?
                 );
             }
+            ConsensusMsg::CommitProposal(request) => {
+                monitor!(
+                    "process_commit_decision",
+                    {
+                        let commit_proposal = request.unwrap();
+                        match self.processor_mut() {
+                            RoundProcessor::Normal(p) => {
+                                self.commitphase.process_commit_proposal(commit_proposal, p).await?
+                            },
+                            _ => {
+                                // recovery mode, ignore the request for now.
+                                // TODO
+                            }
+                        }
+                    }
+                );
+            }
+            ConsensusMsg::CommitDecision(request) => {
+                monitor!(
+                    "process_commit_decision",
+                    self.commitphase.process_commit_decision(request.unwrap()).await?
+                );
+            }
             _ => {
                 bail!("[EpochManager] Unexpected messages: {:?}", msg);
             }
@@ -534,6 +564,24 @@ impl EpochManager {
         }
     }
 
+    async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        match self.processor_mut() {
+            RoundProcessor::Normal(p) => { p.broadcast_commit_proposal(ledger_info).await},
+            _ => unreachable!("RoundManager not started yet"),
+        }
+    }
+
+    async fn broadcast_commit_decision(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        self.network_sender.broadcast(ConsensusMsg::CommitDecision(
+            Box::new(
+                CommitDecision::new(
+                    ledger_info
+                )
+            )
+        )).await;
+        Ok(())
+    }
+
     async fn expect_new_epoch(&mut self) {
         if let Some(payload) = self.reconfig_events.next().await {
             self.start_processor(payload).await;
@@ -546,6 +594,7 @@ impl EpochManager {
         mut self,
         mut round_timeout_sender_rx: channel::Receiver<Round>,
         mut network_receivers: NetworkReceivers,
+        mut ledger_info_receiver: channel::Receiver<CommitPhaseChannelMsgWrapper>
     ) {
         // initial start of the processor
         self.expect_new_epoch().await;
@@ -562,6 +611,17 @@ impl EpochManager {
                     }
                     round = round_timeout_sender_rx.select_next_some() => {
                         monitor!("process_local_timeout", self.process_local_timeout(round).await)
+                    }
+                    ledger_info = ledger_info_receiver.select_next_some() => {
+                        match ledger_info {
+                            CommitPhaseMsgWrapper::CommitProposal(li) => {
+                                monitor!("generate_commit_proposal", self.broadcast_commit_proposal(li).await)
+                            }
+                            CommitPhaseMsgWrapper::CommitDecision(li) => {
+                                monitor!("generate_commit_proposal", self.broadcast_commit_decision(li).await)
+                            }
+                        }
+
                     }
                 }
             );
