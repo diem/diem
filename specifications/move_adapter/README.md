@@ -315,7 +315,7 @@ Move VM with gas metering disabled. Each kind of transaction payload has a
 corresponding prologue function that is used for validation. These prologue
 functions are defined in the `DiemAccount` module of the Diem Framework:
 
-* `ScriptFunction` and `Script`: The prologue function is `script_prologue`.
+* Single-agent `ScriptFunction` and `Script`: The prologue function is `script_prologue`.
 In addition to the common checks listed below, it also calls the `is_script_allowed`
 function in the `DiemTransactionPublishingOption` module to determine if the script
 should be allowed. A script sent by an account with `has_diem_root_role` is always
@@ -325,6 +325,19 @@ script bytecode is on the list of allowed scripts published at
 `ScriptFunction` payloads, for which the adapter uses an empty vector in place
 of the script hash, are always allowed. If the script is not allowed, validation
 fails with an `UNKNOWN_SCRIPT` status code.
+
+* Multi-agent `ScriptFunction` and `Script`: The prologue function is `multi_agent_script_prologue`.
+In addition to the common checks listed below, it also performs the following checks:
+    * Check that the number of secondary signer addresses provided is the same
+      as the number of secondary signer public key hashes provided. If not,
+      validation fails with a `SECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH` status code.
+    * For each secondary signer, check if the secondary signer has an account,
+      and if not, validation fails with a `SENDING_ACCOUNT_DOES_NOT_EXIST` status code.
+    * For each secondary signer, check that the hash of the secondary signer's
+      public key (from the `authenticator` in the `SignedTransaction`) matches
+      the authentication key in the secondary signer's account. If not, validation
+      fails with an `INVALID_AUTH_KEY` status code.
+
 
 * `Module`: The prologue function is `module_prologue`. In addition to the
 common checks listed below, it also calls the `is_module_allowed` function in
@@ -352,17 +365,6 @@ transaction sender's account is frozen. If so, the status code is set to
 * Check that the hash of the transaction's public key (from the `authenticator`
 in the `SignedTransaction`) matches the authentication key in the sender's
 account. If not, validation fails with an `INVALID_AUTH_KEY` status code.
-
-* If secondary signers exist for the transaction, perform the following checks:
-    * Check that the number of secondary signer addresses provided is the same
-      as the number of secondary signer public key hashes provided. If not,
-      validation fails with a `SECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH` status code.
-    * For each secondary signer, check if the secondary signer has an account,
-      and if not, validation fails with a `SENDING_ACCOUNT_DOES_NOT_EXIST` status code.
-    * For each secondary signer, check that the hash of the secondary signer's
-      public key (from the `authenticator` in the `SignedTransaction`) matches
-      the authentication key in the secondary signer's account. If not, validation
-      fails with an `INVALID_AUTH_KEY` status code.
 
 * The transaction sender must be able to pay the maximum transaction fee. The
 maximum fee is the product of the transaction's `max_gas_amount` and
