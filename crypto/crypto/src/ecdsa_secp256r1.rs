@@ -13,25 +13,21 @@ use crate::{
     traits::*,
 };
 use anyhow::{anyhow, Result};
-use std::convert::{TryFrom, TryInto};
 use diem_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use mirai_annotations::*;
-use p256::{
-    ecdsa::{SigningKey as P256SigningKey, Signature as P256Signature, signature::Signer, VerifyingKey as P256VerifyingKey, signature::Verifier}
+use p256::ecdsa::{
+    signature::{Signer, Verifier},
+    Signature as P256Signature, SigningKey as P256SigningKey, VerifyingKey as P256VerifyingKey,
 };
 use serde::Serialize;
-use std::{cmp::Ordering, fmt};
-
-/// The length of the EcdsaPublicKey
-pub const ECDSA_SECP256R1_PRIVATE_KEY_LENGTH: usize = 32;
-/// The length of the EcdsaPublicKey
-pub const ECDSA_SECP256R1_PUBLIC_KEY_LENGTH: usize = 33;
-/// The length of the EcdsaSignature
-pub const ECDSA_SECP256R1_SIGNATURE_LENGTH: usize = 64;
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
 /// An ECDSA secp256r1 private key
 #[derive(DeserializeKey, SerializeKey, SilentDebug, SilentDisplay)]
-pub struct EcdsaPrivateKey(Vec<u8>);
+pub struct EcdsaPrivateKey(P256SigningKey);
 
 #[cfg(feature = "assert-private-keys-not-cloneable")]
 static_assertions::assert_not_impl_any!(EcdsaPrivateKey: Clone);
@@ -39,13 +35,17 @@ static_assertions::assert_not_impl_any!(EcdsaPrivateKey: Clone);
 #[cfg(any(test, feature = "cloneable-private-keys"))]
 impl Clone for EcdsaPrivateKey {
     fn clone(&self) -> Self {
-        EcdsaPrivateKey(self.0.clone())
+        let private_bytes = self.0.to_bytes();
+        let p256_signing_key = P256SigningKey::from_bytes(&private_bytes)
+            .map_err(|_| CryptoMaterialError::DeserializationError)
+            .expect("EcdsaPrivateKey cloning: from_bytes after to_bytes should not fail.");
+        EcdsaPrivateKey(p256_signing_key)
     }
 }
 
 /// An ECDSA secp256r1 public key
 #[derive(DeserializeKey, Clone, SerializeKey)]
-pub struct EcdsaPublicKey(Vec<u8>);
+pub struct EcdsaPublicKey(P256VerifyingKey);
 
 #[cfg(mirai)]
 use crate::tags::ValidatedPublicKeyTag;
@@ -54,60 +54,80 @@ struct ValidatedPublicKeyTag {}
 
 /// An ECDSA secp256r1 signature
 #[derive(DeserializeKey, Clone, SerializeKey)]
-pub struct EcdsaSignature(Vec<u8>);
+pub struct EcdsaSignature(P256Signature);
 
 impl EcdsaPrivateKey {
-    /// The length of the EcdsaPrivateKey
-    pub const LENGTH: usize = ECDSA_SECP256R1_PRIVATE_KEY_LENGTH;
+    /// The length of the EcdsaPrivateKey.
+    pub const LENGTH: usize = 32;
 
     /// Serialize an EcdsaPrivateKey.
     pub fn to_bytes(&self) -> [u8; EcdsaPrivateKey::LENGTH] {
-        // Converting from Vec to array will not normally fail, and if it does it's better to panic.
-        self.0.clone().try_into().unwrap()
+        self.0
+            .to_bytes()
+            .try_into()
+            .map_err(|_| CryptoMaterialError::SerializationError)
+            .expect("EcdsaPrivateKey to_bytes should not fail.")
     }
 
     /// Deserialize an EcdsaPrivateKey without any validation checks apart from expected key size.
     fn from_bytes_unchecked(
         bytes: &[u8],
     ) -> std::result::Result<EcdsaPrivateKey, CryptoMaterialError> {
-        if bytes.len() != ECDSA_SECP256R1_PRIVATE_KEY_LENGTH {
-            Err(CryptoMaterialError::DeserializationError)
+        if bytes.len() != EcdsaPrivateKey::LENGTH {
+            Err(CryptoMaterialError::WrongLengthError)
         } else {
-            Ok(EcdsaPrivateKey(bytes.to_vec()))
+            let p256_signing_key = P256SigningKey::from_bytes(&bytes)
+                .map_err(|_| CryptoMaterialError::DeserializationError)?;
+            Ok(EcdsaPrivateKey(p256_signing_key))
         }
     }
 
     /// Private function aimed at minimizing code duplication between sign
     /// methods of the SigningKey implementation. This should remain private.
     fn sign_arbitrary_message(&self, message: &[u8]) -> EcdsaSignature {
-        let signing_key = P256SigningKey::from_bytes(&self.0).unwrap();
-        let signature: P256Signature = signing_key.sign(message);
-        EcdsaSignature(to_compressed_signature_bytes(&signature))
+        EcdsaSignature(self.0.sign(message))
     }
 }
 
 impl EcdsaPublicKey {
+    /// The length of the EcdsaPublicKey
+    pub const LENGTH: usize = 33;
+
     /// Serialize an EcdsaPublicKey.
-    pub fn to_bytes(&self) -> [u8; ECDSA_SECP256R1_PUBLIC_KEY_LENGTH] { self.0.clone().try_into().unwrap() }
+    pub fn to_bytes(&self) -> [u8; EcdsaPublicKey::LENGTH] {
+        self.0
+            .to_encoded_point(true)
+            .to_bytes()
+            // Note that we expect 33 bytes; unfortunately, Rust supports slice -> array conversion
+            // using try_into for up to 32 elements. A temp hack is via slice -> vec -> array.
+            .to_vec()
+            .try_into()
+            .map_err(|_| CryptoMaterialError::SerializationError)
+            .expect("Serialization of EcdsaPublicKey should not fail.")
+    }
 
     /// Deserialize an EcdsaPublicKey without any validation checks apart from expected key size.
     pub(crate) fn from_bytes_unchecked(
         bytes: &[u8],
     ) -> std::result::Result<EcdsaPublicKey, CryptoMaterialError> {
-        if bytes.len() != ECDSA_SECP256R1_PUBLIC_KEY_LENGTH {
-            return Err(CryptoMaterialError::WrongLengthError)
+        if bytes.len() != EcdsaPublicKey::LENGTH {
+            return Err(CryptoMaterialError::WrongLengthError);
         }
-        Ok(EcdsaPublicKey(bytes.to_vec()))
+        let encoded_point = p256::EncodedPoint::from_bytes(&bytes)
+            .map_err(|_| CryptoMaterialError::DeserializationError)?;
+        let p256_verifying_key = P256VerifyingKey::from_encoded_point(&encoded_point)
+            .map_err(|_| CryptoMaterialError::DeserializationError)?;
+        Ok(EcdsaPublicKey(p256_verifying_key))
     }
 }
 
 impl EcdsaSignature {
     /// The length of the EcdsaSignature
-    pub const LENGTH: usize = ECDSA_SECP256R1_SIGNATURE_LENGTH;
+    pub const LENGTH: usize = 64;
 
     /// Serialize an EcdsaSignature.
-    pub fn to_bytes(&self) -> [u8; ECDSA_SECP256R1_SIGNATURE_LENGTH] {
-        self.0.clone().try_into().unwrap()
+    pub fn to_bytes(&self) -> [u8; EcdsaSignature::LENGTH] {
+        self.to_compressed_signature_bytes()
     }
 
     /// Deserialize an EcdsaSignature without any validation checks
@@ -115,17 +135,28 @@ impl EcdsaSignature {
     pub(crate) fn from_bytes_unchecked(
         bytes: &[u8],
     ) -> std::result::Result<EcdsaSignature, CryptoMaterialError> {
-        if bytes.len() != ECDSA_SECP256R1_SIGNATURE_LENGTH {
-            return Err(CryptoMaterialError::WrongLengthError)
+        if bytes.len() != EcdsaSignature::LENGTH {
+            return Err(CryptoMaterialError::WrongLengthError);
         }
-        Ok(EcdsaSignature(bytes.to_vec()))
+        let p256_signature = P256Signature::try_from(bytes)
+            .map_err(|_| CryptoMaterialError::DeserializationError)?;
+        Ok(EcdsaSignature(p256_signature))
     }
 
-    /// return an all-zero signature (for test only)
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn dummy_signature() -> Self {
-        Self::from_bytes_unchecked(&[0u8; Self::LENGTH]).unwrap()
+    // Compressing signature to 64 bytes via concatenated r and s signature parts.
+    fn to_compressed_signature_bytes(&self) -> [u8; EcdsaSignature::LENGTH] {
+        let mut sig_bytes = [0u8; EcdsaSignature::LENGTH];
+        sig_bytes[..32].copy_from_slice(&self.0.r().to_bytes());
+        sig_bytes[32..].copy_from_slice(&self.0.s().to_bytes());
+        sig_bytes
     }
+
+    // TODO: uncomment when needed in tests.
+    // /// return an all-zero signature (for test only)
+    // #[cfg(any(test, feature = "fuzzing"))]
+    // pub fn dummy_signature() -> Self {
+    //     Self::from_bytes_unchecked(&[0u8; Self::LENGTH]).unwrap()
+    // }
 }
 
 ///////////////////////
@@ -156,11 +187,11 @@ impl SigningKey for EcdsaPrivateKey {
 
 impl Uniform for EcdsaPrivateKey {
     fn generate<R>(rng: &mut R) -> Self
-        where
-            R: ::rand::RngCore + ::rand::CryptoRng,
+    where
+        R: ::rand::RngCore + ::rand::CryptoRng,
     {
         let signing_key = P256SigningKey::random(rng);
-        EcdsaPrivateKey(signing_key.to_bytes().to_vec())
+        EcdsaPrivateKey(signing_key)
     }
 }
 
@@ -177,12 +208,10 @@ impl Eq for EcdsaPrivateKey {}
 impl TryFrom<&[u8]> for EcdsaPrivateKey {
     type Error = CryptoMaterialError;
 
-    /// Deserialize an Ed25519PrivateKey. This method will also check for key validity.
+    /// Deserialize an EcdsaPrivateKey. This method will also check for key validity.
     fn try_from(bytes: &[u8]) -> std::result::Result<EcdsaPrivateKey, CryptoMaterialError> {
-        if bytes.len() != EcdsaPrivateKey::LENGTH {
-            return Err(CryptoMaterialError::WrongLengthError)
-        }
-        Ok(EcdsaPrivateKey(bytes.to_vec()))
+        // TODO: ensure that P256 crate exhausts the required private key validation checks.
+        EcdsaPrivateKey::from_bytes_unchecked(bytes)
     }
 }
 
@@ -213,9 +242,7 @@ impl Genesis for EcdsaPrivateKey {
 // Implementing From<&PrivateKey<...>> allows to derive a public key in a more elegant fashion
 impl From<&EcdsaPrivateKey> for EcdsaPublicKey {
     fn from(private_key: &EcdsaPrivateKey) -> Self {
-        let signing_key = P256SigningKey::from_bytes(&private_key.0).unwrap();
-        let verifying_key = P256VerifyingKey::from(&signing_key);
-        EcdsaPublicKey(verifying_key.to_encoded_point(true).to_bytes().to_vec())
+        EcdsaPublicKey(P256VerifyingKey::from(&private_key.0))
     }
 }
 
@@ -249,7 +276,7 @@ impl VerifyingKey for EcdsaPublicKey {
 
 impl fmt::Display for EcdsaPublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
+        write!(f, "{}", hex::encode(&self.0.to_encoded_point(true)))
     }
 }
 
@@ -262,8 +289,8 @@ impl fmt::Debug for EcdsaPublicKey {
 impl TryFrom<&[u8]> for EcdsaPublicKey {
     type Error = CryptoMaterialError;
 
-    /// Deserialize an Ed25519PublicKey. This method will also check for key validity, for instance
-    ///  it will only deserialize keys that are safe against small subgroup attacks.
+    /// Deserialize an EcdsaPublicKey. This method will also check for key validity, for instance
+    /// it will only deserialize keys that are safe against small subgroup attacks.
     fn try_from(bytes: &[u8]) -> std::result::Result<EcdsaPublicKey, CryptoMaterialError> {
         let public_key = EcdsaPublicKey::from_bytes_unchecked(bytes)?;
         add_tag!(&public_key, ValidatedPublicKeyTag); // This key has gone through validity checks.
@@ -273,13 +300,13 @@ impl TryFrom<&[u8]> for EcdsaPublicKey {
 
 impl Length for EcdsaPublicKey {
     fn length(&self) -> usize {
-        ECDSA_SECP256R1_PUBLIC_KEY_LENGTH
+        EcdsaPublicKey::LENGTH
     }
 }
 
 impl ValidCryptoMaterial for EcdsaPublicKey {
     fn to_bytes(&self) -> Vec<u8> {
-        self.0.clone()
+        self.0.to_encoded_point(true).to_bytes().to_vec()
     }
 }
 
@@ -309,21 +336,21 @@ impl Signature for EcdsaSignature {
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
     fn verify_arbitrary_msg(&self, message: &[u8], public_key: &EcdsaPublicKey) -> Result<()> {
-        let verifying_key = P256VerifyingKey::from_sec1_bytes(&public_key.0).unwrap();
-        let signature = P256Signature::try_from((&self.0).as_slice()).unwrap();
-        verifying_key.verify(message, &signature)
+        public_key
+            .0
+            .verify(message, &self.0)
             .map_err(|e| anyhow!("{}", e))
             .and(Ok(()))
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.0.clone()
+        self.to_bytes().to_vec()
     }
 }
 
 impl Length for EcdsaSignature {
     fn length(&self) -> usize {
-        ECDSA_SECP256R1_SIGNATURE_LENGTH
+        EcdsaSignature::LENGTH
     }
 }
 
@@ -369,26 +396,18 @@ impl fmt::Debug for EcdsaSignature {
     }
 }
 
-// --- Utilities ---
-fn to_compressed_signature_bytes(signature: &P256Signature) -> Vec<u8>{
-    let mut sig_bytes = [0u8; 64];
-    sig_bytes[..32].copy_from_slice(&signature.r().to_bytes());
-    sig_bytes[32..].copy_from_slice(&signature.s().to_bytes());
-    sig_bytes.to_vec()
-}
+// TODO: Add proptests
+// #[cfg(any(test, feature = "fuzzing"))]
+// use crate::test_utils::{self, KeyPair};
 
-#[cfg(any(test, feature = "fuzzing"))]
-use crate::test_utils::{self, KeyPair};
-
-/// Produces a uniformly random ecdsa keypair from a seed
-#[cfg(any(test, feature = "fuzzing"))]
-pub fn keypair_strategy() -> impl Strategy<Value = KeyPair<EcdsaPrivateKey, EcdsaPublicKey>> {
-    test_utils::uniform_keypair_strategy::<EcdsaPrivateKey, EcdsaPublicKey>()
-}
+// /// Produces a uniformly random ecdsa keypair from a seed
+// #[cfg(any(test, feature = "fuzzing"))]
+// pub fn keypair_strategy() -> impl Strategy<Value = KeyPair<EcdsaPrivateKey, EcdsaPublicKey>> {
+//     test_utils::uniform_keypair_strategy::<EcdsaPrivateKey, EcdsaPublicKey>()
+// }
 
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
-use rand_core::OsRng;
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl proptest::arbitrary::Arbitrary for EcdsaPublicKey {
@@ -407,9 +426,34 @@ fn sign_verify() {
     let message = b"Hello world";
     let message2 = b"Hello world2";
     let key_bytes = b"12345678901234567890123456789012";
-    let private_key = EcdsaPrivateKey::from_bytes_unchecked(&key_bytes.to_vec().as_slice()).unwrap();
+
+    let private_key = EcdsaPrivateKey::from_bytes_unchecked(key_bytes).unwrap();
     let public_key = EcdsaPublicKey::from(&private_key);
     let signature = private_key.sign_arbitrary_message(&message.to_vec().as_slice());
-    assert!(signature.verify_arbitrary_msg(&message.to_vec().as_slice(), &public_key).is_ok());
-    assert!(signature.verify_arbitrary_msg(&message2.to_vec().as_slice(), &public_key).is_err());
+    let signature2 = private_key.sign_arbitrary_message(&message2.to_vec().as_slice());
+
+    assert!(signature
+        .verify_arbitrary_msg(&message.to_vec().as_slice(), &public_key)
+        .is_ok());
+    assert!(signature2
+        .verify_arbitrary_msg(&message.to_vec().as_slice(), &public_key)
+        .is_err());
+}
+
+#[test]
+fn serialization_full_cycle() {
+    let message = b"Hello world";
+    let key_bytes = b"12345678901234567890123456789012";
+
+    let private_key = EcdsaPrivateKey::from_bytes_unchecked(key_bytes).unwrap();
+    let private_key_2 = EcdsaPrivateKey::from_bytes_unchecked(&private_key.to_bytes()).unwrap();
+    assert_eq!(private_key, private_key_2);
+
+    let public_key = EcdsaPublicKey::from(&private_key);
+    let public_key2 = EcdsaPublicKey::from_bytes_unchecked(&public_key.to_bytes()).unwrap();
+    assert_eq!(public_key, public_key2);
+
+    let signature = private_key.sign_arbitrary_message(&message.to_vec().as_slice());
+    let signature2 = EcdsaSignature::from_bytes_unchecked(&signature.to_bytes()).unwrap();
+    assert_eq!(signature, signature2);
 }

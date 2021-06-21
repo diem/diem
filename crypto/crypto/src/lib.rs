@@ -18,12 +18,14 @@ pub mod test_utils;
 pub mod traits;
 pub mod x25519;
 
+// #[cfg(feature = "crypto-experimental")]
+mod ecdsa_secp256r1;
+
 #[cfg(test)]
 mod unit_tests;
 
 #[cfg(mirai)]
 mod tags;
-mod ecdsa_secp256r1;
 
 pub use self::traits::*;
 pub use hash::HashValue;
