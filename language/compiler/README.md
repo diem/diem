@@ -31,23 +31,23 @@ automatically calls the bytecode verifier at the end of compilation.
 
 ```text
 USAGE:
-    compiler [FLAGS] [OPTIONS] <source_path>
+    compiler [FLAGS] [OPTIONS] <source-path> --address <address>
 
 FLAGS:
     -h, --help                 Prints help information
-    -l, --list_dependencies    Instead of compiling the source, emit a dependency list of the compiled source
+    -l, --list-dependencies    Instead of compiling the source, emit a dependency list of the compiled source
     -m, --module               Treat input file as a module (default is to treat file as a script)
         --no-stdlib            Do not automatically compile stdlib dependencies
         --no-verify            Do not automatically run the bytecode verifier
+        --src-map
     -V, --version              Prints version information
 
 OPTIONS:
-    -a, --address <address>       Account address used for publishing
-        --deps <deps_path>        Path to the list of modules that we want to link with
-    -o, --output <output_path>    Serialize and write the compiled output to this file
+    -a, --address <address>    Account address used for publishing
+        --deps <deps-path>     Path to the list of modules that we want to link with
 
 ARGS:
-    <source_path>    Path to the Move IR source to compile
+    <source-path>    Path to the Move IR source to compile
 ```
 
 ### Example Usage
@@ -59,10 +59,10 @@ ARGS:
 * Alternatively, the binary can be run directly with `cargo run -p compiler`.
 
 To compile and verify `foo.mvir`, which contains a Move IR module:
-> `compiler -m foo.mvir`
+> `compiler --address 0x42 --no-stdlib -m foo.mvir`
 
 To compile and verify `bar.mvir`, which contains a transaction script:
-> `compiler bar.mvir`
+> `compiler --address 0xca --no-stdlib bar.mvir`
 
 ## Folder Structure
 
