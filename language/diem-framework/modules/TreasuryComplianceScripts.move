@@ -267,9 +267,6 @@ module DiemFramework::TreasuryComplianceScripts {
         /// **Access Control:**
         /// Only the account with a Preburn resource or PreburnQueue resource can preburn [[H4]][PERMISSION].
         aborts_if !(exists<Diem::Preburn<Token>>(account_addr) || exists<Diem::PreburnQueue<Token>>(account_addr));
-
-        /// TODO(timeout): this currently times out
-        pragma verify = false;
     }
 
     /// # Summary

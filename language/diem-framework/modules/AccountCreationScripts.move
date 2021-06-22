@@ -87,6 +87,7 @@ module DiemFramework::AccountCreationScripts {
     spec create_child_vasp_account {
         use Std::Signer;
         use Std::Errors;
+        use DiemFramework::DualAttestation;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: parent_vasp}; // properties checked by the prologue.
@@ -97,6 +98,13 @@ module DiemFramework::AccountCreationScripts {
         aborts_if child_initial_balance > max_u64() with Errors::LIMIT_EXCEEDED;
         include (child_initial_balance > 0) ==>
             DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: parent_addr};
+        include (child_initial_balance > 0) ==> DualAttestation::AssertPaymentOkAbortsIf<CoinType>{
+            payer: parent_addr,
+            payee: child_address,
+            metadata: x"",
+            metadata_signature: x"",
+            value: child_initial_balance
+        };
         include (child_initial_balance) > 0 ==>
             DiemAccount::PayFromAbortsIfRestricted<CoinType>{
                 cap: parent_cap,
@@ -120,6 +128,8 @@ module DiemFramework::AccountCreationScripts {
             Errors::INVALID_STATE,
             Errors::INVALID_ARGUMENT;
 
+        // TODO: fix emit specs below
+        /*
         include DiemAccount::MakeAccountEmits{new_account_address: child_address};
         include child_initial_balance > 0 ==>
             DiemAccount::PayFromEmits<CoinType>{
@@ -128,13 +138,11 @@ module DiemFramework::AccountCreationScripts {
                 amount: child_initial_balance,
                 metadata: x"",
             };
+        */
 
         /// **Access Control:**
         /// Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
         include Roles::AbortsIfNotParentVasp{account: parent_vasp};
-
-        /// TODO(timeout): this currently times out
-        pragma verify = false;
     }
 
     /// # Summary
