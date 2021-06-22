@@ -18,8 +18,8 @@ pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
 // Custom timeouts for vault backend operations when using the management tooling.
-const CONNECTION_TIMEOUT_MS: u64 = 10_000;
-const RESPONSE_TIMEOUT_MS: u64 = 10_000;
+const CONNECTION_TIMEOUT_MS: u64 = 100_000;
+const RESPONSE_TIMEOUT_MS: u64 = 100_000;
 
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
 /// only expected key is backend which defines which of the SecureBackends the parameters refer to.
