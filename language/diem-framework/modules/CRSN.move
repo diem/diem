@@ -4,6 +4,7 @@ address 0x1 {
 /// criteria, force expiration and window shifting of CRSNs are described in DIP-168.
 module CRSN {
     use 0x1::BitVector::{Self, BitVector};
+    use 0x1::DiemVersion;
     use 0x1::Signer;
     use 0x1::Errors;
 
@@ -32,11 +33,14 @@ module CRSN {
     const EHAS_CRSN: u64 = 1;
     /// The size given to the CRSN at the time of publishing was zero, which is not supported
     const EZERO_SIZE_CRSN: u64 = 2;
+    /// CRSNs are not supported until after Diem version 3
+    const ECRSN_NOT_SUPPORTED_AT_VERSION: u64 = 3;
 
 
     /// Publish a DSN under `account`. Cannot already have a DSN published.
     public(friend) fun publish(account: &signer, min_nonce: u64, size: u64) {
         assert(!has_crsn(Signer::address_of(account)), Errors::invalid_state(EHAS_CRSN));
+        assert(DiemVersion::get() > 3, Errors::invalid_state(ECRSN_NOT_SUPPORTED_AT_VERSION));
         assert(size > 0, Errors::invalid_argument(EZERO_SIZE_CRSN));
         move_to(account, CRSN {
             min_nonce,
@@ -49,17 +53,21 @@ module CRSN {
     /// `sequence_nonce` is accepted, returns false if the `sequence_nonce` is rejected.
     public(friend) fun record(account: &signer, sequence_nonce: u64): bool
     acquires CRSN {
+        let addr = Signer::address_of(account);
         if (check(account, sequence_nonce)) {
             // CRSN exists by `check`.
-            let crsn = borrow_global_mut<CRSN>(Signer::address_of(account));
+            let crsn = borrow_global_mut<CRSN>(addr);
             // accept nonce
             let scaled_nonce = sequence_nonce - crsn.min_nonce;
             BitVector::set(&mut crsn.slots, scaled_nonce);
             shift_window_right(crsn);
-            true
-        } else {
-            false
-        }
+            return true
+        } else if (exists<CRSN>(addr)) { // window was force shifted in this transaction
+            let crsn = borrow_global<CRSN>(addr);
+            if (crsn.min_nonce > sequence_nonce) return true
+        };
+
+        false
     }
 
     /// A stateless version of `record`: returns `true` if the `sequence_nonce`
@@ -86,6 +94,7 @@ module CRSN {
         true
 
     }
+    //  TODO/XXX: A force expiration will cause the transaction to abort due to the epilogue
 
     /// Force expire transactions by forcibly shifting the window by
     /// `shift_amount`. After the window has been shifted by `shift_amount` it is

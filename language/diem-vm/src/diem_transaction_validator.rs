@@ -9,8 +9,10 @@ use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{self, CurrencyInfoResource, RoleId},
-    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_2, DIEM_VERSION_3},
+    account_config::{self, CRSNResource, CurrencyInfoResource, RoleId},
+    on_chain_config::{
+        DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_2, DIEM_VERSION_3, DIEM_VERSION_4,
+    },
     transaction::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
         VMValidatorResult,
@@ -126,13 +128,23 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     allow_too_new: bool,
     log_context: &impl LogContext,
 ) -> Result<(u64, Identifier), VMStatus> {
-    if transaction.is_multi_agent() && vm.get_diem_version()? < DIEM_VERSION_3 {
+    let diem_version = vm.get_diem_version()?;
+    if transaction.is_multi_agent() && diem_version < DIEM_VERSION_3 {
         // Multi agent is not allowed under this version
         return Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING));
     }
 
     if transaction.contains_duplicate_signers() {
         return Err(VMStatus::Error(StatusCode::SIGNERS_CONTAIN_DUPLICATES));
+    }
+
+    let is_using_crsn = matches!(
+        remote_cache.get_resource(&transaction.sender(), &CRSNResource::struct_tag()),
+        Ok(Some(_))
+    );
+    if is_using_crsn && diem_version < DIEM_VERSION_4 {
+        // CRSNs are not allowed under this version
+        return Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING));
     }
 
     let gas_price = transaction.gas_unit_price();

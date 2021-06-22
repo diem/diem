@@ -25,6 +25,7 @@ pub const EINVALID_WRITESET_SENDER: u64 = 1010; // invalid sender (not diem root
 pub const ESEQUENCE_NUMBER_TOO_BIG: u64 = 1011;
 pub const EBAD_TRANSACTION_FEE_CURRENCY: u64 = 1012;
 pub const ESECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH: u64 = 1013;
+pub const ESEQ_NONCE_NONCE_INVALID: u64 = 1014;
 
 const INVALID_STATE: u8 = 1;
 const INVALID_ARGUMENT: u8 = 7;
@@ -89,6 +90,7 @@ pub fn convert_prologue_error(
                 (INVALID_ARGUMENT, ESECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH) => {
                     StatusCode::SECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH
                 }
+                (INVALID_ARGUMENT, ESEQ_NONCE_NONCE_INVALID) => StatusCode::SEQUENCE_NONCE_INVALID,
                 (category, reason) => {
                     log_context.alert();
                     error!(

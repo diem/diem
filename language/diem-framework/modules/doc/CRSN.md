@@ -19,6 +19,7 @@ criteria, force expiration and window shifting of CRSNs are described in DIP-168
 
 
 <pre><code><b>use</b> <a href="../../../../../../move-stdlib/docs/BitVector.md#0x1_BitVector">0x1::BitVector</a>;
+<b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
 </code></pre>
@@ -80,6 +81,16 @@ min_nonce                       min_nonce + k - 1
 ## Constants
 
 
+<a name="0x1_CRSN_ECRSN_NOT_SUPPORTED_AT_VERSION"></a>
+
+CRSNs are not supported until after Diem version 3
+
+
+<pre><code><b>const</b> <a href="CRSN.md#0x1_CRSN_ECRSN_NOT_SUPPORTED_AT_VERSION">ECRSN_NOT_SUPPORTED_AT_VERSION</a>: u64 = 3;
+</code></pre>
+
+
+
 <a name="0x1_CRSN_EHAS_CRSN"></a>
 
 A CRSN resource wasn't expected, but one was found
@@ -128,6 +139,7 @@ Publish a DSN under <code>account</code>. Cannot already have a DSN published.
 
 <pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="CRSN.md#0x1_CRSN_publish">publish</a>(account: &signer, min_nonce: u64, size: u64) {
     <b>assert</b>(!<a href="CRSN.md#0x1_CRSN_has_crsn">has_crsn</a>(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="CRSN.md#0x1_CRSN_EHAS_CRSN">EHAS_CRSN</a>));
+    <b>assert</b>(<a href="DiemVersion.md#0x1_DiemVersion_get">DiemVersion::get</a>() &gt; 3, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="CRSN.md#0x1_CRSN_ECRSN_NOT_SUPPORTED_AT_VERSION">ECRSN_NOT_SUPPORTED_AT_VERSION</a>));
     <b>assert</b>(size &gt; 0, <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="CRSN.md#0x1_CRSN_EZERO_SIZE_CRSN">EZERO_SIZE_CRSN</a>));
     move_to(account, <a href="CRSN.md#0x1_CRSN">CRSN</a> {
         min_nonce,
@@ -160,17 +172,21 @@ Record <code>sequence_nonce</code> under the <code>account</code>. Returns true 
 
 <pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="CRSN.md#0x1_CRSN_record">record</a>(account: &signer, sequence_nonce: u64): bool
 <b>acquires</b> <a href="CRSN.md#0x1_CRSN">CRSN</a> {
+    <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>if</b> (<a href="CRSN.md#0x1_CRSN_check">check</a>(account, sequence_nonce)) {
         // <a href="CRSN.md#0x1_CRSN">CRSN</a> <b>exists</b> by `check`.
-        <b>let</b> crsn = borrow_global_mut&lt;<a href="CRSN.md#0x1_CRSN">CRSN</a>&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+        <b>let</b> crsn = borrow_global_mut&lt;<a href="CRSN.md#0x1_CRSN">CRSN</a>&gt;(addr);
         // accept nonce
         <b>let</b> scaled_nonce = sequence_nonce - crsn.min_nonce;
         <a href="../../../../../../move-stdlib/docs/BitVector.md#0x1_BitVector_set">BitVector::set</a>(&<b>mut</b> crsn.slots, scaled_nonce);
         <a href="CRSN.md#0x1_CRSN_shift_window_right">shift_window_right</a>(crsn);
-        <b>true</b>
-    } <b>else</b> {
-        <b>false</b>
-    }
+        <b>return</b> <b>true</b>
+    } <b>else</b> <b>if</b> (<b>exists</b>&lt;<a href="CRSN.md#0x1_CRSN">CRSN</a>&gt;(addr)) { // window was force shifted in this transaction
+        <b>let</b> crsn = borrow_global&lt;<a href="CRSN.md#0x1_CRSN">CRSN</a>&gt;(addr);
+        <b>if</b> (crsn.min_nonce &gt; sequence_nonce) <b>return</b> <b>true</b>
+    };
+
+    <b>false</b>
 }
 </code></pre>
 

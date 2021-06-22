@@ -820,6 +820,15 @@ important to the semantics of the system.
 
 
 
+<a name="0x1_DiemAccount_PROLOGUE_ESEQ_NONCE_INVALID"></a>
+
+
+
+<pre><code><b>const</b> <a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQ_NONCE_INVALID">PROLOGUE_ESEQ_NONCE_INVALID</a>: u64 = 1014;
+</code></pre>
+
+
+
 <a name="0x1_DiemAccount_PROLOGUE_ETRANSACTION_EXPIRED"></a>
 
 
@@ -4222,18 +4231,27 @@ The main properties that it verifies:
         <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG">PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG</a>)
     );
 
-    // [PCA11]: Check that the transaction sequence number is not too <b>old</b> (in the past)
-    <b>assert</b>(
-        txn_sequence_number &gt;= sender_account.sequence_number,
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>)
-    );
+    <b>if</b> (<a href="CRSN.md#0x1_CRSN_has_crsn">CRSN::has_crsn</a>(transaction_sender)) {
+        // [PCA13]: If using a sequence nonce check that it's accepted
+        <b>assert</b>(
+            <a href="CRSN.md#0x1_CRSN_check">CRSN::check</a>(sender, txn_sequence_number),
+            <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQ_NONCE_INVALID">PROLOGUE_ESEQ_NONCE_INVALID</a>)
+        );
+    } <b>else</b> {
 
-    // [PCA12]: Check that the transaction's sequence number matches the
-    // current sequence number. Otherwise sequence number is too new by [PCA11].
-    <b>assert</b>(
-        txn_sequence_number == sender_account.sequence_number,
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
-    );
+        // [PCA11]: Check that the transaction sequence number is not too <b>old</b> (in the past)
+        <b>assert</b>(
+            txn_sequence_number &gt;= sender_account.sequence_number,
+            <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>)
+        );
+
+        // [PCA12]: Check that the transaction's sequence number matches the
+        // current sequence number. Otherwise sequence number is too new by [PCA11].
+        <b>assert</b>(
+            txn_sequence_number == sender_account.sequence_number,
+            <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
+        );
+    }
     // WARNING: No checks should be added here <b>as</b> the sequence number too new check should be the last check run
     // by the prologue.
 }
@@ -4376,7 +4394,7 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
-    <b>aborts_if</b> txn_sequence_number &lt; <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> !<a href="CRSN.md#0x1_CRSN_has_crsn">CRSN::has_crsn</a>(transaction_sender) && txn_sequence_number &lt; <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 
@@ -4385,7 +4403,7 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
-    <b>aborts_if</b> txn_sequence_number &gt; <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> !<a href="CRSN.md#0x1_CRSN_has_crsn">CRSN::has_crsn</a>(transaction_sender) && txn_sequence_number &gt; <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 
@@ -4482,17 +4500,25 @@ based on the conditions checked in the prologue, should never fail.
         <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG">PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG</a>)
     );
 
-    // [EA4; Invariant]: Make sure passed-in `txn_sequence_number` matches
-    // the `sender_account`'s `sequence_number`. Already checked in [PCA12].
-    <b>assert</b>(
-        sender_account.sequence_number == txn_sequence_number,
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
-    );
+    <b>if</b> (<a href="CRSN.md#0x1_CRSN_has_crsn">CRSN::has_crsn</a>(sender)) {
+        // Make sure the `sender_account`'s <a href="CRSN.md#0x1_CRSN">CRSN</a> is still valid and record it.
+        <b>assert</b>(
+            <a href="CRSN.md#0x1_CRSN_record">CRSN::record</a>(account, txn_sequence_number),
+            <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQ_NONCE_INVALID">PROLOGUE_ESEQ_NONCE_INVALID</a>),
+        );
+    } <b>else</b> {
+        // [EA4; Invariant]: Make sure passed-in `txn_sequence_number` matches
+        // the `sender_account`'s `sequence_number`. Already checked in [PCA12].
+        <b>assert</b>(
+            sender_account.sequence_number == txn_sequence_number,
+            <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
+        );
+    };
 
     // The transaction sequence number is passed in <b>to</b> prevent any
     // possibility of the account's sequence number increasing by more than
     // one for any transaction.
-    sender_account.sequence_number = txn_sequence_number + 1;
+    sender_account.sequence_number = sender_account.sequence_number + 1;
 
     <b>if</b> (transaction_fee_amount &gt; 0) {
         // [Invariant Use]: <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a> for `Token` verified <b>to</b> exist for non-zero transaction fee amounts by [PCA7].
