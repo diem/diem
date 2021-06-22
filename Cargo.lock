@@ -642,8 +642,11 @@ dependencies = [
  "curve25519-dalek-fiat",
  "diem-workspace-hack",
  "ed25519-dalek-fiat",
+ "proptest",
+ "proptest-derive",
  "sha2",
  "sha3",
+ "x25519-dalek-fiat",
 ]
 
 [[package]]
