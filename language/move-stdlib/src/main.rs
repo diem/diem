@@ -16,5 +16,10 @@ fn main() {
             std::fs::remove_dir_all(&move_stdlib::move_nursery_docs_full_path()).unwrap_or(());
             move_stdlib::build_nursery_doc(&move_stdlib::move_nursery_docs_full_path());
         });
+
+        time_it("Generating error explanations", || {
+            std::fs::remove_file(&move_stdlib::move_stdlib_errmap_full_path()).unwrap_or(());
+            move_stdlib::build_error_code_map(&move_stdlib::move_stdlib_errmap_full_path());
+        });
     }
 }

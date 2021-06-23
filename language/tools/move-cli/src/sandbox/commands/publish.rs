@@ -1,9 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sandbox::utils::{
-    explain_publish_changeset, explain_publish_error, get_gas_status,
-    on_disk_state_view::OnDiskStateView,
+use crate::{
+    sandbox::utils::{
+        explain_publish_changeset, explain_publish_error, get_gas_status,
+        on_disk_state_view::OnDiskStateView,
+    },
+    NativeFunctionRecord,
 };
 use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::move_vm::MoveVM;
@@ -11,6 +14,7 @@ use move_vm_runtime::move_vm::MoveVM;
 use anyhow::Result;
 
 pub fn publish(
+    natives: impl IntoIterator<Item = NativeFunctionRecord>,
     state: &OnDiskStateView,
     files: &[String],
     republish: bool,
@@ -51,7 +55,7 @@ pub fn publish(
 
     // use the the publish_module API frm the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
-        let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
+        let vm = MoveVM::new(natives).unwrap();
         let mut gas_status = get_gas_status(None)?;
         let mut session = vm.new_session(state);
 

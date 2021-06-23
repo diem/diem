@@ -1501,6 +1501,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "850878694b7933ca4c9569d30a34b55031b9b139ee1fc7b94a527c4ef960d690"
 
 [[package]]
+name = "df-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "datatest-stable",
+ "diem-framework-releases",
+ "diem-vm",
+ "diem-workspace-hack",
+ "move-cli",
+ "move-core-types",
+]
+
+[[package]]
 name = "diem-assets-proof"
 version = "0.1.0"
 dependencies = [
@@ -3169,6 +3183,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72312b32704d99a969a55168f1f77edf8554fc7c7b978d457962aaf21404ef85"
 
 [[package]]
+name = "file_diff"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a7a908b8f32538a2143e59a6e4e2508988832d5d4d6f7c156b3cbc762643a5"
+
+[[package]]
 name = "fixedbitset"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4563,9 +4583,6 @@ dependencies = [
  "bcs",
  "bytecode-verifier",
  "datatest-stable",
- "diem-framework-releases",
- "diem-types",
- "diem-vm",
  "diem-workspace-hack",
  "difference",
  "disassembler",
@@ -4582,7 +4599,6 @@ dependencies = [
  "read-write-set",
  "resource-viewer",
  "structopt 0.3.21",
- "vm-genesis",
  "walkdir",
 ]
 
@@ -4821,6 +4837,8 @@ dependencies = [
  "diem-workspace-hack",
  "dir-diff",
  "docgen",
+ "errmapgen",
+ "file_diff",
  "log",
  "move-binary-format",
  "move-core-types",

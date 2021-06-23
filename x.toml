@@ -246,30 +246,14 @@ diem_crates_in_language = [
     "transaction-builder-generator",
     "move-lang-functional-tests",
     "diem-resource-viewer",
+    "df-cli",
 ]
 exclude = [
     "diem-workspace-hack",
 ]
 # This is a list of existing move to diem dependencies that we plan to eliminate over time.
 # You should refrain from adding new entries to this list in general.
-existing_deps = [
-    # Tier 0 - essential components that must be included in the first batch of crates getting
-    #          moved to the new repo
-    ["compiler", "diem-framework-releases"],
-    ["move-cli", "vm-genesis"],
-    ["move-cli", "diem-vm"],
-    ["move-cli", "diem-types"],                               # `ContractEvent`
-    ["move-cli", "diem-framework"],
-    ["move-cli", "diem-framework-releases"],
-
-    # Tier 1 - crates that can wait a little bit longer?
-    ["test-generation", "language-e2e-tests"],
-    ["test-generation", "diem-vm"],
-    ["test-generation", "diem-types"],
-    ["test-generation", "diem-state-view"],
-    ["test-generation", "diem-logger"],
-    ["test-generation", "diem-config"],
-]
+existing_deps = []
 
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.

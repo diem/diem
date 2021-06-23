@@ -1,0 +1,31 @@
+[package]
+name = "df-cli"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "CLI frontend for the Move compiler and VM (with Diem Framework)"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+bcs = "0.1.2"
+
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = { path = "../../move-core/types" }
+move-cli = { path = "../../tools/move-cli" }
+diem-vm = { path = "../../diem-vm" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
+
+[dev-dependencies]
+datatest-stable = "0.1.1"
+
+[[bin]]
+name = "df-cli"
+path = "src/main.rs"
+
+[[test]]
+name = "cli_testsuite"
+harness = false

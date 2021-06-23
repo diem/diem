@@ -37,7 +37,7 @@ pub use package::*;
 
 pub(crate) fn get_gas_status(gas_budget: Option<u64>) -> Result<GasStatus<'static>> {
     let gas_status = if let Some(gas_budget) = gas_budget {
-        let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
+        let gas_schedule = &move_vm_types::gas_schedule::INITIAL_GAS_SCHEDULE;
         let max_gas_budget = u64::MAX
             .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
             .unwrap();
@@ -356,6 +356,7 @@ pub(crate) fn explain_publish_error(
 
 /// Explain an execution error
 pub(crate) fn explain_execution_error(
+    error_descriptions: &ErrorMapping,
     error: VMError,
     state: &OnDiskStateView,
     script_type_parameters: &[AbilitySet],
@@ -368,10 +369,7 @@ pub(crate) fn explain_execution_error(
     match error.into_vm_status() {
         VMStatus::MoveAbort(AbortLocation::Module(id), abort_code) => {
             // try to use move-explain to explain the abort
-            // TODO: this will only work for errors in the stdlib or Diem Framework. We should
-            // add code to build an ErrorMapping for modules in move_lib as well
-            let error_descriptions: ErrorMapping =
-                bcs::from_bytes(diem_framework_releases::current_error_descriptions())?;
+
             print!(
                 "Execution aborted with code {} in module {}.",
                 abort_code, id

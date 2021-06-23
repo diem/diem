@@ -3,8 +3,6 @@
 
 use crate::{BCS_EXTENSION, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
 use disassembler::disassembler::Disassembler;
-// TODO: do we want to make these Move core types or allow this to be customizable?
-use diem_types::{contract_event::ContractEvent, event::EventKey};
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
@@ -24,10 +22,12 @@ use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotato
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fs,
     path::{Path, PathBuf},
 };
+
+type Event = (Vec<u8>, u64, TypeTag, Vec<u8>);
 
 /// subdirectory of `DEFAULT_STORAGE_DIR`/<addr> where resources are stored
 pub const RESOURCES_DIR: &str = "resources";
@@ -113,10 +113,16 @@ impl OnDiskStateView {
     }
 
     // Events are stored under address/handle creation number
-    fn get_event_path(&self, key: &EventKey) -> PathBuf {
-        let mut path = self.get_addr_path(&key.get_creator_address());
+    fn get_event_path(&self, key: &[u8]) -> PathBuf {
+        // TODO: this is a hacky way to get the account address and creation number from the event key.
+        // The root problem here is that the move-cli is using the Diem-specific event format.
+        // We will deal this later when we make events more generic in the Move VM.
+        let account_addr = AccountAddress::try_from(&key[8..])
+            .expect("failed to get account address from event key");
+        let creation_number = u64::from_le_bytes(key[..8].try_into().unwrap());
+        let mut path = self.get_addr_path(&account_addr);
         path.push(EVENTS_DIR);
-        path.push(key.get_creation_number().to_string());
+        path.push(creation_number.to_string());
         path.with_extension(BCS_EXTENSION)
     }
 
@@ -200,10 +206,10 @@ impl OnDiskStateView {
         }
     }
 
-    fn get_events(&self, events_path: &Path) -> Result<Vec<ContractEvent>> {
+    fn get_events(&self, events_path: &Path) -> Result<Vec<Event>> {
         Ok(if events_path.exists() {
             match Self::get_bytes(events_path)? {
-                Some(events_data) => bcs::from_bytes::<Vec<ContractEvent>>(&events_data)?,
+                Some(events_data) => bcs::from_bytes::<Vec<Event>>(&events_data)?,
                 None => vec![],
             }
         } else {
@@ -215,7 +221,7 @@ impl OnDiskStateView {
         let annotator = MoveValueAnnotator::new(self);
         self.get_events(events_path)?
             .iter()
-            .map(|event| annotator.view_value(event.type_tag(), event.event_data()))
+            .map(|(_, _, event_type, event_data)| annotator.view_value(event_type, event_data))
             .collect()
     }
 
@@ -287,24 +293,19 @@ impl OnDiskStateView {
         event_type: TypeTag,
         event_data: Vec<u8>,
     ) -> Result<()> {
-        let key = EventKey::try_from(event_key)?;
-        self.save_contract_event(ContractEvent::new(
-            key,
-            event_sequence_number,
-            event_type,
-            event_data,
-        ))
-    }
-
-    pub fn save_contract_event(&self, event: ContractEvent) -> Result<()> {
         // save event data in handle_address/EVENTS_DIR/handle_number
-        let path = self.get_event_path(event.key());
+        let path = self.get_event_path(event_key);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
         // grab the old event log (if any) and append this event to it
         let mut event_log = self.get_events(&path)?;
-        event_log.push(event);
+        event_log.push((
+            event_key.to_vec(),
+            event_sequence_number,
+            event_type,
+            event_data,
+        ));
         Ok(fs::write(path, &bcs::to_bytes(&event_log)?)?)
     }
 

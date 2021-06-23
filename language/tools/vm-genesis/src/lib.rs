@@ -4,9 +4,8 @@
 #![forbid(unsafe_code)]
 
 mod genesis_context;
-pub mod genesis_gas_schedule;
 
-use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
+use crate::genesis_context::GenesisStateView;
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
@@ -37,7 +36,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::gas_schedule::{GasStatus, INITIAL_GAS_SCHEDULE};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use transaction_builder::encode_create_designated_dealer_script_function;

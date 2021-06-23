@@ -1,13 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sandbox::utils::{
-    contains_module, explain_execution_effects, explain_execution_error, get_gas_status,
-    is_bytecode_file, maybe_commit_effects, on_disk_state_view::OnDiskStateView,
+use crate::{
+    sandbox::utils::{
+        contains_module, explain_execution_effects, explain_execution_error, get_gas_status,
+        is_bytecode_file, maybe_commit_effects, on_disk_state_view::OnDiskStateView,
+    },
+    NativeFunctionRecord,
 };
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_core_types::{
     account_address::AccountAddress,
+    errmap::ErrorMapping,
     identifier::IdentStr,
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
@@ -18,6 +22,8 @@ use move_vm_runtime::move_vm::MoveVM;
 use anyhow::{anyhow, bail, Result};
 use std::{fs, path::Path};
 pub fn run(
+    natives: impl IntoIterator<Item = NativeFunctionRecord>,
+    error_descriptions: &ErrorMapping,
     state: &OnDiskStateView,
     script_file: &str,
     script_name_opt: &Option<String>,
@@ -98,7 +104,7 @@ move run` must be applied to a module inside `storage/`",
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
     let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
-    let vm = MoveVM::new(diem_vm::natives::diem_natives()).unwrap();
+    let vm = MoveVM::new(natives).unwrap();
     let mut gas_status = get_gas_status(gas_budget)?;
     let mut session = vm.new_session(state);
 
@@ -131,6 +137,7 @@ move run` must be applied to a module inside `storage/`",
 
     if let Err(err) = res {
         explain_execution_error(
+            error_descriptions,
             err,
             &state,
             &script_type_parameters,

@@ -12,6 +12,7 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+errmapgen = { path = "../move-prover/errmapgen" }
 docgen = { path = "../move-prover/docgen" }
 move-prover = { path = "../move-prover" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
@@ -30,6 +31,7 @@ sha3 = "0.9.1"
 move-unit-test = { path = "../tools/move-unit-test" }
 tempfile = "3.2.0"
 dir-diff = "0.3.2"
+file_diff = "1.0.0"
 
 [features]
 testing = []
