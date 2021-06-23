@@ -3114,6 +3114,24 @@ pub enum ScriptFunctionCall {
         currency: TypeTag,
         allow_minting: bool,
     },
+
+    /// # Summary
+    /// Updates the `account`'s network identities to the supplied new network identities. May be sent by any account.
+    ///
+    /// # Technical Description
+    /// Replace the `account`'s `NetworkIdentity::NetworkIdentity` field to
+    /// `identities`. `identities` is an opaque type to allow for changing identity by the calling application
+    ///
+    /// # Parameters
+    /// | Name         | Type                      | Description                                           |
+    /// | ------------ | ------------------------- | -------------                                         |
+    /// | `account`    | `signer`                  | The signer of the sending account of the transaction. |
+    /// | `identities` | `vector<u8>` | The network identities of the account's nodes.        |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    UpdateNetworkIdentity { identities: Bytes },
 }
 
 impl ScriptCall {
@@ -3683,6 +3701,9 @@ impl ScriptFunctionCall {
                 currency,
                 allow_minting,
             } => encode_update_minting_ability_script_function(currency, allow_minting),
+            UpdateNetworkIdentity { identities } => {
+                encode_update_network_identity_script_function(identities)
+            }
         }
     }
 
@@ -5924,6 +5945,34 @@ pub fn encode_update_minting_ability_script_function(
 }
 
 /// # Summary
+/// Updates the `account`'s network identities to the supplied new network identities. May be sent by any account.
+///
+/// # Technical Description
+/// Replace the `account`'s `NetworkIdentity::NetworkIdentity` field to
+/// `identities`. `identities` is an opaque type to allow for changing identity by the calling application
+///
+/// # Parameters
+/// | Name         | Type                      | Description                                           |
+/// | ------------ | ------------------------- | -------------                                         |
+/// | `account`    | `signer`                  | The signer of the sending account of the transaction. |
+/// | `identities` | `vector<u8>` | The network identities of the account's nodes.        |
+///
+/// # Common Abort Conditions
+/// | Error Category              | Error Reason              | Description                                                                    |
+/// | ----------------            | --------------            | -------------                                                                  |
+pub fn encode_update_network_identity_script_function(identities: Vec<u8>) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("AccountAdministrationScripts").to_owned(),
+        ),
+        ident_str!("update_network_identity").to_owned(),
+        vec![],
+        vec![bcs::to_bytes(&identities).unwrap()],
+    ))
+}
+
+/// # Summary
 /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
 /// send, receive, and hold `Diem::Diem<Currency>` coins. This transaction can be
 /// successfully sent by any account that is allowed to hold balances
@@ -8151,6 +8200,18 @@ fn decode_update_minting_ability_script_function(
     }
 }
 
+fn decode_update_network_identity_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::UpdateNetworkIdentity {
+            identities: bcs::from_bytes(script.args().get(0)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_add_currency_to_account_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::AddCurrencyToAccount {
         currency: script.ty_args().get(0)?.clone(),
@@ -8716,6 +8777,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "TreasuryComplianceScriptsupdate_minting_ability".to_string(),
             Box::new(decode_update_minting_ability_script_function),
+        );
+        map.insert(
+            "AccountAdministrationScriptsupdate_network_identity".to_string(),
+            Box::new(decode_update_network_identity_script_function),
         );
         map
     });
