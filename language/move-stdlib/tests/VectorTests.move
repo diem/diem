@@ -3,6 +3,8 @@ module 0x1::VectorTests {
     use 0x1::Vector as V;
 
     struct R has store { }
+    struct Droppable has drop {}
+    struct NotDroppable {}
 
     #[test]
     fun test_singleton_contains() {
@@ -394,5 +396,108 @@ module 0x1::VectorTests {
         assert(V::length(&v) == 2, 3);
         assert(*V::borrow(&v, 0) == 7, 4);
         assert(*V::borrow(&v, 1) == 8, 5);
+    }
+
+    #[test]
+    fun index_of_empty_not_has() {
+        let v = V::empty();
+        let (has, index) = V::index_of(&v, &true);
+        assert(!has, 0);
+        assert(index == 0, 1);
+    }
+
+    #[test]
+    fun index_of_nonempty_not_has() {
+        let v = V::empty();
+        V::push_back(&mut v, false);
+        let (has, index) = V::index_of(&v, &true);
+        assert(!has, 0);
+        assert(index == 0, 1);
+    }
+
+    #[test]
+    fun index_of_nonempty_has() {
+        let v = V::empty();
+        V::push_back(&mut v, false);
+        V::push_back(&mut v, true);
+        let (has, index) = V::index_of(&v, &true);
+        assert(has, 0);
+        assert(index == 1, 1);
+    }
+
+    // index_of will return the index first occurence that is equal
+    #[test]
+    fun index_of_nonempty_has_multiple_occurences() {
+        let v = V::empty();
+        V::push_back(&mut v, false);
+        V::push_back(&mut v, true);
+        V::push_back(&mut v, true);
+        let (has, index) = V::index_of(&v, &true);
+        assert(has, 0);
+        assert(index == 1, 1);
+    }
+
+    #[test]
+    fun length() {
+        let empty = V::empty();
+        assert(V::length(&empty) == 0, 0);
+        let i = 0;
+        let max_len = 42;
+        while (i < max_len) {
+            V::push_back(&mut empty, i);
+            assert(V::length(&empty) == i + 1, i);
+            i = i + 1;
+        }
+    }
+
+    #[test]
+    fun pop_push_back() {
+        let v = V::empty();
+        let i = 0;
+        let max_len = 42;
+
+        while (i < max_len) {
+            V::push_back(&mut v, i);
+            i = i + 1;
+        };
+
+        while (i > 0) {
+            assert(V::pop_back(&mut v) == i - 1, i);
+            i = i - 1;
+        };
+    }
+
+    #[test_only]
+    fun test_natives_with_type<T>(x1: T, x2: T): (T, T) {
+        let v = V::empty();
+        assert(V::length(&v) == 0, 0);
+        V::push_back(&mut v, x1);
+        assert(V::length(&v) == 1, 1);
+        V::push_back(&mut v, x2);
+        assert(V::length(&v) == 2, 2);
+        V::swap(&mut v, 0, 1);
+        x1 = V::pop_back(&mut v);
+        assert(V::length(&v) == 1, 3);
+        x2 = V::pop_back(&mut v);
+        assert(V::length(&v) == 0, 4);
+        V::destroy_empty(v);
+        (x1, x2)
+    }
+
+    #[test]
+    fun test_natives_with_different_instantiations() {
+        test_natives_with_type<u8>(1u8, 2u8);
+        test_natives_with_type<u64>(1u64, 2u64);
+        test_natives_with_type<u128>(1u128, 2u128);
+        test_natives_with_type<bool>(true, false);
+        test_natives_with_type<address>(@0x1, @0x2);
+
+        test_natives_with_type<vector<u8>>(V::empty(), V::empty());
+
+        test_natives_with_type<Droppable>(Droppable{}, Droppable{});
+        (NotDroppable {}, NotDroppable {}) = test_natives_with_type<NotDroppable>(
+            NotDroppable {},
+            NotDroppable {}
+        );
     }
 }
