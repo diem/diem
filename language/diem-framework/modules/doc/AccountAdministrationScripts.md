@@ -72,10 +72,16 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Technical Description](#@Technical_Description_52)
     -  [Parameters](#@Parameters_53)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_54)
+-  [Function `update_network_identity`](#0x1_AccountAdministrationScripts_update_network_identity)
+    -  [Summary](#@Summary_55)
+    -  [Technical Description](#@Technical_Description_56)
+    -  [Parameters](#@Parameters_57)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_58)
 
 
 <pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
+<b>use</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity">0x1::NetworkIdentity</a>;
 <b>use</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
 <b>use</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">0x1::SharedEd25519PublicKey</a>;
 <b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
@@ -1217,6 +1223,75 @@ of VASPDomain, and will be empty on at the end of processing this transaction.
 <b>aborts_with</b> [check]
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_AccountAdministrationScripts_update_network_identity"></a>
+
+## Function `update_network_identity`
+
+
+<a name="@Summary_55"></a>
+
+### Summary
+
+Updates the <code>account</code>'s network identities to the supplied new network identities. May be sent by any account.
+
+
+<a name="@Technical_Description_56"></a>
+
+### Technical Description
+
+Replace the <code>account</code>'s <code><a href="NetworkIdentity.md#0x1_NetworkIdentity_NetworkIdentity">NetworkIdentity::NetworkIdentity</a></code> field to
+<code>identities</code>. <code>identities</code> is an opaque type to allow for changing identity by the calling application
+
+
+<a name="@Parameters_57"></a>
+
+### Parameters
+
+| Name         | Type                      | Description                                           |
+| ------------ | ------------------------- | -------------                                         |
+| <code>account</code>    | <code>signer</code>                  | The signer of the sending account of the transaction. |
+| <code>identities</code> | <code>vector&lt;u8&gt;</code> | The network identities of the account's nodes.        |
+
+
+<a name="@Common_Abort_Conditions_58"></a>
+
+### Common Abort Conditions
+
+| Error Category              | Error Reason              | Description                                                                    |
+| ----------------            | --------------            | -------------                                                                  |
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_update_network_identity">update_network_identity</a>(account: signer, identities: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_update_network_identity">update_network_identity</a>(account: signer, identities: vector&lt;u8&gt;) {
+    <a href="NetworkIdentity.md#0x1_NetworkIdentity_update_identities">NetworkIdentity::update_identities</a>(&account, identities)
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 </code></pre>
 
 

@@ -6,6 +6,7 @@ module DiemFramework::AccountAdministrationScripts {
     use DiemFramework::SlidingNonce;
     use DiemFramework::DualAttestation;
     use DiemFramework::VASPDomain;
+    use DiemFramework::NetworkIdentity;
 
     /// # Summary
     /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
@@ -630,5 +631,31 @@ module DiemFramework::AccountAdministrationScripts {
         aborts_with [check]
             Errors::ALREADY_PUBLISHED,
             Errors::REQUIRES_ROLE;
+    }
+
+    /// # Summary
+    /// Updates the `account`'s network identities to the supplied new network identities. May be sent by any account.
+    ///
+    /// # Technical Description
+    /// Replace the `account`'s `NetworkIdentity::NetworkIdentity` field to
+    /// `identities`. `identities` is an opaque type to allow for changing identity by the calling application
+    ///
+    /// # Parameters
+    /// | Name         | Type                      | Description                                           |
+    /// | ------------ | ------------------------- | -------------                                         |
+    /// | `account`    | `signer`                  | The signer of the sending account of the transaction. |
+    /// | `identities` | `vector<u8>` | The network identities of the account's nodes.        |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category              | Error Reason              | Description                                                                    |
+    /// | ----------------            | --------------            | -------------                                                                  |
+    public(script) fun update_network_identity(account: signer, identities: vector<u8>) {
+        NetworkIdentity::update_identities(&account, identities)
+    }
+    spec update_network_identity {
+        use Std::Signer;
+
+        let addr = Signer::spec_address_of(account);
+        include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     }
 }
