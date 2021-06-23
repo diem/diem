@@ -36,13 +36,24 @@ impl<'a> BoundsChecker<'a> {
             context: BoundsCheckingContext::Script,
         };
         bounds_check.verify_impl()?;
-        // The bounds checker has already checked each function definition's code, but a script's
-        // code exists outside of any function definition. It gets checked here.
-        bounds_check.check_code(
-            &script.as_inner().code,
-            &script.as_inner().type_parameters,
-            &script.as_inner().signatures[script.as_inner().parameters.into_index()],
-        )
+
+        let signatures = &script.as_inner().signatures;
+        let parameters = &script.as_inner().parameters;
+        match signatures.get(parameters.into_index()) {
+            // The bounds checker has already checked each function definition's code, but a script's
+            // code exists outside of any function definition. It gets checked here.
+            Some(signature) => bounds_check.check_code(
+                &script.as_inner().code,
+                &script.as_inner().type_parameters,
+                signature,
+            ),
+            None => Err(bounds_error(
+                StatusCode::INDEX_OUT_OF_BOUNDS,
+                IndexKind::Signature,
+                parameters.into_index() as u16,
+                signatures.len(),
+            )),
+        }
     }
 
     pub fn verify_module(module: &'a CompiledModule) -> PartialVMResult<()> {
@@ -256,7 +267,7 @@ impl<'a> BoundsChecker<'a> {
         let parameters = &self.view.signatures()[function_handle.parameters.into_index()];
 
         // check if the number of parameters + locals is less than u8::MAX
-        let locals_count = self.get_locals(code_unit).len() + parameters.len();
+        let locals_count = self.get_locals(code_unit)?.len() + parameters.len();
 
         if locals_count > (u8::MAX as usize) + 1 {
             return Err(verification_error(
@@ -277,7 +288,7 @@ impl<'a> BoundsChecker<'a> {
     ) -> PartialVMResult<()> {
         check_bounds_impl(&self.view.signatures(), code_unit.locals)?;
 
-        let locals = self.get_locals(code_unit);
+        let locals = self.get_locals(code_unit)?;
         let locals_count = locals.len() + parameters.len();
 
         // if there are locals check that the type parameters in local signature are in bounds.
@@ -529,14 +540,16 @@ impl<'a> BoundsChecker<'a> {
         }
     }
 
-    fn get_locals(&self, code_unit: &CodeUnit) -> &[SignatureToken] {
-        &self
-            .view
-            .signatures()
-            .get(code_unit.locals.into_index())
-            .as_ref()
-            .unwrap()
-            .0
+    fn get_locals(&self, code_unit: &CodeUnit) -> PartialVMResult<&[SignatureToken]> {
+        match self.view.signatures().get(code_unit.locals.into_index()) {
+            Some(signature) => Ok(&signature.0),
+            None => Err(bounds_error(
+                StatusCode::INDEX_OUT_OF_BOUNDS,
+                IndexKind::Signature,
+                code_unit.locals.into_index() as u16,
+                self.view.signatures().len(),
+            )),
+        }
     }
 
     fn offset_out_of_bounds(

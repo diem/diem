@@ -273,6 +273,19 @@ fn invalid_friend_module_name() {
     );
 }
 
+#[test]
+fn script_missing_signature() {
+    // The basic test script includes parameters pointing to an empty signature.
+    let mut s = basic_test_script();
+    // Remove the empty signature from the script.
+    s.signatures.clear();
+    // Bounds-checking the script should now result in an out-of-bounds error.
+    assert_eq!(
+        s.freeze().unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
+}
+
 proptest! {
     #[test]
     fn valid_bounds(_module in CompiledModule::valid_strategy(20)) {
