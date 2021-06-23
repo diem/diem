@@ -1,0 +1,18 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+
+    ┌── tests/sources/functional/invariants_with_generics.move:34:5 ───
+    │
+ 34 │ ╭     invariant
+ 35 │ │         exists<S::Storage<u64, bool>>(@0x22)
+ 36 │ │             ==> global<S::Storage<u64, bool>>(@0x22).x == 1;
+    │ ╰────────────────────────────────────────────────────────────^
+    │
+    =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
+    =         account = <redacted>
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
+    =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
+    =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
+    =     at tests/sources/functional/invariants_with_generics.move:34
