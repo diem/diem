@@ -3,7 +3,6 @@
 
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block,
     block_data::BlockData,
     timeout::Timeout,
     timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
@@ -47,7 +46,7 @@ impl TSafetyRules for LocalClient {
         self.internal.write().construct_and_sign_vote(vote_proposal)
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+    fn sign_proposal(&mut self, block_data: &BlockData) -> Result<Ed25519Signature, Error> {
         self.internal.write().sign_proposal(block_data)
     }
 

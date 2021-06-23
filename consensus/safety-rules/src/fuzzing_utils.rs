@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::serializer::SafetyRulesInput;
+#[cfg(any(test, feature = "fuzzing"))]
+use consensus_types::block::Block;
 use consensus_types::{
-    block::Block,
     block_data::{BlockData, BlockType},
     quorum_cert::QuorumCert,
     timeout::Timeout,
@@ -247,8 +248,7 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 pub mod fuzzing {
     use crate::{error::Error, serializer::SafetyRulesInput, test_utils, TSafetyRules};
     use consensus_types::{
-        block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
-        vote_proposal::MaybeSignedVoteProposal,
+        block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::MaybeSignedVoteProposal,
     };
     use diem_crypto::ed25519::Ed25519Signature;
     use diem_types::epoch_change::EpochChangeProof;
@@ -279,7 +279,7 @@ pub mod fuzzing {
         }
     }
 
-    pub fn fuzz_sign_proposal(block_data: BlockData) -> Result<Block, Error> {
+    pub fn fuzz_sign_proposal(block_data: &BlockData) -> Result<Ed25519Signature, Error> {
         let mut safety_rules = test_utils::test_safety_rules();
         safety_rules.sign_proposal(block_data)
     }
@@ -326,7 +326,7 @@ mod tests {
 
         #[test]
         fn sign_proposal_proptest(input in arb_block_data()) {
-            let _ = fuzz_sign_proposal(input);
+            let _ = fuzz_sign_proposal(&input);
         }
 
         #[test]

@@ -413,7 +413,7 @@ impl SafetyRules {
         Ok(vote)
     }
 
-    fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+    fn guarded_sign_proposal(&mut self, block_data: &BlockData) -> Result<Ed25519Signature, Error> {
         self.signer()?;
         self.verify_author(block_data.author())?;
 
@@ -429,14 +429,11 @@ impl SafetyRules {
         }
 
         self.verify_qc(block_data.quorum_cert())?;
-        if self.verify_and_update_preferred_round(block_data.quorum_cert(), &mut safety_data)? {
-            self.persistent_storage.set_safety_data(safety_data)?;
-        }
+        self.verify_and_update_preferred_round(block_data.quorum_cert(), &mut safety_data)?;
+        // we don't persist the updated preferred round to save latency (it'd be updated upon voting)
 
-        let signature = self.sign(&block_data)?;
-        Ok(Block::new_proposal_from_block_data_and_signature(
-            block_data, signature,
-        ))
+        let signature = self.sign(block_data)?;
+        Ok(signature)
     }
 
     fn guarded_sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
@@ -522,7 +519,7 @@ impl TSafetyRules for SafetyRules {
         run_and_log(cb, |log| log.round(round), LogEntry::ConstructAndSignVote)
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+    fn sign_proposal(&mut self, block_data: &BlockData) -> Result<Ed25519Signature, Error> {
         let round = block_data.round();
         let cb = || self.guarded_sign_proposal(block_data);
         run_and_log(cb, |log| log.round(round), LogEntry::SignProposal)

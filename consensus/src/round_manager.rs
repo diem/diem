@@ -278,7 +278,9 @@ impl RoundManager {
             .proposal_generator
             .generate_proposal(new_round_event.round)
             .await?;
-        let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        let signature = self.safety_rules.sign_proposal(&proposal)?;
+        let signed_proposal =
+            Block::new_proposal_from_block_data_and_signature(proposal, signature);
         observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
         debug!(self.new_log(LogEvent::Propose), "{}", signed_proposal);
         // return proposal

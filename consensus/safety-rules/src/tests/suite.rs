@@ -523,7 +523,7 @@ fn test_sign_old_proposal(safety_rules: &Callback) {
 
     let a1 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer, key.as_ref());
     let err = safety_rules
-        .sign_proposal(a1.block().block_data().clone())
+        .sign_proposal(a1.block().block_data())
         .unwrap_err();
     assert!(matches!(err, Error::InvalidProposal(_)));
 }
@@ -538,14 +538,12 @@ fn test_sign_proposal_with_bad_signer(safety_rules: &Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
-    safety_rules
-        .sign_proposal(a1.block().block_data().clone())
-        .unwrap();
+    safety_rules.sign_proposal(a1.block().block_data()).unwrap();
 
     let bad_signer = ValidatorSigner::from_int(0xef);
     let a2 = make_proposal_with_parent(round + 2, &a1, None, &bad_signer, key.as_ref());
     let err = safety_rules
-        .sign_proposal(a2.block().block_data().clone())
+        .sign_proposal(a2.block().block_data())
         .unwrap_err();
     assert_eq!(
         err,
@@ -564,9 +562,7 @@ fn test_sign_proposal_with_invalid_qc(safety_rules: &Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
-    safety_rules
-        .sign_proposal(a1.block().block_data().clone())
-        .unwrap();
+    safety_rules.sign_proposal(a1.block().block_data()).unwrap();
 
     let bad_signer = ValidatorSigner::from_int(0xef);
     let a2 = make_proposal_with_parent(round + 2, &a1, Some(&a1), &bad_signer, key.as_ref());
@@ -577,7 +573,7 @@ fn test_sign_proposal_with_invalid_qc(safety_rules: &Callback) {
         key.as_ref(),
     );
     let err = safety_rules
-        .sign_proposal(a3.block().block_data().clone())
+        .sign_proposal(a3.block().block_data())
         .unwrap_err();
     assert_eq!(
         err,
@@ -593,9 +589,7 @@ fn test_sign_proposal_with_early_preferred_round(safety_rules: &Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
-    safety_rules
-        .sign_proposal(a1.block().block_data().clone())
-        .unwrap();
+    safety_rules.sign_proposal(a1.block().block_data()).unwrap();
 
     // Update preferred round with a few legal proposals
     let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer, key.as_ref());
@@ -613,7 +607,7 @@ fn test_sign_proposal_with_early_preferred_round(safety_rules: &Callback) {
         key.as_ref(),
     );
     let err = safety_rules
-        .sign_proposal(a5.block().block_data().clone())
+        .sign_proposal(a5.block().block_data())
         .unwrap_err();
     assert_eq!(err, Error::IncorrectPreferredRound(0, 2));
 }
@@ -630,7 +624,7 @@ fn test_uninitialized_signer(safety_rules: &Callback) {
     let err = safety_rules.construct_and_sign_vote(&a1).unwrap_err();
     assert_eq!(err, Error::NotInitialized("validator_signer".into()));
     let err = safety_rules
-        .sign_proposal(a1.block().block_data().clone())
+        .sign_proposal(a1.block().block_data())
         .unwrap_err();
     assert_eq!(err, Error::NotInitialized("validator_signer".into()));
 

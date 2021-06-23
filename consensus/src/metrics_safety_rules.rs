@@ -3,8 +3,7 @@
 
 use crate::persistent_liveness_storage::PersistentLivenessStorage;
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
-    vote_proposal::MaybeSignedVoteProposal,
+    block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_metrics::monitor;
@@ -75,8 +74,8 @@ impl TSafetyRules for MetricsSafetyRules {
         self.retry(|inner| monitor!("safety_rules", inner.construct_and_sign_vote(vote_proposal)))
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
-        self.retry(|inner| monitor!("safety_rules", inner.sign_proposal(block_data.clone())))
+    fn sign_proposal(&mut self, block_data: &BlockData) -> Result<Ed25519Signature, Error> {
+        self.retry(|inner| monitor!("safety_rules", inner.sign_proposal(block_data)))
     }
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {

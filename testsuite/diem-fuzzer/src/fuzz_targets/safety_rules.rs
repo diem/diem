@@ -85,7 +85,7 @@ impl FuzzTargetImpl for SafetyRulesSignProposal {
 
     fn fuzz(&self, data: &[u8]) {
         let block_data = fuzz_data_to_value(data, arb_block_data());
-        let _ = fuzz_sign_proposal(block_data);
+        let _ = fuzz_sign_proposal(&block_data);
     }
 }
 
