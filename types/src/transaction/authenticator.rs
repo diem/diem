@@ -43,7 +43,7 @@ pub enum AuthenticationError {
 pub enum TransactionAuthenticator {
     /// Single signature
     Ed25519 {
-        public_key: Ed25519PublicKey,
+        public_key: [u8; 32],
         signature: Ed25519Signature,
     },
     /// K-of-N multisignature
@@ -63,7 +63,7 @@ impl TransactionAuthenticator {
     /// Create a single-signature ed25519 authenticator
     pub fn ed25519(public_key: Ed25519PublicKey, signature: Ed25519Signature) -> Self {
         Self::Ed25519 {
-            public_key,
+            public_key: public_key.to_bytes(),
             signature,
         }
     }
@@ -107,7 +107,7 @@ impl TransactionAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => signature.verify(raw_txn, public_key),
+            } => signature.verify(raw_txn, &Ed25519PublicKey::try_from(&public_key[..])?),
             Self::MultiEd25519 {
                 public_key,
                 signature,
@@ -135,7 +135,10 @@ impl TransactionAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => AccountAuthenticator::ed25519(public_key.clone(), signature.clone()),
+            } => AccountAuthenticator::ed25519(
+                Ed25519PublicKey::try_from(&public_key[..]).unwrap(),
+                signature.clone(),
+            ),
             Self::MultiEd25519 {
                 public_key,
                 signature,
