@@ -34,7 +34,7 @@ jobs:
         run: ./scripts/git-checks.sh
       - id: changes
         name: determine changes
-        uses: diem/actions/changes@266156eaff7ba6e1253cf7019506c7b3702f73de
+        uses: diem/actions/changes@4678f5d3698990d09cdf6cbd65a367a6c71ab993
         with:
           workflow-file: ci-publish-base-image.yml
       - name: build image

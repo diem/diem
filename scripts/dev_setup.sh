@@ -30,7 +30,7 @@ DOTNET_VERSION=3.1
 BOOGIE_VERSION=2.8.33
 PYRE_CHECK_VERSION=0.0.59
 NUMPY_VERSION=1.20.1
-ALLURE_VERSION=2.14.0
+ALLURE_VERSION=2.15.pr1135
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -528,7 +528,7 @@ function install_allure {
       if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
         "${PRE_COMMAND[@]}" apt-get install default-jre -y --no-install-recommends
         export ALLURE=${HOME}/allure_"${ALLURE_VERSION}"-1_all.deb
-        curl -sL -o "$ALLURE" "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
+        curl -sL -o "$ALLURE" "https://github.com/diem/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
         dpkg -i "$ALLURE"
         rm "$ALLURE"
       elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
