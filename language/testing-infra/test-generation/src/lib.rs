@@ -19,12 +19,7 @@ use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::verify_module;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
-use diem_logger::{debug, error, info};
-use diem_state_view::StateView;
-use diem_types::{account_address::AccountAddress, vm_status::StatusCode};
-use diem_vm::DiemVM;
 use getrandom::getrandom;
-use language_e2e_tests::executor::FakeExecutor;
 use module_generation::generate_module;
 use move_binary_format::{
     access::ModuleAccess,
@@ -33,10 +28,21 @@ use move_binary_format::{
         StructHandleIndex,
     },
 };
-use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
+use move_core_types::{
+    account_address::AccountAddress,
+    effects::ChangeSet,
+    language_storage::TypeTag,
+    value::MoveValue,
+    vm_status::{StatusCode, VMStatus},
+};
+use move_lang::{compiled_unit::CompiledUnit, Compiler};
+use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM};
+use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
+use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
+use tracing::{debug, error, info};
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
@@ -48,6 +54,23 @@ fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
         Err(err) => Err(format!("Verifier panic: {:#?}", err)),
     }
 }
+
+static STORAGE_WITH_MOVE_STDLIB: Lazy<InMemoryStorage> = Lazy::new(|| {
+    let mut storage = InMemoryStorage::new();
+    let (_, compiled_units) = Compiler::new(&move_stdlib::move_stdlib_files(), &[])
+        .build_and_report()
+        .unwrap();
+    let compiled_modules = compiled_units.into_iter().map(|unit| match unit {
+        CompiledUnit::Module { module, .. } => module,
+        CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+    });
+    for module in compiled_modules {
+        let mut blob = vec![];
+        module.serialize(&mut blob).unwrap();
+        storage.publish_or_overwrite_module(module.self_id(), blob);
+    }
+    storage
+});
 
 /// This function runs a verified module in the VM runtime
 fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
@@ -75,23 +98,22 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
         })
         .collect();
 
-    let executor = FakeExecutor::from_genesis_file();
     execute_function_in_module(
         module,
         entry_idx,
         vec![],
         main_args,
-        executor.get_state_view(),
+        &*STORAGE_WITH_MOVE_STDLIB,
     )
 }
 
 /// Execute the first function in a module
-fn execute_function_in_module<S: StateView>(
+fn execute_function_in_module(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
-    state_view: &S,
+    storage: &impl MoveStorage,
 ) -> Result<(), VMStatus> {
     let module_id = module.self_id();
     let entry_name = {
@@ -100,25 +122,22 @@ fn execute_function_in_module<S: StateView>(
         module.identifier_at(entry_name_idx)
     };
     {
-        let diem_vm = DiemVM::new(state_view);
+        let vm = MoveVM::new(move_stdlib::natives::all_natives(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+        ))
+        .unwrap();
 
-        let internals = diem_vm.internals();
+        let mut changeset = ChangeSet::new();
+        let mut blob = vec![];
+        module.serialize(&mut blob).unwrap();
+        changeset.publish_or_overwrite_module(module_id.clone(), blob);
+        let delta_storage = DeltaStorage::new(storage, &changeset);
+        let mut sess = vm.new_session(&delta_storage);
 
-        internals.with_txn_data_cache(state_view, |mut txn_context| {
-            let sender = AccountAddress::random();
-            let mut mod_blob = vec![];
-            module
-                .serialize(&mut mod_blob)
-                .expect("Module serialization error");
-            let mut gas_status = GasStatus::new_unmetered();
-            txn_context
-                .publish_module(mod_blob, sender, &mut gas_status)
-                .map_err(|e| e.into_vm_status())?;
-            txn_context
-                .execute_function(&module_id, &entry_name, ty_args, args, &mut gas_status)
-                .map_err(|e| e.into_vm_status())?;
-            Ok(())
-        })
+        let mut gas_status = GasStatus::new_unmetered();
+        sess.execute_function(&module_id, entry_name, ty_args, args, &mut gas_status)?;
+
+        Ok(())
     }
 }
 

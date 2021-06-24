@@ -3,15 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::env;
 use structopt::StructOpt;
 use test_generation::{config::Args, run_generation};
 
 fn setup_log() {
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
-    }
-    ::diem_logger::Logger::new().init();
+    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
 }
 
 pub fn main() {

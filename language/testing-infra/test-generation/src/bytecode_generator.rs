@@ -10,7 +10,6 @@ use crate::{
     control_flow_graph::CFG,
     substitute, summaries,
 };
-use diem_logger::{debug, error, warn};
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{
@@ -21,6 +20,7 @@ use move_binary_format::{
     },
 };
 use rand::{rngs::StdRng, Rng};
+use tracing::{debug, error, warn};
 
 /// This type represents bytecode instructions that take a `LocalIndex`
 type LocalIndexToBytecode = fn(LocalIndex) -> Bytecode;
