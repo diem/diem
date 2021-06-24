@@ -30,7 +30,7 @@ pub struct BytecodeViewer<'a> {
 impl<'a> BytecodeViewer<'a> {
     pub fn new(source_map: SourceMap<Loc>, module: &'a CompiledModule) -> Self {
         let view = BinaryIndexedView::Module(module);
-        let source_mapping = SourceMapping::new(source_map, module.clone());
+        let source_mapping = SourceMapping::new(source_map, view);
         let options = DisassemblerOptions {
             print_code: true,
             print_basic_blocks: true,

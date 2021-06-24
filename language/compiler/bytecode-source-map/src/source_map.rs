@@ -5,9 +5,8 @@ use anyhow::{format_err, Result};
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{
-        CodeOffset, CompiledModule, CompiledScript, ConstantPoolIndex, FunctionDefinition,
-        FunctionDefinitionIndex, LocalIndex, MemberCount, ModuleHandleIndex, StructDefinition,
-        StructDefinitionIndex, TableIndex,
+        CodeOffset, ConstantPoolIndex, FunctionDefinition, FunctionDefinitionIndex, LocalIndex,
+        MemberCount, ModuleHandleIndex, StructDefinition, StructDefinitionIndex, TableIndex,
     },
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
@@ -532,7 +531,9 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             .ok_or_else(|| format_err!("Unable to get struct source map"))
     }
 
-    fn dummy_impl(view: &BinaryIndexedView, default_loc: Location) -> Result<Self> {
+    /// Create a 'dummy' source map for a compiled module or script. This is useful for e.g. disassembling
+    /// with generated or real names depending upon if the source map is available or not.
+    pub fn dummy_from_view(view: &BinaryIndexedView, default_loc: Location) -> Result<Self> {
         let module_handle = view.module_handle_at(ModuleHandleIndex::new(0));
         let module_name = ModuleName::new(view.identifier_at(module_handle.name).to_string());
         let address = *view.address_identifier_at(module_handle.address);
@@ -572,16 +573,6 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         }
 
         Ok(empty_source_map)
-    }
-
-    /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
-    /// with generated or real names depending upon if the source map is available or not.
-    pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
-        Self::dummy_impl(&BinaryIndexedView::Module(module), default_loc)
-    }
-
-    pub fn dummy_from_script(script: &CompiledScript, default_loc: Location) -> Result<Self> {
-        Self::dummy_impl(&BinaryIndexedView::Script(script), default_loc)
     }
 
     pub fn remap_locations<Other: Clone + Eq>(

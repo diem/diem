@@ -41,6 +41,7 @@ use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_binary_format::{
     access::ModuleAccess,
+    binary_views::BinaryIndexedView,
     file_format::{
         AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, SignatureIndex, SignatureToken,
@@ -2032,7 +2033,7 @@ impl<'env> ModuleEnv<'env> {
         let disas = Disassembler::new(
             SourceMapping::new(
                 self.data.source_map.clone(),
-                self.get_verified_module().clone(),
+                BinaryIndexedView::Module(self.get_verified_module()),
             ),
             DisassemblerOptions {
                 only_externally_visible: false,

@@ -7,6 +7,7 @@ use disassembler::disassembler::Disassembler;
 use diem_types::{contract_event::ContractEvent, event::EventKey};
 use move_binary_format::{
     access::ModuleAccess,
+    binary_views::BinaryIndexedView,
     errors::*,
     file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
 };
@@ -226,20 +227,19 @@ impl OnDiskStateView {
 
         Ok(match Self::get_bytes(path)? {
             Some(bytes) => {
-                // TODO: find or create source map and pass it to disassembler
-                let d: Disassembler<Loc> = if is_module {
-                    Disassembler::from_module(
-                        CompiledModule::deserialize(&bytes)
-                            .map_err(|e| anyhow!("Failure deserializing module: {:?}", e))?,
-                        0,
-                    )?
+                let module: CompiledModule;
+                let script: CompiledScript;
+                let view = if is_module {
+                    module = CompiledModule::deserialize(&bytes)
+                        .map_err(|e| anyhow!("Failure deserializing module: {:?}", e))?;
+                    BinaryIndexedView::Module(&module)
                 } else {
-                    Disassembler::from_script(
-                        CompiledScript::deserialize(&bytes)
-                            .map_err(|e| anyhow!("Failure deserializing script: {:?}", e))?,
-                        0,
-                    )?
+                    script = CompiledScript::deserialize(&bytes)
+                        .map_err(|e| anyhow!("Failure deserializing script: {:?}", e))?;
+                    BinaryIndexedView::Script(&script)
                 };
+                // TODO: find or create source map and pass it to disassembler
+                let d: Disassembler<Loc> = Disassembler::from_view(view, 0)?;
                 Some(d.disassemble()?)
             }
             None => None,

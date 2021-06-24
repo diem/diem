@@ -1,20 +1,19 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
 use bytecode_source_map::{
     mapping::SourceMapping,
     source_map::{FunctionSourceMap, SourceName},
 };
 use colored::*;
 use move_binary_format::{
-    access::ModuleAccess,
+    binary_views::BinaryIndexedView,
     control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
     file_format::{
-        Ability, AbilitySet, Bytecode, CompiledModule, CompiledScript, FieldHandleIndex,
-        FunctionDefinition, FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature,
-        Visibility,
+        Ability, AbilitySet, Bytecode, FieldHandleIndex, FunctionDefinition,
+        FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
+        StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature, Visibility,
     },
 };
 use move_core_types::identifier::IdentStr;
@@ -47,16 +46,16 @@ impl DisassemblerOptions {
     }
 }
 
-pub struct Disassembler<Location: Clone + Eq> {
-    source_mapper: SourceMapping<Location>,
+pub struct Disassembler<'a, Location: Clone + Eq> {
+    source_mapper: SourceMapping<'a, Location>,
     // The various options that we can set for disassembly.
     options: DisassemblerOptions,
     // Optional coverage map for use in displaying code coverage
     coverage_map: Option<ExecCoverageMap>,
 }
 
-impl<Location: Clone + Eq> Disassembler<Location> {
-    pub fn new(source_mapper: SourceMapping<Location>, options: DisassemblerOptions) -> Self {
+impl<'a, Location: Clone + Eq> Disassembler<'a, Location> {
+    pub fn new(source_mapper: SourceMapping<'a, Location>, options: DisassemblerOptions) -> Self {
         Self {
             source_mapper,
             options,
@@ -64,21 +63,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         }
     }
 
-    pub fn from_module(module: CompiledModule, default_loc: Location) -> Result<Self> {
+    pub fn from_view(view: BinaryIndexedView<'a>, default_loc: Location) -> Result<Self> {
         let mut options = DisassemblerOptions::new();
         options.print_code = true;
         Ok(Self {
-            source_mapper: SourceMapping::new_from_module(module, default_loc)?,
-            options,
-            coverage_map: None,
-        })
-    }
-
-    pub fn from_script(script: CompiledScript, default_loc: Location) -> Result<Self> {
-        let mut options = DisassemblerOptions::new();
-        options.print_code = true;
-        Ok(Self {
-            source_mapper: SourceMapping::new_from_script(script, default_loc)?,
+            source_mapper: SourceMapping::new_from_view(view, default_loc)?,
             options,
             coverage_map: None,
         })
@@ -96,27 +85,46 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         &self,
         function_definition_index: FunctionDefinitionIndex,
     ) -> Result<&FunctionDefinition> {
-        if function_definition_index.0 as usize >= self.source_mapper.bytecode.function_defs().len()
+        if function_definition_index.0 as usize
+            >= self
+                .source_mapper
+                .bytecode
+                .function_defs()
+                .map_or(0, |f| f.len())
         {
             bail!("Invalid function definition index supplied when marking function")
         }
-        Ok(self
+        match self
             .source_mapper
             .bytecode
-            .function_def_at(function_definition_index))
+            .function_def_at(function_definition_index)
+        {
+            Ok(definition) => Ok(definition),
+            Err(err) => Err(Error::new(err)),
+        }
     }
 
     fn get_struct_def(
         &self,
         struct_definition_index: StructDefinitionIndex,
     ) -> Result<&StructDefinition> {
-        if struct_definition_index.0 as usize >= self.source_mapper.bytecode.struct_defs().len() {
+        if struct_definition_index.0 as usize
+            >= self
+                .source_mapper
+                .bytecode
+                .struct_defs()
+                .map_or(0, |d| d.len())
+        {
             bail!("Invalid struct definition index supplied when marking struct")
         }
-        Ok(self
+        match self
             .source_mapper
             .bytecode
-            .struct_def_at(struct_definition_index))
+            .struct_def_at(struct_definition_index)
+        {
+            Ok(definition) => Ok(definition),
+            Err(err) => Err(Error::new(err)),
+        }
     }
 
     //***************************************************************************
@@ -176,11 +184,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     //***************************************************************************
 
     fn name_for_field(&self, field_idx: FieldHandleIndex) -> Result<String> {
-        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx);
+        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx)?;
         let struct_def = self
             .source_mapper
             .bytecode
-            .struct_def_at(field_handle.owner);
+            .struct_def_at(field_handle.owner)?;
         let field_def = match &struct_def.field_information {
             StructFieldInformation::Native => {
                 return Err(format_err!("Attempt to access field on a native struct"));
@@ -207,11 +215,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     }
 
     fn type_for_field(&self, field_idx: FieldHandleIndex) -> Result<String> {
-        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx);
+        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx)?;
         let struct_def = self
             .source_mapper
             .bytecode
-            .struct_def_at(field_handle.owner);
+            .struct_def_at(field_handle.owner)?;
         let field_def = match &struct_def.field_information {
             StructFieldInformation::Native => {
                 return Err(format_err!("Attempt to access field on a native struct"));
@@ -496,7 +504,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let field_inst = self
                     .source_mapper
                     .bytecode
-                    .field_instantiation_at(*field_idx);
+                    .field_instantiation_at(*field_idx)?;
                 let name = self.name_for_field(field_inst.handle)?;
                 let ty = self.type_for_field(field_inst.handle)?;
                 Ok(format!(
@@ -513,7 +521,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let field_inst = self
                     .source_mapper
                     .bytecode
-                    .field_instantiation_at(*field_idx);
+                    .field_instantiation_at(*field_idx)?;
                 let name = self.name_for_field(field_inst.handle)?;
                 let ty = self.type_for_field(field_inst.handle)?;
                 Ok(format!(
@@ -529,7 +537,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -548,7 +556,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -567,7 +575,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -589,7 +597,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -611,7 +619,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -630,7 +638,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -649,7 +657,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
-                    .struct_instantiation_at(*struct_idx);
+                    .struct_instantiation_at(*struct_idx)?;
                 let type_params = self
                     .source_mapper
                     .bytecode
@@ -1064,11 +1072,19 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             None => "script".to_owned(),
         };
 
-        let struct_defs: Vec<String> = (0..self.source_mapper.bytecode.struct_defs().len())
+        let struct_defs: Vec<String> = (0..self
+            .source_mapper
+            .bytecode
+            .struct_defs()
+            .map_or(0, |d| d.len()))
             .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex)))
             .collect::<Result<Vec<String>>>()?;
 
-        let function_defs: Vec<String> = (0..self.source_mapper.bytecode.function_defs().len())
+        let function_defs: Vec<String> = (0..self
+            .source_mapper
+            .bytecode
+            .function_defs()
+            .map_or(0, |f| f.len()))
             .map(|i| self.disassemble_function_def(FunctionDefinitionIndex(i as TableIndex)))
             .collect::<Result<Vec<String>>>()?;
 

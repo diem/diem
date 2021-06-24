@@ -3,13 +3,13 @@
 
 use crate::{marking::MarkedSourceMapping, source_map::SourceMap};
 use anyhow::Result;
-use move_binary_format::file_format::{CompiledModule, CompiledScript};
+use move_binary_format::binary_views::BinaryIndexedView;
 
 /// An object that associates source code with compiled bytecode and source map.
 #[derive(Debug)]
-pub struct SourceMapping<Location: Clone + Eq> {
+pub struct SourceMapping<'a, Location: Clone + Eq> {
     // The resulting bytecode from compiling the source map
-    pub bytecode: CompiledModule,
+    pub bytecode: BinaryIndexedView<'a>,
 
     // The source map for the bytecode made w.r.t. to the `source_code`
     pub source_map: SourceMap<Location>,
@@ -24,8 +24,8 @@ pub struct SourceMapping<Location: Clone + Eq> {
     pub marks: Option<MarkedSourceMapping>,
 }
 
-impl<Location: Clone + Eq> SourceMapping<Location> {
-    pub fn new(source_map: SourceMap<Location>, bytecode: CompiledModule) -> Self {
+impl<'a, Location: Clone + Eq> SourceMapping<'a, Location> {
+    pub fn new(source_map: SourceMap<Location>, bytecode: BinaryIndexedView<'a>) -> Self {
         Self {
             source_map,
             bytecode,
@@ -34,17 +34,10 @@ impl<Location: Clone + Eq> SourceMapping<Location> {
         }
     }
 
-    pub fn new_from_module(bytecode: CompiledModule, default_loc: Location) -> Result<Self> {
+    pub fn new_from_view(bytecode: BinaryIndexedView<'a>, default_loc: Location) -> Result<Self> {
         Ok(Self::new(
-            SourceMap::dummy_from_module(&bytecode, default_loc)?,
+            SourceMap::dummy_from_view(&bytecode, default_loc)?,
             bytecode,
-        ))
-    }
-
-    pub fn new_from_script(bytecode: CompiledScript, default_loc: Location) -> Result<Self> {
-        Ok(Self::new(
-            SourceMap::dummy_from_script(&bytecode, default_loc)?,
-            bytecode.into_module(),
         ))
     }
 
