@@ -1,3 +1,9 @@
+error[E03004]: unbound type
+  ┌─ tests/move_check/expansion/use_struct_unbound.move:8:19
+  │
+8 │     struct X { f: S }
+  │                   ^ Unbound type 'S' in current scope
+
 error: 
 
    ┌── tests/move_check/expansion/use_struct_unbound.move:6:17 ───
@@ -7,13 +13,5 @@ error:
    ·
  2 │ module X {
    │        - Module '0x2::X' declared here
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/use_struct_unbound.move:8:19 ───
-   │
- 8 │     struct X { f: S }
-   │                   ^ Unbound type 'S' in current scope
    │
 

@@ -1,10 +1,8 @@
-error: 
-
-   ┌── tests/move_check/expansion/invalid_unpack_assign_mdot_no_struct.move:3:9 ───
-   │
- 3 │         Self::f {} = 0;
-   │         ^^^^^^^ Invalid module access. Unbound struct 'f' in module '0x8675309::M'
-   │
+error[E03003]: unbound module member
+  ┌─ tests/move_check/expansion/invalid_unpack_assign_mdot_no_struct.move:3:9
+  │
+3 │         Self::f {} = 0;
+  │         ^^^^^^^ Invalid module access. Unbound struct 'f' in module '0x8675309::M'
 
 error: 
 

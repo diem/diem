@@ -1,24 +1,18 @@
-error: 
+error[E03005]: unbound unscoped name
+  ┌─ tests/move_check/naming/unbound_builtin.move:3:9
+  │
+3 │         global_borrow();
+  │         ^^^^^^^^^^^^^ Unbound function 'global_borrow' in current scope
 
-   ┌── tests/move_check/naming/unbound_builtin.move:3:9 ───
-   │
- 3 │         global_borrow();
-   │         ^^^^^^^^^^^^^ Unbound function 'global_borrow' in current scope
-   │
+error[E03005]: unbound unscoped name
+  ┌─ tests/move_check/naming/unbound_builtin.move:4:9
+  │
+4 │         release<u64>();
+  │         ^^^^^^^ Unbound function 'release' in current scope
 
-error: 
-
-   ┌── tests/move_check/naming/unbound_builtin.move:4:9 ───
-   │
- 4 │         release<u64>();
-   │         ^^^^^^^ Unbound function 'release' in current scope
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/unbound_builtin.move:5:9 ───
-   │
- 5 │         sudo(false);
-   │         ^^^^ Unbound function 'sudo' in current scope
-   │
+error[E03005]: unbound unscoped name
+  ┌─ tests/move_check/naming/unbound_builtin.move:5:9
+  │
+5 │         sudo(false);
+  │         ^^^^ Unbound function 'sudo' in current scope
 

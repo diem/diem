@@ -1,44 +1,36 @@
-error: 
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/naming/global_builtin_zero_type_arguments.move:4:9
+  │
+4 │         borrow_global<>(@0x1);
+  │         ^^^^^^^^^^^^^--------
+  │         │
+  │         Expected 1 type argument(s) but got 0
+  │         Invalid call to builtin function: 'borrow_global'
 
-   ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:4:9 ───
-   │
- 4 │         borrow_global<>(@0x1);
-   │         ^^^^^^^^^^^^^ Invalid call to builtin function: 'borrow_global'
-   ·
- 4 │         borrow_global<>(@0x1);
-   │         --------------------- Expected 1 type argument(s) but got 0
-   │
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/naming/global_builtin_zero_type_arguments.move:5:9
+  │
+5 │         exists<>(@0x1);
+  │         ^^^^^^--------
+  │         │
+  │         Expected 1 type argument(s) but got 0
+  │         Invalid call to builtin function: 'exists'
 
-error: 
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/naming/global_builtin_zero_type_arguments.move:6:17
+  │
+6 │         R1 {} = move_from<>(@0x1);
+  │                 ^^^^^^^^^--------
+  │                 │
+  │                 Expected 1 type argument(s) but got 0
+  │                 Invalid call to builtin function: 'move_from'
 
-   ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:5:9 ───
-   │
- 5 │         exists<>(@0x1);
-   │         ^^^^^^ Invalid call to builtin function: 'exists'
-   ·
- 5 │         exists<>(@0x1);
-   │         -------------- Expected 1 type argument(s) but got 0
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:6:17 ───
-   │
- 6 │         R1 {} = move_from<>(@0x1);
-   │                 ^^^^^^^^^ Invalid call to builtin function: 'move_from'
-   ·
- 6 │         R1 {} = move_from<>(@0x1);
-   │                 ----------------- Expected 1 type argument(s) but got 0
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:7:9 ───
-   │
- 7 │         move_to<>(account, R1{});
-   │         ^^^^^^^ Invalid call to builtin function: 'move_to'
-   ·
- 7 │         move_to<>(account, R1{});
-   │         ------------------------ Expected 1 type argument(s) but got 0
-   │
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/naming/global_builtin_zero_type_arguments.move:7:9
+  │
+7 │         move_to<>(account, R1{});
+  │         ^^^^^^^-----------------
+  │         │
+  │         Expected 1 type argument(s) but got 0
+  │         Invalid call to builtin function: 'move_to'
 

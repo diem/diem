@@ -1,40 +1,32 @@
-error: 
+error[E03006]: unexpected name in this position
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:18:9
+   │
+18 │         T,
+   │         ^ Invalid acquires item. Expected a struct name, but got a type parameter
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:18:9 ───
-    │
- 18 │         T,
-    │         ^ Invalid acquires item. Expected a struct name, but got a type parameter
-    │
+error[E03006]: unexpected name in this position
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:19:9
+   │
+19 │         u64,
+   │         ^^^ Invalid acquires item. Expected a struct name, but got a builtin type
 
-error: 
+error[E02011]: invalid 'acquires' item
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:20:9
+   │
+ 4 │     struct R has key, store {}
+   │            - The struct 'R' was not declared in the current module. Global storage access is internal to the module'
+   ·
+20 │         X::R,
+   │         ^^^^ Invalid acquires item
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:19:9 ───
-    │
- 19 │         u64,
-    │         ^^^ Invalid acquires item. Expected a struct name, but got a builtin type
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:20:9 ───
-    │
- 20 │         X::R,
-    │         ^^^^ Invalid acquires item
-    ·
- 20 │         X::R,
-    │            - The struct 'R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:21:9 ───
-    │
- 21 │         S,
-    │         ^ Invalid acquires item. Expected a struct with the 'key' ability.
-    ·
- 10 │     struct S has store {}
-    │            - Declared without the ability here
-    │
+error[E02011]: invalid 'acquires' item
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:21:9
+   │
+10 │     struct S has store {}
+   │            - Declared without the 'key' ability here
+   ·
+21 │         S,
+   │         ^ Invalid acquires item. Expected a struct with the 'key' ability.
 
 error: 
 

@@ -1,11 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan_reporting_new::diagnostic::Severity;
-
 //**************************************************************************************************
 // Main types
 //**************************************************************************************************
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
+pub enum Severity {
+    BlockingError = 0,
+    NonblockingError = 1,
+    Warning = 2,
+}
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub(crate) struct DiagnosticInfo {
@@ -16,13 +21,14 @@ pub(crate) struct DiagnosticInfo {
 }
 
 pub(crate) trait DiagnosticCode: Copy {
-    const SEVERITY: Severity;
     const CATEGORY: Category;
+
+    fn severity(self) -> Severity;
 
     fn code_and_message(self) -> (u8, &'static str);
 
     fn into_info(self) -> DiagnosticInfo {
-        let severity = Self::SEVERITY;
+        let severity = self.severity();
         let category = Self::CATEGORY;
         let (code, message) = self.code_and_message();
         DiagnosticInfo {
@@ -39,39 +45,47 @@ pub(crate) trait DiagnosticCode: Copy {
 //**************************************************************************************************
 
 macro_rules! codes {
-    ($(severity:$sev:ident, category:$cat:ident=$cat_num:literal, name:$name:ident, codes:[
-        $($code:ident = $code_num:literal: $code_msg:literal),*
-
-    ]),*) => {
+    ($($cat:ident: [
+        $($code:ident: { msg: $code_msg:literal, severity:$sev:ident $(,)? }),* $(,)?
+    ]),* $(,)?) => {
         #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
         #[repr(u8)]
         pub enum Category {
-            $($cat = $cat_num,)*
+            $($cat,)*
         }
 
         $(
             #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
             #[repr(u8)]
-            pub enum $name {
-                $($code = $code_num,)*
+            pub enum $cat {
+                DontStartAtZeroPlaceholder,
+                $($code,)*
             }
 
-            impl DiagnosticCode for $name {
-                const SEVERITY: Severity = Severity::$sev;
+            impl DiagnosticCode for $cat {
                 const CATEGORY: Category = {
                     // hacky check that $cat_num <= 99
-                    let cat_is_leq_99 = $cat_num <= 99;
+                    let cat_is_leq_99 = (Category::$cat as u8) <= 99;
                     ["Diagnostic Category must be a u8 <= 99"][!cat_is_leq_99 as usize];
                     Category::$cat
                 };
 
+                fn severity(self) -> Severity {
+                    match self {
+                        Self::DontStartAtZeroPlaceholder =>
+                            panic!("ICE do not use placeholder error code"),
+                        $(Self::$code => Severity::$sev,)*
+                    }
+                }
+
                 fn code_and_message(self) -> (u8, &'static str) {
                     let code = self as u8;
                     debug_assert!(code > 0);
-                    let message = match self {
-                        $(Self::$code => $code_msg,)*
-                    };
-                    (code, message)
+                    match self {
+                        Self::DontStartAtZeroPlaceholder =>
+                            panic!("ICE do not use placeholder error code"),
+                        $(Self::$code => (code, $code_msg),)*
+                    }
                 }
             }
         )*
@@ -80,9 +94,47 @@ macro_rules! codes {
 }
 
 codes!(
-    severity: Error, category: NameResolution=2, name: NameResolutionError, codes: [
-        UnboundModule = 1:  "unbound module"
-    ]
+    // bucket for random one off errors. unlikely to be used
+    Uncategorized: [],
+    // syntax errors
+    Syntax: [
+        SpecContextRestricted: { msg: "syntax item restricted to spec contexts", severity: BlockingError },
+    ],
+    // errors for any rules around declaration items
+    Declarations: [
+        DuplicateItem: { msg: "duplicate declaration, item, or annotation", severity: NonblockingError },
+        UnnecessaryItem: { msg: "unnecessary or extraneous item", severity: NonblockingError },
+        InvalidAddress: { msg: "invalid 'address' declaration", severity: NonblockingError },
+        InvalidModule: { msg: "invalid 'module' declaration", severity: NonblockingError },
+        InvalidScript: { msg: "invalid 'script' declaration", severity: NonblockingError },
+        InvalidConstant: { msg: "invalid 'const' declaration", severity: NonblockingError },
+        InvalidFunction: { msg: "invalid 'fun' declaration", severity: NonblockingError },
+        InvalidStruct: { msg: "invalid 'struct' declaration", severity: NonblockingError },
+        InvalidName: { msg: "invalid name", severity: BlockingError },
+        InvalidFriendDeclaration: { msg: "invalid 'friend' declaration", severity: NonblockingError },
+        InvalidAcquiresItem: { msg: "invalid 'acquires' item", severity: NonblockingError },
+    ],
+    // errors name resolution, mostly expansion/translate and naming/translate
+    NameResolution: [
+        UnboundAddress: { msg: "unbound address", severity: BlockingError },
+        UnboundModule: { msg: "unbound module", severity: BlockingError },
+        UnboundModuleMember: { msg: "unbound module member", severity: BlockingError },
+        UnboundType: { msg: "unbound type", severity: BlockingError },
+        UnboundUnscopedName: { msg: "unbound unscoped name", severity: BlockingError },
+        NamePositionMismatch: { msg: "unexpected name in this position", severity: BlockingError },
+        TooManyTypeArguments: { msg: "too many type arguments", severity: NonblockingError },
+        TooFewTypeArguments: { msg: "too few type arguments", severity: BlockingError },
+    ],
+    // errors for typing rules. mostly typing/translate
+    TypeSafety: [],
+    // errors for ability rules. mostly typing/translate
+    AbilitySafety: [],
+    // errors for move rules. mostly cfgir/locals
+    MoveSafety: [],
+    // errors for move rules. mostly cfgir/borrows
+    ReferenceSafety: [],
+    // errors for any unused code or items
+    UnusedItem: [],
 );
 
 //**************************************************************************************************
@@ -98,13 +150,22 @@ impl DiagnosticInfo {
             message,
         } = self;
         let sev_prefix = match severity {
-            Severity::Error => "E",
+            Severity::BlockingError | Severity::NonblockingError => "E",
             Severity::Warning => "W",
-            _ => unimplemented!(),
         };
         let cat_prefix: u8 = category as u8;
         debug_assert!(cat_prefix <= 99);
         let string_code = format!("{}{:02}{:03}", sev_prefix, cat_prefix, code);
         (string_code, message)
+    }
+}
+
+impl Severity {
+    pub fn into_codespan_severity(self) -> codespan_reporting_new::diagnostic::Severity {
+        use codespan_reporting_new::diagnostic::Severity as CSRSeverity;
+        match self {
+            Severity::BlockingError | Severity::NonblockingError => CSRSeverity::Error,
+            Severity::Warning => CSRSeverity::Warning,
+        }
     }
 }

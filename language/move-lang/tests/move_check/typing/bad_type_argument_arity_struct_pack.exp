@@ -1,16 +1,12 @@
-error: 
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_struct_pack.move:7:9
+  │
+7 │         S<> { f: 0 };
+  │         ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
 
-   ┌── tests/move_check/typing/bad_type_argument_arity_struct_pack.move:7:9 ───
-   │
- 7 │         S<> { f: 0 };
-   │         ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/bad_type_argument_arity_struct_pack.move:8:9 ───
-   │
- 8 │         S<u64, u64> { f: 0 };
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
-   │
+error[E03007]: too many type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_struct_pack.move:8:9
+  │
+8 │         S<u64, u64> { f: 0 };
+  │         ^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
 

@@ -1,44 +1,32 @@
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:4:29
+  │
+4 │     fun t0() acquires R, X, R {
+  │                       -     ^ Duplicate acquires item
+  │                       │      
+  │                       Previously listed here
 
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:4:29 ───
-   │
- 4 │     fun t0() acquires R, X, R {
-   │                             ^ Duplicate acquires item
-   ·
- 4 │     fun t0() acquires R, X, R {
-   │                       - Previously listed here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:29
+  │
+8 │     fun t1() acquires R, X, R, R, R {
+  │                       -     ^ Duplicate acquires item
+  │                       │      
+  │                       Previously listed here
 
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:32
+  │
+8 │     fun t1() acquires R, X, R, R, R {
+  │                             -  ^ Duplicate acquires item
+  │                             │   
+  │                             Previously listed here
 
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:29 ───
-   │
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                             ^ Duplicate acquires item
-   ·
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                       - Previously listed here
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:32 ───
-   │
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                                ^ Duplicate acquires item
-   ·
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                             - Previously listed here
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/duplicate_acquires_list_item.move:8:35 ───
-   │
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                                   ^ Duplicate acquires item
-   ·
- 8 │     fun t1() acquires R, X, R, R, R {
-   │                                - Previously listed here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:35
+  │
+8 │     fun t1() acquires R, X, R, R, R {
+  │                                -  ^ Duplicate acquires item
+  │                                │   
+  │                                Previously listed here
 

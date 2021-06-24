@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::diagnostic_codes::NameResolutionError,
+    errors::diagnostic_codes::*,
     expansion::{
         ast::{self as E, AbilitySet, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
@@ -126,7 +126,7 @@ impl<'env> Context<'env> {
         let resolved = self.scoped_functions.contains_key(m);
         if !resolved {
             self.env.add_diag(diag!(
-                NameResolutionError::UnboundModule,
+                NameResolution::UnboundModule,
                 (m.loc, format!("Unbound module '{}'", m))
             ))
         }
@@ -141,21 +141,22 @@ impl<'env> Context<'env> {
     ) -> Option<(Loc, StructName, AbilitySet, usize)> {
         let types = match self.scoped_types.get(m) {
             None => {
-                self.env
-                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                self.env.add_diag(diag!(
+                    NameResolution::UnboundModule,
+                    (m.loc, format!("Unbound module '{}'", m)),
+                ));
                 return None;
             }
             Some(members) => members,
         };
         match types.get(&n.value) {
             None => {
-                self.env.add_error_deprecated(vec![(
-                    loc,
-                    format!(
-                        "Invalid module access. Unbound struct '{}' in module '{}'",
-                        n, m
-                    ),
-                )]);
+                let msg = format!(
+                    "Invalid module access. Unbound struct '{}' in module '{}'",
+                    n, m
+                );
+                self.env
+                    .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
                 None
             }
             Some((decl_loc, _, abilities, arity)) => {
@@ -172,21 +173,22 @@ impl<'env> Context<'env> {
     ) -> Option<FunctionName> {
         let functions = match self.scoped_functions.get(m) {
             None => {
-                self.env
-                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                self.env.add_diag(diag!(
+                    NameResolution::UnboundModule,
+                    (m.loc, format!("Unbound module '{}'", m)),
+                ));
                 return None;
             }
             Some(members) => members,
         };
         match functions.get(&n.value).cloned() {
             None => {
-                self.env.add_error_deprecated(vec![(
-                    loc,
-                    format!(
-                        "Invalid module access. Unbound function '{}' in module '{}'",
-                        n, m
-                    ),
-                )]);
+                let msg = format!(
+                    "Invalid module access. Unbound function '{}' in module '{}'",
+                    n, m
+                );
+                self.env
+                    .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
                 None
             }
             Some(_) => Some(FunctionName(n.clone())),
@@ -201,21 +203,22 @@ impl<'env> Context<'env> {
     ) -> Option<ConstantName> {
         let constants = match self.scoped_constants.get(m) {
             None => {
-                self.env
-                    .add_error_deprecated(vec![(m.loc, format!("Unbound module '{}'", m,))]);
+                self.env.add_diag(diag!(
+                    NameResolution::UnboundModule,
+                    (m.loc, format!("Unbound module '{}'", m)),
+                ));
                 return None;
             }
             Some(members) => members,
         };
         match constants.get(&n.value).cloned() {
             None => {
-                self.env.add_error_deprecated(vec![(
-                    loc,
-                    format!(
-                        "Invalid module access. Unbound constant '{}' in module '{}'",
-                        n, m
-                    ),
-                )]);
+                let msg = format!(
+                    "Invalid module access. Unbound constant '{}' in module '{}'",
+                    n, m
+                );
+                self.env
+                    .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
                 None
             }
             Some(_) => Some(ConstantName(n)),
@@ -225,10 +228,9 @@ impl<'env> Context<'env> {
     fn resolve_unscoped_type(&mut self, n: &Name) -> Option<ResolvedType> {
         match self.unscoped_types.get(&n.value) {
             None => {
-                self.env.add_error_deprecated(vec![(
-                    n.loc,
-                    format!("Unbound type '{}' in current scope", n),
-                )]);
+                let msg = format!("Unbound type '{}' in current scope", n);
+                self.env
+                    .add_diag(diag!(NameResolution::UnboundType, (n.loc, msg)));
                 None
             }
             Some(rn) => Some(rn.clone()),
@@ -251,10 +253,11 @@ impl<'env> Context<'env> {
                     None
                 }
                 Some(rt) => {
-                    self.env.add_error_deprecated(vec![
+                    self.env.add_diag(diag!(
+                        NameResolution::NamePositionMismatch,
                         (nloc, format!("Invalid {}. Expected a struct name", verb)),
                         rt.error_msg(&n),
-                    ]);
+                    ));
                     None
                 }
             },
@@ -283,8 +286,10 @@ impl<'env> Context<'env> {
         match ma_ {
             EA::Name(n) => match self.unscoped_constants.get(&n.value) {
                 None => {
-                    self.env
-                        .add_error_deprecated(vec![(loc, format!("Unbound constant '{}'", n))]);
+                    self.env.add_diag(diag!(
+                        NameResolution::UnboundUnscopedName,
+                        (loc, format!("Unbound constant '{}'", n)),
+                    ));
                     None
                 }
                 Some(_) => Some((None, ConstantName(n))),
@@ -448,16 +453,18 @@ fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Opti
         // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
         // rely on the assumption that friend modules must reside within the same account address.
         let msg = "Cannot declare modules out of the current address as a friend";
-        context.env.add_error_deprecated(vec![
+        context.env.add_diag(diag!(
+            Declarations::InvalidFriendDeclaration,
             (friend.loc, "Invalid friend declaration"),
             (mident.loc, msg),
-        ]);
+        ));
         None
     } else if &mident == current_mident {
-        context.env.add_error_deprecated(vec![
+        context.env.add_diag(diag!(
+            Declarations::InvalidFriendDeclaration,
             (friend.loc, "Invalid friend declaration"),
             (mident.loc, "Cannot declare the module itself as a friend"),
-        ]);
+        ));
         None
     } else if context.resolve_module(&mident) {
         Some(friend)
@@ -520,10 +527,11 @@ fn function_acquires(
             Some(sn) => sn,
         };
         if let Some(old_loc) = acquires.insert(sn, new_loc) {
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                Declarations::DuplicateItem,
                 (new_loc, "Duplicate acquires item"),
                 (old_loc, "Previously listed here"),
-            ])
+            ))
         }
     }
     acquires
@@ -538,13 +546,13 @@ fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Optio
                 RT::BuiltinType => "builtin type",
                 RT::TParam(_, _) => "type parameter",
             };
-            context.env.add_error_deprecated(vec![(
-                loc,
-                format!(
-                    "Invalid acquires item. Expected a struct name, but got a {}",
-                    case
-                ),
-            )]);
+            let msg = format!(
+                "Invalid acquires item. Expected a struct name, but got a {}",
+                case
+            );
+            context
+                .env
+                .add_diag(diag!(NameResolution::NamePositionMismatch, (loc, msg)));
             None
         }
         EN::ModuleAccess(m, n) => {
@@ -574,10 +582,12 @@ fn acquires_type_struct(
             "Invalid acquires item. Expected a struct with the '{}' ability.",
             Ability_::KEY
         );
-        context.env.add_error_deprecated(vec![
+        let decl_msg = format!("Declared without the '{}' ability here", Ability_::KEY);
+        context.env.add_diag(diag!(
+            Declarations::InvalidAcquiresItem,
             (loc, msg),
-            (decl_loc, "Declared without the ability here".to_string()),
-        ]);
+            (decl_loc, decl_msg),
+        ));
         has_errors = true;
     }
 
@@ -587,9 +597,11 @@ fn acquires_type_struct(
              internal to the module'",
             n
         );
-        context
-            .env
-            .add_error_deprecated(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
+        context.env.add_diag(diag!(
+            Declarations::InvalidAcquiresItem,
+            (loc, "Invalid acquires item"),
+            (decl_loc, tmsg),
+        ));
         has_errors = true;
     }
 
@@ -677,10 +689,11 @@ fn type_parameters(
             );
             if let Err((name, old_loc)) = unique_tparams.add(name, ()) {
                 let msg = format!("Duplicate type parameter declared with name '{}'", name);
-                context.env.add_error_deprecated(vec![
+                context.env.add_diag(diag!(
+                    Declarations::DuplicateItem,
                     (loc, msg),
                     (old_loc, "Previously defined here".to_string()),
-                ])
+                ))
             }
             tp
         })
@@ -720,10 +733,10 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
             }
             Some(RT::TParam(_, tp)) => {
                 if !tys.is_empty() {
-                    context.env.add_error_deprecated(vec![(
-                        loc,
-                        "Generic type parameters cannot take type arguments",
-                    )]);
+                    context.env.add_diag(diag!(
+                        NameResolution::NamePositionMismatch,
+                        (loc, "Generic type parameters cannot take type arguments"),
+                    ));
                     NT::UnresolvedError
                 } else {
                     NT::Param(tp)
@@ -759,15 +772,18 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
 ) -> Vec<N::Type> {
     let args_len = ty_args.len();
     if args_len != arity {
-        context.env.add_error_deprecated(vec![(
-            loc,
-            format!(
-                "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
-                name_f(),
-                arity,
-                args_len
-            ),
-        )])
+        let diag_code = if args_len > arity {
+            NameResolution::TooManyTypeArguments
+        } else {
+            NameResolution::TooFewTypeArguments
+        };
+        let msg = format!(
+            "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
+            name_f(),
+            arity,
+            args_len
+        );
+        context.env.add_diag(diag!(diag_code, (loc, msg)));
     }
 
     while ty_args.len() > arity {
@@ -955,10 +971,10 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 }
 
                 EA::Name(n) => {
-                    context.env.add_error_deprecated(vec![(
-                        n.loc,
-                        format!("Unbound function '{}' in current scope", n),
-                    )]);
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundUnscopedName,
+                        (n.loc, format!("Unbound function '{}' in current scope", n)),
+                    ));
                     NE::UnresolvedError
                 }
                 EA::ModuleAccess(m, n) => match context.resolve_module_function(mloc, &m, &n) {
@@ -1094,9 +1110,10 @@ fn resolve_builtin_function(
             Assert
         }
         _ => {
-            context
-                .env
-                .add_error_deprecated(vec![(b.loc, format!("Unbound function: '{}'", b))]);
+            context.env.add_diag(diag!(
+                NameResolution::UnboundUnscopedName,
+                (b.loc, format!("Unbound function: '{}'", b)),
+            ));
             return None;
         }
     })
@@ -1123,15 +1140,21 @@ fn check_builtin_ty_args(
     ty_args: Option<Vec<N::Type>>,
 ) -> Option<Vec<N::Type>> {
     ty_args.map(|mut args| {
-        let len = args.len();
-        if len != arity {
-            context.env.add_error_deprecated(vec![
+        let args_len = args.len();
+        if args_len != arity {
+            let diag_code = if args_len > arity {
+                NameResolution::TooManyTypeArguments
+            } else {
+                NameResolution::TooFewTypeArguments
+            };
+            context.env.add_diag(diag!(
+                diag_code,
                 (b.loc, format!("Invalid call to builtin function: '{}'", b)),
                 (
                     loc,
-                    format!("Expected {} type argument(s) but got {}", arity, len),
+                    format!("Expected {} type argument(s) but got {}", arity, args_len),
                 ),
-            ]);
+            ));
         }
 
         while args.len() > arity {

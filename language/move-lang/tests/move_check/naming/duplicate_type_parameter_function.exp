@@ -1,33 +1,24 @@
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_type_parameter_function.move:2:16
+  │
+2 │     fun foo<T, T>() {}
+  │             -  ^ Duplicate type parameter declared with name 'T'
+  │             │   
+  │             Previously defined here
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:2:16 ───
-   │
- 2 │     fun foo<T, T>() {}
-   │                ^ Duplicate type parameter declared with name 'T'
-   ·
- 2 │     fun foo<T, T>() {}
-   │             - Previously defined here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_type_parameter_function.move:3:23
+  │
+3 │     fun foo2<T: drop, T: key, T>() {}
+  │              -        ^ Duplicate type parameter declared with name 'T'
+  │              │         
+  │              Previously defined here
 
-error: 
-
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:23 ───
-   │
- 3 │     fun foo2<T: drop, T: key, T>() {}
-   │                       ^ Duplicate type parameter declared with name 'T'
-   ·
- 3 │     fun foo2<T: drop, T: key, T>() {}
-   │              - Previously defined here
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:31 ───
-   │
- 3 │     fun foo2<T: drop, T: key, T>() {}
-   │                               ^ Duplicate type parameter declared with name 'T'
-   ·
- 3 │     fun foo2<T: drop, T: key, T>() {}
-   │              - Previously defined here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/naming/duplicate_type_parameter_function.move:3:31
+  │
+3 │     fun foo2<T: drop, T: key, T>() {}
+  │              -                ^ Duplicate type parameter declared with name 'T'
+  │              │                 
+  │              Previously defined here
 

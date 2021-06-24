@@ -1,3 +1,21 @@
+error[E03006]: unexpected name in this position
+  ┌─ tests/move_check/naming/generics_shadowing_invalid.move:8:20
+  │
+6 │     fun foo<S>(s1: S, s2: S): S {
+  │             - But 'S' was declared as a type parameter here
+7 │         (s1: Self::S);
+8 │         let s: S = S {}; // TODO error? should this try to construct the generic ?
+  │                    ^ Invalid construction. Expected a struct name
+
+error[E03006]: unexpected name in this position
+   ┌─ tests/move_check/naming/generics_shadowing_invalid.move:10:9
+   │
+ 6 │     fun foo<S>(s1: S, s2: S): S {
+   │             - But 'S' was declared as a type parameter here
+   ·
+10 │         S {}
+   │         ^ Invalid construction. Expected a struct name
+
 error: 
 
    ┌── tests/move_check/naming/generics_shadowing_invalid.move:7:14 ───
@@ -14,17 +32,6 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/generics_shadowing_invalid.move:8:20 ───
-   │
- 8 │         let s: S = S {}; // TODO error? should this try to construct the generic ?
-   │                    ^ Invalid construction. Expected a struct name
-   ·
- 6 │     fun foo<S>(s1: S, s2: S): S {
-   │             - But 'S' was declared as a type parameter here
-   │
-
-error: 
-
     ┌── tests/move_check/naming/generics_shadowing_invalid.move:9:9 ───
     │
   9 │         bar(s1);
@@ -35,16 +42,5 @@ error:
     ·
  13 │     fun bar(s: S) {}
     │                - Is not compatible with: '0x2::M::S'
-    │
-
-error: 
-
-    ┌── tests/move_check/naming/generics_shadowing_invalid.move:10:9 ───
-    │
- 10 │         S {}
-    │         ^ Invalid construction. Expected a struct name
-    ·
-  6 │     fun foo<S>(s1: S, s2: S): S {
-    │             - But 'S' was declared as a type parameter here
     │
 

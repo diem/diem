@@ -1,16 +1,12 @@
-error: 
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_struct_unpack.move:7:13
+  │
+7 │         let S<> { f } = copy s;
+  │             ^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
 
-   ┌── tests/move_check/typing/bad_type_argument_arity_struct_unpack.move:7:13 ───
-   │
- 7 │         let S<> { f } = copy s;
-   │             ^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/bad_type_argument_arity_struct_unpack.move:9:13 ───
-   │
- 9 │         let S<u64, u64> { f } = copy s;
-   │             ^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
-   │
+error[E03007]: too many type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_struct_unpack.move:9:13
+  │
+9 │         let S<u64, u64> { f } = copy s;
+  │             ^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
 

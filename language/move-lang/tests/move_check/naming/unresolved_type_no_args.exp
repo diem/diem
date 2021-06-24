@@ -1,40 +1,30 @@
-error: 
+error[E03004]: unbound type
+  ┌─ tests/move_check/naming/unresolved_type_no_args.move:2:22
+  │
+2 │     struct Mine { f: A }
+  │                      ^ Unbound type 'A' in current scope
 
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:2:22 ───
-   │
- 2 │     struct Mine { f: A }
-   │                      ^ Unbound type 'A' in current scope
-   │
+error[E03004]: unbound type
+  ┌─ tests/move_check/naming/unresolved_type_no_args.move:3:16
+  │
+3 │     fun foo(x: S): G {
+  │                ^ Unbound type 'S' in current scope
 
-error: 
+error[E03004]: unbound type
+  ┌─ tests/move_check/naming/unresolved_type_no_args.move:3:20
+  │
+3 │     fun foo(x: S): G {
+  │                    ^ Unbound type 'G' in current scope
 
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:16 ───
-   │
- 3 │     fun foo(x: S): G {
-   │                ^ Unbound type 'S' in current scope
-   │
+error[E03004]: unbound type
+  ┌─ tests/move_check/naming/unresolved_type_no_args.move:4:16
+  │
+4 │         let _: B = (0: P);
+  │                ^ Unbound type 'B' in current scope
 
-error: 
-
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:3:20 ───
-   │
- 3 │     fun foo(x: S): G {
-   │                    ^ Unbound type 'G' in current scope
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:4:16 ───
-   │
- 4 │         let _: B = (0: P);
-   │                ^ Unbound type 'B' in current scope
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/unresolved_type_no_args.move:4:24 ───
-   │
- 4 │         let _: B = (0: P);
-   │                        ^ Unbound type 'P' in current scope
-   │
+error[E03004]: unbound type
+  ┌─ tests/move_check/naming/unresolved_type_no_args.move:4:24
+  │
+4 │         let _: B = (0: P);
+  │                        ^ Unbound type 'P' in current scope
 

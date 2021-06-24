@@ -1,3 +1,36 @@
+error[E02010]: invalid 'friend' declaration
+  ┌─ tests/move_check/expansion/unbound_named_address.move:5:5
+  │
+5 │     friend C::M;
+  │     ^^^^^^^^^^^^
+  │     │      │
+  │     │      Cannot declare modules out of the current address as a friend
+  │     Invalid friend declaration
+
+error[E03002]: unbound module
+  ┌─ tests/move_check/expansion/unbound_named_address.move:9:12
+  │
+9 │         x: E::M::S,
+  │            ^^^^ Unbound module 'E::M'
+
+error[E03002]: unbound module
+   ┌─ tests/move_check/expansion/unbound_named_address.move:13:17
+   │
+13 │         let x = F::M::S {};
+   │                 ^^^^ Unbound module 'F::M'
+
+error[E03002]: unbound module
+   ┌─ tests/move_check/expansion/unbound_named_address.move:14:9
+   │
+14 │         G::M::foo();
+   │         ^^^^ Unbound module 'G::M'
+
+error[E03002]: unbound module
+   ┌─ tests/move_check/expansion/unbound_named_address.move:15:17
+   │
+15 │         let c = H::M::C;
+   │                 ^^^^ Unbound module 'H::M'
+
 error: 
 
    ┌── tests/move_check/expansion/unbound_named_address.move:2:8 ───
@@ -20,17 +53,6 @@ error:
    │
  3 │     use B::M;
    │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/unbound_named_address.move:5:5 ───
-   │
- 5 │     friend C::M;
-   │     ^^^^^^^^^^^^ Invalid friend declaration
-   ·
- 5 │     friend C::M;
-   │            ---- Cannot declare modules out of the current address as a friend
    │
 
 error: 
@@ -67,26 +89,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/expansion/unbound_named_address.move:9:12 ───
-   │
- 9 │         x: E::M::S,
-   │            ^^^^ Unbound module 'E::M'
-   │
-
-error: 
-
     ┌── tests/move_check/expansion/unbound_named_address.move:13:17 ───
     │
  13 │         let x = F::M::S {};
     │                 ^ Unbound address 'F'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/unbound_named_address.move:13:17 ───
-    │
- 13 │         let x = F::M::S {};
-    │                 ^^^^ Unbound module 'F::M'
     │
 
 error: 
@@ -99,26 +105,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/expansion/unbound_named_address.move:14:9 ───
-    │
- 14 │         G::M::foo();
-    │         ^^^^ Unbound module 'G::M'
-    │
-
-error: 
-
     ┌── tests/move_check/expansion/unbound_named_address.move:15:17 ───
     │
  15 │         let c = H::M::C;
     │                 ^ Unbound address 'H'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/unbound_named_address.move:15:17 ───
-    │
- 15 │         let c = H::M::C;
-    │                 ^^^^ Unbound module 'H::M'
     │
 
 error: 

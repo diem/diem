@@ -1,17 +1,15 @@
+error[E03005]: unbound unscoped name
+  ┌─ tests/move_check/naming/standalone_module_ident.move:8:17
+  │
+8 │         let x = X;
+  │                 ^ Unbound constant 'X'
+
 error: 
 
    ┌── tests/move_check/naming/standalone_module_ident.move:6:14 ───
    │
  6 │     use 0x2::X;
    │              ^ Unused 'use' of alias 'X'. Consider removing it
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/standalone_module_ident.move:8:17 ───
-   │
- 8 │         let x = X;
-   │                 ^ Unbound constant 'X'
    │
 
 error: 

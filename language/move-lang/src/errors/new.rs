@@ -95,7 +95,7 @@ fn render_diagnostic(
         primary_label,
         secondary_labels,
     } = diag;
-    let mut diag = csr::diagnostic::Diagnostic::new(info.severity);
+    let mut diag = csr::diagnostic::Diagnostic::new(info.severity.into_codespan_severity());
     let (code, message) = info.render();
     diag = diag.with_code(code);
     diag = diag.with_message(message);
@@ -161,7 +161,7 @@ macro_rules! diag {
     ($code: expr, $primary: expr $(,)?) => {{
         crate::errors::new::Diagnostic::new($code, $primary, std::iter::empty::<(Loc, String)>())
     }};
-    ($code: expr, $primary: expr, $($secondary: expr),+) => {{
+    ($code: expr, $primary: expr, $($secondary: expr),+ $(,)?) => {{
         crate::errors::new::Diagnostic::new($code, $primary, $(vec![$secondary, ])*)
     }};
 }

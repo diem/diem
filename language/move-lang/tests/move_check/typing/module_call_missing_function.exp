@@ -1,24 +1,18 @@
-error: 
+error[E03003]: unbound module member
+   ┌─ tests/move_check/typing/module_call_missing_function.move:13:9
+   │
+13 │         Self::fooo();
+   │         ^^^^^^^^^^ Invalid module access. Unbound function 'fooo' in module '0x2::M'
 
-    ┌── tests/move_check/typing/module_call_missing_function.move:13:9 ───
-    │
- 13 │         Self::fooo();
-    │         ^^^^^^^^^^ Invalid module access. Unbound function 'fooo' in module '0x2::M'
-    │
+error[E03005]: unbound unscoped name
+   ┌─ tests/move_check/typing/module_call_missing_function.move:14:9
+   │
+14 │         foooo();
+   │         ^^^^^ Unbound function 'foooo' in current scope
 
-error: 
-
-    ┌── tests/move_check/typing/module_call_missing_function.move:14:9 ───
-    │
- 14 │         foooo();
-    │         ^^^^^ Unbound function 'foooo' in current scope
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_missing_function.move:15:9 ───
-    │
- 15 │         X::foooooo();
-    │         ^^^^^^^^^^ Invalid module access. Unbound function 'foooooo' in module '0x2::X'
-    │
+error[E03003]: unbound module member
+   ┌─ tests/move_check/typing/module_call_missing_function.move:15:9
+   │
+15 │         X::foooooo();
+   │         ^^^^^^^^^^ Invalid module access. Unbound function 'foooooo' in module '0x2::X'
 

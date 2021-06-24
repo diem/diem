@@ -1,10 +1,26 @@
-error: 
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_const.move:6:15
+  │
+6 │     const S1: S = S { f: 0 };
+  │               ^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
 
-   ┌── tests/move_check/typing/bad_type_argument_arity_const.move:6:15 ───
-   │
- 6 │     const S1: S = S { f: 0 };
-   │               ^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
-   │
+error[E03008]: too few type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_const.move:7:15
+  │
+7 │     const S2: S<> = S { f: 0 };
+  │               ^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
+
+error[E03007]: too many type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_const.move:8:15
+  │
+8 │     const S3: S<u64, bool> = S { f: 0 };
+  │               ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
+
+error[E03007]: too many type arguments
+  ┌─ tests/move_check/typing/bad_type_argument_arity_const.move:9:17
+  │
+9 │     const S4: S<S<u64, bool>> = S { f: S { f: 0 } };
+  │                 ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
 
 error: 
 
@@ -30,14 +46,6 @@ error:
    ┌── tests/move_check/typing/bad_type_argument_arity_const.move:7:15 ───
    │
  7 │     const S2: S<> = S { f: 0 };
-   │               ^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/bad_type_argument_arity_const.move:7:15 ───
-   │
- 7 │     const S2: S<> = S { f: 0 };
    │               ^^^ Unpermitted constant type
    ·
  7 │     const S2: S<> = S { f: 0 };
@@ -50,14 +58,6 @@ error:
    │
  7 │     const S2: S<> = S { f: 0 };
    │                     ^^^^^^^^^^ Structs are not supported in constants
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/bad_type_argument_arity_const.move:8:15 ───
-   │
- 8 │     const S3: S<u64, bool> = S { f: 0 };
-   │               ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
    │
 
 error: 
@@ -88,14 +88,6 @@ error:
    ·
  9 │     const S4: S<S<u64, bool>> = S { f: S { f: 0 } };
    │               --------------- Found: '0x42::M::S<_>'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/bad_type_argument_arity_const.move:9:17 ───
-   │
- 9 │     const S4: S<S<u64, bool>> = S { f: S { f: 0 } };
-   │                 ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
    │
 
 error: 
