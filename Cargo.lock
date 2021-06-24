@@ -1948,7 +1948,7 @@ dependencies = [
 
 [[package]]
 name = "diem-json-rpc-types"
-version = "0.0.3"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "bcs",
