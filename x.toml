@@ -186,6 +186,7 @@ members = [
     "diem-retrier",
     "diem-smoke-test-attribute",
     "diem-swarm",
+    "diem-transaction-benchmarks",
     "diem-wallet",
     "diemdb-benchmark",
     "executor-benchmark",
@@ -231,6 +232,7 @@ diem_crates_in_language = [
     "diem-read-write-set",
     "diem-validator-interface",
     "diem-transaction-replay",
+    "diem-transaction-benchmarks",
     "diem-writeset-generator",
     "diem-vm",
     "language-e2e-testsuite",
@@ -262,10 +264,6 @@ existing_deps = [
     ["move-cli", "diem-framework-releases"],
 
     # Tier 1 - crates that can wait a little bit longer?
-    ["language-benchmarks", "language-e2e-tests"],
-    ["language-benchmarks", "diem-vm"],
-    ["language-benchmarks", "diem-types"],
-    ["language-benchmarks", "diem-state-view"],
     ["test-generation", "language-e2e-tests"],
     ["test-generation", "diem-vm"],
     ["test-generation", "diem-types"],

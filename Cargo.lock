@@ -2400,6 +2400,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-transaction-benchmarks"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "criterion-cpu-time",
+ "diem-types",
+ "diem-workspace-hack",
+ "language-e2e-tests",
+ "proptest",
+]
+
+[[package]]
 name = "diem-transaction-builder"
 version = "0.0.2"
 dependencies = [
@@ -4198,16 +4210,13 @@ dependencies = [
  "bytecode-verifier",
  "criterion",
  "criterion-cpu-time",
- "diem-state-view",
- "diem-types",
- "diem-vm",
  "diem-workspace-hack",
- "language-e2e-tests",
  "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-stdlib",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "once_cell",
  "proptest",

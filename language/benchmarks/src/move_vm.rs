@@ -1,11 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
 use criterion::{measurement::Measurement, Criterion};
-use diem_state_view::StateView;
-use diem_types::access_path::AccessPath;
-use diem_vm::data_cache::StateViewCache;
 use move_binary_format::CompiledModule;
 use move_core_types::{
     account_address::AccountAddress,
@@ -14,6 +10,7 @@ use move_core_types::{
 };
 use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_test_utils::BlankStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
@@ -72,11 +69,10 @@ fn execute<M: Measurement + 'static>(
     fun: &str,
 ) {
     // establish running context
+    let storage = BlankStorage::new();
     let sender = CORE_CODE_ADDRESS;
-    let state = EmptyStateView;
-    let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();
-    let mut session = move_vm.new_session(&data_cache);
+    let mut session = move_vm.new_session(&storage);
     let mut gas_status = GasStatus::new_unmetered();
 
     for module in modules {
@@ -115,21 +111,4 @@ fn execute<M: Measurement + 'static>(
                 })
         })
     });
-}
-
-//
-// Utilities to get the VM going...
-//
-
-// An empty `StateView`
-struct EmptyStateView;
-
-impl StateView for EmptyStateView {
-    fn get(&self, _: &AccessPath) -> Result<Option<Vec<u8>>> {
-        Ok(None)
-    }
-
-    fn is_genesis(&self) -> bool {
-        true
-    }
 }

@@ -2,7 +2,7 @@
 name = "language-benchmarks"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Diem language benchmarks"
+description = "Move language benchmarks"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
@@ -17,22 +17,15 @@ proptest = "1.0.0"
 criterion-cpu-time = "0.1.0"
 
 bytecode-verifier = { path = "../bytecode-verifier" }
-language-e2e-tests = { path = "../testing-infra/e2e-tests" }
-diem-state-view = { path = "../../storage/state-view" }
-diem-types = { path = "../../types", features = ["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
 move-lang = { path = "../move-lang" }
 move-vm-runtime = { path = "../move-vm/runtime" }
+move-vm-test-utils = { path = "../move-vm/test-utils" }
 move-vm-types = { path = "../move-vm/types" }
 move-binary-format = { path = "../move-binary-format" }
-diem-vm = { path = "../diem-vm" }
 move-stdlib = { path = "../move-stdlib" }
 
 [[bench]]
 name = "vm_benches"
-harness = false
-
-[[bench]]
-name = "transaction_benches"
 harness = false
