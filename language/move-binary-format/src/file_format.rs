@@ -1654,21 +1654,9 @@ impl CompiledScript {
     /// If a `CompiledScript` has been bounds checked, the corresponding `CompiledModule` can be
     /// assumed to pass the bounds checker as well.
     #[allow(deprecated)]
-    pub fn into_module(self) -> (ScriptConversionInfo, CompiledModule) {
-        let (info, m) = self.0.into_module();
-        (info, CompiledModule(m))
+    pub fn into_module(self) -> CompiledModule {
+        CompiledModule(self.0.into_module())
     }
-}
-
-pub struct ScriptConversionInfo {
-    // If a dummy address was added.
-    added_dummy_addr: bool,
-    // If an empty signature was added.
-    added_dummy_sig: bool,
-    // If the <SELF> identifier was added.
-    added_self_ident: bool,
-    // If a self module handle was added.
-    added_self_module_handle: bool,
 }
 
 impl CompiledScriptMut {
@@ -1684,74 +1672,70 @@ impl CompiledScriptMut {
     /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
     /// of both.
     ///
-    /// This also produces a `ScriptConversionInfo`, which will be required to convert the
-    /// module back into a script.
-    ///
     /// TODO: rewrite things that depend on this and get this removed.
     #[deprecated(
         note = "This function is deprecated and will be removed soon. Please do not introduce new dependencies."
     )]
-    pub fn into_module(mut self) -> (ScriptConversionInfo, CompiledModuleMut) {
+    pub fn into_module(mut self) -> CompiledModuleMut {
         // Add the "<SELF>" identifier if it isn't present.
         //
         // Note: When adding an element to the table, in theory it is possible for the index
         // to overflow. This will not be a problem if we get rid of the script/module conversion.
-        let (added_self_ident, self_ident_idx) = match self
+        let self_ident_idx = match self
             .identifiers
             .iter()
             .position(|ident| ident.as_ident_str() == self_module_name())
         {
-            Some(idx) => (false, IdentifierIndex::new(idx as u16)),
+            Some(idx) => IdentifierIndex::new(idx as u16),
             None => {
                 let idx = IdentifierIndex::new(self.identifiers.len() as u16);
                 self.identifiers
                     .push(Identifier::new(self_module_name().to_string()).unwrap());
-                (true, idx)
+                idx
             }
         };
 
         // Add a dummy adress if none exists.
         let dummy_addr = AccountAddress::new([0xff; AccountAddress::LENGTH]);
-        let (added_dummy_addr, dummy_addr_idx) = match self
+        let dummy_addr_idx = match self
             .address_identifiers
             .iter()
             .position(|addr| addr == &dummy_addr)
         {
-            Some(idx) => (false, AddressIdentifierIndex::new(idx as u16)),
+            Some(idx) => AddressIdentifierIndex::new(idx as u16),
             None => {
                 let idx = AddressIdentifierIndex::new(self.address_identifiers.len() as u16);
                 self.address_identifiers.push(dummy_addr);
-                (true, idx)
+                idx
             }
         };
 
         // Add a self module handle.
-        let (added_self_module_handle, self_module_handle_idx) =
+        let self_module_handle_idx =
             match self.module_handles.iter().position(|handle| {
                 handle.address == dummy_addr_idx && handle.name == self_ident_idx
             }) {
-                Some(idx) => (false, ModuleHandleIndex::new(idx as u16)),
+                Some(idx) => ModuleHandleIndex::new(idx as u16),
                 None => {
                     let idx = ModuleHandleIndex::new(self.module_handles.len() as u16);
                     self.module_handles.push(ModuleHandle {
                         address: dummy_addr_idx,
                         name: self_ident_idx,
                     });
-                    (true, idx)
+                    idx
                 }
             };
 
         // Find the index to the empty signature [].
         // Create one if it doesn't exist.
-        let (added_dummy_sig, return_sig_idx) =
-            match self.signatures.iter().position(|sig| sig.0.is_empty()) {
-                Some(idx) => (false, SignatureIndex::new(idx as u16)),
-                None => {
-                    let idx = SignatureIndex::new(self.signatures.len() as u16);
-                    self.signatures.push(Signature(vec![]));
-                    (true, idx)
-                }
-            };
+        let return_sig_idx = match self.signatures.iter().position(|sig| sig.0.is_empty()) {
+            Some(idx) => SignatureIndex::new(idx as u16),
+            None => {
+                let idx = SignatureIndex::new(self.signatures.len() as u16);
+                self.signatures.push(Signature(vec![]));
+                idx
+            }
+        };
 
         // Create a function handle for the main function.
         let main_handle_idx = FunctionHandleIndex::new(self.function_handles.len() as u16);
@@ -1771,14 +1755,7 @@ impl CompiledScriptMut {
             code: Some(self.code),
         };
 
-        let info = ScriptConversionInfo {
-            added_dummy_addr,
-            added_dummy_sig,
-            added_self_ident,
-            added_self_module_handle,
-        };
-
-        let m = CompiledModuleMut {
+        CompiledModuleMut {
             version: self.version,
             module_handles: self.module_handles,
             self_module_handle_idx,
@@ -1799,9 +1776,7 @@ impl CompiledScriptMut {
 
             struct_defs: vec![],
             function_defs: vec![main_def],
-        };
-
-        (info, m)
+        }
     }
 }
 
@@ -2043,51 +2018,6 @@ impl CompiledModule {
     /// Returns the code key of `self`
     pub fn self_id(&self) -> ModuleId {
         self.module_id_for_handle(self.self_handle())
-    }
-
-    /// This function should only be called on an instance of CompiledModule obtained by invoking
-    /// into_module on some instance of CompiledScript. This function is the inverse of
-    /// into_module, i.e., script.into_module().into_script() == script.
-    #[deprecated(
-        note = "This function is deprecated and will be removed soon. Please do not introduce new dependencies."
-    )]
-    pub fn into_script(self, conv_info: ScriptConversionInfo) -> CompiledScript {
-        let mut inner = self.into_inner();
-        precondition!(!inner.function_defs.is_empty());
-        let main = inner.function_defs.pop().unwrap();
-
-        if conv_info.added_dummy_addr {
-            inner.address_identifiers.pop().unwrap();
-        }
-        if conv_info.added_dummy_sig {
-            inner.signatures.pop().unwrap();
-        }
-        if conv_info.added_self_ident {
-            inner.identifiers.pop().unwrap();
-        }
-        if conv_info.added_self_module_handle {
-            inner.module_handles.pop().unwrap();
-        }
-        let main_handle = inner.function_handles.pop().unwrap();
-
-        CompiledScript(CompiledScriptMut {
-            version: inner.version,
-            module_handles: inner.module_handles,
-            struct_handles: inner.struct_handles,
-            function_handles: inner.function_handles,
-
-            function_instantiations: inner.function_instantiations,
-
-            signatures: inner.signatures,
-
-            identifiers: inner.identifiers,
-            address_identifiers: inner.address_identifiers,
-            constant_pool: inner.constant_pool,
-
-            type_parameters: main_handle.type_parameters,
-            parameters: main_handle.parameters,
-            code: main.code.unwrap(),
-        })
     }
 }
 

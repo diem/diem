@@ -354,7 +354,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: E:
                         functions,
                         specs,
                     };
-                    let module = script.into_module().1;
+                    let module = script.into_module();
                     (ident, expanded_module, module, source_map, function_infos)
                 }
             })

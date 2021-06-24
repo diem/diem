@@ -1452,7 +1452,7 @@ impl Script {
         }
 
         let mut function_instantiations = vec![];
-        let (_, module) = script.clone().into_module();
+        let module = script.clone().into_module();
         for func_inst in script.function_instantiations() {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];

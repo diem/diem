@@ -44,7 +44,7 @@ impl<Location: Clone + Eq> SourceMapping<Location> {
     pub fn new_from_script(bytecode: CompiledScript, default_loc: Location) -> Result<Self> {
         Ok(Self::new(
             SourceMap::dummy_from_script(&bytecode, default_loc)?,
-            bytecode.into_module().1,
+            bytecode.into_module(),
         ))
     }
 

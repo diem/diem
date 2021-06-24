@@ -93,7 +93,6 @@ fn main() {
             CompiledScript::deserialize(&bytecode_bytes)
                 .expect("Script blob can't be deserialized")
                 .into_module()
-                .1
         } else {
             CompiledModule::deserialize(&bytecode_bytes).expect("Module blob can't be deserialized")
         };
