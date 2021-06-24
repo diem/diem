@@ -286,6 +286,11 @@ jobs:
     if: ${{ always() && needs.build-images.result=='success' && needs.prepare.outputs.test-land-blocking == 'true' }}
     timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Launch cluster test
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
