@@ -71,6 +71,8 @@ the [Diem framework documentation][FRAMEWORK] which has specifications embedded.
                 - [Isolated Global Invariants](#isolated-global-invariants)
                 - [Modular Verification and Global Invariants](#modular-verification-and-global-invariants)
         - [Assume and Assert Conditions in Code](#assume-and-assert-conditions-in-code)
+            - [Loop Invariants](#loop-invariants)
+            - [Referring to Pre State](#referring-to-pre-state)
         - [Specification Variables](#specification-variables)
         - [Schemas](#schemas)
             - [Basic Schema Usage](#basic-schema-usage)
@@ -231,7 +233,10 @@ language:
 - `update_field(S, F, T): S` updates a field in a struct, preserving the values of other fields,
   where `S` is some struct, `F` the name of a field in `S`, and `T` a value for this field.
 - `old(T): T` delivers the value of the passed argument at point of entry into a Move function. This
-  is only allowed in `ensures` post-conditions and certain forms of invariants, as discussed later.
+  is allowed in
+  `ensures` post-conditions,
+  inline spec blocks (with additional restrictions), and
+  certain forms of invariants, as discussed later.
 - `TRACE(T): T` is semantically the identity function and causes visualization of the argument's
   value in error messages created by the prover.
 
@@ -1006,6 +1011,8 @@ fun simple2(x: u64, y: u64) {
 }
 ```
 
+### Loop Invariants
+
 An assert statement can also encode a loop invariant if it is placed at a loop head, as in the
 following example.
 
@@ -1031,6 +1038,70 @@ fun simple3(n: u64) {
 A loop invariant may comprise both assert and assume statements. The assume statements will be
 assumed at each entry into the loop while the assert statements will be checked at each entry into
 the loop.
+
+### Referring to Pre State
+
+Occasionally, we would like to refer to the pre state of a mutable function argument in inline spec
+blocks. In MSL, this can be done with the `old(T)` expression. Similar to the semantics of `old(..)`
+in post conditions, an `old(T)` expression in an `assume` or `assert` statement always yields the
+value of `T` at the function entry point. Following is an example that illustrate the use of
+`old(..)` in an inline spec block.
+
+```
+fun swap(x: &mut u64, y: &mut u64) {
+    let t = *x;
+    *x = *y;
+    *y = t;
+    spec {
+        assert x == old(y);
+        assert y == old(x);
+    };
+}
+```
+
+The above example is trivial as the same property can be expressed with post conditions
+(i.e., `ensures`) too. But there are cases where we must use `old(..)` to refer to the pre
+state, especially in the specification of loop invariants. Consider the following example
+where we verify that the `vector_reverse` function properly reverse the order of all elements
+in a vector:
+
+```
+fun verify_reverse<Element>(v: &mut vector<Element>) {
+    let vlen = Vector::length(v);
+    if (vlen == 0) return ();
+
+    let front_index = 0;
+    let back_index = vlen -1;
+    while ({
+        spec {
+            assert front_index + back_index == vlen - 1;
+            assert forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
+            assert forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
+            assert forall j in front_index..back_index+1: v[j] == old(v)[j];
+            assert len(v) == vlen;
+        };
+        (front_index < back_index)
+    }) {
+        Vector::swap(v, front_index, back_index);
+        front_index = front_index + 1;
+        back_index = back_index - 1;
+    };
+}
+spec verify_reverse {
+    aborts_if false;
+    ensures forall i in 0..len(v): v[i] == old(v)[len(v)-1-i];
+}
+```
+
+Note the usage of `old(v)` in the loop invariants. Without them, it is hard to express the
+invariant that the vector is partially reversed while the loop is iterating and the rest
+remain unchanged.
+
+However, unlike the `old(T)` expressions in `ensures` conditions where `T` can be any valid
+expression (e.g., `old(v[i])` is allowed), the `old(T)` expressions in `assert` and `assumes`
+statements only accept a single variable as `T` and that variable must be a function argument of
+a mutable reference type. In the above example, `old(v[i])` is not allowed, and we should use
+`old(v)[i]` instead.
 
 ## Specification Variables
 
