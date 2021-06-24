@@ -23,7 +23,7 @@ A `script` block must start with all of its [use](./uses.md) declarations, follo
 The main function can have any name (i.e., it need not be called `main`), is the only function in a script block, can have any number of
 arguments, and must not return a value. Here is an example with each of these components:
 
-```rust
+```move
 script {
     // Import the Debug module published at account address 0x1.
     // 0x1 is shorthand for the fully qualified address
@@ -39,7 +39,7 @@ script {
 }
 ```
 
-Scripts have very limited power--they cannot declare struct types or access global storage. Their primary purpose is invoke module functions.
+Scripts have very limited power--they cannot declare friends, struct types or access global storage. Their primary purpose is invoke module functions.
 
 ### Modules
 
@@ -48,19 +48,20 @@ A Module has the following syntax:
 ```
 address <address_const> {
 module <identifier> {
-    (<use> | <type> | <function> | <constant>)*
+    (<use> | <friend> | <type> | <function> | <constant>)*
 }
 }
 ```
 
 For example:
 
-```rust
+```move
 address 0x42 {
 module Test {
     resource struct Example { i: u64 }
 
     use 0x1::Debug;
+    friend 0x42::AnotherTest;
 
     const ONE: u64 = 1;
 
@@ -77,7 +78,7 @@ The `address 0x42` part specifies that the module will be published under the [a
 
 Multiple modules can be declared in a single `address` block:
 
-```rust
+```move
 address 0x42 {
 module M { ... }
 module N { ... }
@@ -86,7 +87,7 @@ module N { ... }
 
 Module names can start with letters `a` to `z` or letters `A` to `Z`. After the first character, module names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-```rust
+```move
 module my_module {}
 module FooBar42 {}
 ```
@@ -94,5 +95,7 @@ module FooBar42 {}
 Typically, module names start with an uppercase letter. A module named `MyModule` should be stored in a source file named `MyModule.move`.
 
 All elements inside a `module` block can appear in any order.
-Fundamentally, a module is a collection of [`types`](./structs-and-resources.md) and
-[`functions`](./functions.md). [Uses](./uses.md) import types from other modules. [Constants](./constants.md) define private constants that can be used in the functions of a module.
+Fundamentally, a module is a collection of [`types`](./structs-and-resources.md) and [`functions`](./functions.md).
+[Uses](./uses.md) import types from other modules.
+[Friends](./friends.md) specify a list of trusted modules.
+[Constants](./constants.md) define private constants that can be used in the functions of a module.

@@ -29,6 +29,7 @@
 - [Generics](generics.md)
 - [Equality](equality.md)
 - [Uses and Aliases](uses.md)
+- [Friends](friends.md)
 
 ## Global Storage
 

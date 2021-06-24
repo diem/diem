@@ -12,7 +12,7 @@ fun <identifier><[type_parameters: constraint],*>([identifier: type],*): <return
 
 For example
 
-```rust
+```move
 fun foo<T1, T2>(x: u64, y: T1, z: T2): (T2, T1, u64) { (z, y, x) }
 ```
 
@@ -20,7 +20,7 @@ fun foo<T1, T2>(x: u64, y: T1, z: T2): (T2, T1, u64) { (z, y, x) }
 
 Module functions, by default, can only be called within the same module. These internal (sometimes called private) functions cannot be called from other modules or from scripts.
 
-```rust=
+```move=
 address 0x42 {
 module M {
     fun foo(): u64 { 0 }
@@ -43,9 +43,16 @@ script {
 }
 ```
 
-To allow access from other modules or from scripts, the function must be declared `public`
+To allow access from other modules or from scripts, the function must be declared `public`, `public(friend)`, or `public(script)`.
 
-```rust=
+#### `public` visibility
+
+A `public` function can be called by *any* function defined in *any* module or script. As shown in the following example, a `public` function can be called by:
+- other functions defined in the same module,
+- functions defined in another module, or
+- the function defined in a script.
+
+```move=
 address 0x42 {
 module M {
     public fun foo(): u64 { 0 }
@@ -54,6 +61,81 @@ module M {
 
 module other {
     fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+```
+
+#### `public(friend)` visibility
+
+The `public(friend)` visibility modifier is a more restricted form of the `public` modifier to give more control about where a function can be used. A `public(friend)` function can be called by:
+- other functions defined in the same module, or
+- functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
+
+Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a `public(friend)` function.
+
+```move=
+address 0x42 {
+module M {
+    friend 0x42::N;  // friend declaration
+    public(friend) fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // valid
+}
+
+module N {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+
+module other {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    }
+}
+```
+
+#### `public(script)` visibility
+
+The `public(script)` modifier is designed to allow module functions to be safely and directly invoked much like scripts. A `public(script)` function can only be called from a *script* context, which is either:
+- the function defined in a transaction script, or
+- another `public(script)` function.
+
+Essentially, this rule implies that once the execution transitions to a non-script context via a call to any non-`public(script)` function, there is no turning back, i.e., there is no way to call a `public(script)` function again.
+
+```move=
+address 0x42 {
+module M {
+    public(script) fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // ERROR!
+//                         ^^^ 'foo' can only be called from a script context
+}
+
+module N {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a script context
+    }
+}
+
+module other {
+    public(script) fun calls_M_foo(): u64 {
         0x42::M::foo() // valid
     }
 }
