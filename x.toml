@@ -255,7 +255,6 @@ exclude = [
 existing_deps = [
     # Tier 0 - essential components that must be included in the first batch of crates getting
     #          moved to the new repo
-    ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
     ["compiler", "diem-framework-releases"],
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],

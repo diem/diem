@@ -35,15 +35,10 @@ bcs = "0.1.2"
 move-lang-test-utils = { path = "test-utils" }
 move-stdlib = { path = "../move-stdlib" }
 datatest-stable = "0.1.1"
-diem-framework = { path = "../diem-framework" }
 
 [[test]]
 name = "move_check_testsuite"
 harness = false
-
-[[test]]
-name = "stdlib_sanity_check"
-harness = true
 
 [[test]]
 name = "ir_test_coverage"

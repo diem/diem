@@ -4662,7 +4662,6 @@ dependencies = [
  "codespan-reporting 0.11.1",
  "codespan-reporting 0.8.0",
  "datatest-stable",
- "diem-framework",
  "diem-workspace-hack",
  "difference",
  "hex",
