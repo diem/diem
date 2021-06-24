@@ -3,7 +3,7 @@
 
 use anyhow::{format_err, Result};
 use move_binary_format::{
-    access::*,
+    binary_views::BinaryIndexedView,
     file_format::{
         CodeOffset, CompiledModule, CompiledScript, ConstantPoolIndex, FunctionDefinition,
         FunctionDefinitionIndex, LocalIndex, MemberCount, ModuleHandleIndex, StructDefinition,
@@ -119,11 +119,11 @@ impl<Location: Clone + Eq> StructSourceMap<Location> {
 
     pub fn dummy_struct_map(
         &mut self,
-        module: &CompiledModule,
+        view: &BinaryIndexedView,
         struct_def: &StructDefinition,
         default_loc: Location,
     ) -> Result<()> {
-        let struct_handle = module.struct_handle_at(struct_def.struct_handle);
+        let struct_handle = view.struct_handle_at(struct_def.struct_handle);
 
         // Add dummy locations for the fields
         match struct_def.declared_field_count() {
@@ -245,11 +245,11 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 
     pub fn dummy_function_map(
         &mut self,
-        module: &CompiledModule,
+        view: &BinaryIndexedView,
         function_def: &FunctionDefinition,
         default_loc: Location,
     ) -> Result<()> {
-        let function_handle = module.function_handle_at(function_def.function);
+        let function_handle = view.function_handle_at(function_def.function);
 
         // Generate names for each type parameter
         for i in 0..function_handle.type_parameters.len() {
@@ -258,14 +258,14 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         }
 
         // Generate names for each parameter
-        let params = module.signature_at(function_handle.parameters);
+        let params = view.signature_at(function_handle.parameters);
         for i in 0..params.0.len() {
             let name = format!("Arg{}", i);
             self.add_parameter_mapping((name, default_loc.clone()))
         }
 
         if let Some(code) = &function_def.code {
-            let locals = module.signature_at(code.locals);
+            let locals = view.signature_at(code.locals);
             for i in 0..locals.0.len() {
                 let name = format!("loc{}", i);
                 self.add_local_mapping((name, default_loc.clone()))
@@ -532,17 +532,15 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             .ok_or_else(|| format_err!("Unable to get struct source map"))
     }
 
-    /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
-    /// with generated or real names depending upon if the source map is available or not.
-    pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
-        let module_handle = module.module_handle_at(ModuleHandleIndex::new(0));
-        let module_name = ModuleName::new(module.identifier_at(module_handle.name).to_string());
-        let address = *module.address_identifier_at(module_handle.address);
+    fn dummy_impl(view: &BinaryIndexedView, default_loc: Location) -> Result<Self> {
+        let module_handle = view.module_handle_at(ModuleHandleIndex::new(0));
+        let module_name = ModuleName::new(view.identifier_at(module_handle.name).to_string());
+        let address = *view.address_identifier_at(module_handle.address);
         let module_ident = QualifiedModuleIdent::new(module_name, address);
 
         let mut empty_source_map = Self::new(Some(module_ident));
 
-        for (function_idx, function_def) in module.function_defs().iter().enumerate() {
+        for (function_idx, function_def) in view.function_defs().into_iter().flatten().enumerate() {
             empty_source_map.add_top_level_function_mapping(
                 FunctionDefinitionIndex(function_idx as TableIndex),
                 default_loc.clone(),
@@ -551,10 +549,10 @@ impl<Location: Clone + Eq> SourceMap<Location> {
                 .function_map
                 .get_mut(&(function_idx as TableIndex))
                 .ok_or_else(|| format_err!("Unable to get function map while generating dummy"))?
-                .dummy_function_map(&module, &function_def, default_loc.clone())?;
+                .dummy_function_map(&view, &function_def, default_loc.clone())?;
         }
 
-        for (struct_idx, struct_def) in module.struct_defs().iter().enumerate() {
+        for (struct_idx, struct_def) in view.struct_defs().into_iter().flatten().enumerate() {
             empty_source_map.add_top_level_struct_mapping(
                 StructDefinitionIndex(struct_idx as TableIndex),
                 default_loc.clone(),
@@ -563,10 +561,10 @@ impl<Location: Clone + Eq> SourceMap<Location> {
                 .struct_map
                 .get_mut(&(struct_idx as TableIndex))
                 .ok_or_else(|| format_err!("Unable to get struct map while generating dummy"))?
-                .dummy_struct_map(&module, &struct_def, default_loc.clone())?;
+                .dummy_struct_map(&view, &struct_def, default_loc.clone())?;
         }
 
-        for const_idx in 0..module.constant_pool().len() {
+        for const_idx in 0..view.constant_pool().len() {
             empty_source_map.add_const_mapping(
                 ConstantPoolIndex(const_idx as TableIndex),
                 ConstantName::new(format!("CONST{}", const_idx)),
@@ -576,8 +574,14 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         Ok(empty_source_map)
     }
 
+    /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
+    /// with generated or real names depending upon if the source map is available or not.
+    pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
+        Self::dummy_impl(&BinaryIndexedView::Module(module), default_loc)
+    }
+
     pub fn dummy_from_script(script: &CompiledScript, default_loc: Location) -> Result<Self> {
-        Self::dummy_from_module(&script.clone().into_module(), default_loc)
+        Self::dummy_impl(&BinaryIndexedView::Script(script), default_loc)
     }
 
     pub fn remap_locations<Other: Clone + Eq>(
