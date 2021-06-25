@@ -12,6 +12,7 @@
 -  [Function `unset`](#0x1_BitVector_unset)
 -  [Function `shift_left`](#0x1_BitVector_shift_left)
 -  [Function `is_index_set`](#0x1_BitVector_is_index_set)
+-  [Function `length`](#0x1_BitVector_length)
 -  [Function `bit_index`](#0x1_BitVector_bit_index)
 -  [Module Specification](#@Module_Specification_1)
 
@@ -229,6 +230,31 @@ represents "1" and <code><b>false</b></code> represents a 0
     <b>let</b> inner = <a href="_borrow">Vector::borrow</a>(&bitvector.bit_field, bit_index / <a href="BitVector.md#0x1_BitVector_WORD_SIZE">WORD_SIZE</a>);
     <b>let</b> inner_index = bit_index % <a href="BitVector.md#0x1_BitVector_WORD_SIZE">WORD_SIZE</a>;
     *inner & (1 &lt;&lt; (inner_index <b>as</b> u8)) != 0
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_BitVector_length"></a>
+
+## Function `length`
+
+Return the length (number of bits) in the bitvector.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="BitVector.md#0x1_BitVector_length">length</a>(bitvector: &<a href="BitVector.md#0x1_BitVector_BitVector">BitVector::BitVector</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="BitVector.md#0x1_BitVector_length">length</a>(bitvector: &<a href="BitVector.md#0x1_BitVector">BitVector</a>): u64 {
+    bitvector.length
 }
 </code></pre>
 

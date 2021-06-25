@@ -1,3 +1,2 @@
 sandbox publish src/modules --mode diem
-sandbox run src/scripts/compare.move --mode diem --dry-run
 sandbox run src/scripts/set.move --mode diem --dry-run
