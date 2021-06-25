@@ -163,8 +163,7 @@ impl<'a> BoundsChecker<'a> {
         if let Some(struct_def) = &self
             .view
             .struct_defs()
-            .unwrap_or(&[])
-            .get(field_handle.owner.into_index())
+            .and_then(|d| d.get(field_handle.owner.into_index()))
         {
             let fields_count = match &struct_def.field_information {
                 StructFieldInformation::Native => 0,
@@ -308,14 +307,14 @@ impl<'a> BoundsChecker<'a> {
                     *idx,
                     bytecode_offset,
                 )?,
-                MutBorrowField(idx) | ImmBorrowField(idx) => self.check_code_unit_bounds_impl(
-                    &self.view.field_handles().unwrap_or(&[]),
+                MutBorrowField(idx) | ImmBorrowField(idx) => self.check_code_unit_bounds_impl_opt(
+                    &self.view.field_handles(),
                     *idx,
                     bytecode_offset,
                 )?,
                 MutBorrowFieldGeneric(idx) | ImmBorrowFieldGeneric(idx) => {
-                    self.check_code_unit_bounds_impl(
-                        &self.view.field_instantiations().unwrap_or(&[]),
+                    self.check_code_unit_bounds_impl_opt(
+                        &self.view.field_instantiations(),
                         *idx,
                         bytecode_offset,
                     )?;
@@ -323,8 +322,7 @@ impl<'a> BoundsChecker<'a> {
                     if let Some(field_inst) = self
                         .view
                         .field_instantiations()
-                        .unwrap_or(&[])
-                        .get(idx.into_index())
+                        .and_then(|f| f.get(idx.into_index()))
                     {
                         if let Some(sig) = self
                             .view
@@ -365,8 +363,8 @@ impl<'a> BoundsChecker<'a> {
                 }
                 Pack(idx) | Unpack(idx) | Exists(idx) | ImmBorrowGlobal(idx)
                 | MutBorrowGlobal(idx) | MoveFrom(idx) | MoveTo(idx) => self
-                    .check_code_unit_bounds_impl(
-                        &self.view.struct_defs().unwrap_or(&[]),
+                    .check_code_unit_bounds_impl_opt(
+                        &self.view.struct_defs(),
                         *idx,
                         bytecode_offset,
                     )?,
@@ -377,8 +375,8 @@ impl<'a> BoundsChecker<'a> {
                 | MutBorrowGlobalGeneric(idx)
                 | MoveFromGeneric(idx)
                 | MoveToGeneric(idx) => {
-                    self.check_code_unit_bounds_impl(
-                        &self.view.struct_instantiations().unwrap_or(&[]),
+                    self.check_code_unit_bounds_impl_opt(
+                        &self.view.struct_instantiations(),
                         *idx,
                         bytecode_offset,
                     )?;
@@ -386,8 +384,7 @@ impl<'a> BoundsChecker<'a> {
                     if let Some(struct_inst) = self
                         .view
                         .struct_instantiations()
-                        .unwrap_or(&[])
-                        .get(idx.into_index())
+                        .and_then(|s| s.get(idx.into_index()))
                     {
                         if let Some(sig) = self
                             .view
@@ -516,6 +513,20 @@ impl<'a> BoundsChecker<'a> {
         Ok(())
     }
 
+    fn check_code_unit_bounds_impl_opt<T, I>(
+        &self,
+        pool: &Option<&[T]>,
+        idx: I,
+        bytecode_offset: usize,
+    ) -> PartialVMResult<()>
+    where
+        I: ModuleIndex,
+    {
+        pool.map_or(Ok(()), |p| {
+            self.check_code_unit_bounds_impl(p, idx, bytecode_offset)
+        })
+    }
+
     fn check_code_unit_bounds_impl<T, I>(
         &self,
         pool: &[T],
@@ -589,10 +600,7 @@ fn check_bounds_impl_opt<T, I>(pool: &Option<&[T]>, idx: I) -> PartialVMResult<(
 where
     I: ModuleIndex,
 {
-    match pool {
-        Some(p) => check_bounds_impl(p, idx),
-        None => Ok(()),
-    }
+    pool.map_or(Ok(()), |p| check_bounds_impl(p, idx))
 }
 
 fn check_bounds_impl<T, I>(pool: &[T], idx: I) -> PartialVMResult<()>
