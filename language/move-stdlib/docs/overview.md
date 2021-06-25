@@ -13,6 +13,7 @@ This is the root document for the Move stdlib module documentation. The Move std
 
 
 -  [`0x1::BCS`](BCS.md#0x1_BCS)
+-  [`0x1::BitVector`](BitVector.md#0x1_BitVector)
 -  [`0x1::Errors`](Errors.md#0x1_Errors)
 -  [`0x1::Event`](Event.md#0x1_Event)
 -  [`0x1::FixedPoint32`](FixedPoint32.md#0x1_FixedPoint32)

@@ -5,7 +5,8 @@ use anyhow::Result;
 use diem_state_view::StateViewId;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::AccountResource,
+    account_config::{AccountResource, AccountSequenceNumber},
+    account_state::AccountState,
     on_chain_config::{DiemVersion, OnChainConfigPayload, VMConfig, VMPublishingOption},
     transaction::{SignedTransaction, VMValidatorResult},
 };
@@ -92,14 +93,27 @@ impl TransactionValidation for VMValidator {
 }
 
 /// returns account's sequence number from storage
-pub fn get_account_sequence_number(storage: &dyn DbReader, address: AccountAddress) -> Result<u64> {
+pub fn get_account_sequence_number(
+    storage: &dyn DbReader,
+    address: AccountAddress,
+) -> Result<AccountSequenceNumber> {
     fail_point!("vm_validator::get_account_sequence_number", |_| {
         Err(anyhow::anyhow!(
             "Injected error in get_account_sequence_number"
         ))
     });
     match storage.get_latest_account_state(address)? {
-        Some(blob) => Ok(AccountResource::try_from(&blob)?.sequence_number()),
-        None => Ok(0),
+        Some(blob) => {
+            if let Ok(Some(crsn)) = AccountState::try_from(&blob)?.get_crsn_resource() {
+                return Ok(AccountSequenceNumber::CRSN {
+                    min_nonce: crsn.min_nonce(),
+                    size: crsn.size(),
+                });
+            }
+            Ok(AccountSequenceNumber::SequenceNumber(
+                AccountResource::try_from(&blob)?.sequence_number(),
+            ))
+        }
+        None => Ok(AccountSequenceNumber::SequenceNumber(0)),
     }
 }

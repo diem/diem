@@ -61,6 +61,16 @@ module DiemVersion {
         include DiemConfig::SetEnsures<DiemVersion>{payload: DiemVersion { major }};
     }
 
+    public fun get(): u64 {
+        DiemTimestamp::assert_operating();
+        let config = DiemConfig::get<DiemVersion>();
+        config.major
+    }
+    spec get {
+        include DiemTimestamp::AbortsIfNotOperating;
+        ensures result == DiemConfig::spec_get_config<DiemVersion>().major;
+    }
+
     // =================================================================
     // Module Specification
 

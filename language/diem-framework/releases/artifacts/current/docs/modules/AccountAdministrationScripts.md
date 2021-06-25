@@ -72,9 +72,20 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Technical Description](#@Technical_Description_52)
     -  [Parameters](#@Parameters_53)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_54)
+-  [Function `opt_in_to_crsn`](#0x1_AccountAdministrationScripts_opt_in_to_crsn)
+    -  [Summary](#@Summary_55)
+    -  [Technical Description](#@Technical_Description_56)
+    -  [Parameters](#@Parameters_57)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_58)
+-  [Function `force_expire`](#0x1_AccountAdministrationScripts_force_expire)
+    -  [Summary](#@Summary_59)
+    -  [Technical Description](#@Technical_Description_60)
+    -  [Parameters](#@Parameters_61)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_62)
 
 
-<pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
+<pre><code><b>use</b> <a href="CRSN.md#0x1_CRSN">0x1::CRSN</a>;
+<b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
 <b>use</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
@@ -1217,6 +1228,133 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <b>aborts_with</b> [check]
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_AccountAdministrationScripts_opt_in_to_crsn"></a>
+
+## Function `opt_in_to_crsn`
+
+
+<a name="@Summary_55"></a>
+
+### Summary
+
+Publishes a CRSN resource under <code>account</code> and opts the account in to
+concurrent transaction processing. Upon successful execution of this
+script, all further transactions sent from this account will be ordered
+and processed according to DIP-168.
+
+
+<a name="@Technical_Description_56"></a>
+
+### Technical Description
+
+This publishes a <code><a href="CRSN.md#0x1_CRSN_CRSN">CRSN::CRSN</a></code> resource under <code>account</code> with <code>crsn_size</code>
+number of slots. All slots will be initialized to the empty (unused)
+state, and the CRSN resource's <code>min_nonce</code> field will be set to the transaction's
+sequence number + 1.
+
+
+<a name="@Parameters_57"></a>
+
+### Parameters
+
+| Name        | Type     | Description                                           |
+| ------      | ------   | -------------                                         |
+| <code>account</code>   | <code>signer</code> | The signer of the sending account of the transaction. |
+| <code>crsn_size</code> | <code>u64</code>    | The the number of slots the published CRSN will have. |
+
+
+<a name="@Common_Abort_Conditions_58"></a>
+
+### Common Abort Conditions
+
+| Error Category             | Error Reason            | Description                                                    |
+| ----------------           | --------------          | -------------                                                  |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="CRSN.md#0x1_CRSN_EHAS_CRSN">CRSN::EHAS_CRSN</a></code>       | A <code><a href="CRSN.md#0x1_CRSN_CRSN">CRSN::CRSN</a></code> resource was already published under <code>account</code>. |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="CRSN.md#0x1_CRSN_EZERO_SIZE_CRSN">CRSN::EZERO_SIZE_CRSN</a></code> | The <code>crsn_size</code> was zero.                                      |
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_opt_in_to_crsn">opt_in_to_crsn</a>(account: signer, crsn_size: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_opt_in_to_crsn">opt_in_to_crsn</a>(account: signer, crsn_size: u64) {
+    <a href="DiemAccount.md#0x1_DiemAccount_publish_crsn">DiemAccount::publish_crsn</a>(&account, crsn_size)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_AccountAdministrationScripts_force_expire"></a>
+
+## Function `force_expire`
+
+
+<a name="@Summary_59"></a>
+
+### Summary
+
+Shifts the window held by the CRSN resource published under <code>account</code>
+by <code>shift_amount</code>. This will expire all unused slots in the CRSN at the
+time of processing that are less than <code>shift_amount</code>. The exact
+semantics are defined in DIP-168.
+
+
+<a name="@Technical_Description_60"></a>
+
+### Technical Description
+
+This shifts the slots in the published <code><a href="CRSN.md#0x1_CRSN_CRSN">CRSN::CRSN</a></code> resource under
+<code>account</code> by <code>shift_amount</code>, and increments the CRSN's <code>min_nonce</code> field
+by <code>shift_amount</code> as well. After this, it will shift the window over
+any set bits. It is important to note that the sequence nonce of the
+sending transaction must still lie within the range of the window in
+order for this transaction to be processed successfully.
+
+
+<a name="@Parameters_61"></a>
+
+### Parameters
+
+| Name           | Type     | Description                                                 |
+| ------         | ------   | -------------                                               |
+| <code>account</code>      | <code>signer</code> | The signer of the sending account of the transaction.       |
+| <code>shift_amount</code> | <code>u64</code>    | The amount to shift the window in the CRSN under <code>account</code>. |
+
+
+<a name="@Common_Abort_Conditions_62"></a>
+
+### Common Abort Conditions
+
+| Error Category          | Error Reason     | Description                                               |
+| ----------------        | --------------   | -------------                                             |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code> | <code><a href="CRSN.md#0x1_CRSN_ENO_CRSN">CRSN::ENO_CRSN</a></code> | A <code><a href="CRSN.md#0x1_CRSN_CRSN">CRSN::CRSN</a></code> resource is not published under <code>account</code>. |
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_force_expire">force_expire</a>(account: signer, shift_amount: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_force_expire">force_expire</a>(account: signer, shift_amount: u64) {
+    <a href="CRSN.md#0x1_CRSN_force_expire">CRSN::force_expire</a>(&account, shift_amount)
+}
 </code></pre>
 
 

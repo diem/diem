@@ -5,7 +5,7 @@ use crate::{
     access_path::Path,
     account_address::AccountAddress,
     account_config::{
-        currency_code_from_type_tag, AccountResource, AccountRole, BalanceResource,
+        currency_code_from_type_tag, AccountResource, AccountRole, BalanceResource, CRSNResource,
         ChainIdResource, ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer,
         DesignatedDealerPreburns, DiemIdDomainManager, DiemIdDomains, FreezingBit, ParentVASP,
         PreburnQueueResource, PreburnResource,
@@ -39,6 +39,10 @@ impl AccountState {
 
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
         self.get_resource::<AccountResource>()
+    }
+
+    pub fn get_crsn_resource(&self) -> Result<Option<CRSNResource>> {
+        self.get_resource::<CRSNResource>()
     }
 
     pub fn get_balance_resources(&self) -> Result<BTreeMap<Identifier, BalanceResource>> {

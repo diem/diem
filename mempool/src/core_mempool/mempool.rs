@@ -17,6 +17,7 @@ use diem_config::config::NodeConfig;
 use diem_logger::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
+    account_config::AccountSequenceNumber,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::{GovernanceRole, SignedTransaction},
 };
@@ -83,6 +84,20 @@ impl Mempool {
             // update current cached sequence number for account
             let new_seq_number = max(current_seq_number, sequence_number + 1);
             self.sequence_number_cache.insert(*sender, new_seq_number);
+            let new_seq_number = if let Some(mempool_transaction) =
+                self.transactions.get_mempool_txn(&sender, sequence_number)
+            {
+                match mempool_transaction.seqno_type {
+                    // In the CRSN case, we can only clear out transactions based on the LHS of the
+                    // window (i.e., min_nonce).
+                    x @ AccountSequenceNumber::CRSN { .. } => x,
+                    AccountSequenceNumber::SequenceNumber(_) => {
+                        AccountSequenceNumber::SequenceNumber(new_seq_number)
+                    }
+                }
+            } else {
+                AccountSequenceNumber::SequenceNumber(new_seq_number)
+            };
             self.transactions
                 .commit_transaction(&sender, new_seq_number);
         }
@@ -105,27 +120,32 @@ impl Mempool {
         txn: SignedTransaction,
         gas_amount: u64,
         ranking_score: u64,
-        db_sequence_number: u64,
+        crsn_or_seqno: AccountSequenceNumber,
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
     ) -> MempoolStatus {
+        let db_sequence_number = crsn_or_seqno.min_seq();
         trace!(
             LogSchema::new(LogEntry::AddTxn)
                 .txns(TxnsLog::new_txn(txn.sender(), txn.sequence_number())),
             committed_seq_number = db_sequence_number
         );
         let cached_value = self.sequence_number_cache.get(&txn.sender());
-        let sequence_number =
-            cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
+        let sequence_number = match crsn_or_seqno {
+            AccountSequenceNumber::CRSN { .. } => crsn_or_seqno,
+            AccountSequenceNumber::SequenceNumber(_) => AccountSequenceNumber::SequenceNumber(
+                cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number)),
+            ),
+        };
         self.sequence_number_cache
-            .insert(txn.sender(), sequence_number);
+            .insert(txn.sender(), sequence_number.min_seq());
 
         // don't accept old transactions (e.g. seq is less than account's current seq_number)
-        if txn.sequence_number() < sequence_number {
+        if txn.sequence_number() < sequence_number.min_seq() {
             return MempoolStatus::new(MempoolStatusCode::InvalidSeqNumber).with_message(format!(
                 "transaction sequence number is {}, current sequence number is  {}",
                 txn.sequence_number(),
-                sequence_number,
+                sequence_number.min_seq(),
             ));
         }
 
@@ -143,6 +163,7 @@ impl Mempool {
             ranking_score,
             timeline_state,
             governance_role,
+            crsn_or_seqno,
         );
 
         self.transactions.insert(txn_info, sequence_number)
@@ -178,8 +199,12 @@ impl Mempool {
             let account_sequence_number = self.sequence_number_cache.get(&txn.address);
             let seen_previous = seq > 0 && seen.contains(&(txn.address, seq - 1));
             // include transaction if it's "next" for given account or
-            // we've already sent its ancestor to Consensus
-            if seen_previous || account_sequence_number == Some(&seq) {
+            // we've already sent its ancestor to Consensus. In the case of CRSNs, we can safely
+            // assume that it can be included.
+            if seen_previous
+                || account_sequence_number == Some(&seq)
+                || matches!(txn.seqno_type, AccountSequenceNumber::CRSN { .. })
+            {
                 let ptr = TxnPointer::from(txn);
                 seen.insert(ptr);
                 result.push(ptr);

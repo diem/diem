@@ -24,5 +24,10 @@ pub const DIEM_VERSION_2: DiemVersion = DiemVersion { major: 2 };
 //  - Multi-agent transactions
 pub const DIEM_VERSION_3: DiemVersion = DiemVersion { major: 3 };
 
+// NOTE: version number for release 1.4 of Diem
+// Items gated by this version number include:
+//  - Conflict-Resistant Sequence Numbers
+pub const DIEM_VERSION_4: DiemVersion = DiemVersion { major: 4 };
+
 // Maximum current known version
-pub const DIEM_MAX_KNOWN_VERSION: DiemVersion = DIEM_VERSION_3;
+pub const DIEM_MAX_KNOWN_VERSION: DiemVersion = DIEM_VERSION_4;

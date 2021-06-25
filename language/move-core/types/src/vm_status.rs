@@ -164,6 +164,7 @@ impl VMStatus {
                 code_offset,
             }),
             VMStatus::Error(code) => {
+                println!("CODE: {:#?}", code);
                 match code.status_type() {
                     // Any unknown error should be discarded
                     StatusType::Unknown => Err(code),
@@ -464,6 +465,8 @@ pub enum StatusCode {
     SECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH = 27,
     // There are duplicates among signers, including the sender and all the secondary signers
     SIGNERS_CONTAIN_DUPLICATES = 28,
+    // The sequence nonce in the transaction is invalid (too new, too old, or already used).
+    SEQUENCE_NONCE_INVALID = 29,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
