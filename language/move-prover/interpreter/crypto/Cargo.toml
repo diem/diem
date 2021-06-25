@@ -13,17 +13,11 @@ diem-workspace-hack = { path = "../../../../common/workspace-hack" }
 anyhow = "1.0.38"
 curve25519-dalek = { version = "0.1.0", package = "curve25519-dalek-fiat", default-features = false, features = ["std"] }
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "serde"] }
-proptest = { version = "1.0.0", optional = true }
-proptest-derive = { version = "0.3.0", optional = true }
 sha2 = "0.9.3"
 sha3 = "0.9.1"
-x25519-dalek = { version = "0.1.0", package = "x25519-dalek-fiat", default-features = false, features = ["std"] }
 
 [features]
 default = ["fiat"]
-assert-private-keys-not-cloneable = []
-cloneable-private-keys = []
-fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]
-fiat = ["curve25519-dalek/fiat_u64_backend", "ed25519-dalek/fiat_u64_backend", "x25519-dalek/fiat_u64_backend"]
-u64 = ["curve25519-dalek/u64_backend", "ed25519-dalek/u64_backend", "x25519-dalek/u64_backend"]
-u32 = ["curve25519-dalek/u32_backend", "ed25519-dalek/u32_backend", "x25519-dalek/u32_backend"]
+fiat = ["curve25519-dalek/fiat_u64_backend", "ed25519-dalek/fiat_u64_backend"]
+u64 = ["curve25519-dalek/u64_backend", "ed25519-dalek/u64_backend"]
+u32 = ["curve25519-dalek/u32_backend", "ed25519-dalek/u32_backend"]
