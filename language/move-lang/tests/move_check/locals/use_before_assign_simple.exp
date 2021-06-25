@@ -1,66 +1,48 @@
-error: 
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_before_assign_simple.move:6:17
+  │
+5 │         let x: u64;
+  │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+6 │         let _ = move x + 1;
+  │                 ^^^^^^ Invalid usage of variable 'x'
 
-   ┌── tests/move_check/locals/use_before_assign_simple.move:6:17 ───
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_before_assign_simple.move:9:19
+  │
+8 │         let s: S;
+  │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+9 │         let _s2 = s;
+  │                   ^ Invalid usage of variable 's'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_simple.move:14:17
    │
- 6 │         let _ = move x + 1;
-   │                 ^^^^^^ Invalid usage of local 'x'
-   ·
- 5 │         let x: u64;
-   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+13 │         let x: u64;
+   │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+14 │         let _ = x + 1;
+   │                 ^ Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_simple.move:17:19
    │
+16 │         let s: S;
+   │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+17 │         let _s3 = copy s;
+   │                   ^^^^^^ Invalid usage of variable 's'
 
-error: 
-
-   ┌── tests/move_check/locals/use_before_assign_simple.move:9:19 ───
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_simple.move:22:17
    │
- 9 │         let _s2 = s;
-   │                   ^ Invalid usage of local 's'
-   ·
- 8 │         let s: S;
-   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+21 │         let x: u64;
+   │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+22 │         let _ = &x;
+   │                 ^^ Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_simple.move:25:19
    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_simple.move:14:17 ───
-    │
- 14 │         let _ = x + 1;
-    │                 ^ Invalid usage of local 'x'
-    ·
- 13 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_simple.move:17:19 ───
-    │
- 17 │         let _s3 = copy s;
-    │                   ^^^^^^ Invalid usage of local 's'
-    ·
- 16 │         let s: S;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_simple.move:22:17 ───
-    │
- 22 │         let _ = &x;
-    │                 ^^ Invalid usage of local 'x'
-    ·
- 21 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_simple.move:25:19 ───
-    │
- 25 │         let _s2 = &s;
-    │                   ^^ Invalid usage of local 's'
-    ·
- 24 │         let s: S;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
-    │
+24 │         let s: S;
+   │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+25 │         let _s2 = &s;
+   │                   ^^ Invalid usage of variable 's'
 

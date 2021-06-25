@@ -1,24 +1,18 @@
-error: 
+error[E10005]: unable to generate test
+  ┌─ tests/move_check/unit_test/script_with_multiple_on_main.move:4:7
+  │
+4 │     #[expected_failure]
+  │       ^^^^^^^^^^^^^^^^ Testing attributes are not allowed in scripts.
 
-   ┌── tests/move_check/unit_test/script_with_multiple_on_main.move:4:7 ───
-   │
- 4 │     #[expected_failure]
-   │       ^^^^^^^^^^^^^^^^ Testing attributes are not allowed in scripts.
-   │
+error[E10005]: unable to generate test
+  ┌─ tests/move_check/unit_test/script_with_multiple_on_main.move:5:7
+  │
+5 │     #[test_only, test]
+  │       ^^^^^^^^^ Testing attributes are not allowed in scripts.
 
-error: 
-
-   ┌── tests/move_check/unit_test/script_with_multiple_on_main.move:5:7 ───
-   │
- 5 │     #[test_only, test]
-   │       ^^^^^^^^^ Testing attributes are not allowed in scripts.
-   │
-
-error: 
-
-   ┌── tests/move_check/unit_test/script_with_multiple_on_main.move:5:18 ───
-   │
- 5 │     #[test_only, test]
-   │                  ^^^^ Testing attributes are not allowed in scripts.
-   │
+error[E10005]: unable to generate test
+  ┌─ tests/move_check/unit_test/script_with_multiple_on_main.move:5:18
+  │
+5 │     #[test_only, test]
+  │                  ^^^^ Testing attributes are not allowed in scripts.
 

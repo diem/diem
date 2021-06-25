@@ -1,4 +1,4 @@
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/restricted_address_names.move:1:9
   │
 1 │ address Self;

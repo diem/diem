@@ -123,7 +123,9 @@ fn move_check_for_errors(
 
     compilation_env.check_errors()?;
     let units = compiler.at_cfgir(cfgir).build()?;
-    Ok(move_lang::compiled_unit::verify_units(units).1)
+    Ok(Errors::from(
+        move_lang::compiled_unit::verify_units(units).1,
+    ))
 }
 
 datatest_stable::harness!(move_check_testsuite, MOVE_CHECK_DIR, r".*\.move$");

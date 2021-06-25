@@ -1,143 +1,110 @@
-error: 
+warning[W09003]: unused assignment
+  ┌─ tests/move_check/locals/unused_resource_explicit_return.move:5:13
+  │
+5 │         let r = R{};
+  │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
-   ┌── tests/move_check/locals/unused_resource_explicit_return.move:5:13 ───
-   │
- 5 │         let r = R{};
-   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
-   │
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/locals/unused_resource_explicit_return.move:6:9
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         let r = R{};
+  │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+  │             │    
+  │             The local variable 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+6 │         return ()
+  │         ^^^^^^^^^ Invalid return
 
-error: 
-
-   ┌── tests/move_check/locals/unused_resource_explicit_return.move:6:9 ───
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:11:21
    │
- 6 │         return ()
-   │         ^^^^^^^^^ Invalid return
-   ·
- 5 │         let r = R{};
-   │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-   ·
- 5 │         let r = R{};
-   │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
  2 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+10 │         let r = R {};
+   │             -   ---- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The local variable 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+11 │         if (cond) { return () };
+   │                     ^^^^^^^^^ Invalid return
+
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:17:29
    │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+16 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The local variable 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+17 │         if (cond) {} else { return () };
+   │                             ^^^^^^^^^ Invalid return
 
-error: 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:23:24
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+22 │         let r = R {};
+   │             -   ---- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The local variable 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+23 │         while (cond) { return () };
+   │                        ^^^^^^^^^ Invalid return
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:11:21 ───
-    │
- 11 │         if (cond) { return () };
-    │                     ^^^^^^^^^ Invalid return
-    ·
- 10 │         let r = R {};
-    │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 10 │         let r = R {};
-    │                 ---- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
+warning[W09003]: unused assignment
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:28:13
+   │
+28 │         let r = R{};
+   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
-error: 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:29:16
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+28 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The local variable 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+29 │         loop { return () }
+   │                ^^^^^^^^^ Invalid return
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:17:29 ───
-    │
- 17 │         if (cond) {} else { return () };
-    │                             ^^^^^^^^^ Invalid return
-    ·
- 16 │         let r = R{};
-    │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 16 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
+warning[W09003]: unused assignment
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:33:13
+   │
+33 │         let x = &R{};
+   │             ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
 
-error: 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:34:9
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+33 │         let x = &R{};
+   │                  ---
+   │                  │
+   │                  The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+   │                  The type '0x8675309::M::R' does not have the ability 'drop'
+34 │         return ()
+   │         ^^^^^^^^^ Invalid return
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:23:24 ───
-    │
- 23 │         while (cond) { return () };
-    │                        ^^^^^^^^^ Invalid return
-    ·
- 22 │         let r = R {};
-    │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 22 │         let r = R {};
-    │                 ---- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:28:13 ───
-    │
- 28 │         let r = R{};
-    │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:29:16 ───
-    │
- 29 │         loop { return () }
-    │                ^^^^^^^^^ Invalid return
-    ·
- 28 │         let r = R{};
-    │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 28 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:13 ───
-    │
- 33 │         let x = &R{};
-    │             ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:34:9 ───
-    │
- 34 │         return ()
-    │         ^^^^^^^^^ Invalid return
-    ·
- 33 │         let x = &R{};
-    │                  --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 33 │         let x = &R{};
-    │                  --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:38:9 ───
-    │
- 38 │         return ()
-    │         ^^^^^^^^^ Invalid return
-    ·
- 37 │     fun t6<T>(_x: R) {
-    │               -- The parameter '_x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-    ·
- 37 │     fun t6<T>(_x: R) {
-    │                   - The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/unused_resource_explicit_return.move:38:9
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+37 │     fun t6<T>(_x: R) {
+   │               --  - The type '0x8675309::M::R' does not have the ability 'drop'
+   │               │    
+   │               The parameter '_x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+38 │         return ()
+   │         ^^^^^^^^^ Invalid return
 

@@ -625,8 +625,8 @@ fn check_phantom_params(
             }
         }
         Type_::Apply(_, n, ty_args) => match &n.value {
-            // Tuples cannot appear in structs, but we still report them as a non-phantom position in
-            // case they are ever allowed.
+            // Tuples cannot appear in structs, but we still report them as a non-phantom position
+            // for full information.
             TypeName_::Builtin(_) | TypeName_::Multiple(_) => {
                 for ty_arg in ty_args {
                     check_phantom_params(context, type_parameters, ty_arg, Some(TypeArg));
@@ -638,8 +638,8 @@ fn check_phantom_params(
                     .iter()
                     .map(|param| param.is_phantom)
                     .collect();
-                // Length of params and args may be different but we can still report errors
-                // for parameters with information
+                // Length of params and args may be different, but we can still report errors
+                // for parameters with information.
                 for (is_phantom, ty_arg) in param_is_phantom.into_iter().zip(ty_args) {
                     check_phantom_params(
                         context,
@@ -651,7 +651,7 @@ fn check_phantom_params(
             }
         },
         // References cannot appear in structs, but we still report them as a non-phantom position
-        // in case they are ever allowed.
+        // for full information.
         Type_::Ref(_, inner) => {
             check_phantom_params(context, type_parameters, &inner, Some(TypeArg))
         }
@@ -668,7 +668,10 @@ fn invalid_phantom_use_error(
 ) {
     let msg = match non_phantom_pos {
         NonPhantomPos::FieldType => "Phantom type parameter cannot be used as a field type",
-        NonPhantomPos::TypeArg => "Phantom type parameter cannot be used as an argument to a parameter not declared as phantom",
+        NonPhantomPos::TypeArg => {
+            "Phantom type parameter cannot be used as an argument to a parameter not declared as \
+             phantom"
+        }
     };
     let decl_msg = format!("'{}' declared here as phantom", &param.user_specified_name);
     context.env.add_diag(diag!(

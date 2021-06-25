@@ -10,7 +10,7 @@ error[E03006]: unexpected name in this position
 19 │         u64,
    │         ^^^ Invalid acquires item. Expected a struct name, but got a builtin type
 
-error[E02011]: invalid 'acquires' item
+error[E02012]: invalid 'acquires' item
    ┌─ tests/move_check/typing/invalid_type_acquire.move:20:9
    │
  4 │     struct R has key, store {}
@@ -19,7 +19,7 @@ error[E02011]: invalid 'acquires' item
 20 │         X::R,
    │         ^^^^ Invalid acquires item
 
-error[E02011]: invalid 'acquires' item
+error[E02012]: invalid 'acquires' item
    ┌─ tests/move_check/typing/invalid_type_acquire.move:21:9
    │
 10 │     struct S has store {}

@@ -1,14 +1,10 @@
-error: 
-
-   ┌── tests/move_check/unit_test/test_and_test_only_annotation.move:5:7 ───
-   │
- 5 │     #[test_only]
-   │       ^^^^^^^^^ Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other
-   ·
- 4 │     #[test(_a=@0x1, _b=@0x2)]
-   │       ---------------------- Previously annotated here
-   ·
- 6 │     public fun boo(_a: signer, _b: signer) { }
-   │                --- In this test
-   │
+error[E10004]: invalid usage of known attribute
+  ┌─ tests/move_check/unit_test/test_and_test_only_annotation.move:5:7
+  │
+4 │     #[test(_a=@0x1, _b=@0x2)]
+  │       ---------------------- Previously annotated here
+5 │     #[test_only]
+  │       ^^^^^^^^^ Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other
+6 │     public fun boo(_a: signer, _b: signer) { }
+  │                --- Error found in this test
 

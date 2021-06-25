@@ -1,4 +1,4 @@
-warning[W08001]: unused alias
+warning[W09001]: unused alias
   ┌─ tests/move_check/naming/standalone_module_ident.move:6:14
   │
 6 │     use 0x2::X;

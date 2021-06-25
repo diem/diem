@@ -1,33 +1,27 @@
-error: 
+error[E07002]: mutable ownership violated
+  ┌─ tests/move_check/liveness/dead_refs_loop_invalid.move:6:17
+  │
+4 │         let x_ref = &mut x;
+  │                     ------ It is still being mutably borrowed by this reference
+5 │         while (cond) {
+6 │             _ = x;
+  │                 ^ Invalid copy of local 'x'
 
-   ┌── tests/move_check/liveness/dead_refs_loop_invalid.move:6:17 ───
+error[E07002]: mutable ownership violated
+   ┌─ tests/move_check/liveness/dead_refs_loop_invalid.move:16:16
    │
- 6 │             _ = x;
-   │                 ^ Invalid copy of local 'x'
-   ·
- 4 │         let x_ref = &mut x;
+13 │         let x_ref = &mut x;
    │                     ------ It is still being mutably borrowed by this reference
+   ·
+16 │            _ = x;
+   │                ^ Invalid copy of local 'x'
+
+error[E07002]: mutable ownership violated
+   ┌─ tests/move_check/liveness/dead_refs_loop_invalid.move:25:17
    │
-
-error: 
-
-    ┌── tests/move_check/liveness/dead_refs_loop_invalid.move:16:16 ───
-    │
- 16 │            _ = x;
-    │                ^ Invalid copy of local 'x'
-    ·
- 13 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
-    │
-
-error: 
-
-    ┌── tests/move_check/liveness/dead_refs_loop_invalid.move:25:17 ───
-    │
- 25 │             _ = x;
-    │                 ^ Invalid copy of local 'x'
-    ·
- 22 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
-    │
+22 │         let x_ref = &mut x;
+   │                     ------ It is still being mutably borrowed by this reference
+   ·
+25 │             _ = x;
+   │                 ^ Invalid copy of local 'x'
 

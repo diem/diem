@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    diag,
     expansion::ast::{AbilitySet, Fields, ModuleIdent, Value_},
     hlir::ast::{self as H, Block},
     naming::ast as N,
@@ -1676,11 +1677,12 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
             let unreachable_msg = "Any code after this expression will not be reached";
             let info_msg = "A trailing ';' in an expression block implicitly adds a '()' value \
                         after the semicolon. That '()' value will not be reachable";
-            $context.env.add_error_deprecated(vec![
+            $context.env.add_diag(diag!(
+                UnusedItem::TrailingSemi,
                 ($uloc, semi_msg),
                 ($loc, unreachable_msg),
                 ($uloc, info_msg),
-            ]);
+            ));
             block.pop_back();
         }};
     }
@@ -1776,7 +1778,6 @@ fn check_unused_locals(
         .as_ref()
         .expect("ICE Signature should always be defined when checking a function body");
     let mut unused = BTreeSet::new();
-    let mut errors = Vec::new();
     // report unused locals
     for (v, _) in locals
         .key_cloned_iter()
@@ -1796,14 +1797,14 @@ fn check_unused_locals(
             // unused local variable; mark for removal
             unused.insert(v);
             format!(
-                "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
+                "Unused local variable '{0}'. Consider removing or prefixing with an underscore: \
+                 '_{0}'",
                 vstr
             )
         };
-        errors.push((loc, msg));
-    }
-    for error in errors {
-        context.env.add_error_deprecated(vec![error]);
+        context
+            .env
+            .add_diag(diag!(UnusedItem::Variable, (loc, msg)));
     }
     for v in &unused {
         locals.remove(v);

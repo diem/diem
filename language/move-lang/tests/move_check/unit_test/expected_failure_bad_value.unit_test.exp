@@ -1,55 +1,45 @@
-error: 
+error[E10003]: invalid attribute value
+  ┌─ tests/move_check/unit_test/expected_failure_bad_value.move:7:35
+  │
+7 │     #[expected_failure(abort_code=true)]
+  │                        -----------^^^^
+  │                        │          │
+  │                        │          Invalid value in expected failure code assignment
+  │                        Unsupported value in this assignment
 
-   ┌── tests/move_check/unit_test/expected_failure_bad_value.move:7:35 ───
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_bad_value.move:11:35
    │
- 7 │     #[expected_failure(abort_code=true)]
-   │                                   ^^^^ Invalid value in expected failure code assignment
-   ·
- 7 │     #[expected_failure(abort_code=true)]
-   │                        --------------- In this assignment
+11 │     #[expected_failure(abort_code=x"")]
+   │                        -----------^^^
+   │                        │          │
+   │                        │          Invalid value in expected failure code assignment
+   │                        Unsupported value in this assignment
+
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_bad_value.move:15:35
    │
+15 │     #[expected_failure(abort_code=b"")]
+   │                        -----------^^^
+   │                        │          │
+   │                        │          Invalid value in expected failure code assignment
+   │                        Unsupported value in this assignment
 
-error: 
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_bad_value.move:19:35
+   │
+19 │     #[expected_failure(abort_code=Foo)]
+   │                        -----------^^^
+   │                        │          │
+   │                        │          Invalid value in expected failure code assignment
+   │                        Unsupported value in this assignment
 
-    ┌── tests/move_check/unit_test/expected_failure_bad_value.move:11:35 ───
-    │
- 11 │     #[expected_failure(abort_code=x"")]
-    │                                   ^^^ Invalid value in expected failure code assignment
-    ·
- 11 │     #[expected_failure(abort_code=x"")]
-    │                        -------------- In this assignment
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/expected_failure_bad_value.move:15:35 ───
-    │
- 15 │     #[expected_failure(abort_code=b"")]
-    │                                   ^^^ Invalid value in expected failure code assignment
-    ·
- 15 │     #[expected_failure(abort_code=b"")]
-    │                        -------------- In this assignment
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/expected_failure_bad_value.move:19:35 ───
-    │
- 19 │     #[expected_failure(abort_code=Foo)]
-    │                                   ^^^ Invalid value in expected failure code assignment
-    ·
- 19 │     #[expected_failure(abort_code=Foo)]
-    │                        -------------- In this assignment
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/expected_failure_bad_value.move:23:35 ───
-    │
- 23 │     #[expected_failure(abort_code=@0xC0FFEE)]
-    │                                   ^^^^^^^^^ Invalid value in expected failure code assignment
-    ·
- 23 │     #[expected_failure(abort_code=@0xC0FFEE)]
-    │                        -------------------- In this assignment
-    │
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_bad_value.move:23:35
+   │
+23 │     #[expected_failure(abort_code=@0xC0FFEE)]
+   │                        -----------^^^^^^^^^
+   │                        │          │
+   │                        │          Invalid value in expected failure code assignment
+   │                        Unsupported value in this assignment
 

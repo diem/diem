@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/borrow_tests/copy_loc_borrowed_indirect_invalid.move:6:9 ───
-   │
- 6 │         copy x;
-   │         ^^^^^^ Invalid copy of local 'x'
-   ·
- 5 │         let r1 = foo(&mut x, &mut y);
-   │                  ------------------- It is still being mutably borrowed by this reference
-   │
+error[E07002]: mutable ownership violated
+  ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/copy_loc_borrowed_indirect_invalid.move:6:9
+  │
+5 │         let r1 = foo(&mut x, &mut y);
+  │                  ------------------- It is still being mutably borrowed by this reference
+6 │         copy x;
+  │         ^^^^^^ Invalid copy of local 'x'
 

@@ -1,33 +1,26 @@
-error: 
+error[E07003]: invalid operation, could create dangling a reference
+  ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:9:9
+  │
+7 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+  │                 -------------------------------------------------- It is still being mutably borrowed by this reference
+8 │         acquires_t2(account);
+9 │         acquires_t1(account);
+  │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
 
-   ┌── tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:9:9 ───
+error[E07003]: invalid operation, could create dangling a reference
+   ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:16:9
    │
- 9 │         acquires_t1(account);
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
-   ·
- 7 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+14 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
    │                 -------------------------------------------------- It is still being mutably borrowed by this reference
+15 │         acquires_t2(account);
+16 │         acquires_t1(account);
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+
+error[E07003]: invalid operation, could create dangling a reference
+   ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:22:9
    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:16:9 ───
-    │
- 16 │         acquires_t1(account);
-    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
-    ·
- 14 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
-    │                 -------------------------------------------------- It is still being mutably borrowed by this reference
-    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_2.move:22:9 ───
-    │
- 22 │         acquires_t1(account);
-    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
-    ·
- 21 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
-    │                 -------------------------------------------------- It is still being mutably borrowed by this reference
-    │
+21 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+   │                 -------------------------------------------------- It is still being mutably borrowed by this reference
+22 │         acquires_t1(account);
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
 

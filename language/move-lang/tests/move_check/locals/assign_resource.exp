@@ -1,118 +1,88 @@
-error: 
+warning[W09003]: unused assignment
+  ┌─ tests/move_check/locals/assign_resource.move:5:13
+  │
+5 │         let r = R{};
+  │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
-   ┌── tests/move_check/locals/assign_resource.move:5:13 ───
-   │
- 5 │         let r = R{};
-   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
-   │
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/locals/assign_resource.move:6:9
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         let r = R{};
+  │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+  │             │    
+  │             The variable contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+6 │         r = R{};
+  │         ^ Invalid assignment to variable 'r'
 
-error: 
-
-   ┌── tests/move_check/locals/assign_resource.move:6:9 ───
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/assign_resource.move:12:21
    │
- 6 │         r = R{};
-   │         ^ Invalid assignment to local 'r'
-   ·
- 5 │         let r = R{};
-   │             - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-   ·
- 5 │         let r = R{};
-   │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
  2 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+11 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The variable contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+12 │         if (cond) { r = R{}; };
+   │                     ^ Invalid assignment to variable 'r'
+
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/assign_resource.move:18:29
    │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+17 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The variable contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+18 │         if (cond) {} else { r = R{}; };
+   │                             ^ Invalid assignment to variable 'r'
 
-error: 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/assign_resource.move:24:24
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+23 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The variable contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+24 │         while (cond) { r = R{} };
+   │                        ^ Invalid assignment to variable 'r'
 
-    ┌── tests/move_check/locals/assign_resource.move:12:21 ───
-    │
- 12 │         if (cond) { r = R{}; };
-    │                     ^ Invalid assignment to local 'r'
-    ·
- 11 │         let r = R{};
-    │             - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-    ·
- 11 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
+warning[W09003]: unused assignment
+   ┌─ tests/move_check/locals/assign_resource.move:29:13
+   │
+29 │         let r = R{};
+   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
-error: 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/assign_resource.move:30:16
+   │
+ 2 │     struct R {}
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+29 │         let r = R{};
+   │             -   --- The type '0x8675309::M::R' does not have the ability 'drop'
+   │             │    
+   │             The variable might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+30 │         loop { r = R{}; R {} = r }
+   │                ^ Invalid assignment to variable 'r'
 
-    ┌── tests/move_check/locals/assign_resource.move:18:29 ───
-    │
- 18 │         if (cond) {} else { r = R{}; };
-    │                             ^ Invalid assignment to local 'r'
-    ·
- 17 │         let r = R{};
-    │             - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-    ·
- 17 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/assign_resource.move:24:24 ───
-    │
- 24 │         while (cond) { r = R{} };
-    │                        ^ Invalid assignment to local 'r'
-    ·
- 23 │         let r = R{};
-    │             - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-    ·
- 23 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/assign_resource.move:29:13 ───
-    │
- 29 │         let r = R{};
-    │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/assign_resource.move:30:16 ───
-    │
- 30 │         loop { r = R{}; R {} = r }
-    │                ^ Invalid assignment to local 'r'
-    ·
- 29 │         let r = R{};
-    │             - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-    ·
- 29 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/assign_resource.move:34:9 ───
-    │
- 34 │         x = y;
-    │         ^ Invalid assignment to local 'x'
-    ·
- 33 │     fun t5<T>(x: T, y: T): T {
-    │               - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
-    ·
- 33 │     fun t5<T>(x: T, y: T): T {
-    │                  - The type 'T' does not have the ability 'drop'
-    ·
- 33 │     fun t5<T>(x: T, y: T): T {
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/locals/assign_resource.move:34:9
+   │
+33 │     fun t5<T>(x: T, y: T): T {
+   │            -  -  - The type 'T' does not have the ability 'drop'
+   │            │  │   
+   │            │  The variable contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this variable again
+   │            To satisfy the constraint, the 'drop' ability would need to be added here
+34 │         x = y;
+   │         ^ Invalid assignment to variable 'x'
 

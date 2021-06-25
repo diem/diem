@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/unit_test/script_with_test_on_main.move:3:7 ───
-   │
- 3 │     #[test]
-   │       ^^^^ Testing attributes are not allowed in scripts.
-   │
+error[E10005]: unable to generate test
+  ┌─ tests/move_check/unit_test/script_with_test_on_main.move:3:7
+  │
+3 │     #[test]
+  │       ^^^^ Testing attributes are not allowed in scripts.
 

@@ -3,11 +3,7 @@
 
 use crate::{
     diag,
-    errors::{
-        diagnostic_codes::{AbilitySafety, NameResolution},
-        new::Diagnostic,
-        *,
-    },
+    errors::{diagnostic_codes::NameResolution, new::Diagnostic},
     expansion::ast::{AbilitySet, ModuleIdent},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
@@ -957,10 +953,10 @@ fn solve_ability_constraint(
             Some(s) => s.clone(),
             None => format!("'{}' constraint not satisifed", constraint),
         };
-        let mut secondary_labels = vec![];
+        let mut diag = diag!(AbilitySafety::Constraint, (loc, constraint_msg));
         ability_not_satisified_tips(
             &context.subst,
-            &mut secondary_labels,
+            &mut diag,
             constraint.value,
             &ty,
             declared_loc_opt,
@@ -973,22 +969,18 @@ fn solve_ability_constraint(
 
         // is none if it is from a user constraint and not a part of the type system
         if given_msg_opt.is_none() {
-            secondary_labels.push((
+            diag.add_secondary_label((
                 constraint.loc,
                 format!("'{}' constraint declared here", constraint),
             ));
         }
-        context.env.add_diag(Diagnostic::new(
-            AbilitySafety::Constraint,
-            (loc, constraint_msg),
-            secondary_labels,
-        ))
+        context.env.add_diag(diag)
     }
 }
 
 pub fn ability_not_satisified_tips<'a>(
     subst: &Subst,
-    error: &mut Error,
+    diag: &mut Diagnostic,
     constraint: Ability_,
     ty: &Type,
     declared_loc_opt: Option<Loc>,
@@ -1000,13 +992,13 @@ pub fn ability_not_satisified_tips<'a>(
         "The type {} does not have the ability '{}'",
         ty_str, constraint
     );
-    error.push((ty.loc, ty_msg));
+    diag.add_secondary_label((ty.loc, ty_msg));
     match (
         declared_loc_opt,
         declared_abilities.has_ability_(constraint),
     ) {
         // Type was not given the ability
-        (Some(dloc), false) => error.push((
+        (Some(dloc), false) => diag.add_secondary_label((
             dloc,
             format!(
                 "To satisfy the constraint, the '{}' ability would need to be added here",
@@ -1018,7 +1010,7 @@ pub fn ability_not_satisified_tips<'a>(
         // Type has the ability but a type argument causes it to fail
         (_, true) => {
             let requirement = constraint.requires();
-            let mut error_added = false;
+            let mut label_added = false;
             for (ty_arg, ty_arg_abilities) in ty_args {
                 if !ty_arg_abilities.has_ability_(requirement) {
                     let ty_arg_str = error_format(ty_arg, &subst);
@@ -1030,12 +1022,12 @@ pub fn ability_not_satisified_tips<'a>(
                         constraint = constraint,
                         requirement = requirement,
                     );
-                    error.push((ty_arg.loc, msg));
-                    error_added = true;
+                    diag.add_secondary_label((ty_arg.loc, msg));
+                    label_added = true;
                     break;
                 }
             }
-            assert!(error_added)
+            assert!(label_added)
         }
     }
 }

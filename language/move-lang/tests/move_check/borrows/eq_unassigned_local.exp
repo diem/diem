@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/borrows/eq_unassigned_local.move:5:9 ───
-   │
- 5 │         ref == &x;
-   │         ^^^ Invalid usage of local 'ref'
-   ·
- 4 │         let ref;
-   │             --- The local does not have a value due to this position. The local must be assigned a value before being used
-   │
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/borrows/eq_unassigned_local.move:5:9
+  │
+4 │         let ref;
+  │             --- The variable does not have a value due to this position. The variable must be assigned a value before being used
+5 │         ref == &x;
+  │         ^^^ Invalid usage of variable 'ref'
 

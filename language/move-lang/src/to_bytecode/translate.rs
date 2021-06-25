@@ -5,6 +5,7 @@ use super::{context::*, remove_fallthrough_jumps};
 use crate::{
     cfgir::ast as G,
     compiled_unit::*,
+    diag,
     expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId, Value_},
     hlir::{
         ast::{self as H},
@@ -232,8 +233,10 @@ fn module(
     {
         Ok(res) => res,
         Err(e) => {
-            compilation_env
-                .add_error_deprecated(vec![(ident_loc, format!("ICE. IR ERROR: {}", e))]);
+            compilation_env.add_diag(diag!(
+                Bug::BytecodeGeneration,
+                (ident_loc, format!("IR ERROR: {}", e))
+            ));
             return None;
         }
     };
@@ -289,7 +292,10 @@ fn script(
     {
         Ok(res) => res,
         Err(e) => {
-            compilation_env.add_error_deprecated(vec![(loc, format!("IR ERROR: {}", e))]);
+            compilation_env.add_diag(diag!(
+                Bug::BytecodeGeneration,
+                (loc, format!("IR ERROR: {}", e))
+            ));
             return None;
         }
     };

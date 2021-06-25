@@ -1,32 +1,24 @@
-error: 
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/declare_with_type_annot.move:6:13
+  │
+6 │         let x: u64;
+  │             ^ Unused local variable 'x'. Consider removing or prefixing with an underscore: '_x'
 
-   ┌── tests/move_check/typing/declare_with_type_annot.move:6:13 ───
-   │
- 6 │         let x: u64;
-   │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
-   │
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/declare_with_type_annot.move:7:14
+  │
+7 │         let (x, b, R{f}): (u64, bool, R);
+  │              ^ Unused local variable 'x'. Consider removing or prefixing with an underscore: '_x'
 
-error: 
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/declare_with_type_annot.move:7:17
+  │
+7 │         let (x, b, R{f}): (u64, bool, R);
+  │                 ^ Unused local variable 'b'. Consider removing or prefixing with an underscore: '_b'
 
-   ┌── tests/move_check/typing/declare_with_type_annot.move:7:14 ───
-   │
- 7 │         let (x, b, R{f}): (u64, bool, R);
-   │              ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/declare_with_type_annot.move:7:17 ───
-   │
- 7 │         let (x, b, R{f}): (u64, bool, R);
-   │                 ^ Unused local 'b'. Consider removing or prefixing with an underscore: '_b'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/declare_with_type_annot.move:7:22 ───
-   │
- 7 │         let (x, b, R{f}): (u64, bool, R);
-   │                      ^ Unused local 'f'. Consider removing or prefixing with an underscore: '_f'
-   │
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/declare_with_type_annot.move:7:22
+  │
+7 │         let (x, b, R{f}): (u64, bool, R);
+  │                      ^ Unused local variable 'f'. Consider removing or prefixing with an underscore: '_f'
 

@@ -4,7 +4,7 @@ error[E03002]: unbound module
 14 │     use B::M;
    │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
 
-error[E02010]: invalid 'friend' declaration
+error[E02011]: invalid 'friend' declaration
    ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:15:5
    │
 15 │     friend B::M;

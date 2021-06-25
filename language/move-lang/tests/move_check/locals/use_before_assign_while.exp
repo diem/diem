@@ -1,52 +1,38 @@
-error: 
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_before_assign_while.move:4:32
+  │
+3 │         let x: u64;
+  │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+4 │         while (cond) { let y = move x + 1; x = 0; y; }
+  │                                ^^^^^^ Invalid usage of variable 'x'
 
-   ┌── tests/move_check/locals/use_before_assign_while.move:4:32 ───
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_before_assign_while.move:9:32
+  │
+8 │         let x: u64;
+  │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+9 │         while (cond) { let y = move x + 1; if (cond) { continue }; x = 0; y; }
+  │                                ^^^^^^ Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_while.move:14:32
    │
- 4 │         while (cond) { let y = move x + 1; x = 0; y; }
-   │                                ^^^^^^ Invalid usage of local 'x'
-   ·
- 3 │         let x: u64;
-   │             - The local might not have a value due to this position. The local must be assigned a value before being used
+13 │         let x: u64;
+   │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+14 │         while (cond) { let y = &x; _ = move y; x = 0 }
+   │                                ^^ Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_while.move:19:32
    │
+18 │         let x: u64;
+   │             - The variable does not have a value due to this position. The variable must be assigned a value before being used
+19 │         while (cond) { let y = &x; _ = move y; if (cond) { x = 0 }; break }
+   │                                ^^ Invalid usage of variable 'x'
 
-error: 
-
-   ┌── tests/move_check/locals/use_before_assign_while.move:9:32 ───
+warning[W09003]: unused assignment
+   ┌─ tests/move_check/locals/use_before_assign_while.move:19:60
    │
- 9 │         while (cond) { let y = move x + 1; if (cond) { continue }; x = 0; y; }
-   │                                ^^^^^^ Invalid usage of local 'x'
-   ·
- 8 │         let x: u64;
-   │             - The local might not have a value due to this position. The local must be assigned a value before being used
-   │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_while.move:14:32 ───
-    │
- 14 │         while (cond) { let y = &x; _ = move y; x = 0 }
-    │                                ^^ Invalid usage of local 'x'
-    ·
- 13 │         let x: u64;
-    │             - The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_while.move:19:32 ───
-    │
- 19 │         while (cond) { let y = &x; _ = move y; if (cond) { x = 0 }; break }
-    │                                ^^ Invalid usage of local 'x'
-    ·
- 18 │         let x: u64;
-    │             - The local does not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_while.move:19:60 ───
-    │
- 19 │         while (cond) { let y = &x; _ = move y; if (cond) { x = 0 }; break }
-    │                                                            ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
-    │
+19 │         while (cond) { let y = &x; _ = move y; if (cond) { x = 0 }; break }
+   │                                                            ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
 

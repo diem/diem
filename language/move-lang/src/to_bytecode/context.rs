@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::Error,
+    errors::new::Diagnostic,
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
@@ -96,8 +96,8 @@ impl<'a> Context<'a> {
             let ir_name = Self::ir_module_alias(&module);
             let ir_ident = match Self::translate_module_ident_impl(addresses, module) {
                 Ok(ident) => ident,
-                Err(e) => {
-                    env.add_error_deprecated(e);
+                Err(d) => {
+                    env.add_diag(d);
                     continue;
                 }
             };
@@ -226,8 +226,8 @@ impl<'a> Context<'a> {
     pub fn resolve_address(&mut self, loc: Loc, addr: Address, case: &str) -> Option<AddressBytes> {
         match addr.into_addr_bytes(self.addresses, loc, case) {
             Ok(addr) => Some(addr),
-            Err(e) => {
-                self.env.add_error_deprecated(e);
+            Err(d) => {
+                self.env.add_diag(d);
                 None
             }
         }
@@ -236,8 +236,8 @@ impl<'a> Context<'a> {
     pub fn translate_module_ident(&mut self, ident: ModuleIdent) -> Option<IR::ModuleIdent> {
         match Self::translate_module_ident_impl(&self.addresses, ident) {
             Ok(ident) => Some(ident),
-            Err(e) => {
-                self.env.add_error_deprecated(e);
+            Err(d) => {
+                self.env.add_diag(d);
                 None
             }
         }
@@ -246,7 +246,7 @@ impl<'a> Context<'a> {
     fn translate_module_ident_impl(
         addresses: &UniqueMap<Name, AddressBytes>,
         sp!(loc, ModuleIdent_ { address, module }): ModuleIdent,
-    ) -> Result<IR::ModuleIdent, Error> {
+    ) -> Result<IR::ModuleIdent, Diagnostic> {
         let address_bytes = address.into_addr_bytes(addresses, loc, "module identifier")?;
         let name = Self::translate_module_name_(module.0.value);
         Ok(IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(

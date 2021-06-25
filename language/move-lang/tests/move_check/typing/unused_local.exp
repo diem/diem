@@ -1,80 +1,60 @@
-error: 
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/unused_local.move:5:13
+  │
+5 │         let x: u64;
+  │             ^ Unused local variable 'x'. Consider removing or prefixing with an underscore: '_x'
 
-   ┌── tests/move_check/typing/unused_local.move:5:13 ───
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/unused_local.move:9:14
+  │
+9 │         let (x, y): (u64, u64);
+  │              ^ Unused local variable 'x'. Consider removing or prefixing with an underscore: '_x'
+
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/unused_local.move:9:17
+  │
+9 │         let (x, y): (u64, u64);
+  │                 ^ Unused local variable 'y'. Consider removing or prefixing with an underscore: '_y'
+
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:13:16
    │
- 5 │         let x: u64;
-   │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+13 │         let S{ f, g }: S;
+   │                ^ Unused local variable 'f'. Consider removing or prefixing with an underscore: '_f'
+
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:13:19
    │
+13 │         let S{ f, g }: S;
+   │                   ^ Unused local variable 'g'. Consider removing or prefixing with an underscore: '_g'
 
-error: 
-
-   ┌── tests/move_check/typing/unused_local.move:9:14 ───
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:25:22
    │
- 9 │         let (x, y): (u64, u64);
-   │              ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+25 │     fun unused_param(x: u64) {
+   │                      ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
+
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:28:20
    │
+28 │     fun two_unused(x: u64, y: bool) {
+   │                    ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
 
-error: 
-
-   ┌── tests/move_check/typing/unused_local.move:9:17 ───
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:28:28
    │
- 9 │         let (x, y): (u64, u64);
-   │                 ^ Unused local 'y'. Consider removing or prefixing with an underscore: '_y'
+28 │     fun two_unused(x: u64, y: bool) {
+   │                            ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
+
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:31:35
    │
+31 │     fun unused_param1_used_param2(x: u64, y: bool): bool {
+   │                                   ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
 
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:13:16 ───
-    │
- 13 │         let S{ f, g }: S;
-    │                ^ Unused local 'f'. Consider removing or prefixing with an underscore: '_f'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:13:19 ───
-    │
- 13 │         let S{ f, g }: S;
-    │                   ^ Unused local 'g'. Consider removing or prefixing with an underscore: '_g'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:25:22 ───
-    │
- 25 │     fun unused_param(x: u64) {
-    │                      ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:28:20 ───
-    │
- 28 │     fun two_unused(x: u64, y: bool) {
-    │                    ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:28:28 ───
-    │
- 28 │     fun two_unused(x: u64, y: bool) {
-    │                            ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:31:35 ───
-    │
- 31 │     fun unused_param1_used_param2(x: u64, y: bool): bool {
-    │                                   ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unused_local.move:35:43 ───
-    │
- 35 │     fun unused_param2_used_param1(x: u64, y: bool): u64 {
-    │                                           ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
-    │
+warning[W09002]: unused variable
+   ┌─ tests/move_check/typing/unused_local.move:35:43
+   │
+35 │     fun unused_param2_used_param1(x: u64, y: bool): u64 {
+   │                                           ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
 

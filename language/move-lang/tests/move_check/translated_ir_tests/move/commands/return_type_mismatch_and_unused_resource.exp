@@ -1,28 +1,22 @@
-error: 
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/translated_ir_tests/move/commands/return_type_mismatch_and_unused_resource.move:7:9
+  │
+2 │     struct X {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         let x = X {};
+  │             -   ---- The type '0x8675309::M::X' does not have the ability 'drop'
+  │             │    
+  │             The local variable 'x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+6 │         &x;
+7 │         false
+  │         ^^^^^ Invalid return
 
-   ┌── tests/move_check/translated_ir_tests/move/commands/return_type_mismatch_and_unused_resource.move:7:9 ───
+error[E07004]: invalid return of locally borrowed state
+   ┌─ tests/move_check/translated_ir_tests/move/commands/return_type_mismatch_and_unused_resource.move:13:9
    │
- 7 │         false
-   │         ^^^^^ Invalid return
-   ·
- 5 │         let x = X {};
-   │             - The local 'x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-   ·
- 5 │         let x = X {};
-   │                 ---- The type '0x8675309::M::X' does not have the ability 'drop'
-   ·
- 2 │     struct X {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/commands/return_type_mismatch_and_unused_resource.move:13:9 ───
-    │
- 13 │         r
-    │         ^ Invalid return. Local 'u' is still being borrowed.
-    ·
- 12 │         let r = &u;
-    │                 -- It is still being borrowed by this reference
-    │
+12 │         let r = &u;
+   │                 -- It is still being borrowed by this reference
+13 │         r
+   │         ^ Invalid return. Local variable 'u' is still being borrowed.
 

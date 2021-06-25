@@ -1,16 +1,16 @@
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/module_invalid_names.move:2:8
   │
 2 │ module _m {
   │        ^^ Invalid module name '_m'. Module names cannot start with '_'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/module_invalid_names.move:4:8
   │
 4 │ module _ {
   │        ^ Invalid module name '_'. Module names cannot start with '_'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/module_invalid_names.move:6:8
   │
 6 │ module ___ {

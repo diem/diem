@@ -1,25 +1,19 @@
-error: 
+error[E10005]: unable to generate test
+   ┌─ tests/move_check/unit_test/valid_test_module.move:22:7
+   │
+22 │     #[test(_a=0x1, _b=@0x2)]
+   │       ^^^^^^^^^^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+23 │     public fun b(_a: signer, _b: signer) { }
+   │                - -- Corresponding to this parameter
+   │                │  
+   │                Error found in this test
 
-    ┌── tests/move_check/unit_test/valid_test_module.move:22:7 ───
-    │
- 22 │     #[test(_a=0x1, _b=@0x2)]
-    │       ^^^^^^^^^^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
-    ·
- 23 │     public fun b(_a: signer, _b: signer) { }
-    │                  -- Corresponding to this parameter
-    ·
- 23 │     public fun b(_a: signer, _b: signer) { }
-    │                - In this test
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/valid_test_module.move:22:15 ───
-    │
- 22 │     #[test(_a=0x1, _b=@0x2)]
-    │               ^^^ Unsupported attribute value
-    ·
- 22 │     #[test(_a=0x1, _b=@0x2)]
-    │            ------ Assigned in this attribute
-    │
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/valid_test_module.move:22:15
+   │
+22 │     #[test(_a=0x1, _b=@0x2)]
+   │            ---^^^
+   │            │  │
+   │            │  Unsupported attribute value
+   │            Assigned in this attribute
 

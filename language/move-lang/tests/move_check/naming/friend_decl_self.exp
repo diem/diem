@@ -1,4 +1,4 @@
-error[E02010]: invalid 'friend' declaration
+error[E02011]: invalid 'friend' declaration
   ┌─ tests/move_check/naming/friend_decl_self.move:3:5
   │
 2 │ module M {
@@ -6,7 +6,7 @@ error[E02010]: invalid 'friend' declaration
 3 │     friend Self;
   │     ^^^^^^^^^^^^ Invalid friend declaration
 
-error[E02010]: invalid 'friend' declaration
+error[E02011]: invalid 'friend' declaration
   ┌─ tests/move_check/naming/friend_decl_self.move:9:5
   │
 9 │     friend 0x43::M;

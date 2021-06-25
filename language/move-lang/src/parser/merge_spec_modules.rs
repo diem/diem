@@ -11,7 +11,7 @@
 //! are for specs or not, and allow the older to resolve only in spec contexts.
 
 use crate::{
-    errors::Errors,
+    diag,
     parser::ast::{Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, Program},
     shared::*,
 };
@@ -31,27 +31,18 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
     // Report errors for misplaced members
     for m in spec_modules.values() {
-        let errors: Errors = m
-            .members
-            .iter()
-            .filter_map(|m| match m {
-                ModuleMember::Function(f) => Some(vec![(
-                    f.loc,
-                    "functions not allowed in specification module".to_owned(),
-                )]),
-                ModuleMember::Struct(s) => Some(vec![(
-                    s.loc,
-                    "structs not allowed in specification module".to_owned(),
-                )]),
-                ModuleMember::Constant(c) => Some(vec![(
-                    c.loc,
-                    "constants not allowed in specification module".to_owned(),
-                )]),
-                ModuleMember::Use(_) | ModuleMember::Friend(_) | ModuleMember::Spec(_) => None,
-            })
-            .collect();
-        if !errors.is_empty() {
-            compilation_env.add_errors_deprecated(errors);
+        for mem in &m.members {
+            let (loc, msg) = match mem {
+                ModuleMember::Function(f) => {
+                    (f.loc, "functions not allowed in specification module")
+                }
+                ModuleMember::Struct(s) => (s.loc, "structs not allowed in specification module"),
+                ModuleMember::Constant(c) => {
+                    (c.loc, "constants not allowed in specification module")
+                }
+                ModuleMember::Use(_) | ModuleMember::Friend(_) | ModuleMember::Spec(_) => continue,
+            };
+            compilation_env.add_diag(diag!(Declarations::InvalidSpec, (loc, msg)))
         }
     }
 
@@ -61,12 +52,9 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
     // Remaining spec modules could not be merged, report errors.
     for (_, m) in spec_modules {
-        compilation_env.add_error_deprecated(vec![(
-            m.name.loc(),
-            "Cannot associate specification with any target module in this compilation. A module \
-             specification cannot be compiled standalone."
-                .to_owned(),
-        )]);
+        let msg = "Cannot associate specification with any target module in this compilation. A \
+                   module specification cannot be compiled standalone.";
+        compilation_env.add_diag(diag!(Declarations::InvalidSpec, (m.name.loc(), msg)))
     }
     Program {
         source_definitions,

@@ -1,34 +1,26 @@
-error: 
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/typing/borrow_local_temp_resource.move:7:17
+  │
+3 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+6 │         &R{};
+  │          ---
+  │          │
+  │          The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+  │          The type '0x8675309::M::R' does not have the ability 'drop'
+7 │         &mut R{};
+  │                 ^ Invalid return
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
-   │
- 7 │         &mut R{};
-   │                 ^ Invalid return
-   ·
- 6 │         &R{};
-   │          --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
-   ·
- 6 │         &R{};
-   │          --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 3 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
-   │
- 7 │         &mut R{};
-   │                 ^ Invalid return
-   ·
- 7 │         &mut R{};
-   │              --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
-   ·
- 7 │         &mut R{};
-   │              --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 3 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/typing/borrow_local_temp_resource.move:7:17
+  │
+3 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+7 │         &mut R{};
+  │              ---^ Invalid return
+  │              │   
+  │              The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+  │              The type '0x8675309::M::R' does not have the ability 'drop'
 

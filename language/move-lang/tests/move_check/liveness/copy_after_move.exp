@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/liveness/copy_after_move.move:5:9 ───
-   │
- 5 │         copy x;
-   │         ^^^^^^ Invalid usage of local 'x'
-   ·
- 4 │         move x;
-   │         ------ The local does not have a value due to this position. The local must be assigned a value before being used
-   │
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/liveness/copy_after_move.move:5:9
+  │
+4 │         move x;
+  │         ------ The variable does not have a value due to this position. The variable must be assigned a value before being used
+5 │         copy x;
+  │         ^^^^^^ Invalid usage of variable 'x'
 

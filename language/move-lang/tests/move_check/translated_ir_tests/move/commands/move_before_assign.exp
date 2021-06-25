@@ -1,19 +1,14 @@
-error: 
+warning[W09003]: unused assignment
+  ┌─ tests/move_check/translated_ir_tests/move/commands/move_before_assign.move:4:9
+  │
+4 │     let y = move x;
+  │         ^ Unused assignment or binding for local 'y'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_y')
 
-   ┌── tests/move_check/translated_ir_tests/move/commands/move_before_assign.move:4:9 ───
-   │
- 4 │     let y = move x;
-   │         ^ Unused assignment or binding for local 'y'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_y')
-   │
-
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/commands/move_before_assign.move:4:13 ───
-   │
- 4 │     let y = move x;
-   │             ^^^^^^ Invalid usage of local 'x'
-   ·
- 3 │     let x: u64;
-   │         - The local does not have a value due to this position. The local must be assigned a value before being used
-   │
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/translated_ir_tests/move/commands/move_before_assign.move:4:13
+  │
+3 │     let x: u64;
+  │         - The variable does not have a value due to this position. The variable must be assigned a value before being used
+4 │     let y = move x;
+  │             ^^^^^^ Invalid usage of variable 'x'
 

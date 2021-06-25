@@ -9,7 +9,7 @@ use super::{
     locals,
 };
 use crate::{
-    errors::*,
+    errors::new::Diagnostics,
     hlir::ast::{self as H, *},
     parser::ast::Var,
     shared::{unique_map::UniqueMap, CompilationEnv},
@@ -53,12 +53,12 @@ impl TransferFunctions for Liveness {
         label: Label,
         idx: usize,
         cmd: &Command,
-    ) -> Errors {
+    ) -> Diagnostics {
         command(state, cmd);
         // set current [label][command_idx] data with the new liveness data
         let cur_label_states = self.states.get_mut(&label).unwrap();
         cur_label_states[idx] = state.clone();
-        Errors::new()
+        Diagnostics::new()
     }
 }
 
@@ -189,6 +189,7 @@ pub fn last_usage(
 mod last_usage {
     use crate::{
         cfgir::liveness::state::LivenessState,
+        diag,
         hlir::{
             ast::*,
             translate::{display_var, DisplayVar},
@@ -300,7 +301,9 @@ mod last_usage {
                                      '_{}')",
                                     v_str, v_str
                                 );
-                                context.env.add_error_deprecated(vec![(l.loc, msg)]);
+                                context
+                                    .env
+                                    .add_diag(diag!(UnusedItem::Assignment, (l.loc, msg)));
                             }
                             if context.has_drop(v) {
                                 l.value = L::Ignore

@@ -6,7 +6,8 @@ use crate::{
         ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd, LoopInfo},
         remove_no_ops,
     },
-    errors::*,
+    diag,
+    errors::new::Diagnostics,
     hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_, UnitCase},
     shared::ast_debug::*,
 };
@@ -47,7 +48,7 @@ impl<'a> BlockCFG<'a> {
         start: Label,
         blocks: &'a mut BasicBlocks,
         block_info: &[(Label, BlockInfo)],
-    ) -> (Self, BTreeSet<Label>, Errors) {
+    ) -> (Self, BTreeSet<Label>, Diagnostics) {
         let mut cfg = BlockCFG {
             start,
             blocks,
@@ -58,14 +59,14 @@ impl<'a> BlockCFG<'a> {
 
         // no dead code
         let dead_code = cfg.recompute();
-        let mut errors = Errors::new();
+        let mut diags = Diagnostics::new();
         for (_lbl, block) in dead_code {
-            dead_code_error(&mut errors, &block)
+            dead_code_error(&mut diags, &block)
         }
 
         let infinite_loop_starts = determine_infinite_loop_starts(&cfg, block_info);
 
-        (cfg, infinite_loop_starts, errors)
+        (cfg, infinite_loop_starts, diags)
     }
 
     /// Recomputes successor/predecessor maps. returns removed, dead blocks
@@ -171,19 +172,20 @@ impl<'a> CFG for BlockCFG<'a> {
 }
 
 const DEAD_ERR_CMD: &str = "Unreachable code. This statement (and any following statements) will \
-                            not be executed. In some cases, this will result in unused resource \
-                            values.";
+                            not be executed.";
 
 const DEAD_ERR_EXP: &str = "Invalid use of a divergent expression. The code following the \
-                            evaluation of this expression will be dead and should be removed. In \
-                            some cases, this is necessary to prevent unused resource values.";
+                            evaluation of this expression will be dead and should be removed.";
 
-fn dead_code_error(errors: &mut Errors, block: &BasicBlock) {
+fn dead_code_error(diags: &mut Diagnostics, block: &BasicBlock) {
     let first_command = block.front().unwrap();
     match unreachable_loc(first_command) {
-        Some(loc) => errors.add_deprecated(vec![(loc, DEAD_ERR_EXP.into())]),
+        Some(loc) => diags.add(diag!(UnusedItem::DeadCode, (loc, DEAD_ERR_EXP))),
         None if is_implicit_control_flow(&block) => (),
-        None => errors.add_deprecated(vec![(first_command.loc, DEAD_ERR_CMD.into())]),
+        None => diags.add(diag!(
+            UnusedItem::DeadCode,
+            (first_command.loc, DEAD_ERR_CMD)
+        )),
     }
 }
 
