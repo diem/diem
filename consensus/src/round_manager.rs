@@ -33,7 +33,7 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
-use diem_infallible::checked;
+use diem_infallible::{checked, Mutex};
 use diem_logger::prelude::*;
 use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier, validator_verifier::VerifyError as ValidatorVerifyError};
 use fail::fail_point;
@@ -189,7 +189,7 @@ pub struct RoundManager {
     round_state: RoundState,
     proposer_election: Box<dyn ProposerElection + Send + Sync>,
     proposal_generator: ProposalGenerator,
-    safety_rules: MetricsSafetyRules,
+    safety_rules: Arc<Mutex<MetricsSafetyRules>>,
     network: NetworkSender,
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
@@ -204,7 +204,7 @@ impl RoundManager {
         round_state: RoundState,
         proposer_election: Box<dyn ProposerElection + Send + Sync>,
         proposal_generator: ProposalGenerator,
-        safety_rules: MetricsSafetyRules,
+        safety_rules: Arc<Mutex<MetricsSafetyRules>>,
         network: NetworkSender,
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
@@ -287,7 +287,7 @@ impl RoundManager {
             .proposal_generator
             .generate_proposal(new_round_event.round)
             .await?;
-        let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        let signed_proposal = self.safety_rules.lock().sign_proposal(proposal)?;
         observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
         debug!(self.new_log(LogEvent::Propose), "{}", signed_proposal);
         // return proposal
@@ -468,6 +468,7 @@ impl RoundManager {
             let timeout = timeout_vote.timeout();
             let signature = self
                 .safety_rules
+                .lock()
                 .sign_timeout(&timeout)
                 .context("[RoundManager] SafetyRules signs timeout")?;
             timeout_vote.add_timeout_signature(signature);
@@ -503,11 +504,12 @@ impl RoundManager {
 
     pub fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> Ed25519Signature {
         self.safety_rules
+            .lock()
             .sign_commit_proposal(ledger_info.clone(), &self.epoch_state.verifier).unwrap()
     }
 
     pub fn generate_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<ConsensusMsg> {
-        let signature = self.sign_commit_proposal(ledger_info);
+        let signature = self.sign_commit_proposal(ledger_info.clone());
         Ok(ConsensusMsg::CommitProposalMsg(Box::new(
             CommitProposal::new_with_signature(
                 self.author,
@@ -520,6 +522,11 @@ impl RoundManager {
     pub async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
         let msg = self.generate_commit_proposal(ledger_info).unwrap();
         self.network.broadcast(msg).await;
+        Ok(())
+    }
+
+    pub async fn broadcast_commit_decision(&mut self, msg: ConsensusMsg) -> anyhow::Result<()> {
+        self.network.broadcast(msg); //.await // we do not have to wait for broadcasting commit decision
         Ok(())
     }
 
@@ -623,6 +630,7 @@ impl RoundManager {
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
         let vote = self
             .safety_rules
+            .lock()
             .construct_and_sign_vote(&maybe_signed_vote_proposal)
             .context(format!(
                 "[RoundManager] SafetyRules {}Rejected{} {}",
@@ -802,15 +810,15 @@ impl RoundManager {
     /// Inspect the current consensus state.
     #[cfg(test)]
     pub fn consensus_state(&mut self) -> ConsensusState {
-        self.safety_rules.consensus_state().unwrap()
+        self.safety_rules.lock().consensus_state().unwrap()
     }
 
     #[cfg(test)]
-    pub fn set_safety_rules(&mut self, safety_rules: MetricsSafetyRules) {
+    pub fn set_safety_rules(&mut self, safety_rules: Arc<Mutex<MetricsSafetyRules>>) {
         self.safety_rules = safety_rules
     }
 
-    pub fn safety_rules(&mut self) -> &MetricsSafetyRules { &self.safety_rules }
+    pub fn safety_rules(&self) -> &Arc<Mutex<MetricsSafetyRules>> { &self.safety_rules }
 
     pub fn epoch_state(&self) -> &EpochState {
         &self.epoch_state

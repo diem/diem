@@ -93,8 +93,8 @@ impl TSafetyRules for MetricsSafetyRules {
     fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures, verifier: &ValidatorVerifier) -> Result<Ed25519Signature, Error> {
         let mut result = monitor!("safety_rules", self.inner.sign_commit_proposal(ledger_info, verifier));
         if let Err(Error::NotInitialized(_res)) = result {
-            self.perform_initialize()?;
-            result = monitor!("safety_rules", self.inner.sign_commit_proposal(ledger_info, verifier));
+            // panic here
+            unimplemented!("Initialize when signing commit proposals.")
         }
         result
     }

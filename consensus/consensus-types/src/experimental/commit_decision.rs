@@ -1,13 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright (c) The Diem Core Contributors
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::common::Round;
+use anyhow::Context;
 use std::fmt::{Debug, Display, Formatter};
 use serde::{Deserialize, Serialize};
 use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::validator_verifier::ValidatorVerifier;
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct CommitDecision {
@@ -26,7 +25,7 @@ impl Display for CommitDecision {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "CommitProposal: [{}]",
+            "CommitDecision: [{}]",
             self.ledger_info
         )
     }
@@ -51,4 +50,17 @@ impl CommitDecision {
         &self.ledger_info
     }
 
+    /// Verifies that the signatures carried in the message forms a valid quorum,
+    /// and then verifies the signature.
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
+        // We do not need to check the author because as long as the signature tree
+        // is valid, the message should be valid.
+        validator
+            .verify_aggregated_struct_signature(
+                self.ledger_info.ledger_info(),
+                self.ledger_info.signatures(),
+            ).context("Failed to verify Commit Decision")?;
+
+        Ok(())
+    }
 }
