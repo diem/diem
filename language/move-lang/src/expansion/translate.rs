@@ -1792,7 +1792,7 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         PV::ByteString(s) => match byte_string::decode(loc, &s) {
             Ok(v) => EV::Bytearray(v),
             Err(e) => {
-                context.env.add_errors(e);
+                context.env.add_diags(e);
                 return None;
             }
         },

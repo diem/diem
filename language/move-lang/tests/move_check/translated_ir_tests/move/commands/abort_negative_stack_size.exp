@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/commands/abort_negative_stack_size.move:6:1 ───
-   │
- 6 │ }
-   │ ^ Unexpected '}'
-   ·
- 6 │ }
-   │ - Expected an expression term
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/translated_ir_tests/move/commands/abort_negative_stack_size.move:6:1
+  │
+6 │ }
+  │ ^
+  │ │
+  │ Unexpected '}'
+  │ Expected an expression term
 

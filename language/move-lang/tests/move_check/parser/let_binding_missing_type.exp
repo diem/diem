@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/let_binding_missing_type.move:3:17 ───
-   │
- 3 │         let x : = 0; // Test a missing let type (but with a colon)
-   │                 ^ Unexpected '='
-   ·
- 3 │         let x : = 0; // Test a missing let type (but with a colon)
-   │                 - Expected a type name
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/let_binding_missing_type.move:3:17
+  │
+3 │         let x : = 0; // Test a missing let type (but with a colon)
+  │                 ^
+  │                 │
+  │                 Unexpected '='
+  │                 Expected a type name
 

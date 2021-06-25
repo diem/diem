@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/address_too_long.move:2:9 ───
-   │
- 2 │ address 0x112233445566778899101122334455667788992011223344556677889930112233 {
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid address literal. The numeric value is too large. The maximum size is 16 bytes
-   │
+error[E01005]: invalid address
+  ┌─ tests/move_check/parser/address_too_long.move:2:9
+  │
+2 │ address 0x112233445566778899101122334455667788992011223344556677889930112233 {
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid address literal. The numeric value is too large. The maximum size is 16 bytes
 

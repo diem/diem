@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/let_binding_missing_fields.move:6:26 ───
-   │
- 6 │         let Generic<u64> = g; // Test a type name with no field bindings
-   │                          ^ Unexpected '='
-   ·
- 6 │         let Generic<u64> = g; // Test a type name with no field bindings
-   │                          - Expected '{'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/let_binding_missing_fields.move:6:26
+  │
+6 │         let Generic<u64> = g; // Test a type name with no field bindings
+  │                          ^
+  │                          │
+  │                          Unexpected '='
+  │                          Expected '{'
 

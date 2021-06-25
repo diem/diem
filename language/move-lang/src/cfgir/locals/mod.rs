@@ -65,13 +65,13 @@ impl<'a, 'b> Context<'a, 'b> {
         }
     }
 
-    fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
+    fn error_deprecated(&mut self, e: Vec<(Loc, impl Into<String>)>) {
         self.errors
             .add_deprecated(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
     }
 
-    fn extend_errors(&mut self, errors: Errors) {
-        self.errors.extend(errors)
+    fn extend_errors_deprecated(&mut self, errors: Errors) {
+        self.errors.extend_deprecated(errors)
     }
 
     fn get_errors(self) -> Errors {
@@ -120,7 +120,7 @@ pub fn verify(
     let initial_state = LocalStates::initial(&signature.parameters, locals);
     let mut locals_safety = LocalsSafety::new(struct_declared_abilities, locals, signature);
     let (final_state, es) = locals_safety.analyze_function(cfg, initial_state);
-    compilation_env.add_errors(es);
+    compilation_env.add_errors_deprecated(es);
     final_state
 }
 
@@ -181,7 +181,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                     }
                 }
             }
-            context.extend_errors(errors);
+            context.extend_errors_deprecated(errors);
         }
         C::Jump { .. } => (),
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
@@ -227,7 +227,7 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             (available, msg),
                         ];
                         add_drop_ability_tip(context, &mut error, ty.clone());
-                        context.error(error)
+                        context.error_deprecated(error)
                     }
                 }
             }
@@ -298,7 +298,7 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
                  value before being used",
                 verb
             );
-            context.error(vec![
+            context.error_deprecated(vec![
                 (*loc, format!("Invalid usage of local '{}'", vstr)),
                 (unavailable, msg),
             ])

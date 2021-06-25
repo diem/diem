@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/spec_parsing_quantifier_fail.move:3:33 ───
-   │
- 3 │         invariant forall x: num y: num : x == y;
-   │                                 ^ Unexpected 'y'
-   ·
- 3 │         invariant forall x: num y: num : x == y;
-   │                                 - Expected ':'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/spec_parsing_quantifier_fail.move:3:33
+  │
+3 │         invariant forall x: num y: num : x == y;
+  │                                 ^
+  │                                 │
+  │                                 Unexpected 'y'
+  │                                 Expected ':'
 

@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/byte_string_token_eof2.move:3:9 ───
-   │
- 3 │         b"Diem
-   │         ^^^^^^ Missing closing quote (") after byte string
-   │
+error[E01007]: invalid byte string
+  ┌─ tests/move_check/parser/byte_string_token_eof2.move:3:9
+  │
+3 │         b"Diem
+  │         ^^^^^^ Missing closing quote (") after byte string
 

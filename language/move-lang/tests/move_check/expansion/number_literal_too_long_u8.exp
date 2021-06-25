@@ -1,10 +1,10 @@
-error[E01001]: invalid number literal
+error[E01006]: invalid number literal
   ┌─ tests/move_check/expansion/number_literal_too_long_u8.move:4:9
   │
 4 │         0x1FFu8;
   │         ^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u8'
 
-error[E01001]: invalid number literal
+error[E01006]: invalid number literal
   ┌─ tests/move_check/expansion/number_literal_too_long_u8.move:6:9
   │
 6 │         256u8;

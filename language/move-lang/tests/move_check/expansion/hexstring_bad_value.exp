@@ -1,10 +1,10 @@
-error[E01003]: invalid hex string
+error[E01008]: invalid hex string
   ┌─ tests/move_check/expansion/hexstring_bad_value.move:3:11
   │
 3 │         x"g0"
   │           ^ Invalid hexadecimal character: 'g'
 
-error[E01003]: invalid hex string
+error[E01008]: invalid hex string
   ┌─ tests/move_check/expansion/hexstring_bad_value.move:6:9
   │
 6 │         x"123"

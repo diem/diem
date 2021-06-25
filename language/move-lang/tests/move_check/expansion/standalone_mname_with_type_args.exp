@@ -1,4 +1,4 @@
-error[E01005]: syntax item restricted to spec contexts
+error[E01010]: syntax item restricted to spec contexts
   ┌─ tests/move_check/expansion/standalone_mname_with_type_args.move:3:21
   │
 3 │         let _ = 0 + M<u64>;

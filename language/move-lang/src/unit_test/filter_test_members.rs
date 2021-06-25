@@ -170,7 +170,7 @@ fn filter_tests_from_definition(
                     specs,
                 }))
             } else {
-                context.env.add_errors(errors);
+                context.env.add_errors_deprecated(errors);
                 None
             }
         }
@@ -213,10 +213,10 @@ fn filter_tests_from_module(
 }
 
 /// If a module is being compiled in test mode, this inserts a function that calls a native
-/// function `0x1::UnitTest::create_signers_for_testing` that only exists if the VM is being run with the
-/// "unit_test" feature flag set. This will then cause the module to fail to link if an attempt is
-/// made to publish a module that has been compiled in test mode on a VM that is not running in
-/// test mode.
+/// function `0x1::UnitTest::create_signers_for_testing` that only exists if the VM is being run
+/// with the "unit_test" feature flag set. This will then cause the module to fail to link if
+/// an attempt is made to publish a module that has been compiled in test mode on a VM that is not
+/// running in test mode.
 fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::ModuleMember>) {
     if !context.env.flags().is_testing() {
         return;
@@ -229,7 +229,8 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
     };
 
     // TODO: Change this to a named "Std" address once named addresses in the stdlib have landed
-    //let leading_name_access =  sp(mloc, P::LeadingNameAccess_::Name(P::ModuleName(sp(mloc, "Std".to_string())),
+    // let leading_name_access =
+    //     sp(mloc, P::LeadingNameAccess_::Name(P::ModuleName(sp(mloc, "Std".to_string())),
     let leading_name_access = sp(
         mloc,
         P::LeadingNameAccess_::AnonymousAddress(STDLIB_ADDRESS),

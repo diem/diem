@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/hexstring_token_eof1.move:3:9 ───
-   │
- 3 │         x"
-   │         ^^ Missing closing quote (") after byte string
-   │
+error[E01008]: invalid hex string
+  ┌─ tests/move_check/parser/hexstring_token_eof1.move:3:9
+  │
+3 │         x"
+  │         ^^ Missing closing quote (") after byte string
 

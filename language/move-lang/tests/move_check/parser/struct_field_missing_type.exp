@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/struct_field_missing_type.move:2:18 ───
-   │
- 2 │     struct S { f } // Each field must specify a type
-   │                  ^ Unexpected '}'
-   ·
- 2 │     struct S { f } // Each field must specify a type
-   │                  - Expected ':'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/struct_field_missing_type.move:2:18
+  │
+2 │     struct S { f } // Each field must specify a type
+  │                  ^
+  │                  │
+  │                  Unexpected '}'
+  │                  Expected ':'
 

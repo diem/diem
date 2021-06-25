@@ -1,4 +1,4 @@
-error[E01004]: invalid assignment
+error[E01009]: invalid assignment
    ┌─ tests/move_check/typing/assign_nested.move:14:19
    │
 14 │         (_, x, _, s.f) = four();

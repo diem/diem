@@ -142,11 +142,14 @@ impl<'a, 'b> Compiler<'a, 'b> {
         let compilation_env = CompilationEnv::new(flags);
         let (source_text, pprog_and_comments_res) =
             parse_program(&compilation_env, targets, &deps)?;
-        let res = pprog_and_comments_res.and_then(|(pprog, comments)| {
-            SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
-                .run::<TARGET>()
-                .map(|compiler| (comments, compiler))
-        });
+        let res: Result<_, Errors> =
+            pprog_and_comments_res
+                .map_err(Errors::from)
+                .and_then(|(pprog, comments)| {
+                    SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
+                        .run::<TARGET>()
+                        .map(|compiler| (comments, compiler))
+                });
         Ok((source_text, res))
     }
 
@@ -248,7 +251,9 @@ macro_rules! ast_stepped_compilers {
                     }
                 }
 
-                pub fn run<const TARGET: Pass>(self) -> Result<SteppedCompiler<'a, TARGET>, Errors> {
+                pub fn run<const TARGET: Pass>(
+                    self
+                ) -> Result<SteppedCompiler<'a, TARGET>, Errors> {
                     self.run_impl()
                 }
 

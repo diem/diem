@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/unknown_ability_name_function_constraint.move:4:16 ───
-   │
- 4 │     fun foo<T: blah>() {}
-   │                ^^^^ Unexpected 'blah'. Expected a type ability, one of: 'copy', 'drop', 'store', or 'key'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/unknown_ability_name_function_constraint.move:4:16
+  │
+4 │     fun foo<T: blah>() {}
+  │                ^^^^ Unexpected 'blah'. Expected a type ability, one of: 'copy', 'drop', 'store', or 'key'
 

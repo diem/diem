@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/global_access_pack.move:3:9 ───
-   │
- 3 │         ::S { }
-   │         ^^ Unexpected '::'
-   ·
- 3 │         ::S { }
-   │         -- Expected an expression term
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/global_access_pack.move:3:9
+  │
+3 │         ::S { }
+  │         ^^
+  │         │
+  │         Unexpected '::'
+  │         Expected an expression term
 

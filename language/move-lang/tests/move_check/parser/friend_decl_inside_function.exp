@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/friend_decl_inside_function.move:6:9 ───
-   │
- 6 │         friend 0x42::A;
-   │         ^^^^^^ Unexpected 'friend'
-   ·
- 6 │         friend 0x42::A;
-   │         ------ Expected an expression term
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/friend_decl_inside_function.move:6:9
+  │
+6 │         friend 0x42::A;
+  │         ^^^^^^
+  │         │
+  │         Unexpected 'friend'
+  │         Expected an expression term
 

@@ -51,7 +51,7 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
             })
             .collect();
         if !errors.is_empty() {
-            compilation_env.add_errors(errors);
+            compilation_env.add_errors_deprecated(errors);
         }
     }
 

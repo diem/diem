@@ -52,8 +52,8 @@ impl<'a, 'b> Context<'a, 'b> {
         self.errors
     }
 
-    fn add_errors(&mut self, additional: Errors) {
-        self.errors.extend(additional);
+    fn add_errors_deprecated(&mut self, additional: Errors) {
+        self.errors.extend_deprecated(additional);
     }
 }
 
@@ -91,7 +91,7 @@ pub fn verify(
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
     let (final_state, es) = safety.analyze_function(cfg, initial_state);
-    compilation_env.add_errors(es);
+    compilation_env.add_errors_deprecated(es);
     final_state
 }
 
@@ -111,7 +111,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             assert!(!value.is_ref());
             let lvalue = assert_single_value(exp(context, el));
             let errors = context.borrow_state.mutate(*loc, lvalue);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
         }
         C::JumpIf { cond: e, .. } => {
             let value = assert_single_value(exp(context, e));
@@ -125,7 +125,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
         C::Return { exp: e, .. } => {
             let values = exp(context, e);
             let errors = context.borrow_state.return_(*loc, values);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
         }
         C::Abort(e) => {
             let value = assert_single_value(exp(context, e));
@@ -152,7 +152,7 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue, value: Value) {
         }
         L::Var(v, _) => {
             let errors = context.borrow_state.assign_local(*loc, v, value);
-            context.add_errors(errors)
+            context.add_errors_deprecated(errors)
         }
         L::Unpack(_, _, fields) => {
             assert!(!value.is_ref());
@@ -170,36 +170,36 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
     match &parent_e.exp.value {
         E::Move { var, .. } => {
             let (errors, value) = context.borrow_state.move_local(*eloc, var);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             vec![value]
         }
         E::Copy { var, .. } => {
             let (errors, value) = context.borrow_state.copy_local(*eloc, var);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             vec![value]
         }
         E::BorrowLocal(mut_, var) => {
             let (errors, value) = context.borrow_state.borrow_local(*eloc, *mut_, var);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             assert!(value.is_ref());
             vec![value]
         }
         E::Freeze(e) => {
             let evalue = assert_single_value(exp(context, e));
             let (errors, value) = context.borrow_state.freeze(*eloc, evalue);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             vec![value]
         }
         E::Dereference(e) => {
             let evalue = assert_single_value(exp(context, e));
             let (errors, value) = context.borrow_state.dereference(*eloc, evalue);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             vec![value]
         }
         E::Borrow(mut_, e, f) => {
             let evalue = assert_single_value(exp(context, e));
             let (errors, value) = context.borrow_state.borrow_field(*eloc, *mut_, evalue, f);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             vec![value]
         }
 
@@ -210,14 +210,14 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
                 sp!(_, BuiltinFunction_::BorrowGlobal(mut_, t)) => {
                     assert!(!assert_single_value(evalues).is_ref());
                     let (errors, value) = context.borrow_state.borrow_global(*eloc, *mut_, t);
-                    context.add_errors(errors);
+                    context.add_errors_deprecated(errors);
                     vec![value]
                 }
                 sp!(_, BuiltinFunction_::MoveFrom(t)) => {
                     assert!(!assert_single_value(evalues).is_ref());
                     let (errors, value) = context.borrow_state.move_from(*eloc, t);
                     assert!(!value.is_ref());
-                    context.add_errors(errors);
+                    context.add_errors_deprecated(errors);
                     vec![value]
                 }
                 _ => {
@@ -226,7 +226,7 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
                         context
                             .borrow_state
                             .call(*eloc, evalues, &BTreeMap::new(), ret_ty);
-                    context.add_errors(errors);
+                    context.add_errors_deprecated(errors);
                     values
                 }
             }
@@ -239,7 +239,7 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
                 context
                     .borrow_state
                     .call(*eloc, evalues, &mcall.acquires, ret_ty);
-            context.add_errors(errors);
+            context.add_errors_deprecated(errors);
             values
         }
 

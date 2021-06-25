@@ -5,11 +5,11 @@
 // Main types
 //**************************************************************************************************
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash, PartialOrd, Ord)]
 pub enum Severity {
-    BlockingError = 0,
+    Warning = 0,
     NonblockingError = 1,
-    Warning = 2,
+    BlockingError = 2,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
@@ -98,15 +98,22 @@ codes!(
     Uncategorized: [],
     // syntax errors
     Syntax: [
+        InvalidCharacter: { msg: "invalid character", severity: BlockingError },
+        UnexpectedToken: { msg: "unexpected token", severity: BlockingError },
+        InvalidModifier: { msg: "invalid modifier", severity: BlockingError },
+        InvalidDocComment: { msg: "invalid documentation comment", severity: Warning },
+        InvalidAddress: { msg: "invalid address", severity: BlockingError },
         InvalidNumber: { msg: "invalid number literal", severity: BlockingError },
         InvalidByteString: { msg: "invalid byte string", severity: BlockingError },
         InvalidHexString: { msg: "invalid hex string", severity: BlockingError },
         InvalidLValue: { msg: "invalid assignment", severity: BlockingError },
-        SpecContextRestricted: { msg: "syntax item restricted to spec contexts", severity: BlockingError },
+        SpecContextRestricted:
+            { msg: "syntax item restricted to spec contexts", severity: BlockingError },
     ],
     // errors for any rules around declaration items
     Declarations: [
-        DuplicateItem: { msg: "duplicate declaration, item, or annotation", severity: NonblockingError },
+        DuplicateItem:
+            { msg: "duplicate declaration, item, or annotation", severity: NonblockingError },
         UnnecessaryItem: { msg: "unnecessary or extraneous item", severity: NonblockingError },
         InvalidAddress: { msg: "invalid 'address' declaration", severity: NonblockingError },
         InvalidModule: { msg: "invalid 'module' declaration", severity: NonblockingError },
@@ -115,7 +122,8 @@ codes!(
         InvalidFunction: { msg: "invalid 'fun' declaration", severity: NonblockingError },
         InvalidStruct: { msg: "invalid 'struct' declaration", severity: NonblockingError },
         InvalidName: { msg: "invalid name", severity: BlockingError },
-        InvalidFriendDeclaration: { msg: "invalid 'friend' declaration", severity: NonblockingError },
+        InvalidFriendDeclaration:
+            { msg: "invalid 'friend' declaration", severity: NonblockingError },
         InvalidAcquiresItem: { msg: "invalid 'acquires' item", severity: NonblockingError },
     ],
     // errors name resolution, mostly expansion/translate and naming/translate
@@ -167,11 +175,20 @@ impl DiagnosticInfo {
 }
 
 impl Severity {
+    pub const MIN: Self = Self::Warning;
+    pub const MAX: Self = Self::BlockingError;
+
     pub fn into_codespan_severity(self) -> codespan_reporting_new::diagnostic::Severity {
         use codespan_reporting_new::diagnostic::Severity as CSRSeverity;
         match self {
             Severity::BlockingError | Severity::NonblockingError => CSRSeverity::Error,
             Severity::Warning => CSRSeverity::Warning,
         }
+    }
+}
+
+impl Default for Severity {
+    fn default() -> Self {
+        Self::MIN
     }
 }

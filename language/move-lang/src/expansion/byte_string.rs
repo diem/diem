@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::{diagnostic_codes::*, *},
+    errors::{diagnostic_codes::*, new::Diagnostics},
     parser::syntax::make_loc,
 };
 use move_ir_types::location::*;
@@ -12,7 +12,7 @@ use move_ir_types::location::*;
 struct Context {
     filename: &'static str,
     start_offset: usize,
-    errors: Errors,
+    diags: Diagnostics,
 }
 
 impl Context {
@@ -20,7 +20,7 @@ impl Context {
         Self {
             filename,
             start_offset,
-            errors: Errors::new(),
+            diags: Diagnostics::new(),
         }
     }
 
@@ -30,30 +30,30 @@ impl Context {
             self.start_offset + 2 + start, // add 2 for the beginning of the string
             self.start_offset + 2 + end,
         );
-        self.errors
+        self.diags
             .add(diag!(Syntax::InvalidByteString, (loc, err_text)))
     }
 
-    fn has_errors(&self) -> bool {
-        !self.errors.is_empty()
+    fn has_diags(&self) -> bool {
+        !self.diags.is_empty()
     }
 
-    fn get_errors(self) -> Errors {
-        self.errors
+    fn get_diags(self) -> Diagnostics {
+        self.diags
     }
 }
 
-pub fn decode(loc: Loc, text: &str) -> Result<Vec<u8>, Errors> {
+pub fn decode(loc: Loc, text: &str) -> Result<Vec<u8>, Diagnostics> {
     let filename = loc.file();
     let start_offset = loc.span().start().0 as usize;
     let mut context = Context::new(filename, start_offset);
     let mut buffer = vec![];
     let chars: Vec<_> = text.chars().collect();
     decode_(&mut context, &mut buffer, chars);
-    if !context.has_errors() {
+    if !context.has_diags() {
         Ok(buffer)
     } else {
-        Err(context.get_errors())
+        Err(context.get_diags())
     }
 }
 

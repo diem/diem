@@ -175,7 +175,11 @@ impl Errors {
         self.new_fmt.add(error)
     }
 
-    pub fn extend(&mut self, errors: Self) {
+    pub fn extend(&mut self, diags: new::Diagnostics) {
+        self.new_fmt.extend(diags)
+    }
+
+    pub fn extend_deprecated(&mut self, errors: Self) {
         self.old_fmt.extend(errors.old_fmt);
         self.new_fmt.extend(errors.new_fmt)
     }
@@ -185,12 +189,12 @@ impl Errors {
         let Self { old_fmt, new_fmt } = self;
         let mut v = old_fmt;
 
-        for err in new_fmt.0 {
+        for diag in new_fmt.diagnostics {
             let new::Diagnostic {
                 info: _,
                 primary_label,
                 secondary_labels,
-            } = err;
+            } = diag;
             let mut inner_v = vec![primary_label];
             inner_v.extend(secondary_labels);
             v.push(inner_v)
@@ -225,11 +229,21 @@ impl From<Vec<Error>> for Errors {
         }
     }
 }
+
 impl From<Vec<new::Diagnostic>> for Errors {
     fn from(v: Vec<new::Diagnostic>) -> Self {
         Self {
             old_fmt: vec![],
             new_fmt: new::Diagnostics::from(v),
+        }
+    }
+}
+
+impl From<new::Diagnostics> for Errors {
+    fn from(new_fmt: new::Diagnostics) -> Self {
+        Self {
+            old_fmt: vec![],
+            new_fmt,
         }
     }
 }

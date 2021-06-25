@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/native_main.move:2:1 ───
-   │
- 2 │ native fun main();
-   │ ^^^^^^ 'native' functions can only be declared inside a module
-   │
+error[E01003]: invalid modifier
+  ┌─ tests/move_check/parser/native_main.move:2:1
+  │
+2 │ native fun main();
+  │ ^^^^^^ 'native' functions can only be declared inside a module
 

@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/typing/type_variable_join_single_pack.move:2:19 ───
-   │
- 2 │     struct Box<T> copy, drop { f1: T, f2: T }
-   │                   ^^^^ Unexpected 'copy'
-   ·
- 2 │     struct Box<T> copy, drop { f1: T, f2: T }
-   │                   ---- Expected '{'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/typing/type_variable_join_single_pack.move:2:19
+  │
+2 │     struct Box<T> copy, drop { f1: T, f2: T }
+  │                   ^^^^
+  │                   │
+  │                   Unexpected 'copy'
+  │                   Expected '{'
 

@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/let_binding_missing_semicolon.move:4:5 ───
-   │
- 4 │     }
-   │     ^ Unexpected '}'
-   ·
- 4 │     }
-   │     - Expected ';'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/let_binding_missing_semicolon.move:4:5
+  │
+4 │     }
+  │     ^
+  │     │
+  │     Unexpected '}'
+  │     Expected ';'
 

@@ -420,7 +420,7 @@ fn function_body(
 
             let (mut cfg, infinite_loop_starts, errors) =
                 BlockCFG::new(start, &mut blocks, &block_info);
-            context.env.add_errors(errors);
+            context.env.add_errors_deprecated(errors);
 
             cfgir::refine_inference_and_verify(
                 context.env,

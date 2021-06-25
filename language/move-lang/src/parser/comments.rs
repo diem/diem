@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::errors::*;
+use crate::{
+    diag,
+    errors::{diagnostic_codes::*, new::Diagnostics},
+};
 use codespan::{ByteIndex, Span};
 use move_ir_types::location::*;
 use std::{collections::BTreeMap, iter::Peekable, str::Chars};
@@ -39,7 +42,7 @@ pub fn is_permitted_char(c: char) -> bool {
     is_permitted_printable_char(c) || is_permitted_newline_char(c)
 }
 
-fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
+fn verify_string(fname: &'static str, string: &str) -> Result<(), Diagnostics> {
     match string
         .chars()
         .enumerate()
@@ -54,7 +57,10 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
                  tabs (\\t), and line endings (\\n) are permitted.",
                 chr
             );
-            Err(Errors::from(vec![vec![(loc, msg)]]))
+            Err(Diagnostics::from(vec![diag!(
+                Syntax::InvalidCharacter,
+                (loc, msg)
+            )]))
         }
     }
 }
@@ -69,7 +75,10 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
 /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
 /// span in the returned map, however, covers the whole region of the comment, including the
 /// delimiters.
-fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileCommentMap), Errors> {
+fn strip_comments(
+    fname: &'static str,
+    input: &str,
+) -> Result<(String, FileCommentMap), Diagnostics> {
     const SLASH: char = '/';
     const SPACE: char = ' ';
     const STAR: char = '*';
@@ -212,16 +221,14 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
                 // try to point to last real character
                 pos -= 1;
             }
-            return Err(Errors::from(vec![vec![
-                (
-                    Loc::new(fname, Span::new(pos, pos)),
-                    "unclosed block comment".to_string(),
-                ),
-                (
-                    Loc::new(fname, Span::new(comment_start_pos, comment_start_pos + 2)),
-                    "begin of unclosed block comment".to_string(),
-                ),
-            ]]));
+            let loc = Loc::new(fname, Span::new(pos, pos));
+            let start_loc = Loc::new(fname, Span::new(comment_start_pos, comment_start_pos + 2));
+            let diag = diag!(
+                Syntax::InvalidDocComment,
+                (loc, "Unclosed block comment"),
+                (start_loc, "Unclosed block comment starts here"),
+            );
+            return Err(Diagnostics::from(vec![diag]));
         }
         State::Source | State::String => {}
     }
@@ -234,7 +241,7 @@ fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileComme
 pub(crate) fn strip_comments_and_verify(
     fname: &'static str,
     string: &str,
-) -> Result<(String, FileCommentMap), Errors> {
+) -> Result<(String, FileCommentMap), Diagnostics> {
     verify_string(fname, string)?;
     strip_comments(fname, string)
 }

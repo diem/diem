@@ -44,7 +44,7 @@ fn collect_states_and_errors<State>(map: InvariantMap<State>) -> (BTreeMap<Label
         .into_iter()
         .map(|(lbl, BlockInvariant { pre, post })| {
             if let BlockPostcondition::Error(es) = post {
-                errors.extend(es)
+                errors.extend_deprecated(es)
             }
             (lbl, pre)
         })
@@ -150,7 +150,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         let mut state = pre_state.clone();
         let mut errors = Errors::new();
         for (idx, cmd) in cfg.commands(block_lbl) {
-            errors.extend(self.execute(&mut state, block_lbl, idx, cmd));
+            errors.extend_deprecated(self.execute(&mut state, block_lbl, idx, cmd));
         }
         (state, errors)
     }

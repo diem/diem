@@ -1,4 +1,4 @@
-error[E01005]: syntax item restricted to spec contexts
+error[E01010]: syntax item restricted to spec contexts
   ┌─ tests/move_check/expansion/spec_block_in_spec_context.move:5:13
   │
 5 │             spec {};

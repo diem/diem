@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/function_visibility_multiple.move:2:19 ───
-   │
- 2 │     public(script script) fun f() {}
-   │                   ^^^^^^ Unexpected 'script'
-   ·
- 2 │     public(script script) fun f() {}
-   │                   ------ Expected ')'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/function_visibility_multiple.move:2:19
+  │
+2 │     public(script script) fun f() {}
+  │                   ^^^^^^
+  │                   │
+  │                   Unexpected 'script'
+  │                   Expected ')'
 

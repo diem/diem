@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/use_inner_scope_invalid.move:6:9 ───
-   │
- 6 │         use 0x1::M::foo;
-   │         ^^^ Unexpected 'use'
-   ·
- 6 │         use 0x1::M::foo;
-   │         --- Expected an expression term
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/use_inner_scope_invalid.move:6:9
+  │
+6 │         use 0x1::M::foo;
+  │         ^^^
+  │         │
+  │         Unexpected 'use'
+  │         Expected an expression term
 

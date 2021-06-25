@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::errors::diagnostic_codes::{DiagnosticCode, DiagnosticInfo};
+use crate::errors::diagnostic_codes::{DiagnosticCode, DiagnosticInfo, Severity};
 use codespan_reporting_new::{
     self as csr,
     files::SimpleFiles,
@@ -9,7 +9,7 @@ use codespan_reporting_new::{
 };
 use move_ir_types::location::*;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     iter::FromIterator,
     ops::Range,
 };
@@ -31,7 +31,10 @@ pub struct Diagnostic {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Default)]
-pub struct Diagnostics(pub(crate) Vec<Diagnostic>);
+pub struct Diagnostics {
+    pub(crate) diagnostics: Vec<Diagnostic>,
+    pub(crate) severity_count: BTreeMap<Severity, usize>,
+}
 
 //**************************************************************************************************
 // Reporting
@@ -57,13 +60,13 @@ fn render_diagnostics(
     file_mapping: &FileMapping,
     mut diags: Diagnostics,
 ) {
-    diags.0.sort_by(|e1, e2| {
+    diags.diagnostics.sort_by(|e1, e2| {
         let loc1: &Loc = &e1.primary_label.0;
         let loc2: &Loc = &e2.primary_label.0;
         loc1.cmp(loc2)
     });
     let mut seen: HashSet<Diagnostic> = HashSet::new();
-    for diag in diags.0 {
+    for diag in diags.diagnostics {
         if seen.contains(&diag) {
             continue;
         }
@@ -115,27 +118,47 @@ fn render_diagnostic(
 
 impl Diagnostics {
     pub fn new() -> Self {
-        Self(vec![])
+        Self {
+            diagnostics: vec![],
+            severity_count: BTreeMap::new(),
+        }
+    }
+
+    pub fn max_severity(&self) -> Severity {
+        debug_assert!(self.severity_count.values().all(|count| *count > 0));
+        self.severity_count
+            .iter()
+            .max_by_key(|(sev, _count)| **sev)
+            .map(|(sev, _count)| *sev)
+            .unwrap_or(Severity::MIN)
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.diagnostics.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.diagnostics.len()
     }
 
     pub fn add(&mut self, diag: Diagnostic) {
-        self.0.push(diag)
+        *self.severity_count.entry(diag.info.severity).or_insert(0) += 1;
+        self.diagnostics.push(diag)
     }
 
-    pub fn extend(&mut self, diags: Self) {
-        self.0.extend(diags.0)
+    pub fn extend(&mut self, other: Self) {
+        let Self {
+            diagnostics,
+            severity_count,
+        } = other;
+        for (sev, count) in severity_count {
+            *self.severity_count.entry(sev).or_insert(0) += count;
+        }
+        self.diagnostics.extend(diagnostics)
     }
 
     pub fn into_vec(self) -> Vec<Diagnostic> {
-        self.0
+        self.diagnostics
     }
 }
 
@@ -153,6 +176,22 @@ impl Diagnostic {
                 .map(|(loc, msg)| (loc, msg.to_string()))
                 .collect(),
         }
+    }
+
+    #[allow(unused)]
+    pub(crate) fn add_secondary_labels(
+        &mut self,
+        additional_labels: impl IntoIterator<Item = (Loc, impl ToString)>,
+    ) {
+        self.secondary_labels.extend(
+            additional_labels
+                .into_iter()
+                .map(|(loc, msg)| (loc, msg.to_string())),
+        )
+    }
+
+    pub(crate) fn add_secondary_label(&mut self, (loc, msg): (Loc, impl ToString)) {
+        self.secondary_labels.push((loc, msg.to_string()))
     }
 }
 
@@ -172,12 +211,20 @@ macro_rules! diag {
 
 impl FromIterator<Diagnostic> for Diagnostics {
     fn from_iter<I: IntoIterator<Item = Diagnostic>>(iter: I) -> Self {
-        Self(iter.into_iter().collect())
+        let diagnostics = iter.into_iter().collect::<Vec<_>>();
+        Self::from(diagnostics)
     }
 }
 
 impl From<Vec<Diagnostic>> for Diagnostics {
-    fn from(v: Vec<Diagnostic>) -> Self {
-        Self(v)
+    fn from(diagnostics: Vec<Diagnostic>) -> Self {
+        let mut severity_count = BTreeMap::new();
+        for diag in &diagnostics {
+            *severity_count.entry(diag.info.severity).or_insert(0) += 1;
+        }
+        Self {
+            diagnostics,
+            severity_count,
+        }
     }
 }

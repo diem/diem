@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/parser/attribute_no_closing_bracket.move:4:5 ───
-   │
- 4 │     fun foo() {}
-   │     ^ Expected ']'
-   ·
- 3 │     #[attr = 0
-   │      - To match this '['
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/attribute_no_closing_bracket.move:4:5
+  │
+3 │     #[attr = 0
+  │      - To match this '['
+4 │     fun foo() {}
+  │     ^ Expected ']'
 

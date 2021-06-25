@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/parser/comments_unbalanced.move:5:2 ───
-   │
- 5 │ }
-   │  ^ unclosed block comment
-   ·
- 3 │     /** This comment must be closed.
-   │     -- begin of unclosed block comment
-   │
+warning[W01004]: invalid documentation comment
+  ┌─ tests/move_check/parser/comments_unbalanced.move:5:2
+  │
+3 │     /** This comment must be closed.
+  │     -- Unclosed block comment starts here
+4 │     fun f() { }
+5 │ }
+  │  ^ Unclosed block comment
 

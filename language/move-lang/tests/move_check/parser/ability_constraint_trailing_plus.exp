@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/ability_constraint_trailing_plus.move:4:22 ───
-   │
- 4 │     fun foo<T: copy +>() {}
-   │                      ^ Unexpected '>'. Expected a type ability, one of: 'copy', 'drop', 'store', or 'key'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/ability_constraint_trailing_plus.move:4:22
+  │
+4 │     fun foo<T: copy +>() {}
+  │                      ^ Unexpected '>'. Expected a type ability, one of: 'copy', 'drop', 'store', or 'key'
 

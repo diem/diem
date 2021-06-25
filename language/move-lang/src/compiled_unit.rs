@@ -203,7 +203,7 @@ pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Errors) {
     for unit in units {
         let (unit, es) = unit.verify();
         new_units.push(unit);
-        errors.extend(es);
+        errors.extend_deprecated(es);
     }
     (new_units, errors)
 }

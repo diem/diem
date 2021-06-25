@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/expansion/use_spec_function_as_normal_function.move:4:16 ───
-   │
- 4 │         define foo(): bool { true }
-   │                ^^^ Unexpected 'foo'
-   ·
- 4 │         define foo(): bool { true }
-   │                --- Expected ':'
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/expansion/use_spec_function_as_normal_function.move:4:16
+  │
+4 │         define foo(): bool { true }
+  │                ^^^
+  │                │
+  │                Unexpected 'foo'
+  │                Expected ':'
 

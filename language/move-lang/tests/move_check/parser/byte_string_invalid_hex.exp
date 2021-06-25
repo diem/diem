@@ -1,4 +1,4 @@
-error[E01002]: invalid byte string
+error[E01007]: invalid byte string
   ┌─ tests/move_check/parser/byte_string_invalid_hex.move:3:18
   │
 3 │         b"diem \xG0"

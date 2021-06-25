@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/struct_type_extra_comma.move:2:14 ───
-   │
- 2 │     struct S<,T> { } // Test a comma before the first type parameter
-   │              ^ Expected a type parameter
-   │
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/struct_type_extra_comma.move:2:14
+  │
+2 │     struct S<,T> { } // Test a comma before the first type parameter
+  │              ^ Expected a type parameter
 

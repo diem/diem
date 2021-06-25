@@ -1,4 +1,4 @@
-error[E01002]: invalid byte string
+error[E01007]: invalid byte string
   ┌─ tests/move_check/parser/byte_string_invalid_escaped_sequence.move:3:15
   │
 3 │         b"libr\a"

@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/constant_native.move:3:5 ───
-   │
- 3 │     native const Foo: u64 = 0;
-   │     ^^^^^^ Invalid constant declaration. 'native' constants are not supported
-   │
+error[E01003]: invalid modifier
+  ┌─ tests/move_check/parser/constant_native.move:3:5
+  │
+3 │     native const Foo: u64 = 0;
+  │     ^^^^^^ Invalid constant declaration. 'native' constants are not supported
 

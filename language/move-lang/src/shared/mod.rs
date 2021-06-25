@@ -3,7 +3,10 @@
 
 use crate::{
     command_line as cli,
-    errors::{new::Diagnostic, Errors},
+    errors::{
+        new::{Diagnostic, Diagnostics},
+        Errors,
+    },
 };
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
@@ -253,8 +256,12 @@ impl CompilationEnv {
         self.errors.add(diag)
     }
 
-    pub fn add_errors(&mut self, es: Errors) {
-        self.errors.extend(es)
+    pub fn add_diags(&mut self, diags: Diagnostics) {
+        self.errors.extend(diags)
+    }
+
+    pub fn add_errors_deprecated(&mut self, es: Errors) {
+        self.errors.extend_deprecated(es)
     }
 
     pub fn has_errors(&self) -> bool {

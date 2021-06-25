@@ -390,7 +390,7 @@ impl BorrowState {
                     Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
                         format!("Invalid return. Local '{}' is still being borrowed.", local)
                     });
-                errors.extend(local_errors)
+                errors.extend_deprecated(local_errors)
             }
         }
 
@@ -404,7 +404,7 @@ impl BorrowState {
                         resource
                     )
                 });
-            errors.extend(resource_errors)
+            errors.extend_deprecated(resource_errors)
         }
 
         // check any returned reference is not borrowed
@@ -418,7 +418,7 @@ impl BorrowState {
                             .into()
                     };
                     let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                    errors.extend(es);
+                    errors.extend_deprecated(es);
                 }
                 _ => (),
             }
@@ -606,7 +606,7 @@ impl BorrowState {
             // TODO point to location of acquire
             let msg = || format!("Invalid acquiring of resource '{}'", resource);
             let es = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
-            errors.extend(es);
+            errors.extend_deprecated(es);
         }
 
         // Check mutable arguments are not borrowed
@@ -620,7 +620,7 @@ impl BorrowState {
                         .into()
                 };
                 let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                errors.extend(es);
+                errors.extend_deprecated(es);
             });
 
         let mut all_parents = BTreeSet::new();
