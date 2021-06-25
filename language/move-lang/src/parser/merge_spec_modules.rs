@@ -63,8 +63,8 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
     for (_, m) in spec_modules {
         compilation_env.add_error_deprecated(vec![(
             m.name.loc(),
-            "Cannot associate specification with any target module in this compilation. \
-                    A module specification cannot be compiled standalone."
+            "Cannot associate specification with any target module in this compilation. A module \
+             specification cannot be compiled standalone."
                 .to_owned(),
         )]);
     }

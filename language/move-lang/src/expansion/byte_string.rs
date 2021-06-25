@@ -1,7 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::*, parser::syntax::make_loc};
+use crate::{
+    diag,
+    errors::{diagnostic_codes::*, *},
+    parser::syntax::make_loc,
+};
 use move_ir_types::location::*;
 
 #[derive(Default)]
@@ -21,14 +25,13 @@ impl Context {
     }
 
     fn error(&mut self, start: usize, end: usize, err_text: String) {
-        self.errors.add_deprecated(vec![(
-            make_loc(
-                self.filename,
-                self.start_offset + 2 + start, // add 2 for the beginning of the string
-                self.start_offset + 2 + end,
-            ),
-            err_text,
-        )])
+        let loc = make_loc(
+            self.filename,
+            self.start_offset + 2 + start, // add 2 for the beginning of the string
+            self.start_offset + 2 + end,
+        );
+        self.errors
+            .add(diag!(Syntax::InvalidByteString, (loc, err_text)))
     }
 
     fn has_errors(&self) -> bool {

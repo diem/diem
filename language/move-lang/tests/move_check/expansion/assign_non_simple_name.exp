@@ -1,101 +1,79 @@
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:16:9 ───
-    │
- 16 │         X::S = ();
-    │         ^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:16:9
+   │
+16 │         X::S = ();
+   │         ^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. 'X::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:17:9 ───
-    │
- 17 │         Self::S<u64> = ();
-    │         ^^^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:17:9
+   │
+17 │         Self::S<u64> = ();
+   │         ^^^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. 'Self::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:18:9 ───
-    │
- 18 │         Self::R = ();
-    │         ^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:18:9
+   │
+18 │         Self::R = ();
+   │         ^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. 'Self::R {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:22:9 ───
-    │
- 22 │         0x42::X::S = ();
-    │         ^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:22:9
+   │
+22 │         0x42::X::S = ();
+   │         ^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::X::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:23:9 ───
-    │
- 23 │         0x42::M::S<u64> = ();
-    │         ^^^^^^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:23:9
+   │
+23 │         0x42::M::S<u64> = ();
+   │         ^^^^^^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::M::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:24:9 ───
-    │
- 24 │         0x42::M::R = ();
-    │         ^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:24:9
+   │
+24 │         0x42::M::R = ();
+   │         ^^^^^^^^^^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::M::R {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:28:9 ───
-    │
- 28 │         x<u64> = ();
-    │         ^^^^^^ Unexpected assignment of instantiated type without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:28:9
+   │
+28 │         x<u64> = ();
+   │         ^^^^^^ Unexpected assignment of instantiated type without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. 'x {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:29:9 ───
-    │
- 29 │         S<u64> = ();
-    │         ^^^^^^ Unexpected assignment of instantiated type without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:29:9
+   │
+29 │         S<u64> = ();
+   │         ^^^^^^ Unexpected assignment of instantiated type without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. 'S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:33:9 ───
-    │
- 33 │         X = ();
-    │         ^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:33:9
+   │
+33 │         X = ();
+   │         ^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::X::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:34:9 ───
-    │
- 34 │         S = ();
-    │         ^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:34:9
+   │
+34 │         S = ();
+   │         ^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::M::S {}'
-    │
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:35:9 ───
-    │
- 35 │         R = ();
-    │         ^ Unexpected assignment of module access without fields outside of a spec context.
+error[E01005]: syntax item restricted to spec contexts
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:35:9
+   │
+35 │         R = ();
+   │         ^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::M::R {}'
-    │
 
 error: 
 

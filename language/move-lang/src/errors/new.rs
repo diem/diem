@@ -162,7 +162,7 @@ macro_rules! diag {
         crate::errors::new::Diagnostic::new($code, $primary, std::iter::empty::<(Loc, String)>())
     }};
     ($code: expr, $primary: expr, $($secondary: expr),+ $(,)?) => {{
-        crate::errors::new::Diagnostic::new($code, $primary, $(vec![$secondary, ])*)
+        crate::errors::new::Diagnostic::new($code, $primary, vec![$($secondary, )*])
     }};
 }
 

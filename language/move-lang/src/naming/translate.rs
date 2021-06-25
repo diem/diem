@@ -530,7 +530,7 @@ fn function_acquires(
             context.env.add_diag(diag!(
                 Declarations::DuplicateItem,
                 (new_loc, "Duplicate acquires item"),
-                (old_loc, "Previously listed here"),
+                (old_loc, "Item previously listed here"),
             ))
         }
     }
@@ -692,7 +692,10 @@ fn type_parameters(
                 context.env.add_diag(diag!(
                     Declarations::DuplicateItem,
                     (loc, msg),
-                    (old_loc, "Previously defined here".to_string()),
+                    (
+                        old_loc,
+                        "Type parameter previously defined here".to_string()
+                    ),
                 ))
             }
             tp

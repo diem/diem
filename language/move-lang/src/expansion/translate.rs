@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::*,
+    diag,
+    errors::{diagnostic_codes::*, new::Diagnostic},
     expansion::{
         address_map::build_address_map,
         aliases::{AliasMap, AliasSet},
@@ -76,16 +77,6 @@ impl<'env> Context<'env> {
         }
         for alias in members {
             unused_alias(self, alias)
-        }
-    }
-
-    /// Produces an error if translation is not in specification context.
-    pub fn require_spec_context(&mut self, loc: Loc, item: &str) -> bool {
-        if self.in_spec_context {
-            true
-        } else {
-            self.env.add_error_deprecated(vec![(loc, item)]);
-            false
         }
     }
 
@@ -226,12 +217,12 @@ fn definition(
     }
 }
 
-fn unbound_address_error(suggest_declaration: bool, loc: Loc, n: &Name) -> Error {
-    let mut msg = format!("Unbound address '{}'", n,);
+fn unbound_address_error(suggest_declaration: bool, loc: Loc, n: &Name) -> Diagnostic {
+    let mut msg = format!("Unbound address '{}'", n);
     if suggest_declaration {
         msg = format!("{}. Try declaring it with 'address {};'", msg, n)
     }
-    vec![(loc, msg)]
+    diag!(NameResolution::UnboundAddress, (loc, msg))
 }
 
 // Access a top level address as declared, not affected by any aliasing/shadowing
@@ -254,11 +245,7 @@ fn address_impl(
         P::LeadingNameAccess_::AnonymousAddress(bytes) => Address::Anonymous(sp(loc, bytes)),
         P::LeadingNameAccess_::Name(n) => {
             if address_mapping.get(&n).is_none() {
-                compilation_env.add_error_deprecated(unbound_address_error(
-                    suggest_declaration,
-                    loc,
-                    &n,
-                ));
+                compilation_env.add_diag(unbound_address_error(suggest_declaration, loc, &n));
             }
             Address::Named(n)
         }
@@ -290,9 +277,11 @@ fn check_module_address(
             } else {
                 "Multiple addresses specified for module"
             };
-            context
-                .env
-                .add_error_deprecated(vec![(other_loc, msg), (loc, "Previously specified here")]);
+            context.env.add_diag(diag!(
+                Declarations::DuplicateItem,
+                (other_loc, msg),
+                (loc, "Address previously specified here")
+            ));
             sp(other_loc, other_addr)
         }
         None => sp(loc, addr),
@@ -309,10 +298,11 @@ fn module(
     let (mident, mod_) = module_(context, module_address, module_def);
     if let Err((mident, old_loc)) = module_map.add(mident, mod_) {
         let mmsg = format!("Duplicate definition for module '{}'", mident);
-        context.env.add_error_deprecated(vec![
+        context.env.add_diag(diag!(
+            Declarations::DuplicateItem,
             (mident.loc, mmsg),
-            (old_loc, "Previously defined here".into()),
-        ]);
+            (old_loc, "Module previously defined here"),
+        ));
     }
     context.address = None
 }
@@ -332,7 +322,9 @@ fn set_sender_address(
                  address 'module <address>::{}''",
                 module_name
             );
-            context.env.add_error_deprecated(vec![(loc, msg)]);
+            context
+                .env
+                .add_diag(diag!(Declarations::InvalidModule, (loc, msg)));
             Address::Anonymous(sp(loc, AddressBytes::DEFAULT_ERROR_BYTES))
         }
     })
@@ -361,7 +353,9 @@ fn module_(
             "Invalid module name '{}'. Module names cannot start with '_'",
             name,
         );
-        context.env.add_error_deprecated(vec![(name.loc(), msg)]);
+        context
+            .env
+            .add_diag(diag!(Declarations::InvalidName, (name.loc(), msg)));
     }
 
     let name = name;
@@ -468,16 +462,23 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
                 function.visibility,
                 Visibility::SCRIPT,
             );
-            context.env.add_error_deprecated(vec![(*loc, msg)]);
+            context
+                .env
+                .add_diag(diag!(Declarations::UnnecessaryItem, (*loc, msg)));
         }
         Visibility::Internal => (),
     }
     match &function.body {
         sp!(_, E::FunctionBody_::Defined(_)) => (),
-        sp!(loc, E::FunctionBody_::Native) => context.env.add_error_deprecated(vec![(
-            *loc,
-            "Invalid 'native' function. This top-level function must have a defined body",
-        )]),
+        sp!(loc, E::FunctionBody_::Native) => {
+            context.env.add_diag(diag!(
+                Declarations::InvalidScript,
+                (
+                    *loc,
+                    "Invalid 'native' function. 'script' functions must have a defined body"
+                )
+            ));
+        }
     }
     let specs = specs(context, pspecs);
     context.set_to_outer_scope(old_aliases);
@@ -707,11 +708,14 @@ fn aliases_from_member(
 }
 
 fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
-    let unbound_module = |mident: &ModuleIdent| -> Error {
-        vec![(
-            mident.loc,
-            format!("Invalid 'use'. Unbound module: '{}'", mident),
-        )]
+    let unbound_module = |mident: &ModuleIdent| -> Diagnostic {
+        diag!(
+            NameResolution::UnboundModule,
+            (
+                mident.loc,
+                format!("Invalid 'use'. Unbound module: '{}'", mident),
+            )
+        )
     };
     macro_rules! add_module_alias {
         ($ident:expr, $alias_opt:expr) => {{
@@ -729,7 +733,7 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
         P::Use::Module(pmident, alias_opt) => {
             let mident = module_ident(context, pmident);
             if !context.module_members.contains_key(&mident) {
-                context.env.add_error_deprecated(unbound_module(&mident));
+                context.env.add_diag(unbound_module(&mident));
                 return;
             };
             add_module_alias!(mident, alias_opt.map(|m| m.0))
@@ -739,7 +743,7 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
             let members = match context.module_members.get(&mident) {
                 Some(members) => members,
                 None => {
-                    context.env.add_error_deprecated(unbound_module(&mident));
+                    context.env.add_diag(unbound_module(&mident));
                     return;
                 }
             };
@@ -766,10 +770,11 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
                             "Invalid 'use'. Unbound member '{}' in module '{}'",
                             member, mident
                         );
-                        context.env.add_error_deprecated(vec![
+                        context.env.add_diag(diag!(
+                            NameResolution::UnboundModuleMember,
                             (member.loc, msg),
                             (mloc, format!("Module '{}' declared here", mident)),
-                        ]);
+                        ));
                         continue;
                     }
                     Some(m) => m,
@@ -794,10 +799,11 @@ fn duplicate_module_alias(context: &mut Context, old_loc: Loc, alias: Name) {
         "Duplicate module alias '{}'. Module aliases must be unique within a given namespace",
         alias
     );
-    context.env.add_error_deprecated(vec![
+    context.env.add_diag(diag!(
+        Declarations::DuplicateItem,
         (alias.loc, msg),
-        (old_loc, "Previously defined here".into()),
-    ])
+        (old_loc, "Alias previously defined here"),
+    ));
 }
 
 fn duplicate_module_member(context: &mut Context, old_loc: Loc, alias: Name) {
@@ -805,10 +811,11 @@ fn duplicate_module_member(context: &mut Context, old_loc: Loc, alias: Name) {
         "Duplicate module member or alias '{}'. Top level names in a namespace must be unique",
         alias
     );
-    context.env.add_error_deprecated(vec![
+    context.env.add_diag(diag!(
+        Declarations::DuplicateItem,
         (alias.loc, msg),
-        (old_loc, "Previously defined here".into()),
-    ])
+        (old_loc, "Alias previously defined here"),
+    ));
 }
 
 fn unused_alias(context: &mut Context, alias: Name) {
@@ -816,10 +823,13 @@ fn unused_alias(context: &mut Context, alias: Name) {
         return;
     }
 
-    context.env.add_error_deprecated(vec![(
-        alias.loc,
-        format!("Unused 'use' of alias '{}'. Consider removing it", alias),
-    )])
+    context.env.add_diag(diag!(
+        UnusedItem::Alias,
+        (
+            alias.loc,
+            format!("Unused 'use' of alias '{}'. Consider removing it", alias)
+        ),
+    ))
 }
 
 //**************************************************************************************************
@@ -878,7 +888,8 @@ fn struct_fields(
     for (idx, (field, pt)) in pfields_vec.into_iter().enumerate() {
         let t = type_(context, pt);
         if let Err((field, old_loc)) = field_map.add(field, (idx, t)) {
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                Declarations::DuplicateItem,
                 (
                     field.loc(),
                     format!(
@@ -886,8 +897,8 @@ fn struct_fields(
                         field, sname
                     ),
                 ),
-                (old_loc, "Previously defined here".into()),
-            ]);
+                (old_loc, "Field previously defined here"),
+            ));
         }
     }
     E::StructFields::Defined(field_map)
@@ -911,10 +922,11 @@ fn friend(
                      unique",
                     mident
                 );
-                context.env.add_error_deprecated(vec![
+                context.env.add_diag(diag!(
+                    Declarations::DuplicateItem,
                     (friend.loc, msg),
-                    (old_friend.loc, "Previously declared here".into()),
-                ]);
+                    (old_friend.loc, "Friend previously declared here"),
+                ));
             }
         },
         None => assert!(context.env.has_errors()),
@@ -1255,10 +1267,11 @@ fn ability_set(context: &mut Context, case: &str, abilities_vec: Vec<Ability>) -
     for ability in abilities_vec {
         let loc = ability.loc;
         if let Err(prev_loc) = set.add(ability) {
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                Declarations::DuplicateItem,
                 (loc, format!("Duplicate '{}' ability {}", ability, case)),
-                (prev_loc, "Previously given".to_string()),
-            ])
+                (prev_loc, "Ability previously given here")
+            ));
         }
     }
     set
@@ -1300,14 +1313,15 @@ fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {
         }
         PT::Ref(mut_, inner) => ET::Ref(mut_, Box::new(type_(context, *inner))),
         PT::Fun(args, result) => {
-            if context
-                .require_spec_context(loc, "`|_|_` function type only allowed in specifications")
-            {
+            if context.in_spec_context {
                 let args = types(context, args);
                 let result = type_(context, *result);
                 ET::Fun(args, Box::new(result))
             } else {
-                assert!(context.env.has_errors());
+                context.env.add_diag(diag!(
+                    Syntax::SpecContextRestricted,
+                    (loc, "`|_|_` function type only allowed in specifications")
+                ));
                 ET::UnresolvedError
             }
         }
@@ -1356,15 +1370,16 @@ fn name_access_chain(
         (_, PN::Two(sp!(nloc, LN::AnonymousAddress(_)), _)) => {
             context
                 .env
-                .add_error_deprecated(unexpected_address_module_error(loc, nloc, access));
+                .add_diag(unexpected_address_module_error(loc, nloc, access));
             return None;
         }
 
         (_, PN::Two(sp!(_, LN::Name(n1)), n2)) => match context.aliases.module_alias_get(&n1) {
             None => {
-                context
-                    .env
-                    .add_error_deprecated(vec![(n1.loc, format!("Unbound module alias '{}'", n1))]);
+                context.env.add_diag(diag!(
+                    NameResolution::UnboundModule,
+                    (n1.loc, format!("Unbound module alias '{}'", n1))
+                ));
                 return None;
             }
             Some(mident) => EN::ModuleAccess(mident.clone(), n2),
@@ -1386,10 +1401,10 @@ fn name_access_chain_to_module_ident(
     match pn_ {
         PN::One(name) => match context.aliases.module_alias_get(&name) {
             None => {
-                context.env.add_error_deprecated(vec![(
-                    name.loc,
-                    format!("Unbound module alias '{}'", name),
-                )]);
+                context.env.add_diag(diag!(
+                    NameResolution::UnboundModule,
+                    (name.loc, format!("Unbound module alias '{}'", name)),
+                ));
                 None
             }
             Some(mident) => Some(mident.clone()),
@@ -1408,16 +1423,19 @@ fn name_access_chain_to_module_ident(
                 module: ModuleName(n),
             };
             let _ = module_ident(context, sp(ident_loc, pmident_));
-            context.env.add_error_deprecated(vec![(
-                mem.loc,
-                "Unexpected module member access. Expected a module identifier only",
-            )]);
+            context.env.add_diag(diag!(
+                NameResolution::NamePositionMismatch,
+                (
+                    mem.loc,
+                    "Unexpected module member access. Expected a module identifier only",
+                )
+            ));
             None
         }
     }
 }
 
-fn unexpected_address_module_error(loc: Loc, nloc: Loc, access: Access) -> Error {
+fn unexpected_address_module_error(loc: Loc, nloc: Loc, access: Access) -> Diagnostic {
     let case = match access {
         Access::Type | Access::ApplyNamed | Access::ApplyPositional => "type",
         Access::Term => "expression",
@@ -1426,10 +1444,11 @@ fn unexpected_address_module_error(loc: Loc, nloc: Loc, access: Access) -> Error
         "Unexpected module identifier. A module identifier is not a valid {}",
         case
     );
-    vec![
+    diag!(
+        NameResolution::NamePositionMismatch,
         (loc, unexpected_msg),
         (nloc, "Expected a module name".to_owned()),
-    ]
+    )
 }
 
 //**************************************************************************************************
@@ -1525,14 +1544,15 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         },
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
-        PE::Name(_, Some(_))
-            if !context.require_spec_context(
-                loc,
-                "Expected name to be followed by a brace-enclosed list of field expressions or a \
-                 parenthesized list of arguments for a function call",
-            ) =>
-        {
-            assert!(context.env.has_errors());
+        PE::Name(_, Some(_)) if !context.in_spec_context => {
+            context.env.add_diag(diag!(
+                Syntax::SpecContextRestricted,
+                (
+                    loc,
+                    "Expected name to be followed by a brace-enclosed list of field expressions \
+                     or a parenthesized list of arguments for a function call",
+                )
+            ));
             EE::UnresolvedError
         }
         PE::Name(pn, ptys_opt) => {
@@ -1587,8 +1607,11 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::Lambda(pbs, pe) => {
-            if !context.require_spec_context(loc, "expression only allowed in specifications") {
-                assert!(context.env.has_errors());
+            if !context.in_spec_context {
+                context.env.add_diag(diag!(
+                    Syntax::SpecContextRestricted,
+                    (loc, "lambda expression only allowed in specifications"),
+                ));
                 EE::UnresolvedError
             } else {
                 let bs_opt = bind_list(context, pbs);
@@ -1603,8 +1626,11 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         }
         PE::Quant(k, prs, ptrs, pc, pe) => {
-            if !context.require_spec_context(loc, "expression only allowed in specifications") {
-                assert!(context.env.has_errors());
+            if !context.in_spec_context {
+                context.env.add_diag(diag!(
+                    Syntax::SpecContextRestricted,
+                    (loc, "quantifer expression only allowed in specifications")
+                ));
                 EE::UnresolvedError
             } else {
                 let rs_opt = bind_with_range_list(context, prs);
@@ -1654,16 +1680,14 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Dereference(pe) => EE::Dereference(exp(context, *pe)),
         PE::UnaryExp(op, pe) => EE::UnaryExp(op, exp(context, *pe)),
         PE::BinopExp(pl, op, pr) => {
-            if op.value.is_spec_only()
-                && !context.require_spec_context(
-                    loc,
-                    &format!(
-                        "`{}` operator only allowed in specifications",
-                        op.value.symbol()
-                    ),
-                )
-            {
-                assert!(context.env.has_errors());
+            if op.value.is_spec_only() && !context.in_spec_context {
+                let msg = format!(
+                    "`{}` operator only allowed in specifications",
+                    op.value.symbol()
+                );
+                context
+                    .env
+                    .add_diag(diag!(Syntax::SpecContextRestricted, (loc, msg)));
                 EE::UnresolvedError
             } else {
                 EE::BinopExp(exp(context, *pl), op, exp(context, *pr))
@@ -1679,20 +1703,22 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         },
         PE::Cast(e, ty) => EE::Cast(exp(context, *e), type_(context, ty)),
         PE::Index(e, i) => {
-            if context
-                .require_spec_context(loc, "`_[_]` index operator only allowed in specifications")
-            {
+            if context.in_spec_context {
                 EE::Index(exp(context, *e), exp(context, *i))
             } else {
+                let msg = "`_[_]` index operator only allowed in specifications";
+                context
+                    .env
+                    .add_diag(diag!(Syntax::SpecContextRestricted, (loc, msg)));
                 EE::UnresolvedError
             }
         }
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
         PE::Spec(_) if context.in_spec_context => {
-            context.env.add_error_deprecated(vec![(
-                loc,
-                "'spec' blocks cannot be used inside of a spec context",
-            )]);
+            context.env.add_diag(diag!(
+                Syntax::SpecContextRestricted,
+                (loc, "'spec' blocks cannot be used inside of a spec context",)
+            ));
             EE::UnresolvedError
         }
         PE::Spec(spec_block) => {
@@ -1727,34 +1753,28 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         PV::Num(s) if s.ends_with("u8") => match parse_u8(&s[..s.len() - 2]) {
             Ok(u) => EV::U8(u),
             Err(_) => {
-                context
-                    .env
-                    .add_error_deprecated(num_too_big_error(loc, "'u8'"));
+                context.env.add_diag(num_too_big_error(loc, "'u8'"));
                 return None;
             }
         },
         PV::Num(s) if s.ends_with("u64") => match parse_u64(&s[..s.len() - 3]) {
             Ok(u) => EV::U64(u),
             Err(_) => {
-                context
-                    .env
-                    .add_error_deprecated(num_too_big_error(loc, "'u64'"));
+                context.env.add_diag(num_too_big_error(loc, "'u64'"));
                 return None;
             }
         },
         PV::Num(s) if s.ends_with("u128") => match parse_u128(&s[..s.len() - 4]) {
             Ok(u) => EV::U128(u),
             Err(_) => {
-                context
-                    .env
-                    .add_error_deprecated(num_too_big_error(loc, "'u128'"));
+                context.env.add_diag(num_too_big_error(loc, "'u128'"));
                 return None;
             }
         },
         PV::Num(s) => match parse_u128(&s) {
             Ok(u) => EV::InferredNum(u),
             Err(_) => {
-                context.env.add_error_deprecated(num_too_big_error(
+                context.env.add_diag(num_too_big_error(
                     loc,
                     "the largest possible integer type, 'u128'",
                 ));
@@ -1765,7 +1785,7 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         PV::HexString(s) => match hex_string::decode(loc, &s) {
             Ok(v) => EV::Bytearray(v),
             Err(e) => {
-                context.env.add_errors(e);
+                context.env.add_diag(e);
                 return None;
             }
         },
@@ -1782,14 +1802,17 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
 
 // Create an error for an integer literal that is too big to fit in its type.
 // This assumes that the literal is the current token.
-fn num_too_big_error(loc: Loc, type_description: &'static str) -> Error {
-    vec![(
-        loc,
-        format!(
-            "Invalid number literal. The given literal is too large to fit into {}",
-            type_description
+fn num_too_big_error(loc: Loc, type_description: &'static str) -> Diagnostic {
+    diag!(
+        Syntax::InvalidNumber,
+        (
+            loc,
+            format!(
+                "Invalid number literal. The given literal is too large to fit into {}",
+                type_description
+            )
         ),
-    )]
+    )
 }
 
 //**************************************************************************************************
@@ -1806,14 +1829,15 @@ fn fields<T>(
     let mut fmap = UniqueMap::new();
     for (idx, (field, x)) in xs.into_iter().enumerate() {
         if let Err((field, old_loc)) = fmap.add(field, (idx, x)) {
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                Declarations::DuplicateItem,
                 (loc, format!("Invalid {}", case)),
                 (
                     field.loc(),
                     format!("Duplicate {} given for field '{}'", verb, field),
                 ),
-                (old_loc, "Previously defined here".into()),
-            ])
+                (old_loc, "Field previously defined here".into()),
+            ))
         }
     }
     fmap
@@ -1907,7 +1931,9 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
                  context.\nIf you are trying to unpack a struct, try adding fields, e.g. '{} {{}}'",
                 n
             );
-            context.env.add_error_deprecated(vec![(loc, msg)]);
+            context
+                .env
+                .add_diag(diag!(Syntax::SpecContextRestricted, (loc, msg)));
 
             // For unused alias warnings and unbound modules
             name_access_chain(context, Access::Term, n);
@@ -1920,7 +1946,9 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
                  context.\nIf you are trying to unpack a struct, try adding fields, e.g. '{} {{}}'",
                 n
             );
-            context.env.add_error_deprecated(vec![(loc, msg)]);
+            context
+                .env
+                .add_diag(diag!(Syntax::SpecContextRestricted, (loc, msg)));
 
             // For unused alias warnings and unbound modules
             name_access_chain(context, Access::Term, n);
@@ -1937,7 +1965,9 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
                          '{}::{} {{}}'",
                         m, n,
                     );
-                    context.env.add_error_deprecated(vec![(loc, msg)]);
+                    context
+                        .env
+                        .add_diag(diag!(Syntax::SpecContextRestricted, (loc, msg)));
                     return None;
                 }
                 _ => {
@@ -1953,11 +1983,14 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
             EL::Unpack(en, tys_opt, efields)
         }
         _ => {
-            context.env.add_error_deprecated(vec![(
-                loc,
-                "Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing \
-                 assignment",
-            )]);
+            context.env.add_diag(diag!(
+                Syntax::InvalidLValue,
+                (
+                    loc,
+                    "Invalid assignment syntax. Expected: a local, a field write, or a \
+                     deconstructing assignment"
+                )
+            ));
             return None;
         }
     };
@@ -2199,7 +2232,9 @@ fn check_valid_local_name(context: &mut Context, v: &Var) {
              '_')",
             v,
         );
-        context.env.add_error_deprecated(vec![(v.loc(), msg)])
+        context
+            .env
+            .add_diag(diag!(Declarations::InvalidName, (v.loc(), msg)));
     }
 }
 
@@ -2273,7 +2308,9 @@ fn check_valid_module_member_name_impl(
                     n,
                     upper_first_letter(case),
                 );
-                context.env.add_error_deprecated(vec![(n.loc, msg)]);
+                context
+                    .env
+                    .add_diag(diag!(Declarations::InvalidName, (n.loc, msg)));
                 return Err(());
             }
         }
@@ -2285,7 +2322,9 @@ fn check_valid_module_member_name_impl(
                     n,
                     upper_first_letter(case),
                 );
-                context.env.add_error_deprecated(vec![(n.loc, msg)]);
+                context
+                    .env
+                    .add_diag(diag!(Declarations::InvalidName, (n.loc, msg)));
                 return Err(());
             }
         }
@@ -2320,7 +2359,7 @@ fn check_restricted_self_name(context: &mut Context, case: &str, n: &Name) -> Re
     if n.value == ModuleName::SELF_NAME {
         context
             .env
-            .add_error_deprecated(restricted_name_error(case, n.loc, ModuleName::SELF_NAME));
+            .add_diag(restricted_name_error(case, n.loc, ModuleName::SELF_NAME));
         Err(())
     } else {
         Ok(())
@@ -2334,21 +2373,19 @@ fn check_restricted_names(
     all_names: &BTreeSet<&str>,
 ) -> Result<(), ()> {
     if all_names.contains(n_.as_str()) {
-        context
-            .env
-            .add_error_deprecated(restricted_name_error(case, *loc, n_));
+        context.env.add_diag(restricted_name_error(case, *loc, n_));
         Err(())
     } else {
         Ok(())
     }
 }
 
-fn restricted_name_error(case: &str, loc: Loc, restricted: &str) -> Error {
+fn restricted_name_error(case: &str, loc: Loc, restricted: &str) -> Diagnostic {
     let msg = format!(
         "Invalid {case} name '{restricted}'. '{restricted}' is restricted and cannot be used to \
          name a {case}",
         case = case,
         restricted = restricted,
     );
-    vec![(loc, msg)]
+    diag!(Declarations::InvalidName, (loc, msg))
 }

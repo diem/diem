@@ -1,3 +1,9 @@
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/invalid_struct_name.move:2:12
+  │
+2 │     struct no {}
+  │            ^^ Invalid struct name 'no'. Struct names must start with 'A'..'Z'
+
 error[E03004]: unbound type
   ┌─ tests/move_check/expansion/invalid_struct_name.move:3:19
   │
@@ -21,6 +27,12 @@ error[E03004]: unbound type
   │
 6 │         no {}
   │         ^^ Unbound type 'no' in current scope
+
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/invalid_struct_name.move:9:12
+  │
+9 │     struct no2 {}
+  │            ^^^ Invalid struct name 'no2'. Struct names must start with 'A'..'Z'
 
 error[E03004]: unbound type
    ┌─ tests/move_check/expansion/invalid_struct_name.move:10:19
@@ -51,20 +63,4 @@ error[E03004]: unbound type
    │
 14 │         no2 {}
    │         ^^^ Unbound type 'no2' in current scope
-
-error: 
-
-   ┌── tests/move_check/expansion/invalid_struct_name.move:2:12 ───
-   │
- 2 │     struct no {}
-   │            ^^ Invalid struct name 'no'. Struct names must start with 'A'..'Z'
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/invalid_struct_name.move:9:12 ───
-   │
- 9 │     struct no2 {}
-   │            ^^^ Invalid struct name 'no2'. Struct names must start with 'A'..'Z'
-   │
 

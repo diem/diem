@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/dependencies/friend_cycle_2.move:8:5 ───
-   │
- 8 │     friend 0x2::A;
-   │     ^^^^^^^^^^^^^^ Invalid friend '0x2::A' in module '0x2::B'
-   ·
- 8 │     friend 0x2::A;
-   │     -------------- This friend relationship creates a dependency cycle: '0x2::B' is a friend of '0x2::A' is a friend of '0x2::B'
-   │
+error[E02004]: invalid 'module' declaration
+  ┌─ tests/move_check/dependencies/friend_cycle_2.move:8:5
+  │
+4 │     friend 0x2::B;
+  │     -------------- '0x2::B' is a friend of '0x2::A'
+  ·
+8 │     friend 0x2::A;
+  │     ^^^^^^^^^^^^^^ '0x2::A' is a friend of '0x2::B'. This 'friend' relationship creates a dependency cycle.
 

@@ -1,14 +1,10 @@
-error: 
-
-   ┌── tests/move_check/expansion/duplicate_field_assign.move:5:9 ───
-   │
- 5 │         S { f, f } = S { f: 0 };
-   │         ^^^^^^^^^^ Invalid deconstructing assignment
-   ·
- 5 │         S { f, f } = S { f: 0 };
-   │                - Duplicate assignment binding given for field 'f'
-   ·
- 5 │         S { f, f } = S { f: 0 };
-   │             - Previously defined here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_field_assign.move:5:9
+  │
+5 │         S { f, f } = S { f: 0 };
+  │         ^^^^^^^^^^
+  │         │   │  │
+  │         │   │  Duplicate assignment binding given for field 'f'
+  │         │   Field previously defined here
+  │         Invalid deconstructing assignment
 

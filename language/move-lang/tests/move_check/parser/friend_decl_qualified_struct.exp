@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/friend_decl_qualified_struct.move:7:21 ───
-   │
- 7 │     friend 0x42::A::A;
-   │                     ^ Unexpected module member access. Expected a module identifier only
-   │
+error[E03006]: unexpected name in this position
+  ┌─ tests/move_check/parser/friend_decl_qualified_struct.move:7:21
+  │
+7 │     friend 0x42::A::A;
+  │                     ^ Unexpected module member access. Expected a module identifier only
 

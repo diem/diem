@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::*,
+    errors::{diagnostic_codes::*, new::Diagnostic},
     expansion::ast::{self as E, ModuleIdent},
     shared::{unique_map::UniqueMap, *},
 };
@@ -34,7 +34,7 @@ pub fn verify(
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
             let error = cycle_error(&module_neighbors, cycle_ident);
-            compilation_env.add_error_deprecated(error);
+            compilation_env.add_diag(error);
         }
         Ok(ordered_ids) => {
             for (order, mident) in ordered_ids.iter().rev().enumerate() {
@@ -164,62 +164,66 @@ fn dependency_graph(
 fn cycle_error(
     deps: &BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
     cycle_ident: ModuleIdent,
-) -> Error {
+) -> Diagnostic {
     let graph = dependency_graph(deps);
+    // For printing uses, sort the cycle by location (earliest first)
     let cycle = shortest_cycle(&graph, &cycle_ident);
 
-    let mut cycle_strings: String = cycle
+    let mut cycle_info = cycle
         .windows(2)
         .map(|pair| {
             let node = pair[0];
             let neighbor = pair[1];
             let relations = deps.get(node).unwrap().get(neighbor).unwrap();
-            let verb = if relations.contains_key(&DepType::Use) {
-                "uses"
-            } else {
-                assert!(relations.contains_key(&DepType::Friend));
-                "is a friend of"
-            };
-            format!("'{}' {} ", node, verb)
+            match (
+                relations.get(&DepType::Use),
+                relations.get(&DepType::Friend),
+            ) {
+                (Some(loc), _) => (
+                    *loc,
+                    DepType::Use,
+                    format!("'{}' uses '{}'", neighbor, node),
+                    node,
+                    neighbor,
+                ),
+                (_, Some(loc)) => (
+                    *loc,
+                    DepType::Friend,
+                    format!("'{}' is a friend of '{}'", node, neighbor),
+                    node,
+                    neighbor,
+                ),
+                (None, None) => unreachable!(),
+            }
         })
-        .collect();
-    cycle_strings.push_str(&format!("'{}'", cycle.last().unwrap()));
+        .collect::<Vec<_>>();
+    debug_assert!({
+        let first_node = cycle_info.first().unwrap().3;
+        let last_neighbor = cycle_info.last().unwrap().4;
+        first_node == last_neighbor
+    });
+    let cycle_last = cycle_info.pop().unwrap();
 
-    // For printing uses, sort the cycle by location (earliest first)
-    let (dep_type, cycle_loc, node, neighbor) = best_cycle_loc(deps, cycle);
-
-    let (use_msg, cycle_msg) = match dep_type {
-        DepType::Use => (
-            format!("Invalid use of module '{}' in module '{}'.", neighbor, node),
-            format!(
-                "Using this module creates a dependency cycle: {}",
-                cycle_strings
-            ),
-        ),
-        DepType::Friend => (
-            format!("Invalid friend '{}' in module '{}'", node, neighbor),
-            format!(
-                "This friend relationship creates a dependency cycle: {}",
-                cycle_strings
-            ),
-        ),
+    let (cycle_loc, use_msg) = {
+        let (loc, dep_type, case_msg, _node, _neighbor) = cycle_last;
+        let case = match dep_type {
+            DepType::Use => "use",
+            DepType::Friend => "friend",
+        };
+        let msg = format!(
+            "{}. This '{}' relationship creates a dependency cycle.",
+            case_msg, case
+        );
+        (loc, msg)
     };
-    vec![(cycle_loc, use_msg), (cycle_loc, cycle_msg)]
-}
 
-fn best_cycle_loc<'a>(
-    deps: &'a BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
-    cycle: Vec<&'a ModuleIdent>,
-) -> (DepType, Loc, &'a ModuleIdent, &'a ModuleIdent) {
-    let len = cycle.len();
-    assert!(len >= 3);
-    let first = cycle[0];
-    let node = cycle[len - 2];
-    let neighbor = cycle[len - 1];
-    assert_eq!(first, neighbor);
-    let cycle_locs = deps.get(node).unwrap().get(neighbor).unwrap();
-    let (dep_type, loc) = cycle_locs.iter().next().unwrap();
-    (*dep_type, *loc, node, neighbor)
+    Diagnostic::new(
+        Declarations::InvalidModule,
+        (cycle_loc, use_msg),
+        cycle_info
+            .into_iter()
+            .map(|(loc, _dep_type, msg, _node, _neighbor)| (loc, msg)),
+    )
 }
 
 //**************************************************************************************************

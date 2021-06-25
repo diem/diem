@@ -1,5 +1,0 @@
-[0] Transaction(0)
-[1] Move VM Status: EXECUTED
-[2] Transaction Status: Keep(EXECUTED)
-[3] Transaction(1)
-[4] "\n\nerror: \n\n   ┌── (file):3:17 ───\n   │\n 3 │     fun foo() { M::foo() }\n   │                 ^^^^^^^^ Invalid call to \'0xD98F86E3303C97B00313854B8314F51B::M::foo\'\n   │\n\n   ┌── (file):2:5 ───\n   │\n 2 │     public(friend) fun foo() {}\n   │     -------------- This function can only be called from a \'friend\' of module \'0xD98F86E3303C97B00313854B8314F51B::M\'\n   │\n\n\n"

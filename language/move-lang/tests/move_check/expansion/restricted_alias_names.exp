@@ -1,224 +1,168 @@
-error: 
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/restricted_alias_names.move:9:16
+  │
+9 │         foo as address,
+  │                ^^^^^^^ Invalid function alias name 'address'. 'address' is restricted and cannot be used to name a function alias
 
-   ┌── tests/move_check/expansion/restricted_alias_names.move:9:16 ───
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:10:16
    │
- 9 │         foo as address,
+10 │         foo as signer,
+   │                ^^^^^^ Invalid function alias name 'signer'. 'signer' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:11:16
+   │
+11 │         foo as u8,
+   │                ^^ Invalid function alias name 'u8'. 'u8' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:12:16
+   │
+12 │         foo as u64,
+   │                ^^^ Invalid function alias name 'u64'. 'u64' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:13:16
+   │
+13 │         foo as u128,
+   │                ^^^^ Invalid function alias name 'u128'. 'u128' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:14:16
+   │
+14 │         foo as vector,
+   │                ^^^^^^ Invalid function alias name 'vector'. 'vector' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:15:16
+   │
+15 │         foo as move_to,
+   │                ^^^^^^^ Invalid function alias name 'move_to'. 'move_to' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:16:16
+   │
+16 │         foo as move_from,
+   │                ^^^^^^^^^ Invalid function alias name 'move_from'. 'move_from' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:17:16
+   │
+17 │         foo as borrow_global,
+   │                ^^^^^^^^^^^^^ Invalid function alias name 'borrow_global'. 'borrow_global' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:18:16
+   │
+18 │         foo as borrow_global_mut,
+   │                ^^^^^^^^^^^^^^^^^ Invalid function alias name 'borrow_global_mut'. 'borrow_global_mut' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:19:16
+   │
+19 │         foo as exists,
+   │                ^^^^^^ Invalid function alias name 'exists'. 'exists' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:20:16
+   │
+20 │         foo as freeze,
+   │                ^^^^^^ Invalid function alias name 'freeze'. 'freeze' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:21:16
+   │
+21 │         foo as assert,
+   │                ^^^^^^ Invalid function alias name 'assert'. 'assert' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:22:16
+   │
+22 │         foo as Self,
+   │                ^^^^ Invalid function alias name 'Self'. 'Self' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:30:16
+   │
+30 │         foo as address,
    │                ^^^^^^^ Invalid function alias name 'address'. 'address' is restricted and cannot be used to name a function alias
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:31:16
    │
+31 │         foo as signer,
+   │                ^^^^^^ Invalid function alias name 'signer'. 'signer' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:32:16
+   │
+32 │         foo as u8,
+   │                ^^ Invalid function alias name 'u8'. 'u8' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:10:16 ───
-    │
- 10 │         foo as signer,
-    │                ^^^^^^ Invalid function alias name 'signer'. 'signer' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:33:16
+   │
+33 │         foo as u64,
+   │                ^^^ Invalid function alias name 'u64'. 'u64' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:34:16
+   │
+34 │         foo as u128,
+   │                ^^^^ Invalid function alias name 'u128'. 'u128' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:11:16 ───
-    │
- 11 │         foo as u8,
-    │                ^^ Invalid function alias name 'u8'. 'u8' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:35:16
+   │
+35 │         foo as vector,
+   │                ^^^^^^ Invalid function alias name 'vector'. 'vector' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:36:16
+   │
+36 │         foo as move_to,
+   │                ^^^^^^^ Invalid function alias name 'move_to'. 'move_to' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:12:16 ───
-    │
- 12 │         foo as u64,
-    │                ^^^ Invalid function alias name 'u64'. 'u64' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:37:16
+   │
+37 │         foo as move_from,
+   │                ^^^^^^^^^ Invalid function alias name 'move_from'. 'move_from' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:38:16
+   │
+38 │         foo as borrow_global,
+   │                ^^^^^^^^^^^^^ Invalid function alias name 'borrow_global'. 'borrow_global' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:13:16 ───
-    │
- 13 │         foo as u128,
-    │                ^^^^ Invalid function alias name 'u128'. 'u128' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:39:16
+   │
+39 │         foo as borrow_global_mut,
+   │                ^^^^^^^^^^^^^^^^^ Invalid function alias name 'borrow_global_mut'. 'borrow_global_mut' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:40:16
+   │
+40 │         foo as exists,
+   │                ^^^^^^ Invalid function alias name 'exists'. 'exists' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:14:16 ───
-    │
- 14 │         foo as vector,
-    │                ^^^^^^ Invalid function alias name 'vector'. 'vector' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:41:16
+   │
+41 │         foo as freeze,
+   │                ^^^^^^ Invalid function alias name 'freeze'. 'freeze' is restricted and cannot be used to name a function alias
 
-error: 
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:42:16
+   │
+42 │         foo as assert,
+   │                ^^^^^^ Invalid function alias name 'assert'. 'assert' is restricted and cannot be used to name a function alias
 
-    ┌── tests/move_check/expansion/restricted_alias_names.move:15:16 ───
-    │
- 15 │         foo as move_to,
-    │                ^^^^^^^ Invalid function alias name 'move_to'. 'move_to' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:16:16 ───
-    │
- 16 │         foo as move_from,
-    │                ^^^^^^^^^ Invalid function alias name 'move_from'. 'move_from' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:17:16 ───
-    │
- 17 │         foo as borrow_global,
-    │                ^^^^^^^^^^^^^ Invalid function alias name 'borrow_global'. 'borrow_global' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:18:16 ───
-    │
- 18 │         foo as borrow_global_mut,
-    │                ^^^^^^^^^^^^^^^^^ Invalid function alias name 'borrow_global_mut'. 'borrow_global_mut' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:19:16 ───
-    │
- 19 │         foo as exists,
-    │                ^^^^^^ Invalid function alias name 'exists'. 'exists' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:20:16 ───
-    │
- 20 │         foo as freeze,
-    │                ^^^^^^ Invalid function alias name 'freeze'. 'freeze' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:21:16 ───
-    │
- 21 │         foo as assert,
-    │                ^^^^^^ Invalid function alias name 'assert'. 'assert' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:22:16 ───
-    │
- 22 │         foo as Self,
-    │                ^^^^ Invalid function alias name 'Self'. 'Self' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:30:16 ───
-    │
- 30 │         foo as address,
-    │                ^^^^^^^ Invalid function alias name 'address'. 'address' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:31:16 ───
-    │
- 31 │         foo as signer,
-    │                ^^^^^^ Invalid function alias name 'signer'. 'signer' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:32:16 ───
-    │
- 32 │         foo as u8,
-    │                ^^ Invalid function alias name 'u8'. 'u8' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:33:16 ───
-    │
- 33 │         foo as u64,
-    │                ^^^ Invalid function alias name 'u64'. 'u64' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:34:16 ───
-    │
- 34 │         foo as u128,
-    │                ^^^^ Invalid function alias name 'u128'. 'u128' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:35:16 ───
-    │
- 35 │         foo as vector,
-    │                ^^^^^^ Invalid function alias name 'vector'. 'vector' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:36:16 ───
-    │
- 36 │         foo as move_to,
-    │                ^^^^^^^ Invalid function alias name 'move_to'. 'move_to' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:37:16 ───
-    │
- 37 │         foo as move_from,
-    │                ^^^^^^^^^ Invalid function alias name 'move_from'. 'move_from' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:38:16 ───
-    │
- 38 │         foo as borrow_global,
-    │                ^^^^^^^^^^^^^ Invalid function alias name 'borrow_global'. 'borrow_global' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:39:16 ───
-    │
- 39 │         foo as borrow_global_mut,
-    │                ^^^^^^^^^^^^^^^^^ Invalid function alias name 'borrow_global_mut'. 'borrow_global_mut' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:40:16 ───
-    │
- 40 │         foo as exists,
-    │                ^^^^^^ Invalid function alias name 'exists'. 'exists' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:41:16 ───
-    │
- 41 │         foo as freeze,
-    │                ^^^^^^ Invalid function alias name 'freeze'. 'freeze' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:42:16 ───
-    │
- 42 │         foo as assert,
-    │                ^^^^^^ Invalid function alias name 'assert'. 'assert' is restricted and cannot be used to name a function alias
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_alias_names.move:43:16 ───
-    │
- 43 │         foo as Self,
-    │                ^^^^ Invalid function alias name 'Self'. 'Self' is restricted and cannot be used to name a function alias
-    │
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/restricted_alias_names.move:43:16
+   │
+43 │         foo as Self,
+   │                ^^^^ Invalid function alias name 'Self'. 'Self' is restricted and cannot be used to name a function alias
 

@@ -1,33 +1,24 @@
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_module_after_mapping.move:7:14
+  │
+6 │ module OneA::M {}
+  │              - Module previously defined here as 'OneA::M', with 'OneA' = 0x1
+7 │ module OneB::M {}
+  │              ^ Duplicate definition of 'OneB::M', with 'OneB' = 0x1
 
-   ┌── tests/move_check/expansion/duplicate_module_after_mapping.move:7:14 ───
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/duplicate_module_after_mapping.move:12:14
    │
- 7 │ module OneB::M {}
-   │              ^ Duplicate definition of 'OneB::M', with 'OneB' = 0x1
-   ·
- 6 │ module OneA::M {}
-   │              - Previously defined here as 'OneA::M', with 'OneA' = 0x1
+11 │ module 0x2::M {}
+   │             - Module previously defined here as '0x2::M'
+12 │ module TwoB::M {}
+   │              ^ Duplicate definition of 'TwoB::M', with 'TwoB' = 0x2
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/duplicate_module_after_mapping.move:17:13
    │
-
-error: 
-
-    ┌── tests/move_check/expansion/duplicate_module_after_mapping.move:12:14 ───
-    │
- 12 │ module TwoB::M {}
-    │              ^ Duplicate definition of 'TwoB::M', with 'TwoB' = 0x2
-    ·
- 11 │ module 0x2::M {}
-    │             - Previously defined here as '0x2::M'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/duplicate_module_after_mapping.move:17:13 ───
-    │
- 17 │ module 0x3::M {}
-    │             ^ Duplicate definition of '0x3::M'
-    ·
- 16 │ module ThreeA::M {}
-    │                - Previously defined here as 'ThreeA::M', with 'ThreeA' = 0x3
-    │
+16 │ module ThreeA::M {}
+   │                - Module previously defined here as 'ThreeA::M', with 'ThreeA' = 0x3
+17 │ module 0x3::M {}
+   │             ^ Duplicate definition of '0x3::M'
 

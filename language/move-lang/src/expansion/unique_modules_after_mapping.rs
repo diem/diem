@@ -3,6 +3,8 @@
 
 use crate::{
     compiled_unit::CompiledModuleIdent,
+    diag,
+    errors::diagnostic_codes::*,
     expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
     parser::ast::ModuleName,
     shared::{unique_map::UniqueMap, *},
@@ -62,8 +64,12 @@ pub fn verify(
                 ),
             };
             let msg = format!("Duplicate definition of {}", format_name(duplicate));
-            let prev_msg = format!("Previously defined here as {}", format_name(orig));
-            compilation_env.add_error_deprecated(vec![(duplicate.loc, msg), (orig.loc, prev_msg)]);
+            let prev_msg = format!("Module previously defined here as {}", format_name(orig));
+            compilation_env.add_diag(diag!(
+                Declarations::DuplicateItem,
+                (duplicate.loc, msg),
+                (orig.loc, prev_msg)
+            ))
         }
     }
 }

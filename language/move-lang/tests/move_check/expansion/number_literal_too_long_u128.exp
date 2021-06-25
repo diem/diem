@@ -1,16 +1,12 @@
-error: 
+error[E01001]: invalid number literal
+  ┌─ tests/move_check/expansion/number_literal_too_long_u128.move:4:9
+  │
+4 │         0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFu128;
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u128'
 
-   ┌── tests/move_check/expansion/number_literal_too_long_u128.move:4:9 ───
-   │
- 4 │         0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFu128;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u128'
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/number_literal_too_long_u128.move:6:9 ───
-   │
- 6 │         340282366920938463463374607431768211456u128;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u128'
-   │
+error[E01001]: invalid number literal
+  ┌─ tests/move_check/expansion/number_literal_too_long_u128.move:6:9
+  │
+6 │         340282366920938463463374607431768211456u128;
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u128'
 

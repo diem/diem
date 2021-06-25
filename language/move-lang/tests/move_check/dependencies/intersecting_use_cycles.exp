@@ -1,11 +1,12 @@
-error: 
-
-    ┌── tests/move_check/dependencies/intersecting_use_cycles.move:10:14 ───
-    │
- 10 │     fun c(): 0x2::C::S { abort 0 }
-    │              ^^^^^^^^^ Invalid use of module '0x2::C' in module '0x2::B'.
-    ·
- 10 │     fun c(): 0x2::C::S { abort 0 }
-    │              --------- Using this module creates a dependency cycle: '0x2::C' uses '0x2::A' uses '0x2::B' uses '0x2::C'
-    │
+error[E02004]: invalid 'module' declaration
+   ┌─ tests/move_check/dependencies/intersecting_use_cycles.move:10:14
+   │
+ 5 │     fun b(): 0x2::B::S { abort 0 }
+   │              --------- '0x2::B' uses '0x2::A'
+   ·
+10 │     fun c(): 0x2::C::S { abort 0 }
+   │              ^^^^^^^^^ '0x2::C' uses '0x2::B'. This 'use' relationship creates a dependency cycle.
+   ·
+17 │     fun A(): 0x2::A::S { abort 0 }
+   │              --------- '0x2::A' uses '0x2::C'
 

@@ -4,5 +4,5 @@ error[E02001]: duplicate declaration, item, or annotation
 5 │     public fun test(account: &signer) acquires T1, T1 {
   │                                                --  ^^ Duplicate acquires item
   │                                                │    
-  │                                                Previously listed here
+  │                                                Item previously listed here
 

@@ -80,9 +80,11 @@ impl AddressBytes {
             Err(_) => {
                 // TODO the kind of error is in an unstable nightly API
                 // But currently the only way this should fail is if the number is too long
-                return Err("Invalid address literal. The numeric value is too large. \
-                    The maximum size is 16 bytes"
-                    .to_owned());
+                return Err(
+                    "Invalid address literal. The numeric value is too large. The maximum size is \
+                     16 bytes"
+                        .to_owned(),
+                );
             }
         };
         Ok(AddressBytes(decoded))

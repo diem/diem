@@ -28,25 +28,21 @@ error[E03005]: unbound unscoped name
 13 │         let x = CONSTANT;
    │                 ^^^^^^^^ Unbound constant 'CONSTANT'
 
+error[E03002]: unbound module
+   ┌─ tests/move_check/naming/unbound_constant.move:14:17
+   │
+14 │         let y = Self::CONSTANT;
+   │                 ^^^^ Unbound module alias 'Self'
+
 error[E03005]: unbound unscoped name
    ┌─ tests/move_check/naming/unbound_constant.move:15:13
    │
 15 │         0 + CONSTANT + Self::CONSTANT;
    │             ^^^^^^^^ Unbound constant 'CONSTANT'
 
-error: 
-
-    ┌── tests/move_check/naming/unbound_constant.move:14:17 ───
-    │
- 14 │         let y = Self::CONSTANT;
-    │                 ^^^^ Unbound module alias 'Self'
-    │
-
-error: 
-
-    ┌── tests/move_check/naming/unbound_constant.move:15:24 ───
-    │
- 15 │         0 + CONSTANT + Self::CONSTANT;
-    │                        ^^^^ Unbound module alias 'Self'
-    │
+error[E03002]: unbound module
+   ┌─ tests/move_check/naming/unbound_constant.move:15:24
+   │
+15 │         0 + CONSTANT + Self::CONSTANT;
+   │                        ^^^^ Unbound module alias 'Self'
 

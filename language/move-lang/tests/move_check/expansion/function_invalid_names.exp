@@ -1,48 +1,36 @@
-error: 
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/function_invalid_names.move:3:9
+  │
+3 │     fun _foo() {}
+  │         ^^^^ Invalid function name '_foo'. Function names cannot start with '_'
 
-   ┌── tests/move_check/expansion/function_invalid_names.move:3:9 ───
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/function_invalid_names.move:4:9
+  │
+4 │     fun _() {}
+  │         ^ Invalid function name '_'. Function names cannot start with '_'
+
+error[E02009]: invalid name
+  ┌─ tests/move_check/expansion/function_invalid_names.move:5:9
+  │
+5 │     fun ___() {}
+  │         ^^^ Invalid function name '___'. Function names cannot start with '_'
+
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/function_invalid_names.move:10:9
    │
- 3 │     fun _foo() {}
+10 │     fun _foo() {}
    │         ^^^^ Invalid function name '_foo'. Function names cannot start with '_'
-   │
 
-error: 
-
-   ┌── tests/move_check/expansion/function_invalid_names.move:4:9 ───
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/function_invalid_names.move:13:9
    │
- 4 │     fun _() {}
+13 │     fun _() {}
    │         ^ Invalid function name '_'. Function names cannot start with '_'
-   │
 
-error: 
-
-   ┌── tests/move_check/expansion/function_invalid_names.move:5:9 ───
+error[E02009]: invalid name
+   ┌─ tests/move_check/expansion/function_invalid_names.move:16:9
    │
- 5 │     fun ___() {}
+16 │     fun ___() {}
    │         ^^^ Invalid function name '___'. Function names cannot start with '_'
-   │
-
-error: 
-
-    ┌── tests/move_check/expansion/function_invalid_names.move:10:9 ───
-    │
- 10 │     fun _foo() {}
-    │         ^^^^ Invalid function name '_foo'. Function names cannot start with '_'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/function_invalid_names.move:13:9 ───
-    │
- 13 │     fun _() {}
-    │         ^ Invalid function name '_'. Function names cannot start with '_'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/function_invalid_names.move:16:9 ───
-    │
- 16 │     fun ___() {}
-    │         ^^^ Invalid function name '___'. Function names cannot start with '_'
-    │
 

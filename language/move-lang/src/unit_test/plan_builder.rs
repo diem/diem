@@ -122,7 +122,8 @@ fn build_test_info(
 
     // expected failures cannot be annotated on non-#[test] functions
     if !abort_attributes.is_empty() && test_attributes.is_empty() {
-        let fn_msg =  "Only functions defined as a test with #[test] can also have an #[expected_failure] attribute";
+        let fn_msg = "Only functions defined as a test with #[test] can also have an \
+                      #[expected_failure] attribute";
         let abort_msg = "Attributed as #[expected_failure] here";
         context.env.add_error_deprecated(vec![
             (fn_loc, fn_msg),
@@ -152,7 +153,8 @@ fn build_test_info(
 
     // A #[test] function cannot also be annotated #[test_only]
     if !test_only_attributes.is_empty() {
-        let msg = "Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other";
+        let msg = "Function annotated as both #[test(...)] and #[test_only]. You need to declare \
+                   it as either one or the other";
         context.env.add_error_deprecated(vec![
             (test_only_attributes.last().unwrap().loc, msg),
             (
@@ -186,7 +188,8 @@ fn build_test_info(
         match test_annotation_params.get(var.value()) {
             Some(value) => arguments.push(value.clone()),
             None => {
-                let missing_param_msg = "Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute";
+                let missing_param_msg = "Missing test parameter assignment in test. Expected a \
+                                         parameter to be assigned in this attribute";
                 context.env.add_error_deprecated(vec![
                     (test_attribute.loc, missing_param_msg),
                     (var.loc(), "Corresponding to this parameter"),
@@ -333,9 +336,10 @@ fn parse_failure_attribute(
                 }
                 sp!(assign_loc, EA::Assigned(sp!(nmloc, _), _)) => {
                     let invalid_name_msg = format!(
-                                "Invalid name in expected failure code assignment. Did you mean to use '{}'?",
-                                known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
-                            );
+                        "Invalid name in expected failure code assignment. Did you mean to use \
+                         '{}'?",
+                        known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
+                    );
                     context.env.add_error_deprecated(vec![
                         (*nmloc, invalid_name_msg),
                         (*assign_loc, "In this assignment".into()),

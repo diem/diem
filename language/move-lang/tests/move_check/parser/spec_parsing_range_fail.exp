@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/parser/spec_parsing_range_fail.move:3:15 ───
-   │
- 3 │       let _ = 1 .. 2;
-   │               ^^^^^^ `..` operator only allowed in specifications
-   │
+error[E01005]: syntax item restricted to spec contexts
+  ┌─ tests/move_check/parser/spec_parsing_range_fail.move:3:15
+  │
+3 │       let _ = 1 .. 2;
+  │               ^^^^^^ `..` operator only allowed in specifications
 

@@ -1,8 +1,6 @@
-error: 
-
-    ┌── tests/move_check/typing/assign_nested.move:14:19 ───
-    │
- 14 │         (_, x, _, s.f) = four();
-    │                   ^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
-    │
+error[E01004]: invalid assignment
+   ┌─ tests/move_check/typing/assign_nested.move:14:19
+   │
+14 │         (_, x, _, s.f) = four();
+   │                   ^^^ Invalid assignment syntax. Expected: a local, a field write, or a deconstructing assignment
 

@@ -1,44 +1,32 @@
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_abilities.move:4:26
+  │
+4 │     struct Foo has copy, copy {}
+  │                    ----  ^^^^ Duplicate 'copy' ability modifier
+  │                    │      
+  │                    Ability previously given here
 
-   ┌── tests/move_check/expansion/duplicate_abilities.move:4:26 ───
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_abilities.move:5:26
+  │
+5 │     struct Bar<T: drop + drop> {}
+  │                   ----   ^^^^ Duplicate 'drop' ability constraint
+  │                   │       
+  │                   Ability previously given here
+
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_abilities.move:6:24
+  │
+6 │     fun baz<T: store + store>() {}
+  │                -----   ^^^^^ Duplicate 'store' ability constraint
+  │                │        
+  │                Ability previously given here
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/duplicate_abilities.move:10:23
    │
- 4 │     struct Foo has copy, copy {}
-   │                          ^^^^ Duplicate 'copy' ability modifier
-   ·
- 4 │     struct Foo has copy, copy {}
-   │                    ---- Previously given
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/duplicate_abilities.move:5:26 ───
-   │
- 5 │     struct Bar<T: drop + drop> {}
-   │                          ^^^^ Duplicate 'drop' ability constraint
-   ·
- 5 │     struct Bar<T: drop + drop> {}
-   │                   ---- Previously given
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/duplicate_abilities.move:6:24 ───
-   │
- 6 │     fun baz<T: store + store>() {}
-   │                        ^^^^^ Duplicate 'store' ability constraint
-   ·
- 6 │     fun baz<T: store + store>() {}
-   │                ----- Previously given
-   │
-
-error: 
-
-    ┌── tests/move_check/expansion/duplicate_abilities.move:10:23 ───
-    │
- 10 │     fun main<T: key + key>() {}
-    │                       ^^^ Duplicate 'key' ability constraint
-    ·
- 10 │     fun main<T: key + key>() {}
-    │                 --- Previously given
-    │
+10 │     fun main<T: key + key>() {}
+   │                 ---   ^^^ Duplicate 'key' ability constraint
+   │                 │      
+   │                 Ability previously given here
 

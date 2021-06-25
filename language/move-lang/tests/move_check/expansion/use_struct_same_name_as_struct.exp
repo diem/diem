@@ -1,60 +1,48 @@
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:10:12
+   │
+ 8 │     use 0x2::X::{U, U as U2};
+   │                  - Alias previously defined here
+ 9 │ 
+10 │     struct U {}
+   │            ^ Duplicate module member or alias 'U'. Top level names in a namespace must be unique
 
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:10:12 ───
-    │
- 10 │     struct U {}
-    │            ^ Duplicate module member or alias 'U'. Top level names in a namespace must be unique
-    ·
-  8 │     use 0x2::X::{U, U as U2};
-    │                  - Previously defined here
-    │
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:11:12
+   │
+ 8 │     use 0x2::X::{U, U as U2};
+   │                          -- Alias previously defined here
+   ·
+11 │     struct U2 {}
+   │            ^^ Duplicate module member or alias 'U2'. Top level names in a namespace must be unique
 
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18
+   │
+13 │     struct R {}
+   │            - Alias previously defined here
+14 │ 
+15 │     use 0x2::X::{R, R as R2};
+   │                  ^ Duplicate module member or alias 'R'. Top level names in a namespace must be unique
 
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:11:12 ───
-    │
- 11 │     struct U2 {}
-    │            ^^ Duplicate module member or alias 'U2'. Top level names in a namespace must be unique
-    ·
-  8 │     use 0x2::X::{U, U as U2};
-    │                          -- Previously defined here
-    │
+warning[W08001]: unused alias
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18
+   │
+15 │     use 0x2::X::{R, R as R2};
+   │                  ^ Unused 'use' of alias 'R'. Consider removing it
 
-error: 
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26
+   │
+12 │     struct R2 {}
+   │            -- Alias previously defined here
+   ·
+15 │     use 0x2::X::{R, R as R2};
+   │                          ^^ Duplicate module member or alias 'R2'. Top level names in a namespace must be unique
 
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18 ───
-    │
- 15 │     use 0x2::X::{R, R as R2};
-    │                  ^ Duplicate module member or alias 'R'. Top level names in a namespace must be unique
-    ·
- 13 │     struct R {}
-    │            - Previously defined here
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:18 ───
-    │
- 15 │     use 0x2::X::{R, R as R2};
-    │                  ^ Unused 'use' of alias 'R'. Consider removing it
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26 ───
-    │
- 15 │     use 0x2::X::{R, R as R2};
-    │                          ^^ Duplicate module member or alias 'R2'. Top level names in a namespace must be unique
-    ·
- 12 │     struct R2 {}
-    │            -- Previously defined here
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26 ───
-    │
- 15 │     use 0x2::X::{R, R as R2};
-    │                          ^^ Unused 'use' of alias 'R2'. Consider removing it
-    │
+warning[W08001]: unused alias
+   ┌─ tests/move_check/expansion/use_struct_same_name_as_struct.move:15:26
+   │
+15 │     use 0x2::X::{R, R as R2};
+   │                          ^^ Unused 'use' of alias 'R2'. Consider removing it
 

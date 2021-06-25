@@ -4,7 +4,7 @@ error[E02001]: duplicate declaration, item, or annotation
 2 │     fun foo<T, T>() {}
   │             -  ^ Duplicate type parameter declared with name 'T'
   │             │   
-  │             Previously defined here
+  │             Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_function.move:3:23
@@ -12,7 +12,7 @@ error[E02001]: duplicate declaration, item, or annotation
 3 │     fun foo2<T: drop, T: key, T>() {}
   │              -        ^ Duplicate type parameter declared with name 'T'
   │              │         
-  │              Previously defined here
+  │              Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_function.move:3:31
@@ -20,5 +20,5 @@ error[E02001]: duplicate declaration, item, or annotation
 3 │     fun foo2<T: drop, T: key, T>() {}
   │              -                ^ Duplicate type parameter declared with name 'T'
   │              │                 
-  │              Previously defined here
+  │              Type parameter previously defined here
 

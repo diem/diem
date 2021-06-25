@@ -1,16 +1,12 @@
-error: 
+error[E03002]: unbound module
+   ┌─ tests/move_check/unit_test/cross_module_test_only_module.move:10:9
+   │
+10 │     use 0x1::M;
+   │         ^^^^^^ Invalid 'use'. Unbound module: '0x1::M'
 
-    ┌── tests/move_check/unit_test/cross_module_test_only_module.move:10:9 ───
-    │
- 10 │     use 0x1::M;
-    │         ^^^^^^ Invalid 'use'. Unbound module: '0x1::M'
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/cross_module_test_only_module.move:13:9 ───
-    │
- 13 │         M::foo()
-    │         ^ Unbound module alias 'M'
-    │
+error[E03002]: unbound module
+   ┌─ tests/move_check/unit_test/cross_module_test_only_module.move:13:9
+   │
+13 │         M::foo()
+   │         ^ Unbound module alias 'M'
 

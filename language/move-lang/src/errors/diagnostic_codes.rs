@@ -98,6 +98,10 @@ codes!(
     Uncategorized: [],
     // syntax errors
     Syntax: [
+        InvalidNumber: { msg: "invalid number literal", severity: BlockingError },
+        InvalidByteString: { msg: "invalid byte string", severity: BlockingError },
+        InvalidHexString: { msg: "invalid hex string", severity: BlockingError },
+        InvalidLValue: { msg: "invalid assignment", severity: BlockingError },
         SpecContextRestricted: { msg: "syntax item restricted to spec contexts", severity: BlockingError },
     ],
     // errors for any rules around declaration items
@@ -134,7 +138,9 @@ codes!(
     // errors for move rules. mostly cfgir/borrows
     ReferenceSafety: [],
     // errors for any unused code or items
-    UnusedItem: [],
+    UnusedItem: [
+        Alias: { msg: "unused alias", severity: Warning },
+    ],
 );
 
 //**************************************************************************************************

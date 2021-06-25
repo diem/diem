@@ -1,14 +1,12 @@
+warning[W08001]: unused alias
+  ┌─ tests/move_check/expansion/module_alias_as_type.move:6:14
+  │
+6 │     use 0x2::X;
+  │              ^ Unused 'use' of alias 'X'. Consider removing it
+
 error[E03004]: unbound type
   ┌─ tests/move_check/expansion/module_alias_as_type.move:7:16
   │
 7 │     fun foo(x: X) {}
   │                ^ Unbound type 'X' in current scope
-
-error: 
-
-   ┌── tests/move_check/expansion/module_alias_as_type.move:6:14 ───
-   │
- 6 │     use 0x2::X;
-   │              ^ Unused 'use' of alias 'X'. Consider removing it
-   │
 

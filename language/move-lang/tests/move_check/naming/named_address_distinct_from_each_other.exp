@@ -1,3 +1,9 @@
+error[E03002]: unbound module
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:14:9
+   │
+14 │     use B::M;
+   │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
+
 error[E02010]: invalid 'friend' declaration
    ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:15:5
    │
@@ -24,12 +30,4 @@ error[E03002]: unbound module
    │
 18 │         B::M::s()
    │         ^^^^ Unbound module 'B::M'
-
-error: 
-
-    ┌── tests/move_check/naming/named_address_distinct_from_each_other.move:14:9 ───
-    │
- 14 │     use B::M;
-    │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
-    │
 

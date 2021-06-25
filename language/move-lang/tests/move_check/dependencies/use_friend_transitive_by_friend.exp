@@ -1,11 +1,12 @@
-error: 
-
-    ┌── tests/move_check/dependencies/use_friend_transitive_by_friend.move:14:5 ───
-    │
- 14 │     friend 0x2::C;
-    │     ^^^^^^^^^^^^^^ Invalid friend '0x2::C' in module '0x2::B'
-    ·
- 14 │     friend 0x2::C;
-    │     -------------- This friend relationship creates a dependency cycle: '0x2::B' is a friend of '0x2::A' uses '0x2::C' is a friend of '0x2::B'
-    │
+error[E02004]: invalid 'module' declaration
+   ┌─ tests/move_check/dependencies/use_friend_transitive_by_friend.move:14:5
+   │
+ 6 │     friend B;
+   │     --------- '0x2::B' is a friend of '0x2::A'
+   ·
+ 9 │         C::c()
+   │         ---- '0x2::C' uses '0x2::A'
+   ·
+14 │     friend 0x2::C;
+   │     ^^^^^^^^^^^^^^ '0x2::C' is a friend of '0x2::B'. This 'friend' relationship creates a dependency cycle.
 

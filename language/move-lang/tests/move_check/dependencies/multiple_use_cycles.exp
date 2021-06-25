@@ -1,11 +1,9 @@
-error: 
-
-    ┌── tests/move_check/dependencies/multiple_use_cycles.move:25:14 ───
-    │
- 25 │     fun f(): 0x2::F::S { abort 0 }
-    │              ^^^^^^^^^ Invalid use of module '0x2::F' in module '0x2::D'.
-    ·
- 25 │     fun f(): 0x2::F::S { abort 0 }
-    │              --------- Using this module creates a dependency cycle: '0x2::F' uses '0x2::D' uses '0x2::F'
-    │
+error[E02004]: invalid 'module' declaration
+   ┌─ tests/move_check/dependencies/multiple_use_cycles.move:25:14
+   │
+25 │     fun f(): 0x2::F::S { abort 0 }
+   │              ^^^^^^^^^ '0x2::F' uses '0x2::D'. This 'use' relationship creates a dependency cycle.
+   ·
+35 │     fun d(): 0x2::D::S { abort 0 }
+   │              --------- '0x2::D' uses '0x2::F'
 

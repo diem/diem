@@ -4,7 +4,7 @@ error[E02001]: duplicate declaration, item, or annotation
 2 │     struct S<T, T> {}
   │              -  ^ Duplicate type parameter declared with name 'T'
   │              │   
-  │              Previously defined here
+  │              Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_struct.move:3:24
@@ -12,7 +12,7 @@ error[E02001]: duplicate declaration, item, or annotation
 3 │     struct S2<T: drop, T: key, T> {}
   │               -        ^ Duplicate type parameter declared with name 'T'
   │               │         
-  │               Previously defined here
+  │               Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_struct.move:3:32
@@ -20,7 +20,7 @@ error[E02001]: duplicate declaration, item, or annotation
 3 │     struct S2<T: drop, T: key, T> {}
   │               -                ^ Duplicate type parameter declared with name 'T'
   │               │                 
-  │               Previously defined here
+  │               Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_struct.move:4:17
@@ -28,7 +28,7 @@ error[E02001]: duplicate declaration, item, or annotation
 4 │     struct R<T, T> {}
   │              -  ^ Duplicate type parameter declared with name 'T'
   │              │   
-  │              Previously defined here
+  │              Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_struct.move:5:24
@@ -36,7 +36,7 @@ error[E02001]: duplicate declaration, item, or annotation
 5 │     struct R2<T: drop, T: key, T> {}
   │               -        ^ Duplicate type parameter declared with name 'T'
   │               │         
-  │               Previously defined here
+  │               Type parameter previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_type_parameter_struct.move:5:32
@@ -44,5 +44,5 @@ error[E02001]: duplicate declaration, item, or annotation
 5 │     struct R2<T: drop, T: key, T> {}
   │               -                ^ Duplicate type parameter declared with name 'T'
   │               │                 
-  │               Previously defined here
+  │               Type parameter previously defined here
 

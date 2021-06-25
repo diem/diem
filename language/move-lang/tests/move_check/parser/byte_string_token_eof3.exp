@@ -1,16 +1,12 @@
-error: 
+error[E01002]: invalid byte string
+  ┌─ tests/move_check/parser/byte_string_token_eof3.move:3:11
+  │
+3 │         b"\x0";
+  │           ^^^ Invalid escape: '\x0'. Hex literals are represented by two symbols: [\x00-\xFF].
 
-   ┌── tests/move_check/parser/byte_string_token_eof3.move:3:11 ───
-   │
- 3 │         b"\x0";
-   │           ^^^ Invalid escape: '\x0'. Hex literals are represented by two symbols: [\x00-\xFF].
-   │
-
-error: 
-
-   ┌── tests/move_check/parser/byte_string_token_eof3.move:4:11 ───
-   │
- 4 │         b"\x"
-   │           ^^ Invalid escape: '\x'. Hex literals are represented by two symbols: [\x00-\xFF].
-   │
+error[E01002]: invalid byte string
+  ┌─ tests/move_check/parser/byte_string_token_eof3.move:4:11
+  │
+4 │         b"\x"
+  │           ^^ Invalid escape: '\x'. Hex literals are represented by two symbols: [\x00-\xFF].
 

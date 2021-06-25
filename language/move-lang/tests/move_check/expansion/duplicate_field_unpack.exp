@@ -1,14 +1,10 @@
-error: 
-
-   ┌── tests/move_check/expansion/duplicate_field_unpack.move:4:13 ───
-   │
- 4 │         let S { f, f } = S { f: 0 };
-   │             ^^^^^^^^^^ Invalid deconstruction binding
-   ·
- 4 │         let S { f, f } = S { f: 0 };
-   │                    - Duplicate binding given for field 'f'
-   ·
- 4 │         let S { f, f } = S { f: 0 };
-   │                 - Previously defined here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_field_unpack.move:4:13
+  │
+4 │         let S { f, f } = S { f: 0 };
+  │             ^^^^^^^^^^
+  │             │   │  │
+  │             │   │  Duplicate binding given for field 'f'
+  │             │   Field previously defined here
+  │             Invalid deconstruction binding
 

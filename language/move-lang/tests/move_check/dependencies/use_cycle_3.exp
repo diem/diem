@@ -1,11 +1,12 @@
-error: 
-
-    ┌── tests/move_check/dependencies/use_cycle_3.move:95:16 ───
+error[E02004]: invalid 'module' declaration
+    ┌─ tests/move_check/dependencies/use_cycle_3.move:95:16
     │
- 95 │     fun foo(): 0x4::C::S {
-    │                ^^^^^^^^^ Invalid use of module '0x4::C' in module '0x4::B'.
+ 85 │     fun foo(): 0x4::A::S {
+    │                --------- '0x4::A' uses '0x4::C'
     ·
  95 │     fun foo(): 0x4::C::S {
-    │                --------- Using this module creates a dependency cycle: '0x4::C' uses '0x4::A' uses '0x4::B' uses '0x4::C'
-    │
+    │                ^^^^^^^^^ '0x4::C' uses '0x4::B'. This 'use' relationship creates a dependency cycle.
+    ·
+106 │     fun foo(): 0x4::B::S {
+    │                --------- '0x4::B' uses '0x4::A'
 

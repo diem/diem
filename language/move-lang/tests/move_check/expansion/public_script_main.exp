@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/expansion/public_script_main.move:2:1 ───
-   │
- 2 │ public(script) fun main() {
-   │ ^^^^^^^^^^^^^^ Extraneous 'public(script)' modifier. Script functions are always 'public(script)'
-   │
+error[E02002]: unnecessary or extraneous item
+  ┌─ tests/move_check/expansion/public_script_main.move:2:1
+  │
+2 │ public(script) fun main() {
+  │ ^^^^^^^^^^^^^^ Extraneous 'public(script)' modifier. Script functions are always 'public(script)'
 

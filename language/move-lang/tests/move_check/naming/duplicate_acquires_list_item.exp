@@ -4,7 +4,7 @@ error[E02001]: duplicate declaration, item, or annotation
 4 │     fun t0() acquires R, X, R {
   │                       -     ^ Duplicate acquires item
   │                       │      
-  │                       Previously listed here
+  │                       Item previously listed here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:29
@@ -12,7 +12,7 @@ error[E02001]: duplicate declaration, item, or annotation
 8 │     fun t1() acquires R, X, R, R, R {
   │                       -     ^ Duplicate acquires item
   │                       │      
-  │                       Previously listed here
+  │                       Item previously listed here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:32
@@ -20,7 +20,7 @@ error[E02001]: duplicate declaration, item, or annotation
 8 │     fun t1() acquires R, X, R, R, R {
   │                             -  ^ Duplicate acquires item
   │                             │   
-  │                             Previously listed here
+  │                             Item previously listed here
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/naming/duplicate_acquires_list_item.move:8:35
@@ -28,5 +28,5 @@ error[E02001]: duplicate declaration, item, or annotation
 8 │     fun t1() acquires R, X, R, R, R {
   │                                -  ^ Duplicate acquires item
   │                                │   
-  │                                Previously listed here
+  │                                Item previously listed here
 

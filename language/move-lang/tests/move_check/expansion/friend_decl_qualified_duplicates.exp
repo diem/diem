@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/expansion/friend_decl_qualified_duplicates.move:6:5 ───
-   │
- 6 │     friend 0x42::A;
-   │     ^^^^^^^^^^^^^^^ Duplicate friend declaration '0x42::A'. Friend declarations in a module must be unique
-   ·
- 5 │     friend 0x42::A;
-   │     --------------- Previously declared here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/friend_decl_qualified_duplicates.move:6:5
+  │
+5 │     friend 0x42::A;
+  │     --------------- Friend previously declared here
+6 │     friend 0x42::A;
+  │     ^^^^^^^^^^^^^^^ Duplicate friend declaration '0x42::A'. Friend declarations in a module must be unique
 

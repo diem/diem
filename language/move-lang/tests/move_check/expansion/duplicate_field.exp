@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/expansion/duplicate_field.move:4:9 ───
-   │
- 4 │         f: u64,
-   │         ^ Duplicate definition for field 'f' in struct 'S'
-   ·
- 3 │         f: u64,
-   │         - Previously defined here
-   │
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/duplicate_field.move:4:9
+  │
+3 │         f: u64,
+  │         - Field previously defined here
+4 │         f: u64,
+  │         ^ Duplicate definition for field 'f' in struct 'S'
 

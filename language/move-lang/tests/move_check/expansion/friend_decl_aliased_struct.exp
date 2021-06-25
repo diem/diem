@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/expansion/friend_decl_aliased_struct.move:8:12 ───
-   │
- 8 │     friend A;
-   │            ^ Unbound module alias 'A'
-   │
+error[E03002]: unbound module
+  ┌─ tests/move_check/expansion/friend_decl_aliased_struct.move:8:12
+  │
+8 │     friend A;
+  │            ^ Unbound module alias 'A'
 

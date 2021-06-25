@@ -1,16 +1,12 @@
-error: 
+error[E01003]: invalid hex string
+  ┌─ tests/move_check/expansion/hexstring_bad_value.move:3:11
+  │
+3 │         x"g0"
+  │           ^ Invalid hexadecimal character: 'g'
 
-   ┌── tests/move_check/expansion/hexstring_bad_value.move:3:11 ───
-   │
- 3 │         x"g0"
-   │           ^ Invalid hexadecimal character: 'g'
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/hexstring_bad_value.move:6:9 ───
-   │
- 6 │         x"123"
-   │         ^^^^^^ Odd number of characters in hex string. Expected 2 hexadecimal digits for each byte
-   │
+error[E01003]: invalid hex string
+  ┌─ tests/move_check/expansion/hexstring_bad_value.move:6:9
+  │
+6 │         x"123"
+  │         ^^^^^^ Odd number of characters in hex string. Expected 2 hexadecimal digits for each byte
 
