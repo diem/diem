@@ -34,8 +34,6 @@ public fun Fields::borrow_read($t0|s: &Fields::S): u64 {
      # Formal(0)/f: Read
      #
      # Locals:
-     # Formal(0): Formal(0)
-     # Formal(0)/f: Formal(0)/f
      # Ret(0): Formal(0)/f
      #
   0: $t1 := move($t0)
@@ -54,8 +52,6 @@ public fun Fields::borrow_read_generic<#0>($t0|t: &Fields::T<#0>): u64 {
      # Formal(0)/f: Read
      #
      # Locals:
-     # Formal(0): Formal(0)
-     # Formal(0)/f: Formal(0)/f
      # Ret(0): Formal(0)/f
      #
   0: $t1 := move($t0)

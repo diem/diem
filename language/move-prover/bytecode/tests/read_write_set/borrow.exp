@@ -30,7 +30,6 @@ fun Borrow::borrow_s($t0|a: address) {
      # Accesses:
      #
      # Locals:
-     # Formal(0): Formal(0)
      #
   0: $t1 := copy($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)
@@ -46,7 +45,6 @@ fun Borrow::borrow_s_mut($t0|a: address) {
      # Accesses:
      #
      # Locals:
-     # Formal(0): Formal(0)
      #
   0: $t1 := copy($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)

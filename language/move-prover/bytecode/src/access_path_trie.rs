@@ -7,7 +7,9 @@
 //! Each node is (optionally) associated with abstract value of a generic type `T`.
 
 use crate::{
-    access_path::{AbsAddr, AccessPath, AccessPathMap, FootprintDomain, Offset, Root},
+    access_path::{
+        AbsAddr, AccessPath, AccessPathDeletableMap, AccessPathMap, FootprintDomain, Offset, Root,
+    },
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
 };
 use im::ordmap::Entry;
@@ -103,6 +105,16 @@ impl<T: FootprintDomain> TrieNode<T> {
     /// Return the node mapped to `o` from self (if any)
     pub fn get_offset(&self, o: &Offset) -> Option<&Self> {
         self.children.get(o)
+    }
+
+    /// Return a mutable reference to the node mapped to `o` from self (if any)
+    pub fn get_offset_mut(&mut self, o: &Offset) -> Option<&mut Self> {
+        self.children.get_mut(o)
+    }
+
+    /// Removes the node mapped to `o` from self (if it exists)
+    pub fn remove_offset(&mut self, o: &Offset) -> Option<Self> {
+        self.children.remove(o)
     }
 
     /// Return true if `self`'s keys can be converted into a compact set of concrete access paths
@@ -214,6 +226,12 @@ impl<T: FootprintDomain> AccessPathMap<T> for AccessPathTrie<T> {
     }
 }
 
+impl<T: FootprintDomain> AccessPathDeletableMap<T> for AccessPathTrie<T> {
+    fn remove_access_path(&mut self, ap: AccessPath) -> Option<T> {
+        self.remove_node(ap).and_then(|n| n.data)
+    }
+}
+
 impl<T: FootprintDomain> AccessPathTrie<T> {
     fn join_footprint(&mut self, t1: &Self, t2: &Self) {
         t1.iter_paths_opt(|ap, data1_opt| {
@@ -248,6 +266,36 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
             }
         }
         Some(node)
+    }
+
+    /// Removes node located at the given access path
+    /// Returns the node if it has been fully removed from the trie (i.e. it did not have any children)
+    pub fn remove_node(&mut self, ap: AccessPath) -> Option<TrieNode<T>> {
+        let mut node = self.0.get_mut(ap.root())?;
+
+        // If no offset, we want to remove the root node
+        if ap.offsets().is_empty() {
+            if node.children.is_empty() {
+                return self.0.remove(ap.root());
+            } else {
+                node.data = None;
+            }
+        // Otherwise, find the offset in the trie
+        } else {
+            let offsets_count = ap.offsets().len();
+            for offset in &ap.offsets()[0..offsets_count - 1] {
+                node = node.get_offset_mut(offset)?;
+            }
+            let last_offset = &ap.offsets()[offsets_count - 1];
+            let to_remove = node.get_offset_mut(last_offset)?;
+
+            if to_remove.children.is_empty() {
+                return node.remove_offset(last_offset);
+            } else {
+                to_remove.data = None;
+            }
+        }
+        None
     }
 
     pub fn get_child_data(&self) -> Option<T> {
@@ -470,6 +518,21 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
         self.iter_paths_opt(|ap, t_opt| {
             t_opt.map(|t| f(ap, t));
         })
+    }
+
+    /// Apply `f` to each (access path, data) pair encoded in `self`
+    /// and collects the result when `f` returns `Some(r)`
+    pub fn map_paths<F, R>(&self, mut f: F) -> Vec<R>
+    where
+        F: FnMut(&AccessPath, &T) -> Option<R>,
+    {
+        let mut results = vec![];
+        self.iter_paths(|a, b| {
+            if let Some(r) = f(a, b) {
+                results.push(r);
+            }
+        });
+        results
     }
 
     /// Return a wrapper that of `self` that implements `Display` using `env`

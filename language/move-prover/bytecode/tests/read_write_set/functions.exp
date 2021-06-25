@@ -93,7 +93,6 @@ public fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
      # Formal(0)/0x1::Funtions::R/v: Write
      #
      # Locals:
-     # Formal(0): Formal(0)
      #
   0: $t2 := copy($t0)
   1: $t3 := borrow_global<Funtions::R>($t2)
@@ -194,7 +193,6 @@ public fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
      # Formal(0)/v: Write
      #
      # Locals:
-     # Formal(0): Formal(0)
      # Formal(0)/v: Formal(1)
      #
   0: $t2 := move($t1)

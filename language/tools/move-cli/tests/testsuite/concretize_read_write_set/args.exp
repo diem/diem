@@ -5,9 +5,6 @@ Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
 Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Read
 
 Locals:
-Formal(0): Formal(0)
-Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a
-Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f
 Ret(0): Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f
 
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA`:
@@ -31,10 +28,6 @@ Formal(0)/0x1::ConcretizeVector::S/v/[_]: Read
 Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Read
 
 Locals:
-Formal(0): Formal(0)
-Formal(0)/0x1::ConcretizeVector::S/v: Formal(0)/0x1::ConcretizeVector::S/v
-Formal(0)/0x1::ConcretizeVector::S/v/[_]: Formal(0)/0x1::ConcretizeVector::S/v/[_]
-Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f
 Ret(0): Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f
 
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1`:

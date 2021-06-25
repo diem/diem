@@ -109,6 +109,12 @@ pub trait AccessPathMap<T: AbstractDomain> {
     fn get_access_path(&self, ap: AccessPath) -> Option<&T>;
 }
 
+/// Trait for a domain that can be viewed as a partial map from access paths to values
+/// and values can be deleted using their access paths
+pub trait AccessPathDeletableMap<T: AbstractDomain> {
+    fn remove_access_path(&mut self, ap: AccessPath) -> Option<T>;
+}
+
 /// Trait for an abstract domain that can represent footprint values
 pub trait FootprintDomain: AbstractDomain + Clone + Debug + PartialEq + Sized {
     /// Create a footprint value for access path `ap`

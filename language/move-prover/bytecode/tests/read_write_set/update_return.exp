@@ -82,8 +82,6 @@ public fun UpdateReturn::write_f($t0|s: &mut UpdateReturn::S, $t1|x: u64): u64 {
      # Formal(0)/f: Write
      #
      # Locals:
-     # Formal(0): Formal(0)
-     # Formal(0)/f: Formal(0)/f
      # Ret(0): Formal(1)
      #
   0: $t2 := 7

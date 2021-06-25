@@ -5,8 +5,6 @@ Accesses:
 Formal(0)/f: Read
 
 Locals:
-Formal(0): Formal(0)
-Formal(0)/f: Formal(0)/f
 Ret(0): Formal(0)/f
 
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/RWSet.mv write_f --mode bare -v`:
@@ -15,6 +13,4 @@ Accesses:
 Formal(0)/f: Write
 
 Locals:
-Formal(0): Formal(0)
-Formal(0)/f: Formal(0)/f
 

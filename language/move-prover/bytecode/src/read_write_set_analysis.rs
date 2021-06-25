@@ -694,7 +694,18 @@ impl<'a> CompositionalAnalysis<ReadWriteSetState> for ReadWriteSetAnalysis<'a> {
                 }
             }
         }
-        // TODO: if the data associated with path P is Footprint(P), remove it
+
+        // collect access paths only associated with a single addr s.t. ap = { Footprint(ap) }
+        let aps_to_remove =
+            state
+                .locals
+                .map_paths(|ap, addrs| match (addrs.iter().next(), addrs.len()) {
+                    (Some(Addr::Footprint(x)), 1) if x == ap => Some(ap.clone()),
+                    _ => None,
+                });
+        aps_to_remove.iter().for_each(|ap| {
+            state.locals.remove_node(ap.clone());
+        });
 
         state
     }

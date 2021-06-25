@@ -98,8 +98,6 @@ public fun BoolFootprint::global_get($t0|a: address): bool {
      # Formal(0)/0x1::BoolFootprint::B/b: Read
      #
      # Locals:
-     # Formal(0): Formal(0)
-     # Formal(0)/0x1::BoolFootprint::B/b: Formal(0)/0x1::BoolFootprint::B/b
      # Ret(0): Formal(0)/0x1::BoolFootprint::B/b
      #
   0: $t2 := copy($t0)

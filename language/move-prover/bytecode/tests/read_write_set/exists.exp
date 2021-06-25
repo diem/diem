@@ -131,8 +131,6 @@ public fun Exists::exists_field($t0|s: &Exists::S): bool {
      # Formal(0)/f/0x2::Exists::T: Read
      #
      # Locals:
-     # Formal(0): Formal(0)
-     # Formal(0)/f: Formal(0)/f
      #
   0: $t1 := move($t0)
   1: $t2 := borrow_field<Exists::S>.f($t1)
