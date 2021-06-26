@@ -27,6 +27,7 @@ mod pending_votes;
 mod persistent_liveness_storage;
 mod round_manager;
 mod state_computer;
+mod experimental;
 mod state_replication;
 #[cfg(any(test, feature = "fuzzing"))]
 mod test_utils;

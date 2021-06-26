@@ -33,9 +33,9 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
-use diem_infallible::checked;
+use diem_infallible::{checked, Mutex};
 use diem_logger::prelude::*;
-use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
+use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier, validator_verifier::VerifyError as ValidatorVerifyError};
 use fail::fail_point;
 #[cfg(test)]
 use safety_rules::ConsensusState;
@@ -43,6 +43,10 @@ use safety_rules::TSafetyRules;
 use serde::Serialize;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
+use diem_types::ledger_info::{LedgerInfoWithSignatures, LedgerInfo};
+use consensus_types::experimental::commit_proposal::CommitProposal;
+use diem_crypto::ed25519::Ed25519Signature;
+use diem_types::account_address::AccountAddress;
 
 #[derive(Serialize, Clone)]
 pub enum UnverifiedEvent {
@@ -185,11 +189,12 @@ pub struct RoundManager {
     round_state: RoundState,
     proposer_election: Box<dyn ProposerElection + Send + Sync>,
     proposal_generator: ProposalGenerator,
-    safety_rules: MetricsSafetyRules,
+    safety_rules: Arc<Mutex<MetricsSafetyRules>>,
     network: NetworkSender,
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
     sync_only: bool,
+    author: Author,
 }
 
 impl RoundManager {
@@ -199,11 +204,12 @@ impl RoundManager {
         round_state: RoundState,
         proposer_election: Box<dyn ProposerElection + Send + Sync>,
         proposal_generator: ProposalGenerator,
-        safety_rules: MetricsSafetyRules,
+        safety_rules: Arc<Mutex<MetricsSafetyRules>>,
         network: NetworkSender,
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
+        author: Author,
     ) -> Self {
         counters::OP_COUNTERS
             .gauge("sync_only")
@@ -219,8 +225,11 @@ impl RoundManager {
             txn_manager,
             storage,
             sync_only,
+            author,
         }
     }
+
+    pub fn author(&self) -> Author { self.author }
 
     fn create_block_retriever(&self, author: Author) -> BlockRetriever {
         BlockRetriever::new(self.network.clone(), author)
@@ -278,7 +287,7 @@ impl RoundManager {
             .proposal_generator
             .generate_proposal(new_round_event.round)
             .await?;
-        let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        let signed_proposal = self.safety_rules.lock().sign_proposal(proposal)?;
         observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
         debug!(self.new_log(LogEvent::Propose), "{}", signed_proposal);
         // return proposal
@@ -459,6 +468,7 @@ impl RoundManager {
             let timeout = timeout_vote.timeout();
             let signature = self
                 .safety_rules
+                .lock()
                 .sign_timeout(&timeout)
                 .context("[RoundManager] SafetyRules signs timeout")?;
             timeout_vote.add_timeout_signature(signature);
@@ -478,6 +488,48 @@ impl RoundManager {
         );
         bail!("Round {} timeout, broadcast to all peers", round);
     }
+
+    pub fn verify_signature(&mut self, author: AccountAddress, ledger_info: &LedgerInfo, signature: &Ed25519Signature) -> Result<(), ValidatorVerifyError> {
+        self.epoch_state.verifier.verify(author, ledger_info, signature)
+    }
+
+    pub fn verify_signature_tree(&mut self, ledger_info: &LedgerInfoWithSignatures) -> Result<(), ValidatorVerifyError> {
+        self.epoch_state
+            .verifier
+            .verify_aggregated_struct_signature(
+                ledger_info.ledger_info(),
+                ledger_info.signatures()
+            )
+    }
+
+    pub fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> Ed25519Signature {
+        self.safety_rules
+            .lock()
+            .sign_commit_proposal(ledger_info.clone(), &self.epoch_state.verifier).unwrap()
+    }
+
+    pub fn generate_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<ConsensusMsg> {
+        let signature = self.sign_commit_proposal(ledger_info.clone());
+        Ok(ConsensusMsg::CommitProposalMsg(Box::new(
+            CommitProposal::new_with_signature(
+                self.author,
+                ledger_info.ledger_info().clone(),
+                signature,
+            )
+        )))
+    }
+
+    pub async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        let msg = self.generate_commit_proposal(ledger_info).unwrap();
+        self.network.broadcast(msg).await;
+        Ok(())
+    }
+
+    pub async fn broadcast_commit_decision(&mut self, msg: ConsensusMsg) -> anyhow::Result<()> {
+        self.network.broadcast(msg); //.await // we do not have to wait for broadcasting commit decision
+        Ok(())
+    }
+
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
     async fn process_certificates(&mut self) -> anyhow::Result<()> {
@@ -578,6 +630,7 @@ impl RoundManager {
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
         let vote = self
             .safety_rules
+            .lock()
             .construct_and_sign_vote(&maybe_signed_vote_proposal)
             .context(format!(
                 "[RoundManager] SafetyRules {}Rejected{} {}",
@@ -757,13 +810,15 @@ impl RoundManager {
     /// Inspect the current consensus state.
     #[cfg(test)]
     pub fn consensus_state(&mut self) -> ConsensusState {
-        self.safety_rules.consensus_state().unwrap()
+        self.safety_rules.lock().consensus_state().unwrap()
     }
 
     #[cfg(test)]
-    pub fn set_safety_rules(&mut self, safety_rules: MetricsSafetyRules) {
+    pub fn set_safety_rules(&mut self, safety_rules: Arc<Mutex<MetricsSafetyRules>>) {
         self.safety_rules = safety_rules
     }
+
+    pub fn safety_rules(&self) -> &Arc<Mutex<MetricsSafetyRules>> { &self.safety_rules }
 
     pub fn epoch_state(&self) -> &EpochState {
         &self.epoch_state

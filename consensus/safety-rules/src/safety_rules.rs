@@ -33,6 +33,8 @@ use diem_types::{
 };
 use serde::Serialize;
 use std::cmp::Ordering;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::validator_verifier::ValidatorVerifier;
 
 /// @TODO consider a cache of verified QCs to cut down on verification costs
 pub struct SafetyRules {
@@ -439,6 +441,31 @@ impl SafetyRules {
         let signature = self.sign(timeout)?;
         Ok(signature)
     }
+
+    fn guarded_sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures, verifier: &ValidatorVerifier) -> Result<Ed25519Signature, Error> {
+        self.signer()?;
+
+        // Verify that ledger_info contains at least 2f + 1 dostinct signatures
+        match verifier.verify_aggregated_struct_signature(ledger_info.ledger_info(), ledger_info.signatures()) {
+            Ok(_) => {},
+            Err(error) => {
+                // TODO: Panic here
+                return Err(Error::InvalidQuorumCertificate(
+                    error.to_string()
+                ))
+            },
+        };
+
+        //let mut safety_data = self.persistent_storage.safety_data()?;
+        //self.verify_epoch(commit_proposal.epoch(), &safety_data)?;
+
+        // TODO: add guarding rules
+
+        let signature = self.sign(ledger_info.ledger_info())?;
+
+        Ok(signature)
+    }
+
 }
 
 impl TSafetyRules for SafetyRules {
@@ -470,6 +497,11 @@ impl TSafetyRules for SafetyRules {
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         let cb = || self.guarded_sign_timeout(timeout);
         run_and_log(cb, |log| log.round(timeout.round()), LogEntry::SignTimeout)
+    }
+
+    fn sign_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures, verifier: &ValidatorVerifier) -> Result<Ed25519Signature, Error> {
+        let cb = || self.guarded_sign_commit_proposal(ledger_info, verifier);
+        run_and_log(cb, |log| log, LogEntry::SignCommitProposal)
     }
 }
 

@@ -24,6 +24,8 @@ pub struct ConsensusConfig {
     pub sync_only: bool,
     // how many times to wait for txns from mempool when propose
     pub mempool_poll_count: u64,
+    pub decoupled: bool,
+    pub channel_size: usize,
 }
 
 impl Default for ConsensusConfig {
@@ -42,6 +44,8 @@ impl Default for ConsensusConfig {
             safety_rules: SafetyRulesConfig::default(),
             sync_only: false,
             mempool_poll_count: 1,
+            decoupled: false,  // Work in progress. Do not turn it on.
+            channel_size: 30,
         }
     }
 }

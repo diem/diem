@@ -23,25 +23,30 @@ use crate::{
     util::time_service::TimeService,
 };
 use anyhow::{bail, ensure, Context};
-use channel::diem_channel;
+use channel::{diem_channel, Sender, Receiver};
 use consensus_types::{
     common::{Author, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
-use diem_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
-use diem_infallible::duration_since_epoch;
+use diem_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig, Error};
+use diem_infallible::{duration_since_epoch, Mutex};
 use diem_logger::prelude::*;
-use diem_metrics::monitor;
+use diem_metrics::{monitor, IntGauge};
 use diem_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
-use futures::{select, StreamExt};
+use futures::{select, StreamExt, SinkExt};
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
+use tokio::runtime::{self, Runtime};
+use consensus_types::experimental::commit_decision::CommitDecision;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
+use crate::experimental::commit_phase::{CommitPhase, CommitPhaseChannelMsgWrapper};
+use consensus_types::executed_block::ExecutedBlock;
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// RoundManager is used for normal event handling.
@@ -82,6 +87,11 @@ pub struct EpochManager {
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    commit_channel_state_computer: Arc<dyn StateComputer>,
+    sender_cp: Sender<CommitPhaseChannelMsgWrapper>,
+    receiver_cp: Receiver<CommitPhaseChannelMsgWrapper>,
+    sender_vblocks: Option<Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>>,
+    sender_commit_msg: Option<Sender<ConsensusMsg>>,
 }
 
 impl EpochManager {
@@ -95,11 +105,19 @@ impl EpochManager {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        commit_channel_state_computer: Arc<dyn StateComputer>,
+        sender_vblocks: Option<Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>>,
+        sender_commit_msg: Option<Sender<ConsensusMsg>>,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
         let sr_config = &node_config.consensus.safety_rules;
         let safety_rules_manager = SafetyRulesManager::new(sr_config);
+        let guage_cp = IntGauge::new("D_COMMPROPOSAL_CHANNEL_COUNTER", "counter for the committing proposals").unwrap();
+        let (sender_cp, receiver_cp) = channel::new::<CommitPhaseChannelMsgWrapper>(
+            node_config.consensus.channel_size,
+            &guage_cp
+        );
         Self {
             author,
             config,
@@ -113,6 +131,11 @@ impl EpochManager {
             safety_rules_manager,
             processor: None,
             reconfig_events,
+            commit_channel_state_computer,
+            sender_cp,
+            receiver_cp,
+            sender_vblocks,
+            sender_commit_msg,
         }
     }
 
@@ -310,6 +333,8 @@ impl EpochManager {
             );
         }
 
+        let safety_rules_container = Arc::new(Mutex::new(safety_rules));
+
         info!(epoch = epoch, "Create ProposalGenerator");
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
@@ -334,17 +359,45 @@ impl EpochManager {
             epoch_state.verifier.clone(),
         );
 
+        let guage_c = IntGauge::new("D_COM_CHANNEL_COUNTER_EM", "counter for the decoupling committing channel in epoch manager").unwrap();
+        let (sender_comm, receiver_comm) = channel::new::<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>(
+            self.config.channel_size,
+            &guage_c
+        );
+
+        let guage_c_msg = IntGauge::new("D_COM_CHANNEL_COUNTER_EM", "counter for the decoupling committing channel in epoch manager").unwrap();
+        let (sender_c_msg, receiver_c_msg) = channel::new::<ConsensusMsg>(
+            self.config.channel_size,
+            &guage_c_msg
+        );
+
+        self.sender_vblocks = Some(sender_comm);
+        self.sender_commit_msg = Some(sender_c_msg);
+
+        let commit_phase = CommitPhase::new(
+            receiver_comm,
+            self.commit_channel_state_computer.clone(),
+            self.sender_cp.clone(),
+            receiver_c_msg,
+            epoch_state.verifier.clone(),
+            Arc::clone(&safety_rules_container),
+            self.author,
+        );
+
+        tokio::spawn(commit_phase.start());
+
         let mut processor = RoundManager::new(
             epoch_state,
             block_store,
             round_state,
             proposer_election,
             proposal_generator,
-            safety_rules,
+            Arc::clone(&safety_rules_container),
             network_sender,
             self.txn_manager.clone(),
             self.storage.clone(),
             self.config.sync_only,
+            self.author,
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));
@@ -472,6 +525,24 @@ impl EpochManager {
                     self.process_epoch_retrieval(*request, peer_id).await?
                 );
             }
+            ConsensusMsg::CommitProposalMsg(request) => {
+                match &self.sender_commit_msg {
+                    Some(sender) => {
+                        sender.clone()
+                            .send(ConsensusMsg::CommitProposalMsg(request)).await;
+                    }
+                    None => {}
+                }
+            }
+            ConsensusMsg::CommitDecisionMsg(request) => {
+                match &self.sender_commit_msg {
+                    Some(sender) => {
+                        sender.clone()
+                            .send(ConsensusMsg::CommitDecisionMsg(request)).await;
+                    }
+                    None => {}
+                }
+            }
             _ => {
                 bail!("[EpochManager] Unexpected messages: {:?}", msg);
             }
@@ -534,6 +605,28 @@ impl EpochManager {
         }
     }
 
+    async fn broadcast_commit_proposal(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        match self.processor_mut() {
+            RoundProcessor::Normal(p) => { p.broadcast_commit_proposal(ledger_info).await},
+            _ => unreachable!("RoundManager not started yet"),
+        }
+    }
+
+    async fn broadcast_commit_decision(&mut self, ledger_info: LedgerInfoWithSignatures) -> anyhow::Result<()> {
+        match self.processor_mut() {
+            RoundProcessor::Normal(p) => {
+                p.broadcast_commit_decision(ConsensusMsg::CommitDecisionMsg(
+                    Box::new(
+                        CommitDecision::new(
+                            ledger_info
+                        )
+                    )));
+            }
+            _ => unreachable!("RoundManager not started yet")
+        }
+        Ok(())
+    }
+
     async fn expect_new_epoch(&mut self) {
         if let Some(payload) = self.reconfig_events.next().await {
             self.start_processor(payload).await;
@@ -546,6 +639,7 @@ impl EpochManager {
         mut self,
         mut round_timeout_sender_rx: channel::Receiver<Round>,
         mut network_receivers: NetworkReceivers,
+        mut commit_channel_recv: channel::Receiver<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
     ) {
         // initial start of the processor
         self.expect_new_epoch().await;
@@ -562,6 +656,26 @@ impl EpochManager {
                     }
                     round = round_timeout_sender_rx.select_next_some() => {
                         monitor!("process_local_timeout", self.process_local_timeout(round).await)
+                    }
+                    ledger_info = self.receiver_cp.select_next_some() => {
+                        match ledger_info {
+                            CommitPhaseChannelMsgWrapper::CommitProposal(li) => {
+                                monitor!("generate_commit_proposal", self.broadcast_commit_proposal(li).await)
+                            }
+                            CommitPhaseChannelMsgWrapper::CommitDecision(li) => {
+                                monitor!("generate_commit_proposal", self.broadcast_commit_decision(li).await)
+                            }
+                        }
+                    }
+                    vblocks = commit_channel_recv.select_next_some() => {
+                        match &self.sender_vblocks {
+                            Some(sender) => {
+                                monitor!("pass the executed blocks to the inner commit phase",
+                                    sender.clone().send(vblocks).await)
+                            }
+                            None => { unreachable!() }
+                        };
+                        Ok(())
                     }
                 }
             );
