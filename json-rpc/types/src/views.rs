@@ -47,8 +47,6 @@ impl AmountView {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "type")]
 pub enum AccountRoleView {
-    #[serde(rename = "unknown")]
-    Unknown,
     #[serde(rename = "child_vasp")]
     ChildVASP { parent_vasp_address: AccountAddress },
     #[serde(rename = "parent_vasp")]
@@ -73,6 +71,11 @@ pub enum AccountRoleView {
         base_url_rotation_events_key: EventKey,
         preburn_queues: Option<Vec<PreburnQueueView>>,
     },
+    /// The Unknown variant is deserialized by the client if it sees
+    /// a variant that it doesn't know about
+    #[serde(rename = "unknown")]
+    #[serde(other)]
+    Unknown,
 }
 
 impl AccountRoleView {
@@ -550,6 +553,8 @@ pub enum VMStatusView {
     VerificationError,
     DeserializationError,
     PublishingFailure,
+    #[serde(other)]
+    Unknown,
 }
 
 impl VMStatusView {
@@ -587,6 +592,7 @@ impl std::fmt::Display for VMStatusView {
             VMStatusView::VerificationError => write!(f, "Verification Error"),
             VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
             VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
+            VMStatusView::Unknown => write!(f, "Unknown Error"),
         }
     }
 }
@@ -638,7 +644,8 @@ pub enum TransactionDataView {
         script: ScriptView,
     },
     #[serde(rename = "unknown")]
-    UnknownTransaction {},
+    #[serde(other)]
+    UnknownTransaction,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
