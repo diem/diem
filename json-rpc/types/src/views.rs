@@ -1423,7 +1423,10 @@ impl TryFrom<&AccountStateProofView> for AccountStateProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::views::{AmountView, EventDataView, PreburnWithMetadataView};
+    use crate::views::{
+        AccountRoleView, AmountView, EventDataView, PreburnWithMetadataView, TransactionDataView,
+        VMStatusView,
+    };
     use diem_types::{contract_event::ContractEvent, event::EventKey};
     use move_core_types::language_storage::TypeTag;
     use serde_json::json;
@@ -1464,5 +1467,53 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn account_role_view_unknown() {
+        let json = json!({
+            "type": "NewVariant",
+            "new-field": 5,
+        });
+
+        let actual: AccountRoleView = serde_json::from_value(json).unwrap();
+        let expected = AccountRoleView::Unknown;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn event_data_view_unknown() {
+        let json = json!({
+            "type": "NewVariant",
+            "new-field": 5,
+        });
+
+        let actual: EventDataView = serde_json::from_value(json).unwrap();
+        let expected = EventDataView::UnknownToClient;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn vm_status_view_unknown() {
+        let json = json!({
+            "type": "NewVariant",
+            "new-field": 5,
+        });
+
+        let actual: VMStatusView = serde_json::from_value(json).unwrap();
+        let expected = VMStatusView::Unknown;
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn transaction_data_view_unknown() {
+        let json = json!({
+            "type": "NewVariant",
+            "new-field": 5,
+        });
+
+        let actual: TransactionDataView = serde_json::from_value(json).unwrap();
+        let expected = TransactionDataView::UnknownTransaction;
+        assert_eq!(actual, expected);
     }
 }
