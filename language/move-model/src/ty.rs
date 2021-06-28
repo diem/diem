@@ -605,6 +605,10 @@ impl TypeUnification {
         }
     }
 
+    pub fn decompose(self) -> (BTreeMap<Type, Type>, BTreeMap<Type, Type>) {
+        (self.subst_lhs, self.subst_rhs)
+    }
+
     fn extract_subst(&mut self, ty: &Type, subst: &BTreeMap<Type, Type>, is_lhs: bool) {
         ty.visit(&mut |t| match t {
             Type::TypeParameter(_) | Type::TypeLocal(_) => match subst.get(t) {
