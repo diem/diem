@@ -6,7 +6,7 @@ use crate::interfaces::LeftScreen;
 use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_binary_format::{
-    access::ModuleAccess,
+    binary_views::BinaryIndexedView,
     file_format::{CodeOffset, CompiledModule, FunctionDefinitionIndex},
 };
 use move_ir_types::location::Loc;
@@ -21,14 +21,15 @@ pub struct BytecodeInfo {
 }
 
 #[derive(Clone, Debug)]
-pub struct BytecodeViewer {
+pub struct BytecodeViewer<'a> {
     pub lines: Vec<String>,
-    pub module: CompiledModule,
+    pub view: BinaryIndexedView<'a>,
     pub line_map: HashMap<usize, BytecodeInfo>,
 }
 
-impl BytecodeViewer {
-    pub fn new(source_map: SourceMap<Loc>, module: CompiledModule) -> Self {
+impl<'a> BytecodeViewer<'a> {
+    pub fn new(source_map: SourceMap<Loc>, module: &'a CompiledModule) -> Self {
+        let view = BinaryIndexedView::Module(module);
         let source_mapping = SourceMapping::new(source_map, module.clone());
         let options = DisassemblerOptions {
             print_code: true,
@@ -42,7 +43,7 @@ impl BytecodeViewer {
         let mut base_viewer = Self {
             lines: disassembled_string.lines().map(|x| x.to_string()).collect(),
             line_map: HashMap::new(),
-            module,
+            view,
         };
         base_viewer.build_mapping();
         base_viewer
@@ -56,14 +57,15 @@ impl BytecodeViewer {
         let mut line_map = HashMap::new();
 
         let function_def_for_name: HashMap<String, u16> = self
-            .module
+            .view
             .function_defs()
-            .iter()
+            .into_iter()
+            .flatten()
             .enumerate()
             .map(|(index, fdef)| {
                 (
-                    self.module
-                        .identifier_at(self.module.function_handle_at(fdef.function).name)
+                    self.view
+                        .identifier_at(self.view.function_handle_at(fdef.function).name)
                         .to_string(),
                     index as u16,
                 )
@@ -97,7 +99,7 @@ impl BytecodeViewer {
     }
 }
 
-impl LeftScreen for BytecodeViewer {
+impl LeftScreen for BytecodeViewer<'_> {
     type SourceIndex = BytecodeInfo;
 
     fn get_source_index_for_line(&self, line: usize, _column: usize) -> Option<&Self::SourceIndex> {

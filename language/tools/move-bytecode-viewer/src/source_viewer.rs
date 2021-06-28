@@ -40,7 +40,7 @@ impl ModuleViewer {
     }
 }
 
-impl RightScreen<BytecodeViewer> for ModuleViewer {
+impl<'a> RightScreen<BytecodeViewer<'a>> for ModuleViewer {
     fn source_for_code_location(&self, bytecode_info: &BytecodeInfo) -> Result<SourceContext> {
         let span = self
             .source_map

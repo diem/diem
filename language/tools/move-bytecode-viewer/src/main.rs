@@ -45,7 +45,7 @@ pub fn main() {
     let source_path = Path::new(&args.source_file_path);
     let module_viewer =
         ModuleViewer::new(compiled_module.clone(), source_map.clone(), &source_path);
-    let bytecode_viewer = BytecodeViewer::new(source_map, compiled_module);
+    let bytecode_viewer = BytecodeViewer::new(source_map, &compiled_module);
 
     let interface = Viewer::new(module_viewer, bytecode_viewer);
     start_tui_with_interface(interface).unwrap();
