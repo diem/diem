@@ -1,18 +1,10 @@
-Move prover returns: exiting with boogie verification errors
-error: global memory invariant does not hold
+Move prover returns: exiting with boogie generation errors
+error: Type quantification not supported by this backend.
 
-    ┌── tests/sources/functional/invariants_with_generics.move:34:5 ───
+    ┌── tests/sources/functional/invariants_with_generics.move:52:9 ───
     │
- 34 │ ╭     invariant
- 35 │ │         exists<S::Storage<u64, bool>>(@0x22)
- 36 │ │             ==> global<S::Storage<u64, bool>>(@0x22).x == 1;
-    │ ╰────────────────────────────────────────────────────────────^
+ 52 │ ╭         forall t1: type, t2: type:
+ 53 │ │             (exists<S::Storage<t1, t2>>(@0x22) && exists<S::Storage<t1, t2>>(@0x23))
+ 54 │ │                 ==> global<S::Storage<t1, t2>>(@0x22) == global<S::Storage<t1, t2>>(@0x23);
+    │ ╰──────────────────────────────────────────────────────────────────────────────────────────^
     │
-    =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
-    =         account = <redacted>
-    =         x = <redacted>
-    =         y = <redacted>
-    =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
-    =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
-    =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
-    =     at tests/sources/functional/invariants_with_generics.move:34
