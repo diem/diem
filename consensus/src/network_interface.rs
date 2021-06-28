@@ -11,7 +11,7 @@ use consensus_types::{
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
-    experimental::commit_proposal::CommitProposal,
+    experimental::commit_vote::CommitVote,
     experimental::commit_decision::CommitDecision,
 };
 use diem_metrics::IntCounterVec;
@@ -49,9 +49,9 @@ pub enum ConsensusMsg {
     /// VoteMsg is the struct that is ultimately sent by the voter in response for receiving a
     /// proposal.
     VoteMsg(Box<VoteMsg>),
-    /// CommitProposal is the struct that is sent by the validator after execution to propose
+    /// CommitVote is the struct that is sent by the validator after execution to propose
     /// on the committed state hash root.
-    CommitProposalMsg(Box<CommitProposal>),
+    CommitVoteMsg(Box<CommitVote>),
     /// CommitDecision is the struct that is sent by the validator after collecting no fewer
     /// than 2f + 1 signatures on the commit proposal. This part is not on the critical path, but
     /// it can save slow machines to quickly confirm the execution result.
