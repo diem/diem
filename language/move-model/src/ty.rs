@@ -5,7 +5,7 @@
 
 use crate::{
     ast::QualifiedSymbol,
-    model::{GlobalEnv, ModuleId, StructEnv, StructId},
+    model::{AbilitySet, GlobalEnv, ModuleId, StructEnv, StructId, TypeParameter},
     symbol::{Symbol, SymbolPool},
 };
 use move_core_types::language_storage::{StructTag, TypeTag};
@@ -98,6 +98,24 @@ impl PrimitiveType {
             Signer => TypeTag::Signer,
             Num | Range | TypeValue | EventStore => return None,
         })
+    }
+
+    /// Returns the abilities of this primitive type.
+    /// Return None if the type only appears in spec.
+    pub fn get_abilities(&self, treat_num_as_int: bool) -> Option<AbilitySet> {
+        use PrimitiveType::*;
+        match self {
+            Bool | U8 | U64 | U128 | Address => Some(AbilitySet::PRIMITIVES),
+            Signer => Some(AbilitySet::SIGNER),
+            Num => {
+                if treat_num_as_int {
+                    Some(AbilitySet::PRIMITIVES)
+                } else {
+                    None
+                }
+            }
+            Range | TypeValue | EventStore => None,
+        }
     }
 }
 
@@ -462,6 +480,33 @@ impl Type {
         }
     }
 
+    /// Returns the abilities of this type.
+    /// Return None if the type is a type parameter or only appears in spec.
+    pub fn get_abilities(&self, env: &GlobalEnv, treat_num_as_int: bool) -> Option<AbilitySet> {
+        use Type::*;
+        match self {
+            Primitive(p) => p.get_abilities(treat_num_as_int),
+            Vector(elem) => Some(
+                AbilitySet::polymorphic_abilities(
+                    AbilitySet::VECTOR,
+                    vec![false],
+                    vec![elem.get_abilities(env, treat_num_as_int)?],
+                )
+                .unwrap(),
+            ),
+            Struct(module_id, struct_id, _) => Some(
+                env.get_struct(module_id.qualified(*struct_id))
+                    .get_abilities(),
+            ),
+            Reference(..) => Some(AbilitySet::REFERENCES),
+            // type parameters have no abilities, instead, they have ability constraints.
+            TypeParameter(..) => None,
+            // types only appears in spec
+            Tuple(..) | Fun(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
+            | Var(..) => None,
+        }
+    }
+
     /// Get the unbound type variables in the type.
     pub fn get_vars(&self) -> BTreeSet<u16> {
         let mut vars = BTreeSet::new();
@@ -507,6 +552,305 @@ impl Type {
             _ => {}
         }
         visitor(self)
+    }
+}
+
+/// Holds the join-relation (GCD or LCM) between two type instantiations
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TypeUnification {
+    /// The two types matches
+    Match,
+    /// GCD: LHS < RHS
+    /// LCM: RHS < LHS
+    LHS,
+    /// GCD: RHS < LHS
+    /// LCM: LHS < RHS
+    RHS,
+    /// The two types overlap, but there is no way to derive one by instantiating the other
+    Both(Type),
+    /// There is no overlap between the two types
+    Disjoint,
+}
+
+impl TypeUnification {
+    pub fn derive(
+        lhs: &Type,
+        rhs: &Type,
+        env: &GlobalEnv,
+        ty_params: &[TypeParameter],
+        is_gcd: bool,
+        match_num_and_int: bool,
+        match_type_param_and_local: bool,
+        subst_lhs: &mut BTreeMap<Type, Type>,
+        subst_rhs: &mut BTreeMap<Type, Type>,
+    ) -> Self {
+        // helpers
+        let can_inst = |t_generic: &Type, t_concrete: &Type| {
+            let requirements = match t_generic {
+                Type::TypeParameter(idx) => ty_params.get(*idx as usize).unwrap().1 .0,
+                Type::TypeLocal(_) => AbilitySet::EMPTY,
+                _ => panic!("Only TypeParameter and TypeLocal allowed as a generic type"),
+            };
+            match t_concrete.get_abilities(env, match_num_and_int) {
+                None => false,
+                Some(abs) => requirements.is_subset(abs),
+            }
+        };
+
+        // panic if we see a type that should not appear in type instantiations
+        for t in &[lhs, rhs] {
+            match t {
+                Type::Reference(..)
+                | Type::Fun(..)
+                | Type::TypeDomain(..)
+                | Type::ResourceDomain(..)
+                | Type::Var(..)
+                | Type::Error => {
+                    let type_param_names = ty_params.iter().map(|p| p.0).collect();
+                    let ctxt = TypeDisplayContext::WithEnv {
+                        env,
+                        type_param_names: Some(type_param_names),
+                    };
+                    panic!(
+                        "Invariant violation: invalid type in type instantiation: {}",
+                        lhs.display(&ctxt)
+                    );
+                }
+                _ => (),
+            }
+        }
+        // now do the comparison
+        match (lhs, rhs) {
+            // primitive
+            (Type::Primitive(lhs_primitive), Type::Primitive(rhs_primitive)) => {
+                if lhs_primitive == rhs_primitive {
+                    return Self::Match;
+                }
+                if !match_num_and_int {
+                    return Self::Disjoint;
+                }
+                match (lhs_primitive, rhs_primitive) {
+                    (PrimitiveType::Num, _) if rhs.is_number() => Self::Match,
+                    (_, PrimitiveType::Num) if lhs.is_number() => Self::Match,
+                    _ => Self::Disjoint,
+                }
+            }
+            // tuple
+            (Type::Tuple(lhs_tuple), Type::Tuple(rhs_tuple)) => Self::derive_vec(
+                lhs_tuple,
+                rhs_tuple,
+                env,
+                ty_params,
+                is_gcd,
+                match_num_and_int,
+                match_type_param_and_local,
+                subst_lhs,
+                subst_rhs,
+                Type::Tuple,
+            ),
+            // vector
+            (Type::Vector(lhs_elem), Type::Vector(rhs_elem)) => {
+                let rel = Self::derive(
+                    lhs_elem,
+                    rhs_elem,
+                    env,
+                    ty_params,
+                    is_gcd,
+                    match_num_and_int,
+                    match_type_param_and_local,
+                    subst_lhs,
+                    subst_rhs,
+                );
+                match rel {
+                    Self::Match => Self::Match,
+                    Self::LHS => Self::LHS,
+                    Self::RHS => Self::RHS,
+                    Self::Both(new_t) => Self::Both(Type::Vector(Box::new(new_t))),
+                    Self::Disjoint => Self::Disjoint,
+                }
+            }
+            // struct
+            (
+                Type::Struct(lhs_mid, lhs_sid, lhs_inst),
+                Type::Struct(rhs_mid, rhs_sid, rhs_inst),
+            ) => {
+                if lhs_mid != rhs_mid || lhs_sid != rhs_sid {
+                    return Self::Disjoint;
+                }
+                Self::derive_vec(
+                    lhs_inst,
+                    rhs_inst,
+                    env,
+                    ty_params,
+                    is_gcd,
+                    match_num_and_int,
+                    match_type_param_and_local,
+                    subst_lhs,
+                    subst_rhs,
+                    |v| Type::Struct(*lhs_mid, *lhs_sid, v),
+                )
+            }
+            // type parameters and type locals
+            (Type::TypeParameter(lhs_param), Type::TypeParameter(rhs_param)) => {
+                if lhs_param == rhs_param {
+                    Self::Match
+                } else {
+                    Self::Disjoint
+                }
+            }
+            (Type::TypeLocal(lhs_local), Type::TypeLocal(rhs_local)) => {
+                if lhs_local == rhs_local {
+                    Self::Match
+                } else {
+                    Self::Disjoint
+                }
+            }
+            (Type::TypeParameter(_), Type::TypeLocal(_))
+            | (Type::TypeLocal(_), Type::TypeParameter(_)) => {
+                if !match_type_param_and_local {
+                    return Self::Disjoint;
+                }
+                match (subst_lhs.get(lhs).cloned(), subst_rhs.get(rhs).cloned()) {
+                    (None, None) => Self::Match,
+                    (Some(s_lhs), None) => {
+                        subst_rhs.insert(rhs.clone(), s_lhs);
+                        Self::Match
+                    }
+                    (None, Some(s_rhs)) => {
+                        subst_lhs.insert(lhs.clone(), s_rhs);
+                        Self::Match
+                    }
+                    (Some(s_lhs), Some(s_rhs)) => Self::derive(
+                        &s_lhs,
+                        &s_rhs,
+                        env,
+                        ty_params,
+                        is_gcd,
+                        match_num_and_int,
+                        match_type_param_and_local,
+                        subst_lhs,
+                        subst_rhs,
+                    ),
+                }
+            }
+            (Type::TypeParameter(_), _) | (Type::TypeLocal(_), _) => {
+                match subst_lhs.get(lhs).cloned() {
+                    None => {
+                        if !can_inst(lhs, rhs) {
+                            return Self::Disjoint;
+                        }
+                        subst_lhs.insert(lhs.clone(), rhs.clone());
+                        if is_gcd {
+                            Self::RHS
+                        } else {
+                            Self::LHS
+                        }
+                    }
+                    Some(s_lhs) => Self::derive(
+                        &s_lhs,
+                        rhs,
+                        env,
+                        ty_params,
+                        is_gcd,
+                        match_num_and_int,
+                        match_type_param_and_local,
+                        subst_lhs,
+                        subst_rhs,
+                    ),
+                }
+            }
+            (_, Type::TypeParameter(_)) | (_, Type::TypeLocal(_)) => {
+                match subst_rhs.get(rhs).cloned() {
+                    None => {
+                        if !can_inst(rhs, lhs) {
+                            return Self::Disjoint;
+                        }
+                        subst_rhs.insert(rhs.clone(), lhs.clone());
+                        if is_gcd {
+                            Self::LHS
+                        } else {
+                            Self::RHS
+                        }
+                    }
+                    Some(s_rhs) => Self::derive(
+                        lhs,
+                        &s_rhs,
+                        env,
+                        ty_params,
+                        is_gcd,
+                        match_num_and_int,
+                        match_type_param_and_local,
+                        subst_lhs,
+                        subst_rhs,
+                    ),
+                }
+            }
+            // all other remaining cases are mismatches
+            _ => Self::Disjoint,
+        }
+    }
+
+    fn derive_vec<F>(
+        lhs: &[Type],
+        rhs: &[Type],
+        env: &GlobalEnv,
+        ty_params: &[TypeParameter],
+        is_gcd: bool,
+        match_num_and_int: bool,
+        match_type_param_and_local: bool,
+        subst_lhs: &mut BTreeMap<Type, Type>,
+        subst_rhs: &mut BTreeMap<Type, Type>,
+        converter: F,
+    ) -> Self
+    where
+        F: Fn(Vec<Type>) -> Type,
+    {
+        if lhs.len() != rhs.len() {
+            return Self::Disjoint;
+        }
+        let mut common = vec![];
+        let mut lhs_holds = true;
+        let mut rhs_holds = true;
+        for (lhs_sub, rhs_sub) in lhs.iter().zip(rhs.iter()) {
+            let rel = Self::derive(
+                lhs_sub,
+                rhs_sub,
+                env,
+                ty_params,
+                is_gcd,
+                match_num_and_int,
+                match_type_param_and_local,
+                subst_lhs,
+                subst_rhs,
+            );
+            match rel {
+                Self::Match => {
+                    common.push(lhs_sub.clone());
+                }
+                Self::LHS => {
+                    common.push(lhs_sub.clone());
+                    rhs_holds = false;
+                }
+                Self::RHS => {
+                    common.push(rhs_sub.clone());
+                    lhs_holds = false;
+                }
+                Self::Both(new_t) => {
+                    common.push(new_t);
+                    lhs_holds = false;
+                    rhs_holds = false;
+                }
+                Self::Disjoint => {
+                    return Self::Disjoint;
+                }
+            }
+        }
+        match (lhs_holds, rhs_holds) {
+            (true, true) => Self::Match,
+            (true, false) => Self::LHS,
+            (false, true) => Self::RHS,
+            (false, false) => Self::Both(converter(common)),
+        }
     }
 }
 
