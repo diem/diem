@@ -699,13 +699,13 @@ impl<'a> CompositionalAnalysis<ReadWriteSetState> for ReadWriteSetAnalysis<'a> {
         let aps_to_remove =
             state
                 .locals
-                .map_paths(|ap, addrs| match (addrs.iter().next(), addrs.len()) {
+                .filter_map_paths(|ap, addrs| match (addrs.iter().next(), addrs.len()) {
                     (Some(Addr::Footprint(x)), 1) if x == ap => Some(ap.clone()),
                     _ => None,
                 });
-        aps_to_remove.iter().for_each(|ap| {
+        for ap in aps_to_remove.iter() {
             state.locals.remove_node(ap.clone());
-        });
+        }
 
         state
     }

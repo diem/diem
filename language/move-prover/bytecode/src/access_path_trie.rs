@@ -7,9 +7,7 @@
 //! Each node is (optionally) associated with abstract value of a generic type `T`.
 
 use crate::{
-    access_path::{
-        AbsAddr, AccessPath, AccessPathDeletableMap, AccessPathMap, FootprintDomain, Offset, Root,
-    },
+    access_path::{AbsAddr, AccessPath, AccessPathMap, FootprintDomain, Offset, Root},
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
 };
 use im::ordmap::Entry;
@@ -224,9 +222,7 @@ impl<T: FootprintDomain> AccessPathMap<T> for AccessPathTrie<T> {
             None => None,
         }
     }
-}
 
-impl<T: FootprintDomain> AccessPathDeletableMap<T> for AccessPathTrie<T> {
     fn remove_access_path(&mut self, ap: AccessPath) -> Option<T> {
         self.remove_node(ap).and_then(|n| n.data)
     }
@@ -522,7 +518,7 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
 
     /// Apply `f` to each (access path, data) pair encoded in `self`
     /// and collects the result when `f` returns `Some(r)`
-    pub fn map_paths<F, R>(&self, mut f: F) -> Vec<R>
+    pub fn filter_map_paths<F, R>(&self, mut f: F) -> Vec<R>
     where
         F: FnMut(&AccessPath, &T) -> Option<R>,
     {

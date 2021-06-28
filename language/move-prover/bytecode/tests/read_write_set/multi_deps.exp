@@ -1,0 +1,90 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: bool) {
+     var $t3|tmp#$3: u64
+     var $t4: bool
+     var $t5: &MultiDeps::T
+     var $t6: &mut MultiDeps::S
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: &MultiDeps::T
+     var $t10: &u64
+     var $t11: u64
+     var $t12: u64
+     var $t13: &mut MultiDeps::S
+     var $t14: &mut u64
+  0: $t4 := copy($t2)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 12
+  4: label L0
+  5: $t5 := move($t1)
+  6: destroy($t5)
+  7: $t6 := copy($t0)
+  8: $t7 := borrow_field<MultiDeps::S>.f($t6)
+  9: $t8 := read_ref($t7)
+ 10: $t3 := $t8
+ 11: goto 18
+ 12: label L2
+ 13: $t9 := move($t1)
+ 14: $t10 := borrow_field<MultiDeps::T>.f($t9)
+ 15: $t11 := read_ref($t10)
+ 16: $t3 := $t11
+ 17: goto 18
+ 18: label L3
+ 19: $t12 := move($t3)
+ 20: $t13 := move($t0)
+ 21: $t14 := borrow_field<MultiDeps::S>.f($t13)
+ 22: write_ref($t14, $t12)
+ 23: return ()
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: bool) {
+     var $t3|tmp#$3: u64
+     var $t4: bool
+     var $t5: &MultiDeps::T
+     var $t6: &mut MultiDeps::S
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: &MultiDeps::T
+     var $t10: &u64
+     var $t11: u64
+     var $t12: u64
+     var $t13: &mut MultiDeps::S
+     var $t14: &mut u64
+     # Accesses:
+     # Formal(0)/f: ReadWrite
+     # Formal(1)/f: Read
+     #
+     # Locals:
+     # Formal(0)/f: {Formal(0)/f, Formal(1)/f, }
+     #
+  0: $t4 := copy($t2)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 12
+  4: label L0
+  5: $t5 := move($t1)
+  6: destroy($t5)
+  7: $t6 := copy($t0)
+  8: $t7 := borrow_field<MultiDeps::S>.f($t6)
+  9: $t8 := read_ref($t7)
+ 10: $t3 := $t8
+ 11: goto 18
+ 12: label L2
+ 13: $t9 := move($t1)
+ 14: $t10 := borrow_field<MultiDeps::T>.f($t9)
+ 15: $t11 := read_ref($t10)
+ 16: $t3 := $t11
+ 17: goto 18
+ 18: label L3
+ 19: $t12 := move($t3)
+ 20: $t13 := move($t0)
+ 21: $t14 := borrow_field<MultiDeps::S>.f($t13)
+ 22: write_ref($t14, $t12)
+ 23: return ()
+}

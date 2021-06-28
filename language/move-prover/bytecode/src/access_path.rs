@@ -105,13 +105,9 @@ pub struct AccessPath {
 // Abstract domain operations
 
 /// Trait for a domain that can be viewed as a partial map from access paths to values
+/// and values can be deleted using their access paths
 pub trait AccessPathMap<T: AbstractDomain> {
     fn get_access_path(&self, ap: AccessPath) -> Option<&T>;
-}
-
-/// Trait for a domain that can be viewed as a partial map from access paths to values
-/// and values can be deleted using their access paths
-pub trait AccessPathDeletableMap<T: AbstractDomain> {
     fn remove_access_path(&mut self, ap: AccessPath) -> Option<T>;
 }
 
