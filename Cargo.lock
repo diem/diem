@@ -4571,6 +4571,7 @@ dependencies = [
  "move-core-types",
  "move-coverage",
  "move-lang",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
