@@ -29,19 +29,19 @@ module ValidatorAdministrationScripts {
     /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                                                               |
-    /// | ----------------           | --------------                               | -------------                                                                                                                             |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
-    /// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
+    /// | Error Category              | Error Reason                                 | Description                                                                                                                               |
+    /// | ----------------            | --------------                               | -------------                                                                                                                             |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
+    /// | 0                           | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
+    /// | `Errors::LIMIT_EXCEEDED`    | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -67,6 +67,7 @@ module ValidatorAdministrationScripts {
     spec add_validator_and_reconfigure {
         use 0x1::DiemAccount;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Roles;
         use 0x1::DiemConfig;
 
@@ -91,7 +92,7 @@ module ValidatorAdministrationScripts {
             Errors::REQUIRES_ADDRESS,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE;
+            DiemErrors::REQUIRES_ROLE;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -198,18 +199,18 @@ module ValidatorAdministrationScripts {
     /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                     |
-    /// | ----------------           | --------------                          | -------------                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                |
-    /// | 0                          | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR` | The validator to be removed is not in the validator set.                                        |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`            | The sending account is not the Diem Root account.                                              |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                    | The sending account is not the Diem Root account.                                              |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
+    /// | Error Category              | Error Reason                            | Description                                                                                     |
+    /// | ----------------            | --------------                          | -------------                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `dr_account`.                                  |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.      |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | The sending account is not the Diem Root account or Treasury Compliance account                 |
+    /// | 0                           | 0                                       | The provided `validator_name` does not match the already-recorded human name for the validator. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemSystem::ENOT_AN_ACTIVE_VALIDATOR`  | The validator to be removed is not in the validator set.                                        |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::EDIEM_ROOT`             | The sending account is not the Diem Root account.                                               |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDIEM_ROOT`                     | The sending account is not the Diem Root account.                                               |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`       | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -235,6 +236,7 @@ module ValidatorAdministrationScripts {
     spec remove_validator_and_reconfigure {
         use 0x1::DiemAccount;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Roles;
         use 0x1::DiemConfig;
 
@@ -258,7 +260,7 @@ module ValidatorAdministrationScripts {
             Errors::NOT_PUBLISHED,
             Errors::REQUIRES_ADDRESS,
             Errors::INVALID_STATE,
-            Errors::REQUIRES_ROLE;
+            DiemErrors::REQUIRES_ROLE;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -288,13 +290,13 @@ module ValidatorAdministrationScripts {
     /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                   | Description                                                                                           |
-    /// | ----------------           | --------------                                 | -------------                                                                                         |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
-    /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
+    /// | Error Category              | Error Reason                                   | Description                                                                                           |
+    /// | ----------------            | --------------                                 | -------------                                                                                         |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
+    /// | `Errors::INVALID_STATE`     | `DiemConfig::EINVALID_BLOCK_TIME`              | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -327,6 +329,7 @@ module ValidatorAdministrationScripts {
         use 0x1::DiemConfig;
         use 0x1::DiemSystem;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Signer;
 
          // properties checked by the prologue.
@@ -367,7 +370,7 @@ module ValidatorAdministrationScripts {
         /// for which there is no useful recovery except to resubmit the transaction.
         aborts_with [check]
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE,
+            DiemErrors::REQUIRES_ROLE,
             Errors::INVALID_ARGUMENT,
             Errors::INVALID_STATE;
 
@@ -403,13 +406,13 @@ module ValidatorAdministrationScripts {
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-    /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-    /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+    /// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+    /// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+    /// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -433,6 +436,7 @@ module ValidatorAdministrationScripts {
         use 0x1::DiemAccount;
         use 0x1::Signer;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Roles;
 
         let account_addr = Signer::address_of(account);
@@ -450,7 +454,7 @@ module ValidatorAdministrationScripts {
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
             Errors::INVALID_ARGUMENT,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            DiemErrors::REQUIRES_ROLE;
 
         /// **Access Control:**
         /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
@@ -481,18 +485,18 @@ module ValidatorAdministrationScripts {
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
-    /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
-    /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
-    /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
+    /// | Error Category              | Error Reason                                          | Description                                                                                                                                                  |
+    /// | ----------------            | --------------                                        | -------------                                                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
+    /// | 0                           | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
+    /// | `Errors::INVALID_ARGUMENT`  | `ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR`          | The account at `operator_account` does not have a `ValidatorOperatorConfig::ValidatorOperatorConfig` resource.                                               |
+    /// | `Errors::NOT_PUBLISHED`     | `ValidatorConfig::EVALIDATOR_CONFIG`                  | A `ValidatorConfig::ValidatorConfig` is not published under `account`.                                                                                       |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_validator_account`
@@ -519,6 +523,7 @@ module ValidatorAdministrationScripts {
         use 0x1::DiemAccount;
         use 0x1::Signer;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Roles;
 
         let account_addr = Signer::address_of(account);
@@ -535,7 +540,7 @@ module ValidatorAdministrationScripts {
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
             Errors::INVALID_ARGUMENT,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            DiemErrors::REQUIRES_ROLE;
 
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].

@@ -6,6 +6,7 @@ address 0x1 {
 module DiemConfig {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
+    use 0x1::DiemErrors;
     use 0x1::Event;
     use 0x1::DiemTimestamp;
     use 0x1::Signer;
@@ -111,7 +112,7 @@ module DiemConfig {
     acquires DiemConfig, Configuration {
         let signer_address = Signer::address_of(account);
         // Next should always be true if properly initialized.
-        assert(exists<ModifyConfigCapability<Config>>(signer_address), Errors::requires_capability(EMODIFY_CAPABILITY));
+        assert(exists<ModifyConfigCapability<Config>>(signer_address), DiemErrors::requires_capability(EMODIFY_CAPABILITY));
 
         let addr = CoreAddresses::DIEM_ROOT_ADDRESS();
         assert(exists<DiemConfig<Config>>(addr), Errors::not_published(EDIEM_CONFIG));
@@ -138,7 +139,7 @@ module DiemConfig {
     spec schema AbortsIfNotModifiable<Config> {
         account: signer;
         aborts_if !exists<ModifyConfigCapability<Config>>(Signer::spec_address_of(account))
-            with Errors::REQUIRES_CAPABILITY;
+            with DiemErrors::REQUIRES_CAPABILITY;
     }
     spec schema SetEnsures<Config> {
         payload: Config;

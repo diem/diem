@@ -52,7 +52,7 @@ module TreasuryComplianceScripts {
     /// # Common Abort Conditions
     /// | Error Category                | Error Reason                                     | Description                                                                                                                         |
     /// | ----------------              | --------------                                   | -------------                                                                                                                       |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
     /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
@@ -72,6 +72,7 @@ module TreasuryComplianceScripts {
     spec cancel_burn_with_amount {
         use 0x1::CoreAddresses;
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -104,7 +105,7 @@ module TreasuryComplianceScripts {
         };
 
         aborts_with [check]
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_ARGUMENT,
             Errors::LIMIT_EXCEEDED,
@@ -159,7 +160,7 @@ module TreasuryComplianceScripts {
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
     /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
     /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
     /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
@@ -175,6 +176,7 @@ module TreasuryComplianceScripts {
     }
     spec burn_with_amount {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -184,7 +186,7 @@ module TreasuryComplianceScripts {
 
         aborts_with [check]
             Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED;
@@ -224,16 +226,16 @@ module TreasuryComplianceScripts {
     /// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
     ///
     /// # Common Abort Conditions
-    /// | Error Category           | Error Reason                                             | Description                                                                             |
-    /// | ----------------         | --------------                                           | -------------                                                                           |
-    /// | `Errors::NOT_PUBLISHED`  | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                      |
-    /// | `Errors::INVALID_STATE`  | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                     |
-    /// | `Errors::LIMIT_EXCEEDED` | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                  |
-    /// | `Errors::NOT_PUBLISHED`  | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                            |
-    /// | `Errors::NOT_PUBLISHED`  | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
-    /// | `Errors::INVALID_STATE`  | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
-    /// | `Errors::NOT_PUBLISHED`  | `Roles::EROLE_ID`                                        | The `account` did not have a role assigned to it.                                       |
-    /// | `Errors::REQUIRES_ROLE`  | `Roles::EDESIGNATED_DEALER`                              | The `account` did not have the role of DesignatedDealer.                                |
+    /// | Error Category              | Error Reason                                            | Description                                                                            |
+    /// | ----------------            | --------------                                          | -------------                                                                          |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                                  | The `Token` is not a registered currency on-chain.                                     |
+    /// | `Errors::INVALID_STATE`     | `DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The withdrawal capability for `account` has already been extracted.                    |
+    /// | `Errors::LIMIT_EXCEEDED`    | `DiemAccount::EINSUFFICIENT_BALANCE`                    | `amount` is greater than `payer`'s balance in `Token`.                                 |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                           |
+    /// | `Errors::NOT_PUBLISHED`     | `Diem::EPREBURN`                                        | `account` doesn't have a `Diem::Preburn<Token>` resource published under it.           |
+    /// | `Errors::INVALID_STATE`     | `Diem::EPREBURN_OCCUPIED`                               | The `value` field in the `Diem::Preburn<Token>` resource under the sender is non-zero. |
+    /// | `Errors::NOT_PUBLISHED`     | `Roles::EROLE_ID`                                       | The `account` did not have a role assigned to it.                                      |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::EDESIGNATED_DEALER`                             | The `account` did not have the role of DesignatedDealer.                               |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
@@ -248,6 +250,7 @@ module TreasuryComplianceScripts {
 
     spec preburn {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Signer;
         use 0x1::Diem;
 
@@ -263,7 +266,7 @@ module TreasuryComplianceScripts {
         aborts_with [check]
             Errors::NOT_PUBLISHED,
             Errors::INVALID_STATE,
-            Errors::REQUIRES_ROLE,
+            DiemErrors::REQUIRES_ROLE,
             Errors::LIMIT_EXCEEDED;
 
         /// **Access Control:**
@@ -348,19 +351,19 @@ module TreasuryComplianceScripts {
     /// | `tier_index`                | `u64`     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
     ///
     /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                                 | Description                                                                                                                  |
-    /// | ----------------              | --------------                               | -------------                                                                                                                |
-    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                            |
-    /// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`        | `tc_account` is not the Treasury Compliance account.                                                                         |
-    /// | `Errors::REQUIRES_ROLE`       | `Roles::ETREASURY_COMPLIANCE`                | `tc_account` is not the Treasury Compliance account.                                                                         |
-    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT`     | `mint_amount` is zero.                                                                                                       |
-    /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
-    /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
-    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
+    /// | Error Category                | Error Reason                             | Description                                                                                                                  |
+    /// | ----------------              | --------------                           | -------------                                                                                                                |
+    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`           | A `SlidingNonce` resource is not published under `tc_account`.                                                               |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`           | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                   |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`           | The `sliding_nonce` is too far in the future.                                                                                |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED`  | The `sliding_nonce` has been previously recorded.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS`    | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                         |
+    /// | `DiemErrors::REQUIRES_ROLE`   | `Roles::ETREASURY_COMPLIANCE`            | `tc_account` is not the Treasury Compliance account.                                                                         |
+    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT` | `mint_amount` is zero.                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`              | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
+    /// | `DiemErrors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                 | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                   |
+    /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`             | Minting is not currently allowed for `CoinType` coins.                                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`   | The depositing of the funds would exceed the `account`'s account limits.                                                     |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_designated_dealer`
@@ -382,6 +385,7 @@ module TreasuryComplianceScripts {
 
     spec tiered_mint {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
@@ -393,10 +397,10 @@ module TreasuryComplianceScripts {
             Errors::INVALID_ARGUMENT,
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_CAPABILITY,
+            DiemErrors::REQUIRES_CAPABILITY,
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE;
+            DiemErrors::REQUIRES_ROLE;
 
         include DiemAccount::TieredMintEmits<CoinType>;
 
@@ -435,16 +439,16 @@ module TreasuryComplianceScripts {
     /// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                |
-    /// | ----------------           | --------------                               | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `tc_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`        | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`                | The sending account is not the Treasury Compliance account.                                |
-    /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_TC`         | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
-    /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                              |
+    /// | Error Category              | Error Reason                                | Description                                                                                |
+    /// | ----------------            | --------------                              | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`              | A `SlidingNonce` resource is not published under `tc_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`              | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`              | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED`     | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`       | The sending account is not the Treasury Compliance account.                                |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`               | The sending account is not the Treasury Compliance account.                                |
+    /// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_TC`        | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
+    /// | `Errors::INVALID_ARGUMENT`  | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                               |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::unfreeze_account`
@@ -551,17 +555,17 @@ module TreasuryComplianceScripts {
     /// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                            | Description                                                                                |
-    /// | ----------------           | --------------                          | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
-    /// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
-    /// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+    /// | Error Category              | Error Reason                            | Description                                                                                |
+    /// | ----------------            | --------------                          | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`           | `tc_account` is not the Treasury Compliance account.                                       |
+    /// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::EDENOMINATOR`            | `new_exchange_rate_denominator` is zero.                                                   |
+    /// | `Errors::INVALID_ARGUMENT`  | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
+    /// | `Errors::LIMIT_EXCEEDED`    | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
     ///
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::update_dual_attestation_limit`
@@ -582,6 +586,7 @@ module TreasuryComplianceScripts {
     }
     spec update_exchange_rate {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         use 0x1::DiemAccount;
         use 0x1::Roles;
 
@@ -603,7 +608,7 @@ module TreasuryComplianceScripts {
             Errors::INVALID_ARGUMENT,
             Errors::REQUIRES_ADDRESS,
             Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE,
+            DiemErrors::REQUIRES_ROLE,
             Errors::NOT_PUBLISHED;
 
         /// **Access Control:**
@@ -662,14 +667,14 @@ module TreasuryComplianceScripts {
     /// | `domain`     | `vector<u8>` | The domain to be added.                                                                         |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                             | Description                                                                                                                            |
-    /// | ----------------           | --------------                           | -------------                                                                                                                          |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
+    /// | Error Category              | Error Reason                             | Description                                                                                                                            |
+    /// | ----------------            | --------------                           | -------------                                                                                                                          |
+    /// | `DiemErrors::REQUIRES_ROLE` | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`     | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
+    /// | `Errors::INVALID_ARGUMENT`  | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
     public(script) fun add_diem_id_domain (
         tc_account: signer,
         address: address,
@@ -679,12 +684,13 @@ module TreasuryComplianceScripts {
     }
     spec add_diem_id_domain {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include DiemId::AddDiemIdDomainAbortsIf;
         include DiemId::AddDiemIdDomainEnsures;
         include DiemId::AddDiemIdDomainEmits;
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
+            DiemErrors::REQUIRES_ROLE,
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_ARGUMENT;
@@ -708,7 +714,7 @@ module TreasuryComplianceScripts {
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                             | Description                                                                                                                            |
     /// | ----------------           | --------------                           | -------------                                                                                                                          |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
+    /// | `DiemErrors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
     /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
     /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
@@ -723,8 +729,9 @@ module TreasuryComplianceScripts {
     }
     spec remove_diem_id_domain {
         use 0x1::Errors;
+        use 0x1::DiemErrors;
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
+            DiemErrors::REQUIRES_ROLE,
             Errors::REQUIRES_ADDRESS,
             Errors::NOT_PUBLISHED,
             Errors::INVALID_ARGUMENT;

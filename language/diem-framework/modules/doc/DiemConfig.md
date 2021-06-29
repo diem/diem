@@ -32,6 +32,7 @@ to synchronize configuration changes for the validators.
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="DiemErrors.md#0x1_DiemErrors">0x1::DiemErrors</a>;
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/Event.md#0x1_Event">0x1::Event</a>;
@@ -406,7 +407,7 @@ resource published under it.
 <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>, <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a> {
     <b>let</b> signer_address = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // Next should always be <b>true</b> <b>if</b> properly initialized.
-    <b>assert</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_requires_capability">Errors::requires_capability</a>(<a href="DiemConfig.md#0x1_DiemConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="DiemErrors.md#0x1_DiemErrors_requires_capability">DiemErrors::requires_capability</a>(<a href="DiemConfig.md#0x1_DiemConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>));
 
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
     <b>assert</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(addr), <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemConfig.md#0x1_DiemConfig_EDIEM_CONFIG">EDIEM_CONFIG</a>));
@@ -459,7 +460,7 @@ generic type/specific invariant issue
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt; {
     account: signer;
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
-        <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
+        <b>with</b> <a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_CAPABILITY">DiemErrors::REQUIRES_CAPABILITY</a>;
 }
 </code></pre>
 

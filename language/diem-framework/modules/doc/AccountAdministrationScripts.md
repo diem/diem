@@ -1183,7 +1183,7 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 | Error Category              | Error Reason              | Description                                                                    |
 | ----------------            | --------------            | -------------                                                                  |
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code> | A <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>. |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
+| <code><a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_ROLE">DiemErrors::REQUIRES_ROLE</a></code> | <code><a href="Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
@@ -1216,7 +1216,7 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <b>include</b> <a href="DiemId.md#0x1_DiemId_PublishDiemIdDomainsEnsures">DiemId::PublishDiemIdDomainsEnsures</a> { vasp_addr };
 <b>aborts_with</b> [check]
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="DiemErrors.md#0x1_DiemErrors_REQUIRES_ROLE">DiemErrors::REQUIRES_ROLE</a>;
 </code></pre>
 
 

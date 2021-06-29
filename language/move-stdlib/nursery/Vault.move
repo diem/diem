@@ -310,7 +310,7 @@ module 0x1::Vault {
         if (exists<VaultDelegate<Content>>(addr)) {
             // The signer is a delegate. Check it's granted capabilities.
             let delegate = borrow_global<VaultDelegate<Content>>(addr);
-            assert(Vector::contains(&delegate.granted_caps, &cap), Errors::requires_capability(EDELEGATE));
+            assert(Vector::contains(&delegate.granted_caps, &cap), Errors::no_permission(EDELEGATE));
             (delegate.vault_address, addr)
         } else {
             // If it is not a delegate, it must be the owner to succeed.

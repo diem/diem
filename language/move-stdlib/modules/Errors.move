@@ -1,12 +1,12 @@
 address 0x1 {
 
-/// Module defining error codes used in Move aborts throughout the framework.
+/// Module defining structured error codes in Move aborts.
 ///
 /// A `u64` error code is constructed from two values:
 ///
 ///  1. The *error category* which is encoded in the lower 8 bits of the code. Error categories are
-///     declared in this module and are globally unique across the Diem framework. There is a limited
-///     fixed set of predefined categories, and the framework is guaranteed to use those consistently.
+///     declared in this module and are globally unique across the Move Stdlib. There is a limited
+///     fixed set of predefined categories, and the stdlib is guaranteed to use those consistently.
 ///
 ///  2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 ///     number relative to the module which raised the error and can be used to obtain more information about
@@ -16,7 +16,7 @@ address 0x1 {
 /// >TODO: determine what kind of stability guarantees we give about reasons/associated module.
 module Errors {
     /// A function to create an error from from a category and a reason.
-    fun make(category: u8, reason: u64): u64 {
+    public fun make(category: u8, reason: u64): u64 {
         (category as u64) + (reason << 8)
     }
     spec make {
@@ -34,14 +34,9 @@ module Errors {
     /// which publishes a resource under a particular address.
     const REQUIRES_ADDRESS: u8 = 2;
 
-    /// The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-    /// which requires the signer to have the role of treasury compliance.
-    const REQUIRES_ROLE: u8 = 3;
+    // 3 and 4 are assigned in `0x1::DiemErrors` for backwards compatibility reasons
 
-    /// The signer of a transaction does not have a required capability.
-    const REQUIRES_CAPABILITY: u8 = 4;
-
-    /// A resource is required but not published. Example: access to non-existing AccountLimits resource.
+    /// A resource is required but not published. Example: access to non-existing account resource.
     const NOT_PUBLISHED: u8 = 5;
 
     /// Attempting to publish a resource that is already published. Example: calling an initialization function
@@ -51,9 +46,11 @@ module Errors {
     /// An argument provided to an operation is invalid. Example: a signing key has the wrong format.
     const INVALID_ARGUMENT: u8 = 7;
 
-    /// A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money after account limits window
-    /// is exhausted.
+    /// A limit on an amount is exceeded. Example: addition of two u64s each with a value of u64::MAX was attempted.
     const LIMIT_EXCEEDED: u8 = 8;
+
+    /// A signer does not have a required permission to perform the operation.
+    const NO_PERMISSION: u8 = 9;
 
     /// An internal error (bug) has occurred.
     const INTERNAL: u8 = 10;
@@ -73,20 +70,6 @@ module Errors {
         pragma opaque = true;
         aborts_if false;
         ensures result == REQUIRES_ADDRESS;
-    }
-
-    public fun requires_role(reason: u64): u64 { make(REQUIRES_ROLE, reason) }
-    spec requires_role {
-        pragma opaque = true;
-        aborts_if false;
-        ensures result == REQUIRES_ROLE;
-    }
-
-    public fun requires_capability(reason: u64): u64 { make(REQUIRES_CAPABILITY, reason) }
-    spec requires_capability {
-        pragma opaque = true;
-        aborts_if false;
-        ensures result == REQUIRES_CAPABILITY;
     }
 
     public fun not_published(reason: u64): u64 { make(NOT_PUBLISHED, reason) }
@@ -122,6 +105,13 @@ module Errors {
         pragma opaque = true;
         aborts_if false;
         ensures result == INTERNAL;
+    }
+
+    public fun no_permission(reason: u64): u64 { make(NO_PERMISSION, reason) }
+    spec custom {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == NO_PERMISSION;
     }
 
     public fun custom(reason: u64): u64 { make(CUSTOM, reason) }

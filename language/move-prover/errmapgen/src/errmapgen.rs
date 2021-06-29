@@ -14,26 +14,28 @@ use move_model::{
     symbol::Symbol,
 };
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, rc::Rc};
+use std::{collections::BTreeSet, convert::TryFrom, rc::Rc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrmapOptions {
     /// The constant prefix that determines if a constant is an error or not
     pub error_prefix: String,
-    /// The module ID of the error category module
-    pub error_category_module: ModuleId,
+    /// The module IDs of the error category modules
+    pub error_category_modules: BTreeSet<ModuleId>,
     /// In which file to store the output
     pub output_file: String,
 }
 
 impl Default for ErrmapOptions {
     fn default() -> Self {
+        let mut error_category_modules = BTreeSet::new();
+        error_category_modules.insert(ModuleId::new(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+            Identifier::new("Errors").unwrap(),
+        ));
         Self {
             error_prefix: "E".to_string(),
-            error_category_module: ModuleId::new(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
-                Identifier::new("Errors").unwrap(),
-            ),
+            error_category_modules,
             output_file: "errmap".to_string(),
         }
     }
@@ -71,7 +73,7 @@ impl<'env> ErrmapGen<'env> {
 
     fn build_error_map(&mut self, module: &ModuleEnv<'_>) -> Result<()> {
         let module_id = self.get_module_id_for_name(module);
-        if module_id == self.options.error_category_module {
+        if self.options.error_category_modules.contains(&module_id) {
             self.build_error_categories(module)?
         } else {
             self.build_error_map_for_module(&module_id, module)?
