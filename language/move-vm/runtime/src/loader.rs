@@ -8,6 +8,7 @@ use crate::{
 use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
+    binary_views::BinaryIndexedView,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         AbilitySet, Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex,
@@ -255,7 +256,7 @@ impl ModuleCache {
     }
 
     // `make_type` is the entry point to "translate" a `SignatureToken` to a `Type`
-    fn make_type(&self, module: &CompiledModule, tok: &SignatureToken) -> PartialVMResult<Type> {
+    fn make_type(&self, module: BinaryIndexedView, tok: &SignatureToken) -> PartialVMResult<Type> {
         self.make_type_internal(module, tok, &|struct_name, module_id| {
             Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
         })
@@ -270,34 +271,40 @@ impl ModuleCache {
         tok: &SignatureToken,
     ) -> PartialVMResult<Type> {
         let self_id = module.self_id();
-        self.make_type_internal(module, tok, &|struct_name, module_id| {
-            if module_id == &self_id {
-                // module has not been published yet, loop through the types
-                for (idx, struct_type) in self.structs.iter().enumerate().rev() {
-                    if &struct_type.module != module_id {
-                        break;
+        self.make_type_internal(
+            BinaryIndexedView::Module(&module),
+            tok,
+            &|struct_name, module_id| {
+                if module_id == &self_id {
+                    // module has not been published yet, loop through the types
+                    for (idx, struct_type) in self.structs.iter().enumerate().rev() {
+                        if &struct_type.module != module_id {
+                            break;
+                        }
+                        if struct_type.name.as_ident_str() == struct_name {
+                            return Ok(idx);
+                        }
                     }
-                    if struct_type.name.as_ident_str() == struct_name {
-                        return Ok(idx);
-                    }
+                    Err(
+                        PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(
+                            format!(
+                                "Cannot find {:?}::{:?} in publishing module",
+                                module_id, struct_name
+                            ),
+                        ),
+                    )
+                } else {
+                    Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
                 }
-                Err(
-                    PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
-                        "Cannot find {:?}::{:?} in publishing module",
-                        module_id, struct_name
-                    )),
-                )
-            } else {
-                Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
-            }
-        })
+            },
+        )
     }
 
     // `make_type_internal` returns a `Type` given a signature and a resolver which
     // is resonsible to map a local struct index to a global one
     fn make_type_internal<F>(
         &self,
-        module: &CompiledModule,
+        module: BinaryIndexedView,
         tok: &SignatureToken,
         resolver: &F,
     ) -> PartialVMResult<Type>
@@ -552,7 +559,11 @@ impl Loader {
             .parameters
             .0
             .iter()
-            .map(|tok| self.module_cache.read().make_type(module.module(), tok))
+            .map(|tok| {
+                self.module_cache
+                    .read()
+                    .make_type(BinaryIndexedView::Module(module.module()), tok)
+            })
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
@@ -560,7 +571,11 @@ impl Loader {
             .return_
             .0
             .iter()
-            .map(|tok| self.module_cache.read().make_type(module.module(), tok))
+            .map(|tok| {
+                self.module_cache
+                    .read()
+                    .make_type(BinaryIndexedView::Module(module.module()), tok)
+            })
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
@@ -1406,14 +1421,13 @@ impl Script {
         }
 
         let mut function_instantiations = vec![];
-        let module = script.clone().into_module();
         for func_inst in script.function_instantiations() {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];
             for ty in &script.signature_at(func_inst.type_parameters).0 {
                 instantiation.push(
                     cache
-                        .make_type(&module, ty)
+                        .make_type(BinaryIndexedView::Script(&script), ty)
                         .map_err(|e| e.finish(Location::Script))?,
                 );
             }
@@ -1432,7 +1446,7 @@ impl Script {
         let parameter_tys = parameters
             .0
             .iter()
-            .map(|tok| cache.make_type(&module, tok))
+            .map(|tok| cache.make_type(BinaryIndexedView::Script(&script), tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
         let return_ = Signature(vec![]);
