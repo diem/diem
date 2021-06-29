@@ -3,8 +3,9 @@
 
 use crate::{Factory, Swarm};
 
-pub mod node;
-pub mod swarm;
+mod node;
+mod swarm;
+pub use node::LocalNode;
 pub use swarm::{LocalSwarm, LocalSwarmBuilder};
 
 pub struct LocalFactory {

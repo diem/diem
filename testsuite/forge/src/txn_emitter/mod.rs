@@ -578,7 +578,7 @@ fn is_sequence_equal(accounts: &[LocalAccount], sequence_numbers: &[u64]) -> boo
     true
 }
 
-async fn query_sequence_numbers(
+pub async fn query_sequence_numbers(
     client: &JsonRpcClient,
     addresses: &[AccountAddress],
 ) -> Result<Vec<u64>> {

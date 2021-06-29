@@ -9,13 +9,14 @@ PR=""
 WORKSPACE=""
 ENV=""
 LOCAL_BUILD=""
+LOCAL_SWARM=""
 EXIT_CODE=0
 # Default timeout is 45 mins
 TIMEOUT_SECS=2700
 
 AWS_ACCOUNT=${AWS_ACCOUNT:-$(aws sts get-caller-identity --query Account --output text)}
 
-FORGE_K8S_CLUSTERS=(rustietest)
+FORGE_K8S_CLUSTERS=(forge-1)
 K8S_CONTEXT_PATTERN="arn:aws:eks:us-west-2:${AWS_ACCOUNT}:cluster/libra-CLUSTERNAME"
 HELM_CHARTS_URL_PATTERN="s3://diem-testnet-CLUSTERNAME-helm/charts"
 GRAFANA_URL_PATTERN="http://mon.CLUSTERNAME.aws.hlw3truzy4ls.com"
@@ -30,7 +31,7 @@ join_args() {
   retval_join_args=""
   for var in "$@"
   do
-    retval_join_args="${retval_join_args}, \"${var}\""
+    retval_join_args="${retval_join_args} \"${var}\""
   done
 }
 
@@ -150,6 +151,10 @@ while (( "$#" )); do
       TIMEOUT_SECS=$2
       shift 2
       ;;
+    --local-swarm)
+      LOCAL_SWARM="yes"
+      shift 1
+      ;;
     -T|--tag)
       TAG=$2
       shift 2
@@ -167,6 +172,11 @@ while (( "$#" )); do
       ;;
   esac
 done
+
+if [ -n "$LOCAL_SWARM" ]; then
+  cargo run -p forge -- --local-swarm
+  exit $EXIT_CODE
+fi
 
 if ! which kubectl &>/dev/null; then
   echo "kubectl is not installed. Please install kubectl. On mac, you can use: brew install kubectl"
