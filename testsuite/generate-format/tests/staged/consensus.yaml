@@ -108,6 +108,18 @@ ChangeSet:
     - events:
         SEQ:
           TYPENAME: ContractEvent
+CommitDecision:
+  STRUCT:
+    - ledger_info:
+        TYPENAME: LedgerInfoWithSignatures
+CommitVote:
+  STRUCT:
+    - author:
+        TYPENAME: AccountAddress
+    - ledger_info:
+        TYPENAME: LedgerInfo
+    - signature:
+        TYPENAME: Ed25519Signature
 ConsensusMsg:
   ENUM:
     0:
@@ -138,6 +150,14 @@ ConsensusMsg:
       VoteMsg:
         NEWTYPE:
           TYPENAME: VoteMsg
+    7:
+      CommitVoteMsg:
+        NEWTYPE:
+          TYPENAME: CommitVote
+    8:
+      CommitDecisionMsg:
+        NEWTYPE:
+          TYPENAME: CommitDecision
 ContractEvent:
   ENUM:
     0:

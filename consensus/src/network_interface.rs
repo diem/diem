@@ -8,6 +8,7 @@ use channel::message_queues::QueueStyle;
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
     epoch_retrieval::EpochRetrievalRequest,
+    experimental::{commit_decision::CommitDecision, commit_vote::CommitVote},
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
@@ -47,6 +48,13 @@ pub enum ConsensusMsg {
     /// VoteMsg is the struct that is ultimately sent by the voter in response for receiving a
     /// proposal.
     VoteMsg(Box<VoteMsg>),
+    /// CommitProposal is the struct that is sent by the validator after execution to propose
+    /// on the committed state hash root.
+    CommitVoteMsg(Box<CommitVote>),
+    /// CommitDecision is the struct that is sent by the validator after collecting no fewer
+    /// than 2f + 1 signatures on the commit proposal. This part is not on the critical path, but
+    /// it can save slow machines to quickly confirm the execution result.
+    CommitDecisionMsg(Box<CommitDecision>),
 }
 
 /// The interface from Network to Consensus layer.
