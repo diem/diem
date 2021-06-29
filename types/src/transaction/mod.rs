@@ -1165,6 +1165,13 @@ impl AccountTransactionsWithProof {
         self.0
     }
 
+    // TODO(philiphayes): this will need to change to support CRSNs
+    // (Conflict-Resistant Sequence Numbers)[https://github.com/diem/dip/blob/main/dips/dip-168.md].
+    //
+    // If we use a separate event stream under each account for sequence numbers,
+    // we'll probably need to always `include_events: true`, find the sequence
+    // number event, and use that to guarantee the response is sequential and
+    // complete.
     /// 1. Verify all transactions are consistent with the given ledger info.
     /// 2. All transactions were sent by `account`.
     /// 3. The transactions are contiguous by sequence number, starting at `start_seq_num`.

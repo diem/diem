@@ -666,8 +666,6 @@ impl DbReader for DiemDB {
                 )?
                 .map(|result| {
                     let (_seq_num, txn_version) = result?;
-                    // TODO(philiphayes): check seq_num? are we guaranteed only user
-                    // signed txns here?
                     self.get_transaction_with_proof(txn_version, ledger_version, include_events)
                 })
                 .collect::<Result<Vec<_>>>()?;

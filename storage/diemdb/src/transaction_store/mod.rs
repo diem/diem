@@ -48,7 +48,10 @@ impl TransactionStore {
 
     /// Gets an iterator that yields `(sequence_number, version)` for each
     /// transaction sent by an account, starting at `start_seq_num`, and returning
-    /// at most `num_versions` results with `version <= ledger_version`
+    /// at most `num_versions` results with `version <= ledger_version`.
+    ///
+    /// Guarantees that the returned sequence numbers are sequential, i.e.,
+    /// `seq_num_{i} + 1 = seq_num_{i+1}`.
     pub fn get_account_transaction_version_iter(
         &self,
         address: AccountAddress,
@@ -176,6 +179,21 @@ impl<'a> Iterator for TransactionIter<'a> {
     }
 }
 
+// TODO(philiphayes): this will need to change to support CRSNs
+// (Conflict-Resistant Sequence Numbers)[https://github.com/diem/dip/blob/main/dips/dip-168.md].
+//
+// It depends on the implementation details, but we'll probably index by _requested_
+// transaction sequence number rather than committed account sequence number.
+// This would mean the property: `seq_num_{i+1} == seq_num_{i} + 1` would no longer
+// be guaranteed and the check should be removed.
+//
+// This index would also no longer iterate over an account's transactions in
+// committed order, meaning the outer method would need to overread by
+// `CRSN_WINDOW_SIZE`, sort by version, and take only `limit` entries to get
+// at most `limit` transactions in committed order. Alternatively, add another
+// index for scanning an accounts transactions in committed order, e.g.,
+// `(AccountAddress, Version) -> SeqNum`.
+
 pub struct AccountTransactionVersionIter<'a> {
     inner: SchemaIterator<'a, TransactionByAccountSchema>,
     address: AccountAddress,
@@ -193,13 +211,6 @@ impl<'a> AccountTransactionVersionIter<'a> {
 
         Ok(match self.inner.next().transpose()? {
             Some(((address, seq_num), version)) => {
-                // TODO(philiphayes): what guarantees do we make about sequence
-                // numbers and transactions for one account? In the current documentation,
-                // we guarantee that sequence numbers are contiguous (as below),
-                // but is this required in the future? what about proposals for
-                // non-contiguous sequence numbers, how does that fit in here or
-                // is that at a higher layer?
-
                 // No more transactions sent by this account.
                 if address != self.address {
                     return Ok(None);
