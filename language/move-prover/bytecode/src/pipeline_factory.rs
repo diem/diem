@@ -14,6 +14,7 @@ use crate::{
     loop_analysis::LoopAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
     mono_analysis::MonoAnalysisProcessor,
+    mono_analysis_v2::MonoProcessorV2,
     mut_ref_instrumentation::MutRefInstrumenter,
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
@@ -53,6 +54,8 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
     ];
     if options.run_mono {
         processors.push(MonoAnalysisProcessor::new());
+    } else if options.run_mono_v2 {
+        processors.push(MonoProcessorV2::new());
     }
 
     let mut res = FunctionTargetPipeline::default();

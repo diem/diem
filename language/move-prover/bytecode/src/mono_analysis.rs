@@ -238,7 +238,7 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
 // ======================
 
 impl MonoAnalysisProcessor {
-    fn analyze<'a>(
+    pub fn analyze<'a>(
         &self,
         env: &'a GlobalEnv,
         rewritten_axioms: Option<&[Condition]>,

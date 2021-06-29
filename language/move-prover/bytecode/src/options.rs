@@ -73,6 +73,9 @@ pub struct ProverOptions {
     pub weak_edges: bool,
     /// Whether to run monomorphization analysis & transformation
     pub run_mono: bool,
+    /// Whether to run the new monomorphization pass
+    /// TODO (mengxu) clean-up wither run_mono or run_mono_v2
+    pub run_mono_v2: bool,
     /// Whether to use new global invariant checking
     pub invariants_v2: bool,
     /// Whether to run the transformation passes for concrete interpretation (instead of proving)
@@ -101,6 +104,7 @@ impl Default for ProverOptions {
             check_inconsistency: false,
             weak_edges: false,
             run_mono: true,
+            run_mono_v2: false,
             invariants_v2: true,
             for_interpretation: false,
         }

@@ -27,6 +27,7 @@ pub mod livevar_analysis;
 pub mod loop_analysis;
 pub mod memory_instrumentation;
 pub mod mono_analysis;
+pub mod mono_analysis_v2;
 pub mod mut_ref_instrumentation;
 pub mod options;
 pub mod packed_types_analysis;

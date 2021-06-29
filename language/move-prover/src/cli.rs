@@ -212,6 +212,11 @@ impl Options {
                     .help("whether to use the old v1 invariant processing (without disabled invariants)")
             )
             .arg(
+                Arg::with_name("mono-v2")
+                    .long("mono-v2")
+                    .help("whether to use the new v2 monomorphization processing")
+            )
+            .arg(
                 Arg::with_name("negative")
                     .long("negative")
                     .help("runs negative verification checks")
@@ -551,9 +556,14 @@ impl Options {
         if matches.is_present("boogie-poly") {
             options.boogie_poly = true;
             options.prover.run_mono = false;
+            options.prover.run_mono_v2 = false;
         }
         if matches.is_present("inv-v1") {
             options.prover.invariants_v2 = false;
+        }
+        if matches.is_present("mono-v2") {
+            options.prover.run_mono = false;
+            options.prover.run_mono_v2 = true;
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
