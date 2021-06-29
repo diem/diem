@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{epoch_state::EpochState, on_chain_config::ValidatorSet, transaction::Version};
-use diem_crypto::hash::HashValue;
-#[cfg(any(test, feature = "fuzzing"))]
-use diem_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use diem_crypto::hash::{HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -156,6 +154,26 @@ impl BlockInfo {
 
     pub fn version(&self) -> Version {
         self.version
+    }
+
+    /// This function checks if the current BlockInfo has
+    /// exactly the same values in those fields that will not change
+    /// after execution, compred to a given BlockInfo
+    pub fn match_ordered_only(&self, block_info: &BlockInfo) -> bool {
+        self.epoch == block_info.epoch
+            && self.round == block_info.round
+            && self.id == block_info.id
+            && self.timestamp_usecs == block_info.timestamp_usecs
+    }
+
+    /// This function checks if the current BlockInfo is consistent
+    /// with the dummy values we put in the ordering state computer
+    /// and it is not empty
+    pub fn is_ordered_only(&self) -> bool {
+        *self != BlockInfo::empty()
+            && self.next_epoch_state == None
+            && self.executed_state_id == *ACCUMULATOR_PLACEHOLDER_HASH
+            && self.version == 0
     }
 }
 

@@ -47,6 +47,10 @@ pub enum Error {
     NotSafeToTimeout(u64, u64, u64, u64),
     #[error("Invalid TC: {0}")]
     InvalidTimeoutCertificate(String),
+    #[error("Inconsistent Execution Result: Ordered BlockInfo doesn't match executed BlockInfo. Ordered: {0}, Executed: {1}")]
+    InconsistentExecutionResult(String, String),
+    #[error("Invalid Ordered LedgerInfoWithSignatures: Empty or at least one of executed_state_id, version, or epoch_state are not dummy value: {0}")]
+    InvalidOrderedLedgerInfo(String),
 }
 
 impl From<bcs::Error> for Error {

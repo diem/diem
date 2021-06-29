@@ -29,8 +29,11 @@ use diem_crypto::{
 };
 use diem_logger::prelude::*;
 use diem_types::{
-    block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
-    ledger_info::LedgerInfo, waypoint::Waypoint,
+    block_info::BlockInfo,
+    epoch_change::EpochChangeProof,
+    epoch_state::EpochState,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    waypoint::Waypoint,
 };
 use serde::Serialize;
 
@@ -462,6 +465,41 @@ impl SafetyRules {
         let signature = self.sign(timeout)?;
         Ok(signature)
     }
+
+    fn guarded_sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error> {
+        self.signer()?;
+
+        let old_ledger_info = ledger_info.ledger_info();
+
+        if !old_ledger_info.commit_info().is_ordered_only() {
+            return Err(Error::InvalidOrderedLedgerInfo(old_ledger_info.to_string()));
+        }
+
+        if !old_ledger_info
+            .commit_info()
+            .match_ordered_only(new_ledger_info.commit_info())
+        {
+            return Err(Error::InconsistentExecutionResult(
+                old_ledger_info.commit_info().to_string(),
+                new_ledger_info.commit_info().to_string(),
+            ));
+        }
+
+        // Verify that ledger_info contains at least 2f + 1 dostinct signatures
+        ledger_info
+            .verify_signatures(&self.epoch_state()?.verifier)
+            .map_err(|error| Error::InvalidQuorumCertificate(error.to_string()))?;
+
+        // TODO: add guarding rules in unhappy path
+
+        let signature = self.sign(&new_ledger_info)?;
+
+        Ok(signature)
+    }
 }
 
 impl TSafetyRules for SafetyRules {
@@ -522,6 +560,15 @@ impl TSafetyRules for SafetyRules {
             |log| log.round(round),
             LogEntry::ConstructAndSignVoteTwoChain,
         )
+    }
+
+    fn sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error> {
+        let cb = || self.guarded_sign_commit_vote(ledger_info, new_ledger_info);
+        run_and_log(cb, |log| log, LogEntry::SignCommitVote)
     }
 }
 

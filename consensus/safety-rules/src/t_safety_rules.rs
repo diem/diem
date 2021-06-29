@@ -11,7 +11,10 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
-use diem_types::epoch_change::EpochChangeProof;
+use diem_types::{
+    epoch_change::EpochChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
 
 /// Interface for SafetyRules
 pub trait TSafetyRules {
@@ -56,4 +59,12 @@ pub trait TSafetyRules {
     ) -> Result<Vote, Error> {
         unimplemented!();
     }
+
+    /// As the holder of the private key, SafetyRules also signs a commit vote.
+    /// This returns the signature for the commit vote.
+    fn sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error>;
 }

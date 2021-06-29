@@ -12,7 +12,10 @@ use consensus_types::{
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_infallible::RwLock;
-use diem_types::epoch_change::EpochChangeProof;
+use diem_types::{
+    epoch_change::EpochChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
 use std::sync::Arc;
 
 /// A local interface into SafetyRules. Constructed in such a way that the container / caller
@@ -70,5 +73,15 @@ impl TSafetyRules for LocalClient {
         self.internal
             .write()
             .construct_and_sign_vote_two_chain(vote_proposal, timeout_cert)
+    }
+
+    fn sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error> {
+        self.internal
+            .write()
+            .sign_commit_vote(ledger_info, new_ledger_info)
     }
 }

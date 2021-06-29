@@ -12,7 +12,10 @@ use consensus_types::{
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_infallible::RwLock;
-use diem_types::epoch_change::EpochChangeProof;
+use diem_types::{
+    epoch_change::EpochChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -31,6 +34,7 @@ pub enum SafetyRulesInput {
         Box<MaybeSignedVoteProposal>,
         Box<Option<TwoChainTimeoutCertificate>>,
     ),
+    SignCommitVote(Box<LedgerInfoWithSignatures>, Box<LedgerInfo>),
 }
 
 pub struct SerializerService {
@@ -69,6 +73,11 @@ impl SerializerService {
                         maybe_tc.as_ref().as_ref(),
                     ))
                 }
+                SafetyRulesInput::SignCommitVote(ledger_info, new_ledger_info) => bcs::to_bytes(
+                    &self
+                        .internal
+                        .sign_commit_vote(*ledger_info, *new_ledger_info),
+                ),
             };
 
         Ok(output?)
@@ -153,6 +162,19 @@ impl TSafetyRules for SerializerClient {
         let response = self.request(SafetyRulesInput::ConstructAndSignVoteTwoChain(
             Box::new(vote_proposal.clone()),
             Box::new(timeout_cert.cloned()),
+        ))?;
+        bcs::from_bytes(&response)?
+    }
+
+    fn sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error> {
+        let _timer = counters::start_timer("external", LogEntry::SignCommitVote.as_str());
+        let response = self.request(SafetyRulesInput::SignCommitVote(
+            Box::new(ledger_info),
+            Box::new(new_ledger_info),
         ))?;
         bcs::from_bytes(&response)?
     }

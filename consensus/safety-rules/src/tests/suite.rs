@@ -11,15 +11,20 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::{
-    ed25519::Ed25519PrivateKey,
-    hash::{CryptoHash, HashValue},
+    ed25519::{Ed25519PrivateKey, Ed25519Signature},
+    hash::{CryptoHash, HashValue, ACCUMULATOR_PLACEHOLDER_HASH},
 };
 use diem_global_constants::CONSENSUS_KEY;
 use diem_secure_storage::CryptoStorage;
 use diem_types::{
-    epoch_state::EpochState, validator_signer::ValidatorSigner,
+    account_address::AccountAddress,
+    block_info::BlockInfo,
+    epoch_state::EpochState,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
+use std::collections::BTreeMap;
 
 type Proof = test_utils::Proof;
 
@@ -71,6 +76,7 @@ pub fn run_test_suite(safety_rules: &Callback) {
     test_key_not_in_store(safety_rules);
     test_2chain_rules(safety_rules);
     test_2chain_timeout(safety_rules);
+    test_sign_commit_vote(safety_rules);
 }
 
 fn test_bad_execution_output(safety_rules: &Callback) {
@@ -957,4 +963,97 @@ fn test_2chain_timeout(constructor: &Callback) {
             .unwrap_err(),
         Error::NotSafeToTimeout(4, 1, 3, 2)
     );
+}
+
+/// Test that we can succesfully sign a valid commit vote
+fn test_sign_commit_vote(constructor: &Callback) {
+    // we construct a chain of proposals
+    // genesis -- a1 -- a2 -- a3
+
+    let (mut safety_rules, signer, key) = constructor();
+    let (proof, genesis_qc) = test_utils::make_genesis(&signer);
+
+    let round = genesis_qc.certified_block().round();
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
+    let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer, key.as_ref());
+    let a3 = make_proposal_with_parent(round + 3, &a2, Some(&a1), &signer, key.as_ref());
+
+    // now we try to agree on a1's execution result
+    let ledger_info_with_sigs = a3.block().quorum_cert().ledger_info();
+    // make sure this is for a1
+    assert!(ledger_info_with_sigs
+        .ledger_info()
+        .commit_info()
+        .match_ordered_only(
+            &a1.block()
+                .gen_block_info(*ACCUMULATOR_PLACEHOLDER_HASH, 0, None,)
+        ));
+
+    assert!(safety_rules
+        .sign_commit_vote(
+            ledger_info_with_sigs.clone(),
+            ledger_info_with_sigs.ledger_info().clone()
+        )
+        .is_ok());
+
+    // check empty ledger info
+    assert!(matches!(
+        safety_rules
+            .sign_commit_vote(
+                a2.block().quorum_cert().ledger_info().clone(),
+                a3.block().quorum_cert().ledger_info().ledger_info().clone()
+            )
+            .unwrap_err(),
+        Error::InvalidOrderedLedgerInfo(_)
+    ));
+
+    // non-dummy blockinfo test
+    assert!(matches!(
+        safety_rules
+            .sign_commit_vote(
+                LedgerInfoWithSignatures::new(
+                    LedgerInfo::new(
+                        a1.block().gen_block_info(
+                            *ACCUMULATOR_PLACEHOLDER_HASH,
+                            100, // non-dummy value
+                            None
+                        ),
+                        ledger_info_with_sigs.ledger_info().consensus_data_hash()
+                    ),
+                    BTreeMap::<AccountAddress, Ed25519Signature>::new()
+                ),
+                ledger_info_with_sigs.ledger_info().clone()
+            )
+            .unwrap_err(),
+        Error::InvalidOrderedLedgerInfo(_)
+    ));
+
+    // empty signature test
+    assert!(matches!(
+        safety_rules
+            .sign_commit_vote(
+                LedgerInfoWithSignatures::new(
+                    ledger_info_with_sigs.ledger_info().clone(),
+                    BTreeMap::<AccountAddress, Ed25519Signature>::new()
+                ),
+                ledger_info_with_sigs.ledger_info().clone()
+            )
+            .unwrap_err(),
+        Error::InvalidQuorumCertificate(_)
+    ));
+
+    // inconsistent ledger_info test
+    let bad_ledger_info = LedgerInfo::new(
+        BlockInfo::random(ledger_info_with_sigs.ledger_info().round()),
+        ledger_info_with_sigs.ledger_info().consensus_data_hash(),
+    );
+
+    assert!(matches!(
+        safety_rules
+            .sign_commit_vote(ledger_info_with_sigs.clone(), bad_ledger_info,)
+            .unwrap_err(),
+        Error::InconsistentExecutionResult(_, _)
+    ));
 }

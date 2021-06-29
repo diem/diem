@@ -54,6 +54,7 @@ pub enum LogEntry {
     SignTimeoutWithQC,
     State,
     Waypoint,
+    SignCommitVote,
 }
 
 impl LogEntry {
@@ -73,6 +74,7 @@ impl LogEntry {
             LogEntry::SignTimeoutWithQC => "sign_timeout_with_qc",
             LogEntry::State => "state",
             LogEntry::Waypoint => "waypoint",
+            LogEntry::SignCommitVote => "sign_commit_vote",
         }
     }
 }

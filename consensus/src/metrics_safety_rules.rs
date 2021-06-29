@@ -8,7 +8,10 @@ use consensus_types::{
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_metrics::monitor;
-use diem_types::epoch_change::EpochChangeProof;
+use diem_types::{
+    epoch_change::EpochChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
 use safety_rules::{ConsensusState, Error, TSafetyRules};
 use std::sync::Arc;
 
@@ -78,5 +81,18 @@ impl TSafetyRules for MetricsSafetyRules {
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.retry(|inner| monitor!("safety_rules", inner.sign_timeout(timeout)))
+    }
+
+    fn sign_commit_vote(
+        &mut self,
+        ledger_info: LedgerInfoWithSignatures,
+        new_ledger_info: LedgerInfo,
+    ) -> Result<Ed25519Signature, Error> {
+        self.retry(|inner| {
+            monitor!(
+                "safety_rules",
+                inner.sign_commit_vote(ledger_info.clone(), new_ledger_info.clone())
+            )
+        })
     }
 }
