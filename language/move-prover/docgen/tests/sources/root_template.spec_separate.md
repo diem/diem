@@ -44,7 +44,7 @@ The script <code><a href="root_template_script3.md#yet_another">yet_another</a><
 This script does really nothing but just aborts.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="root.md#some">some</a>&lt;T&gt;(_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="root.md#some">some</a>&lt;T&gt;(_account: signer)
 </code></pre>
 
 
@@ -72,7 +72,7 @@ This script does really nothing but just aborts.
 ##### Function `some`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="root.md#some">some</a>&lt;T&gt;(_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="root.md#some">some</a>&lt;T&gt;(_account: signer)
 </code></pre>
 
 
@@ -103,7 +103,7 @@ This script does really nothing but just aborts.
 This script does also abort.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="root.md#other">other</a>&lt;T&gt;(_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="root.md#other">other</a>&lt;T&gt;(_account: signer)
 </code></pre>
 
 
@@ -131,7 +131,7 @@ This script does also abort.
 ##### Function `other`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="root.md#other">other</a>&lt;T&gt;(_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="root.md#other">other</a>&lt;T&gt;(_account: signer)
 </code></pre>
 
 

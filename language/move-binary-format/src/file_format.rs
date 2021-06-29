@@ -1647,16 +1647,6 @@ impl CompiledScript {
     pub fn into_inner(self) -> CompiledScriptMut {
         self.0
     }
-
-    /// Converts a `CompiledScript` into a `CompiledModule` for code that wants a uniform view of
-    /// both.
-    ///
-    /// If a `CompiledScript` has been bounds checked, the corresponding `CompiledModule` can be
-    /// assumed to pass the bounds checker as well.
-    #[allow(deprecated)]
-    pub fn into_module(self) -> CompiledModule {
-        CompiledModule(self.0.into_module())
-    }
 }
 
 impl CompiledScriptMut {
@@ -1667,116 +1657,6 @@ impl CompiledScriptMut {
         let script = CompiledScript(self);
         BoundsChecker::verify_script(&script)?;
         Ok(script)
-    }
-
-    /// Converts a `CompiledScriptMut` to a `CompiledModule` for code that wants a uniform view
-    /// of both.
-    ///
-    /// TODO: rewrite things that depend on this and get this removed.
-    #[deprecated(
-        note = "This function is deprecated and will be removed soon. Please do not introduce new dependencies."
-    )]
-    pub fn into_module(mut self) -> CompiledModuleMut {
-        // Add the "<SELF>" identifier if it isn't present.
-        //
-        // Note: When adding an element to the table, in theory it is possible for the index
-        // to overflow. This will not be a problem if we get rid of the script/module conversion.
-        let self_ident_idx = match self
-            .identifiers
-            .iter()
-            .position(|ident| ident.as_ident_str() == self_module_name())
-        {
-            Some(idx) => IdentifierIndex::new(idx as u16),
-            None => {
-                let idx = IdentifierIndex::new(self.identifiers.len() as u16);
-                self.identifiers
-                    .push(Identifier::new(self_module_name().to_string()).unwrap());
-                idx
-            }
-        };
-
-        // Add a dummy adress if none exists.
-        let dummy_addr = AccountAddress::new([0xff; AccountAddress::LENGTH]);
-        let dummy_addr_idx = match self
-            .address_identifiers
-            .iter()
-            .position(|addr| addr == &dummy_addr)
-        {
-            Some(idx) => AddressIdentifierIndex::new(idx as u16),
-            None => {
-                let idx = AddressIdentifierIndex::new(self.address_identifiers.len() as u16);
-                self.address_identifiers.push(dummy_addr);
-                idx
-            }
-        };
-
-        // Add a self module handle.
-        let self_module_handle_idx =
-            match self.module_handles.iter().position(|handle| {
-                handle.address == dummy_addr_idx && handle.name == self_ident_idx
-            }) {
-                Some(idx) => ModuleHandleIndex::new(idx as u16),
-                None => {
-                    let idx = ModuleHandleIndex::new(self.module_handles.len() as u16);
-                    self.module_handles.push(ModuleHandle {
-                        address: dummy_addr_idx,
-                        name: self_ident_idx,
-                    });
-                    idx
-                }
-            };
-
-        // Find the index to the empty signature [].
-        // Create one if it doesn't exist.
-        let return_sig_idx = match self.signatures.iter().position(|sig| sig.0.is_empty()) {
-            Some(idx) => SignatureIndex::new(idx as u16),
-            None => {
-                let idx = SignatureIndex::new(self.signatures.len() as u16);
-                self.signatures.push(Signature(vec![]));
-                idx
-            }
-        };
-
-        // Create a function handle for the main function.
-        let main_handle_idx = FunctionHandleIndex::new(self.function_handles.len() as u16);
-        self.function_handles.push(FunctionHandle {
-            module: self_module_handle_idx,
-            name: self_ident_idx,
-            parameters: self.parameters,
-            return_: return_sig_idx,
-            type_parameters: self.type_parameters,
-        });
-
-        // Create a function definition for the main function.
-        let main_def = FunctionDefinition {
-            function: main_handle_idx,
-            visibility: Visibility::Public,
-            acquires_global_resources: vec![],
-            code: Some(self.code),
-        };
-
-        CompiledModuleMut {
-            version: self.version,
-            module_handles: self.module_handles,
-            self_module_handle_idx,
-            struct_handles: self.struct_handles,
-            function_handles: self.function_handles,
-            field_handles: vec![],
-            friend_decls: vec![],
-
-            struct_def_instantiations: vec![],
-            function_instantiations: self.function_instantiations,
-            field_instantiations: vec![],
-
-            signatures: self.signatures,
-
-            identifiers: self.identifiers,
-            address_identifiers: self.address_identifiers,
-            constant_pool: self.constant_pool,
-
-            struct_defs: vec![],
-            function_defs: vec![main_def],
-        }
     }
 }
 

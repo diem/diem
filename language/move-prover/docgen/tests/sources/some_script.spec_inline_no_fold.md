@@ -13,7 +13,7 @@
 This script does really nothing but just aborts.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="some_script.md#some">some</a>&lt;T&gt;(_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="some_script.md#some">some</a>&lt;T&gt;(_account: signer)
 </code></pre>
 
 
