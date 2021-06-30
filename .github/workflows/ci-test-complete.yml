@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2.3.4
       - name: Download artifacts
-        uses: diem/actions/get-artifacts@4678f5d3698990d09cdf6cbd65a367a6c71ab993
+        uses: diem/actions/get-artifacts@faadd16607b77dfa2231a8f366883e01717b3225
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow_run_id: ${{ github.event.workflow_run.id }}
