@@ -41,6 +41,12 @@ pub struct Options {
     format: Format,
 }
 
+impl Options {
+    pub fn from_args() -> Self {
+        StructOpt::from_args()
+    }
+}
+
 arg_enum! {
     #[derive(Debug, Eq, PartialEq)]
     pub enum Format {
