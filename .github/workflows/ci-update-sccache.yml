@@ -15,51 +15,11 @@ env:
   pre_command: cd /opt/git/diem/
 
 jobs:
-  update-sccache-osx:
-    environment:
-      name: Sccache
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v2.3.4
-        with:
-          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
-          # On `push` this value will be empty and will "do-the-right-thing"
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 #get all the history!!!
-      - id: changes
-        name: determine changes
-        uses: diem/actions/changes@4678f5d3698990d09cdf6cbd65a367a6c71ab993
-        with:
-          workflow-file: ci-update-sccache.yml
-      - id: rust-changes
-        name: find rust/cargo changes.
-        uses: diem/actions/matches@4678f5d3698990d09cdf6cbd65a367a6c71ab993
-        with:
-          pattern: '^documentation\|^docker\|^scripts'
-          invert: "true"
-      - uses: ./.github/actions/build-setup
-        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-      - uses: actions/cache@v2.1.6
-        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-        with:
-          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
-          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: "crates-${{ runner.os }}"
-      - name: build all unit test code.
-        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-        run: |
-          $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
-        env:
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
-      - uses: ./.github/actions/build-teardown
-        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-
   # In the future when the script can differentiate between target branches for each auto run then we'll
   # update this report to differentiate branches.
   unit-test-allure-report:
     name: Unit Test Reports
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-xl
     if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
     environment:
       name: Sccache
@@ -77,7 +37,7 @@ jobs:
       - uses: ./.github/actions/build-setup
         # build setup is called to ensure the latest docker image tooling is in place and the ~/.profile is called.
       - name: Publish unit test results
-        uses: diem/actions/process-test-results@4678f5d3698990d09cdf6cbd65a367a6c71ab993
+        uses: rexhoffman/actions/process-test-results@9f64e5ddb4b9bc023a3ab96a7754fdf7feba3c32
         with:
           #used to read artifacts, annoying to need one.
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -85,7 +45,7 @@ jobs:
           workflow_file: ci-test.yml
           branch: auto
           history: 20
-          recreate: false
+          recreate: true
           allure_configuration: ./allure-configuration
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
