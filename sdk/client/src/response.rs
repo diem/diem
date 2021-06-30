@@ -145,6 +145,16 @@ impl MethodResponse {
         }
     }
 
+    pub fn try_into_submit(self) -> Result<(), Error> {
+        match self {
+            MethodResponse::Submit => Ok(()),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::Submit found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
+
     pub fn try_into_get_state_proof(self) -> Result<StateProofView, Error> {
         match self {
             MethodResponse::GetStateProof(state_proof) => Ok(state_proof),

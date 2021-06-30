@@ -21,7 +21,7 @@ use diem_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::Version,
+    transaction::{SignedTransaction, Version},
     trusted_state::TrustedState,
     waypoint::Waypoint,
 };
@@ -247,6 +247,26 @@ impl<S: Storage> VerifyingClient<S> {
         }
 
         Ok(())
+    }
+
+    /// Submit a new signed user transaction.
+    ///
+    /// Note: we don't verify anything about the server's response here. If the
+    /// server is behaving maliciously, they can claim our transaction is
+    /// malformed when it is not, they can broadcast our valid transaction but
+    /// tell us it is too old, or they can accept our invalid transaction without
+    /// giving us any indication that it's bad.
+    ///
+    /// Unfortunately, there's nothing for us to verify that their response is
+    /// correct or not; the only way to get around this is by broadcasting our
+    /// transaction to multiple different servers. As long as one is honest, our
+    /// valid transaction will eventually be committed. This client handles a
+    /// connection to a single server, so the broadcasting needs to happen at a
+    /// higher layer.
+    pub async fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>> {
+        self.request(MethodRequest::submit(txn).map_err(Error::request)?)
+            .await?
+            .and_then(MethodResponse::try_into_submit)
     }
 
     pub async fn get_account(
@@ -548,6 +568,7 @@ impl VerifyingRequest {
 impl From<MethodRequest> for VerifyingRequest {
     fn from(request: MethodRequest) -> Self {
         match request {
+            MethodRequest::Submit((txn,)) => verifying_submit(txn),
             MethodRequest::GetAccount(address, version) => verifying_get_account(address, version),
             MethodRequest::GetTransactions(start_version, limit, include_events) => {
                 verifying_get_transactions(start_version, limit, include_events)
@@ -575,6 +596,24 @@ impl From<MethodRequest> for VerifyingRequest {
 //
 // would allow the from(MethodRequest) above to call a method on the enum inner
 // instead of these ad-hoc methods i think
+
+fn verifying_submit(txn: String) -> VerifyingRequest {
+    let request = MethodRequest::Submit((txn,));
+    let subrequests = vec![request.clone()];
+    let callback: RequestCallback = |_ctxt, subresponses| {
+        match subresponses {
+            [MethodResponse::Submit] => (),
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [Submit] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+        Ok(MethodResponse::Submit)
+    };
+    VerifyingRequest::new(request, subrequests, callback)
+}
 
 fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> VerifyingRequest {
     let request = MethodRequest::GetAccount(address, version);
