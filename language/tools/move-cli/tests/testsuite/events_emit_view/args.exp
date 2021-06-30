@@ -1,8 +1,8 @@
 Command `sandbox publish src/modules -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Publishing a new module 00000000000000000000000000000002::Events (wrote 368 bytes)
-Wrote 368 bytes of module ID's and code
+Publishing a new module 00000000000000000000000000000002::Events (wrote 369 bytes)
+Wrote 369 bytes of module ID's and code
 Command `sandbox run src/scripts/emit.move --signers 0xA --args 5 -v`:
 Compiling transaction script...
 Emitted 1 events:

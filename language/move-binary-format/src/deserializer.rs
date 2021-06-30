@@ -633,8 +633,7 @@ fn load_struct_handles(
         let module = load_module_handle_index(&mut cursor)?;
         let name = load_identifier_index(&mut cursor)?;
         let abilities = load_ability_set(&mut cursor, AbilitySetPosition::StructHandle)?;
-        let type_parameters =
-            load_ability_sets(&mut cursor, AbilitySetPosition::StructTypeParameters)?;
+        let type_parameters = load_struct_type_parameters(&mut cursor)?;
         struct_handles.push(StructHandle {
             module,
             name,
@@ -1050,6 +1049,33 @@ fn load_ability_sets(
     Ok(kinds)
 }
 
+fn load_struct_type_parameters(
+    cursor: &mut VersionedCursor,
+) -> BinaryLoaderResult<Vec<StructTypeParameter>> {
+    let len = load_type_parameter_count(cursor)?;
+    let mut type_params = Vec::with_capacity(len);
+    for _ in 0..len {
+        type_params.push(load_struct_type_parameter(cursor)?);
+    }
+    Ok(type_params)
+}
+
+fn load_struct_type_parameter(
+    cursor: &mut VersionedCursor,
+) -> BinaryLoaderResult<StructTypeParameter> {
+    let constraints = load_ability_set(cursor, AbilitySetPosition::StructTypeParameters)?;
+    let is_phantom = if cursor.version() < VERSION_3 {
+        false
+    } else {
+        let byte: u8 = read_uleb_internal(cursor, 1)?;
+        byte != 0
+    };
+    Ok(StructTypeParameter {
+        constraints,
+        is_phantom,
+    })
+}
+
 /// Builds the `StructDefinition` table.
 fn load_struct_defs(
     binary: &VersionedBinary,
@@ -1180,7 +1206,7 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
             };
             (vis, flags)
         }
-        VERSION_2 => {
+        VERSION_2 | VERSION_3 => {
             // NOTE: changes compared with VERSION_1
             // - in VERSION_1: the flags is a byte compositing both the visibility info and whether
             //                 the function is a native function

@@ -11,7 +11,7 @@ use move_binary_format::{
         FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
         FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
         SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
+        StructDefinitionIndex, StructHandle, StructHandleIndex, StructTypeParameter, TableIndex,
     },
     CompiledModule,
 };
@@ -591,7 +591,7 @@ impl<'a> Context<'a> {
         &mut self,
         sname: QualifiedStructIdent,
         abilities: AbilitySet,
-        type_parameters: Vec<AbilitySet>,
+        type_parameters: Vec<StructTypeParameter>,
     ) -> Result<StructHandleIndex> {
         self.declare_struct_handle_index_with_abilities(sname, abilities, type_parameters)
     }
@@ -600,7 +600,7 @@ impl<'a> Context<'a> {
         &mut self,
         sname: QualifiedStructIdent,
         abilities: AbilitySet,
-        type_parameters: Vec<AbilitySet>,
+        type_parameters: Vec<StructTypeParameter>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
         let name = self.identifier_index(sname.name.as_inner())?;
@@ -722,7 +722,7 @@ impl<'a> Context<'a> {
     fn dep_struct_handle(
         &mut self,
         s: &QualifiedStructIdent,
-    ) -> Result<(AbilitySet, Vec<AbilitySet>)> {
+    ) -> Result<(AbilitySet, Vec<StructTypeParameter>)> {
         if s.module.as_inner() == ModuleName::self_name() {
             bail!("Unbound struct {}", s)
         }

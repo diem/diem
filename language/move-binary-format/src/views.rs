@@ -219,7 +219,7 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         self.struct_handle.abilities
     }
 
-    pub fn type_parameters(&self) -> &Vec<AbilitySet> {
+    pub fn type_parameters(&self) -> &Vec<StructTypeParameter> {
         &self.struct_handle.type_parameters
     }
 
@@ -356,7 +356,7 @@ impl<'a, T: ModuleAccess> StructDefinitionView<'a, T> {
         }
     }
 
-    pub fn type_parameters(&self) -> &Vec<AbilitySet> {
+    pub fn type_parameters(&self) -> &Vec<StructTypeParameter> {
         self.struct_handle_view.type_parameters()
     }
 

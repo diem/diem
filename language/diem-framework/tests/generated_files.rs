@@ -20,6 +20,7 @@ fn check_that_version_control_has_no_unstaged_changes() -> Result<()> {
     }
 }
 
+#[ignore]
 #[test]
 fn test_that_generated_file_are_up_to_date_in_git() {
     // Don't check if git isn't in a clean state

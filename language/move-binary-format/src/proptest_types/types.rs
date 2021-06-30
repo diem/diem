@@ -4,8 +4,8 @@
 use crate::{
     file_format::{
         AbilitySet, FieldDefinition, IdentifierIndex, ModuleHandleIndex, SignatureToken,
-        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
-        TypeSignature,
+        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex,
+        StructTypeParameter, TableIndex, TypeSignature,
     },
     internals::ModuleIndex,
     proptest_types::{
@@ -91,16 +91,17 @@ pub struct StructHandleGen {
     module_idx: PropIndex,
     name_idx: PropIndex,
     abilities: AbilitySetGen,
-    type_parameters: Vec<AbilitySetGen>,
+    type_parameters: Vec<(AbilitySetGen, bool)>,
 }
 
 impl StructHandleGen {
     pub fn strategy(ability_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
+        let ability_count = ability_count.into();
         (
             any::<PropIndex>(),
             any::<PropIndex>(),
             AbilitySetGen::strategy(),
-            vec(AbilitySetGen::strategy(), ability_count),
+            vec((AbilitySetGen::strategy(), any::<bool>()), ability_count),
         )
             .prop_map(|(module_idx, name_idx, abilities, type_parameters)| Self {
                 module_idx,
@@ -121,10 +122,14 @@ impl StructHandleGen {
             self_module_handle_idx.into_index(),
             module_len,
         );
-        let mut type_parameters = vec![];
-        for type_param in self.type_parameters {
-            type_parameters.push(type_param.materialize());
-        }
+        let type_parameters = self
+            .type_parameters
+            .into_iter()
+            .map(|(constraints, is_phantom)| StructTypeParameter {
+                constraints: constraints.materialize(),
+                is_phantom,
+            })
+            .collect();
         StructHandle {
             module: ModuleHandleIndex(idx as TableIndex),
             name: IdentifierIndex(self.name_idx.index(identifiers_len) as TableIndex),
@@ -138,7 +143,7 @@ impl StructHandleGen {
 pub struct StructDefinitionGen {
     name_idx: PropIndex,
     abilities: AbilitySetGen,
-    type_parameters: Vec<AbilitySetGen>,
+    type_parameters: Vec<(AbilitySetGen, bool)>,
     is_public: bool,
     field_defs: Option<Vec<FieldDefinitionGen>>,
 }
@@ -151,7 +156,10 @@ impl StructDefinitionGen {
         (
             any::<PropIndex>(),
             AbilitySetGen::strategy(),
-            vec(AbilitySetGen::strategy(), type_parameter_count),
+            vec(
+                (AbilitySetGen::strategy(), any::<bool>()),
+                type_parameter_count,
+            ),
             any::<bool>(),
             option::of(vec(FieldDefinitionGen::strategy(), field_count)),
         )
@@ -188,15 +196,20 @@ impl StructDefinitionGen {
             .fold(self.abilities.materialize(), |acc, field| {
                 acc.intersect(state.potential_abilities(&field.signature.0))
             });
+
+        let type_parameters = self
+            .type_parameters
+            .into_iter()
+            .map(|(constraints, is_phantom)| StructTypeParameter {
+                constraints: constraints.materialize(),
+                is_phantom,
+            })
+            .collect();
         let handle = StructHandle {
             module: state.self_module_handle_idx,
             name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
             abilities,
-            type_parameters: self
-                .type_parameters
-                .into_iter()
-                .map(|abilities| abilities.materialize())
-                .collect(),
+            type_parameters,
         };
         match state.add_struct_handle(handle) {
             Some(struct_handle) => {

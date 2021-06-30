@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    file_format::{AbilitySet, Visibility},
+    file_format::{AbilitySet, StructTypeParameter, Visibility},
     normalized::Module,
 };
 use std::collections::BTreeSet;
@@ -59,7 +59,7 @@ impl Compatibility {
             };
 
             if !struct_abilities_compatibile(old_struct.abilities, new_struct.abilities)
-                || !type_parameters_compatibile(
+                || !struct_type_parameters_compatibile(
                     &old_struct.type_parameters,
                     &new_struct.type_parameters,
                 )
@@ -119,7 +119,7 @@ impl Compatibility {
             if !is_vis_compatible
                 || old_func.parameters != new_func.parameters
                 || old_func.return_ != new_func.return_
-                || !type_parameters_compatibile(
+                || !fun_type_parameters_compatibile(
                     &old_func.type_parameters,
                     &new_func.type_parameters,
                 )
@@ -157,7 +157,7 @@ fn struct_abilities_compatibile(old_abilities: AbilitySet, new_abilities: Abilit
 
 // When upgrading, the new type parameters must be the same length, and the new type parameter
 // constraints must be compatible
-fn type_parameters_compatibile(
+fn fun_type_parameters_compatibile(
     old_type_parameters: &[AbilitySet],
     new_type_parameters: &[AbilitySet],
 ) -> bool {
@@ -172,6 +172,22 @@ fn type_parameters_compatibile(
         )
 }
 
+fn struct_type_parameters_compatibile(
+    old_type_parameters: &[StructTypeParameter],
+    new_type_parameters: &[StructTypeParameter],
+) -> bool {
+    old_type_parameters.len() == new_type_parameters.len()
+        && old_type_parameters.iter().zip(new_type_parameters).all(
+            |(old_type_parameter, new_type_parameter)| {
+                type_parameter_phantom_decl_compatibile(old_type_parameter, new_type_parameter)
+                    && type_parameter_constraints_compatibile(
+                        old_type_parameter.constraints,
+                        new_type_parameter.constraints,
+                    )
+            },
+        )
+}
+
 // When upgrading, the new constraints must be a subset of (or equal to) the old constraints.
 // Removing an ability is fine, but adding an ability could cause existing callsites to fail
 fn type_parameter_constraints_compatibile(
@@ -179,4 +195,15 @@ fn type_parameter_constraints_compatibile(
     new_type_constraints: AbilitySet,
 ) -> bool {
     new_type_constraints.is_subset(old_type_constraints)
+}
+
+// Adding a phantom annotation to a parameter won't break clients because that can only increase the
+// the set of abilities in struct instantiations. Put it differently, adding phantom declarations
+// relaxes the requirements for clients.
+fn type_parameter_phantom_decl_compatibile(
+    old_type_parameter: &StructTypeParameter,
+    new_type_parameter: &StructTypeParameter,
+) -> bool {
+    // old_type_paramter.is_phantom => new_type_parameter.is_phantom
+    !old_type_parameter.is_phantom || new_type_parameter.is_phantom
 }

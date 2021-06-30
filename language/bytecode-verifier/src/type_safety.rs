@@ -64,7 +64,7 @@ impl<'a> TypeSafetyChecker<'a> {
         self.locals.local_at(i)
     }
 
-    fn abilities(&self, t: &SignatureToken) -> AbilitySet {
+    fn abilities(&self, t: &SignatureToken) -> PartialVMResult<AbilitySet> {
         self.resolver
             .abilities(&t, self.function_view.type_parameters())
     }
@@ -176,7 +176,7 @@ fn borrow_global(
 
     let struct_def = verifier.resolver.struct_def_at(idx)?;
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    if !verifier.abilities(&struct_type).has_key() {
+    if !verifier.abilities(&struct_type)?.has_key() {
         return Err(verifier.error(StatusCode::BORROWGLOBAL_WITHOUT_KEY_ABILITY, offset));
     }
 
@@ -277,7 +277,7 @@ fn exists(
     type_args: &Signature,
 ) -> PartialVMResult<()> {
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    if !verifier.abilities(&struct_type).has_key() {
+    if !verifier.abilities(&struct_type)?.has_key() {
         return Err(verifier.error(
             StatusCode::EXISTS_WITHOUT_KEY_ABILITY_OR_BAD_ARGUMENT,
             offset,
@@ -304,7 +304,7 @@ fn move_from(
     type_args: &Signature,
 ) -> PartialVMResult<()> {
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    if !verifier.abilities(&struct_type).has_key() {
+    if !verifier.abilities(&struct_type)?.has_key() {
         return Err(verifier.error(StatusCode::MOVEFROM_WITHOUT_KEY_ABILITY, offset));
     }
 
@@ -325,7 +325,7 @@ fn move_to(
     type_args: &Signature,
 ) -> PartialVMResult<()> {
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    if !verifier.abilities(&struct_type).has_key() {
+    if !verifier.abilities(&struct_type)?.has_key() {
         return Err(verifier.error(StatusCode::MOVETO_WITHOUT_KEY_ABILITY, offset));
     }
 
@@ -355,7 +355,7 @@ fn verify_instr(
             let abilities = verifier
                 .resolver
                 .abilities(&operand, verifier.function_view.type_parameters());
-            if !abilities.has_drop() {
+            if !abilities?.has_drop() {
                 return Err(verifier.error(StatusCode::POP_WITHOUT_DROP_ABILITY, offset));
             }
         }
@@ -458,7 +458,7 @@ fn verify_instr(
             let local_signature = verifier.local_at(*idx).clone();
             if !verifier
                 .resolver
-                .abilities(&local_signature, verifier.function_view.type_parameters())
+                .abilities(&local_signature, verifier.function_view.type_parameters())?
                 .has_copy()
             {
                 return Err(verifier.error(StatusCode::COPYLOC_WITHOUT_COPY_ABILITY, offset));
@@ -515,7 +515,7 @@ fn verify_instr(
             let operand = verifier.stack.pop().unwrap();
             match operand {
                 ST::Reference(inner) | ST::MutableReference(inner) => {
-                    if !verifier.abilities(&inner).has_copy() {
+                    if !verifier.abilities(&inner)?.has_copy() {
                         return Err(
                             verifier.error(StatusCode::READREF_WITHOUT_COPY_ABILITY, offset)
                         );
@@ -537,7 +537,7 @@ fn verify_instr(
                     )
                 }
             };
-            if !verifier.abilities(&ref_inner_signature).has_drop() {
+            if !verifier.abilities(&ref_inner_signature)?.has_drop() {
                 return Err(verifier.error(StatusCode::WRITEREF_WITHOUT_DROP_ABILITY, offset));
             }
 
@@ -617,7 +617,7 @@ fn verify_instr(
         Bytecode::Eq | Bytecode::Neq => {
             let operand1 = verifier.stack.pop().unwrap();
             let operand2 = verifier.stack.pop().unwrap();
-            if verifier.abilities(&operand1).has_drop() && operand1 == operand2 {
+            if verifier.abilities(&operand1)?.has_drop() && operand1 == operand2 {
                 verifier.stack.push(ST::Bool);
             } else {
                 return Err(verifier.error(StatusCode::EQUALITY_OP_TYPE_MISMATCH_ERROR, offset));

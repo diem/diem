@@ -174,7 +174,8 @@ impl SignatureTokenGen {
                         SignatureToken::Struct(StructHandleIndex(struct_idx as TableIndex))
                     } else {
                         let mut type_params = vec![];
-                        for abs in &sh.type_parameters {
+                        for type_param in &sh.type_parameters {
+                            let abs = type_param.constraints;
                             assert!(!abs.has_key());
                             match (abs.has_copy(), abs.has_drop(), abs.has_store()) {
                                 (false, true, false) => type_params.push(SignatureToken::Signer),

@@ -5,7 +5,8 @@ use crate::{
     access::ModuleAccess,
     file_format::{
         AbilitySet, CompiledModule, FieldDefinition, FunctionDefinition, SignatureToken,
-        StructDefinition, StructFieldInformation, TypeParameterIndex, Visibility,
+        StructDefinition, StructFieldInformation, StructTypeParameter, TypeParameterIndex,
+        Visibility,
     },
 };
 use move_core_types::{
@@ -60,7 +61,7 @@ pub struct Field {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Struct {
     pub abilities: AbilitySet,
-    pub type_parameters: Vec<AbilitySet>,
+    pub type_parameters: Vec<StructTypeParameter>,
     pub fields: Vec<Field>,
 }
 
@@ -240,6 +241,10 @@ impl Struct {
             fields,
         };
         (name, s)
+    }
+
+    pub fn type_param_constraints(&self) -> impl ExactSizeIterator<Item = &AbilitySet> {
+        self.type_parameters.iter().map(|param| &param.constraints)
     }
 }
 
