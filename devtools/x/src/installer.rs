@@ -132,6 +132,7 @@ pub fn install_cargo_component_if_needed(
         info!("Installing {} {}", name, installation.version);
         //prevent recursive install attempts of sccache.
         let mut cmd = Cargo::new(&cargo_config, "install", true);
+        cmd.arg("--force");
         if let Some(features) = &installation.features {
             if !features.is_empty() {
                 cmd.arg("--features");
