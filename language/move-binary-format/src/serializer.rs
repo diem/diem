@@ -394,7 +394,26 @@ fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle
     serialize_module_handle_index(binary, &struct_handle.module)?;
     serialize_identifier_index(binary, &struct_handle.name)?;
     serialize_ability_set(binary, struct_handle.abilities)?;
-    serialize_ability_sets(binary, &struct_handle.type_parameters)
+    serialize_type_parameters(binary, &struct_handle.type_parameters)
+}
+
+fn serialize_type_parameters(
+    binary: &mut BinaryData,
+    type_parameters: &[StructTypeParameter],
+) -> Result<()> {
+    serialize_type_parameter_count(binary, type_parameters.len())?;
+    for type_param in type_parameters {
+        serialize_type_parameter(binary, type_param)?;
+    }
+    Ok(())
+}
+
+fn serialize_type_parameter(
+    binary: &mut BinaryData,
+    type_param: &StructTypeParameter,
+) -> Result<()> {
+    serialize_ability_set(binary, type_param.constraints)?;
+    write_as_uleb128(binary, type_param.is_phantom as u8, 1u64)
 }
 
 /// Serializes a `FunctionHandle`.

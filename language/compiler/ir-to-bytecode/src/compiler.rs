@@ -13,8 +13,8 @@ use move_binary_format::{
         Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut,
         CompiledScript, CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition,
         FunctionSignature, ModuleHandle, Signature, SignatureToken, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
-        TypeParameterIndex, TypeSignature, Visibility,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, StructTypeParameter,
+        TableIndex, TypeParameterIndex, TypeSignature, Visibility,
     },
     file_format_common::VERSION_MAX,
 };
@@ -745,8 +745,14 @@ fn make_type_argument_subst(
     Ok(subst)
 }
 
-fn type_parameter_kinds(ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)]) -> Vec<AbilitySet> {
-    ast_tys.iter().map(|(_, abs)| abilities(abs)).collect()
+fn type_parameter_kinds(ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)]) -> Vec<StructTypeParameter> {
+    ast_tys
+        .iter()
+        .map(|(_, abs)| StructTypeParameter {
+            constraints: abilities(abs),
+            is_phantom: false,
+        })
+        .collect()
 }
 
 fn abilities(abilities: &BTreeSet<ast::Ability>) -> AbilitySet {

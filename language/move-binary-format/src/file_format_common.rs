@@ -358,8 +358,12 @@ pub const VERSION_1: u32 = 1;
 ///  + friend list for modules
 pub const VERSION_2: u32 = 2;
 
+/// Version 3: changes compared with version 2
+///  + phantom type parameters
+pub const VERSION_3: u32 = 3;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_2;
+pub const VERSION_MAX: u32 = VERSION_3;
 
 pub(crate) mod versioned_data {
     use crate::{errors::*, file_format_common::*};

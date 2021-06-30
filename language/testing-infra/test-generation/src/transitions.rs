@@ -390,7 +390,7 @@ pub fn stack_satisfies_struct_signature(
             token_view.as_inner().clone()
         };
         let has = if let SignatureToken::TypeParameter(idx) = &ty {
-            if stack_has_all_abilities(state, i, type_parameters[*idx as usize]) {
+            if stack_has_all_abilities(state, i, type_parameters[*idx as usize].constraints) {
                 let stack_tok = state.stack_peek(i).unwrap();
                 substitution.check_and_add(state, stack_tok.token, ty)
             } else {
@@ -399,7 +399,14 @@ pub fn stack_satisfies_struct_signature(
         } else {
             let abstract_value = AbstractValue {
                 token: ty,
-                abilities: abilities(&state.module.module, token_view.as_inner(), type_parameters),
+                abilities: abilities(
+                    &state.module.module,
+                    token_view.as_inner(),
+                    &type_parameters
+                        .iter()
+                        .map(|param| param.constraints)
+                        .collect::<Vec<_>>(),
+                ),
             };
             stack_has(state, i, Some(abstract_value))
         };
@@ -431,9 +438,9 @@ pub fn get_struct_instantiation_for_state(
     let struct_def = state.module.module.struct_def_at(struct_index);
     let struct_def = StructDefinitionView::new(&state.module.module, struct_def);
     let typs = struct_def.type_parameters();
-    for (index, abilities) in typs.iter().enumerate() {
+    for (index, type_param) in typs.iter().enumerate() {
         if !partial_instantiation.subst.contains_key(&index) {
-            if abilities.has_key() {
+            if type_param.constraints.has_key() {
                 unimplemented!("[Struct Instantiation] Need to fill in resource type params");
             } else {
                 partial_instantiation
@@ -483,8 +490,17 @@ pub fn struct_abilities(
         .module
         .module
         .struct_handle_at(struct_def.struct_handle);
+    let declared_phantom_parameters = struct_handle
+        .type_parameters
+        .iter()
+        .map(|param| param.is_phantom);
     let type_argument_abilities = abilities_for_instantiation(state, &type_args.0);
-    AbilitySet::polymorphic_abilities(struct_handle.abilities, type_argument_abilities)
+    AbilitySet::polymorphic_abilities(
+        struct_handle.abilities,
+        declared_phantom_parameters,
+        type_argument_abilities,
+    )
+    .unwrap()
 }
 
 pub fn struct_inst_abilities(

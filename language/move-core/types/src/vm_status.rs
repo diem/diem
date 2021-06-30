@@ -573,6 +573,9 @@ pub enum StatusCode {
     INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES = 1106,
     // The updated module introduces a cyclic friendship (i.e., A friends B and B also friends A)
     CYCLIC_MODULE_FRIENDSHIP = 1107,
+    // A phantom type parameter was used in a non-phantom position.
+    INVALID_PHANTOM_TYPE_PARAM_POSITION = 1108,
+
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

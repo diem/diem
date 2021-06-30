@@ -778,7 +778,7 @@ impl Loader {
                     for ty_param in &struct_tag.type_params {
                         type_params.push(self.load_type(ty_param, data_store)?);
                     }
-                    self.verify_ty_args(&struct_type.type_parameters, &type_params)
+                    self.verify_ty_args(struct_type.type_param_constraints(), &type_params)
                         .map_err(|e| e.finish(Location::Undefined))?;
                     Type::StructInstantiation(idx, type_params)
                 }
@@ -896,7 +896,12 @@ impl Loader {
     // Verify the kind (constraints) of an instantiation.
     // Both function and script invocation use this function to verify correctness
     // of type arguments provided
-    fn verify_ty_args(&self, constraints: &[AbilitySet], ty_args: &[Type]) -> PartialVMResult<()> {
+    fn verify_ty_args<'a, I>(&self, constraints: I, ty_args: &[Type]) -> PartialVMResult<()>
+    where
+        I: IntoIterator<Item = &'a AbilitySet>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let constraints = constraints.into_iter();
         if constraints.len() != ty_args.len() {
             return Err(PartialVMError::new(
                 StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
@@ -952,21 +957,27 @@ impl Loader {
                 "Unexpected TyParam type after translating from TypeTag to Type".to_string(),
             )),
 
-            Type::Vector(ty) => Ok(AbilitySet::polymorphic_abilities(
+            Type::Vector(ty) => AbilitySet::polymorphic_abilities(
                 AbilitySet::VECTOR,
-                vec![self.abilities(ty)?].into_iter(),
-            )),
+                vec![false],
+                vec![self.abilities(ty)?],
+            ),
             Type::Struct(idx) => Ok(self.module_cache.read().struct_at(*idx).abilities),
             Type::StructInstantiation(idx, type_args) => {
-                let declared_abilities = self.module_cache.read().struct_at(*idx).abilities;
+                let struct_type = self.module_cache.read().struct_at(*idx);
+                let declared_phantom_parameters = struct_type
+                    .type_parameters
+                    .iter()
+                    .map(|param| param.is_phantom);
                 let type_argument_abilities = type_args
                     .iter()
-                    .map(|ty| self.abilities(ty))
+                    .map(|arg| self.abilities(arg))
                     .collect::<PartialVMResult<Vec<_>>>()?;
-                Ok(AbilitySet::polymorphic_abilities(
-                    declared_abilities,
+                AbilitySet::polymorphic_abilities(
+                    struct_type.abilities,
+                    declared_phantom_parameters,
                     type_argument_abilities,
-                ))
+                )
             }
         }
     }

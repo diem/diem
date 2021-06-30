@@ -287,13 +287,14 @@ fn check_type_instantiation(
 }
 
 fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
-    let abilities = match ty {
+    match ty {
         TypeTag::Bool | TypeTag::U8 | TypeTag::U64 | TypeTag::U128 | TypeTag::Address => {
-            AbilitySet::PRIMITIVES
+            Ok(AbilitySet::PRIMITIVES)
         }
-        TypeTag::Signer => AbilitySet::SIGNER,
+        TypeTag::Signer => Ok(AbilitySet::SIGNER),
         TypeTag::Vector(elem_ty) => AbilitySet::polymorphic_abilities(
             AbilitySet::VECTOR,
+            vec![false],
             vec![get_abilities(env, elem_ty)?],
         ),
         TypeTag::Struct(struct_tag) => {
@@ -306,13 +307,18 @@ fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
                 ))
             })?;
             let struct_env = env.get_struct(struct_id);
+            let declared_phantom_parameters = (0..struct_env.get_type_parameters().len())
+                .map(|idx| struct_env.is_phantom_parameter(idx));
             let ty_arg_abilities = struct_tag
                 .type_params
                 .iter()
                 .map(|arg| get_abilities(env, arg))
                 .collect::<PartialVMResult<Vec<_>>>()?;
-            AbilitySet::polymorphic_abilities(struct_env.get_abilities(), ty_arg_abilities)
+            AbilitySet::polymorphic_abilities(
+                struct_env.get_abilities(),
+                declared_phantom_parameters,
+                ty_arg_abilities,
+            )
         }
-    };
-    Ok(abilities)
+    }
 }

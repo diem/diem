@@ -248,29 +248,40 @@ impl<'a> BinaryIndexedView<'a> {
     // Return the `AbilitySet` of a `SignatureToken` given a context.
     // A `TypeParameter` has the abilities of its `constraints`.
     // `StructInstantiation` abilities are predicated on the particular instantiation
-    pub fn abilities(&self, ty: &SignatureToken, constraints: &[AbilitySet]) -> AbilitySet {
+    pub fn abilities(
+        &self,
+        ty: &SignatureToken,
+        constraints: &[AbilitySet],
+    ) -> PartialVMResult<AbilitySet> {
         use SignatureToken::*;
 
         match ty {
-            Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+            Bool | U8 | U64 | U128 | Address => Ok(AbilitySet::PRIMITIVES),
 
-            Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
-            Signer => AbilitySet::SIGNER,
-            TypeParameter(idx) => constraints[*idx as usize],
+            Reference(_) | MutableReference(_) => Ok(AbilitySet::REFERENCES),
+            Signer => Ok(AbilitySet::SIGNER),
+            TypeParameter(idx) => Ok(constraints[*idx as usize]),
             Vector(ty) => AbilitySet::polymorphic_abilities(
                 AbilitySet::VECTOR,
-                vec![self.abilities(ty, constraints)].into_iter(),
+                vec![false],
+                vec![self.abilities(ty, constraints)?],
             ),
             Struct(idx) => {
                 let sh = self.struct_handle_at(*idx);
-                sh.abilities
+                Ok(sh.abilities)
             }
             StructInstantiation(idx, type_args) => {
                 let sh = self.struct_handle_at(*idx);
                 let declared_abilities = sh.abilities;
-                let type_argument_abilities =
-                    type_args.iter().map(|ty| self.abilities(ty, constraints));
-                AbilitySet::polymorphic_abilities(declared_abilities, type_argument_abilities)
+                let type_arguments = type_args
+                    .iter()
+                    .map(|arg| self.abilities(arg, constraints))
+                    .collect::<PartialVMResult<Vec<_>>>()?;
+                AbilitySet::polymorphic_abilities(
+                    declared_abilities,
+                    sh.type_parameters.iter().map(|param| param.is_phantom),
+                    type_arguments,
+                )
             }
         }
     }

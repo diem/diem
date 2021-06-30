@@ -7,8 +7,8 @@ use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         Ability, AbilitySet, CompiledModule, FunctionDefinition, ModuleHandle, SignatureToken,
-        StructDefinition, StructFieldInformation, StructHandleIndex, TypeParameterIndex,
-        Visibility,
+        StructDefinition, StructFieldInformation, StructHandleIndex, StructTypeParameter,
+        TypeParameterIndex, Visibility,
     },
 };
 use move_core_types::language_storage::ModuleId;
@@ -162,7 +162,7 @@ fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
         format!(
             "    struct {}{}{} {{",
             ctx.module.identifier_at(shandle.name),
-            write_type_parameters(&shandle.type_parameters),
+            write_struct_type_parameters(&shandle.type_parameters),
             write_ability_modifiers(shandle.abilities),
         )
     );
@@ -197,7 +197,7 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
         "    native {}fun {}{}({}){};",
         write_visibility(fdef.visibility),
         ctx.module.identifier_at(fhandle.name),
-        write_type_parameters(&fhandle.type_parameters),
+        write_fun_type_parameters(&fhandle.type_parameters),
         write_parameters(ctx, parameters),
         write_return_type(ctx, return_)
     )
@@ -250,7 +250,28 @@ fn write_ability(ab: Ability) -> String {
     .to_string()
 }
 
-fn write_type_parameters(tps: &[AbilitySet]) -> String {
+fn write_struct_type_parameters(tps: &[StructTypeParameter]) -> String {
+    if tps.is_empty() {
+        return "".to_string();
+    }
+
+    let tp_and_constraints = tps
+        .iter()
+        .enumerate()
+        .map(|(idx, ty_param)| {
+            format!(
+                "{}{}{}",
+                if ty_param.is_phantom { "phantom " } else { "" },
+                write_type_parameter(idx as TypeParameterIndex),
+                write_ability_constraint(ty_param.constraints),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("<{}>", tp_and_constraints)
+}
+
+fn write_fun_type_parameters(tps: &[AbilitySet]) -> String {
     if tps.is_empty() {
         return "".to_string();
     }

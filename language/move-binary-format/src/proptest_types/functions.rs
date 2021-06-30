@@ -302,7 +302,10 @@ impl<'a> FnDefnMaterializeState<'a> {
         FunctionHandleIndex((self.function_handles.len() - 1) as TableIndex)
     }
 
-    fn get_signature_from_type_params(&mut self, abilities: &[AbilitySet]) -> Signature {
+    fn get_signature_from_type_params(
+        &mut self,
+        abilities: impl IntoIterator<Item = AbilitySet>,
+    ) -> Signature {
         let mut type_params = vec![];
         for abs in abilities {
             assert!(!abs.has_key());
@@ -314,14 +317,17 @@ impl<'a> FnDefnMaterializeState<'a> {
         Signature(type_params)
     }
 
-    fn add_signature_from_type_params(&mut self, abilities: &[AbilitySet]) -> SignatureIndex {
+    fn add_signature_from_type_params(
+        &mut self,
+        abilities: impl IntoIterator<Item = AbilitySet>,
+    ) -> SignatureIndex {
         let sig = self.get_signature_from_type_params(abilities);
         self.signatures.add_signature(sig)
     }
 
     fn get_function_instantiation(&mut self, fh_idx: usize) -> FunctionInstantiationIndex {
         let abilities = self.function_handles[fh_idx].type_parameters.clone();
-        let sig_idx = self.add_signature_from_type_params(&abilities);
+        let sig_idx = self.add_signature_from_type_params(abilities.iter().copied());
         let fi = FunctionInstantiation {
             handle: FunctionHandleIndex(fh_idx as TableIndex),
             type_parameters: sig_idx,
@@ -331,10 +337,8 @@ impl<'a> FnDefnMaterializeState<'a> {
 
     fn get_type_instantiation(&mut self, sd_idx: usize) -> StructDefInstantiationIndex {
         let sd = &self.struct_defs[sd_idx];
-        let type_parameters = self.struct_handles[sd.struct_handle.0 as usize]
-            .type_parameters
-            .clone();
-        let sig_idx = self.add_signature_from_type_params(&type_parameters);
+        let struct_handle = &self.struct_handles[sd.struct_handle.0 as usize];
+        let sig_idx = self.add_signature_from_type_params(struct_handle.type_param_constraints());
         let si = StructDefInstantiation {
             def: StructDefinitionIndex(sd_idx as TableIndex),
             type_parameters: sig_idx,
@@ -555,13 +559,13 @@ impl BytecodeGen {
                     field: field.index(*field_count) as TableIndex,
                 });
 
-                let type_parameters = &state.struct_handles
-                    [state.struct_defs[sd_idx].struct_handle.0 as usize]
-                    .type_parameters;
-                if type_parameters.is_empty() {
+                let struct_handle =
+                    &state.struct_handles[state.struct_defs[sd_idx].struct_handle.0 as usize];
+                if struct_handle.type_parameters.is_empty() {
                     Bytecode::MutBorrowField(fh_idx)
                 } else {
-                    let sig_idx = state.add_signature_from_type_params(&type_parameters.clone());
+                    let sig_idx = state
+                        .add_signature_from_type_params(struct_handle.type_param_constraints());
                     let fi_idx = state
                         .field_instantiations
                         .add_instantiation(FieldInstantiation {
@@ -582,13 +586,13 @@ impl BytecodeGen {
                     field: field.index(*field_count) as TableIndex,
                 });
 
-                let type_parameters = &state.struct_handles
-                    [state.struct_defs[sd_idx].struct_handle.0 as usize]
-                    .type_parameters;
-                if type_parameters.is_empty() {
+                let struct_handle =
+                    &state.struct_handles[state.struct_defs[sd_idx].struct_handle.0 as usize];
+                if struct_handle.type_parameters.is_empty() {
                     Bytecode::ImmBorrowField(fh_idx)
                 } else {
-                    let sig_idx = state.add_signature_from_type_params(&type_parameters.clone());
+                    let sig_idx = state
+                        .add_signature_from_type_params(struct_handle.type_param_constraints());
                     let fi_idx = state
                         .field_instantiations
                         .add_instantiation(FieldInstantiation {

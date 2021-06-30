@@ -7,7 +7,7 @@ use crate::absint::{AbstractDomain, JoinResult};
 use mirai_annotations::{checked_precondition, checked_verify};
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
-    errors::PartialVMError,
+    errors::{PartialVMError, PartialVMResult},
     file_format::{AbilitySet, CodeOffset, FunctionDefinitionIndex, LocalIndex},
 };
 use move_core_types::vm_status::StatusCode;
@@ -34,7 +34,10 @@ pub(crate) struct AbstractState {
 
 impl AbstractState {
     /// create a new abstract state
-    pub fn new(resolver: &BinaryIndexedView, function_view: &FunctionView) -> Self {
+    pub fn new(
+        resolver: &BinaryIndexedView,
+        function_view: &FunctionView,
+    ) -> PartialVMResult<Self> {
         let num_args = function_view.parameters().len();
         let num_locals = num_args + function_view.locals().len();
         let local_states = (0..num_locals)
@@ -47,13 +50,13 @@ impl AbstractState {
             .iter()
             .chain(function_view.locals().0.iter())
             .map(|st| resolver.abilities(st, &function_view.type_parameters()))
-            .collect();
+            .collect::<PartialVMResult<Vec<_>>>()?;
 
-        Self {
+        Ok(Self {
             current_function: function_view.index(),
             local_states,
             all_local_abilities,
-        }
+        })
     }
 
     pub fn local_abilities(&self, idx: LocalIndex) -> AbilitySet {
