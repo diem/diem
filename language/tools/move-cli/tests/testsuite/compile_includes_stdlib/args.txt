@@ -1,0 +1,3 @@
+compile --check src/modules/UseSigner.move --mode bare -v
+compile --check src/modules/UseSigner.move -v
+compile src/modules/UseSigner.move -v

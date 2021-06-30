@@ -1,0 +1,18 @@
+Command `compile --check src/modules/UseSigner.move --mode bare -v`:
+Checking Move files...
+error[E03002]: unbound module
+  ┌─ src/modules/UseSigner.move:2:7
+  │
+2 │   use 0x1::Signer;
+  │       ^^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Signer'
+
+error[E03002]: unbound module
+  ┌─ src/modules/UseSigner.move:5:5
+  │
+5 │     Signer::address_of(account)
+  │     ^^^^^^ Unbound module alias 'Signer'
+
+Command `compile --check src/modules/UseSigner.move -v`:
+Checking Move files...
+Command `compile src/modules/UseSigner.move -v`:
+Compiling Move files...

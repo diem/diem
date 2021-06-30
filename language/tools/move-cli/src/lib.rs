@@ -217,9 +217,9 @@ pub enum ExperimentalCommand {
 
 fn handle_experimental_commands(
     move_args: &Move,
+    mode: &Mode,
     experimental_command: &ExperimentalCommand,
 ) -> Result<()> {
-    let mode = Mode::new(move_args.mode);
     match experimental_command {
         ExperimentalCommand::ReadWriteSet {
             module_file,
@@ -248,9 +248,9 @@ fn handle_sandbox_commands(
     natives: Vec<NativeFunctionRecord>,
     error_descriptions: &ErrorMapping,
     move_args: &Move,
+    mode: &Mode,
     sandbox_command: &SandboxCommand,
 ) -> Result<()> {
-    let mode = Mode::new(move_args.mode);
     match sandbox_command {
         SandboxCommand::Link { no_republish } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
@@ -344,6 +344,7 @@ pub fn move_cli(
     error_descriptions: &ErrorMapping,
 ) -> Result<()> {
     let move_args = Move::from_args();
+    let mode = Mode::new(move_args.mode);
 
     match &move_args.cmd {
         Command::Compile {
@@ -351,11 +352,19 @@ pub fn move_cli(
             no_source_maps,
             check,
         } => {
+            let mode_interface_dir = mode
+                .prepare_state(&move_args.build_dir, &move_args.storage_dir)?
+                .interface_files_dir()?;
             if *check {
-                base::commands::check(&[], false, &source_files, move_args.verbose)
+                base::commands::check(
+                    &[mode_interface_dir],
+                    false,
+                    &source_files,
+                    move_args.verbose,
+                )
             } else {
                 base::commands::compile(
-                    &[],
+                    &[mode_interface_dir],
                     &move_args.build_dir,
                     false,
                     &source_files,
@@ -365,8 +374,8 @@ pub fn move_cli(
             }
         }
         Command::Sandbox { cmd } => {
-            handle_sandbox_commands(natives, error_descriptions, &move_args, cmd)
+            handle_sandbox_commands(natives, error_descriptions, &move_args, &mode, cmd)
         }
-        Command::Experimental { cmd } => handle_experimental_commands(&move_args, cmd),
+        Command::Experimental { cmd } => handle_experimental_commands(&move_args, &mode, cmd),
     }
 }
