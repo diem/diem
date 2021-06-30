@@ -8,7 +8,7 @@ use crate::{
 use anyhow::format_err;
 use diem_logger::*;
 use diem_sdk::{
-    crypto::ed25519::{Ed25519PrivateKey, ED25519_PRIVATE_KEY_LENGTH},
+    crypto::ed25519::Ed25519PrivateKey,
     types::{
         chain_id::{ChainId, NamedChain},
         AccountKey, LocalAccount, PeerId,
@@ -40,7 +40,7 @@ pub struct K8sSwarm {
 }
 
 impl K8sSwarm {
-    pub async fn new(root_key: String, treasury_compliance_key: String) -> Result<Self> {
+    pub async fn new(root_key: &[u8], treasury_compliance_key: &[u8]) -> Result<Self> {
         Command::new(KUBECTL_BIN).arg("proxy").spawn()?;
         diem_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move {
@@ -273,12 +273,10 @@ fn parse_node_id(s: &str) -> Result<usize> {
     Ok(idx)
 }
 
-fn load_root_key(root_key: &str) -> Ed25519PrivateKey {
-    let composite_key = base64::decode(root_key).unwrap();
-    Ed25519PrivateKey::try_from(composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH).unwrap()).unwrap()
+fn load_root_key(root_key_bytes: &[u8]) -> Ed25519PrivateKey {
+    Ed25519PrivateKey::try_from(root_key_bytes).unwrap()
 }
 
-fn load_tc_key(tc_key: &str) -> Ed25519PrivateKey {
-    let composite_key = base64::decode(tc_key).unwrap();
-    Ed25519PrivateKey::try_from(composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH).unwrap()).unwrap()
+fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
+    Ed25519PrivateKey::try_from(tc_key_bytes).unwrap()
 }

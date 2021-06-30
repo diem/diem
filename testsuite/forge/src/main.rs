@@ -34,11 +34,6 @@ struct Args {
         default_value = "60"
     )]
     duration: u64,
-    // TODO, need to remove these args once we can load from vault
-    #[structopt(long, default_value = "")]
-    pub root_key: String,
-    #[structopt(long, default_value = "")]
-    pub treasury_compliance_key: String,
 
     #[structopt(flatten)]
     options: Options,
@@ -54,11 +49,7 @@ fn main() -> Result<()> {
             &args.options,
         )
     } else {
-        forge_main(
-            k8s_test_suite(),
-            K8sFactory::new(args.root_key.clone(), args.treasury_compliance_key.clone()),
-            &args.options,
-        )
+        forge_main(k8s_test_suite(), K8sFactory::new().unwrap(), &args.options)
     }
 }
 

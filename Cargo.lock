@@ -3219,6 +3219,7 @@ dependencies = [
  "diem-logger",
  "diem-retrier",
  "diem-sdk",
+ "diem-secure-storage",
  "diem-workspace-hack",
  "futures",
  "itertools 0.10.0",
