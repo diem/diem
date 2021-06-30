@@ -5,6 +5,7 @@
 
 use bytecode_source_map::utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc};
 use move_binary_format::file_format::CompiledModule;
+use move_command_line_common::files::SOURCE_MAP_EXTENSION;
 use move_coverage::{coverage_map::CoverageMap, source_coverage::SourceCoverageBuilder};
 use std::{
     fs,
@@ -39,7 +40,7 @@ struct Args {
 
 fn main() {
     let args = Args::from_args();
-    let source_map_extension = "mvsm";
+    let source_map_extension = SOURCE_MAP_EXTENSION;
     let coverage_map = if args.is_raw_trace_file {
         CoverageMap::from_trace_file(&args.input_trace_path)
     } else {

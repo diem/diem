@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_command_line_common::files::{MOVE_EXTENSION, MOVE_IR_EXTENSION};
 use std::path::{Path, PathBuf};
-
 pub struct StringError(String);
 
 pub const SENDER: &str = "0x8675309";
@@ -14,8 +14,6 @@ pub const PATH_TO_IR_TESTS: &str = "../ir-testsuite/tests";
 
 pub const MIGRATION_SUB_DIR: &str = "translated_ir_tests";
 pub const TODO_EXTENSION: &str = "move_TODO";
-pub const MOVE_EXTENSION: &str = "move";
-pub const IR_EXTENSION: &str = "mvir";
 
 pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 
@@ -26,28 +24,6 @@ pub const COMPLETED_DIRECTORIES: &[&str; 5] = &[
     "move/signer",
     "move/operators",
 ];
-
-impl std::fmt::Display for StringError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
-    }
-}
-
-impl std::fmt::Debug for StringError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
-    }
-}
-
-impl std::error::Error for StringError {
-    fn description(&self) -> &str {
-        &self.0
-    }
-}
-
-pub fn error(s: String) -> datatest_stable::Result<()> {
-    Err(Box::new(StringError(s)))
-}
 
 //**************************************************************************************************
 // IR Test Translation
@@ -66,7 +42,7 @@ pub fn ir_tests() -> impl Iterator<Item = (String, String)> {
         .map(|_| 1)
         .sum();
     iterate_directory(Path::new(PATH_TO_IR_TESTS)).flat_map(move |path| {
-        if path.extension()?.to_str()? != IR_EXTENSION {
+        if path.extension()?.to_str()? != MOVE_IR_EXTENSION {
             return None;
         }
         let pathbuf = path.canonicalize().ok()?;

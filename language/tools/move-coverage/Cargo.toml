@@ -19,6 +19,7 @@ codespan = { version = "0.8.0", features = ["serialization"] }
 colored = "2.0.0"
 
 bcs = "0.1.2"
+move-command-line-common = { path = "../../move-command-line-common" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use log::LevelFilter;
+use move_command_line_common::files::{MOVE_COMPILED_EXTENSION, MOVE_EXTENSION};
 use std::path::PathBuf;
 
 #[cfg(test)]
@@ -9,10 +10,6 @@ mod tests;
 pub mod utils;
 
 pub mod natives;
-
-pub const MOVE_EXTENSION: &str = "move";
-pub const COMPILED_EXTENSION: &str = "mv";
-pub const ERROR_DESC_EXTENSION: &str = "errmap";
 
 const MODULES_DIR: &str = "modules";
 const NURSERY_DIR: &str = "nursery";
@@ -37,7 +34,7 @@ pub fn filter_move_bytecode_files(
     dir_iter: impl Iterator<Item = PathBuf>,
 ) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
-        if path.extension()?.to_str()? == COMPILED_EXTENSION {
+        if path.extension()?.to_str()? == MOVE_COMPILED_EXTENSION {
             Some(path)
         } else {
             None

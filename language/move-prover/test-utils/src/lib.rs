@@ -12,18 +12,6 @@ pub mod baseline_test;
 pub const DEFAULT_SENDER: &str = "0x8675309";
 
 // =================================================================================================
-// Env vars
-
-pub fn read_env_var(v: &str) -> String {
-    std::env::var(v).unwrap_or_else(|_| "".into())
-}
-
-pub fn read_bool_env_var(v: &str) -> bool {
-    let val = read_env_var(v);
-    val == "1" || val == "true"
-}
-
-// =================================================================================================
 // Extract test annotations out of sources
 
 // Extracts lines out of some text file where each line starts with `start` which can be a regular

@@ -34,4 +34,5 @@ diem-config = { path = "../../../config" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-transaction-builder = { path = "../../../sdk/transaction-builder" }
+move-command-line-common = { path = "../../move-command-line-common" }
 hex = "0.4.3"

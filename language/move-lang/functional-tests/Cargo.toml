@@ -15,8 +15,9 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 anyhow = "1.0.38"
 tempfile = "3.2.0"
 once_cell = "1.7.2"
-
 datatest-stable = "0.1.1"
+
+move-command-line-common = { path = "../../move-command-line-common" }
 functional-tests = { path = "../../testing-infra/functional-tests" }
 diem-types = { path = "../../../types" }
 move-lang = { path = ".." }

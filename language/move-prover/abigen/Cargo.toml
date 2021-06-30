@@ -12,6 +12,7 @@ move-model = { path = "../../move-model" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 bytecode-verifier = { path = "../../bytecode-verifier" }
+move-command-line-common = { path = "../../move-command-line-common" }
 bcs = "0.1.2"
 
 # external dependencies

@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
+move-command-line-common = { path = "../../move-command-line-common" }
 hex = "0.4.3"
 diem-state-view = { path = "../../../storage/state-view" }
 diem-types = { path = "../../../types" }

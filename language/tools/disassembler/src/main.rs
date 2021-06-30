@@ -12,6 +12,9 @@ use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
 };
+use move_command_line_common::files::{
+    MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
+};
 use move_coverage::coverage_map::CoverageMap;
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
@@ -58,9 +61,9 @@ struct Args {
 fn main() {
     let args = Args::from_args();
 
-    let move_extension = "move";
-    let mv_bytecode_extension = "mv";
-    let source_map_extension = "mvsm";
+    let move_extension = MOVE_EXTENSION;
+    let mv_bytecode_extension = MOVE_COMPILED_EXTENSION;
+    let source_map_extension = SOURCE_MAP_EXTENSION;
 
     let source_path = Path::new(&args.bytecode_file_path);
     let extension = source_path

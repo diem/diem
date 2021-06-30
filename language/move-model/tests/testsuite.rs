@@ -1,17 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::Path;
-
-use codespan_reporting::term::termcolor::Buffer;
-
-use codespan_reporting::diagnostic::Severity;
+use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
 };
+use move_command_line_common::testing::EXP_EXT;
 use move_model::{run_bytecode_model_builder, run_model_builder};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
+use std::path::Path;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];
@@ -56,7 +54,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
         "All good, no errors!".to_string()
     };
-    let baseline_path = path.with_extension("exp");
+    let baseline_path = path.with_extension(EXP_EXT);
     verify_or_update_baseline(baseline_path.as_path(), &diags)?;
     Ok(())
 }

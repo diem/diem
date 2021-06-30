@@ -3,8 +3,8 @@
 
 //! A module supporting baseline (golden) tests.
 
-use crate::read_bool_env_var;
 use anyhow::anyhow;
+use move_command_line_common::testing::read_env_update_baseline;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
 use std::{
@@ -15,7 +15,7 @@ use std::{
 
 /// Verifies or updates baseline file for the given generated text.
 pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> anyhow::Result<()> {
-    let update_baseline = read_bool_env_var("UPBL");
+    let update_baseline = read_env_update_baseline();
 
     if update_baseline {
         if !text.is_empty() {

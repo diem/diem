@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::command_line::{read_env_var, COLOR_MODE_ENV_VAR};
+use crate::command_line::COLOR_MODE_ENV_VAR;
 use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
@@ -11,6 +11,7 @@ use codespan_reporting::{
         Config,
     },
 };
+use move_command_line_common::env::read_env_var;
 use move_ir_types::location::*;
 use std::{
     collections::{HashMap, HashSet},

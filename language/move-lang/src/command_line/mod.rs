@@ -24,18 +24,4 @@ pub const TEST_SHORT: &str = "t";
 
 pub const COLOR_MODE_ENV_VAR: &str = "COLOR_MODE";
 
-pub const MOVE_EXTENSION: &str = "move";
-pub const MOVE_COMPILED_EXTENSION: &str = "mv";
 pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";
-pub const SOURCE_MAP_EXTENSION: &str = "mvsm";
-
-pub fn read_env_var(v: &str) -> String {
-    std::env::var(v)
-        .unwrap_or_else(|_| "".into())
-        .to_uppercase()
-}
-
-pub fn read_bool_env_var(v: &str) -> bool {
-    let val = read_env_var(v);
-    val == "1" || val == "TRUE"
-}

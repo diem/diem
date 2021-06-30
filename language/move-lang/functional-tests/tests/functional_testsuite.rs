@@ -7,9 +7,10 @@ use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
     testsuite,
 };
+use move_command_line_common::env::read_bool_env_var;
 use move_lang::{
-    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors,
-    Compiler as MoveCompiler, Flags, FullyCompiledProgram, PASS_COMPILATION,
+    self, compiled_unit::CompiledUnit, errors, Compiler as MoveCompiler, Flags,
+    FullyCompiledProgram, PASS_COMPILATION,
 };
 use once_cell::sync::Lazy;
 use std::{fmt, io::Write, path::Path};

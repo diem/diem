@@ -5,6 +5,9 @@ use anyhow::{bail, Result};
 use diem_types::transaction::ScriptFunction;
 use include_dir::{include_dir, Dir};
 use move_binary_format::file_format::CompiledModule;
+use move_command_line_common::files::{
+    extension_equals, MOVE_COMPILED_EXTENSION, MOVE_ERROR_DESC_EXTENSION,
+};
 use once_cell::sync::Lazy;
 use std::{convert::TryFrom, path::PathBuf};
 
@@ -41,12 +44,8 @@ pub fn load_modules_from_release(release_name: &str) -> Result<Vec<Vec<u8>>> {
             let mut modules = modules_dir
                 .files()
                 .iter()
-                .flat_map(|file| match file.path().extension() {
-                    Some(ext) if ext == "mv" => {
-                        Some((file.path().file_name(), file.contents().to_vec()))
-                    }
-                    _ => None,
-                })
+                .filter(|file| extension_equals(file.path(), MOVE_COMPILED_EXTENSION))
+                .map(|file| (file.path().file_name(), file.contents().to_vec()))
                 .collect::<Vec<_>>();
 
             modules.sort_by(|(name1, _), (name2, _)| name1.cmp(name2));
@@ -62,7 +61,7 @@ pub fn load_error_descriptions_from_release(release_name: &str) -> Result<Vec<u8
     let mut errmap_path = PathBuf::from(release_name);
     errmap_path.push("error_description");
     errmap_path.push("error_description");
-    errmap_path.set_extension("errmap");
+    errmap_path.set_extension(MOVE_ERROR_DESC_EXTENSION);
 
     match RELEASES_DIR.get_file(errmap_path) {
         Some(file) => Ok(file.contents().to_vec()),

@@ -9,17 +9,14 @@ pub mod comments;
 pub(crate) mod merge_spec_modules;
 pub(crate) mod sources_shadow_deps;
 
-use crate::{
-    command_line::MOVE_EXTENSION, errors::*, parser, parser::syntax::parse_file_string,
-    shared::CompilationEnv,
-};
+use crate::{errors::*, parser, parser::syntax::parse_file_string, shared::CompilationEnv};
 use anyhow::anyhow;
 use comments::*;
+use move_command_line_common::files::find_move_filenames;
 use std::{
     collections::{BTreeSet, HashMap},
     fs::File,
     io::Read,
-    path::Path,
 };
 
 pub(crate) fn parse_program(
@@ -109,62 +106,6 @@ fn ensure_targets_deps_dont_intersect(
     ))
 }
 
-/// - For each directory in `paths`, it will return all files with the `MOVE_EXTENSION` found
-///   recursively in that directory
-/// - If `keep_specified_files` any file explicitly passed in `paths`, will be added to the result
-///   Otherwise, they will be discarded
-pub fn find_move_filenames(
-    paths: &[String],
-    keep_specified_files: bool,
-) -> anyhow::Result<Vec<String>> {
-    if keep_specified_files {
-        let (mut files, other_paths): (Vec<String>, Vec<String>) =
-            paths.iter().cloned().partition(|s| Path::new(s).is_file());
-        files.extend(find_filenames(&other_paths, |path| {
-            extension_equals(path, MOVE_EXTENSION)
-        })?);
-        Ok(files)
-    } else {
-        find_filenames(paths, |path| extension_equals(path, MOVE_EXTENSION))
-    }
-}
-
-/// - For each directory in `paths`, it will return all files that satisfy the predicate
-/// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
-///   of the file extension
-pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
-    paths: &[String],
-    mut is_file_desired: Predicate,
-) -> anyhow::Result<Vec<String>> {
-    let mut result = vec![];
-
-    for s in paths {
-        let path = Path::new(s);
-        if !path.exists() {
-            return Err(anyhow!(format!("No such file or directory '{}'", s)));
-        }
-        if path.is_file() && is_file_desired(path) {
-            result.push(path_to_string(path)?);
-            continue;
-        }
-        if !path.is_dir() {
-            continue;
-        }
-        for entry in walkdir::WalkDir::new(path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            let entry_path = entry.path();
-            if !entry.file_type().is_file() || !is_file_desired(&entry_path) {
-                continue;
-            }
-
-            result.push(path_to_string(entry_path)?);
-        }
-    }
-    Ok(result)
-}
-
 // TODO replace with some sort of intern table
 fn leak_str(s: &str) -> &'static str {
     Box::leak(Box::new(s.to_owned()))
@@ -196,18 +137,4 @@ fn parse_file(
     };
     files.insert(fname, source_buffer);
     Ok((defs, comments, errors))
-}
-
-pub fn path_to_string(path: &Path) -> anyhow::Result<String> {
-    match path.to_str() {
-        Some(p) => Ok(p.to_string()),
-        None => Err(anyhow!("non-Unicode file name")),
-    }
-}
-
-pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
-    match path.extension().and_then(|s| s.to_str()) {
-        Some(extension) => extension == target_ext,
-        None => false,
-    }
 }

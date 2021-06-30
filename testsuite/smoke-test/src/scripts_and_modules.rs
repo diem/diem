@@ -7,6 +7,7 @@ use crate::{
 };
 use diem_temppath::TempPath;
 use diem_types::account_address::AccountAddress;
+use move_move_command_line_common::files::MOVE_EXTENSION;
 use std::{
     fs, io,
     io::Write,
@@ -145,7 +146,7 @@ fn test_execute_custom_module_and_script() {
 }
 
 fn copy_file_with_sender_address(file_path: &Path, sender: AccountAddress) -> io::Result<PathBuf> {
-    let tmp_source_path = TempPath::new().as_ref().with_extension("move");
+    let tmp_source_path = TempPath::new().as_ref().with_extension(MOVE_EXTENSION);
     let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
     let mut code = fs::read_to_string(file_path)?;
     code = code.replace("{{sender}}", &format!("0x{}", sender));

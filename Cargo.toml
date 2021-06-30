@@ -81,6 +81,7 @@ members = [
     "language/ir-testsuite",
     "language/move-binary-format",
     "language/move-binary-format/serializer-tests",
+    "language/move-command-line-common",
     "language/move-core/types",
     "language/move-ir/types",
     "language/move-lang",

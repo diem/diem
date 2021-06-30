@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
+move-command-line-common = { path = "../../move-command-line-common" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"

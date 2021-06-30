@@ -30,6 +30,7 @@ diem-framework-releases = { path = "../../language/diem-framework/releases" }
 debug-interface = { path = "../../common/debug-interface" }
 generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
+move-move-command-line-common = { path = "../../language/move-command-line-common", package = "move-command-line-common" }
 move-stdlib = { path = "../../language/move-stdlib" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }

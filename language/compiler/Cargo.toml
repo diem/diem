@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 bytecode-verifier = { path = "../bytecode-verifier" }
+move-command-line-common = { path = "../move-command-line-common" }
 ir-to-bytecode = { path = "ir-to-bytecode" }
 bytecode-source-map = { path = "bytecode-source-map" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }

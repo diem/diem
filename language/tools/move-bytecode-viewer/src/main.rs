@@ -4,12 +4,12 @@
 #![forbid(unsafe_code)]
 
 use bytecode_source_map::utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc};
+use move_binary_format::file_format::CompiledModule;
 use move_bytecode_viewer::{
     bytecode_viewer::BytecodeViewer, source_viewer::ModuleViewer,
     tui::tui_interface::start_tui_with_interface, viewer::Viewer,
 };
-
-use move_binary_format::file_format::CompiledModule;
+use move_command_line_common::files::SOURCE_MAP_EXTENSION;
 use std::{fs, path::Path};
 use structopt::StructOpt;
 
@@ -30,7 +30,7 @@ struct Args {
 
 pub fn main() {
     let args = Args::from_args();
-    let source_map_extension = "mvsm";
+    let source_map_extension = SOURCE_MAP_EXTENSION;
 
     let bytecode_bytes = fs::read(&args.module_binary_path).expect("Unable to read bytecode file");
     let compiled_module =

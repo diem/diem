@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use move_command_line_common::files::MOVE_ERROR_DESC_EXTENSION;
 use move_core_types::{
     account_address::AccountAddress,
     errmap::{ErrorDescription, ErrorMapping},
@@ -34,7 +35,7 @@ impl Default for ErrmapOptions {
                 AccountAddress::from_hex_literal("0x1").unwrap(),
                 Identifier::new("Errors").unwrap(),
             ),
-            output_file: "errmap".to_string(),
+            output_file: MOVE_ERROR_DESC_EXTENSION.to_string(),
         }
     }
 }

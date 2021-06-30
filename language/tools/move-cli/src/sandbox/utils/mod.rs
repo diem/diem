@@ -10,6 +10,7 @@ use move_binary_format::{
     normalized,
 };
 use move_bytecode_utils::Modules;
+use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
@@ -19,7 +20,6 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, MOVE_COMPILED_EXTENSION};
 use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
 
 use move_vm_types::gas_schedule::GasStatus;

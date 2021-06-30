@@ -4,11 +4,13 @@
 use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_SOURCE_DIR, DEFAULT_STORAGE_DIR};
 use anyhow::anyhow;
 use move_binary_format::file_format::CompiledModule;
-use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
-use move_lang::{
-    command_line::{read_bool_env_var, COLOR_MODE_ENV_VAR},
-    extension_equals, path_to_string, MOVE_COMPILED_EXTENSION,
+use move_command_line_common::{
+    env::read_bool_env_var,
+    files::{extension_equals, find_filenames, path_to_string, MOVE_COMPILED_EXTENSION},
+    testing::{format_diff, read_env_update_baseline, EXP_EXT},
 };
+use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
+use move_lang::command_line::COLOR_MODE_ENV_VAR;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     env,
@@ -24,19 +26,11 @@ use std::{
 /// result to the expected output, and runs `move clean` to discard resources,
 /// modules, and event data created by running the test.
 
-const EXP_EXT: &str = "exp";
-
 /// If this env var is set, `move clean` will not be run after each test.
 /// this is useful if you want to look at the `storage` or `move_events`
 /// produced by a test. However, you'll have to manually run `move clean`
 /// before re-running the test.
 const NO_MOVE_CLEAN: &str = "NO_MOVE_CLEAN";
-
-/// If either of these env vars is set, the test harness overwrites the
-/// old .exp files with the output instead of checking them against the
-/// output.
-const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
-const UB: &str = "UB";
 
 /// The filename that contains the arguments to the Move binary.
 pub const TEST_ARGS_FILENAME: &str = "args.txt";
@@ -51,36 +45,6 @@ const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
 /// be produced.
 const DEFAULT_TRACE_FILE: &str = "trace";
 
-fn format_diff(expected: String, actual: String) -> String {
-    use difference::*;
-
-    let changeset = Changeset::new(&expected, &actual, "\n");
-
-    let mut ret = String::new();
-
-    for seq in changeset.diffs {
-        match &seq {
-            Difference::Same(x) => {
-                ret.push_str(x);
-                ret.push('\n');
-            }
-            Difference::Add(x) => {
-                ret.push_str("\x1B[92m");
-                ret.push_str(x);
-                ret.push_str("\x1B[0m");
-                ret.push('\n');
-            }
-            Difference::Rem(x) => {
-                ret.push_str("\x1B[91m");
-                ret.push_str(x);
-                ret.push_str("\x1B[0m");
-                ret.push('\n');
-            }
-        }
-    }
-    ret
-}
-
 fn collect_coverage(
     trace_file: &Path,
     build_dir: &Path,
@@ -88,7 +52,7 @@ fn collect_coverage(
 ) -> anyhow::Result<ExecCoverageMapWithModules> {
     fn find_compiled_move_filenames(path: &Path) -> anyhow::Result<Vec<String>> {
         if path.exists() {
-            move_lang::find_filenames(&[path_to_string(path)?], |fpath| {
+            find_filenames(&[path_to_string(path)?], |fpath| {
                 extension_equals(fpath, MOVE_COMPILED_EXTENSION)
             })
         } else {
@@ -104,7 +68,7 @@ fn collect_coverage(
             .collect();
 
     // collect modules published minus modules compiled for packages
-    let src_module_files = move_lang::find_filenames(&[path_to_string(storage_dir)?], |fpath| {
+    let src_module_files = find_filenames(&[path_to_string(storage_dir)?], |fpath| {
         extension_equals(fpath, MOVE_COMPILED_EXTENSION)
             && !pkg_modules.contains(fpath.file_name().unwrap())
     })?;
@@ -242,7 +206,7 @@ pub fn run_one(
         );
     }
 
-    let update_baseline = read_bool_env_var(UPDATE_BASELINE) || read_bool_env_var(UB);
+    let update_baseline = read_env_update_baseline();
     let exp_path = args_path.with_extension(EXP_EXT);
     if update_baseline {
         fs::write(exp_path, &output)?;
@@ -266,7 +230,7 @@ pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Re
     let mut cov_info = ExecCoverageMapWithModules::empty();
 
     // find `args.txt` and iterate over them
-    for entry in move_lang::find_filenames(&[args_path.to_owned()], |fpath| {
+    for entry in find_filenames(&[args_path.to_owned()], |fpath| {
         fpath.file_name().expect("unexpected file entry path") == TEST_ARGS_FILENAME
     })? {
         match run_one(Path::new(&entry), cli_binary, track_cov) {

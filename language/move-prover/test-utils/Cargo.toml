@@ -11,3 +11,4 @@ prettydiff = "0.4.0"
 anyhow = "1.0.38"
 regex = "1.4.3"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-command-line-common = { path = "../../move-command-line-common" }

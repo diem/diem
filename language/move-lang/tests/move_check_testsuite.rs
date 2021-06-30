@@ -1,50 +1,21 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_command_line_common::{
+    env::read_bool_env_var,
+    testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
+};
 use move_lang::{
-    command_line::read_bool_env_var, errors::*, shared::Flags, unit_test, CommentMap, Compiler,
-    SteppedCompiler, PASS_CFGIR, PASS_PARSER,
+    errors::*, shared::Flags, unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR,
+    PASS_PARSER,
 };
 use move_lang_test_utils::*;
 use std::{fs, path::Path};
 
-const OUT_EXT: &str = "out";
-const EXP_EXT: &str = "exp";
-const TEST_EXT: &str = "unit_test";
-
+/// Shared flag to keep any temporary results of the test
 const KEEP_TMP: &str = "KEEP";
-const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
-const UB: &str = "UB";
 
-fn format_diff(expected: String, actual: String) -> String {
-    use difference::*;
-
-    let changeset = Changeset::new(&expected, &actual, "\n");
-
-    let mut ret = String::new();
-
-    for seq in changeset.diffs {
-        match &seq {
-            Difference::Same(x) => {
-                ret.push_str(x);
-                ret.push('\n');
-            }
-            Difference::Add(x) => {
-                ret.push_str("\x1B[92m");
-                ret.push_str(x);
-                ret.push_str("\x1B[0m");
-                ret.push('\n');
-            }
-            Difference::Rem(x) => {
-                ret.push_str("\x1B[91m");
-                ret.push_str(x);
-                ret.push_str("\x1B[0m");
-                ret.push('\n');
-            }
-        }
-    }
-    ret
-}
+const TEST_EXT: &str = "unit_test";
 
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     // A test is marked that it should also be compiled in test mode by having a `path.unit_test`
@@ -70,16 +41,12 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
 
     let exp_path = path.with_extension(EXP_EXT);
     let out_path = path.with_extension(OUT_EXT);
-    run_test(path, &exp_path, &out_path, Flags::empty())
+    run_test(path, &exp_path, &out_path, Flags::empty())?;
+    Ok(())
 }
 
 // Runs all tests under the test/testsuite directory.
-fn run_test(
-    path: &Path,
-    exp_path: &Path,
-    out_path: &Path,
-    flags: Flags,
-) -> datatest_stable::Result<()> {
+fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyhow::Result<()> {
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let mut deps = move_stdlib::move_stdlib_files();
     deps.push(move_stdlib::unit_testing_module_file());
@@ -99,12 +66,11 @@ fn run_test(
     };
 
     let save_errors = read_bool_env_var(KEEP_TMP);
-    let update_baseline = read_bool_env_var(UPDATE_BASELINE) || read_bool_env_var(UB);
+    let update_baseline = read_env_update_baseline();
 
-    fs::write(out_path, error_buffer)?;
-    let rendered_errors = fs::read_to_string(out_path)?;
-    if !save_errors {
-        fs::remove_file(out_path)?;
+    let rendered_errors = std::str::from_utf8(&error_buffer)?;
+    if save_errors {
+        fs::write(out_path, &error_buffer)?;
     }
 
     if update_baseline {
@@ -121,14 +87,14 @@ fn run_test(
         (false, false) => Ok(()),
         (true, false) => {
             let msg = format!("Expected success. Unexpected errors:\n{}", rendered_errors);
-            error(msg)
+            anyhow::bail!(msg)
         }
         (false, true) => {
             let msg = format!(
                 "Unexpected success. Expected errors:\n{}",
                 fs::read_to_string(exp_path)?
             );
-            error(msg)
+            anyhow::bail!(msg)
         }
         (true, true) => {
             let expected_errors = fs::read_to_string(exp_path)?;
@@ -137,7 +103,7 @@ fn run_test(
                     "Expected errors differ from actual errors:\n{}",
                     format_diff(expected_errors, rendered_errors),
                 );
-                error(msg)
+                anyhow::bail!(msg)
             } else {
                 Ok(())
             }

@@ -40,10 +40,7 @@ pub use command_line::{
         FullyCompiledProgram, SteppedCompiler, PASS_CFGIR, PASS_COMPILATION, PASS_EXPANSION,
         PASS_HLIR, PASS_NAMING, PASS_PARSER, PASS_TYPING,
     },
-    MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR, MOVE_EXTENSION,
+    MOVE_COMPILED_INTERFACES_DIR,
 };
-pub use parser::{
-    comments::{CommentMap, FileCommentMap, MatchedFileCommentMap},
-    extension_equals, find_filenames, find_move_filenames, path_to_string,
-};
+pub use parser::comments::{CommentMap, FileCommentMap, MatchedFileCommentMap};
 pub use shared::Flags;

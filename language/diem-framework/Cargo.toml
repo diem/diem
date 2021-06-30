@@ -13,6 +13,7 @@ publish = false
 bytecode-verifier = { path = "../bytecode-verifier" }
 abigen = { path = "../move-prover/abigen" }
 docgen = { path = "../move-prover/docgen" }
+move-command-line-common = { path = "../move-command-line-common" }
 errmapgen = { path = "../move-prover/errmapgen" }
 move-lang = { path = "../move-lang" }
 move-prover = { path = "../move-prover" }

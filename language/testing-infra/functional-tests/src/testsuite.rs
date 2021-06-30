@@ -9,6 +9,10 @@ use crate::{
     preprocessor::{build_transactions, extract_global_config, split_input},
 };
 use difference::Changeset;
+use move_command_line_common::{
+    env::read_bool_env_var,
+    testing::{read_env_update_baseline, EXP_EXT},
+};
 use regex::Regex;
 use std::{
     env,
@@ -22,7 +26,6 @@ use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, WriteColor}
 
 pub const PRETTY: &str = "PRETTY";
 pub const FILTER: &str = "FILTER";
-pub const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
 
 fn at_most_n_chars(s: impl IntoIterator<Item = char>, n: usize) -> String {
     let mut it = s.into_iter();
@@ -53,22 +56,6 @@ fn at_most_n_before_and_m_after(
     let matched = s[start..end].to_string();
     let after = at_most_n_chars(s[end..].chars(), m).chars().collect();
     (before, matched, after)
-}
-
-fn env_var(var_name: &str) -> String {
-    env::var(var_name)
-        .unwrap_or_else(|_| "".to_string())
-        .to_ascii_lowercase()
-}
-
-fn pretty_mode() -> bool {
-    let pretty = env_var(PRETTY);
-    pretty == "1" || pretty == "true"
-}
-
-fn update_baseline() -> bool {
-    let update = env_var(UPDATE_BASELINE);
-    update == "1" || update == "true"
 }
 
 fn print_stage(haystack: &str) -> bool {
@@ -117,7 +104,7 @@ fn check_or_update_expected_output(
     let changeset = Changeset::new(&expected, &text, "\n");
     // TODO: make this less sensitive to spaces.
     if changeset.distance != 0 {
-        if update_baseline() {
+        if read_env_update_baseline() {
             let mut f = File::create(&exp_file_path)?;
             f.write_all(text.as_bytes())?;
         } else {
@@ -210,7 +197,7 @@ fn run_checker_directives(
     output.set_color(ColorSpec::new().set_bold(true))?;
     writeln!(output, "Evaluation Outputs")?;
     output.reset()?;
-    if pretty_mode() {
+    if read_bool_env_var(PRETTY) {
         writeln!(
             output,
             "{}",
@@ -313,7 +300,7 @@ pub fn functional_tests<TComp: Compiler>(
     test_file_path: &Path,
 ) -> datatest_stable::Result<()> {
     let mut exp_file_path = PathBuf::from(test_file_path);
-    exp_file_path.set_extension("exp");
+    exp_file_path.set_extension(EXP_EXT);
     let exp_mode = exp_file_path.exists();
 
     let input = read_to_string(test_file_path)?;

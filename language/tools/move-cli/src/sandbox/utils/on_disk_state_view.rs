@@ -9,6 +9,7 @@ use move_binary_format::{
     errors::*,
     file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
 };
+use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -16,7 +17,7 @@ use move_core_types::{
     parser,
     vm_status::StatusCode,
 };
-use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
+use move_lang::MOVE_COMPILED_INTERFACES_DIR;
 use move_vm_runtime::data_cache::MoveStorage;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 

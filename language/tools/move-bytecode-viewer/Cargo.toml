@@ -14,6 +14,7 @@ termion = "1.5"
 tui = "0.14.0"
 
 codespan = { version = "0.8.0", features = ["serialization"] }
+move-command-line-common = { path = "../../move-command-line-common" }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-ir-types = { path = "../../move-ir/types" }

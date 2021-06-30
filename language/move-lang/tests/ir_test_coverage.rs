@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_command_line_common::files::{MOVE_EXTENSION, MOVE_IR_EXTENSION};
 use move_lang_test_utils::*;
 use std::{collections::HashSet, path::Path};
 
@@ -54,7 +55,7 @@ fn test_ir_test_coverage() {
 
 fn translated_test_exists(subdir: &str, name_str: &str) -> bool {
     let mut stem = name_str.to_owned();
-    (0..=IR_EXTENSION.len()).for_each(|_| {
+    (0..=MOVE_IR_EXTENSION.len()).for_each(|_| {
         stem.pop().unwrap();
     });
     let stem_str = &stem;

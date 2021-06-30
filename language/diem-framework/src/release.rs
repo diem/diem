@@ -4,6 +4,7 @@
 use crate::{path_in_crate, save_binary};
 use log::LevelFilter;
 use move_binary_format::{compatibility::Compatibility, normalized::Module, CompiledModule};
+use move_command_line_common::files::{MOVE_COMPILED_EXTENSION, MOVE_ERROR_DESC_EXTENSION};
 use move_core_types::language_storage::ModuleId;
 use std::{
     collections::BTreeMap,
@@ -52,7 +53,7 @@ fn build_modules(output_path: impl AsRef<Path>) -> BTreeMap<String, CompiledModu
         let mut bytes = Vec::new();
         module.serialize(&mut bytes).unwrap();
         let mut module_path = Path::join(&output_path, name);
-        module_path.set_extension(move_stdlib::COMPILED_EXTENSION);
+        module_path.set_extension(MOVE_COMPILED_EXTENSION);
         save_binary(&module_path, &bytes);
     }
 
@@ -368,7 +369,7 @@ pub fn create_release(output_path: impl AsRef<Path>, options: &ReleaseOptions) {
         let mut err_exp_path = output_path
             .join("error_description")
             .join("error_description");
-        err_exp_path.set_extension("errmap");
+        err_exp_path.set_extension(MOVE_ERROR_DESC_EXTENSION);
         run_step(msg("Generating error explanations"), || {
             build_error_code_map(&err_exp_path)
         });

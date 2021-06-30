@@ -14,6 +14,7 @@ publish = false
 [dependencies]
 errmapgen = { path = "../move-prover/errmapgen" }
 docgen = { path = "../move-prover/docgen" }
+move-command-line-common = { path = "../move-command-line-common" }
 move-prover = { path = "../move-prover" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-vm-types = { path = "../move-vm/types" }

@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_command_line_common::files::MOVE_ERROR_DESC_EXTENSION;
 use move_core_types::{
     account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
     language_storage::ModuleId,
@@ -19,7 +20,7 @@ struct Args {
     #[structopt(long = "abort-code", short = "a")]
     abort_code: u64,
     /// Path to the error code mapping file
-    #[structopt(long = "errmap", short = "e")]
+    #[structopt(long = MOVE_ERROR_DESC_EXTENSION, short = "e")]
     errmap_path: String,
 }
 

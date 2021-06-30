@@ -3,11 +3,10 @@
 
 use std::{env, path::Path};
 
-use move_prover_test_utils::{baseline_test::verify_or_update_baseline, read_bool_env_var};
+use move_command_line_common::{env::read_bool_env_var, testing::EXP_EXT};
+use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use move_stdlib::move_stdlib_files;
 use move_unit_test::UnitTestingConfig;
-
-const BASELINE_EXTENSION: &str = "exp";
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     env::set_var("NO_COLOR", "1");
@@ -31,7 +30,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     config.run_and_report_unit_tests(test_plan, &mut buffer)?;
     let output = String::from_utf8(buffer)?;
 
-    let baseline_path = path.with_extension(BASELINE_EXTENSION);
+    let baseline_path = path.with_extension(EXP_EXT);
     verify_or_update_baseline(&baseline_path, &output)?;
     Ok(())
 }

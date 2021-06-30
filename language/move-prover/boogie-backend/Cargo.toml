@@ -10,6 +10,7 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.42"
 bytecode = { path = "../bytecode" }
+move-command-line-common = { path = "../../move-command-line-common" }
 move-model = { path = "../../move-model" }
 move-binary-format = { path = "../../move-binary-format" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

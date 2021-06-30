@@ -4,10 +4,10 @@
 use anyhow::{anyhow, Result};
 use include_dir::Dir;
 use move_binary_format::file_format::CompiledModule;
-use move_lang::{
-    compiled_unit::CompiledUnit, extension_equals, find_filenames, path_to_string, shared::Flags,
-    Compiler, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
+use move_command_line_common::files::{
+    extension_equals, find_filenames, path_to_string, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
 };
+use move_lang::{compiled_unit::CompiledUnit, shared::Flags, Compiler};
 use once_cell::sync::Lazy;
 use std::{
     collections::HashSet,

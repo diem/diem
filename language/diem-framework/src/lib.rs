@@ -5,6 +5,7 @@
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
+use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_lang::{compiled_unit::CompiledUnit, Compiler};
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
@@ -14,8 +15,6 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-
-pub use move_stdlib::{COMPILED_EXTENSION, ERROR_DESC_EXTENSION, MOVE_EXTENSION};
 
 pub mod natives;
 pub mod release;
@@ -61,7 +60,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
             for name in &names {
                 let suffix = "_".to_owned()
                     + Path::new(name)
-                        .with_extension(COMPILED_EXTENSION)
+                        .with_extension(MOVE_COMPILED_EXTENSION)
                         .file_name()
                         .unwrap()
                         .to_str()

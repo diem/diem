@@ -7,10 +7,9 @@ use codespan_reporting::term::termcolor::Buffer;
 
 use anyhow::anyhow;
 use itertools::Itertools;
+use move_command_line_common::{env::read_env_var, testing::EXP_EXT};
 use move_prover::{cli::Options, run_move_prover};
-use move_prover_test_utils::{
-    baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var,
-};
+use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 use tempfile::TempDir;
 
 use datatest_stable::Requirements;
@@ -222,7 +221,7 @@ fn get_flags_and_baseline(
                 Some(path.with_extension(if separate_baseline {
                     format!("{}_exp", feature.name)
                 } else {
-                    "exp".to_string()
+                    EXP_EXT.to_string()
                 })),
             )
         };

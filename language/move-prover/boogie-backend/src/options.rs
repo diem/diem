@@ -3,6 +3,7 @@
 
 use anyhow::anyhow;
 use itertools::Itertools;
+use move_command_line_common::env::{read_bool_env_var, read_env_var};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
@@ -104,14 +105,13 @@ pub struct BoogieOptions {
 
 impl Default for BoogieOptions {
     fn default() -> Self {
-        let get_env = |s| std::env::var(s).unwrap_or_else(|_| String::new());
         Self {
             bench_repeat: 1,
-            boogie_exe: get_env("BOOGIE_EXE"),
+            boogie_exe: read_env_var("BOOGIE_EXE"),
             use_exp_boogie: false,
-            z3_exe: get_env("Z3_EXE"),
+            z3_exe: read_env_var("Z3_EXE"),
             use_cvc4: false,
-            cvc4_exe: get_env("CVC4_EXE"),
+            cvc4_exe: read_env_var("CVC4_EXE"),
             boogie_flags: vec![],
             debug_trace: false,
             use_array_theory: false,
@@ -152,7 +152,7 @@ impl BoogieOptions {
     pub fn get_boogie_command(&self, boogie_file: &str) -> Vec<String> {
         let mut result = if self.use_exp_boogie {
             // This should have a better ux...
-            vec![std::env::var("EXP_BOOGIE_EXE").unwrap_or_else(|_| String::new())]
+            vec![read_env_var("EXP_BOOGIE_EXE")]
         } else {
             vec![self.boogie_exe.clone()]
         };
@@ -223,7 +223,7 @@ impl BoogieOptions {
     pub fn adjust_timeout(&self, time: usize) -> usize {
         // If env var MVP_TEST_ON_CI is set, add 100% to the timeout for added
         // robustness against flakiness.
-        if std::env::var("MVP_TEST_ON_CI").unwrap_or_else(|_| "".into()) == "1" {
+        if read_bool_env_var("MVP_TEST_ON_CI") {
             usize::saturating_add(time, time)
         } else {
             time

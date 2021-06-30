@@ -20,6 +20,7 @@ bcs = "0.1.2"
 bytecode-verifier = { path = "../../bytecode-verifier" }
 
 disassembler = { path = "../disassembler" }
+move-command-line-common = { path = "../../move-command-line-common" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
 move-coverage = { path = "../move-coverage" }

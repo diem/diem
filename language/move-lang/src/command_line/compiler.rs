@@ -3,10 +3,7 @@
 
 use crate::{
     cfgir,
-    command_line::{
-        DEFAULT_OUTPUT_DIR, MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR, MOVE_EXTENSION,
-        SOURCE_MAP_EXTENSION,
-    },
+    command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
     compiled_unit::CompiledUnit,
     errors,
@@ -15,6 +12,9 @@ use crate::{
     parser::{comments::*, *},
     shared::{CompilationEnv, Flags},
     to_bytecode, typing, unit_test,
+};
+use move_command_line_common::files::{
+    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
 use std::{
     fs,
