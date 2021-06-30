@@ -3,6 +3,7 @@
 
 use crate::test_utils::setup_swarm_and_client_proxy;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
+use diem_sdk::client::views::TransactionDataView;
 use diem_types::{account_config::XUS_NAME, transaction::authenticator::AuthenticationKey};
 
 #[test]
@@ -87,7 +88,7 @@ fn test_external_transaction_signer() {
         .unwrap();
 
     match txn.transaction {
-        diem_client::views::TransactionDataView::UserTransaction {
+        TransactionDataView::UserTransaction {
             sender,
             sequence_number,
             max_gas_amount,

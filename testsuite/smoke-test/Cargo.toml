@@ -41,7 +41,7 @@ diem-key-manager = { path = "../../secure/key-manager" }
 diem-logger = { path = "../../common/logger" }
 diem-management = { path = "../../config/management", features = ["testing"] }
 diem-operational-tool = {path = "../../config/management/operational", features = ["testing"] }
-diem-client = { path = "../../sdk/client" }
+diem-sdk = { path = "../../sdk" }
 diem-secure-storage = { path = "../../secure/storage", features = ["testing"] }
 diem-smoke-test-attribute = { path = "../smoke-test/attribute" }
 diem-swarm = { path = "../diem-swarm"}

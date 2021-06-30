@@ -3,11 +3,11 @@
 
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::compare_balances};
 use cli::client_proxy::{ClientProxy, IndexAndSequence};
-use diem_client::AccountAddress;
 use diem_config::{
     config::{DiscoveryMethod, NodeConfig, Peer, PeerRole, HANDSHAKE_VERSION},
     network_id::NetworkId,
 };
+use diem_sdk::client::AccountAddress;
 use diem_types::{
     account_config::{testnet_dd_account_address, treasury_compliance_account_address},
     network_address::{NetworkAddress, Protocol},

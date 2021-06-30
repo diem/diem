@@ -5,6 +5,7 @@ use crate::{
     test_utils::{diem_swarm_utils::get_diem_debugger, setup_swarm_and_client_proxy},
     workspace_builder,
 };
+use diem_sdk::client::views::VMStatusView;
 
 #[test]
 fn test_replay_tooling() {
@@ -57,5 +58,5 @@ fn test_replay_tooling() {
 
     assert_eq!(account_creation_txn.version + 1, bisect_result);
     assert_eq!(replay_result.gas_used(), txn.gas_used);
-    assert_eq!(diem_client::views::VMStatusView::Executed, txn.vm_status);
+    assert_eq!(VMStatusView::Executed, txn.vm_status);
 }

@@ -9,9 +9,9 @@ use crate::{
         wait_for_transaction_on_all_nodes,
     },
 };
-use diem_client::views::VMStatusView;
 use diem_config::config::SecureBackend;
 use diem_global_constants::OWNER_ACCOUNT;
+use diem_sdk::client::views::VMStatusView;
 use diem_secure_storage::{KVStorage, Storage};
 use diem_types::{account_address::AccountAddress, network_address::NetworkAddress};
 use std::{convert::TryInto, str::FromStr};

@@ -6,7 +6,7 @@ use crate::{
     test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy},
 };
 use cli::client_proxy::ClientProxy;
-use diem_client::{
+use diem_sdk::client::{
     Client, InMemoryStorage, MethodRequest, MethodResponse, Response, Result, VerifyingClient,
 };
 use diem_types::{
