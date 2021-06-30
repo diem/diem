@@ -115,7 +115,7 @@ pub struct ClientProxy {
     /// do not print '.' when waiting for signed transaction
     pub quiet_wait: bool,
     /// Wallet library managing user accounts.
-    wallet: WalletLibrary,
+    pub wallet: WalletLibrary,
     /// Whether to sync with validator on wallet recovery.
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)

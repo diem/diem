@@ -3,11 +3,12 @@
 
 use crate::{
     client::Client,
-    error::{Error, Result},
+    error::{Error, Result, WaitForTransactionError},
     request::MethodRequest,
     response::{MethodResponse, Response},
     state::State,
 };
+use diem_crypto::hash::{CryptoHash, HashValue};
 use diem_json_rpc_types::views::{
     AccountView, CurrencyInfoView, EventView, TransactionListView, TransactionView,
 };
@@ -21,7 +22,7 @@ use diem_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::{SignedTransaction, Version},
+    transaction::{SignedTransaction, Transaction, Version},
     trusted_state::TrustedState,
     waypoint::Waypoint,
 };
@@ -30,6 +31,7 @@ use std::{
     convert::TryFrom,
     fmt::Debug,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 
 // TODO(philiphayes): figure out retry strategy
@@ -116,6 +118,71 @@ impl<S: Storage> VerifyingClient<S> {
             .unwrap()
             .trusted_state()
             .clone()
+    }
+
+    pub async fn wait_for_signed_transaction(
+        &self,
+        txn: &SignedTransaction,
+        timeout: Option<Duration>,
+        delay: Option<Duration>,
+    ) -> Result<Response<TransactionView>, WaitForTransactionError> {
+        let response = self
+            .wait_for_transaction(
+                txn.sender(),
+                txn.sequence_number(),
+                txn.expiration_timestamp_secs(),
+                Transaction::UserTransaction(txn.clone()).hash(),
+                timeout,
+                delay,
+            )
+            .await?;
+
+        if !response.inner().vm_status.is_executed() {
+            return Err(WaitForTransactionError::TransactionExecutionFailed(
+                response.into_inner(),
+            ));
+        }
+
+        Ok(response)
+    }
+
+    pub async fn wait_for_transaction(
+        &self,
+        address: AccountAddress,
+        seq: u64,
+        expiration_time_secs: u64,
+        txn_hash: HashValue,
+        timeout: Option<Duration>,
+        delay: Option<Duration>,
+    ) -> Result<Response<TransactionView>, WaitForTransactionError> {
+        const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
+        const DEFAULT_DELAY: Duration = Duration::from_millis(50);
+
+        let start = std::time::Instant::now();
+        while start.elapsed() < timeout.unwrap_or(DEFAULT_TIMEOUT) {
+            let txn_resp = self
+                .get_account_transaction(address, seq, true)
+                .await
+                .map_err(WaitForTransactionError::GetTransactionError)?;
+
+            let (maybe_txn, state) = txn_resp.into_parts();
+
+            if let Some(txn) = maybe_txn {
+                if txn.hash != txn_hash {
+                    return Err(WaitForTransactionError::TransactionHashMismatchError(txn));
+                }
+
+                return Ok(Response::new(txn, state));
+            }
+
+            if expiration_time_secs <= state.timestamp_usecs / 1_000_000 {
+                return Err(WaitForTransactionError::TransactionExpired);
+            }
+
+            tokio::time::sleep(delay.unwrap_or(DEFAULT_DELAY)).await;
+        }
+
+        Err(WaitForTransactionError::Timeout)
     }
 
     /// Issue `get_state_proof` requests until we successfully sync to the remote
@@ -301,6 +368,18 @@ impl<S: Storage> VerifyingClient<S> {
         ))
         .await?
         .and_then(MethodResponse::try_into_get_transactions)
+    }
+
+    pub async fn get_account_transaction(
+        &self,
+        address: AccountAddress,
+        seq_num: u64,
+        include_events: bool,
+    ) -> Result<Response<Option<TransactionView>>> {
+        // TODO(philiphayes): replace when other PR lands
+        self.inner
+            .get_account_transaction(address, seq_num, include_events)
+            .await
     }
 
     pub async fn get_events(

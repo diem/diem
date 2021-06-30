@@ -5,9 +5,13 @@ use crate::{
     smoke_test_environment::SmokeTestEnvironment,
     test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy},
 };
-use cli::client_proxy::ClientProxy;
-use diem_sdk::client::{
-    Client, InMemoryStorage, MethodRequest, MethodResponse, Response, Result, VerifyingClient,
+use cli::client_proxy::{AddressAndIndex, ClientProxy};
+use diem_sdk::{
+    client::{
+        Client, InMemoryStorage, MethodRequest, MethodResponse, Response, Result, VerifyingClient,
+    },
+    transaction_builder::{Currency, TransactionFactory},
+    types::LocalAccount,
 };
 use diem_types::{
     account_address::AccountAddress,
@@ -61,13 +65,18 @@ impl Environment {
         }
     }
 
-    fn fund_new_account(&mut self) -> AccountAddress {
+    fn transaction_factory(&self) -> TransactionFactory {
+        TransactionFactory::new(self.client_proxy.chain_id)
+    }
+
+    fn fund_new_account(&mut self, amount: u64) -> AddressAndIndex {
         let account = self.client_proxy.create_next_account(false).unwrap();
         let idx = format!("{}", account.index);
+        let amount = format!("{}", amount);
         self.client_proxy
-            .mint_coins(&["mintb", &idx, "1000", "XUS"], true)
+            .mint_coins(&["mintb", &idx, &amount, "XUS"], true)
             .unwrap();
-        account.address
+        account
     }
 
     fn latest_observed_version(&self) -> Version {
@@ -299,9 +308,9 @@ fn test_client_equivalence() {
         treasury_compliance_account_address(),
         testnet_dd_account_address(),
         // Fund some new accounts
-        env.fund_new_account(),
-        env.fund_new_account(),
-        env.fund_new_account(),
+        env.fund_new_account(1000).address,
+        env.fund_new_account(2000).address,
+        env.fund_new_account(3000).address,
         // Some random, likely non-existent accounts
         AccountAddress::ZERO,
         AccountAddress::random(),
@@ -326,4 +335,77 @@ fn test_client_equivalence() {
         let (recv_nv, recv_v) = rt.block_on(env.batch(batch));
         assert_batches_equal(recv_nv, recv_v);
     });
+}
+
+#[test]
+fn test_submit() {
+    let rt = Builder::new_current_thread().enable_all().build().unwrap();
+    let mut env = Environment::new();
+
+    let start_amount = 1_000_000;
+    let transfer_amount = 100;
+    let currency = Currency::XUS;
+
+    let idx_1 = env.fund_new_account(start_amount / 1_000_000).index;
+    let idx_2 = env.fund_new_account(start_amount / 1_000_000).index;
+
+    let account_1 = env.client_proxy.get_account(idx_1).unwrap();
+    let account_2 = env.client_proxy.get_account(idx_2).unwrap();
+
+    let mut account_1 = LocalAccount::new(
+        account_1.address,
+        env.client_proxy
+            .wallet
+            .get_private_key(&account_1.address)
+            .unwrap(),
+        account_1.sequence_number,
+    );
+    let account_2 = LocalAccount::new(
+        account_2.address,
+        env.client_proxy
+            .wallet
+            .get_private_key(&account_2.address)
+            .unwrap(),
+        account_2.sequence_number,
+    );
+
+    rt.block_on(env.verifying_client.sync()).unwrap();
+
+    let txn = account_1.sign_with_transaction_builder(env.transaction_factory().peer_to_peer(
+        currency,
+        account_2.address(),
+        transfer_amount,
+    ));
+
+    rt.block_on(env.verifying_client.submit(&txn)).unwrap();
+    rt.block_on(
+        env.verifying_client
+            .wait_for_signed_transaction(&txn, None, None),
+    )
+    .unwrap();
+
+    let account_view_1 = rt
+        .block_on(env.verifying_client.get_account(account_1.address()))
+        .unwrap()
+        .into_inner()
+        .unwrap();
+    let balance_1 = account_view_1
+        .balances
+        .iter()
+        .find(|b| b.currency == currency)
+        .unwrap();
+
+    let account_view_2 = rt
+        .block_on(env.verifying_client.get_account(account_2.address()))
+        .unwrap()
+        .into_inner()
+        .unwrap();
+    let balance_2 = account_view_2
+        .balances
+        .iter()
+        .find(|b| b.currency == currency)
+        .unwrap();
+
+    assert_eq!(balance_1.amount, start_amount - transfer_amount);
+    assert_eq!(balance_2.amount, start_amount + transfer_amount);
 }
