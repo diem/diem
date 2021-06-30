@@ -325,7 +325,7 @@ mod tests {
         // These should have no delay
         let expected =
             serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 0}}).to_string();
-        let next = timeout(10, receiver.recv(), "message 0")
+        let next = timeout(1_000, receiver.recv(), "message 0")
             .await
             .unwrap()
             .unwrap();
@@ -333,7 +333,7 @@ mod tests {
 
         let expected =
             serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 1}}).to_string();
-        let next = timeout(10, receiver.recv(), "message 1")
+        let next = timeout(1_000, receiver.recv(), "message 1")
             .await
             .unwrap()
             .unwrap();
@@ -343,7 +343,7 @@ mod tests {
         let start = Instant::now();
         let expected =
             serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 2}}).to_string();
-        let next = timeout(1_000, receiver.recv(), "message 2")
+        let next = timeout(3_000, receiver.recv(), "message 2")
             .await
             .unwrap()
             .unwrap();
@@ -354,7 +354,7 @@ mod tests {
         // This one should have no delay again, due to being reset by the previous message
         let expected =
             serde_json::json!({"jsonrpc": "2.0", "id": 1010101, "result":{"value": 3}}).to_string();
-        let next = timeout(10, receiver.recv(), "message 3")
+        let next = timeout(1_000, receiver.recv(), "message 3")
             .await
             .unwrap()
             .unwrap();
