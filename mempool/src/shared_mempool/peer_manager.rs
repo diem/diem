@@ -150,8 +150,9 @@ impl PeerManager {
         } else {
             // All other nodes have their state immediately restarted anyways, so let's free them
             // TODO: Why is the Validator optimization not applied here
-            self.peer_states.lock().remove(&peer);
-            counters::active_upstream_peers(&peer.raw_network_id()).dec();
+            if self.peer_states.lock().remove(&peer).is_some() {
+                counters::active_upstream_peers(&peer.raw_network_id()).dec();
+            }
         }
 
         // Always update prioritized peers to be in line with peer states
