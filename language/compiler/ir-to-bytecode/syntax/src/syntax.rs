@@ -1209,6 +1209,19 @@ fn parse_type_var(tokens: &mut Lexer) -> Result<TypeVar, ParseError<Loc, anyhow:
     Ok(spanned(tokens.file_name(), start_loc, end_loc, type_var))
 }
 
+fn parse_type_parameter_with_phantom_decl(
+    tokens: &mut Lexer,
+) -> Result<StructTypeParameter, ParseError<Loc, anyhow::Error>> {
+    let is_phantom = if tokens.peek() == Tok::NameValue && tokens.content() == "phantom" {
+        tokens.advance()?;
+        true
+    } else {
+        false
+    };
+    let (type_var, abilities) = parse_type_parameter(tokens)?;
+    Ok((is_phantom, type_var, abilities))
+}
+
 // TypeFormal: (TypeVar_, Kind) = {
 //     <type_var: Sp<TypeVar>> <k: (":" <Ability> ("+" <Ability>)*)?> =>? {
 // }
@@ -1267,9 +1280,13 @@ fn parse_type_actuals(tokens: &mut Lexer) -> Result<Vec<Type>, ParseError<Loc, a
 //     <n: Name> => (n, vec![]),
 // }
 
-fn parse_name_and_type_parameters(
+fn parse_name_and_type_parameters<T, F>(
     tokens: &mut Lexer,
-) -> Result<(String, Vec<(TypeVar, BTreeSet<Ability>)>), ParseError<Loc, anyhow::Error>> {
+    param_parser: F,
+) -> Result<(String, Vec<T>), ParseError<Loc, anyhow::Error>>
+where
+    F: Fn(&mut Lexer) -> Result<T, ParseError<Loc, anyhow::Error>>,
+{
     let mut has_types = false;
     let n = if tokens.peek() == Tok::NameBeginTyValue {
         has_types = true;
@@ -1278,7 +1295,7 @@ fn parse_name_and_type_parameters(
         parse_name(tokens)?
     };
     let k = if has_types {
-        let list = parse_comma_list(tokens, &[Tok::Greater], parse_type_parameter, true)?;
+        let list = parse_comma_list(tokens, &[Tok::Greater], param_parser, true)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1759,7 +1776,7 @@ fn parse_function_decl(
 
     let visibility = parse_function_visibility(tokens)?;
 
-    let (name, type_parameters) = parse_name_and_type_parameters(tokens)?;
+    let (name, type_parameters) = parse_name_and_type_parameters(tokens, parse_type_parameter)?;
     consume_token(tokens, Tok::LParen)?;
     let args = parse_comma_list(tokens, &[Tok::RParen], parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
@@ -1878,7 +1895,8 @@ fn parse_struct_decl(
     };
 
     consume_token(tokens, Tok::Struct)?;
-    let (name, type_parameters) = parse_name_and_type_parameters(tokens)?;
+    let (name, type_parameters) =
+        parse_name_and_type_parameters(tokens, parse_type_parameter_with_phantom_decl)?;
 
     let mut abilities = BTreeSet::new();
     if tokens.peek() == Tok::NameValue && tokens.content() == "has" {

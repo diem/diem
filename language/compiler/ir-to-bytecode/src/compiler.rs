@@ -70,7 +70,7 @@ macro_rules! record_src_loc {
         )?;
     }};
     (struct_type_formals: $context:expr, $var:expr) => {
-        for (ty_var, _) in $var.iter() {
+        for (_, ty_var, _) in $var.iter() {
             let source_name = (ty_var.value.clone().into_inner(), ty_var.loc);
             $context.source_map.add_struct_type_parameter_mapping(
                 $context.current_struct_definition_index(),
@@ -522,7 +522,7 @@ pub fn compile_module<'a>(
             module: self_name.clone(),
             name: s.value.name.clone(),
         };
-        let type_parameters = type_parameter_kinds(&s.value.type_formals);
+        let type_parameters = struct_type_parameters(&s.value.type_formals);
         context.declare_struct_handle_index(ident, abilities, type_parameters)?;
     }
 
@@ -612,7 +612,7 @@ fn compile_explicit_dependency_declarations(
             } = struct_dep;
             let sname = QualifiedStructIdent::new(mname.clone(), name);
             let ability_set = abilities(&abs);
-            let kinds = type_parameter_kinds(&tys);
+            let kinds = struct_type_parameters(&tys);
             context.declare_struct_handle_index(sname, ability_set, kinds)?;
         }
         for function_dep in functions {
@@ -714,11 +714,11 @@ fn compile_imports(
     Ok(())
 }
 
-fn type_parameter_indexes(
-    ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)],
+fn type_parameter_indexes<'a>(
+    ast_tys: impl IntoIterator<Item = &'a TypeVar>,
 ) -> Result<HashMap<TypeVar_, TypeParameterIndex>> {
     let mut m = HashMap::new();
-    for (idx, (ty_var, _)) in ast_tys.iter().enumerate() {
+    for (idx, ty_var) in ast_tys.into_iter().enumerate() {
         if idx > TABLE_MAX_SIZE {
             bail!("Too many type parameters")
         }
@@ -743,12 +743,12 @@ fn make_type_argument_subst(
     Ok(subst)
 }
 
-fn type_parameter_kinds(ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)]) -> Vec<StructTypeParameter> {
+fn struct_type_parameters(ast_tys: &[ast::StructTypeParameter]) -> Vec<StructTypeParameter> {
     ast_tys
         .iter()
-        .map(|(_, abs)| StructTypeParameter {
+        .map(|(is_phantom, _, abs)| StructTypeParameter {
             constraints: abilities(abs),
-            is_phantom: false,
+            is_phantom: *is_phantom,
         })
         .collect()
 }
@@ -828,7 +828,7 @@ fn function_signature(
     context: &mut Context,
     f: &ast::FunctionSignature,
 ) -> Result<FunctionSignature> {
-    let m = type_parameter_indexes(&f.type_formals)?;
+    let m = type_parameter_indexes(f.type_formals.iter().map(|formal| &formal.0))?;
     let return_ = compile_types(context, &m, &f.return_type)?;
     let parameters = f
         .formals
@@ -861,7 +861,7 @@ fn compile_structs(
         let sh_idx = context.struct_handle_index(sident.clone())?;
         record_src_loc!(struct_decl: context, s.loc);
         record_src_loc!(struct_type_formals: context, &s.value.type_formals);
-        let m = type_parameter_indexes(&s.value.type_formals)?;
+        let m = type_parameter_indexes(s.value.type_formals.iter().map(|formal| &formal.1))?;
         let sd_idx = context.declare_struct_definition_index(s.value.name)?;
         let field_information = compile_fields(context, &m, sh_idx, sd_idx, s.value.fields)?;
         struct_defs.push(StructDefinition {
@@ -918,7 +918,13 @@ fn compile_function_body_impl(
 ) -> Result<Option<CodeUnit>> {
     Ok(match ast_function.body {
         FunctionBody::Move { locals, code } => {
-            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
+            let m = type_parameter_indexes(
+                ast_function
+                    .signature
+                    .type_formals
+                    .iter()
+                    .map(|formal| &formal.0),
+            )?;
             Some(compile_function_body(
                 context,
                 m,
@@ -928,7 +934,13 @@ fn compile_function_body_impl(
             )?)
         }
         FunctionBody::Bytecode { locals, code } => {
-            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
+            let m = type_parameter_indexes(
+                ast_function
+                    .signature
+                    .type_formals
+                    .iter()
+                    .map(|formal| &formal.0),
+            )?;
             Some(compile_function_body_bytecode(
                 context,
                 m,

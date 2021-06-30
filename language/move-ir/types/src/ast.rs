@@ -229,6 +229,9 @@ pub type Fields<T> = Vec<(Field, T)>;
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct StructName(String);
 
+/// A struct type parameter with its constraints and whether it's declared as phantom.
+pub type StructTypeParameter = (bool, TypeVar, BTreeSet<Ability>);
+
 /// A Move struct
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructDefinition_ {
@@ -236,8 +239,8 @@ pub struct StructDefinition_ {
     pub abilities: BTreeSet<Ability>,
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
-    /// Constraints of the type parameters
-    pub type_formals: Vec<(TypeVar, BTreeSet<Ability>)>,
+    /// The list of formal type arguments
+    pub type_formals: Vec<StructTypeParameter>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
     /// the invariants for this struct
@@ -253,8 +256,8 @@ pub struct StructDependency {
     pub abilities: BTreeSet<Ability>,
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
-    /// Constraints of the type parameters
-    pub type_formals: Vec<(TypeVar, BTreeSet<Ability>)>,
+    /// The list of formal type arguments
+    pub type_formals: Vec<StructTypeParameter>,
 }
 
 /// The fields of a Move struct definition
@@ -944,7 +947,7 @@ impl StructDefinition_ {
     pub fn move_declared(
         abilities: BTreeSet<Ability>,
         name: impl ToString,
-        type_formals: Vec<(TypeVar, BTreeSet<Ability>)>,
+        type_formals: Vec<StructTypeParameter>,
         fields: Fields<Type>,
         invariants: Vec<Invariant>,
     ) -> Result<Self> {
@@ -962,7 +965,7 @@ impl StructDefinition_ {
     pub fn native(
         abilities: BTreeSet<Ability>,
         name: impl ToString,
-        type_formals: Vec<(TypeVar, BTreeSet<Ability>)>,
+        type_formals: Vec<StructTypeParameter>,
     ) -> Result<Self> {
         Ok(StructDefinition_ {
             abilities,
@@ -1432,7 +1435,7 @@ impl fmt::Display for StructDependency {
                 .collect::<Vec<_>>()
                 .join(" "),
             &self.name,
-            format_type_formals(&self.type_formals)
+            format_struct_type_formals(&self.type_formals)
         )
     }
 }
@@ -1449,7 +1452,7 @@ impl fmt::Display for StructDefinition_ {
             f,
             "Struct({}{}, ",
             self.name,
-            format_type_formals(&self.type_formals)
+            format_struct_type_formals(&self.type_formals)
         )?;
         match &self.fields {
             StructDefinitionFields::Move { fields } => writeln!(f, "{}", format_fields(fields))?,
@@ -1546,7 +1549,7 @@ fn format_fields<T: fmt::Display>(fields: &[(Field, T)]) -> String {
 
 impl fmt::Display for FunctionSignature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format_type_formals(&self.type_formals))?;
+        write!(f, "{}", format_fun_type_formals(&self.type_formals))?;
         write!(f, "(")?;
         for (v, ty) in self.formals.iter() {
             write!(f, "{}: {}, ", v, ty)?;
@@ -1570,13 +1573,32 @@ fn format_type_actuals(tys: &[Type]) -> String {
     }
 }
 
-fn format_type_formals(formals: &[(TypeVar, BTreeSet<Ability>)]) -> String {
+fn format_fun_type_formals(formals: &[(TypeVar, BTreeSet<Ability>)]) -> String {
     if formals.is_empty() {
         "".to_string()
     } else {
         let formatted = formals
             .iter()
             .map(|(tv, abilities)| format!("{}: {}", tv.value, format_constraints(abilities)))
+            .collect::<Vec<_>>();
+        format!("<{}>", intersperse(&formatted, ", "))
+    }
+}
+
+fn format_struct_type_formals(formals: &[StructTypeParameter]) -> String {
+    if formals.is_empty() {
+        "".to_string()
+    } else {
+        let formatted = formals
+            .iter()
+            .map(|(is_phantom, tv, abilities)| {
+                format!(
+                    "{}{}: {}",
+                    if *is_phantom { "phantom " } else { "" },
+                    tv.value,
+                    format_constraints(abilities)
+                )
+            })
             .collect::<Vec<_>>();
         format!("<{}>", intersperse(&formatted, ", "))
     }

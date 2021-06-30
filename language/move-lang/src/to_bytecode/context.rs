@@ -66,10 +66,7 @@ impl<'a> Context<'a> {
         dependency_orderings: &HashMap<ModuleIdent, usize>,
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (
-                BTreeSet<IR::Ability>,
-                Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>,
-            ),
+            (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>),
         >,
         function_declarations: &HashMap<
             (ModuleIdent, FunctionName),
@@ -152,7 +149,7 @@ impl<'a> Context<'a> {
     fn struct_dependencies(
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (BTreeSet<Ability>, Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>),
+            (BTreeSet<Ability>, Vec<IR::StructTypeParameter>),
         >,
         module_dependencies: &mut BTreeMap<
             ModuleIdent,
@@ -169,7 +166,7 @@ impl<'a> Context<'a> {
     fn struct_dependency(
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (BTreeSet<Ability>, Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>),
+            (BTreeSet<Ability>, Vec<IR::StructTypeParameter>),
         >,
         module: &ModuleIdent,
         sname: StructName,

@@ -97,7 +97,7 @@ impl<'a> ModuleGenerator<'a> {
         random_string(&mut self.gen, len)
     }
 
-    fn base_type(&mut self, ty_param_context: &[(TypeVar, BTreeSet<Ability>)]) -> Type {
+    fn base_type(&mut self, ty_param_context: &[&TypeVar]) -> Type {
         // TODO: Don't generate nested resources for now. Once we allow functions to take resources
         // (and have type parameters of kind Resource or All) then we should revisit this here.
         let structs: Vec<_> = self
@@ -139,14 +139,19 @@ impl<'a> ModuleGenerator<'a> {
             }
             _ => {
                 let index = self.index(ty_param_context.len());
-                let ty_var = ty_param_context[index].clone().0.value;
+                let ty_var = ty_param_context[index].value.clone();
                 Type::TypeParameter(ty_var)
             }
         }
     }
 
     fn typ(&mut self, ty_param_context: &[(TypeVar, BTreeSet<Ability>)]) -> Type {
-        let typ = self.base_type(ty_param_context);
+        let typ = self.base_type(
+            &ty_param_context
+                .iter()
+                .map(|(tv, _)| tv)
+                .collect::<Vec<_>>(),
+        );
         // TODO: Always change the base type to a reference if it's resource type. Then we can
         // allow functions to take resources.
         // if typ.is_nominal_resource { .... }
@@ -158,27 +163,39 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn type_parameters(&mut self) -> Vec<(TypeVar, BTreeSet<Ability>)> {
+    fn fun_type_parameters(&mut self) -> Vec<(TypeVar, BTreeSet<Ability>)> {
         // Don't generate type parameters if we're generating simple types only
         if self.options.simple_types_only {
             vec![]
         } else {
             let num_ty_params = self.index(self.options.max_ty_params);
             let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop]);
-            init!(
-                num_ty_params,
-                (
-                    Spanned::unsafe_no_loc(TypeVar_::new(self.identifier())),
-                    abilities.clone(),
-                )
-            )
+            init!(num_ty_params, {
+                let name = Spanned::unsafe_no_loc(TypeVar_::new(self.identifier()));
+                (name, abilities.clone())
+            })
+        }
+    }
+
+    fn struct_type_parameters(&mut self) -> Vec<StructTypeParameter> {
+        // Don't generate type parameters if we're generating simple types only
+        if self.options.simple_types_only {
+            vec![]
+        } else {
+            let is_phantom = self.index(1) != 0;
+            let num_ty_params = self.index(self.options.max_ty_params);
+            let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop]);
+            init!(num_ty_params, {
+                let name = Spanned::unsafe_no_loc(TypeVar_::new(self.identifier()));
+                (is_phantom, name, abilities.clone())
+            })
         }
     }
 
     // All functions will have unit return type, and an empty body with the exception of a return.
     // We'll scoop this out and replace it later on in the compiled module that we generate.
     fn function_signature(&mut self) -> FunctionSignature {
-        let ty_params = self.type_parameters();
+        let ty_params = self.fun_type_parameters();
         let number_of_args = self.index(self.options.max_function_call_size);
         let mut formals: Vec<(Var, Type)> = init!(number_of_args, {
             let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
@@ -202,17 +219,14 @@ impl<'a> ModuleGenerator<'a> {
         FunctionSignature::new(formals, vec![], ty_params)
     }
 
-    fn struct_fields(
-        &mut self,
-        ty_params: &[(TypeVar, BTreeSet<Ability>)],
-    ) -> StructDefinitionFields {
+    fn struct_fields(&mut self, ty_params: &[StructTypeParameter]) -> StructDefinitionFields {
         let num_fields = self
             .gen
             .gen_range(self.options.min_fields..self.options.max_fields);
         let fields: Fields<Type> = init!(num_fields, {
             (
                 Spanned::unsafe_no_loc(Field_::new(self.identifier())),
-                self.base_type(ty_params),
+                self.base_type(&ty_params.iter().map(|(_, tv, _)| tv).collect::<Vec<_>>()),
             )
         });
 
@@ -250,7 +264,7 @@ impl<'a> ModuleGenerator<'a> {
 
     fn struct_def(&mut self, abilities: BTreeSet<Ability>) {
         let name = StructName::new(self.identifier());
-        let type_parameters = self.type_parameters();
+        let type_parameters = self.struct_type_parameters();
         let fields = self.struct_fields(&type_parameters);
         let strct = StructDefinition_ {
             abilities,
