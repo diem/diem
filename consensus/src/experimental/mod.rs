@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(dead_code)]
 // [Decoupled Execution]
 //
 //                 Execution
@@ -21,6 +20,8 @@
 //                               │ Decision    │ (Asynchronously)
 //                               └─────────────┘
 #![allow(dead_code)]
+pub mod commit_phase;
+pub mod errors;
 pub mod execution_phase;
 pub mod ordering_state_computer;
 
