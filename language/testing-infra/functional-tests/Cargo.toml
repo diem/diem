@@ -39,3 +39,11 @@ difference = "2.0.0"
 term_size = "0.3.2"
 tempfile = "3.2.0"
 vm-genesis = { path = "../../tools/vm-genesis" }
+
+[[test]]
+name = "move_testsuite"
+harness = false
+
+[[test]]
+name = "mvir_testsuite"
+harness = false
