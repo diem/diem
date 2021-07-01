@@ -1714,6 +1714,7 @@ dependencies = [
  "dir-diff",
  "docgen",
  "errmapgen",
+ "functional-tests",
  "log",
  "move-binary-format",
  "move-core-types",
