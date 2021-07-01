@@ -10,6 +10,7 @@ pub mod config;
 pub mod errors;
 pub mod evaluator;
 mod genesis_accounts;
+pub mod harness;
 pub mod preprocessor;
 pub mod testsuite;
 
