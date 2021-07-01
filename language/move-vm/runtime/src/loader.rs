@@ -809,12 +809,16 @@ impl Loader {
         // and not being marked as invariant violations
         fn deserialize_and_verify_module(
             loader: &Loader,
+            id: &ModuleId,
             bytes: Vec<u8>,
             data_store: &mut impl DataStore,
         ) -> VMResult<CompiledModule> {
-            let module = CompiledModule::deserialize(&bytes).map_err(|_| {
+            let module = CompiledModule::deserialize(&bytes).map_err(|err| {
+                error!("[VM] deserializer for module returned error: {:?}", err);
+                let msg = format!("Deserialization error: {:?}", err);
                 PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                    .finish(Location::Undefined)
+                    .with_message(msg)
+                    .finish(Location::Module(id.clone()))
             })?;
             loader.verify_module_expect_no_missing_dependencies(&module, data_store)?;
             Ok(module)
@@ -833,7 +837,7 @@ impl Loader {
             }
         };
 
-        let module = deserialize_and_verify_module(self, bytes, data_store)
+        let module = deserialize_and_verify_module(self, id, bytes, data_store)
             .map_err(expect_no_verification_errors)?;
         let module_ref = self
             .module_cache
