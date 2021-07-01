@@ -37,11 +37,16 @@ once_cell = "1.7.2"
 smallvec = "1.6.1"
 
 [dev-dependencies]
-datatest-stable = "0.1.1"
+functional-tests = { path = "../testing-infra/functional-tests" }
 
+datatest-stable = "0.1.1"
 tempfile = "3.2.0"
 dir-diff = "0.3.2"
 
 [features]
 default = []
 fuzzing = ["diem-types/fuzzing"]
+
+[[test]]
+name = "functional_testsuite"
+harness = false
