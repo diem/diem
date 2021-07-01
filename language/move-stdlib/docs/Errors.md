@@ -3,13 +3,13 @@
 
 # Module `0x1::Errors`
 
-Module defining error codes used in Move aborts throughout the framework.
+Module defining error codes used in Move aborts.
 
 A <code>u64</code> error code is constructed from two values:
 
 1. The *error category* which is encoded in the lower 8 bits of the code. Error categories are
-declared in this module and are globally unique across the Diem framework. There is a limited
-fixed set of predefined categories, and the framework is guaranteed to use those consistently.
+declared in this module and are globally unique. There is a limited
+fixed set of predefined categories, it is strongly encourage the Move developers use these consistently.
 
 2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 number relative to the module which raised the error and can be used to obtain more information about
@@ -23,8 +23,8 @@ framework evolves.
 -  [Function `make`](#0x1_Errors_make)
 -  [Function `invalid_state`](#0x1_Errors_invalid_state)
 -  [Function `requires_address`](#0x1_Errors_requires_address)
--  [Function `requires_role`](#0x1_Errors_requires_role)
--  [Function `requires_capability`](#0x1_Errors_requires_capability)
+-  [Function `access_denied`](#0x1_Errors_access_denied)
+-  [Function `framework_only_requires_capability`](#0x1_Errors_framework_only_requires_capability)
 -  [Function `not_published`](#0x1_Errors_not_published)
 -  [Function `already_published`](#0x1_Errors_already_published)
 -  [Function `invalid_argument`](#0x1_Errors_invalid_argument)
@@ -40,6 +40,16 @@ framework evolves.
 <a name="@Constants_0"></a>
 
 ## Constants
+
+
+<a name="0x1_Errors_ACCESS_DENIED"></a>
+
+A signer of a transaction does not have the permission(s) to perform the operation.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_ACCESS_DENIED">ACCESS_DENIED</a>: u8 = 3;
+</code></pre>
+
 
 
 <a name="0x1_Errors_ALREADY_PUBLISHED"></a>
@@ -59,6 +69,16 @@ A custom error category for extension points.
 
 
 <pre><code><b>const</b> <a href="Errors.md#0x1_Errors_CUSTOM">CUSTOM</a>: u8 = 255;
+</code></pre>
+
+
+
+<a name="0x1_Errors_FRAMEWORK_ONLY_REQUIRES_CAPABILITY"></a>
+
+The signer of a transaction does not have a required capability.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>: u8 = 4;
 </code></pre>
 
 
@@ -122,27 +142,6 @@ which publishes a resource under a particular address.
 
 
 <pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>: u8 = 2;
-</code></pre>
-
-
-
-<a name="0x1_Errors_REQUIRES_CAPABILITY"></a>
-
-The signer of a transaction does not have a required capability.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
-</code></pre>
-
-
-
-<a name="0x1_Errors_REQUIRES_ROLE"></a>
-
-The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-which requires the signer to have the role of treasury compliance.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>: u8 = 3;
 </code></pre>
 
 
@@ -259,13 +258,13 @@ A function to create an error from from a category and a reason.
 
 </details>
 
-<a name="0x1_Errors_requires_role"></a>
+<a name="0x1_Errors_access_denied"></a>
 
-## Function `requires_role`
+## Function `access_denied`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_access_denied">access_denied</a>(reason: u64): u64
 </code></pre>
 
 
@@ -274,7 +273,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64 { <a href="Errors.md#0x1_Errors_make">make</a>(<a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_access_denied">access_denied</a>(reason: u64): u64 { <a href="Errors.md#0x1_Errors_make">make</a>(<a href="Errors.md#0x1_Errors_ACCESS_DENIED">ACCESS_DENIED</a>, reason) }
 </code></pre>
 
 
@@ -288,20 +287,21 @@ A function to create an error from from a category and a reason.
 
 <pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>;
+<b>ensures</b> result == <a href="Errors.md#0x1_Errors_ACCESS_DENIED">ACCESS_DENIED</a>;
 </code></pre>
 
 
 
 </details>
 
-<a name="0x1_Errors_requires_capability"></a>
+<a name="0x1_Errors_framework_only_requires_capability"></a>
 
-## Function `requires_capability`
+## Function `framework_only_requires_capability`
+
+Do not add any new instances of this function. Kept for backwards compatibility reasons.
 
 
-
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_framework_only_requires_capability">framework_only_requires_capability</a>(reason: u64): u64
 </code></pre>
 
 
@@ -310,7 +310,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64 { <a href="Errors.md#0x1_Errors_make">make</a>(<a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="Errors.md#0x1_Errors_framework_only_requires_capability">framework_only_requires_capability</a>(reason: u64): u64 { <a href="Errors.md#0x1_Errors_make">make</a>(<a href="Errors.md#0x1_Errors_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>, reason) }
 </code></pre>
 
 
@@ -324,7 +324,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>;
+<b>ensures</b> result == <a href="Errors.md#0x1_Errors_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>;
 </code></pre>
 
 

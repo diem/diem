@@ -242,7 +242,7 @@ module Roles {
         CoreAddresses::assert_diem_root(account);
         let addr = Signer::address_of(account);
         assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
-        assert(borrow_global<RoleId>(addr).role_id == DIEM_ROOT_ROLE_ID, Errors::requires_role(EDIEM_ROOT));
+        assert(borrow_global<RoleId>(addr).role_id == DIEM_ROOT_ROLE_ID, Errors::access_denied(EDIEM_ROOT));
     }
     spec assert_diem_root {
         pragma opaque;
@@ -257,7 +257,7 @@ module Roles {
         assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(addr).role_id == TREASURY_COMPLIANCE_ROLE_ID,
-            Errors::requires_role(ETREASURY_COMPLIANCE)
+            Errors::access_denied(ETREASURY_COMPLIANCE)
         )
     }
     spec assert_treasury_compliance {
@@ -271,7 +271,7 @@ module Roles {
         assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(addr).role_id == PARENT_VASP_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP)
+            Errors::access_denied(EPARENT_VASP)
         )
     }
     spec assert_parent_vasp_role {
@@ -285,7 +285,7 @@ module Roles {
         assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(addr).role_id == CHILD_VASP_ROLE_ID,
-            Errors::requires_role(ECHILD_VASP)
+            Errors::access_denied(ECHILD_VASP)
         )
     }
     spec assert_child_vasp_role {
@@ -300,7 +300,7 @@ module Roles {
         assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(addr).role_id == DESIGNATED_DEALER_ROLE_ID,
-            Errors::requires_role(EDESIGNATED_DEALER)
+            Errors::access_denied(EDESIGNATED_DEALER)
         )
     }
     spec assert_designated_dealer {
@@ -314,7 +314,7 @@ module Roles {
         assert(exists<RoleId>(validator_addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(validator_addr).role_id == VALIDATOR_ROLE_ID,
-            Errors::requires_role(EVALIDATOR)
+            Errors::access_denied(EVALIDATOR)
         )
     }
     spec assert_validator {
@@ -328,7 +328,7 @@ module Roles {
         assert(exists<RoleId>(validator_operator_addr), Errors::not_published(EROLE_ID));
         assert(
             borrow_global<RoleId>(validator_operator_addr).role_id == VALIDATOR_OPERATOR_ROLE_ID,
-            Errors::requires_role(EVALIDATOR_OPERATOR)
+            Errors::access_denied(EVALIDATOR_OPERATOR)
         )
     }
     spec assert_validator_operator {
@@ -343,7 +343,7 @@ module Roles {
         let role_id = borrow_global<RoleId>(addr).role_id;
         assert(
             role_id == PARENT_VASP_ROLE_ID || role_id == DESIGNATED_DEALER_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP_OR_DESIGNATED_DEALER)
+            Errors::access_denied(EPARENT_VASP_OR_DESIGNATED_DEALER)
         );
     }
     spec assert_parent_vasp_or_designated_dealer {
@@ -357,7 +357,7 @@ module Roles {
         let role_id = borrow_global<RoleId>(addr).role_id;
         assert(
             role_id == PARENT_VASP_ROLE_ID || role_id == CHILD_VASP_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP_OR_CHILD_VASP)
+            Errors::access_denied(EPARENT_VASP_OR_CHILD_VASP)
         );
     }
     spec assert_parent_vasp_or_child_vasp {
@@ -526,7 +526,7 @@ module Roles {
         include CoreAddresses::AbortsIfNotDiemRoot;
         let addr = Signer::spec_address_of(account);
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != DIEM_ROOT_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(addr).role_id != DIEM_ROOT_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotTreasuryCompliance {
@@ -534,27 +534,27 @@ module Roles {
         include CoreAddresses::AbortsIfNotTreasuryCompliance;
         let addr = Signer::spec_address_of(account);
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != TREASURY_COMPLIANCE_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(addr).role_id != TREASURY_COMPLIANCE_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotParentVasp {
         account: signer;
         let addr = Signer::spec_address_of(account);
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != PARENT_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(addr).role_id != PARENT_VASP_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotChildVasp {
         account: address;
         aborts_if !exists<RoleId>(account) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(account).role_id != CHILD_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(account).role_id != CHILD_VASP_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotDesignatedDealer {
         account: signer;
         let addr = Signer::spec_address_of(account);
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != DESIGNATED_DEALER_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(addr).role_id != DESIGNATED_DEALER_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotParentVaspOrDesignatedDealer {
@@ -563,7 +563,7 @@ module Roles {
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
         let role_id = global<RoleId>(addr).role_id;
         aborts_if role_id != PARENT_VASP_ROLE_ID && role_id != DESIGNATED_DEALER_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotParentVaspOrChildVasp {
@@ -572,20 +572,20 @@ module Roles {
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
         let role_id = global<RoleId>(addr).role_id;
         aborts_if role_id != PARENT_VASP_ROLE_ID && role_id != CHILD_VASP_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotValidator {
         validator_addr: address;
         aborts_if !exists<RoleId>(validator_addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(validator_addr).role_id != VALIDATOR_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if global<RoleId>(validator_addr).role_id != VALIDATOR_ROLE_ID with Errors::ACCESS_DENIED;
     }
 
     spec schema AbortsIfNotValidatorOperator {
         validator_operator_addr: address;
         aborts_if !exists<RoleId>(validator_operator_addr) with Errors::NOT_PUBLISHED;
         aborts_if global<RoleId>(validator_operator_addr).role_id != VALIDATOR_OPERATOR_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with Errors::ACCESS_DENIED;
     }
 }
 }

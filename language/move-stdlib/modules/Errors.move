@@ -1,12 +1,12 @@
 address 0x1 {
 
-/// Module defining error codes used in Move aborts throughout the framework.
+/// Module defining error codes used in Move aborts.
 ///
 /// A `u64` error code is constructed from two values:
 ///
 ///  1. The *error category* which is encoded in the lower 8 bits of the code. Error categories are
-///     declared in this module and are globally unique across the Diem framework. There is a limited
-///     fixed set of predefined categories, and the framework is guaranteed to use those consistently.
+///     declared in this module and are globally unique. There is a limited
+///     fixed set of predefined categories, it is strongly encourage the Move developers use these consistently.
 ///
 ///  2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 ///     number relative to the module which raised the error and can be used to obtain more information about
@@ -34,12 +34,12 @@ module Errors {
     /// which publishes a resource under a particular address.
     const REQUIRES_ADDRESS: u8 = 2;
 
-    /// The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-    /// which requires the signer to have the role of treasury compliance.
-    const REQUIRES_ROLE: u8 = 3;
+    /// A signer of a transaction does not have the permission(s) to perform the operation.
+    const ACCESS_DENIED: u8 = 3;
 
+    // Kept for backwards compatibility with the Diem Framework.
     /// The signer of a transaction does not have a required capability.
-    const REQUIRES_CAPABILITY: u8 = 4;
+    const FRAMEWORK_ONLY_REQUIRES_CAPABILITY: u8 = 4;
 
     /// A resource is required but not published. Example: access to non-existing AccountLimits resource.
     const NOT_PUBLISHED: u8 = 5;
@@ -75,18 +75,19 @@ module Errors {
         ensures result == REQUIRES_ADDRESS;
     }
 
-    public fun requires_role(reason: u64): u64 { make(REQUIRES_ROLE, reason) }
-    spec requires_role {
+    public fun access_denied(reason: u64): u64 { make(ACCESS_DENIED, reason) }
+    spec access_denied {
         pragma opaque = true;
         aborts_if false;
-        ensures result == REQUIRES_ROLE;
+        ensures result == ACCESS_DENIED;
     }
 
-    public fun requires_capability(reason: u64): u64 { make(REQUIRES_CAPABILITY, reason) }
-    spec requires_capability {
+    /// Do not add any new instances of this function. Kept for backwards compatibility reasons.
+    public fun framework_only_requires_capability(reason: u64): u64 { make(FRAMEWORK_ONLY_REQUIRES_CAPABILITY, reason) }
+    spec framework_only_requires_capability {
         pragma opaque = true;
         aborts_if false;
-        ensures result == REQUIRES_CAPABILITY;
+        ensures result == FRAMEWORK_ONLY_REQUIRES_CAPABILITY;
     }
 
     public fun not_published(reason: u64): u64 { make(NOT_PUBLISHED, reason) }

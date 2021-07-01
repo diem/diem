@@ -1088,7 +1088,7 @@ pair of the vault address and the used authority.
     <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
         // The signer is a delegate. Check it's granted capabilities.
         <b>let</b> delegate = borrow_global&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-        <b>assert</b>(<a href="_contains">Vector::contains</a>(&delegate.granted_caps, &cap), <a href="_requires_capability">Errors::requires_capability</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
+        <b>assert</b>(<a href="_contains">Vector::contains</a>(&delegate.granted_caps, &cap), <a href="_access_denied">Errors::access_denied</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
         (delegate.vault_address, addr)
     } <b>else</b> {
         // If it is not a delegate, it must be the owner <b>to</b> succeed.

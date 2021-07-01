@@ -773,7 +773,7 @@ This is emitted on the new Child VASPS's <code><a href="../../../../../releases/
 | Error Category              | Error Reason                                             | Description                                                                              |
 | ----------------            | --------------                                           | -------------                                                                            |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>            | The <code>auth_key_prefix</code> was not of length 32.                                              |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>                                    | The sending account wasn't a Parent VASP account.                                        |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>                                    | The sending account wasn't a Parent VASP account.                                        |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                                        | The <code>child_address</code> address is already taken.                                            |
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASP.md#0x1_VASP_ETOO_MANY_CHILDREN">VASP::ETOO_MANY_CHILDREN</a></code>                               | The sending account has reached the maximum number of allowed child accounts.            |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                                  | The <code>CoinType</code> is not a registered currency on-chain.                                    |
@@ -859,7 +859,7 @@ This is emitted on the new Child VASPS's <code><a href="../../../../../releases/
 <b>ensures</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;CoinType&gt;(parent_addr)
     == <b>old</b>(<a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;CoinType&gt;(parent_addr)) - child_initial_balance;
 <b>aborts_with</b> [check]
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
@@ -953,7 +953,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                         |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
@@ -1007,7 +1007,7 @@ Only Diem root may create Validator Operator accounts
 Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
 Checks that above table includes all error categories.
 The verifier finds an abort that is not documented, and cannot occur in practice:
-* REQUIRES_ROLE comes from <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
+* ACCESS_DENIED comes from <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
 Diem root address before checking the role, and the role abort is unreachable in practice, since
 only Diem root has the Diem root role.
 
@@ -1021,7 +1021,7 @@ only Diem root has the Diem root role.
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
@@ -1099,7 +1099,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                         |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
@@ -1153,7 +1153,7 @@ Only Diem root may create Validator accounts
 Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
 Checks that above table includes all error categories.
 The verifier finds an abort that is not documented, and cannot occur in practice:
-* REQUIRES_ROLE comes from <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
+* ACCESS_DENIED comes from <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
 Diem root address before checking the role, and the role abort is unreachable in practice, since
 only Diem root has the Diem root role.
 
@@ -1167,7 +1167,7 @@ only Diem root has the Diem root role.
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
@@ -1244,7 +1244,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The <code>CoinType</code> is not a registered currency on-chain.                                      |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
@@ -1307,7 +1307,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
@@ -1389,7 +1389,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The <code>Currency</code> is not a registered currency on-chain.                                      |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
@@ -1450,7 +1450,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>{new_account_address: addr};
 </code></pre>
 
@@ -2591,7 +2591,7 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 | Error Category              | Error Reason              | Description                                                                    |
 | ----------------            | --------------            | -------------                                                                  |
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code> | A <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>. |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
@@ -2624,7 +2624,7 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_PublishDiemIdDomainsEnsures">DiemId::PublishDiemIdDomainsEnsures</a> { vasp_addr };
 <b>aborts_with</b> [check]
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 </code></pre>
 
 
@@ -3030,7 +3030,7 @@ or does not have a <code><a href="../../../../../releases/artifacts/current/docs
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>               | The <code>sliding_nonce</code> is too far in the future.                                                                                             |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>      | The <code>sliding_nonce</code> has been previously recorded.                                                                                         |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                  | The sending account is not the Diem Root account.                                                                                         |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                          | The sending account is not the Diem Root account.                                                                                         |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                          | The sending account is not the Diem Root account.                                                                                         |
 | 0                          | 0                                            | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_EINVALID_PROSPECTIVE_VALIDATOR">DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_EALREADY_A_VALIDATOR">DiemSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
@@ -3093,7 +3093,7 @@ or does not have a <code><a href="../../../../../releases/artifacts/current/docs
 Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
 is_operating() is always true during transactions, and CapabilityHolder is published
 during initialization (Genesis).
-Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
+Reports ACCESS_DENIED if dr_account is not Diem root, but that can't happen
 in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
@@ -3104,7 +3104,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
@@ -3294,7 +3294,7 @@ is not in the validator set.
 | 0                          | 0                                       | The provided <code>validator_name</code> does not match the already-recorded human name for the validator. |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_ENOT_AN_ACTIVE_VALIDATOR">DiemSystem::ENOT_AN_ACTIVE_VALIDATOR</a></code> | The validator to be removed is not in the validator set.                                        |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                              |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                              |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                              |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 
 
@@ -3354,7 +3354,7 @@ is not in the validator set.
 Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
 is_operating() is always true during transactions, and CapabilityHolder is published
 during initialization (Genesis).
-Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
+Reports ACCESS_DENIED if dr_account is not Diem root, but that can't happen
 in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
@@ -3364,7 +3364,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
@@ -3424,7 +3424,7 @@ on-chain with the updated <code><a href="../../../../../releases/artifacts/curre
 | Error Category             | Error Reason                                   | Description                                                                                           |
 | ----------------           | --------------                                 | -------------                                                                                         |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>           | <code>validator_address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it.   |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR_OPERATOR">Roles::EVALIDATOR_OPERATOR</a></code>                   | <code>validator_operator_account</code> does not have a Validator Operator role.                                 |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR_OPERATOR">Roles::EVALIDATOR_OPERATOR</a></code>                   | <code>validator_operator_account</code> does not have a Validator Operator role.                                 |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">ValidatorConfig::EINVALID_TRANSACTION_SENDER</a></code> | <code>validator_operator_account</code> is not the registered operator for the validator at <code>validator_address</code>. |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
@@ -3509,7 +3509,7 @@ for which there is no useful recovery except to resubmit the transaction.
 
 <pre><code><b>aborts_with</b> [check]
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>;
 <b>include</b> is_validator_info_updated ==&gt; <a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
@@ -3576,7 +3576,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 | ----------------           | --------------                                        | -------------                                                                                                                                                |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG</a></code> | The <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource is not published under <code>operator_account</code>.                                                   |
 | 0                          | 0                                                     | The <code>human_name</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource under <code>operator_account</code> does not match the provided <code>human_name</code>. |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR">ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR</a></code>          | The account at <code>operator_account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource.                                               |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
@@ -3639,7 +3639,7 @@ because CapabilityHolder is published during initialization (Genesis).
     0, // Odd error code in <b>assert</b> on second statement in add_validator_and_reconfigure
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 </code></pre>
 
 
@@ -3707,7 +3707,7 @@ the system is initiated by this script.
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG</a></code> | The <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource is not published under <code>operator_account</code>.                                                   |
 | 0                          | 0                                                     | The <code>human_name</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource under <code>operator_account</code> does not match the provided <code>human_name</code>. |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR">ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR</a></code>          | The account at <code>operator_account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource.                                               |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
@@ -3767,7 +3767,7 @@ the system is initiated by this script.
     0, // Odd error code in <b>assert</b> on second statement in add_validator_and_reconfigure
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 </code></pre>
 
 
@@ -3884,7 +3884,7 @@ being <code>preburn_address</code>.
 
 | Error Category                | Error Reason                                     | Description                                                                                                                         |
 | ----------------              | --------------                                   | -------------                                                                                                                       |
-| <code><a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                         | The sending <code>account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.                                             |
+| <code><a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                         | The sending <code>account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.                                             |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN_NOT_FOUND">Diem::EPREBURN_NOT_FOUND</a></code>                       | The <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;Token&gt;</code> resource under <code>preburn_address</code> does not contain a preburn request with a value matching <code>amount</code>. |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN_QUEUE">Diem::EPREBURN_QUEUE</a></code>                           | The account at <code>preburn_address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;Token&gt;</code> resource published under it.                           |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                           | The specified <code>Token</code> is not a registered currency on-chain.                                                                        |
@@ -3959,7 +3959,7 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
     metadata: x""
 };
 <b>aborts_with</b> [check]
-    <a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
+    <a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
@@ -4046,7 +4046,7 @@ held in the <code><a href="../../../../../releases/artifacts/current/docs/module
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.                                          |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                                                                       |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                                                                   |
-| <code><a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                | The sending <code>account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.                                             |
+| <code><a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                | The sending <code>account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.                                             |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN_NOT_FOUND">Diem::EPREBURN_NOT_FOUND</a></code>              | The <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;Token&gt;</code> resource under <code>preburn_address</code> does not contain a preburn request with a value matching <code>amount</code>. |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN_QUEUE">Diem::EPREBURN_QUEUE</a></code>                  | The account at <code>preburn_address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;Token&gt;</code> resource published under it.                           |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                  | The specified <code>Token</code> is not a registered currency on-chain.                                                                        |
@@ -4091,7 +4091,7 @@ held in the <code><a href="../../../../../releases/artifacts/current/docs/module
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_BurnEnsures">Diem::BurnEnsures</a>&lt;Token&gt;;
 <b>aborts_with</b> [check]
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
-    <a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
+    <a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
@@ -4171,7 +4171,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                                        | <code>account</code> doesn't have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it.           |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EPREBURN_OCCUPIED">Diem::EPREBURN_OCCUPIED</a></code>                               | The <code>value</code> field in the <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource under the sender is non-zero. |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                                        | The <code>account</code> did not have a role assigned to it.                                       |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDESIGNATED_DEALER">Roles::EDESIGNATED_DEALER</a></code>                              | The <code>account</code> did not have the role of DesignatedDealer.                                |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>  | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EDESIGNATED_DEALER">Roles::EDESIGNATED_DEALER</a></code>                              | The <code>account</code> did not have the role of DesignatedDealer.                                |
 
 
 <a name="@Related_Scripts_195"></a>
@@ -4218,7 +4218,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <b>aborts_with</b> [check]
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 </code></pre>
 
@@ -4389,10 +4389,10 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>               | The <code>sliding_nonce</code> is too far in the future.                                                                                |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>      | The <code>sliding_nonce</code> has been previously recorded.                                                                            |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>        | <code>tc_account</code> is not the Treasury Compliance account.                                                                         |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>                | <code>tc_account</code> is not the Treasury Compliance account.                                                                         |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>                | <code>tc_account</code> is not the Treasury Compliance account.                                                                         |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT">DesignatedDealer::EINVALID_MINT_AMOUNT</a></code>     | <code>mint_amount</code> is zero.                                                                                                       |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">DesignatedDealer::EDEALER</a></code>                  | <code><a href="../../../../../releases/artifacts/current/docs/modules/DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a></code> or <code><a href="../../../../../releases/artifacts/current/docs/modules/DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">DesignatedDealer::TierInfo</a>&lt;CoinType&gt;</code> resource does not exist at <code>designated_dealer_address</code>. |
-| <code><a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EMINT_CAPABILITY">Diem::EMINT_CAPABILITY</a></code>                    | <code>tc_account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;</code> resource published under it.                                  |
+| <code><a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EMINT_CAPABILITY">Diem::EMINT_CAPABILITY</a></code>                    | <code>tc_account</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;</code> resource published under it.                                  |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_EMINTING_NOT_ALLOWED">Diem::EMINTING_NOT_ALLOWED</a></code>                | Minting is not currently allowed for <code>CoinType</code> coins.                                                                       |
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
 
@@ -4446,10 +4446,10 @@ resource published under the <code>designated_dealer_address</code>.
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
+    <a href="_FRAMEWORK_ONLY_REQUIRES_CAPABILITY">Errors::FRAMEWORK_ONLY_REQUIRES_CAPABILITY</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TieredMintEmits">DiemAccount::TieredMintEmits</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -4526,7 +4526,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>               | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>      | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>        | The sending account is not the Treasury Compliance account.                                |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>                | The sending account is not the Treasury Compliance account.                                |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>                | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_TC">AccountFreezing::ECANNOT_FREEZE_TC</a></code>         | <code>to_freeze_account</code> was the Treasury Compliance account (<code>0xB1E55ED</code>).                     |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_DIEM_ROOT">AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT</a></code> | <code>to_freeze_account</code> was the Diem Root account (<code>0xA550C18</code>).                              |
 
@@ -4763,7 +4763,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | <code>tc_account</code> is not the Treasury Compliance account.                                       |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="_EDENOMINATOR">FixedPoint32::EDENOMINATOR</a></code>            | <code>new_exchange_rate_denominator</code> is zero.                                                   |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="">FixedPoint32</a></code>.                                       |
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="">FixedPoint32</a></code>.                                       |
@@ -4827,7 +4827,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
@@ -4955,7 +4955,7 @@ the account at <code>address</code>.
 
 | Error Category             | Error Reason                             | Description                                                                                                                            |
 | ----------------           | --------------                           | -------------                                                                                                                          |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
@@ -4995,7 +4995,7 @@ the account at <code>address</code>.
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEnsures">DiemId::AddDiemIdDomainEnsures</a>;
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEmits">DiemId::AddDiemIdDomainEmits</a>;
 <b>aborts_with</b> [check]
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
@@ -5043,7 +5043,7 @@ account with <code>address</code>.
 
 | Error Category             | Error Reason                             | Description                                                                                                                            |
 | ----------------           | --------------                           | -------------                                                                                                                          |
-| <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
+| <code><a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
@@ -5079,7 +5079,7 @@ account with <code>address</code>.
 
 
 <pre><code><b>aborts_with</b> [check]
-    <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="_ACCESS_DENIED">Errors::ACCESS_DENIED</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
