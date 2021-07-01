@@ -8,7 +8,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     event::EventKey,
@@ -213,6 +213,15 @@ pub trait DbReader: Send + Sync {
     /// [`DiemDB::get_block_timestamp`]:
     /// ../diemdb/struct.DiemDB.html#method.get_block_timestamp
     fn get_block_timestamp(&self, version: u64) -> Result<u64>;
+
+    /// Returns the [`NewBlockEvent`] for the block containing the requested
+    /// `version` and proof that the block actually contains the `version`.
+    fn get_event_by_version_with_proof(
+        &self,
+        event_key: &EventKey,
+        version: u64,
+        proof_version: u64,
+    ) -> Result<EventByVersionWithProof>;
 
     /// Gets the version of the last transaction committed before timestamp,
     /// a commited block at or after the required timestamp must exist (otherwise it's possible

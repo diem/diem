@@ -13,14 +13,13 @@ use diem_config::{
 };
 use diem_crypto::HashValue;
 use diem_mempool::{MempoolClientSender, SubmissionStatus};
-
 use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     chain_id::ChainId,
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -292,6 +291,15 @@ impl DbReader for MockDiemDB {
         _limit: u64,
         _known_version: Option<u64>,
     ) -> Result<Vec<EventWithProof>> {
+        unimplemented!()
+    }
+
+    fn get_event_by_version_with_proof(
+        &self,
+        _event_key: &EventKey,
+        _version: u64,
+        _proof_version: u64,
+    ) -> Result<EventByVersionWithProof> {
         unimplemented!()
     }
 

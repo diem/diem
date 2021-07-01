@@ -8,7 +8,7 @@ use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -113,6 +113,15 @@ impl DbReader for FakeDb {
         _known_version: Option<u64>,
     ) -> Result<Vec<EventWithProof>> {
         unimplemented!();
+    }
+
+    fn get_event_by_version_with_proof(
+        &self,
+        _event_key: &EventKey,
+        _version: u64,
+        _proof_version: u64,
+    ) -> Result<EventByVersionWithProof> {
+        unimplemented!()
     }
 
     fn get_latest_account_state(

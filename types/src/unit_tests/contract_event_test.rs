@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     event::EventKey,
 };
 use bcs::test_helpers::assert_canonical_encode_decode;
@@ -18,6 +18,13 @@ proptest! {
     #[test]
     fn event_with_proof_bcs_roundtrip(event_with_proof in any::<EventWithProof>()) {
         assert_canonical_encode_decode(event_with_proof);
+    }
+
+    #[test]
+    fn event_by_version_with_proof_bcs_roundtrip(
+        event_by_version_with_proof in any::<EventByVersionWithProof>()
+    ) {
+        assert_canonical_encode_decode(event_by_version_with_proof);
     }
 }
 

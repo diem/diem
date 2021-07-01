@@ -11,7 +11,7 @@ use diem_types::{
     account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
     event::{EventHandle, EventKey},
     ledger_info::LedgerInfoWithSignatures,
@@ -66,6 +66,15 @@ impl DbReader for MockDbReader {
         _limit: u64,
         _known_version: Option<u64>,
     ) -> Result<Vec<EventWithProof>> {
+        unimplemented!()
+    }
+
+    fn get_event_by_version_with_proof(
+        &self,
+        _event_key: &EventKey,
+        _version: u64,
+        _proof_version: u64,
+    ) -> Result<EventByVersionWithProof> {
         unimplemented!()
     }
 
