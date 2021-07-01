@@ -12,15 +12,9 @@ license = "Apache-2.0"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [dev-dependencies]
-anyhow = "1.0.38"
-tempfile = "3.2.0"
-once_cell = "1.7.2"
+functional-tests = { path = "../../testing-infra/functional-tests" }
 
 datatest-stable = "0.1.1"
-functional-tests = { path = "../../testing-infra/functional-tests" }
-diem-types = { path = "../../../types" }
-move-lang = { path = ".." }
-diem-framework = { path = "../../diem-framework" }
 
 [[test]]
 name = "functional_testsuite"
