@@ -555,35 +555,71 @@ impl Type {
     }
 }
 
-/// Holds the join-relation (GCD or LCM) between two type instantiations
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TypeUnification {
-    /// The two types matches
-    Match,
-    /// GCD: LHS < RHS
-    /// LCM: RHS < LHS
-    LHS,
-    /// GCD: RHS < LHS
-    /// LCM: LHS < RHS
-    RHS,
-    /// The two types overlap, but there is no way to derive one by instantiating the other
-    Both(Type),
-    /// There is no overlap between the two types
-    Disjoint,
+/// Holds the unification results between two type instantiations
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TypeUnification {
+    subst_lhs: BTreeMap<Type, Type>,
+    subst_rhs: BTreeMap<Type, Type>,
 }
 
 impl TypeUnification {
-    pub fn derive(
+    pub fn unify(
         lhs: &Type,
         rhs: &Type,
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
-        is_gcd: bool,
         match_num_and_int: bool,
         match_type_param_and_local: bool,
-        subst_lhs: &mut BTreeMap<Type, Type>,
-        subst_rhs: &mut BTreeMap<Type, Type>,
-    ) -> Self {
+    ) -> Option<TypeUnification> {
+        let mut unifier = TypeUnification::default();
+        let matched = unifier.derive(
+            lhs,
+            rhs,
+            env,
+            ty_params,
+            match_num_and_int,
+            match_type_param_and_local,
+        );
+        if matched {
+            Some(unifier)
+        } else {
+            None
+        }
+    }
+
+    pub fn unify_vec(
+        lhs: &[Type],
+        rhs: &[Type],
+        env: &GlobalEnv,
+        ty_params: &[TypeParameter],
+        match_num_and_int: bool,
+        match_type_param_and_local: bool,
+    ) -> Option<TypeUnification> {
+        let mut unifier = TypeUnification::default();
+        let matched = unifier.derive_vec(
+            lhs,
+            rhs,
+            env,
+            ty_params,
+            match_num_and_int,
+            match_type_param_and_local,
+        );
+        if matched {
+            Some(unifier)
+        } else {
+            None
+        }
+    }
+
+    fn derive(
+        &mut self,
+        lhs: &Type,
+        rhs: &Type,
+        env: &GlobalEnv,
+        ty_params: &[TypeParameter],
+        match_num_and_int: bool,
+        match_type_param_and_local: bool,
+    ) -> bool {
         // helpers
         let can_inst = |t_generic: &Type, t_concrete: &Type| {
             let requirements = match t_generic {
@@ -624,233 +660,154 @@ impl TypeUnification {
             // primitive
             (Type::Primitive(lhs_primitive), Type::Primitive(rhs_primitive)) => {
                 if lhs_primitive == rhs_primitive {
-                    return Self::Match;
+                    return true;
                 }
                 if !match_num_and_int {
-                    return Self::Disjoint;
+                    return false;
                 }
                 match (lhs_primitive, rhs_primitive) {
-                    (PrimitiveType::Num, _) if rhs.is_number() => Self::Match,
-                    (_, PrimitiveType::Num) if lhs.is_number() => Self::Match,
-                    _ => Self::Disjoint,
+                    (PrimitiveType::Num, _) if rhs.is_number() => true,
+                    (_, PrimitiveType::Num) if lhs.is_number() => true,
+                    _ => false,
                 }
             }
             // tuple
-            (Type::Tuple(lhs_tuple), Type::Tuple(rhs_tuple)) => Self::derive_vec(
+            (Type::Tuple(lhs_tuple), Type::Tuple(rhs_tuple)) => self.derive_vec(
                 lhs_tuple,
                 rhs_tuple,
                 env,
                 ty_params,
-                is_gcd,
                 match_num_and_int,
                 match_type_param_and_local,
-                subst_lhs,
-                subst_rhs,
-                Type::Tuple,
             ),
             // vector
-            (Type::Vector(lhs_elem), Type::Vector(rhs_elem)) => {
-                let rel = Self::derive(
-                    lhs_elem,
-                    rhs_elem,
-                    env,
-                    ty_params,
-                    is_gcd,
-                    match_num_and_int,
-                    match_type_param_and_local,
-                    subst_lhs,
-                    subst_rhs,
-                );
-                match rel {
-                    Self::Match => Self::Match,
-                    Self::LHS => Self::LHS,
-                    Self::RHS => Self::RHS,
-                    Self::Both(new_t) => Self::Both(Type::Vector(Box::new(new_t))),
-                    Self::Disjoint => Self::Disjoint,
-                }
-            }
+            (Type::Vector(lhs_elem), Type::Vector(rhs_elem)) => self.derive(
+                lhs_elem,
+                rhs_elem,
+                env,
+                ty_params,
+                match_num_and_int,
+                match_type_param_and_local,
+            ),
             // struct
             (
                 Type::Struct(lhs_mid, lhs_sid, lhs_inst),
                 Type::Struct(rhs_mid, rhs_sid, rhs_inst),
             ) => {
                 if lhs_mid != rhs_mid || lhs_sid != rhs_sid {
-                    return Self::Disjoint;
+                    return false;
                 }
-                Self::derive_vec(
+                self.derive_vec(
                     lhs_inst,
                     rhs_inst,
                     env,
                     ty_params,
-                    is_gcd,
                     match_num_and_int,
                     match_type_param_and_local,
-                    subst_lhs,
-                    subst_rhs,
-                    |v| Type::Struct(*lhs_mid, *lhs_sid, v),
                 )
             }
             // type parameters and type locals
             (Type::TypeParameter(lhs_param), Type::TypeParameter(rhs_param)) => {
-                if lhs_param == rhs_param {
-                    Self::Match
-                } else {
-                    Self::Disjoint
-                }
+                lhs_param == rhs_param
             }
-            (Type::TypeLocal(lhs_local), Type::TypeLocal(rhs_local)) => {
-                if lhs_local == rhs_local {
-                    Self::Match
-                } else {
-                    Self::Disjoint
-                }
-            }
+            (Type::TypeLocal(lhs_local), Type::TypeLocal(rhs_local)) => lhs_local == rhs_local,
             (Type::TypeParameter(_), Type::TypeLocal(_))
             | (Type::TypeLocal(_), Type::TypeParameter(_)) => {
                 if !match_type_param_and_local {
-                    return Self::Disjoint;
+                    return false;
                 }
-                match (subst_lhs.get(lhs).cloned(), subst_rhs.get(rhs).cloned()) {
-                    (None, None) => Self::Match,
+                match (
+                    self.subst_lhs.get(lhs).cloned(),
+                    self.subst_rhs.get(rhs).cloned(),
+                ) {
+                    (None, None) => true,
                     (Some(s_lhs), None) => {
-                        subst_rhs.insert(rhs.clone(), s_lhs);
-                        Self::Match
+                        self.subst_rhs.insert(rhs.clone(), s_lhs);
+                        true
                     }
                     (None, Some(s_rhs)) => {
-                        subst_lhs.insert(lhs.clone(), s_rhs);
-                        Self::Match
+                        self.subst_lhs.insert(lhs.clone(), s_rhs);
+                        true
                     }
-                    (Some(s_lhs), Some(s_rhs)) => Self::derive(
+                    (Some(s_lhs), Some(s_rhs)) => self.derive(
                         &s_lhs,
                         &s_rhs,
                         env,
                         ty_params,
-                        is_gcd,
                         match_num_and_int,
                         match_type_param_and_local,
-                        subst_lhs,
-                        subst_rhs,
                     ),
                 }
             }
             (Type::TypeParameter(_), _) | (Type::TypeLocal(_), _) => {
-                match subst_lhs.get(lhs).cloned() {
+                match self.subst_lhs.get(lhs).cloned() {
                     None => {
                         if !can_inst(lhs, rhs) {
-                            return Self::Disjoint;
+                            return false;
                         }
-                        subst_lhs.insert(lhs.clone(), rhs.clone());
-                        if is_gcd {
-                            Self::RHS
-                        } else {
-                            Self::LHS
-                        }
+                        self.subst_lhs.insert(lhs.clone(), rhs.clone());
+                        true
                     }
-                    Some(s_lhs) => Self::derive(
+                    Some(s_lhs) => self.derive(
                         &s_lhs,
                         rhs,
                         env,
                         ty_params,
-                        is_gcd,
                         match_num_and_int,
                         match_type_param_and_local,
-                        subst_lhs,
-                        subst_rhs,
                     ),
                 }
             }
             (_, Type::TypeParameter(_)) | (_, Type::TypeLocal(_)) => {
-                match subst_rhs.get(rhs).cloned() {
+                match self.subst_rhs.get(rhs).cloned() {
                     None => {
                         if !can_inst(rhs, lhs) {
-                            return Self::Disjoint;
+                            return false;
                         }
-                        subst_rhs.insert(rhs.clone(), lhs.clone());
-                        if is_gcd {
-                            Self::LHS
-                        } else {
-                            Self::RHS
-                        }
+                        self.subst_rhs.insert(rhs.clone(), lhs.clone());
+                        true
                     }
-                    Some(s_rhs) => Self::derive(
+                    Some(s_rhs) => self.derive(
                         lhs,
                         &s_rhs,
                         env,
                         ty_params,
-                        is_gcd,
                         match_num_and_int,
                         match_type_param_and_local,
-                        subst_lhs,
-                        subst_rhs,
                     ),
                 }
             }
             // all other remaining cases are mismatches
-            _ => Self::Disjoint,
+            _ => false,
         }
     }
 
-    fn derive_vec<F>(
+    fn derive_vec(
+        &mut self,
         lhs: &[Type],
         rhs: &[Type],
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
-        is_gcd: bool,
         match_num_and_int: bool,
         match_type_param_and_local: bool,
-        subst_lhs: &mut BTreeMap<Type, Type>,
-        subst_rhs: &mut BTreeMap<Type, Type>,
-        converter: F,
-    ) -> Self
-    where
-        F: Fn(Vec<Type>) -> Type,
-    {
+    ) -> bool {
         if lhs.len() != rhs.len() {
-            return Self::Disjoint;
+            return false;
         }
-        let mut common = vec![];
-        let mut lhs_holds = true;
-        let mut rhs_holds = true;
         for (lhs_sub, rhs_sub) in lhs.iter().zip(rhs.iter()) {
-            let rel = Self::derive(
+            let matched = self.derive(
                 lhs_sub,
                 rhs_sub,
                 env,
                 ty_params,
-                is_gcd,
                 match_num_and_int,
                 match_type_param_and_local,
-                subst_lhs,
-                subst_rhs,
             );
-            match rel {
-                Self::Match => {
-                    common.push(lhs_sub.clone());
-                }
-                Self::LHS => {
-                    common.push(lhs_sub.clone());
-                    rhs_holds = false;
-                }
-                Self::RHS => {
-                    common.push(rhs_sub.clone());
-                    lhs_holds = false;
-                }
-                Self::Both(new_t) => {
-                    common.push(new_t);
-                    lhs_holds = false;
-                    rhs_holds = false;
-                }
-                Self::Disjoint => {
-                    return Self::Disjoint;
-                }
+            if !matched {
+                return false;
             }
         }
-        match (lhs_holds, rhs_holds) {
-            (true, true) => Self::Match,
-            (true, false) => Self::LHS,
-            (false, true) => Self::RHS,
-            (false, false) => Self::Both(converter(common)),
-        }
+        true
     }
 }
 
