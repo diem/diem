@@ -8,20 +8,23 @@ use log::{debug, info, log, warn};
 
 use crate::{
     function_data_builder::FunctionDataBuilder,
-    function_target::FunctionData,
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{
+        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
+    },
+    options::ProverOptions,
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
     usage_analysis,
     verification_analysis_v2::InvariantAnalysisData,
 };
 
-use crate::options::ProverOptions;
 use move_model::{
-    ast::{ConditionKind, Exp},
+    ast::{ConditionKind, Exp, GlobalInvariant},
     exp_generator::ExpGenerator,
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, Loc, QualifiedId, QualifiedInstId, StructId},
     pragmas::CONDITION_ISOLATED_PROP,
     spec_translator::{SpecTranslator, TranslatedSpec},
+    ty::{Type, TypeUnifier, Variance},
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -38,7 +41,7 @@ impl GlobalInvariantInstrumentationProcessorV2 {
 impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
     fn process(
         &self,
-        _targets: &mut FunctionTargetsHolder,
+        targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'_>,
         data: FunctionData,
     ) -> FunctionData {
@@ -46,13 +49,47 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
             // Nothing to do.
             return data;
         }
-
         if !data.variant.is_verified() {
             // Only need to instrument if this is a verification variant
             return data;
         }
 
-        Instrumenter::run(fun_env, data)
+        // Analyze invariants
+        let target = FunctionTarget::new(fun_env, &data);
+        let Analyzer { plain, func_insts } = Analyzer::analyze(&target);
+
+        // Collect information
+        let env = target.global_env();
+        let ty_params = target.get_type_parameters();
+
+        // Create variants for possible function instantiations
+        let mut func_variants = vec![];
+        for (i, (ty_args, mut global_ids)) in func_insts.into_iter().enumerate() {
+            let variant_data = data.fork_with_instantiation(
+                env,
+                &ty_params,
+                &ty_args,
+                FunctionVariant::Verification(VerificationFlavor::Instantiated(i)),
+            );
+            global_ids.extend(plain.clone().into_iter());
+            func_variants.push((variant_data, global_ids));
+        }
+
+        // Instrument the main variant
+        let main = Instrumenter::run(fun_env, data, plain);
+
+        // Instrument the variants representing different instantiations
+        for (variant_data, variant_global_invariants) in func_variants {
+            let variant = Instrumenter::run(fun_env, variant_data, variant_global_invariants);
+            targets.insert_target_data(
+                &fun_env.get_qualified_id(),
+                variant.variant.clone(),
+                variant,
+            );
+        }
+
+        // Return the main variant
+        main
     }
 
     fn name(&self) -> String {
@@ -60,20 +97,121 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
     }
 }
 
+struct Analyzer {
+    plain: BTreeSet<GlobalId>,
+    func_insts: BTreeMap<BTreeMap<u16, Type>, BTreeSet<GlobalId>>,
+}
+
+impl Analyzer {
+    pub fn analyze(target: &FunctionTarget) -> Self {
+        let mut analyzer = Self {
+            plain: BTreeSet::new(),
+            func_insts: BTreeMap::new(),
+        };
+        analyzer.collect_related_global_invariants(target);
+        analyzer
+    }
+
+    /// Collect global invariants that are raed and written by this function
+    fn collect_related_global_invariants(&mut self, target: &FunctionTarget) {
+        let env = target.global_env();
+
+        // get memory (list of structs) read or written by the function target,
+        // then find all invariants in loaded modules that refer to that memory.
+        let mut invariants_for_used_memory = BTreeSet::new();
+        for mem in usage_analysis::get_used_memory_inst(target).iter() {
+            invariants_for_used_memory.extend(env.get_global_invariants_for_memory(mem));
+        }
+
+        // filter non-applicable global invariants
+        for invariant_id in invariants_for_used_memory {
+            self.check_gloabl_invariant_applicability(
+                target,
+                env.get_global_invariant(invariant_id).unwrap(),
+            );
+        }
+    }
+
+    fn check_gloabl_invariant_applicability(
+        &mut self,
+        target: &FunctionTarget,
+        invariant: &GlobalInvariant,
+    ) {
+        // marks whether the invariant will be checked however this function is instantiated
+        let mut is_generic = false;
+
+        // collect instantiations of this function that are needed to check this global invariant
+        let mut func_insts = BTreeSet::new();
+
+        let fun_mems = usage_analysis::get_used_memory_inst(target);
+        for inv_mem in &invariant.mem_usage {
+            for fun_mem in fun_mems.iter() {
+                if inv_mem.module_id != fun_mem.module_id || inv_mem.id != fun_mem.id {
+                    continue;
+                }
+                let unifier = TypeUnifier::new_vec(&fun_mem.inst, &inv_mem.inst, true, true);
+                let rel = unifier.unify(Variance::Allow, /* shallow_subst */ false);
+                match rel {
+                    None => continue,
+                    Some((subst_lhs, _)) => {
+                        let inst: BTreeMap<_, _> = subst_lhs
+                            .into_iter()
+                            .map(|(k, v)| match k {
+                                Type::TypeParameter(param_idx) => (param_idx, v),
+                                _ => panic!("Only TypeParameter is expected in the substitution"),
+                            })
+                            .collect();
+                        if inst.is_empty() {
+                            is_generic = true;
+                        } else {
+                            func_insts.insert(inst);
+                        }
+                    }
+                }
+            }
+        }
+
+        // save the instantiation required to evaluate this invariant
+        for inst in func_insts {
+            self.func_insts
+                .entry(inst)
+                .or_insert_with(BTreeSet::new)
+                .insert(invariant.id);
+        }
+        if is_generic {
+            self.plain.insert(invariant.id);
+        }
+    }
+}
+
 struct Instrumenter<'a> {
     options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
+    function_inst: Vec<Type>,
+    related_invariants: BTreeSet<GlobalId>,
     saved_from_before_instr_or_call: Option<(TranslatedSpec, BTreeSet<GlobalId>)>,
 }
 
 impl<'a> Instrumenter<'a> {
-    fn run(fun_env: &FunctionEnv<'a>, data: FunctionData) -> FunctionData {
+    fn run(
+        fun_env: &FunctionEnv<'a>,
+        data: FunctionData,
+        related_invariants: BTreeSet<GlobalId>,
+    ) -> FunctionData {
+        if !data.variant.is_verified() {
+            // Run the instrumentation only if this is a verification variant.
+            return data;
+        }
+
         let global_env = fun_env.module_env.env;
         let options = ProverOptions::get(global_env);
+        let function_inst = data.get_type_instantiation(fun_env);
         let builder = FunctionDataBuilder::new(fun_env, data);
         let mut instrumenter = Instrumenter {
             options: options.as_ref(),
             builder,
+            function_inst,
+            related_invariants,
             saved_from_before_instr_or_call: None,
         };
         instrumenter.instrument(global_env);
@@ -81,72 +219,73 @@ impl<'a> Instrumenter<'a> {
     }
 
     fn instrument(&mut self, global_env: &GlobalEnv) {
-        // Extract and clear current code
-        let old_code = std::mem::take(&mut self.builder.data.code);
+        // Collect information
         let fun_env = self.builder.fun_env;
+        let fun_id = fun_env.get_qualified_id();
+
         let inv_ana_data = global_env.get_extension::<InvariantAnalysisData>().unwrap();
         let disabled_inv_fun_set = &inv_ana_data.disabled_inv_fun_set;
         let target_invariants = &inv_ana_data.target_invariants;
 
-        // Emit entrypoint assumptions if this is a verification entry.
-        if self.builder.data.variant.is_verified() {
-            let fun_id = fun_env.get_qualified_id();
+        // Extract and clear current code
+        let old_code = std::mem::take(&mut self.builder.data.code);
 
-            let entrypoint_invariants = self.compute_entrypoint_invariants();
+        // Emit entrypoint assumptions
+        let entrypoint_invariants = self.filter_entrypoint_invariants(&self.related_invariants);
+        let xlated_spec = SpecTranslator::translate_invariants_by_id(
+            self.options.auto_trace_level.invariants(),
+            &mut self.builder,
+            &self.function_inst,
+            &entrypoint_invariants,
+        );
+        self.assert_or_assume_translated_invariants(
+            &xlated_spec.invariants,
+            &entrypoint_invariants,
+            PropKind::Assume,
+        );
+
+        // In addition to the entrypoint invariants assumed just above, it is necessary
+        // to assume more invariants in a special case.  When invariants are disabled in
+        // this function but not in callers, we will later assert those invariants just
+        // before return instructions.
+        // We need to assume those invariants at the beginning of the function in order
+        // to prove them later. They aren't necessarily entrypoint invariants if we are
+        // verifying a function in a strict dependency, or in a friend module that does not
+        // have the target module in its dependencies.
+        // So, the next code finds the set of target invariants (which will be assumed on return)
+        // and assumes those that are not entrypoint invariants.
+        if disabled_inv_fun_set.contains(&fun_id) {
+            // Separate the update invariants, because we never want to assume them.
+            let (global_target_invs, _update_target_invs) =
+                self.separate_update_invariants(target_invariants);
+            let return_invariants: BTreeSet<_> = global_target_invs
+                .difference(&entrypoint_invariants)
+                .cloned()
+                .collect();
             let xlated_spec = SpecTranslator::translate_invariants_by_id(
                 self.options.auto_trace_level.invariants(),
                 &mut self.builder,
-                &entrypoint_invariants,
+                &self.function_inst,
+                &return_invariants,
             );
             self.assert_or_assume_translated_invariants(
                 &xlated_spec.invariants,
-                &entrypoint_invariants,
+                &return_invariants,
                 PropKind::Assume,
             );
+        }
 
-            // In addition to the entrypoint invariants assumed just above, it is necessary
-            // to assume more invariants in a special case.  When invariants are disabled in
-            // this function but not in callers, we will later assert those invariants just
-            // before return instructions.
-            // We need to assume those invariants at the beginning of the function in order
-            // to prove them later. They aren't necessarily entrypoint invariants if we are
-            // verifying a function in a strict dependency, or in a friend module that does not
-            // have the target module in its dependencies.
-            // So, the next code finds the set of target invariants (which will be assumed on return)
-            // and assumes those that are not entrypoint invariants.
-            if disabled_inv_fun_set.contains(&fun_id) {
-                // Separate the update invariants, because we never want to assume them.
-                let (global_target_invs, _update_target_invs) =
-                    self.separate_update_invariants(target_invariants);
-                let return_invariants: BTreeSet<_> = global_target_invs
-                    .difference(&entrypoint_invariants)
-                    .cloned()
-                    .collect();
-                let xlated_spec = SpecTranslator::translate_invariants_by_id(
-                    self.options.auto_trace_level.invariants(),
-                    &mut self.builder,
-                    &return_invariants,
-                );
-                self.assert_or_assume_translated_invariants(
-                    &xlated_spec.invariants,
-                    &return_invariants,
-                    PropKind::Assume,
-                );
-            }
-            // Generate new instrumented code.
-            for bc in old_code {
-                self.instrument_bytecode(bc, fun_id, &inv_ana_data, &entrypoint_invariants);
-            }
-        } else {
-            // just re-emit the bytecode without additional instrumentation
-            for bc in old_code {
-                self.builder.emit(bc);
-            }
+        // Generate new instrumented code.
+        for bc in old_code {
+            self.instrument_bytecode(bc, fun_id, &inv_ana_data, &entrypoint_invariants);
         }
     }
 
     /// Returns list of invariant ids to be assumed at the beginning of the current function.
-    fn compute_entrypoint_invariants(&mut self) -> BTreeSet<GlobalId> {
+    fn filter_entrypoint_invariants(
+        &self,
+        related_invariants: &BTreeSet<GlobalId>,
+    ) -> BTreeSet<GlobalId> {
         // Emit an assume of each invariant over memory touched by this function.
         // Such invariants include
         // - invariants declared in this module, or
@@ -160,23 +299,8 @@ impl<'a> Instrumenter<'a> {
         //   code should therefore not depend, apart from the update itself.
 
         let env = self.builder.global_env();
-        // Invariants with types that are read or written by the function
-        let mut invariants_for_used_memory = BTreeSet::new();
-        // Invariants with types that are written by the function
-        let mut invariants_for_modified_memory = BTreeSet::new();
-        // get memory (list of structs) read or written by the function target, then find all
-        // invariants in loaded modules that refer to that memory.
-        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()).iter() {
-            invariants_for_used_memory.extend(env.get_global_invariants_for_memory(mem));
-        }
-        // get memory (list of structs) written by function, find the invariants referring to that
-        // memory. Also called "invariants updated by the function"
-        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()).iter() {
-            invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(mem));
-        }
-
         let module_env = &self.builder.fun_env.module_env;
-        invariants_for_used_memory
+        related_invariants
             .iter()
             .filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
@@ -250,6 +374,7 @@ impl<'a> Instrumenter<'a> {
                     let xlated_spec = SpecTranslator::translate_invariants_by_id(
                         self.options.auto_trace_level.invariants(),
                         &mut self.builder,
+                        &self.function_inst,
                         &global_target_invs,
                     );
                     self.assert_or_assume_translated_invariants(
@@ -377,6 +502,7 @@ impl<'a> Instrumenter<'a> {
         let mut xlated_invs = SpecTranslator::translate_invariants_by_id(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
+            &self.function_inst,
             &modified_invs,
         );
         // separate out the update invariants, which need to be handled differently from global invs.
@@ -441,7 +567,7 @@ impl<'a> Instrumenter<'a> {
 
     /// Returns the set of invariants modified by a function
     fn get_invs_modified_by_fun(
-        &mut self,
+        &self,
         inv_set: &BTreeSet<GlobalId>,
         fun_id: QualifiedId<FunId>,
         funs_that_modify_inv: &BTreeMap<GlobalId, BTreeSet<QualifiedId<FunId>>>,
