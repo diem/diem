@@ -569,18 +569,13 @@ impl TypeUnification {
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
         match_num_and_int: bool,
-        match_type_param_and_local: bool,
     ) -> Option<TypeUnification> {
-        let mut unifier = TypeUnification::default();
-        let matched = unifier.derive(
-            lhs,
-            rhs,
-            env,
-            ty_params,
-            match_num_and_int,
-            match_type_param_and_local,
-        );
+        let mut subst = BTreeMap::new();
+        let matched = Self::derive(&mut subst, lhs, rhs, env, ty_params, match_num_and_int);
         if matched {
+            let mut unifier = TypeUnification::default();
+            unifier.extract_subst(lhs, &subst, true);
+            unifier.extract_subst(rhs, &subst, false);
             Some(unifier)
         } else {
             None
@@ -593,32 +588,46 @@ impl TypeUnification {
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
         match_num_and_int: bool,
-        match_type_param_and_local: bool,
     ) -> Option<TypeUnification> {
-        let mut unifier = TypeUnification::default();
-        let matched = unifier.derive_vec(
-            lhs,
-            rhs,
-            env,
-            ty_params,
-            match_num_and_int,
-            match_type_param_and_local,
-        );
+        let mut subst = BTreeMap::new();
+        let matched = Self::derive_vec(&mut subst, lhs, rhs, env, ty_params, match_num_and_int);
         if matched {
+            let mut unifier = TypeUnification::default();
+            for t in lhs {
+                unifier.extract_subst(t, &subst, true);
+            }
+            for t in rhs {
+                unifier.extract_subst(t, &subst, false);
+            }
             Some(unifier)
         } else {
             None
         }
     }
 
+    fn extract_subst(&mut self, ty: &Type, subst: &BTreeMap<Type, Type>, is_lhs: bool) {
+        ty.visit(&mut |t| match t {
+            Type::TypeParameter(_) | Type::TypeLocal(_) => match subst.get(t) {
+                None => (),
+                Some(s) => {
+                    if is_lhs {
+                        self.subst_lhs.insert(t.clone(), s.clone());
+                    } else {
+                        self.subst_rhs.insert(t.clone(), s.clone());
+                    }
+                }
+            },
+            _ => (),
+        })
+    }
+
     fn derive(
-        &mut self,
+        subst: &mut BTreeMap<Type, Type>,
         lhs: &Type,
         rhs: &Type,
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
         match_num_and_int: bool,
-        match_type_param_and_local: bool,
     ) -> bool {
         // helpers
         let can_inst = |t_generic: &Type, t_concrete: &Type| {
@@ -672,23 +681,13 @@ impl TypeUnification {
                 }
             }
             // tuple
-            (Type::Tuple(lhs_tuple), Type::Tuple(rhs_tuple)) => self.derive_vec(
-                lhs_tuple,
-                rhs_tuple,
-                env,
-                ty_params,
-                match_num_and_int,
-                match_type_param_and_local,
-            ),
+            (Type::Tuple(lhs_subs), Type::Tuple(rhs_subs)) => {
+                Self::derive_vec(subst, lhs_subs, rhs_subs, env, ty_params, match_num_and_int)
+            }
             // vector
-            (Type::Vector(lhs_elem), Type::Vector(rhs_elem)) => self.derive(
-                lhs_elem,
-                rhs_elem,
-                env,
-                ty_params,
-                match_num_and_int,
-                match_type_param_and_local,
-            ),
+            (Type::Vector(lhs_elem), Type::Vector(rhs_elem)) => {
+                Self::derive(subst, lhs_elem, rhs_elem, env, ty_params, match_num_and_int)
+            }
             // struct
             (
                 Type::Struct(lhs_mid, lhs_sid, lhs_inst),
@@ -697,84 +696,53 @@ impl TypeUnification {
                 if lhs_mid != rhs_mid || lhs_sid != rhs_sid {
                     return false;
                 }
-                self.derive_vec(
-                    lhs_inst,
-                    rhs_inst,
-                    env,
-                    ty_params,
-                    match_num_and_int,
-                    match_type_param_and_local,
-                )
+                Self::derive_vec(subst, lhs_inst, rhs_inst, env, ty_params, match_num_and_int)
             }
             // type parameters and type locals
             (Type::TypeParameter(lhs_param), Type::TypeParameter(rhs_param)) => {
                 lhs_param == rhs_param
             }
             (Type::TypeLocal(lhs_local), Type::TypeLocal(rhs_local)) => lhs_local == rhs_local,
-            (Type::TypeParameter(_), Type::TypeLocal(_))
-            | (Type::TypeLocal(_), Type::TypeParameter(_)) => {
-                if !match_type_param_and_local {
-                    return false;
+            (Type::TypeParameter(_), Type::TypeLocal(_)) => match subst.get(rhs).cloned() {
+                None => {
+                    subst.insert(rhs.clone(), lhs.clone());
+                    true
                 }
-                match (
-                    self.subst_lhs.get(lhs).cloned(),
-                    self.subst_rhs.get(rhs).cloned(),
-                ) {
-                    (None, None) => true,
-                    (Some(s_lhs), None) => {
-                        self.subst_rhs.insert(rhs.clone(), s_lhs);
-                        true
-                    }
-                    (None, Some(s_rhs)) => {
-                        self.subst_lhs.insert(lhs.clone(), s_rhs);
-                        true
-                    }
-                    (Some(s_lhs), Some(s_rhs)) => self.derive(
-                        &s_lhs,
-                        &s_rhs,
-                        env,
-                        ty_params,
-                        match_num_and_int,
-                        match_type_param_and_local,
-                    ),
+                Some(s_rhs) => Self::derive(subst, lhs, &s_rhs, env, ty_params, match_num_and_int),
+            },
+            (Type::TypeLocal(_), Type::TypeParameter(_)) => match subst.get(lhs).cloned() {
+                None => {
+                    subst.insert(lhs.clone(), rhs.clone());
+                    true
                 }
-            }
+                Some(s_lhs) => Self::derive(subst, &s_lhs, rhs, env, ty_params, match_num_and_int),
+            },
             (Type::TypeParameter(_), _) | (Type::TypeLocal(_), _) => {
-                match self.subst_lhs.get(lhs).cloned() {
+                match subst.get(lhs).cloned() {
                     None => {
                         if !can_inst(lhs, rhs) {
                             return false;
                         }
-                        self.subst_lhs.insert(lhs.clone(), rhs.clone());
+                        subst.insert(lhs.clone(), rhs.clone());
                         true
                     }
-                    Some(s_lhs) => self.derive(
-                        &s_lhs,
-                        rhs,
-                        env,
-                        ty_params,
-                        match_num_and_int,
-                        match_type_param_and_local,
-                    ),
+                    Some(s_lhs) => {
+                        Self::derive(subst, &s_lhs, rhs, env, ty_params, match_num_and_int)
+                    }
                 }
             }
             (_, Type::TypeParameter(_)) | (_, Type::TypeLocal(_)) => {
-                match self.subst_rhs.get(rhs).cloned() {
+                match subst.get(rhs).cloned() {
                     None => {
                         if !can_inst(rhs, lhs) {
                             return false;
                         }
-                        self.subst_rhs.insert(rhs.clone(), lhs.clone());
+                        subst.insert(rhs.clone(), lhs.clone());
                         true
                     }
-                    Some(s_rhs) => self.derive(
-                        lhs,
-                        &s_rhs,
-                        env,
-                        ty_params,
-                        match_num_and_int,
-                        match_type_param_and_local,
-                    ),
+                    Some(s_rhs) => {
+                        Self::derive(subst, lhs, &s_rhs, env, ty_params, match_num_and_int)
+                    }
                 }
             }
             // all other remaining cases are mismatches
@@ -783,26 +751,18 @@ impl TypeUnification {
     }
 
     fn derive_vec(
-        &mut self,
+        subst: &mut BTreeMap<Type, Type>,
         lhs: &[Type],
         rhs: &[Type],
         env: &GlobalEnv,
         ty_params: &[TypeParameter],
         match_num_and_int: bool,
-        match_type_param_and_local: bool,
     ) -> bool {
         if lhs.len() != rhs.len() {
             return false;
         }
         for (lhs_sub, rhs_sub) in lhs.iter().zip(rhs.iter()) {
-            let matched = self.derive(
-                lhs_sub,
-                rhs_sub,
-                env,
-                ty_params,
-                match_num_and_int,
-                match_type_param_and_local,
-            );
+            let matched = Self::derive(subst, lhs_sub, rhs_sub, env, ty_params, match_num_and_int);
             if !matched {
                 return false;
             }
