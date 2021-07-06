@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_crypto::hash::CryptoHash;
-use diem_sdk::transaction_builder::Currency;
+use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
     account_config::xus_tag,
@@ -38,6 +38,7 @@ fn main() -> Result<()> {
             &ReSubmittingTransactionWontFail,
             &MempoolValidationError,
             &ExpiredTransaction,
+            &RotateComplianceKeyEvent,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1193,6 +1194,64 @@ impl AdminTest for MintAndReceivedMintEvents {
             "{}",
             result["transaction"]
         );
+        Ok(())
+    }
+}
+
+struct RotateComplianceKeyEvent;
+
+impl Test for RotateComplianceKeyEvent {
+    fn name(&self) -> &'static str {
+        "jsonrpc::rotate-compliance-key-event"
+    }
+}
+
+impl PublicUsageTest for RotateComplianceKeyEvent {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+        let (mut parent, _child1, _child2) =
+            env.create_parent_and_child_accounts(ctx, 1_000_000_000)?;
+        let compliance_key = AccountKey::generate(ctx.rng());
+
+        let txn = parent.sign_with_transaction_builder(factory.rotate_dual_attestation_info(
+            b"http://hello.com".to_vec(),
+            compliance_key.public_key().to_bytes().to_vec(),
+        ));
+
+        let result = env.submit_and_wait(&txn);
+        let version = result["version"].as_u64().unwrap();
+        let rotated_seconds = result["events"][0]["data"]["time_rotated_seconds"]
+            .as_u64()
+            .unwrap();
+        assert_eq!(
+            result["events"],
+            json!([
+                {
+                    "data":{
+                        "new_base_url":"http://hello.com",
+                        "time_rotated_seconds": rotated_seconds,
+                        "type":"baseurlrotation"
+                    },
+                    "key": format!("0100000000000000{:x}", parent.address()),
+                    "sequence_number":0,
+                    "transaction_version":version
+                },
+                {
+                    "data":{
+                        "new_compliance_public_key": hex::encode(compliance_key.public_key().to_bytes()),
+                        "time_rotated_seconds": rotated_seconds,
+                        "type":"compliancekeyrotation"
+                    },
+                    "key": format!("0000000000000000{:x}", parent.address()),
+                    "sequence_number":0,
+                    "transaction_version":version
+                }
+            ]),
+            "{}",
+            result["events"]
+        );
+
         Ok(())
     }
 }
