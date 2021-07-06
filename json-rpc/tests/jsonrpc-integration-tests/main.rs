@@ -55,6 +55,7 @@ fn main() -> Result<()> {
             &GetEventsWithProofs,
             &MultiAgentPaymentOverDualAttestationLimit,
             &GetAccumulatorConsistencyProof,
+            &NoUnknownEvents,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1958,6 +1959,29 @@ impl PublicUsageTest for GetAccumulatorConsistencyProof {
         // root hash from metadata and the computed root hash from the
         // accumulator summary should match
         assert_eq!(metadata_root_hash, accumulator.root_hash());
+        Ok(())
+    }
+}
+
+struct NoUnknownEvents;
+
+impl Test for NoUnknownEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::no-unknwon-events"
+    }
+}
+
+impl PublicUsageTest for NoUnknownEvents {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let response = env.send("get_transactions", json!([0, 1000, true]));
+        let txns = response.result.unwrap();
+        for txn in txns.as_array().unwrap() {
+            for event in txn["events"].as_array().unwrap() {
+                let event_type = event["data"]["type"].as_str().unwrap();
+                assert_ne!(event_type, "unknown", "{}", event);
+            }
+        }
         Ok(())
     }
 }
