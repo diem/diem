@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_sdk::transaction_builder::Currency;
 use diem_transaction_builder::stdlib;
 use diem_types::{account_config::xus_tag, event::EventKey, ledger_info::LedgerInfoWithSignatures};
 use forge::{
@@ -24,6 +25,7 @@ fn main() -> Result<()> {
             &UnknownAccountRoleType,
             &DesignatedDealerPreburns,
             &ParentVaspAccountRole,
+            &GetAccountByVersion,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -424,6 +426,65 @@ impl PublicUsageTest for ParentVaspAccountRole {
                 "sent_events_key": EventKey::new_from_address(&vasp.address(), 3),
                 "sequence_number": 0,
                 "version": resp.diem_ledger_version,
+            }),
+        );
+
+        Ok(())
+    }
+}
+
+struct GetAccountByVersion;
+
+impl Test for GetAccountByVersion {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-account-by-version"
+    }
+}
+
+impl PublicUsageTest for GetAccountByVersion {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+
+        let mut vasp = ctx.random_account();
+        let child = ctx.random_account();
+        ctx.create_parent_vasp_account(vasp.authentication_key())?;
+        env.submit_and_wait(&vasp.sign_with_transaction_builder(
+            factory.create_child_vasp_account(Currency::XUS, child.authentication_key(), false, 0),
+        ));
+
+        let address = format!("{:x}", vasp.address());
+        let resp = env.send("get_account_transaction", json!([address, 0, false]));
+        let result = resp.result.unwrap();
+        let prev_version: u64 = result["version"].as_u64().unwrap() - 1;
+        let resp = env.send("get_account", json!([address, prev_version]));
+        let result = resp.result.unwrap();
+        let human_name = result["role"]["human_name"].as_str().unwrap();
+
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": vasp.authentication_key().to_string(),
+                "balances": [{"amount": 0_u64, "currency": "XUS"}],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": EventKey::new_from_address(&vasp.address(), 2),
+                "role": {
+                    "base_url": "",
+                    "base_url_rotation_events_key": EventKey::new_from_address(&vasp.address(), 1),
+                    "compliance_key": "",
+                    "compliance_key_rotation_events_key": EventKey::new_from_address(&vasp.address(), 0),
+                    "vasp_domains": [],
+                    "expiration_time": 18446744073709551615_u64,
+                    "human_name": human_name,
+                    "num_children": 0,
+                    "type": "parent_vasp",
+                },
+                "sent_events_key": EventKey::new_from_address(&vasp.address(), 3),
+                "sequence_number": 0,
+                "version": prev_version,
             }),
         );
 
