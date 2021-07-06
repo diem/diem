@@ -518,7 +518,7 @@ impl TransactionFactory {
     // Internal Helpers
     //
 
-    fn script(&self, script: Script) -> TransactionBuilder {
+    pub fn script(&self, script: Script) -> TransactionBuilder {
         self.payload(TransactionPayload::Script(script))
     }
 
