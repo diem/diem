@@ -71,7 +71,10 @@ pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F, options: &Opti
         return Ok(());
     }
 
-    forge.run()
+    match forge.run() {
+        Ok(()) => Ok(()),
+        Err(_) => process::exit(101), // Exit with a non-zero exit code if tests failed
+    }
 }
 
 pub struct ForgeConfig<'cfg> {
@@ -157,11 +160,11 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
 
         summary.write_summary()?;
 
-        if !summary.success() {
-            process::exit(101);
+        if summary.success() {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Tests Failed"))
         }
-
-        Ok(())
     }
 
     fn filter_tests<'a, T: Test, I: Iterator<Item = T> + 'a>(
