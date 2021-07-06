@@ -6,13 +6,16 @@ use diem_json_rpc::views::{AccumulatorConsistencyProofView, EventView};
 use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
     account_config::{treasury_compliance_account_address, xus_tag},
     contract_event::EventWithProof,
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::{Transaction, TransactionPayload},
+    transaction::{ChangeSet, Transaction, TransactionPayload, WriteSetPayload},
+    write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use forge::{
     forge_main, AdminContext, AdminTest, ForgeConfig, LocalFactory, Options, PublicUsageContext,
@@ -65,6 +68,7 @@ fn main() -> Result<()> {
             &AddAndRemoveVaspDomain,
             &MultiAgentRotateAuthenticationKeyAdminScript,
             &MultiAgentRotateAuthenticationKeyAdminScriptFunction,
+            &UpgradeEventAndNewEpoch,
         ],
         network_tests: &[],
     };
@@ -1984,4 +1988,75 @@ impl PublicUsageTest for NoUnknownEvents {
         }
         Ok(())
     }
+}
+
+struct UpgradeEventAndNewEpoch;
+
+impl Test for UpgradeEventAndNewEpoch {
+    fn name(&self) -> &'static str {
+        "jsonrpc::upgrade-event-and-new-epoch"
+    }
+}
+
+impl AdminTest for UpgradeEventAndNewEpoch {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+
+        let write_set = ChangeSet::new(create_common_write_set(), vec![]);
+        let txn = ctx
+            .chain_info()
+            .root_account()
+            .sign_with_transaction_builder(factory.payload(TransactionPayload::WriteSet(
+                WriteSetPayload::Direct(write_set),
+            )));
+        let result = env.submit_and_wait(&txn);
+        let version = result["version"].as_u64().unwrap();
+        let committed_time = result["events"][0]["data"]["committed_timestamp_secs"]
+            .as_u64()
+            .unwrap();
+        let epoch = result["events"][1]["data"]["epoch"].as_u64().unwrap();
+        assert!(committed_time != 0);
+        assert_eq!(
+            result["events"],
+            json!([
+                {
+                    "data":{
+                        "type": "admintransaction",
+                        "committed_timestamp_secs": committed_time,
+                    },
+                    "key": "01000000000000000000000000000000000000000a550c18",
+                    "sequence_number": result["events"][0]["sequence_number"].as_u64().unwrap(),
+                    "transaction_version": version
+                },
+                {
+                    "data":{
+                        "epoch": epoch,
+                        "type": "newepoch"
+                    },
+                    "key": "04000000000000000000000000000000000000000a550c18",
+                    "sequence_number": result["events"][1]["sequence_number"].as_u64().unwrap(),
+                    "transaction_version": version
+                }
+            ]),
+            "{:#?}",
+            result["events"]
+        );
+        Ok(())
+    }
+}
+
+fn create_common_write_set() -> WriteSet {
+    WriteSetMut::new(vec![(
+        AccessPath::new(
+            AccountAddress::new([
+                0xc4, 0xc6, 0x3f, 0x80, 0xc7, 0x4b, 0x11, 0x26, 0x3e, 0x42, 0x1e, 0xbf, 0x84, 0x86,
+                0xa4, 0xe3,
+            ]),
+            vec![0x01, 0x21, 0x7d, 0xa6, 0xc6, 0xb3, 0xe1, 0x9f, 0x18],
+        ),
+        WriteOp::Value(vec![0xca, 0xfe, 0xd0, 0x0d]),
+    )])
+    .freeze()
+    .unwrap()
 }

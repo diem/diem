@@ -6,11 +6,7 @@ use serde_json::json;
 use diem_json_rpc_types::views::AccountTransactionsWithProofView;
 use diem_transaction_builder::stdlib;
 use diem_types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    on_chain_config::DIEM_MAX_KNOWN_VERSION,
-    transaction::{AccountTransactionsWithProof, ChangeSet, TransactionPayload, WriteSetPayload},
-    write_set::{WriteOp, WriteSet, WriteSetMut},
+    on_chain_config::DIEM_MAX_KNOWN_VERSION, transaction::AccountTransactionsWithProof,
 };
 use std::convert::TryFrom;
 
@@ -51,47 +47,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "upgrade event & newepoch",
-            run: |env: &mut testing::Env| {
-                let write_set = ChangeSet::new(create_common_write_set(), vec![]);
-                let txn = env.create_txn_by_payload(
-                    &env.root,
-                    TransactionPayload::WriteSet(WriteSetPayload::Direct(write_set)),
-                );
-                let result = env.submit_and_wait(txn);
-                let version = result["version"].as_u64().unwrap();
-                let committed_time = result["events"][0]["data"]["committed_timestamp_secs"]
-                    .as_u64()
-                    .unwrap();
-                assert!(committed_time != 0);
-                assert_eq!(
-                    result["events"],
-                    json!([
-                        {
-                            "data":{
-                                "type": "admintransaction",
-                                "committed_timestamp_secs": committed_time,
-                            },
-                            "key": "01000000000000000000000000000000000000000a550c18",
-                            "sequence_number": 0,
-                            "transaction_version": version
-                        },
-                        {
-                            "data":{
-                                "epoch": 3,
-                                "type": "newepoch"
-                            },
-                            "key": "04000000000000000000000000000000000000000a550c18",
-                            "sequence_number": 2,
-                            "transaction_version": version
-                        }
-                    ]),
-                    "{}",
-                    result["events"]
-                );
-            },
-        },
-        Test {
             name: "get_account_transactions_with_proofs",
             run: |env: &mut testing::Env| {
                 let sender = &env.vasps[0].children[0];
@@ -110,19 +65,4 @@ fn create_test_cases() -> Vec<Test> {
         // no test after this one, as your scripts may not in allow list.
         // add test before above test
     ]
-}
-
-fn create_common_write_set() -> WriteSet {
-    WriteSetMut::new(vec![(
-        AccessPath::new(
-            AccountAddress::new([
-                0xc4, 0xc6, 0x3f, 0x80, 0xc7, 0x4b, 0x11, 0x26, 0x3e, 0x42, 0x1e, 0xbf, 0x84, 0x86,
-                0xa4, 0xe3,
-            ]),
-            vec![0x01, 0x21, 0x7d, 0xa6, 0xc6, 0xb3, 0xe1, 0x9f, 0x18],
-        ),
-        WriteOp::Value(vec![0xca, 0xfe, 0xd0, 0x0d]),
-    )])
-    .freeze()
-    .unwrap()
 }
