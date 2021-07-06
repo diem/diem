@@ -56,6 +56,7 @@ fn main() -> Result<()> {
             &UpdateExchangeRateEvent,
             &MintAndReceivedMintEvents,
             &AddAndRemoveVaspDomain,
+            &MultiAgentRotateAuthenticationKeyAdminScript,
             &MultiAgentRotateAuthenticationKeyAdminScriptFunction,
         ],
         network_tests: &[],
@@ -1831,6 +1832,79 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScriptFunction {
                     "module_address": "00000000000000000000000000000001",
                     "module_name": "AccountAdministrationScripts",
                     "function_name": "rotate_authentication_key_with_nonce_admin"
+                },
+            }),
+        );
+
+        Ok(())
+    }
+}
+
+struct MultiAgentRotateAuthenticationKeyAdminScript;
+
+impl Test for MultiAgentRotateAuthenticationKeyAdminScript {
+    fn name(&self) -> &'static str {
+        "jsonrpc::multi-agent-rotate-authentication-key-admin-script"
+    }
+}
+
+impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScript {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+
+        // Script
+        let mut vasp = ctx.random_account();
+
+        ctx.chain_info()
+            .create_parent_vasp_account(Currency::XUS, vasp.authentication_key())?;
+        let new_key = AccountKey::generate(ctx.rng());
+        let txn = env.create_multi_agent_txn(
+            ctx.chain_info().root_account(),
+            &[&mut vasp],
+            TransactionPayload::Script(
+                stdlib::encode_rotate_authentication_key_with_nonce_admin_script(
+                    0,
+                    new_key.public_key().to_bytes().to_vec(),
+                ),
+            ),
+        );
+
+        let result = env.submit_and_wait(&txn);
+        let script = match txn.payload() {
+            TransactionPayload::Script(s) => s,
+            _ => unreachable!(),
+        };
+        let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
+        let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
+        assert_eq!(result["vm_status"], json!({"type": "executed"}));
+        assert_eq!(
+            result["transaction"],
+            json!({
+                "type": "user",
+                "sender": format!("{:x}", ctx.chain_info().root_account().address()),
+                "signature_scheme": "Scheme::Ed25519",
+                "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
+                "public_key": ctx.chain_info().root_account().public_key(),
+                "secondary_signers": [ format!("{:x}", vasp.address()) ],
+                "secondary_signature_schemes": [ "Scheme::Ed25519" ],
+                "secondary_signatures": [ hex::encode(txn.authenticator().secondary_signers()[0].signature_bytes())],
+                "secondary_public_keys": [ vasp.public_key().to_string() ],
+                "sequence_number": ctx.chain_info().root_account().sequence_number() - 1,
+                "chain_id": ctx.chain_info().chain_id(),
+                "max_gas_amount": 1000000,
+                "gas_unit_price": 0,
+                "gas_currency": "XUS",
+                "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
+                "script_hash": script_hash,
+                "script_bytes": script_bytes,
+                "script": {
+                    "type_arguments": [],
+                    "arguments": [
+                        "{U64: 0}",
+                        format!("{{U8Vector: 0x{}}}", new_key.public_key().to_string()),
+                    ],
+                    "code": hex::encode(script.code()),
+                    "type": "rotate_authentication_key_with_nonce_admin"
                 },
             }),
         );

@@ -7,9 +7,7 @@ use diem_crypto::hash::HashValue;
 use diem_json_rpc_types::views::{
     AccountTransactionsWithProofView, AccumulatorConsistencyProofView,
 };
-use diem_transaction_builder::stdlib::{
-    self, encode_rotate_authentication_key_with_nonce_admin_script,
-};
+use diem_transaction_builder::stdlib;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -124,69 +122,6 @@ fn create_test_cases() -> Vec<Test> {
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
                 }
-            },
-        },
-        Test {
-            name: "multi-agent transaction with rotate_authentication_key_with_nonce_admin script",
-            run: |env: &mut testing::Env| {
-                let root = env.root.clone();
-                let account = env.vasps[1].children[0].clone();
-                let private_key = generate_key::generate_key();
-                let public_key: diem_crypto::ed25519::Ed25519PublicKey = (&private_key).into();
-                let txn = env.create_multi_agent_txn(
-                    &root,
-                    vec![&account],
-                    TransactionPayload::Script(
-                        encode_rotate_authentication_key_with_nonce_admin_script(
-                            0,
-                            public_key.to_bytes().to_vec(),
-                        ),
-                    ),
-                );
-                env.submit_and_wait(txn.clone());
-                let resp = env.send(
-                    "get_account_transaction",
-                    json!([root.address.to_string(), 4, true]),
-                );
-                let result = resp.result.unwrap();
-                let script = match txn.payload() {
-                    TransactionPayload::Script(s) => s,
-                    _ => unreachable!(),
-                };
-                let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
-                let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
-                assert_eq!(result["vm_status"], json!({"type": "executed"}));
-                assert_eq!(
-                    result["transaction"],
-                    json!({
-                        "type": "user",
-                        "sender": format!("{:x}", &root.address),
-                        "signature_scheme": "Scheme::Ed25519",
-                        "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
-                        "public_key": root.public_key.to_string(),
-                        "secondary_signers": [ format!("{:x}", &account.address) ],
-                        "secondary_signature_schemes": [ "Scheme::Ed25519" ],
-                        "secondary_signatures": [ hex::encode(txn.authenticator().secondary_signers()[0].signature_bytes())],
-                        "secondary_public_keys": [ account.public_key.to_string() ],
-                        "sequence_number": 4,
-                        "chain_id": 4,
-                        "max_gas_amount": 1000000,
-                        "gas_unit_price": 0,
-                        "gas_currency": "XUS",
-                        "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
-                        "script_hash": script_hash,
-                        "script_bytes": script_bytes,
-                        "script": {
-                            "type_arguments": [],
-                            "arguments": [
-                                "{U64: 0}",
-                                format!("{{U8Vector: 0x{}}}", public_key.to_string()),
-                            ],
-                            "code": hex::encode(script.code()),
-                            "type": "rotate_authentication_key_with_nonce_admin"
-                        },
-                    }),
-                );
             },
         },
         Test {
