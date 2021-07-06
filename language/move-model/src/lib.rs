@@ -272,7 +272,7 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 
 #[allow(deprecated)]
 fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
-    let mut script = compiled_script.into_inner();
+    let mut script = compiled_script;
 
     // Add the "<SELF>" identifier if it isn't present.
     //

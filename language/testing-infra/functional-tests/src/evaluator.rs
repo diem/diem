@@ -221,11 +221,10 @@ fn fetch_script_dependencies(
     data_store: &FakeDataStore,
     script: &CompiledScript,
 ) -> Vec<CompiledModule> {
-    let inner = script.as_inner();
-    let idents = inner.module_handles.iter().map(|handle| {
+    let idents = script.module_handles.iter().map(|handle| {
         ModuleId::new(
-            inner.address_identifiers[handle.address.0 as usize],
-            inner.identifiers[handle.name.0 as usize].clone(),
+            script.address_identifiers[handle.address.0 as usize],
+            script.identifiers[handle.name.0 as usize].clone(),
         )
     });
     fetch_dependencies(data_store, idents)

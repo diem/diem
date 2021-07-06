@@ -37,16 +37,14 @@ impl<'a> BoundsChecker<'a> {
         };
         bounds_check.verify_impl()?;
 
-        let signatures = &script.as_inner().signatures;
-        let parameters = &script.as_inner().parameters;
+        let signatures = &script.signatures;
+        let parameters = &script.parameters;
         match signatures.get(parameters.into_index()) {
             // The bounds checker has already checked each function definition's code, but a script's
             // code exists outside of any function definition. It gets checked here.
-            Some(signature) => bounds_check.check_code(
-                &script.as_inner().code,
-                &script.as_inner().type_parameters,
-                signature,
-            ),
+            Some(signature) => {
+                bounds_check.check_code(&script.code, &script.type_parameters, signature)
+            }
             None => Err(bounds_error(
                 StatusCode::INDEX_OUT_OF_BOUNDS,
                 IndexKind::Signature,

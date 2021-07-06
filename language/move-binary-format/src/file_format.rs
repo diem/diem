@@ -1669,17 +1669,6 @@ impl CompiledScript {
     /// Returns the index of `main` in case a script is converted to a module.
     pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
 
-    /// Returns a reference to the inner `CompiledScript`.
-    pub fn as_inner(&self) -> &CompiledScript {
-        self
-    }
-
-    /// Converts this instance into the inner `CompiledScript`. Converting back to a
-    /// `CompiledScript` would require it to be verified again.
-    pub fn into_inner(self) -> CompiledScript {
-        self
-    }
-
     /// Converts this instance into `CompiledScript` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
     #[allow(deprecated)]

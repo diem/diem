@@ -354,10 +354,10 @@ impl<'a> FunctionView<'a> {
 
     // Creates a `FunctionView` for a script.
     pub fn script(script: &'a CompiledScript) -> Self {
-        let code = &script.as_inner().code;
-        let parameters = script.signature_at(script.as_inner().parameters);
+        let code = &script.code;
+        let parameters = script.signature_at(script.parameters);
         let locals = script.signature_at(code.locals);
-        let type_parameters = &script.as_inner().type_parameters;
+        let type_parameters = &script.type_parameters;
         Self {
             index: None,
             code,

@@ -1454,9 +1454,8 @@ impl Script {
 
         let scope = Scope::Script(*script_hash);
 
-        let compiled_script = script.as_inner();
-        let code: Vec<Bytecode> = compiled_script.code.code.clone();
-        let parameters = script.signature_at(compiled_script.parameters).clone();
+        let code: Vec<Bytecode> = script.code.code.clone();
+        let parameters = script.signature_at(script.parameters).clone();
 
         let parameter_tys = parameters
             .0
@@ -1469,11 +1468,11 @@ impl Script {
             parameters
                 .0
                 .iter()
-                .chain(script.signature_at(compiled_script.code.locals).0.iter())
+                .chain(script.signature_at(script.code.locals).0.iter())
                 .cloned()
                 .collect(),
         );
-        let type_parameters = compiled_script.type_parameters.clone();
+        let type_parameters = script.type_parameters.clone();
         // TODO: main does not have a name. Revisit.
         let name = Identifier::new("main").unwrap();
         let native = None; // Script entries cannot be native

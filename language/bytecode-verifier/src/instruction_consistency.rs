@@ -52,7 +52,7 @@ impl<'a> InstructionConsistency<'a> {
             resolver: BinaryIndexedView::Script(script),
             current_function: None,
         };
-        checker.check_instructions(&script.as_inner().code)
+        checker.check_instructions(&script.code)
     }
 
     fn check_instructions(&self, code: &CodeUnit) -> PartialVMResult<()> {

@@ -46,7 +46,7 @@ impl<'a> SignatureChecker<'a> {
         };
         sig_check.verify_signature_pool(script.signatures())?;
         sig_check.verify_function_signatures(script.function_handles())?;
-        sig_check.verify_code(script.code(), &script.as_inner().type_parameters)
+        sig_check.verify_code(script.code(), &script.type_parameters)
     }
 
     fn verify_signature_pool(&self, signatures: &[Signature]) -> PartialVMResult<()> {

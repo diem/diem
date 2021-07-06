@@ -217,75 +217,75 @@ pub trait ScriptAccess: Sync {
     fn as_script(&self) -> &CompiledScript;
 
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
-        &self.as_script().as_inner().module_handles[idx.into_index()]
+        &self.as_script().module_handles[idx.into_index()]
     }
 
     fn struct_handle_at(&self, idx: StructHandleIndex) -> &StructHandle {
-        &self.as_script().as_inner().struct_handles[idx.into_index()]
+        &self.as_script().struct_handles[idx.into_index()]
     }
 
     fn function_handle_at(&self, idx: FunctionHandleIndex) -> &FunctionHandle {
-        &self.as_script().as_inner().function_handles[idx.into_index()]
+        &self.as_script().function_handles[idx.into_index()]
     }
 
     fn signature_at(&self, idx: SignatureIndex) -> &Signature {
-        &self.as_script().as_inner().signatures[idx.into_index()]
+        &self.as_script().signatures[idx.into_index()]
     }
 
     fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
-        &self.as_script().as_inner().identifiers[idx.into_index()]
+        &self.as_script().identifiers[idx.into_index()]
     }
 
     fn address_identifier_at(&self, idx: AddressIdentifierIndex) -> &AccountAddress {
-        &self.as_script().as_inner().address_identifiers[idx.into_index()]
+        &self.as_script().address_identifiers[idx.into_index()]
     }
 
     fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
-        &self.as_script().as_inner().constant_pool[idx.into_index()]
+        &self.as_script().constant_pool[idx.into_index()]
     }
 
     fn function_instantiation_at(&self, idx: FunctionInstantiationIndex) -> &FunctionInstantiation {
-        &self.as_script().as_inner().function_instantiations[idx.into_index()]
+        &self.as_script().function_instantiations[idx.into_index()]
     }
 
     fn module_handles(&self) -> &[ModuleHandle] {
-        &self.as_script().as_inner().module_handles
+        &self.as_script().module_handles
     }
 
     fn struct_handles(&self) -> &[StructHandle] {
-        &self.as_script().as_inner().struct_handles
+        &self.as_script().struct_handles
     }
 
     fn function_handles(&self) -> &[FunctionHandle] {
-        &self.as_script().as_inner().function_handles
+        &self.as_script().function_handles
     }
 
     fn function_instantiations(&self) -> &[FunctionInstantiation] {
-        &self.as_script().as_inner().function_instantiations
+        &self.as_script().function_instantiations
     }
 
     fn signatures(&self) -> &[Signature] {
-        &self.as_script().as_inner().signatures
+        &self.as_script().signatures
     }
 
     fn constant_pool(&self) -> &[Constant] {
-        &self.as_script().as_inner().constant_pool
+        &self.as_script().constant_pool
     }
 
     fn identifiers(&self) -> &[Identifier] {
-        &self.as_script().as_inner().identifiers
+        &self.as_script().identifiers
     }
 
     fn address_identifiers(&self) -> &[AccountAddress] {
-        &self.as_script().as_inner().address_identifiers
+        &self.as_script().address_identifiers
     }
 
     fn version(&self) -> u32 {
-        self.as_script().as_inner().version
+        self.as_script().version
     }
 
     fn code(&self) -> &CodeUnit {
-        &self.as_script().as_inner().code
+        &self.as_script().code
     }
 
     fn immediate_dependencies(&self) -> Vec<ModuleId> {

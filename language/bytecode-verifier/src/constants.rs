@@ -28,7 +28,7 @@ pub fn verify_script(module: &CompiledScript) -> VMResult<()> {
 }
 
 fn verify_script_impl(script: &CompiledScript) -> PartialVMResult<()> {
-    for (idx, constant) in script.as_inner().constant_pool.iter().enumerate() {
+    for (idx, constant) in script.constant_pool.iter().enumerate() {
         verify_constant(idx, constant)?
     }
     Ok(())
