@@ -172,7 +172,7 @@ fn get_events_by_event_key(
     last_seq_num: u64,
     order: Order,
     is_latest: bool,
-) -> Result<Vec<ContractEvent>> {
+) -> Result<Vec<(Version, ContractEvent)>> {
     const LIMIT: u64 = 3;
 
     let mut cursor = if order == Order::Ascending {
@@ -214,7 +214,7 @@ fn get_events_by_event_key(
                     e.event_index,
                 )
                 .unwrap();
-                e.event
+                (e.transaction_version, e.event)
             })
             .collect();
 
@@ -222,7 +222,7 @@ fn get_events_by_event_key(
         if num_results == 0 {
             break;
         }
-        assert_eq!(events.first().unwrap().sequence_number(), cursor);
+        assert_eq!(events.first().unwrap().1.sequence_number(), cursor);
 
         if order == Order::Ascending {
             if cursor + num_results > last_seq_num {
@@ -261,7 +261,7 @@ fn get_events_by_event_key(
 
 fn verify_events_by_event_key(
     db: &DiemDB,
-    events: Vec<(EventKey, Vec<ContractEvent>)>,
+    events: Vec<(EventKey, Vec<(Version, ContractEvent)>)>,
     ledger_info: &LedgerInfo,
     is_latest: bool,
 ) {
@@ -271,8 +271,13 @@ fn verify_events_by_event_key(
             let first_seq = events
                 .first()
                 .expect("Shouldn't be empty")
+                .1
                 .sequence_number();
-            let last_seq = events.last().expect("Shouldn't be empty").sequence_number();
+            let last_seq = events
+                .last()
+                .expect("Shouldn't be empty")
+                .1
+                .sequence_number();
 
             let traversed = get_events_by_event_key(
                 db,
@@ -304,15 +309,16 @@ fn verify_events_by_event_key(
 }
 
 fn group_events_by_event_key(
+    first_version: Version,
     txns_to_commit: &[TransactionToCommit],
-) -> Vec<(EventKey, Vec<ContractEvent>)> {
-    let mut event_key_to_events: HashMap<EventKey, Vec<ContractEvent>> = HashMap::new();
-    for txn in txns_to_commit {
+) -> Vec<(EventKey, Vec<(Version, ContractEvent)>)> {
+    let mut event_key_to_events: HashMap<EventKey, Vec<(Version, ContractEvent)>> = HashMap::new();
+    for (batch_idx, txn) in txns_to_commit.iter().enumerate() {
         for event in txn.events() {
             event_key_to_events
                 .entry(*event.key())
                 .or_default()
-                .push(event.clone());
+                .push((first_version + batch_idx as u64, event.clone()));
         }
     }
     event_key_to_events.into_iter().collect()
@@ -465,10 +471,9 @@ fn verify_committed_transactions(
     }
 
     // Fetch and verify events.
-    // TODO: verify events are saved to correct transaction version.
     verify_events_by_event_key(
         db,
-        group_events_by_event_key(txns_to_commit),
+        group_events_by_event_key(first_version, txns_to_commit),
         ledger_info,
         is_latest,
     );
