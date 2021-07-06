@@ -451,6 +451,30 @@ impl TransactionFactory {
         }
     }
 
+    pub fn update_exchange_rate(
+        &self,
+        currency: Currency,
+        sliding_nonce: u64,
+        exchange_rate_numerator: u64,
+        exchange_rate_denominator: u64,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_update_exchange_rate_script_function(
+                currency.type_tag(),
+                sliding_nonce,
+                exchange_rate_numerator,
+                exchange_rate_denominator,
+            ))
+        } else {
+            self.script(stdlib::encode_update_exchange_rate_script(
+                currency.type_tag(),
+                sliding_nonce,
+                exchange_rate_numerator,
+                exchange_rate_denominator,
+            ))
+        }
+    }
+
     pub fn remove_validator_and_reconfigure(
         &self,
         sliding_nonce: u64,
