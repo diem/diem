@@ -426,6 +426,9 @@ impl<'env> FunctionTranslator<'env> {
 
                 let suffix = match flavor {
                     VerificationFlavor::Regular => "$verify".to_string(),
+                    VerificationFlavor::Instantiated(_) => {
+                        format!("$verify_{}", flavor)
+                    }
                     VerificationFlavor::Inconsistency => {
                         attribs.push(format!(
                             "{{:msg_if_verifies \"inconsistency_detected{}\"}} ",

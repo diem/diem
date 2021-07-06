@@ -24,6 +24,7 @@ pub struct FunctionTargetsHolder {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VerificationFlavor {
     Regular,
+    Instantiated(usize),
     Inconsistency,
 }
 
@@ -31,6 +32,9 @@ impl std::fmt::Display for VerificationFlavor {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             VerificationFlavor::Regular => write!(f, ""),
+            VerificationFlavor::Instantiated(index) => {
+                write!(f, "instantiated_{}", index)
+            }
             VerificationFlavor::Inconsistency => write!(f, "inconsistency"),
         }
     }

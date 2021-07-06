@@ -20,7 +20,7 @@ use move_model::{
 
 use crate::function_target_pipeline::FunctionVariant;
 use move_model::{
-    ast::{Exp, TempIndex},
+    ast::{Exp, ExpData, TempIndex},
     model::QualifiedInstId,
 };
 use std::{
@@ -468,6 +468,61 @@ impl FunctionData {
         assert_ne!(self.variant, new_variant);
         FunctionData {
             variant: new_variant,
+            ..self.clone()
+        }
+    }
+
+    /// Fork this function data with instantiations.
+    pub fn fork_with_instantiation(
+        &self,
+        env: &GlobalEnv,
+        ty_params: &[TypeParameter],
+        ty_args: &BTreeMap<u16, Type>,
+        new_variant: FunctionVariant,
+    ) -> Self {
+        let inst: Vec<_> = ty_params
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                let idx = i as u16;
+                match ty_args.get(&idx).cloned() {
+                    None => Type::TypeParameter(idx),
+                    Some(t) => t,
+                }
+            })
+            .collect();
+
+        // fix types
+        let local_types = Type::instantiate_slice(&self.local_types, &inst);
+        let return_types = Type::instantiate_slice(&self.return_types, &inst);
+        let code = self
+            .code
+            .iter()
+            .map(|bc| bc.instantiate(env, &inst))
+            .collect();
+        let modify_targets = self
+            .modify_targets
+            .iter()
+            .map(|(key, val)| {
+                let new_val = val
+                    .iter()
+                    .map(|exp| {
+                        ExpData::rewrite_node_id(exp.clone(), &mut |id| {
+                            ExpData::instantiate_node(env, id, &inst)
+                        })
+                    })
+                    .collect();
+                (*key, new_val)
+            })
+            .collect();
+
+        // construct the new data
+        Self {
+            variant: new_variant,
+            code,
+            local_types,
+            return_types,
+            modify_targets,
             ..self.clone()
         }
     }
