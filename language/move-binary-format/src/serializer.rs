@@ -175,16 +175,6 @@ impl CompiledModule {
     /// Serializes a `CompiledModule` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
-        self.as_inner().serialize(binary)
-    }
-}
-
-impl CompiledModuleMut {
-    /// Serializes this into a binary format.
-    ///
-    /// This is intended mainly for test code. Production code will typically use
-    /// [`CompiledModule::serialize`].
-    pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ModuleSerializer::new(VERSION_MAX);
         let mut temp = BinaryData::new();

@@ -1692,15 +1692,6 @@ impl CompiledScriptMut {
     }
 }
 
-/// A `CompiledModule` defines the structure of a module which is the unit of published code.
-///
-/// A `CompiledModule` contains a definition of types (with their fields) and functions.
-/// It is a unit of code that can be used by transactions or other modules.
-///
-/// A module is published as a single entry and it is retrieved as a single blob.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CompiledModule(CompiledModuleMut);
-
 /// A mutable version of `CompiledModule`. Converting to a `CompiledModule` requires this to pass
 /// the bounds checker.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -1743,6 +1734,14 @@ pub struct CompiledModuleMut {
     /// Function defined in this module.
     pub function_defs: Vec<FunctionDefinition>,
 }
+
+/// A `CompiledModule` defines the structure of a module which is the unit of published code.
+///
+/// A `CompiledModule` contains a definition of types (with their fields) and functions.
+/// It is a unit of code that can be used by transactions or other modules.
+///
+/// A module is published as a single entry and it is retrieved as a single blob.
+pub type CompiledModule = CompiledModuleMut;
 
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
@@ -1860,6 +1859,14 @@ impl Arbitrary for CompiledModuleMut {
 impl CompiledModuleMut {
     /// Returns the count of a specific `IndexKind`
     pub fn kind_count(&self, kind: IndexKind) -> usize {
+        precondition!(!matches!(
+            kind,
+            IndexKind::LocalPool
+                | IndexKind::CodeDefinition
+                | IndexKind::FieldDefinition
+                | IndexKind::TypeParameter
+                | IndexKind::MemberCount
+        ));
         match kind {
             IndexKind::ModuleHandle => self.module_handles.len(),
             IndexKind::StructHandle => self.struct_handles.len(),
@@ -1888,35 +1895,20 @@ impl CompiledModuleMut {
     /// consistency. This includes bounds checks but no others.
     pub fn freeze(self) -> PartialVMResult<CompiledModule> {
         // Impossible to access self_id for location as it might not be safe due to bounds failing
-        let module = CompiledModule(self);
+        let module = self;
         BoundsChecker::verify_module(&module)?;
         Ok(module)
     }
-}
 
-impl CompiledModule {
     /// Returns a reference to the inner `CompiledModuleMut`.
     pub fn as_inner(&self) -> &CompiledModuleMut {
-        &self.0
+        self
     }
 
     /// Converts this instance into the inner `CompiledModuleMut`. Converting back to a
     /// `CompiledModule` would require it to be verified again.
     pub fn into_inner(self) -> CompiledModuleMut {
-        self.0
-    }
-
-    /// Returns the number of items of a specific `IndexKind`.
-    pub fn kind_count(&self, kind: IndexKind) -> usize {
-        precondition!(!matches!(
-            kind,
-            IndexKind::LocalPool
-                | IndexKind::CodeDefinition
-                | IndexKind::FieldDefinition
-                | IndexKind::TypeParameter
-                | IndexKind::MemberCount
-        ));
-        self.as_inner().kind_count(kind)
+        self
     }
 
     /// Returns the code key of `module_handle`
