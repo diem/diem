@@ -14,7 +14,6 @@ use diem_transaction_builder::stdlib::{
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::xus_tag,
     contract_event::EventWithProof,
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     epoch_change::EpochChangeProof,
@@ -71,77 +70,6 @@ fn create_test_cases() -> Vec<Test> {
                 );
                 let txn = env.create_txn(&env.root, script);
                 env.submit_and_wait(txn);
-            },
-        },
-        Test {
-            name: "mint & received mint events",
-            run: |env: &mut testing::Env| {
-                let script = stdlib::encode_tiered_mint_script(
-                    xus_tag(),
-                    0,
-                    env.dd.address,
-                    1_000_000,
-                    1,
-                );
-                let txn = env.create_txn(&env.tc, script.clone());
-                let result = env.submit_and_wait(txn);
-                let version = result["version"].as_u64().unwrap();
-                assert_eq!(
-                    result["events"],
-                    json!([
-                        {
-                            "data":{
-                                "amount":{"amount":1000000,"currency":"XUS"},
-                                "destination_address":"000000000000000000000000000000dd",
-                                "type":"receivedmint"
-                            },
-                            "key":"0000000000000000000000000000000000000000000000dd",
-                            "sequence_number":1,
-                            "transaction_version":version
-                        },
-                        {
-                            "data":{
-                                "amount":{"amount":1000000,"currency":"XUS"},
-                                "type":"mint"
-                            },
-                            "key":"05000000000000000000000000000000000000000a550c18",
-                            "sequence_number":1,
-                            "transaction_version":version},
-                        {
-                            "data":{
-                                "amount":{"amount":1000000,"currency":"XUS"},
-                                "metadata":"",
-                                "receiver":"000000000000000000000000000000dd",
-                                "sender":"00000000000000000000000000000000",
-                                "type":"receivedpayment"
-                            },
-                            "key":"0300000000000000000000000000000000000000000000dd",
-                            "sequence_number":2,
-                            "transaction_version":version
-
-                        }
-                    ]),
-                    "{}",
-                    result["events"]
-                );
-                assert_eq!(
-                    result["transaction"]["script"],
-                    json!({
-                        "type_arguments": [
-                            "XUS"
-                        ],
-                        "arguments": [
-                            "{U64: 0}",
-                            "{ADDRESS: 000000000000000000000000000000DD}",
-                            "{U64: 1000000}",
-                            "{U64: 1}",
-                        ],
-                        "code": hex::encode(script.code()),
-                        "type": "tiered_mint"
-                    }),
-                    "{}",
-                    result["transaction"]
-                );
             },
         },
         Test {
