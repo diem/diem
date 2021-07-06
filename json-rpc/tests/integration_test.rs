@@ -63,24 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "invalid transaction submitted: mempool validation error",
-            run: |env: &mut testing::Env| {
-                env.allow_execution_failures(|env: &mut testing::Env| {
-                    let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 200);
-                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 300);
-                    env.submit(&txn1);
-                    let resp = env.submit(&txn2);
-                    assert_eq!(
-                        resp.error.expect("error").message,
-                        "Server error: Mempool submission error: \"Failed to update gas price to 0\"".to_string(),
-                    );
-                    // wait submitted transaction executed, so that the following tests won't have
-                    // problem when need to submit same account transaction.
-                    env.wait_for_txn(&txn1);
-                });
-            },
-        },
-        Test {
             name: "expired transaction submitted: An expired transaction with too new sequence number will still be rejected",
             run: |env: &mut testing::Env| {
                 env.allow_execution_failures(|env: &mut testing::Env| {

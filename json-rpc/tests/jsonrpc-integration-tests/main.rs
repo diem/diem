@@ -36,6 +36,7 @@ fn main() -> Result<()> {
             &PeerToPeerWithEvents,
             &PeerToPeerErrorExplination,
             &ReSubmittingTransactionWontFail,
+            &MempoolValidationError,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -757,6 +758,49 @@ impl PublicUsageTest for ReSubmittingTransactionWontFail {
         env.submit(&txn);
         env.submit(&txn);
         env.wait_for_txn(&txn);
+
+        Ok(())
+    }
+}
+
+struct MempoolValidationError;
+
+impl Test for MempoolValidationError {
+    fn name(&self) -> &'static str {
+        "jsonrpc::mempool-validator-error"
+    }
+}
+
+impl PublicUsageTest for MempoolValidationError {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let mut env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+        let (_parent, child1, child2) = env.create_parent_and_child_accounts(ctx, 1_000_000_000)?;
+        let txn1 = child1.sign_transaction(
+            factory
+                .peer_to_peer(Currency::XUS, child2.address(), 200)
+                .sender(child1.address())
+                .sequence_number(child1.sequence_number())
+                .build(),
+        );
+        let txn2 = child1.sign_transaction(
+            factory
+                .peer_to_peer(Currency::XUS, child2.address(), 300)
+                .sender(child1.address())
+                .sequence_number(child1.sequence_number())
+                .build(),
+        );
+
+        env.submit(&txn1);
+        env.allow_execution_failures(|env| {
+            let resp = env.submit(&txn2);
+            assert_eq!(
+                resp.error.expect("error").message,
+                "Server error: Mempool submission error: \"Failed to update gas price to 0\""
+                    .to_string(),
+            );
+        });
+        env.wait_for_txn(&txn1);
 
         Ok(())
     }
