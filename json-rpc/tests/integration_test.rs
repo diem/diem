@@ -63,35 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "child vasp role type account",
-            run: |env: &mut testing::Env| {
-                let parent = &env.vasps[0];
-                let account = &env.vasps[0].children[0];
-                let address = format!("{:x}", &account.address);
-                let resp = env.send("get_account", json!([address]));
-                let result = resp.result.unwrap();
-                assert_eq!(
-                    result,
-                    json!({
-                        "address": address,
-                        "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 3000000000_u64, "currency": "XUS"}],
-                        "delegated_key_rotation_capability": false,
-                        "delegated_withdrawal_capability": false,
-                        "is_frozen": false,
-                        "received_events_key": format!("0000000000000000{}", address),
-                        "role": {
-                            "type": "child_vasp",
-                            "parent_vasp_address": format!("{:x}", &parent.address),
-                        },
-                        "sent_events_key": format!("0100000000000000{}", address),
-                        "sequence_number": 0,
-                        "version": resp.diem_ledger_version,
-                    }),
-                );
-            },
-        },
-        Test {
             name: "peer to peer account transaction with events",
             run: |env: &mut testing::Env| {
                 let prev_ledger_version = env.send("get_metadata", json!([])).diem_ledger_version;

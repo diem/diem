@@ -26,6 +26,7 @@ fn main() -> Result<()> {
             &DesignatedDealerPreburns,
             &ParentVaspAccountRole,
             &GetAccountByVersion,
+            &ChildVaspAccountRole,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -485,6 +486,54 @@ impl PublicUsageTest for GetAccountByVersion {
                 "sent_events_key": EventKey::new_from_address(&vasp.address(), 3),
                 "sequence_number": 0,
                 "version": prev_version,
+            }),
+        );
+
+        Ok(())
+    }
+}
+
+struct ChildVaspAccountRole;
+
+impl Test for ChildVaspAccountRole {
+    fn name(&self) -> &'static str {
+        "jsonrpc::child-vasp-account-role"
+    }
+}
+
+impl PublicUsageTest for ChildVaspAccountRole {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+
+        let mut parent = ctx.random_account();
+        let child = ctx.random_account();
+        ctx.create_parent_vasp_account(parent.authentication_key())?;
+        env.submit_and_wait(&parent.sign_with_transaction_builder(
+            factory.create_child_vasp_account(Currency::XUS, child.authentication_key(), false, 0),
+        ));
+
+        let address = format!("{:x}", child.address());
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": child.authentication_key(),
+                "balances": [{"amount": 0_u64, "currency": "XUS"}],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": EventKey::new_from_address(&child.address(), 0),
+                "role": {
+                    "type": "child_vasp",
+                    "parent_vasp_address": parent.address(),
+                },
+                "sent_events_key": EventKey::new_from_address(&child.address(), 1),
+                "sequence_number": 0,
+                "version": resp.diem_ledger_version,
             }),
         );
 
