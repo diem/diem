@@ -63,15 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "re-submit transaction won't fail",
-            run: |env: &mut testing::Env| {
-                let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 200);
-                env.submit(&txn1);
-                env.submit(&txn1);
-                env.wait_for_txn(&txn1);
-            },
-        },
-        Test {
             name: "invalid transaction submitted: mempool validation error",
             run: |env: &mut testing::Env| {
                 env.allow_execution_failures(|env: &mut testing::Env| {
