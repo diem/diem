@@ -241,7 +241,7 @@ fn test_unverifiable_module() {
     {
         let mut storage = InMemoryStorage::new();
 
-        let mut m = m.into_inner();
+        let mut m = m;
         m.function_defs[0].code.as_mut().unwrap().code = vec![];
         let m = m.freeze().unwrap();
         let mut blob = vec![];
@@ -431,7 +431,7 @@ fn test_unverifiable_module_dependency() {
 
     // Publish N and an unverifiable version of M and try to call N::bar, the VM should fail to load M.
     {
-        let mut m = m.into_inner();
+        let mut m = m;
         m.function_defs[0].code.as_mut().unwrap().code = vec![];
         let m = m.freeze().unwrap();
         let mut blob_m = vec![];

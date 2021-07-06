@@ -208,7 +208,7 @@ pub fn module_frame_generation(
 
     let generation_options = config::module_generation_settings();
     let mut rng = StdRng::from_seed(seed);
-    let mut module = generate_module(&mut rng, generation_options.clone()).into_inner();
+    let mut module = generate_module(&mut rng, generation_options.clone());
     // Either get the number of iterations provided by the user, or iterate "infinitely"--up to
     // u128::MAX number of times.
     let iters = num_iters
@@ -216,7 +216,7 @@ pub fn module_frame_generation(
         .unwrap_or_else(|| std::u128::MAX);
 
     while generated < iters && sender.send(module).is_ok() {
-        module = generate_module(&mut rng, generation_options.clone()).into_inner();
+        module = generate_module(&mut rng, generation_options.clone());
         generated += 1;
         while let Ok(stat) = stats.try_recv() {
             match stat {

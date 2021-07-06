@@ -324,10 +324,9 @@ proptest! {
 
     #[test]
     fn code_unit_out_of_bounds(
-        module in CompiledModule::valid_strategy(20),
+        mut module in CompiledModule::valid_strategy(20),
         mutations in vec(CodeUnitBoundsMutation::strategy(), 0..40),
     ) {
-        let mut module = module.into_inner();
         let expected_violations = {
             let context = ApplyCodeUnitBoundsContext::new(&mut module, mutations);
             context.apply()

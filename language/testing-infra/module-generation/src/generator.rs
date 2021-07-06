@@ -49,8 +49,7 @@ pub fn generate_modules(
         .map(|module| {
             let mut module = compile_module(AccountAddress::ZERO, module, &empty_deps)
                 .unwrap()
-                .0
-                .into_inner();
+                .0;
             Pad::pad(table_size, &mut module, options.clone());
             module.freeze().unwrap()
         })
@@ -60,8 +59,7 @@ pub fn generate_modules(
 
     let mut compiled_root = compile_module(AccountAddress::ZERO, root_module, &compiled_callees)
         .unwrap()
-        .0
-        .into_inner();
+        .0;
     Pad::pad(table_size, &mut compiled_root, options);
     (compiled_root.freeze().unwrap(), compiled_callees)
 }

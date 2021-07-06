@@ -195,8 +195,7 @@ impl CallGraph {
 }
 
 /// During the generation of a bytecode sequence, specific instantiations may need to be made, that
-/// may not yet exist in the underlying module. Instead of mutating the underlying module (which
-/// would require an into_inner followd by a freeze) in order to record these instantiations in the
+/// may not yet exist in the underlying module. Instead of mutating the underlying module in order to record these instantiations in the
 /// locals signature table, we instead build wrapper around the underlying module containing the
 /// type instantiations, and at the end materialize this updated signature pool into a module. We
 /// also need the ability to quickly determine if an instantiation has already been created, and if
@@ -395,7 +394,7 @@ impl InstantiableModule {
     /// Consumes self, and adds the instantiations that have been built up to the underlying
     /// module, and returns the resultant compiled module.
     pub fn instantiate(self) -> CompiledModule {
-        let mut module = self.module.into_inner();
+        let mut module = self.module;
         module.signatures = self
             .sig_instance_for_offset
             .into_iter()

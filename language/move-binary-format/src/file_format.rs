@@ -1883,17 +1883,6 @@ impl CompiledModule {
         Ok(module)
     }
 
-    /// Returns a reference to the inner `CompiledModule`.
-    pub fn as_inner(&self) -> &CompiledModule {
-        self
-    }
-
-    /// Converts this instance into the inner `CompiledModule`. Converting back to a
-    /// `CompiledModule` would require it to be verified again.
-    pub fn into_inner(self) -> CompiledModule {
-        self
-    }
-
     /// Returns the code key of `module_handle`
     pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
         ModuleId::new(

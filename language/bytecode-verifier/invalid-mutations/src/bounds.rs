@@ -173,7 +173,7 @@ impl ApplyOutOfBoundsContext {
         let sig_structs: Vec<_> = Self::sig_structs(&module).collect();
 
         Self {
-            module: module.into_inner(),
+            module,
             mutations: Some(mutations),
             sig_structs,
         }

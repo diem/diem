@@ -320,7 +320,7 @@ fn module_function_infos(
     source_map: &SourceMap<Loc>,
     collected_function_infos: &CollectedInfos,
 ) -> UniqueMap<FunctionName, FunctionInfo> {
-    UniqueMap::maybe_from_iter((0..compile_module.as_inner().function_defs.len()).map(|i| {
+    UniqueMap::maybe_from_iter((0..compile_module.function_defs.len()).map(|i| {
         let idx = F::FunctionDefinitionIndex(i as F::TableIndex);
         function_info_map(compile_module, source_map, collected_function_infos, idx)
     }))
@@ -333,7 +333,7 @@ fn function_info_map(
     collected_function_infos: &CollectedInfos,
     idx: F::FunctionDefinitionIndex,
 ) -> (FunctionName, FunctionInfo) {
-    let module = compile_module.as_inner();
+    let module = compile_module;
     let handle_idx = module.function_defs[idx.0 as usize].function;
     let name_idx = module.function_handles[handle_idx.0 as usize].name;
     let name = module.identifiers[name_idx.0 as usize]
