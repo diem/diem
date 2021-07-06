@@ -1677,10 +1677,14 @@ impl CompiledScript {
     }
 }
 
-/// A mutable version of `CompiledModule`. Converting to a `CompiledModule` requires this to pass
-/// the bounds checker.
+/// A `CompiledModule` defines the structure of a module which is the unit of published code.
+///
+/// A `CompiledModule` contains a definition of types (with their fields) and functions.
+/// It is a unit of code that can be used by transactions or other modules.
+///
+/// A module is published as a single entry and it is retrieved as a single blob.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct CompiledModuleMut {
+pub struct CompiledModule {
     /// Version number found during deserialization
     pub version: u32,
     /// Handle to self.
@@ -1720,13 +1724,7 @@ pub struct CompiledModuleMut {
     pub function_defs: Vec<FunctionDefinition>,
 }
 
-/// A `CompiledModule` defines the structure of a module which is the unit of published code.
-///
-/// A `CompiledModule` contains a definition of types (with their fields) and functions.
-/// It is a unit of code that can be used by transactions or other modules.
-///
-/// A module is published as a single entry and it is retrieved as a single blob.
-pub type CompiledModule = CompiledModuleMut;
+pub type CompiledModuleMut = CompiledModule;
 
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
@@ -1783,7 +1781,7 @@ impl Arbitrary for CompiledScript {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for CompiledModuleMut {
+impl Arbitrary for CompiledModule {
     type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled module.
     type Parameters = usize;
@@ -1817,7 +1815,7 @@ impl Arbitrary for CompiledModuleMut {
                     (struct_defs, function_defs),
                 )| {
                     // TODO actual constant generation
-                    CompiledModuleMut {
+                    CompiledModule {
                         version: file_format_common::VERSION_MAX,
                         module_handles,
                         struct_handles,
@@ -1841,7 +1839,7 @@ impl Arbitrary for CompiledModuleMut {
     }
 }
 
-impl CompiledModuleMut {
+impl CompiledModule {
     /// Returns the count of a specific `IndexKind`
     pub fn kind_count(&self, kind: IndexKind) -> usize {
         precondition!(!matches!(
@@ -1885,14 +1883,14 @@ impl CompiledModuleMut {
         Ok(module)
     }
 
-    /// Returns a reference to the inner `CompiledModuleMut`.
-    pub fn as_inner(&self) -> &CompiledModuleMut {
+    /// Returns a reference to the inner `CompiledModule`.
+    pub fn as_inner(&self) -> &CompiledModule {
         self
     }
 
-    /// Converts this instance into the inner `CompiledModuleMut`. Converting back to a
+    /// Converts this instance into the inner `CompiledModule`. Converting back to a
     /// `CompiledModule` would require it to be verified again.
-    pub fn into_inner(self) -> CompiledModuleMut {
+    pub fn into_inner(self) -> CompiledModule {
         self
     }
 
@@ -1911,8 +1909,8 @@ impl CompiledModuleMut {
 }
 
 /// Return the simplest module that will pass the bounds checker
-pub fn empty_module() -> CompiledModuleMut {
-    CompiledModuleMut {
+pub fn empty_module() -> CompiledModule {
+    CompiledModule {
         version: file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
@@ -1942,7 +1940,7 @@ pub fn empty_module() -> CompiledModuleMut {
 /// //     foo() {
 /// //     }
 /// // }
-pub fn basic_test_module() -> CompiledModuleMut {
+pub fn basic_test_module() -> CompiledModule {
     let mut m = empty_module();
 
     m.function_handles.push(FunctionHandle {

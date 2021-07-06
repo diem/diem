@@ -23,12 +23,9 @@ impl CompiledScript {
 impl CompiledModule {
     /// Deserialize a &[u8] slice into a `CompiledModule` instance.
     pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
-        let deserialized = CompiledModuleMut::deserialize_no_check_bounds(binary)?;
-        deserialized.freeze()
+        CompiledModule::deserialize_no_check_bounds(binary)?.freeze()
     }
-}
 
-impl CompiledModuleMut {
     // exposed as a public function to enable testing the deserializer
     pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<Self> {
         deserialize_compiled_module(binary)
@@ -276,7 +273,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
 }
 
 /// Module internal function that manages deserialization of modules.
-fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModuleMut> {
+fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModule> {
     let binary_len = binary.len();
     let mut cursor = VersionedCursor::new(binary)?;
     let table_count = load_table_count(&mut cursor)?;
@@ -291,7 +288,7 @@ fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModu
         content_len as usize,
     )?;
 
-    let mut module = CompiledModuleMut {
+    let mut module = CompiledModule {
         version: cursor.version(),
         self_module_handle_idx: load_module_handle_index(&mut cursor)?,
         ..Default::default()
@@ -420,7 +417,7 @@ impl CommonTables for CompiledScript {
     }
 }
 
-impl CommonTables for CompiledModuleMut {
+impl CommonTables for CompiledModule {
     fn get_module_handles(&mut self) -> &mut Vec<ModuleHandle> {
         &mut self.module_handles
     }
@@ -465,9 +462,9 @@ fn build_compiled_script(
     Ok(())
 }
 
-/// Builds and returns a `CompiledModuleMut`.
+/// Builds and returns a `CompiledModule`.
 fn build_compiled_module(
-    module: &mut CompiledModuleMut,
+    module: &mut CompiledModule,
     binary: &VersionedBinary,
     tables: &[Table],
 ) -> BinaryLoaderResult<()> {
@@ -527,11 +524,11 @@ fn build_common_tables(
     Ok(())
 }
 
-/// Builds tables related to a `CompiledModuleMut`.
+/// Builds tables related to a `CompiledModule`.
 fn build_module_tables(
     binary: &VersionedBinary,
     tables: &[Table],
-    module: &mut CompiledModuleMut,
+    module: &mut CompiledModule,
 ) -> BinaryLoaderResult<()> {
     for table in tables {
         match table.kind {

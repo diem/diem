@@ -13,10 +13,10 @@ use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{
-        self_module_name, AddressIdentifierIndex, CompiledModule, CompiledModuleMut,
-        CompiledScript, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, StructDefinitionIndex, Visibility,
+        self_module_name, AddressIdentifierIndex, CompiledModule, CompiledScript,
+        FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex,
+        IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex,
+        StructDefinitionIndex, Visibility,
     },
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
@@ -354,7 +354,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
         code: Some(script.code),
     };
 
-    CompiledModuleMut {
+    CompiledModule {
         version: script.version,
         module_handles: script.module_handles,
         self_module_handle_idx,

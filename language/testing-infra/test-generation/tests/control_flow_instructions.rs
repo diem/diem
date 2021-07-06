@@ -3,8 +3,8 @@
 
 extern crate test_generation;
 use move_binary_format::file_format::{
-    empty_module, Bytecode, CompiledModuleMut, FunctionHandle, FunctionHandleIndex,
-    IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
+    empty_module, Bytecode, CompiledModule, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
+    ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
 };
 use move_core_types::identifier::Identifier;
 use std::collections::HashMap;
@@ -12,8 +12,8 @@ use test_generation::abstract_state::{AbstractState, AbstractValue, CallGraph};
 
 mod common;
 
-fn generate_module_with_function() -> CompiledModuleMut {
-    let mut module: CompiledModuleMut = empty_module();
+fn generate_module_with_function() -> CompiledModule {
+    let mut module = empty_module();
 
     let offset = module.identifiers.len();
     module.identifiers.push(Identifier::new("func0").unwrap());

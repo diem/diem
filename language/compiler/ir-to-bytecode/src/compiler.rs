@@ -10,11 +10,11 @@ use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::{
     errors::Location as VMErrorLocation,
     file_format::{
-        Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut,
-        CompiledScript, Constant, FieldDefinition, FunctionDefinition, FunctionSignature,
-        ModuleHandle, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex, StructTypeParameter, TableIndex,
-        TypeParameterIndex, TypeSignature, Visibility,
+        Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledScript,
+        Constant, FieldDefinition, FunctionDefinition, FunctionSignature, ModuleHandle, Signature,
+        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex, StructTypeParameter, TableIndex, TypeParameterIndex, TypeSignature,
+        Visibility,
     },
     file_format_common::VERSION_MAX,
 };
@@ -559,7 +559,7 @@ pub fn compile_module<'a>(
         _compiled_deps,
         source_map,
     ) = context.materialize_pools();
-    let compiled_module = CompiledModuleMut {
+    CompiledModule {
         version: VERSION_MAX,
         module_handles,
         self_module_handle_idx,
@@ -576,13 +576,12 @@ pub fn compile_module<'a>(
         constant_pool,
         struct_defs,
         function_defs,
-    };
-    compiled_module
-        .freeze()
-        .map_err(|e| {
-            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
-        })
-        .map(|frozen_module| (frozen_module, source_map))
+    }
+    .freeze()
+    .map_err(|e| {
+        InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
+    })
+    .map(|frozen_module| (frozen_module, source_map))
 }
 
 // Note: DO NOT try to recover from this function as it zeros out the `outer_contexts` dependencies
@@ -639,7 +638,7 @@ fn compile_explicit_dependency_declarations(
             compiled_deps,
             _source_map,
         ) = context.materialize_pools();
-        let compiled_module = CompiledModuleMut {
+        let compiled_module = CompiledModule {
             version: VERSION_MAX,
             module_handles,
             self_module_handle_idx,

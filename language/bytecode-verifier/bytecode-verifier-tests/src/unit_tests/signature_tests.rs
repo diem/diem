@@ -56,7 +56,7 @@ proptest! {
 
 #[test]
 fn no_verify_locals_good() {
-    let compiled_module_good = CompiledModuleMut {
+    let compiled_module_good = CompiledModule {
         version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),

@@ -4,8 +4,8 @@
 //! Utilities for property-based testing.
 
 use crate::file_format::{
-    AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionDefinition, FunctionHandle,
-    IdentifierIndex, ModuleHandle, ModuleHandleIndex, StructDefinition, TableIndex,
+    AddressIdentifierIndex, CompiledModule, FunctionDefinition, FunctionHandle, IdentifierIndex,
+    ModuleHandle, ModuleHandleIndex, StructDefinition, TableIndex,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use proptest::{
@@ -327,7 +327,7 @@ impl CompiledModuleStrategyGen {
                     ) = state.return_tables();
 
                     // Build a compiled module
-                    let module = CompiledModuleMut {
+                    CompiledModule {
                         version: crate::file_format_common::VERSION_MAX,
                         module_handles,
                         self_module_handle_idx,
@@ -348,10 +348,9 @@ impl CompiledModuleStrategyGen {
                         identifiers,
                         address_identifiers,
                         constant_pool,
-                    };
-                    module
-                        .freeze()
-                        .expect("valid modules should satisfy the bounds checker")
+                    }
+                    .freeze()
+                    .expect("valid modules should satisfy the bounds checker")
                 },
             )
     }

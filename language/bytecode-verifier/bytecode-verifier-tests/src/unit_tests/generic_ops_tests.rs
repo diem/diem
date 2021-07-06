@@ -10,8 +10,8 @@ use move_core_types::{
 // Make a Module with 2 structs and 2 resources with one field each, and 2 functions.
 // One of the struct/resource and one of the function is generic, the other "normal".
 // Also make a test function whose body will be filled by given test cases.
-fn make_module() -> CompiledModuleMut {
-    CompiledModuleMut {
+fn make_module() -> CompiledModule {
+    CompiledModule {
         version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![
             // only self module

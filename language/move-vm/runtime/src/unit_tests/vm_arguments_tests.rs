@@ -8,10 +8,10 @@ use move_binary_format::{
     errors::{PartialVMResult, VMResult},
     file_format::{
         empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModule,
-        CompiledModuleMut, CompiledScript, FieldDefinition, FunctionDefinition, FunctionHandle,
-        FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation, StructHandle,
-        StructHandleIndex, TableIndex, TypeSignature, Visibility,
+        CompiledScript, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
+        IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex,
+        SignatureToken, StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex,
+        TableIndex, TypeSignature, Visibility,
     },
 };
 use move_core_types::{
@@ -153,7 +153,7 @@ fn make_module_with_function(
             SignatureIndex((signatures.len() - 1) as TableIndex)
         }
     };
-    let module = CompiledModuleMut {
+    let module = CompiledModule {
         version: move_binary_format::file_format_common::VERSION_MAX,
         self_module_handle_idx: ModuleHandleIndex(0),
         module_handles: vec![ModuleHandle {

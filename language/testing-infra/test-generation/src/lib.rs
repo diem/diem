@@ -24,8 +24,7 @@ use module_generation::generate_module;
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken,
-        StructHandleIndex,
+        AbilitySet, CompiledModule, FunctionDefinitionIndex, SignatureToken, StructHandleIndex,
     },
 };
 use move_core_types::{
@@ -188,7 +187,7 @@ pub enum Status {
     Valid,
 }
 
-fn bytecode_module(rng: &mut StdRng, module: CompiledModuleMut) -> CompiledModuleMut {
+fn bytecode_module(rng: &mut StdRng, module: CompiledModule) -> CompiledModule {
     let mut generated_module = BytecodeGenerator::new(rng).generate_module(module.clone());
     // Module generation can retry under certain circumstances
     while generated_module.is_none() {
@@ -200,7 +199,7 @@ fn bytecode_module(rng: &mut StdRng, module: CompiledModuleMut) -> CompiledModul
 pub fn module_frame_generation(
     num_iters: Option<u64>,
     seed: [u8; 32],
-    sender: Sender<CompiledModuleMut>,
+    sender: Sender<CompiledModule>,
     stats: Receiver<Status>,
 ) {
     let mut verification_failures: u128 = 0;
@@ -261,7 +260,7 @@ pub fn bytecode_generation(
     output_path: Option<String>,
     tid: u64,
     mut rng: StdRng,
-    receiver: Receiver<CompiledModuleMut>,
+    receiver: Receiver<CompiledModule>,
     stats: Sender<Status>,
 ) {
     while let Ok(module) = receiver.recv() {

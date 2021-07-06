@@ -4,9 +4,8 @@
 use move_binary_format::{
     errors::{bounds_error, PartialVMError},
     file_format::{
-        AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex,
-        IdentifierIndex, ModuleHandleIndex, SignatureIndex, StructDefinitionIndex,
-        StructHandleIndex, TableIndex,
+        AddressIdentifierIndex, CompiledModule, FunctionHandleIndex, IdentifierIndex,
+        ModuleHandleIndex, SignatureIndex, StructDefinitionIndex, StructHandleIndex, TableIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -160,7 +159,7 @@ impl AsRef<PropIndex> for OutOfBoundsMutation {
 }
 
 pub struct ApplyOutOfBoundsContext {
-    module: CompiledModuleMut,
+    module: CompiledModule,
     // This is an Option because it gets moved out in apply before apply_one is called. Rust
     // doesn't let you call another con-consuming method after a partial move out.
     mutations: Option<Vec<OutOfBoundsMutation>>,
@@ -180,7 +179,7 @@ impl ApplyOutOfBoundsContext {
         }
     }
 
-    pub fn apply(mut self) -> (CompiledModuleMut, Vec<PartialVMError>) {
+    pub fn apply(mut self) -> (CompiledModule, Vec<PartialVMError>) {
         // This is a map from (source kind, dest kind) to the actual mutations -- this is done to
         // figure out how many mutations to do for a particular pair, which is required for
         // pick_slice_idxs below.

@@ -13,7 +13,7 @@ use crate::{
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
+        Bytecode, CodeOffset, CompiledModule, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
         FunctionInstantiationIndex, LocalIndex, SignatureToken, StructDefInstantiation,
         StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation, TableIndex,
@@ -351,7 +351,7 @@ impl<'a> BytecodeGenerator<'a> {
         &mut self,
         fn_context: &FunctionGenerationContext,
         state: AbstractState,
-        module: CompiledModuleMut,
+        module: CompiledModule,
     ) -> Vec<(StackEffect, Bytecode)> {
         let mut matches: Vec<(StackEffect, Bytecode)> = Vec::new();
         let instructions = &self.instructions;
@@ -600,7 +600,7 @@ impl<'a> BytecodeGenerator<'a> {
         fn_context: &mut FunctionGenerationContext,
         abstract_state_in: AbstractState,
         abstract_state_out: AbstractState,
-        module: &CompiledModuleMut,
+        module: &CompiledModule,
     ) -> Option<(Vec<Bytecode>, AbstractState)> {
         debug!("Abstract state in: {}", abstract_state_in);
         debug!("Abstract state out: {}", abstract_state_out);
@@ -720,7 +720,7 @@ impl<'a> BytecodeGenerator<'a> {
         locals: &[SignatureToken],
         fh: &FunctionHandle,
         acquires_global_resources: &[StructDefinitionIndex],
-        module: &mut CompiledModuleMut,
+        module: &mut CompiledModule,
         call_graph: &mut CallGraph,
     ) -> Option<Vec<Bytecode>> {
         let number_of_blocks = self.rng.gen_range(1..=MAX_CFG_BLOCKS);
@@ -831,7 +831,7 @@ impl<'a> BytecodeGenerator<'a> {
         Some(cfg.serialize())
     }
 
-    pub fn generate_module(&mut self, mut module: CompiledModuleMut) -> Option<CompiledModuleMut> {
+    pub fn generate_module(&mut self, mut module: CompiledModule) -> Option<CompiledModule> {
         let mut fdefs = module.function_defs.clone();
         let mut call_graph = CallGraph::new(module.function_handles.len());
         for fdef in fdefs.iter_mut() {

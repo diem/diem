@@ -25,11 +25,12 @@ fn empty_script_no_errors() {
 
 #[test]
 fn invalid_default_module() {
-    let m = CompiledModuleMut {
+    CompiledModule {
         version: file_format_common::VERSION_MAX,
         ..Default::default()
-    };
-    m.freeze().unwrap_err();
+    }
+    .freeze()
+    .unwrap_err();
 }
 
 #[test]
@@ -344,7 +345,7 @@ proptest! {
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
-        let module = CompiledModuleMut {
+        let module = CompiledModule {
             identifiers,
             address_identifiers,
             ..Default::default()
@@ -364,7 +365,7 @@ proptest! {
 
     /// Make sure that garbage inputs don't crash the bounds checker.
     #[test]
-    fn garbage_inputs(module in any_with::<CompiledModuleMut>(16)) {
+    fn garbage_inputs(module in any_with::<CompiledModule>(16)) {
         let _ = module.freeze();
     }
 }

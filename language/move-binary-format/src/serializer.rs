@@ -319,7 +319,7 @@ impl CommonTables for CompiledScript {
     }
 }
 
-impl CommonTables for CompiledModuleMut {
+impl CommonTables for CompiledModule {
     fn get_module_handles(&self) -> &[ModuleHandle] {
         &self.module_handles
     }
@@ -1110,11 +1110,7 @@ impl ModuleSerializer {
         }
     }
 
-    fn serialize_tables(
-        &mut self,
-        binary: &mut BinaryData,
-        module: &CompiledModuleMut,
-    ) -> Result<()> {
+    fn serialize_tables(&mut self, binary: &mut BinaryData, module: &CompiledModule) -> Result<()> {
         self.common.serialize_common_tables(binary, module)?;
         self.serialize_struct_definitions(binary, &module.struct_defs)?;
         self.serialize_struct_def_instantiations(binary, &module.struct_def_instantiations)?;

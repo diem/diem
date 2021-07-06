@@ -5,7 +5,7 @@ use crate::{borrow_graph::BorrowGraph, error::VMError};
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{
-        empty_module, Ability, AbilitySet, CompiledModule, CompiledModuleMut, FieldInstantiation,
+        empty_module, Ability, AbilitySet, CompiledModule, FieldInstantiation,
         FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiation,
         FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
@@ -394,7 +394,7 @@ impl InstantiableModule {
 
     /// Consumes self, and adds the instantiations that have been built up to the underlying
     /// module, and returns the resultant compiled module.
-    pub fn instantiate(self) -> CompiledModuleMut {
+    pub fn instantiate(self) -> CompiledModule {
         let mut module = self.module.into_inner();
         module.signatures = self
             .sig_instance_for_offset
@@ -473,7 +473,7 @@ impl AbstractState {
     /// Create a new AbstractState given a list of `SignatureTokens` that will be
     /// the (available) locals that the state will have, as well as the module state
     pub fn from_locals(
-        module: CompiledModuleMut,
+        module: CompiledModule,
         locals: HashMap<usize, (AbstractValue, BorrowState)>,
         instantiation: Vec<AbilitySet>,
         acquires_global_resources: Vec<StructDefinitionIndex>,
