@@ -114,53 +114,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "create account event",
-            run: |env: &mut testing::Env| {
-                let response = env.send(
-                    "get_events",
-                    json!(["00000000000000000000000000000000000000000a550c18", 0, 3]),
-                );
-                let events = response.result.unwrap();
-                assert_eq!(
-                    events,
-                    json!([
-                        {
-                            "data":{
-                                "created_address":"0000000000000000000000000a550c18",
-                                "role_id":0,
-                                "type":"createaccount"
-                            },
-                            "key":"00000000000000000000000000000000000000000a550c18",
-                            "sequence_number":0,
-                            "transaction_version":0
-                        },
-                        {
-                            "data":{
-                                "created_address":"0000000000000000000000000b1e55ed",
-                                "role_id":1,
-                                "type":"createaccount"
-                            },
-                            "key":"00000000000000000000000000000000000000000a550c18",
-                            "sequence_number":1,
-                            "transaction_version":0
-                        },
-                        {
-                            "data":{
-                                "created_address": "652f27413456938eaa059f65231647cc",
-                                "role_id":3,
-                                "type":"createaccount"
-                            },
-                            "key":"00000000000000000000000000000000000000000a550c18",
-                            "sequence_number":2,
-                            "transaction_version":0
-                        }
-                    ]),
-                    "{}",
-                    events
-                )
-            },
-        },
-        Test {
             name: "get_transactions without event",
             run: |env: &mut testing::Env| {
                 let response = env.send("get_transactions", json!([0, 1000, false]));

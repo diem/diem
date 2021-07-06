@@ -39,6 +39,7 @@ fn main() -> Result<()> {
             &MempoolValidationError,
             &ExpiredTransaction,
             &RotateComplianceKeyEvent,
+            &CreateAccountEvent,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1252,6 +1253,53 @@ impl PublicUsageTest for RotateComplianceKeyEvent {
             result["events"]
         );
 
+        Ok(())
+    }
+}
+
+struct CreateAccountEvent;
+
+impl Test for CreateAccountEvent {
+    fn name(&self) -> &'static str {
+        "jsonrpc::create-account-event"
+    }
+}
+
+impl PublicUsageTest for CreateAccountEvent {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let response = env.send(
+            "get_events",
+            json!(["00000000000000000000000000000000000000000a550c18", 0, 2]),
+        );
+        let events = response.result.unwrap();
+        assert_eq!(
+            events,
+            json!([
+                {
+                    "data":{
+                        "created_address":"0000000000000000000000000a550c18",
+                        "role_id":0,
+                        "type":"createaccount"
+                    },
+                    "key":"00000000000000000000000000000000000000000a550c18",
+                    "sequence_number":0,
+                    "transaction_version":0
+                },
+                {
+                    "data":{
+                        "created_address":"0000000000000000000000000b1e55ed",
+                        "role_id":1,
+                        "type":"createaccount"
+                    },
+                    "key":"00000000000000000000000000000000000000000a550c18",
+                    "sequence_number":1,
+                    "transaction_version":0
+                },
+            ]),
+            "{}",
+            events
+        );
         Ok(())
     }
 }
