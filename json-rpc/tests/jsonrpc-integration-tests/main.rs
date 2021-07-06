@@ -1,7 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_transaction_builder::stdlib;
+use diem_types::{account_config::xus_tag, event::EventKey, ledger_info::LedgerInfoWithSignatures};
 use forge::{
     forge_main, ForgeConfig, LocalFactory, Options, PublicUsageContext, PublicUsageTest, Result,
     Test,
@@ -21,6 +22,7 @@ fn main() -> Result<()> {
             &OldMetadata,
             &AccoutNotFound,
             &UnknownAccountRoleType,
+            &DesignatedDealerPreburns,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -224,6 +226,156 @@ impl PublicUsageTest for UnknownAccountRoleType {
                 "version": resp.diem_ledger_version,
             }),
         );
+        Ok(())
+    }
+}
+
+struct DesignatedDealerPreburns;
+
+impl Test for DesignatedDealerPreburns {
+    fn name(&self) -> &'static str {
+        "jsonrpc::designated-dealer-preburns"
+    }
+}
+
+impl PublicUsageTest for DesignatedDealerPreburns {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let factory = ctx.transaction_factory();
+        let mut dd = ctx.random_account();
+        ctx.create_designated_dealer_account(dd.authentication_key())?;
+
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let address = format!("{:x}", dd.address());
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+        let human_name = result["role"]["human_name"].as_str().unwrap();
+
+        // Without Preburns
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": dd.authentication_key(),
+                "balances": [
+                    {
+                        "amount": 0_u64,
+                        "currency": "XUS"
+                    },
+                ],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": EventKey::new_from_address(&dd.address(), 3),
+                "role": {
+                    "type": "designated_dealer",
+                    "base_url": "",
+                    "compliance_key": "",
+                    "expiration_time": 18446744073709551615_u64,
+                    "human_name": human_name,
+                    "preburn_balances": [
+                        {
+                            "amount": 0_u64,
+                            "currency": "XUS"
+                        }
+                    ],
+                    "preburn_queues": [
+                        {
+                            "preburns": [],
+                            "currency": "XUS",
+                        }
+                    ],
+                    "received_mint_events_key": EventKey::new_from_address(&dd.address(), 0),
+                    "compliance_key_rotation_events_key": EventKey::new_from_address(&dd.address(), 1),
+                    "base_url_rotation_events_key": EventKey::new_from_address(&dd.address(), 2),
+                },
+                "sent_events_key": EventKey::new_from_address(&dd.address(), 4),
+                "sequence_number": dd.sequence_number(),
+                "version": resp.diem_ledger_version,
+            }),
+        );
+
+        // Fund the DD account and create some Pre-burns
+        ctx.fund(dd.address(), 400)?;
+
+        env.submit_and_wait(&dd.sign_with_transaction_builder(
+            factory.script(stdlib::encode_preburn_script(xus_tag(), 100)),
+        ));
+        env.submit_and_wait(&dd.sign_with_transaction_builder(
+            factory.script(stdlib::encode_preburn_script(xus_tag(), 40)),
+        ));
+        env.submit_and_wait(&dd.sign_with_transaction_builder(
+            factory.script(stdlib::encode_preburn_script(xus_tag(), 60)),
+        ));
+
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+
+        // With Preburns
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": dd.authentication_key(),
+                "balances": [
+                    {
+                        "amount": 200_u64,
+                        "currency": "XUS"
+                    },
+                ],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": EventKey::new_from_address(&dd.address(), 3),
+                "role": {
+                    "type": "designated_dealer",
+                    "base_url": "",
+                    "compliance_key": "",
+                    "expiration_time": 18446744073709551615_u64,
+                    "human_name": human_name,
+                    "preburn_balances": [
+                        {
+                            "amount": 200_u64,
+                            "currency": "XUS"
+                        }
+                    ],
+                    "preburn_queues": [
+                        {
+                            "currency": "XUS",
+                            "preburns": [
+                                {
+                                    "preburn": {
+                                        "amount": 100_u64,
+                                        "currency": "XUS",
+                                    },
+                                    "metadata": "",
+                                },
+                                {
+                                    "preburn": {
+                                        "amount": 40_u64,
+                                        "currency": "XUS"
+                                    },
+                                    "metadata": "",
+                                },
+                                {
+                                    "preburn": {
+                                        "amount": 60_u64,
+                                        "currency": "XUS"
+                                    },
+                                    "metadata": "",
+                                },
+                            ],
+                        }
+                    ],
+                    "received_mint_events_key": EventKey::new_from_address(&dd.address(), 0),
+                    "compliance_key_rotation_events_key": EventKey::new_from_address(&dd.address(), 1),
+                    "base_url_rotation_events_key": EventKey::new_from_address(&dd.address(), 2),
+                },
+                "sent_events_key": EventKey::new_from_address(&dd.address(), 4),
+                "sequence_number": dd.sequence_number(),
+                "version": resp.diem_ledger_version,
+            }),
+        );
+
         Ok(())
     }
 }
