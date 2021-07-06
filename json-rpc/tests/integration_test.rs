@@ -74,69 +74,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "cancel burn event",
-            run: |env: &mut testing::Env| {
-                let txn =
-                    env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100));
-                env.submit_and_wait(txn);
-
-                let script = stdlib::encode_cancel_burn_with_amount_script_function(xus_tag(), env.dd.address, 100);
-                let cancel_burn_txn = env.create_txn_by_payload(
-                    &env.tc,
-                    script,
-                );
-                let result = env.submit_and_wait(cancel_burn_txn);
-                let version = result["version"].as_u64().unwrap();
-                assert_eq!(
-                    result["events"],
-                    json!([
-                        {
-                            "data":{
-                                "amount":{"amount":100,"currency":"XUS"},
-                                "preburn_address":"000000000000000000000000000000dd",
-                                "type":"cancelburn"
-                            },
-                            "key":"08000000000000000000000000000000000000000a550c18",
-                            "sequence_number":0,
-                            "transaction_version":version
-                        },
-                        {
-                            "data":{
-                                "amount":{"amount":100,"currency":"XUS"},
-                                "metadata":"",
-                                "receiver":"000000000000000000000000000000dd",
-                                "sender":"000000000000000000000000000000dd",
-                                "type":"receivedpayment"
-                            },
-                            "key":"0300000000000000000000000000000000000000000000dd",
-                            "sequence_number":1,
-                            "transaction_version":version
-                        }
-                    ]),
-                    "{}",
-                    result["events"]
-                );
-                assert_eq!(
-                    result["transaction"]["script"],
-                    json!({
-                        "type_arguments": [
-                            "XUS"
-                        ],
-                        "arguments_bcs": [
-                            "000000000000000000000000000000dd",
-                            "6400000000000000",
-                        ],
-                        "type": "script_function",
-                        "module_address":"00000000000000000000000000000001",
-                        "module_name":"TreasuryComplianceScripts",
-                        "function_name":"cancel_burn_with_amount",
-                    }),
-                    "{}",
-                    result["transaction"]
-                );
-            },
-        },
-        Test {
             name: "update exchange rate event",
             run: |env: &mut testing::Env| {
                 let script = stdlib::encode_update_exchange_rate_script(xus_tag(), 0, 1, 4);

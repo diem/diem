@@ -39,7 +39,7 @@ fn main() -> Result<()> {
             &MempoolValidationError,
             &ExpiredTransaction,
         ],
-        admin_tests: &[&PreburnAndBurnEvents],
+        admin_tests: &[&PreburnAndBurnEvents, &CancleBurnEvent],
         network_tests: &[],
     };
 
@@ -951,6 +951,89 @@ impl AdminTest for PreburnAndBurnEvents {
                 "function_name":"burn_with_amount",
             }),
             "{:#?}",
+            result["transaction"]
+        );
+
+        Ok(())
+    }
+}
+
+struct CancleBurnEvent;
+
+impl Test for CancleBurnEvent {
+    fn name(&self) -> &'static str {
+        "jsonrpc::cancel-burn-event"
+    }
+}
+
+impl AdminTest for CancleBurnEvent {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+        let mut dd = ctx.random_account();
+        ctx.chain_info()
+            .create_designated_dealer_account(Currency::XUS, dd.authentication_key())?;
+        ctx.chain_info().fund(Currency::XUS, dd.address(), 1000)?;
+
+        let txn = dd.sign_with_transaction_builder(factory.preburn(Currency::XUS, 100));
+        env.submit_and_wait(&txn);
+
+        let cancel_burn_txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.cancel_burn_with_amount(
+                Currency::XUS,
+                dd.address(),
+                100,
+            ));
+
+        let result = env.submit_and_wait(&cancel_burn_txn);
+        let version = result["version"].as_u64().unwrap();
+        assert_eq!(
+            result["events"],
+            json!([
+                {
+                    "data":{
+                        "amount":{"amount":100,"currency":"XUS"},
+                        "preburn_address": dd.address(),
+                        "type":"cancelburn"
+                    },
+                    "key":"08000000000000000000000000000000000000000a550c18",
+                    "sequence_number":0,
+                    "transaction_version":version
+                },
+                {
+                    "data":{
+                        "amount":{"amount":100,"currency":"XUS"},
+                        "metadata":"",
+                        "receiver": dd.address(),
+                        "sender": dd.address(),
+                        "type":"receivedpayment"
+                    },
+                    "key": EventKey::new_from_address(&dd.address(), 3),
+                    "sequence_number":1,
+                    "transaction_version":version
+                }
+            ]),
+            "{}",
+            result["events"]
+        );
+        assert_eq!(
+            result["transaction"]["script"],
+            json!({
+                "type_arguments": [
+                    "XUS"
+                ],
+                "arguments_bcs": [
+                    dd.address(),
+                    "6400000000000000",
+                ],
+                "type": "script_function",
+                "module_address":"00000000000000000000000000000001",
+                "module_name":"TreasuryComplianceScripts",
+                "function_name":"cancel_burn_with_amount",
+            }),
+            "{}",
             result["transaction"]
         );
 
