@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_crypto::hash::CryptoHash;
-use diem_json_rpc::views::EventView;
+use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_json_rpc::views::{AccumulatorConsistencyProofView, EventView};
 use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
@@ -11,6 +11,7 @@ use diem_types::{
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::{Transaction, TransactionPayload},
 };
 use forge::{
@@ -18,7 +19,11 @@ use forge::{
     PublicUsageTest, Result, Test,
 };
 use serde_json::json;
-use std::{convert::TryInto, ops::Deref};
+use std::{
+    convert::{TryFrom, TryInto},
+    ops::Deref,
+    str::FromStr,
+};
 
 #[allow(dead_code)]
 mod helper;
@@ -49,6 +54,7 @@ fn main() -> Result<()> {
             &GetTreasuryComplianceAccount,
             &GetEventsWithProofs,
             &MultiAgentPaymentOverDualAttestationLimit,
+            &GetAccumulatorConsistencyProof,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1909,6 +1915,49 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScript {
             }),
         );
 
+        Ok(())
+    }
+}
+
+struct GetAccumulatorConsistencyProof;
+
+impl Test for GetAccumulatorConsistencyProof {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-accumulator-consistency-proof"
+    }
+}
+
+impl PublicUsageTest for GetAccumulatorConsistencyProof {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        // batch request
+        let resp = env.send_request(json!([
+            {"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1},
+            // leave both params empty to get the full accumulator summary
+            {"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [], "id": 2},
+        ]));
+
+        // extract both responses
+        let resps: Vec<serde_json::Value> =
+            serde_json::from_value(resp).expect("should be valid serde_json::Value");
+        let metadata = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
+        let proof_view = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"];
+
+        // get the root hash and version from the metadata response
+        let metadata_root_hash =
+            HashValue::from_str(metadata["accumulator_root_hash"].as_str().unwrap()).unwrap();
+        let version = metadata["version"].as_u64().unwrap();
+
+        // parse the consistency proof and build the accumulator
+        let proof_view =
+            serde_json::from_value::<AccumulatorConsistencyProofView>(proof_view.clone()).unwrap();
+        let proof = AccumulatorConsistencyProof::try_from(&proof_view).unwrap();
+        let accumulator =
+            TransactionAccumulatorSummary::try_from_genesis_proof(proof, version).unwrap();
+
+        // root hash from metadata and the computed root hash from the
+        // accumulator summary should match
+        assert_eq!(metadata_root_hash, accumulator.root_hash());
         Ok(())
     }
 }
