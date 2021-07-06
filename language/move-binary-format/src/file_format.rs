@@ -1628,10 +1628,13 @@ impl Bytecode {
     }
 }
 
-/// A mutable version of `CompiledScript`. Converting to a `CompiledScript` requires this to pass
-/// the bounds checker.
+/// Contains the main function to execute and its dependencies.
+///
+/// A CompiledScript does not have definition tables because it can only have a `main(args)`.
+/// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
+/// tables (external code references) and it has a `main` definition.
 #[derive(Clone, Default, Eq, PartialEq, Debug)]
-pub struct CompiledScriptMut {
+pub struct CompiledScript {
     /// Version number found during deserialization
     pub version: u32,
     /// Handles to all modules referenced.
@@ -1660,25 +1663,20 @@ pub struct CompiledScriptMut {
     pub code: CodeUnit,
 }
 
-/// Contains the main function to execute and its dependencies.
-///
-/// A CompiledScript does not have definition tables because it can only have a `main(args)`.
-/// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
-/// tables (external code references) and it has a `main` definition.
-pub type CompiledScript = CompiledScriptMut;
+pub type CompiledScriptMut = CompiledScript;
 
-impl CompiledScriptMut {
+impl CompiledScript {
     /// Returns the index of `main` in case a script is converted to a module.
     pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
 
-    /// Returns a reference to the inner `CompiledScriptMut`.
-    pub fn as_inner(&self) -> &CompiledScriptMut {
+    /// Returns a reference to the inner `CompiledScript`.
+    pub fn as_inner(&self) -> &CompiledScript {
         self
     }
 
-    /// Converts this instance into the inner `CompiledScriptMut`. Converting back to a
+    /// Converts this instance into the inner `CompiledScript`. Converting back to a
     /// `CompiledScript` would require it to be verified again.
-    pub fn into_inner(self) -> CompiledScriptMut {
+    pub fn into_inner(self) -> CompiledScript {
         self
     }
 
@@ -1746,7 +1744,7 @@ pub type CompiledModule = CompiledModuleMut;
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for CompiledScriptMut {
+impl Arbitrary for CompiledScript {
     type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled script.
     type Parameters = usize;
@@ -1777,7 +1775,7 @@ impl Arbitrary for CompiledScriptMut {
                     code,
                 )| {
                     // TODO actual constant generation
-                    CompiledScriptMut {
+                    CompiledScript {
                         version: file_format_common::VERSION_MAX,
                         module_handles,
                         struct_handles,
@@ -2028,8 +2026,8 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
 }
 
 /// Return a simple script that contains only a return in the main()
-pub fn empty_script() -> CompiledScriptMut {
-    CompiledScriptMut {
+pub fn empty_script() -> CompiledScript {
+    CompiledScript {
         version: file_format_common::VERSION_MAX,
         module_handles: vec![],
         struct_handles: vec![],
@@ -2052,6 +2050,6 @@ pub fn empty_script() -> CompiledScriptMut {
     }
 }
 
-pub fn basic_test_script() -> CompiledScriptMut {
+pub fn basic_test_script() -> CompiledScript {
     empty_script()
 }

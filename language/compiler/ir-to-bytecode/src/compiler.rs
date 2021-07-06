@@ -11,10 +11,10 @@ use move_binary_format::{
     errors::Location as VMErrorLocation,
     file_format::{
         Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut,
-        CompiledScript, CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition,
-        FunctionSignature, ModuleHandle, Signature, SignatureToken, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, StructTypeParameter,
-        TableIndex, TypeParameterIndex, TypeSignature, Visibility,
+        CompiledScript, Constant, FieldDefinition, FunctionDefinition, FunctionSignature,
+        ModuleHandle, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex, StructTypeParameter, TableIndex,
+        TypeParameterIndex, TypeSignature, Visibility,
     },
     file_format_common::VERSION_MAX,
 };
@@ -461,7 +461,7 @@ pub fn compile_script<'a>(
         _compiled_deps,
         source_map,
     ) = context.materialize_pools();
-    let compiled_script = CompiledScriptMut {
+    CompiledScript {
         version: VERSION_MAX,
         module_handles,
         struct_handles,
@@ -475,13 +475,12 @@ pub fn compile_script<'a>(
         type_parameters: sig.type_parameters,
         parameters: parameters_sig_idx,
         code,
-    };
-    compiled_script
-        .freeze()
-        .map_err(|e| {
-            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
-        })
-        .map(|frozen_script| (frozen_script, source_map))
+    }
+    .freeze()
+    .map_err(|e| {
+        InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
+    })
+    .map(|frozen_script| (frozen_script, source_map))
 }
 
 /// Compile a module.

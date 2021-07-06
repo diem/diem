@@ -285,7 +285,7 @@ trait CommonTables {
     fn get_signatures(&self) -> &[Signature];
 }
 
-impl CommonTables for CompiledScriptMut {
+impl CommonTables for CompiledScript {
     fn get_module_handles(&self) -> &[ModuleHandle] {
         &self.module_handles
     }
@@ -1275,11 +1275,7 @@ impl ScriptSerializer {
     }
 
     /// Serializes the main function.
-    fn serialize_main(
-        &mut self,
-        binary: &mut BinaryData,
-        script: &CompiledScriptMut,
-    ) -> Result<()> {
+    fn serialize_main(&mut self, binary: &mut BinaryData, script: &CompiledScript) -> Result<()> {
         serialize_ability_sets(binary, &script.type_parameters)?;
         serialize_signature_index(binary, &script.parameters)?;
         serialize_code_unit(binary, &script.code)?;

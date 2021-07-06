@@ -7,13 +7,12 @@ use crate::{data_cache::MoveStorage, move_vm::MoveVM};
 use move_binary_format::{
     errors::{PartialVMResult, VMResult},
     file_format::{
-        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModuleMut,
-        CompiledScriptMut, FieldDefinition, FunctionDefinition, FunctionHandle,
+        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModule,
+        CompiledModuleMut, CompiledScript, FieldDefinition, FunctionDefinition, FunctionHandle,
         FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
         SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation, StructHandle,
         StructHandleIndex, TableIndex, TypeSignature, Visibility,
     },
-    CompiledModule,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -39,7 +38,7 @@ fn make_script(parameters: Signature) -> Vec<u8> {
             SignatureIndex((signatures.len() - 1) as TableIndex)
         }
     };
-    CompiledScriptMut {
+    CompiledScript {
         version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![],
         struct_handles: vec![],
@@ -84,7 +83,7 @@ fn make_script_with_non_linking_structs(parameters: Signature) -> Vec<u8> {
             SignatureIndex((signatures.len() - 1) as TableIndex)
         }
     };
-    CompiledScriptMut {
+    CompiledScript {
         version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),

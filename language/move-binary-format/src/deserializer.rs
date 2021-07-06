@@ -10,12 +10,9 @@ use std::{collections::HashSet, convert::TryInto, io::Read};
 impl CompiledScript {
     /// Deserializes a &[u8] slice into a `CompiledScript` instance.
     pub fn deserialize(binary: &[u8]) -> BinaryLoaderResult<Self> {
-        let deserialized = CompiledScriptMut::deserialize_no_check_bounds(binary)?;
-        deserialized.freeze()
+        CompiledScript::deserialize_no_check_bounds(binary)?.freeze()
     }
-}
 
-impl CompiledScriptMut {
     // exposed as a public function to enable testing the deserializer
     #[doc(hidden)]
     pub fn deserialize_no_check_bounds(binary: &[u8]) -> BinaryLoaderResult<Self> {
@@ -248,7 +245,7 @@ fn load_local_index(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u8> {
 }
 
 /// Module internal function that manages deserialization of transactions.
-fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScriptMut> {
+fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScript> {
     let binary_len = binary.len();
     let mut cursor = VersionedCursor::new(binary)?;
     let table_count = load_table_count(&mut cursor)?;
@@ -263,7 +260,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
         content_len as usize,
     )?;
 
-    let mut script = CompiledScriptMut {
+    let mut script = CompiledScript {
         version: cursor.version(),
         type_parameters: load_ability_sets(
             &mut cursor,
@@ -389,7 +386,7 @@ trait CommonTables {
     fn get_constant_pool(&mut self) -> &mut ConstantPool;
 }
 
-impl CommonTables for CompiledScriptMut {
+impl CommonTables for CompiledScript {
     fn get_module_handles(&mut self) -> &mut Vec<ModuleHandle> {
         &mut self.module_handles
     }
@@ -457,9 +454,9 @@ impl CommonTables for CompiledModuleMut {
     }
 }
 
-/// Builds and returns a `CompiledScriptMut`.
+/// Builds and returns a `CompiledScript`.
 fn build_compiled_script(
-    script: &mut CompiledScriptMut,
+    script: &mut CompiledScript,
     binary: &VersionedBinary,
     tables: &[Table],
 ) -> BinaryLoaderResult<()> {
@@ -571,11 +568,11 @@ fn build_module_tables(
     Ok(())
 }
 
-/// Builds tables related to a `CompiledScriptMut`.
+/// Builds tables related to a `CompiledScript`.
 fn build_script_tables(
     _binary: &VersionedBinary,
     tables: &[Table],
-    _script: &mut CompiledScriptMut,
+    _script: &mut CompiledScript,
 ) -> BinaryLoaderResult<()> {
     for table in tables {
         match table.kind {
