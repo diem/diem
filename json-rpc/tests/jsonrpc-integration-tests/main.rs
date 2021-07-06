@@ -34,6 +34,7 @@ fn main() -> Result<()> {
             &GetAccountByVersion,
             &ChildVaspAccountRole,
             &PeerToPeerWithEvents,
+            &PeerToPeerErrorExplination,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -675,6 +676,57 @@ impl PublicUsageTest for PeerToPeerWithEvents {
             }),
             "{:#}",
             result,
+        );
+
+        Ok(())
+    }
+}
+
+struct PeerToPeerErrorExplination;
+
+impl Test for PeerToPeerErrorExplination {
+    fn name(&self) -> &'static str {
+        "jsonrpc::peer-to-peer-error-explination"
+    }
+}
+
+impl PublicUsageTest for PeerToPeerErrorExplination {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let mut env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+        let (_parent, mut child1, child2) =
+            env.create_parent_and_child_accounts(ctx, 1_000_000_000)?;
+        let txn = child1.sign_with_transaction_builder(factory.peer_to_peer(
+            Currency::XUS,
+            child2.address(),
+            200000000000000,
+        ));
+
+        env.allow_execution_failures(|env| {
+            env.submit_and_wait(&txn);
+        });
+
+        let sender = &child1;
+
+        let resp = env.send(
+            "get_account_transaction",
+            json!([sender.address(), 0, true]),
+        );
+        let result = resp.result.unwrap();
+        let vm_status = result["vm_status"].clone();
+        assert_eq!(
+            vm_status,
+            json!({
+                "abort_code": 1288,
+                "explanation": {
+                    "category": "LIMIT_EXCEEDED",
+                    "category_description": " A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money after account limits window\n is exhausted.",
+                    "reason": "EINSUFFICIENT_BALANCE",
+                    "reason_description": " The account does not hold a large enough balance in the specified currency"
+                },
+                "location": "00000000000000000000000000000001::DiemAccount",
+                "type": "move_abort"
+            })
         );
 
         Ok(())
