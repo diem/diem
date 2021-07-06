@@ -1663,8 +1663,6 @@ pub struct CompiledScript {
     pub code: CodeUnit,
 }
 
-pub type CompiledScriptMut = CompiledScript;
-
 impl CompiledScript {
     /// Returns the index of `main` in case a script is converted to a module.
     pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
