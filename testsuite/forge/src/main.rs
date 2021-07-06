@@ -153,20 +153,22 @@ impl PublicUsageTest for TransferCoins {
 
         let mut payer = ctx.random_account();
         let payee = ctx.random_account();
-        let create_payer =
-            account.sign_with_transaction_builder(ctx.tx_factory().create_child_vasp_account(
+        let create_payer = account.sign_with_transaction_builder(
+            ctx.transaction_factory().create_child_vasp_account(
                 currency,
                 payer.authentication_key(),
                 false,
                 100,
-            ));
-        let create_payee =
-            account.sign_with_transaction_builder(ctx.tx_factory().create_child_vasp_account(
+            ),
+        );
+        let create_payee = account.sign_with_transaction_builder(
+            ctx.transaction_factory().create_child_vasp_account(
                 currency,
                 payee.authentication_key(),
                 false,
                 0,
-            ));
+            ),
+        );
         let batch = vec![
             MethodRequest::submit(&create_payer)?,
             MethodRequest::submit(&create_payee)?,

@@ -45,7 +45,7 @@ impl<'t> PublicUsageContext<'t> {
         self.public_info.chain_id
     }
 
-    pub fn tx_factory(&self) -> TransactionFactory {
+    pub fn transaction_factory(&self) -> TransactionFactory {
         TransactionFactory::new(self.chain_id())
     }
 
@@ -66,8 +66,10 @@ impl<'t> PublicUsageContext<'t> {
         amount: u64,
     ) -> Result<()> {
         let client = self.client();
-        let tx = sender
-            .sign_with_transaction_builder(self.tx_factory().peer_to_peer(currency, payee, amount));
+        let tx = sender.sign_with_transaction_builder(
+            self.transaction_factory()
+                .peer_to_peer(currency, payee, amount),
+        );
         client.submit(&tx)?;
         client.wait_for_signed_transaction(&tx, None, None)?;
 
