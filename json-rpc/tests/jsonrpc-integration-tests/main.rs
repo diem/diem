@@ -43,6 +43,7 @@ fn main() -> Result<()> {
             &PreburnAndBurnEvents,
             &CancleBurnEvent,
             &UpdateExchangeRateEvent,
+            &MintAndReceivedMintEvents,
         ],
         network_tests: &[],
     };
@@ -1106,6 +1107,92 @@ impl AdminTest for UpdateExchangeRateEvent {
 
         env.submit_and_wait(&txn);
 
+        Ok(())
+    }
+}
+
+struct MintAndReceivedMintEvents;
+
+impl Test for MintAndReceivedMintEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::mint-and-received-mint-events"
+    }
+}
+
+impl AdminTest for MintAndReceivedMintEvents {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+        let script = stdlib::encode_tiered_mint_script(
+            xus_tag(),
+            0,
+            ctx.chain_info().designated_dealer_account().address(),
+            1_000_000,
+            1,
+        );
+        let txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.script(script.clone()));
+
+        let result = env.submit_and_wait(&txn);
+        let version = result["version"].as_u64().unwrap();
+        assert_eq!(
+            result["events"],
+            json!([
+                {
+                    "data":{
+                        "amount":{"amount":1000000,"currency":"XUS"},
+                        "destination_address":"000000000000000000000000000000dd",
+                        "type":"receivedmint"
+                    },
+                    "key":"0000000000000000000000000000000000000000000000dd",
+                    "sequence_number":1,
+                    "transaction_version":version
+                },
+                {
+                    "data":{
+                        "amount":{"amount":1000000,"currency":"XUS"},
+                        "type":"mint"
+                    },
+                    "key":"05000000000000000000000000000000000000000a550c18",
+                    "sequence_number":1,
+                    "transaction_version":version
+                },
+                {
+                    "data":{
+                        "amount":{"amount":1000000,"currency":"XUS"},
+                        "metadata":"",
+                        "receiver":"000000000000000000000000000000dd",
+                        "sender":"00000000000000000000000000000000",
+                        "type":"receivedpayment"
+                    },
+                    "key":"0300000000000000000000000000000000000000000000dd",
+                    "sequence_number":1,
+                    "transaction_version":version
+                }
+            ]),
+            "{:#?}",
+            result["events"]
+        );
+        assert_eq!(
+            result["transaction"]["script"],
+            json!({
+                "type_arguments": [
+                    "XUS"
+                ],
+                "arguments": [
+                    "{U64: 0}",
+                    "{ADDRESS: 000000000000000000000000000000DD}",
+                    "{U64: 1000000}",
+                    "{U64: 1}",
+                ],
+                "code": hex::encode(script.code()),
+                "type": "tiered_mint"
+            }),
+            "{}",
+            result["transaction"]
+        );
         Ok(())
     }
 }
