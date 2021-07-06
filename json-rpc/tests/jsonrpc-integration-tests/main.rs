@@ -39,7 +39,11 @@ fn main() -> Result<()> {
             &MempoolValidationError,
             &ExpiredTransaction,
         ],
-        admin_tests: &[&PreburnAndBurnEvents, &CancleBurnEvent],
+        admin_tests: &[
+            &PreburnAndBurnEvents,
+            &CancleBurnEvent,
+            &UpdateExchangeRateEvent,
+        ],
         network_tests: &[],
     };
 
@@ -1036,6 +1040,71 @@ impl AdminTest for CancleBurnEvent {
             "{}",
             result["transaction"]
         );
+
+        Ok(())
+    }
+}
+
+struct UpdateExchangeRateEvent;
+
+impl Test for UpdateExchangeRateEvent {
+    fn name(&self) -> &'static str {
+        "jsonrpc::update-exchange-rate-event"
+    }
+}
+
+impl AdminTest for UpdateExchangeRateEvent {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+        let script = stdlib::encode_update_exchange_rate_script(xus_tag(), 0, 1, 4);
+        let txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.script(script.clone()));
+
+        let result = env.submit_and_wait(&txn);
+        let version = result["version"].as_u64().unwrap();
+        assert_eq!(
+            result["events"],
+            json!([{
+                "data":{
+                    "currency_code":"XUS",
+                    "new_to_xdx_exchange_rate":0.25,
+                    "type":"to_xdx_exchange_rate_update"
+                },
+                "key":"09000000000000000000000000000000000000000a550c18",
+                "sequence_number":0,
+                "transaction_version":version
+            }]),
+            "{}",
+            result["events"]
+        );
+        assert_eq!(
+            result["transaction"]["script"],
+            json!({
+                "type_arguments": [
+                    "XUS"
+                ],
+                "arguments": [
+                    "{U64: 0}",
+                    "{U64: 1}",
+                    "{U64: 4}"
+                ],
+                "code": hex::encode(script.code()),
+                "type": "update_exchange_rate"
+            }),
+            "{}",
+            result["transaction"]
+        );
+
+        // Reset exchange rate
+        let txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.update_exchange_rate(Currency::XUS, 0, 1, 1));
+
+        env.submit_and_wait(&txn);
 
         Ok(())
     }
