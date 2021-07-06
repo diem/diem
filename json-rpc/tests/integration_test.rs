@@ -19,14 +19,8 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
-    proof::{
-        AccumulatorConsistencyProof, TransactionAccumulatorRangeProof,
-        TransactionAccumulatorSummary,
-    },
-    transaction::{
-        AccountTransactionsWithProof, ChangeSet, Transaction, TransactionInfo, TransactionPayload,
-        WriteSetPayload,
-    },
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
+    transaction::{AccountTransactionsWithProof, ChangeSet, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use std::{
@@ -138,92 +132,6 @@ fn create_test_cases() -> Vec<Test> {
                         let event_type = event["data"]["type"].as_str().unwrap();
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
-                }
-            },
-        },
-        Test {
-            name: "get_transactions_with_proofs",
-            run: |env: &mut testing::Env| {
-                let resp = env.send("get_metadata", json!([]));
-
-                let limit = 10;
-                let include_events = false;
-                assert!(resp.diem_ledger_version > limit);
-                // We test 2 cases:
-                //      1. base_version + limit > resp.diem_ledger_version
-                //      2. base_version + limit < resp.diem_ledger_version
-                for base_version in &[resp.diem_ledger_version, 0] {
-                   // We use a batched call to ensure we get an answer using the same latest server ledger_info for both
-                    let responses = env.send_request(json!([
-                        {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
-                        {"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": json!([*base_version, limit, include_events]), "id": 2}
-                    ]));
-
-                    let f:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");
-                    let data = &f.iter().find(|g| g["id"] == 2).unwrap()["result"];
-                    let proofs = data["proofs"].as_object().unwrap();
-
-                    // We want to verify the signatures of the LedgerInfo that will be returned by the
-                    // get_transactions_with_proofs call to be sure it's valid, but
-                    // since we don't have a local state with the set of validators unlike an actual client,
-                    // we need to get the validator set from the batched get_state_proof call.
-                    let ledger_info_view = &f.iter().find(|g| g["id"] == 1).unwrap()["result"];
-                    let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
-                    let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
-                    let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
-                    assert!(!some_li.is_empty());
-                    // We use the last one (but the validator set does not change in the tests and
-                    // in practice the epoch change proofs should be verified).
-                    let validator_set = &some_li.last().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
-
-                    // The actual proofs
-                    let raw_hex_li = proofs["ledger_info_to_transaction_infos_proof"].as_str().unwrap();
-                    let li_to_tip:TransactionAccumulatorRangeProof = bcs::from_bytes(&hex::decode(&raw_hex_li).unwrap()).unwrap();
-                    // The txs for which we got the proofs
-                    let raw_hex_txs = proofs["transaction_infos"].as_str().unwrap();
-                    let txs_infos:Vec<TransactionInfo> = bcs::from_bytes(&hex::decode(&raw_hex_txs).unwrap()).unwrap();
-                    let hashes: Vec<_> = txs_infos
-                    .iter()
-                    .map(CryptoHash::hash)
-                    .collect();
-
-                    // We make sure we have between 1 and 10 txs
-                    if hashes.len() > 10 || hashes.is_empty() {
-                        panic!("Unexpected hash len returned at {} by get_transactions_with_proofs: {}", base_version, hashes.len());
-                    }
-
-                    // We must check the transactions we got correspond to the hashes in the proofs
-                    let raw_blobs = data["serialized_transactions"].as_array().unwrap();
-                    assert!(!raw_blobs.is_empty());
-                    let actual_txs:Vec<Transaction>= raw_blobs.iter().map(|tx| {
-                        bcs::from_bytes(&hex::decode(&tx.as_str().unwrap()).unwrap()).unwrap()
-                    }).collect();
-                    assert!(!actual_txs.is_empty());
-                    assert_eq!(txs_infos.len(), actual_txs.len());
-                    for (index, tx) in actual_txs.iter().enumerate() {
-                        // Notice we need to actually hash the transaction to be sure its hash is correct
-                        assert_eq!(tx.hash(), txs_infos[index].transaction_hash());
-                    }
-
-                    // We compare our results with the non-veryfing API for the test
-                    let resp_tx = env.send("get_transactions", json!([*base_version, txs_infos.len(), false]));
-                    let no_proof_txns = resp_tx.result.unwrap();
-                    assert!(!no_proof_txns.as_array().unwrap().is_empty());
-                    assert_eq!(no_proof_txns.as_array().unwrap().len(), actual_txs.len());
-                    for (index, tx) in no_proof_txns.as_array().unwrap().iter().enumerate() {
-                        assert_eq!(tx["hash"].as_str().unwrap(), actual_txs[index].hash().to_hex());
-                    }
-
-                    // We need to get the details required to verify the proof from the batched get_state_proof call
-                    let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
-                    let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
-                    let expected_hash = li.ledger_info().transaction_accumulator_hash();
-
-                    // and we verify the signature of the provided ledger info that provided the accumulator hash
-                    assert!(li.verify_signatures(&validator_set).is_ok());
-
-                    // and we eventually verify the proofs for the transactions
-                    assert!(li_to_tip.verify(expected_hash, Some(*base_version), &hashes).is_ok());
                 }
             },
         },
