@@ -23,6 +23,7 @@ fn main() -> Result<()> {
             &AccoutNotFound,
             &UnknownAccountRoleType,
             &DesignatedDealerPreburns,
+            &ParentVaspAccountRole,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -372,6 +373,56 @@ impl PublicUsageTest for DesignatedDealerPreburns {
                 },
                 "sent_events_key": EventKey::new_from_address(&dd.address(), 4),
                 "sequence_number": dd.sequence_number(),
+                "version": resp.diem_ledger_version,
+            }),
+        );
+
+        Ok(())
+    }
+}
+
+struct ParentVaspAccountRole;
+
+impl Test for ParentVaspAccountRole {
+    fn name(&self) -> &'static str {
+        "jsonrpc::parent-vasp-account-role"
+    }
+}
+
+impl PublicUsageTest for ParentVaspAccountRole {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let vasp = ctx.random_account();
+        ctx.create_parent_vasp_account(vasp.authentication_key())?;
+
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let address = format!("{:x}", vasp.address());
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+        let human_name = result["role"]["human_name"].as_str().unwrap();
+
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": vasp.authentication_key().to_string(),
+                "balances": [{"amount": 0_u64, "currency": "XUS"}],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": EventKey::new_from_address(&vasp.address(), 2),
+                "role": {
+                    "base_url": "",
+                    "base_url_rotation_events_key": EventKey::new_from_address(&vasp.address(), 1),
+                    "compliance_key": "",
+                    "compliance_key_rotation_events_key": EventKey::new_from_address(&vasp.address(), 0),
+                    "vasp_domains": [],
+                    "expiration_time": 18446744073709551615_u64,
+                    "human_name": human_name,
+                    "num_children": 0,
+                    "type": "parent_vasp",
+                },
+                "sent_events_key": EventKey::new_from_address(&vasp.address(), 3),
+                "sequence_number": 0,
                 "version": resp.diem_ledger_version,
             }),
         );

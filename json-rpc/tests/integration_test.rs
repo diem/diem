@@ -63,41 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "parent vasp role type account",
-            run: |env: &mut testing::Env| {
-                let account = &env.vasps[0];
-                let address = format!("{:x}", &account.address);
-                let resp = env.send("get_account", json!([address]));
-                let result = resp.result.unwrap();
-                assert_eq!(
-                    result,
-                    json!({
-                        "address": address,
-                        "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 997000000000_u64, "currency": "XUS"}],
-                        "delegated_key_rotation_capability": false,
-                        "delegated_withdrawal_capability": false,
-                        "is_frozen": false,
-                        "received_events_key": format!("0200000000000000{}", address),
-                        "role": {
-                            "base_url": "",
-                            "base_url_rotation_events_key": format!("0100000000000000{}", address),
-                            "compliance_key": "",
-                            "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "vasp_domains": [],
-                            "expiration_time": 18446744073709551615_u64,
-                            "human_name": "Novi 0",
-                            "num_children": 1,
-                            "type": "parent_vasp",
-                        },
-                        "sent_events_key": format!("0300000000000000{}", address),
-                        "sequence_number": 1,
-                        "version": resp.diem_ledger_version,
-                    }),
-                );
-            },
-        },
-        Test {
             name: "get account by version",
             run: |env: &mut testing::Env| {
                 let account = &env.vasps[0];
