@@ -1915,7 +1915,6 @@ dependencies = [
  "diem-logger",
  "diem-mempool",
  "diem-metrics",
- "diem-node",
  "diem-proptest-helpers",
  "diem-sdk",
  "diem-temppath",

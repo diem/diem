@@ -75,7 +75,6 @@ scratchpad = { path = "../storage/scratchpad" }
 move-vm-types = { path = "../language/move-vm/types" }
 diem-transaction-builder = { path = "../sdk/transaction-builder" }
 diem-sdk = { path = "../sdk" }
-diem-node = { path = "../diem-node" }
 forge = { path = "../testsuite/forge" }
 
 [features]
