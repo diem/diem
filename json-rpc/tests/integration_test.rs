@@ -63,43 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "expired transaction submitted: An expired transaction with too new sequence number will still be rejected",
-            run: |env: &mut testing::Env| {
-                env.allow_execution_failures(|env: &mut testing::Env| {
-                    let txn1 = {
-                        let account1 = env.get_account(0, 0);
-                        let account2 = env.get_account(1, 0);
-                        let script = stdlib::encode_peer_to_peer_with_metadata_script(
-                            xus_tag(),
-                            account2.address,
-                            100,
-                            vec![],
-                            vec![],
-                        );
-                        let seq = env
-                            .get_account_sequence(account1.address.to_string())
-                            .expect("account should exist onchain for create transaction");
-                        diem_types::transaction::helpers::create_user_txn(
-                            account1,
-                            TransactionPayload::Script(script),
-                            account1.address,
-                            seq + 100,
-                            1_000_000,
-                            0,
-                            diem_types::account_config::XUS_NAME.to_owned(),
-                            -100_000_000,
-                            diem_types::chain_id::ChainId::test(),
-                        ).expect("user signed transaction")
-                    };
-                    let resp = env.submit(&txn1);
-                    assert_eq!(
-                        resp.error.expect("error").message,
-                        "Server error: VM Validation error: TRANSACTION_EXPIRED".to_string(),
-                    );
-                });
-            },
-        },
-        Test {
             name: "Upgrade diem version",
             run: |env: &mut testing::Env| {
                 let script = stdlib::encode_update_diem_version_script(
