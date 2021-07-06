@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{BCS_EXTENSION, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
+use anyhow::{anyhow, bail, Result};
 use disassembler::disassembler::Disassembler;
 use move_binary_format::{
     access::ModuleAccess,
@@ -20,8 +21,7 @@ use move_core_types::{
 use move_lang::MOVE_COMPILED_INTERFACES_DIR;
 use move_vm_runtime::data_cache::MoveStorage;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
-
-use anyhow::{anyhow, bail, Result};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -37,6 +37,13 @@ pub const RESOURCES_DIR: &str = "resources";
 pub const MODULES_DIR: &str = "modules";
 /// subdirectory of `DEFAULT_STORAGE_DIR`/<addr> where events are stored
 pub const EVENTS_DIR: &str = "events";
+
+pub type ModuleIdWithNamedAddress = (ModuleId, Option<String>);
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct InterfaceFilesMetadata {
+    named_address_mapping: BTreeMap<ModuleId, String>,
+}
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
@@ -71,6 +78,56 @@ impl OnDiskStateView {
             fs::create_dir_all(&path)?;
         }
         Ok(path.into_os_string().into_string().unwrap())
+    }
+
+    pub(crate) fn interface_files_metadata_file(&self) -> PathBuf {
+        // File containing interface file metadata, specifically named address mapping
+        const INTERFACE_FILES_METADATA: &str = "metadata";
+        let mut path = self.build_dir.join(MOVE_COMPILED_INTERFACES_DIR);
+        path = path.join(INTERFACE_FILES_METADATA);
+        path.set_extension("yaml");
+        path
+    }
+
+    pub(crate) fn read_interface_files_metadata(&self) -> Result<InterfaceFilesMetadata> {
+        let bytes_opt = Self::get_bytes(&self.interface_files_metadata_file())?;
+        Ok(match bytes_opt {
+            None => InterfaceFilesMetadata {
+                named_address_mapping: BTreeMap::new(),
+            },
+            Some(bytes) => serde_yaml::from_slice::<InterfaceFilesMetadata>(&bytes)?,
+        })
+    }
+
+    fn update_interface_files_metadata(
+        &self,
+        additional_named_address_mapping: BTreeMap<ModuleId, Option<String>>,
+    ) -> Result<()> {
+        let InterfaceFilesMetadata {
+            mut named_address_mapping,
+        } = self.read_interface_files_metadata()?;
+        for (id, address_name_opt) in additional_named_address_mapping {
+            match address_name_opt {
+                None => {
+                    named_address_mapping.remove(&id);
+                }
+                Some(address_name) => {
+                    named_address_mapping.insert(id, address_name);
+                }
+            }
+        }
+        self.write_interface_files_metadata(InterfaceFilesMetadata {
+            named_address_mapping,
+        })
+    }
+
+    fn write_interface_files_metadata(&self, metadata: InterfaceFilesMetadata) -> Result<()> {
+        let yaml_string = serde_yaml::to_string(&metadata).unwrap();
+        let path = self.interface_files_metadata_file();
+        if !path.exists() {
+            fs::create_dir_all(path.parent().unwrap())?;
+        }
+        Ok(fs::write(path, yaml_string.as_bytes())?)
     }
 
     pub fn build_dir(&self) -> &PathBuf {
@@ -322,7 +379,11 @@ impl OnDiskStateView {
 
     // keep the mv_interfaces generated in the build_dir in-sync with the modules on storage. The
     // mv_interfaces will be used for compilation and the modules will be used for linking.
-    fn sync_interface_files(&self) -> Result<()> {
+    fn sync_interface_files(
+        &self,
+        named_address_mapping_changes: BTreeMap<ModuleId, Option<String>>,
+    ) -> Result<()> {
+        self.update_interface_files_metadata(named_address_mapping_changes)?;
         move_lang::generate_interface_files(
             &[self
                 .storage_dir
@@ -337,7 +398,7 @@ impl OnDiskStateView {
                     .into_string()
                     .unwrap(),
             ),
-            &BTreeMap::new(),
+            &self.read_interface_files_metadata()?.named_address_mapping,
             false,
         )?;
         Ok(())
@@ -346,17 +407,19 @@ impl OnDiskStateView {
     /// Save all the modules in the local cache, re-generate mv_interfaces if required.
     pub fn save_modules<'a>(
         &self,
-        modules: impl IntoIterator<Item = &'a (ModuleId, Vec<u8>)>,
+        modules: impl IntoIterator<Item = &'a (ModuleIdWithNamedAddress, Vec<u8>)>,
     ) -> Result<()> {
+        let mut named_address_mapping_changes = BTreeMap::new();
         let mut is_empty = true;
-        for (module_id, module_bytes) in modules.into_iter() {
-            self.save_module(module_id, module_bytes)?;
+        for ((module_id, address_name_opt), module_bytes) in modules {
+            self.save_module(&module_id, module_bytes)?;
+            named_address_mapping_changes.insert(module_id.clone(), address_name_opt.clone());
             is_empty = false;
         }
 
         // sync with build_dir for updates of mv_interfaces if new modules are added
         if !is_empty {
-            self.sync_interface_files()?;
+            self.sync_interface_files(named_address_mapping_changes)?;
         }
 
         Ok(())

@@ -10,6 +10,10 @@ use crate::{
 };
 use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::file_format as F;
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier as MoveCoreIdentifier,
+    language_storage::ModuleId,
+};
 use move_ir_types::location::*;
 use std::collections::BTreeMap;
 
@@ -90,6 +94,20 @@ impl CompiledModuleIdent {
             Some(n) => Address::Named(n),
         };
         sp(loc, ModuleIdent_::new(address, module_name))
+    }
+
+    pub fn into_module_id(self) -> (Option<Name>, ModuleId) {
+        let Self {
+            loc: _,
+            address_name,
+            address_bytes,
+            module_name,
+        } = self;
+        let id = ModuleId::new(
+            AccountAddress::new(address_bytes.into_bytes()),
+            MoveCoreIdentifier::new(module_name.0.value).unwrap(),
+        );
+        (address_name, id)
     }
 }
 

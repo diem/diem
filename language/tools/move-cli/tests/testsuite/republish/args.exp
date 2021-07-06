@@ -37,10 +37,10 @@ module 43.N {
 Command `sandbox publish -v --no-republish`:
 Compiling Move modules...
 error[E02001]: duplicate declaration, item, or annotation
-  ┌─ build/mv_interfaces/00000000000000000000000000000042/M.move:2:8
+  ┌─ build/mv_interfaces/00000000000000000000000000000042/M.move:1:14
   │
-2 │ module M {
-  │        ^ Duplicate definition for module '0x42::M'
+1 │ module 0x42::M {
+  │              ^ Duplicate definition for module '0x42::M'
   │
   ┌─ src/M.move:2:8
   │
@@ -48,10 +48,10 @@ error[E02001]: duplicate declaration, item, or annotation
   │        - Module previously defined here
 
 error[E02001]: duplicate declaration, item, or annotation
-  ┌─ build/mv_interfaces/00000000000000000000000000000043/N.move:2:8
+  ┌─ build/mv_interfaces/00000000000000000000000000000043/N.move:1:14
   │
-2 │ module N {
-  │        ^ Duplicate definition for module '0x43::N'
+1 │ module 0x43::N {
+  │              ^ Duplicate definition for module '0x43::N'
   │
   ┌─ src/N.move:2:8
   │
@@ -61,10 +61,10 @@ error[E02001]: duplicate declaration, item, or annotation
 Command `sandbox publish -v --no-republish src/M.move`:
 Compiling Move modules...
 error[E02001]: duplicate declaration, item, or annotation
-  ┌─ build/mv_interfaces/00000000000000000000000000000042/M.move:2:8
+  ┌─ build/mv_interfaces/00000000000000000000000000000042/M.move:1:14
   │
-2 │ module M {
-  │        ^ Duplicate definition for module '0x42::M'
+1 │ module 0x42::M {
+  │              ^ Duplicate definition for module '0x42::M'
   │
   ┌─ src/M.move:2:8
   │

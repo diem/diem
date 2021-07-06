@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::ModuleIdWithNamedAddress;
 use anyhow::{anyhow, Result};
 use include_dir::Dir;
 use move_binary_format::file_format::CompiledModule;
@@ -167,7 +168,10 @@ impl MovePackage {
         Ok(src_dirs)
     }
 
-    pub(crate) fn compiled_modules(&self, out_path: &Path) -> Result<Vec<CompiledModule>> {
+    pub(crate) fn compiled_modules(
+        &self,
+        out_path: &Path,
+    ) -> Result<Vec<(ModuleIdWithNamedAddress, CompiledModule)>> {
         let mut modules = vec![];
         for dep in self.deps.iter() {
             modules.extend(dep.compiled_modules(out_path)?);
@@ -175,10 +179,10 @@ impl MovePackage {
         for entry in find_filenames(&[path_to_string(&self.get_binary_dir(out_path))?], |path| {
             extension_equals(path, MOVE_COMPILED_EXTENSION)
         })? {
-            modules.push(
-                CompiledModule::deserialize(&fs::read(Path::new(&entry)).unwrap())
-                    .map_err(|e| anyhow!("Failure deserializing module {}: {:?}", entry, e))?,
-            );
+            let module = CompiledModule::deserialize(&fs::read(Path::new(&entry)).unwrap())
+                .map_err(|e| anyhow!("Failure deserializing module {}: {:?}", entry, e))?;
+            // TODO support named addresses, will require migrating to new/planned build system
+            modules.push(((module.self_id(), None), module));
         }
         Ok(modules)
     }

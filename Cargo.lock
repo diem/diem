@@ -4611,6 +4611,8 @@ dependencies = [
  "once_cell",
  "read-write-set",
  "resource-viewer",
+ "serde",
+ "serde_yaml",
  "structopt 0.3.21",
  "walkdir",
 ]

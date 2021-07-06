@@ -1,0 +1,23 @@
+Command `sandbox publish src/modules/M_no_named.move`:
+Command `sandbox publish src/modules/N.move`:
+error[E03001]: unbound address
+  ┌─ src/modules/N.move:2:8
+  │
+2 │ module A::N {
+  │        ^ Unbound address 'A'. Try declaring it with 'address A;'
+
+error[E03001]: unbound address
+  ┌─ src/modules/N.move:4:9
+  │
+4 │         A::M::useless()
+  │         ^ Unbound address 'A'
+
+error[E03002]: unbound module
+  ┌─ src/modules/N.move:4:9
+  │
+4 │         A::M::useless()
+  │         ^^^^ Unbound module 'A::M'
+
+Command `sandbox clean`:
+Command `sandbox publish src/modules/M.move`:
+Command `sandbox publish src/modules/N.move`:

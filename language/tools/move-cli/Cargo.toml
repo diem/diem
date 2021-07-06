@@ -14,7 +14,10 @@ anyhow = "1.0.38"
 difference = "2.0.0"
 include_dir = { version = "0.6.0", features = ["search"] }
 once_cell = "1.7.2"
+serde = { version = "1.0.124", default-features = false }
+serde_yaml = "0.8.17"
 structopt = "0.3.21"
+walkdir = "2.3.1"
 
 bcs = "0.1.2"
 bytecode-verifier = { path = "../../bytecode-verifier" }
@@ -32,7 +35,6 @@ move-vm-runtime = { path = "../../move-vm/runtime" }
 read-write-set = { path = "../read-write-set" }
 resource-viewer = { path = "../resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }
-walkdir = "2.3.1"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
