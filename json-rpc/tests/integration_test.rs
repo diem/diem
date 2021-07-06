@@ -73,52 +73,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "rotate compliance key rotation events",
-            run: |env: &mut testing::Env| {
-                let private_key = generate_key::generate_key();
-                let public_key: diem_crypto::ed25519::Ed25519PublicKey = (&private_key).into();
-                let txn = env.create_txn(
-                    &env.vasps[0],
-                    stdlib::encode_rotate_dual_attestation_info_script(
-                        b"http://hello.com".to_vec(),
-                        public_key.to_bytes().to_vec(),
-                    ),
-                );
-                let result = env.submit_and_wait(txn);
-                let version = result["version"].as_u64().unwrap();
-                let rotated_seconds = result["events"][0]["data"]["time_rotated_seconds"]
-                    .as_u64()
-                    .unwrap();
-                assert_eq!(
-                    result["events"],
-                    json!([
-                        {
-                            "data":{
-                                "new_base_url":"http://hello.com",
-                                "time_rotated_seconds": rotated_seconds,
-                                "type":"baseurlrotation"
-                            },
-                            "key": format!("0100000000000000{:x}", &env.vasps[0].address),
-                            "sequence_number":0,
-                            "transaction_version":version
-                        },
-                        {
-                            "data":{
-                                "new_compliance_public_key": hex::encode(public_key.to_bytes()),
-                                "time_rotated_seconds": rotated_seconds,
-                                "type":"compliancekeyrotation"
-                            },
-                            "key": format!("0000000000000000{:x}", &env.vasps[0].address),
-                            "sequence_number":0,
-                            "transaction_version":version
-                        }
-                    ]),
-                    "{}",
-                    result["events"]
-                );
-            },
-        },
-        Test {
             name: "upgrade event & newepoch",
             run: |env: &mut testing::Env| {
                 let write_set = ChangeSet::new(create_common_write_set(), vec![]);
