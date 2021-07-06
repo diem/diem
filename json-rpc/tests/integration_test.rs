@@ -74,47 +74,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "update exchange rate event",
-            run: |env: &mut testing::Env| {
-                let script = stdlib::encode_update_exchange_rate_script(xus_tag(), 0, 1, 4);
-                let txn = env.create_txn(&env.tc, script.clone());
-                let result = env.submit_and_wait(txn);
-                let version = result["version"].as_u64().unwrap();
-                assert_eq!(
-                    result["events"],
-                    json!([{
-                        "data":{
-                            "currency_code":"XUS",
-                            "new_to_xdx_exchange_rate":0.25,
-                            "type":"to_xdx_exchange_rate_update"
-                        },
-                        "key":"09000000000000000000000000000000000000000a550c18",
-                        "sequence_number":0,
-                        "transaction_version":version
-                    }]),
-                    "{}",
-                    result["events"]
-                );
-                assert_eq!(
-                    result["transaction"]["script"],
-                    json!({
-                        "type_arguments": [
-                            "XUS"
-                        ],
-                        "arguments": [
-                            "{U64: 0}",
-                            "{U64: 1}",
-                            "{U64: 4}"
-                        ],
-                        "code": hex::encode(script.code()),
-                        "type": "update_exchange_rate"
-                    }),
-                    "{}",
-                    result["transaction"]
-                );
-            },
-        },
-        Test {
             name: "mint & received mint events",
             run: |env: &mut testing::Env| {
                 let script = stdlib::encode_tiered_mint_script(
