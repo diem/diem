@@ -3,20 +3,16 @@
 
 use serde_json::json;
 
-use diem_crypto::hash::HashValue;
-use diem_json_rpc_types::views::{
-    AccountTransactionsWithProofView, AccumulatorConsistencyProofView,
-};
+use diem_json_rpc_types::views::AccountTransactionsWithProofView;
 use diem_transaction_builder::stdlib;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
-    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::{AccountTransactionsWithProof, ChangeSet, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 mod node;
 mod testing;
@@ -122,41 +118,6 @@ fn create_test_cases() -> Vec<Test> {
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
                 }
-            },
-        },
-        Test {
-            name: "get_accumulator_consistency_proof",
-            run: |env: &mut testing::Env| {
-                // batch request
-                let resp = env.send_request(json!([
-                    {"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1},
-                    // leave both params empty to get the full accumulator summary
-                    {"jsonrpc": "2.0", "method": "get_accumulator_consistency_proof", "params": [], "id": 2},
-                ]));
-
-                // extract both responses
-                let resps: Vec<serde_json::Value> =
-                    serde_json::from_value(resp).expect("should be valid serde_json::Value");
-                let metadata = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
-                let proof_view = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"];
-
-                // get the root hash and version from the metadata response
-                let metadata_root_hash =
-                    HashValue::from_str(metadata["accumulator_root_hash"].as_str().unwrap())
-                        .unwrap();
-                let version = metadata["version"].as_u64().unwrap();
-
-                // parse the consistency proof and build the accumulator
-                let proof_view =
-                    serde_json::from_value::<AccumulatorConsistencyProofView>(proof_view.clone())
-                        .unwrap();
-                let proof = AccumulatorConsistencyProof::try_from(&proof_view).unwrap();
-                let accumulator =
-                    TransactionAccumulatorSummary::try_from_genesis_proof(proof, version).unwrap();
-
-                // root hash from metadata and the computed root hash from the
-                // accumulator summary should match
-                assert_eq!(metadata_root_hash, accumulator.root_hash());
             },
         },
         // no test after this one, as your scripts may not in allow list.
