@@ -63,17 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "get metadata with older version parameter should not return version information",
-            run: |env: &mut testing::Env| {
-                let resp = env.send("get_metadata", json!([1]));
-                let metadata = resp.result.unwrap();
-                // no data provided for the following fields when requesting older version
-                assert_eq!(metadata["script_hash_allow_list"], json!(null));
-                assert_eq!(metadata["module_publishing_allowed"], json!(null));
-                assert_eq!(metadata["diem_version"], json!(null));
-            },
-        },
-        Test {
             name: "account not found",
             run: |env: &mut testing::Env| {
                 let resp = env.send("get_account", json!(["d738a0b9851305dfe1d17707f0841dbc"]));
