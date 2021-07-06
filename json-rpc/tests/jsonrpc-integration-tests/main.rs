@@ -13,6 +13,7 @@ use diem_types::{
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::DIEM_MAX_KNOWN_VERSION,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::{ChangeSet, Transaction, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -28,7 +29,6 @@ use std::{
     str::FromStr,
 };
 
-#[allow(dead_code)]
 mod helper;
 use helper::JsonRpcTestHelper;
 
@@ -69,6 +69,7 @@ fn main() -> Result<()> {
             &MultiAgentRotateAuthenticationKeyAdminScript,
             &MultiAgentRotateAuthenticationKeyAdminScriptFunction,
             &UpgradeEventAndNewEpoch,
+            &UpgradeDiemVersion,
         ],
         network_tests: &[],
     };
@@ -2059,4 +2060,27 @@ fn create_common_write_set() -> WriteSet {
     )])
     .freeze()
     .unwrap()
+}
+
+struct UpgradeDiemVersion;
+
+impl Test for UpgradeDiemVersion {
+    fn name(&self) -> &'static str {
+        "jsonrpc::upgrade-diem-version"
+    }
+}
+
+impl AdminTest for UpgradeDiemVersion {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+        let txn = ctx
+            .chain_info()
+            .root_account()
+            .sign_with_transaction_builder(
+                factory.update_diem_version(0, DIEM_MAX_KNOWN_VERSION.major + 1),
+            );
+        env.submit_and_wait(&txn);
+        Ok(())
+    }
 }
