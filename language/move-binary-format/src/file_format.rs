@@ -1724,8 +1724,6 @@ pub struct CompiledModule {
     pub function_defs: Vec<FunctionDefinition>,
 }
 
-pub type CompiledModuleMut = CompiledModule;
-
 // Need a custom implementation of Arbitrary because as of proptest-derive 0.1.1, the derivation
 // doesn't work for structs with more than 10 fields.
 #[cfg(any(test, feature = "fuzzing"))]
