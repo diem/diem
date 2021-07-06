@@ -20,7 +20,7 @@ use crate::{
     stackless_bytecode::{Bytecode, Constant, Operation},
 };
 use move_binary_format::file_format::CodeOffset;
-use move_core_types::{account_address::AccountAddress, language_storage::TypeTag};
+use move_core_types::language_storage::TypeTag;
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, ModuleId, StructId},
@@ -81,17 +81,22 @@ impl ReadWriteSetState {
     // TODO: figure out how to reuse this in apply_footprint
     pub fn sub_actuals(
         accesses: AccessPathTrie<Access>,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
         fun_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) -> AccessPathTrie<Access> {
         // (1) bind all footprint values and types in callee accesses to their caller values
         let mut new_accesses =
-            accesses.substitute_footprint_skip_data(&actuals, type_actuals, sub_map);
+            accesses.substitute_footprint_skip_data(actuals, type_actuals, fun_env, sub_map);
         // (2) bind footprint paths in callee accesses with their caller values
-        for (i, actual_v) in actuals.iter().enumerate() {
-            let formal_i = Root::from_index(i, fun_env);
+        for (callee_i, caller_i) in actuals.iter().enumerate() {
+            let formal_i = Root::from_index(callee_i, fun_env);
+            let actual_i = AccessPath::from_index(*caller_i, fun_env);
+            // sub_map should always be generated to contain all actuals
+            let actual_v = sub_map
+                .get_access_path(actual_i)
+                .expect("actual not found in caller state");
             assert!(
                 formal_i.is_formal(),
                 "Arity mismatch between caller and callee for {}; given {} actuals for {} formals",
@@ -134,7 +139,7 @@ impl ReadWriteSetState {
     pub fn apply_summary(
         &mut self, // caller state
         callee_summary_: &Self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
         returns: &[TempIndex],
         caller_fun_env: &FunctionEnv,
@@ -144,20 +149,27 @@ impl ReadWriteSetState {
         let callee_summary = callee_summary_.clone();
         // (1) bind all footprint values and types in callee locals to their caller values
         let mut new_callee_locals = callee_summary.locals.substitute_footprint(
-            actuals,
+            &actuals,
             type_actuals,
+            caller_fun_env,
             &self.locals,
             AbsAddr::substitute_footprint,
         );
         // (2) bind all footprint values and types in callee accesses to their caller values
         let mut new_callee_accesses = callee_summary.accesses.substitute_footprint_skip_data(
-            actuals,
+            &actuals,
             type_actuals,
+            caller_fun_env,
             &self.locals,
         );
         // (3) bind footprint paths in callee accesses with their caller values
-        for (i, actual_v) in actuals.iter().enumerate() {
-            let formal_i = Root::from_index(i, callee_fun_env);
+        for (i_callee, i_caller) in actuals.iter().enumerate() {
+            let formal_i = Root::from_index(i_callee, callee_fun_env);
+            let actual_v = self
+                .locals
+                .get_local(*i_caller, caller_fun_env)
+                .cloned()
+                .unwrap_or_default();
             assert!(
                 formal_i.is_formal(),
                 "Arity mismatch between caller and callee"
@@ -365,14 +377,19 @@ impl ReadWriteSetState {
     /// Substitute concrete values `actuals` and `type_actuals` into `self`
     pub fn substitute_footprint_concrete(
         self,
-        actuals: &[Option<AccountAddress>],
+        actuals: &[TempIndex],
         type_actuals: &[TypeTag],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
         env: &GlobalEnv,
     ) -> SpecializedReadWriteSetState {
-        let accesses =
-            self.accesses
-                .substitute_footprint_concrete(actuals, type_actuals, sub_map, env);
+        let accesses = self.accesses.substitute_footprint_concrete(
+            actuals,
+            type_actuals,
+            func_env,
+            sub_map,
+            env,
+        );
         SpecializedReadWriteSetState(accesses)
     }
 
@@ -532,16 +549,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     {
                         state.apply_summary(
                             callee_summary,
-                            &args
-                                .iter()
-                                .map(|i| {
-                                    state
-                                        .locals
-                                        .get_local(*i, func_env)
-                                        .cloned()
-                                        .unwrap_or_default()
-                                })
-                                .collect::<Vec<AbsAddr>>(),
+                            &args,
                             types,
                             rets,
                             func_env,

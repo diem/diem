@@ -103,13 +103,18 @@ impl ConcretizedFormals {
         type_actuals: &[Type],
         fun_env: &FunctionEnv,
     ) -> ConcretizedFormals {
-        let empty_sub_map = AccessPathTrie::default();
+        let mut sub_map = AccessPathTrie::default();
+        let mut actual_indices = vec![];
+        for (i, actual) in actuals.iter().enumerate() {
+            sub_map.bind_local(i, actual.clone(), fun_env);
+            actual_indices.push(i);
+        }
         ConcretizedFormals(ReadWriteSetState::sub_actuals(
             accesses,
-            actuals,
+            &actual_indices,
             type_actuals,
             fun_env,
-            &empty_sub_map,
+            &sub_map,
         ))
     }
 
@@ -147,8 +152,9 @@ impl ConcretizedFormals {
             } else {
                 AbsAddr::default()
             };
-            new_actuals.push(actual)
+            new_actuals.push(actual);
         }
+
         let env = fun_env.module_env.env;
         let new_type_actuals = type_actuals
             .iter()

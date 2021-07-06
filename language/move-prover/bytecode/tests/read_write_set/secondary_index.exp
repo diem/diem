@@ -1,6 +1,18 @@
 ============ initial translation from Move ================
 
 [variant baseline]
+fun SecondaryIndex::call_two_secondary_indexes($t0|s: &SecondaryIndex::S): address {
+     var $t1: &SecondaryIndex::S
+     var $t2: bool
+     var $t3: address
+  0: $t1 := move($t0)
+  1: $t2 := true
+  2: $t3 := SecondaryIndex::two_secondary_indexes($t1, $t2)
+  3: return $t3
+}
+
+
+[variant baseline]
 fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A): address {
      var $t1: &SecondaryIndex::A
      var $t2: &address
@@ -69,7 +81,117 @@ fun SecondaryIndex::read_secondary_index_from_global_interproc($t0|a: address): 
   3: return $t3
 }
 
+
+[variant baseline]
+fun SecondaryIndex::two_secondary_indexes($t0|s: &SecondaryIndex::S, $t1|b: bool): address {
+     var $t2|tmp#$2: address
+     var $t3: bool
+     var $t4: &SecondaryIndex::S
+     var $t5: &address
+     var $t6: address
+     var $t7: &SecondaryIndex::A
+     var $t8: &address
+     var $t9: address
+     var $t10: &SecondaryIndex::S
+     var $t11: &address
+     var $t12: address
+     var $t13: &SecondaryIndex::A
+     var $t14: &address
+     var $t15: address
+     var $t16: address
+  0: $t3 := copy($t1)
+  1: if ($t3) goto 4 else goto 2
+  2: label L1
+  3: goto 13
+  4: label L0
+  5: $t4 := move($t0)
+  6: $t5 := borrow_field<SecondaryIndex::S>.f($t4)
+  7: $t6 := read_ref($t5)
+  8: $t7 := borrow_global<SecondaryIndex::A>($t6)
+  9: $t8 := borrow_field<SecondaryIndex::A>.a_addr($t7)
+ 10: $t9 := read_ref($t8)
+ 11: $t2 := $t9
+ 12: goto 22
+ 13: label L2
+ 14: $t10 := move($t0)
+ 15: $t11 := borrow_field<SecondaryIndex::S>.g($t10)
+ 16: $t12 := read_ref($t11)
+ 17: $t13 := borrow_global<SecondaryIndex::A>($t12)
+ 18: $t14 := borrow_field<SecondaryIndex::A>.a_addr($t13)
+ 19: $t15 := read_ref($t14)
+ 20: $t2 := $t15
+ 21: goto 22
+ 22: label L3
+ 23: $t16 := move($t2)
+ 24: return $t16
+}
+
+
+[variant baseline]
+fun SecondaryIndex::write_both_fields($t0|c: &mut SecondaryIndex::C, $t1|b: SecondaryIndex::B, $t2|addr: address, $t3|flag: bool) {
+     var $t4: bool
+     var $t5: SecondaryIndex::B
+     var $t6: &mut SecondaryIndex::C
+     var $t7: &mut SecondaryIndex::B
+     var $t8: bool
+     var $t9: address
+     var $t10: &mut SecondaryIndex::C
+     var $t11: &mut SecondaryIndex::B
+     var $t12: &mut address
+     var $t13: &mut SecondaryIndex::C
+  0: $t4 := copy($t3)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 10
+  4: label L0
+  5: $t5 := move($t1)
+  6: $t6 := copy($t0)
+  7: $t7 := borrow_field<SecondaryIndex::C>.b($t6)
+  8: write_ref($t7, $t5)
+  9: goto 10
+ 10: label L2
+ 11: $t8 := copy($t3)
+ 12: if ($t8) goto 15 else goto 13
+ 13: label L4
+ 14: goto 22
+ 15: label L3
+ 16: $t9 := copy($t2)
+ 17: $t10 := move($t0)
+ 18: $t11 := borrow_field<SecondaryIndex::C>.b($t10)
+ 19: $t12 := borrow_field<SecondaryIndex::B>.b_addr($t11)
+ 20: write_ref($t12, $t9)
+ 21: goto 26
+ 22: label L5
+ 23: $t13 := move($t0)
+ 24: destroy($t13)
+ 25: goto 26
+ 26: label L6
+ 27: return ()
+}
+
 ============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun SecondaryIndex::call_two_secondary_indexes($t0|s: &SecondaryIndex::S): address {
+     var $t1: &SecondaryIndex::S
+     var $t2: bool
+     var $t3: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/f: Read
+     # Formal(0)/f/0x1::SecondaryIndex::A/a_addr: Read
+     # Formal(0)/g: Read
+     # Formal(0)/g/0x1::SecondaryIndex::A/a_addr: Read
+     #
+     # Locals:
+     # Ret(0): {Formal(0)/f/0x1::SecondaryIndex::A/a_addr, Formal(0)/g/0x1::SecondaryIndex::A/a_addr, }
+     #
+  0: $t1 := move($t0)
+  1: $t2 := true
+  2: $t3 := SecondaryIndex::two_secondary_indexes($t1, $t2)
+  3: return $t3
+}
+
 
 [variant baseline]
 fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A): address {
@@ -108,6 +230,7 @@ fun SecondaryIndex::read_secondary_index_from_formal_interproc($t0|a_addr: addre
      # Formal(0): Read
      #
      # Locals:
+     # Ret(0): Formal(0)/0x1::SecondaryIndex::B/b_addr
      #
   0: $t2 := copy($t0)
   1: $t3 := pack SecondaryIndex::A($t2)
@@ -168,4 +291,115 @@ fun SecondaryIndex::read_secondary_index_from_global_interproc($t0|a: address): 
   1: $t2 := borrow_global<SecondaryIndex::A>($t1)
   2: $t3 := SecondaryIndex::read_secondary_index_from_formal($t2)
   3: return $t3
+}
+
+
+[variant baseline]
+fun SecondaryIndex::two_secondary_indexes($t0|s: &SecondaryIndex::S, $t1|b: bool): address {
+     var $t2|tmp#$2: address
+     var $t3: bool
+     var $t4: &SecondaryIndex::S
+     var $t5: &address
+     var $t6: address
+     var $t7: &SecondaryIndex::A
+     var $t8: &address
+     var $t9: address
+     var $t10: &SecondaryIndex::S
+     var $t11: &address
+     var $t12: address
+     var $t13: &SecondaryIndex::A
+     var $t14: &address
+     var $t15: address
+     var $t16: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/f: Read
+     # Formal(0)/f/0x1::SecondaryIndex::A/a_addr: Read
+     # Formal(0)/g: Read
+     # Formal(0)/g/0x1::SecondaryIndex::A/a_addr: Read
+     # Formal(1): Read
+     #
+     # Locals:
+     # Ret(0): {Formal(0)/f/0x1::SecondaryIndex::A/a_addr, Formal(0)/g/0x1::SecondaryIndex::A/a_addr, }
+     #
+  0: $t3 := copy($t1)
+  1: if ($t3) goto 4 else goto 2
+  2: label L1
+  3: goto 13
+  4: label L0
+  5: $t4 := move($t0)
+  6: $t5 := borrow_field<SecondaryIndex::S>.f($t4)
+  7: $t6 := read_ref($t5)
+  8: $t7 := borrow_global<SecondaryIndex::A>($t6)
+  9: $t8 := borrow_field<SecondaryIndex::A>.a_addr($t7)
+ 10: $t9 := read_ref($t8)
+ 11: $t2 := $t9
+ 12: goto 22
+ 13: label L2
+ 14: $t10 := move($t0)
+ 15: $t11 := borrow_field<SecondaryIndex::S>.g($t10)
+ 16: $t12 := read_ref($t11)
+ 17: $t13 := borrow_global<SecondaryIndex::A>($t12)
+ 18: $t14 := borrow_field<SecondaryIndex::A>.a_addr($t13)
+ 19: $t15 := read_ref($t14)
+ 20: $t2 := $t15
+ 21: goto 22
+ 22: label L3
+ 23: $t16 := move($t2)
+ 24: return $t16
+}
+
+
+[variant baseline]
+fun SecondaryIndex::write_both_fields($t0|c: &mut SecondaryIndex::C, $t1|b: SecondaryIndex::B, $t2|addr: address, $t3|flag: bool) {
+     var $t4: bool
+     var $t5: SecondaryIndex::B
+     var $t6: &mut SecondaryIndex::C
+     var $t7: &mut SecondaryIndex::B
+     var $t8: bool
+     var $t9: address
+     var $t10: &mut SecondaryIndex::C
+     var $t11: &mut SecondaryIndex::B
+     var $t12: &mut address
+     var $t13: &mut SecondaryIndex::C
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/b: Write
+     # Formal(0)/b/b_addr: Write
+     # Formal(1): Read
+     # Formal(2): Read
+     # Formal(3): Read
+     #
+     # Locals:
+     # Formal(0)/b: {Formal(0)/b, Formal(1), }
+     # Formal(0)/b/b_addr: {Formal(0)/b/b_addr, Formal(2), }
+     #
+  0: $t4 := copy($t3)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 10
+  4: label L0
+  5: $t5 := move($t1)
+  6: $t6 := copy($t0)
+  7: $t7 := borrow_field<SecondaryIndex::C>.b($t6)
+  8: write_ref($t7, $t5)
+  9: goto 10
+ 10: label L2
+ 11: $t8 := copy($t3)
+ 12: if ($t8) goto 15 else goto 13
+ 13: label L4
+ 14: goto 22
+ 15: label L3
+ 16: $t9 := copy($t2)
+ 17: $t10 := move($t0)
+ 18: $t11 := borrow_field<SecondaryIndex::C>.b($t10)
+ 19: $t12 := borrow_field<SecondaryIndex::B>.b_addr($t11)
+ 20: write_ref($t12, $t9)
+ 21: goto 26
+ 22: label L5
+ 23: $t13 := move($t0)
+ 24: destroy($t13)
+ 25: goto 26
+ 26: label L6
+ 27: return ()
 }

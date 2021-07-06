@@ -140,6 +140,36 @@ fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
  13: return $t11
 }
 
+
+[variant baseline]
+fun PackUnpack::use_results($t0|_: u64, $t1|a: address): address {
+     var $t2|a1: address
+     var $t3|s: PackUnpack::S
+     var $t4: address
+     var $t5: address
+     var $t6: address
+     var $t7: address
+     var $t8: bool
+     var $t9: PackUnpack::T
+     var $t10: u64
+     var $t11: PackUnpack::S
+     var $t12: PackUnpack::S
+     var $t13: address
+  0: $t4 := copy($t1)
+  1: $t5 := PackUnpack::pack_then_read($t4)
+  2: $t2 := $t5
+  3: $t6 := copy($t2)
+  4: $t7 := 0x7
+  5: $t8 := true
+  6: $t9 := pack PackUnpack::T($t7, $t8)
+  7: $t10 := 10
+  8: $t11 := pack PackUnpack::S($t6, $t9, $t10)
+  9: $t3 := $t11
+ 10: $t12 := move($t3)
+ 11: $t13 := PackUnpack::read_unpacked_addr($t12)
+ 12: return $t13
+}
+
 ============ after pipeline `read_write_set` ================
 
 [variant baseline]
@@ -315,4 +345,40 @@ fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
  11: $t10 := borrow_field<PackUnpack::T>.a2($t9)
  12: $t11 := read_ref($t10)
  13: return $t11
+}
+
+
+[variant baseline]
+fun PackUnpack::use_results($t0|_: u64, $t1|a: address): address {
+     var $t2|a1: address
+     var $t3|s: PackUnpack::S
+     var $t4: address
+     var $t5: address
+     var $t6: address
+     var $t7: address
+     var $t8: bool
+     var $t9: PackUnpack::T
+     var $t10: u64
+     var $t11: PackUnpack::S
+     var $t12: PackUnpack::S
+     var $t13: address
+     # Accesses:
+     # Formal(1): Read
+     #
+     # Locals:
+     # Ret(0): {0x7, Formal(1), }
+     #
+  0: $t4 := copy($t1)
+  1: $t5 := PackUnpack::pack_then_read($t4)
+  2: $t2 := $t5
+  3: $t6 := copy($t2)
+  4: $t7 := 0x7
+  5: $t8 := true
+  6: $t9 := pack PackUnpack::T($t7, $t8)
+  7: $t10 := 10
+  8: $t11 := pack PackUnpack::S($t6, $t9, $t10)
+  9: $t3 := $t11
+ 10: $t12 := move($t3)
+ 11: $t13 := PackUnpack::read_unpacked_addr($t12)
+ 12: return $t13
 }

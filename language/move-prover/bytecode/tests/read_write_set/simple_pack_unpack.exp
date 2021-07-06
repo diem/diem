@@ -1,0 +1,70 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun SimplePackUnpack::pack_unpack($t0|a: address): address {
+     var $t1|s: SimplePackUnpack::S
+     var $t2: address
+     var $t3: SimplePackUnpack::S
+     var $t4: SimplePackUnpack::S
+     var $t5: address
+  0: $t2 := copy($t0)
+  1: $t3 := pack SimplePackUnpack::S($t2)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
+  4: $t5 := SimplePackUnpack::unpack($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun SimplePackUnpack::unpack($t0|s: SimplePackUnpack::S): address {
+     var $t1: &SimplePackUnpack::S
+     var $t2: &address
+     var $t3: address
+  0: $t1 := borrow_local($t0)
+  1: $t2 := borrow_field<SimplePackUnpack::S>.a1($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun SimplePackUnpack::pack_unpack($t0|a: address): address {
+     var $t1|s: SimplePackUnpack::S
+     var $t2: address
+     var $t3: SimplePackUnpack::S
+     var $t4: SimplePackUnpack::S
+     var $t5: address
+     # Accesses:
+     # Formal(0): Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)
+     #
+  0: $t2 := copy($t0)
+  1: $t3 := pack SimplePackUnpack::S($t2)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
+  4: $t5 := SimplePackUnpack::unpack($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun SimplePackUnpack::unpack($t0|s: SimplePackUnpack::S): address {
+     var $t1: &SimplePackUnpack::S
+     var $t2: &address
+     var $t3: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/a1: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/a1
+     #
+  0: $t1 := borrow_local($t0)
+  1: $t2 := borrow_field<SimplePackUnpack::S>.a1($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}

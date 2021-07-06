@@ -31,12 +31,9 @@ module 0x1::PackUnpack {
         *&t.a2
     } // ret |-> Formal(0)
 
-    // TODO: crashes the analysis. fix by addressing TODO
-    // in AccessPath::substitute_footprint
-    /*fun use_results(_: u64, a: address): address {
+    fun use_results(_: u64, a: address): address {
         let a1 = pack_then_read(a);
         let s = S { a1, t: T { a2: @0x7, b: true }, i: 10 };
         read_unpacked_addr(s)
-    }  // ret |-> { Formal(0), @0x7 }
-    */
+    }  // ret |-> { Formal(1), @0x7 }
 }

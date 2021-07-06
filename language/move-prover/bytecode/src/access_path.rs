@@ -211,15 +211,16 @@ impl AbsAddr {
     /// `ap` in `sub_map`
     pub fn substitute_footprint(
         &mut self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) {
         let mut acc = SetDomain::default();
         for a in self.iter() {
             match a {
                 Addr::Footprint(ap) => {
-                    acc.join(&ap.substitute_footprint(actuals, type_actuals, sub_map));
+                    acc.join(&ap.substitute_footprint(actuals, type_actuals, func_env, sub_map));
                 }
                 c => {
                     acc.insert(c.clone());
@@ -353,12 +354,13 @@ impl GlobalKey {
     /// `ap` in `sub_map`.
     pub fn substitute_footprint(
         &mut self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) {
         self.addr
-            .substitute_footprint(actuals, type_actuals, sub_map);
+            .substitute_footprint(actuals, type_actuals, func_env, sub_map);
         self.ty.substitute_footprint(type_actuals);
     }
 
@@ -432,12 +434,13 @@ impl Root {
     /// Bind free type variables to `type_actuals`.
     pub fn substitute_footprint(
         &mut self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) {
         match self {
-            Self::Global(g) => g.substitute_footprint(actuals, type_actuals, sub_map),
+            Self::Global(g) => g.substitute_footprint(actuals, type_actuals, func_env, sub_map),
             Self::Formal(_) | Self::Local(_) | Self::Return(_) => (),
         }
     }
@@ -636,36 +639,53 @@ impl AccessPath {
     /// Bind free type variables to `type_actuals`.
     pub fn substitute_footprint(
         &self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) -> AbsAddr {
-        let mut acc = AbsAddr::default();
         let mut new_offsets = self.offsets.clone();
         new_offsets.iter_mut().for_each(|o| {
             o.substitute_footprint(type_actuals);
         });
         match &self.root {
             Root::Formal(i) => {
-                let actual = &actuals[*i];
-                if !actual.is_empty() {
-                    let new_ap = AccessPath::new(self.root.clone(), new_offsets);
-                    acc.join(&new_ap.prepend_addrs(actual));
-                } else {
-                    // TODO: change actuals to &[TempIndex], look up actuals[i]/new_offsets in sub_map")
+                let temp_index = actuals[*i];
+                let caller_root = Root::from_index(temp_index, func_env);
+                let mut results = AbsAddr::default();
+
+                // In this loop, we lookup the access path in the submap,
+                // starting with the root of the caller and adding the
+                // offsets of the current access path.
+                // When a result is found, we accumulate to results
+                // We need to try with the offsets to handle cases such as
+                // Formal(1): { data: None, children: { Field(0): { data: Footprint(AccessPath { root: Formal(0), offsets: [] }) } }
+                // where simply reading Formal(1) would yield None
+                // but Formal(1)/0 gives the mapping to Formal(0)
+                for i in 0..=new_offsets.len() {
+                    let caller_offsets = Vec::from(&new_offsets[0..i]);
+                    let ap = AccessPath::new(caller_root.clone(), caller_offsets.clone());
+                    if let Some(addrs) = sub_map.get_access_path(ap) {
+                        // We need to adjust the offset from the current access path
+                        // to avoid duplicating it (i.e. Formal(0)/0/0 instead of Formal(0)/0)
+                        let callee_offsets = Vec::from(&new_offsets[i..new_offsets.len()]);
+                        let new_addrs =
+                            AccessPath::new(self.root.clone(), callee_offsets).prepend_addrs(addrs);
+                        results.join(&new_addrs);
+                    }
                 }
+                results
             }
             Root::Global(g) => {
                 let mut new_g = g.clone();
-                new_g.substitute_footprint(actuals, type_actuals, sub_map);
-                acc.insert(Addr::footprint(AccessPath::new(
+                new_g.substitute_footprint(actuals, type_actuals, func_env, sub_map);
+                AbsAddr::singleton(Addr::footprint(AccessPath::new(
                     Root::Global(new_g),
                     new_offsets,
-                )));
+                )))
             }
-            Root::Local(_) | Root::Return(_) => (),
+            Root::Local(_) | Root::Return(_) => AbsAddr::default(),
         }
-        acc
     }
 
     /// Return true if `self` can be converted to a compact set of concrete access paths.

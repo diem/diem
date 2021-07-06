@@ -11,7 +11,7 @@ use crate::{
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
 };
 use im::ordmap::Entry;
-use move_core_types::{account_address::AccountAddress, language_storage::TypeTag};
+use move_core_types::language_storage::TypeTag;
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv},
@@ -131,16 +131,17 @@ impl<T: FootprintDomain> TrieNode<T> {
     /// (2) Apply `sub_data` to `self.data` and (recursively) to the `data` fields of `self.children`
     pub fn substitute_footprint<F>(
         mut self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
         mut sub_data: F,
     ) -> Self
     where
-        F: FnMut(&mut T, &[AbsAddr], &[Type], &dyn AccessPathMap<AbsAddr>) + Copy,
+        F: FnMut(&mut T, &[TempIndex], &[Type], &FunctionEnv, &dyn AccessPathMap<AbsAddr>) + Copy,
     {
         match &mut self.data {
-            Some(d) => sub_data(d, actuals, type_actuals, sub_map),
+            Some(d) => sub_data(d, actuals, type_actuals, func_env, sub_map),
             None => (),
         }
         let mut acc = Self::new_opt(self.data);
@@ -148,7 +149,7 @@ impl<T: FootprintDomain> TrieNode<T> {
             k.substitute_footprint(type_actuals);
             acc.children.insert_join(
                 k,
-                v.substitute_footprint(actuals, type_actuals, sub_map, sub_data),
+                v.substitute_footprint(actuals, type_actuals, func_env, sub_map, sub_data),
             );
         }
         acc
@@ -422,18 +423,19 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     /// (2) Apply `sub_data` to `self.data` and (recursively) to the `data` fields of `self.children`
     pub fn substitute_footprint<F>(
         self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
         sub_data: F,
     ) -> Self
     where
-        F: FnMut(&mut T, &[AbsAddr], &[Type], &dyn AccessPathMap<AbsAddr>) + Copy,
+        F: FnMut(&mut T, &[TempIndex], &[Type], &FunctionEnv, &dyn AccessPathMap<AbsAddr>) + Copy,
     {
         let mut acc = Self::default();
         for (mut k, v) in self.0.into_iter() {
-            k.substitute_footprint(actuals, type_actuals, sub_map);
-            let new_v = v.substitute_footprint(actuals, type_actuals, sub_map, sub_data);
+            k.substitute_footprint(actuals, type_actuals, func_env, sub_map);
+            let new_v = v.substitute_footprint(actuals, type_actuals, func_env, sub_map, sub_data);
             acc.insert_join(k, new_v);
         }
         acc
@@ -442,36 +444,37 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     /// Same as `substitute_footprint`, but does not change the `data` field of any node
     pub fn substitute_footprint_skip_data(
         self,
-        actuals: &[AbsAddr],
+        actuals: &[TempIndex],
         type_actuals: &[Type],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
     ) -> Self {
         // TODO: is there a less hacky way to do this?
-        fn no_op<T>(_: &mut T, _: &[AbsAddr], _: &[Type], _: &dyn AccessPathMap<AbsAddr>) {}
-        self.substitute_footprint(actuals, type_actuals, sub_map, no_op)
+        fn no_op<T>(
+            _: &mut T,
+            _: &[TempIndex],
+            _: &[Type],
+            _: &FunctionEnv,
+            _: &dyn AccessPathMap<AbsAddr>,
+        ) {
+        }
+        self.substitute_footprint(actuals, type_actuals, func_env, sub_map, no_op)
     }
 
     /// Substitute concrete values `actuals` and `type_actuals` into `self`
     pub fn substitute_footprint_concrete(
         self,
-        actuals: &[Option<AccountAddress>],
+        actuals: &[TempIndex],
         type_actuals: &[TypeTag],
+        func_env: &FunctionEnv,
         sub_map: &dyn AccessPathMap<AbsAddr>,
         env: &GlobalEnv,
     ) -> Self {
-        let values = actuals
-            .iter()
-            .map(|addr_opt| {
-                addr_opt
-                    .map(|addr| AbsAddr::from(&addr))
-                    .unwrap_or_default()
-            })
-            .collect::<Vec<AbsAddr>>();
         let types = type_actuals
             .iter()
             .map(|t| Type::from_type_tag(t, env))
             .collect::<Vec<Type>>();
-        self.substitute_footprint_skip_data(&values, &types, sub_map)
+        self.substitute_footprint_skip_data(actuals, &types, func_env, sub_map)
     }
 
     /// Apply `f` to each node in `self`
