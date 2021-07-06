@@ -4,10 +4,7 @@
 use serde_json::json;
 
 use diem_json_rpc_types::views::AccountTransactionsWithProofView;
-use diem_transaction_builder::stdlib;
-use diem_types::{
-    on_chain_config::DIEM_MAX_KNOWN_VERSION, transaction::AccountTransactionsWithProof,
-};
+use diem_types::transaction::AccountTransactionsWithProof;
 use std::convert::TryFrom;
 
 mod node;
@@ -37,15 +34,6 @@ pub struct Test {
 
 fn create_test_cases() -> Vec<Test> {
     vec![
-        Test {
-            name: "Upgrade diem version",
-            run: |env: &mut testing::Env| {
-                let script =
-                    stdlib::encode_update_diem_version_script(0, DIEM_MAX_KNOWN_VERSION.major + 1);
-                let txn = env.create_txn(&env.root, script);
-                env.submit_and_wait(txn);
-            },
-        },
         Test {
             name: "get_account_transactions_with_proofs",
             run: |env: &mut testing::Env| {
