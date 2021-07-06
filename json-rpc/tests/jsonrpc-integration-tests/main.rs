@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_crypto::{hash::CryptoHash, HashValue};
-use diem_json_rpc::views::{AccumulatorConsistencyProofView, EventView};
+use diem_json_rpc::views::{
+    AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView,
+};
 use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
@@ -15,7 +17,9 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::{ChangeSet, Transaction, TransactionPayload, WriteSetPayload},
+    transaction::{
+        AccountTransactionsWithProof, ChangeSet, Transaction, TransactionPayload, WriteSetPayload,
+    },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use forge::{
@@ -53,6 +57,7 @@ fn main() -> Result<()> {
             &CreateAccountEvent,
             &GetTransactionsWithoutEvents,
             &GetAccountTransactionsWithoutEvents,
+            &GetAccountTransactionsWithProofs,
             &GetTransactionsWithProofs,
             &GetTreasuryComplianceAccount,
             &GetEventsWithProofs,
@@ -1375,6 +1380,30 @@ impl PublicUsageTest for GetAccountTransactionsWithoutEvents {
         for txn in txns.as_array().unwrap() {
             assert_eq!(txn["events"], json!([]));
         }
+        Ok(())
+    }
+}
+
+struct GetAccountTransactionsWithProofs;
+
+impl Test for GetAccountTransactionsWithProofs {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-account-transactions-with-proofs"
+    }
+}
+
+impl PublicUsageTest for GetAccountTransactionsWithProofs {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let response = env.send(
+            "get_account_transactions_with_proofs",
+            json!([treasury_compliance_account_address(), 0, 1000, false]),
+        );
+        // Just check that the responses deserialize correctly, we'll let
+        // the verifying client tests handle the proof checking.
+        let value = response.result.unwrap();
+        let view = serde_json::from_value::<AccountTransactionsWithProofView>(value).unwrap();
+        let _txns = AccountTransactionsWithProof::try_from(&view).unwrap();
         Ok(())
     }
 }
