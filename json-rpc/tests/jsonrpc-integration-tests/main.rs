@@ -11,8 +11,8 @@ use diem_types::{
     transaction::{Transaction, TransactionPayload},
 };
 use forge::{
-    forge_main, ForgeConfig, LocalFactory, Options, PublicUsageContext, PublicUsageTest, Result,
-    Test,
+    forge_main, AdminContext, AdminTest, ForgeConfig, LocalFactory, Options, PublicUsageContext,
+    PublicUsageTest, Result, Test,
 };
 use serde_json::json;
 use std::ops::Deref;
@@ -39,7 +39,7 @@ fn main() -> Result<()> {
             &MempoolValidationError,
             &ExpiredTransaction,
         ],
-        admin_tests: &[],
+        admin_tests: &[&PreburnAndBurnEvents],
         network_tests: &[],
     };
 
@@ -836,6 +836,124 @@ impl PublicUsageTest for ExpiredTransaction {
                 "Server error: VM Validation error: TRANSACTION_EXPIRED".to_string(),
             );
         });
+        Ok(())
+    }
+}
+
+struct PreburnAndBurnEvents;
+
+impl Test for PreburnAndBurnEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::preburn-and-burn-events"
+    }
+}
+
+impl AdminTest for PreburnAndBurnEvents {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+        let mut dd = ctx.random_account();
+        ctx.chain_info()
+            .create_designated_dealer_account(Currency::XUS, dd.authentication_key())?;
+        ctx.chain_info().fund(Currency::XUS, dd.address(), 1000)?;
+
+        let script = stdlib::encode_preburn_script(Currency::XUS.type_tag(), 100);
+        let txn = dd.sign_with_transaction_builder(factory.script(script.clone()));
+        let result = env.submit_and_wait(&txn);
+        let version = result["version"].as_u64().unwrap();
+
+        assert_eq!(
+            result["events"],
+            json!([
+                {
+                    "data": {
+                        "amount": {"amount": 100, "currency": "XUS"},
+                        "metadata": "",
+                        "receiver": dd.address(),
+                        "sender": dd.address(),
+                        "type": "sentpayment"
+                    },
+                    "key": EventKey::new_from_address(&dd.address(), 4),
+                    "sequence_number": result["events"][0]["sequence_number"].as_u64().unwrap(),
+                    "transaction_version": version
+                },
+                {
+                    "data": {
+                        "amount": {"amount": 100, "currency": "XUS"},
+                        "preburn_address": dd.address(),
+                        "type": "preburn"
+                    },
+                    "key": "07000000000000000000000000000000000000000a550c18",
+                    "sequence_number": result["events"][1]["sequence_number"].as_u64().unwrap(),
+                    "transaction_version": version
+                }
+            ]),
+            "{:#?}",
+            result["events"]
+        );
+        assert_eq!(
+            result["transaction"]["script"],
+            json!({
+                "type_arguments": [
+                    "XUS"
+                ],
+                "arguments": [
+                    "{U64: 100}",
+                ],
+                "code": hex::encode(script.code()),
+                "type": "preburn"
+            }),
+            "{}",
+            result["transaction"]
+        );
+
+        let script = stdlib::encode_burn_with_amount_script_function(
+            Currency::XUS.type_tag(),
+            0,
+            dd.address(),
+            100,
+        );
+        let burn_txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.payload(script));
+        let result = env.submit_and_wait(&burn_txn);
+        let version = result["version"].as_u64().unwrap();
+        assert_eq!(
+            result["events"],
+            json!([{
+                "data":{
+                    "amount":{"amount":100,"currency":"XUS"},
+                    "preburn_address": dd.address(),
+                    "type":"burn"
+                },
+                "key":"06000000000000000000000000000000000000000a550c18",
+                "sequence_number":0,
+                "transaction_version":version
+            }]),
+            "{:#?}",
+            result["events"]
+        );
+        assert_eq!(
+            result["transaction"]["script"],
+            json!({
+                "type_arguments": [
+                    "XUS"
+                ],
+                "arguments_bcs": [
+                    "0000000000000000",
+                    dd.address(),
+                    "6400000000000000",
+                ],
+                "type": "script_function",
+                "module_address":"00000000000000000000000000000001",
+                "module_name":"TreasuryComplianceScripts",
+                "function_name":"burn_with_amount",
+            }),
+            "{:#?}",
+            result["transaction"]
+        );
+
         Ok(())
     }
 }
