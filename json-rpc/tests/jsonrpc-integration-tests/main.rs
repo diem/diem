@@ -35,6 +35,7 @@ fn main() -> Result<()> {
             &ChildVaspAccountRole,
             &PeerToPeerWithEvents,
             &PeerToPeerErrorExplination,
+            &ReSubmittingTransactionWontFail,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -728,6 +729,34 @@ impl PublicUsageTest for PeerToPeerErrorExplination {
                 "type": "move_abort"
             })
         );
+
+        Ok(())
+    }
+}
+
+struct ReSubmittingTransactionWontFail;
+
+impl Test for ReSubmittingTransactionWontFail {
+    fn name(&self) -> &'static str {
+        "jsonrpc::re-submitting-transaction-wont-fail"
+    }
+}
+
+impl PublicUsageTest for ReSubmittingTransactionWontFail {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+        let (_parent, mut child1, child2) =
+            env.create_parent_and_child_accounts(ctx, 1_000_000_000)?;
+        let txn = child1.sign_with_transaction_builder(factory.peer_to_peer(
+            Currency::XUS,
+            child2.address(),
+            200,
+        ));
+
+        env.submit(&txn);
+        env.submit(&txn);
+        env.wait_for_txn(&txn);
 
         Ok(())
     }
