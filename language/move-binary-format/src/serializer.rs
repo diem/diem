@@ -15,7 +15,27 @@ impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
-        self.as_inner().serialize(binary)
+        let mut binary_data = BinaryData::from(binary.clone());
+        let mut ser = ScriptSerializer::new(VERSION_MAX);
+        let mut temp = BinaryData::new();
+
+        ser.common.serialize_common_tables(&mut temp, self)?;
+        if temp.len() > TABLE_CONTENT_SIZE_MAX as usize {
+            bail!(
+                "table content size ({}) cannot exceed ({})",
+                temp.len(),
+                TABLE_CONTENT_SIZE_MAX
+            );
+        }
+        ser.common.serialize_header(&mut binary_data)?;
+        ser.common.serialize_table_indices(&mut binary_data)?;
+
+        binary_data.extend(temp.as_inner())?;
+
+        ser.serialize_main(&mut binary_data, self)?;
+
+        *binary = binary_data.into_inner();
+        Ok(())
     }
 }
 
@@ -149,36 +169,6 @@ fn serialize_table_count(binary: &mut BinaryData, len: u8) -> Result<()> {
 
 fn serialize_local_index(binary: &mut BinaryData, idx: u8) -> Result<()> {
     write_as_uleb128(binary, idx, LOCAL_INDEX_MAX)
-}
-
-impl CompiledScriptMut {
-    /// Serializes this into a binary format.
-    ///
-    /// This is intended mainly for test code. Production code will typically use
-    /// [`CompiledScript::serialize`].
-    pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
-        let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ScriptSerializer::new(VERSION_MAX);
-        let mut temp = BinaryData::new();
-
-        ser.common.serialize_common_tables(&mut temp, self)?;
-        if temp.len() > TABLE_CONTENT_SIZE_MAX as usize {
-            bail!(
-                "table content size ({}) cannot exceed ({})",
-                temp.len(),
-                TABLE_CONTENT_SIZE_MAX
-            );
-        }
-        ser.common.serialize_header(&mut binary_data)?;
-        ser.common.serialize_table_indices(&mut binary_data)?;
-
-        binary_data.extend(temp.as_inner())?;
-
-        ser.serialize_main(&mut binary_data, self)?;
-
-        *binary = binary_data.into_inner();
-        Ok(())
-    }
 }
 
 impl CompiledModule {

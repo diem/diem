@@ -1628,16 +1628,6 @@ impl Bytecode {
     }
 }
 
-// Note that this doesn't derive either `Arbitrary` or `Default` while `CompiledScriptMut` does.
-// That's because a CompiledScript is guaranteed to be valid while a CompiledScriptMut isn't.
-/// Contains the main function to execute and its dependencies.
-///
-/// A CompiledScript does not have definition tables because it can only have a `main(args)`.
-/// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
-/// tables (external code references) and it has a `main` definition.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CompiledScript(CompiledScriptMut);
-
 /// A mutable version of `CompiledScript`. Converting to a `CompiledScript` requires this to pass
 /// the bounds checker.
 #[derive(Clone, Default, Eq, PartialEq, Debug)]
@@ -1670,28 +1660,33 @@ pub struct CompiledScriptMut {
     pub code: CodeUnit,
 }
 
-impl CompiledScript {
+/// Contains the main function to execute and its dependencies.
+///
+/// A CompiledScript does not have definition tables because it can only have a `main(args)`.
+/// A CompiledScript defines the constant pools (string, address, signatures, etc.), the handle
+/// tables (external code references) and it has a `main` definition.
+pub type CompiledScript = CompiledScriptMut;
+
+impl CompiledScriptMut {
     /// Returns the index of `main` in case a script is converted to a module.
     pub const MAIN_INDEX: FunctionDefinitionIndex = FunctionDefinitionIndex(0);
 
     /// Returns a reference to the inner `CompiledScriptMut`.
     pub fn as_inner(&self) -> &CompiledScriptMut {
-        &self.0
+        self
     }
 
     /// Converts this instance into the inner `CompiledScriptMut`. Converting back to a
     /// `CompiledScript` would require it to be verified again.
     pub fn into_inner(self) -> CompiledScriptMut {
-        self.0
+        self
     }
-}
 
-impl CompiledScriptMut {
     /// Converts this instance into `CompiledScript` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
     #[allow(deprecated)]
     pub fn freeze(self) -> PartialVMResult<CompiledScript> {
-        let script = CompiledScript(self);
+        let script = self;
         BoundsChecker::verify_script(&script)?;
         Ok(script)
     }
