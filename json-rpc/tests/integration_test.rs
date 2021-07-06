@@ -32,7 +32,6 @@ use diem_types::{
 };
 use std::{
     convert::{TryFrom, TryInto},
-    ops::Deref,
     str::FromStr,
 };
 
@@ -63,50 +62,6 @@ pub struct Test {
 
 fn create_test_cases() -> Vec<Test> {
     vec![
-        Test {
-            name: "block metadata",
-            run: |env: &mut testing::Env| {
-                // batch request
-                let resp = env.send_request(json!([
-                    {"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1},
-                    {"jsonrpc": "2.0", "method": "get_state_proof", "params": [0], "id": 2}
-                ]));
-
-                // extract both responses
-                let resps: Vec<serde_json::Value> = serde_json::from_value(resp).expect("should be valid serde_json::Value");
-                let metadata = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
-                let state_proof = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"];
-
-                // extract header and ensure they match in both responses
-                let diem_chain_id = &resps[0]["diem_chain_id"];
-                let diem_ledger_timestampusec = &resps[0]["diem_ledger_timestampusec"];
-                let diem_ledger_version = &resps[0]["diem_ledger_version"];
-
-                assert_eq!(diem_chain_id, &resps[1]["diem_chain_id"]);
-                assert_eq!(diem_ledger_timestampusec, &resps[1]["diem_ledger_timestampusec"]);
-                assert_eq!(diem_ledger_version, &resps[1]["diem_ledger_version"]);
-
-                // parse metadata
-                assert_eq!(&metadata["chain_id"], diem_chain_id);
-                assert_eq!(&metadata["timestamp"], diem_ledger_timestampusec);
-                assert_eq!(&metadata["version"], diem_ledger_version);
-                assert_eq!(metadata["chain_id"], 4);
-                // All genesis's start with closed publishing so this should be populated with a
-                // list of allowed scripts and publishing off
-                assert_ne!(metadata["script_hash_allow_list"], json!([]));
-                assert_eq!(metadata["module_publishing_allowed"], false);
-                assert_eq!(metadata["diem_version"], 3);
-                assert_eq!(metadata["dual_attestation_limit"], 1000000000);
-                assert_ne!(diem_ledger_timestampusec, 0);
-                assert_ne!(diem_ledger_version, 0);
-
-                // prove the accumulator_root_hash
-                let info_hex = state_proof["ledger_info_with_signatures"].as_str().unwrap();
-                let info:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&info_hex).unwrap()).unwrap();
-                let expected_hash = info.deref().ledger_info().transaction_accumulator_hash().to_hex();
-                assert_eq!(expected_hash, metadata["accumulator_root_hash"].as_str().unwrap());
-            },
-        },
         Test {
             name: "get metadata with older version parameter should not return version information",
             run: |env: &mut testing::Env| {
