@@ -15,7 +15,6 @@ use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     contract_event::EventWithProof,
-    diem_id_identifier::DiemIdVaspDomainIdentifier,
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
@@ -133,96 +132,6 @@ fn create_test_cases() -> Vec<Test> {
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
                 }
-            },
-        },
-        Test {
-            name: "add and remove vasp domain to parent vasp account",
-            run: |env: &mut testing::Env| {
-                // add domain
-                let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
-                let txn = env.create_txn_by_payload(
-                    &env.tc,
-                    stdlib::encode_add_vasp_domain_script_function(
-                        env.vasps[0].address,
-                        domain,
-                    ),
-                );
-                let result = env.submit_and_wait(txn);
-                let version1 = result["version"].as_u64().unwrap();
-
-                // get account
-                let account = &env.vasps[0];
-                let address = format!("{:x}", &account.address);
-                let resp = env.send("get_account", json!([address]));
-                let result = resp.result.unwrap();
-                assert_eq!(
-                    result["role"]["vasp_domains"],
-                    json!(
-                        ["diem"]
-                    ),
-                );
-
-                // remove domain
-                let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
-                let txn = env.create_txn_by_payload(
-                    &env.tc,
-                    stdlib::encode_remove_vasp_domain_script_function(
-                        env.vasps[0].address,
-                        domain,
-                    ),
-                );
-                let result = env.submit_and_wait(txn);
-                let version2 = result["version"].as_u64().unwrap();
-
-                // get account
-                let account = &env.vasps[0];
-                let address = format!("{:x}", &account.address);
-                let resp = env.send("get_account", json!([address]));
-                let result = resp.result.unwrap();
-                assert_eq!(
-                    result["role"]["vasp_domains"],
-                    json!(
-                        []
-                    ),
-                );
-
-                // get event
-                let tc_address = format!("{:x}", &env.tc.address);
-                let resp = env.send("get_account", json!([tc_address]));
-                let result = resp.result.unwrap();
-                let vasp_domain_events_key = result["role"]["vasp_domain_events_key"].clone();
-                let response = env.send(
-                    "get_events",
-                    json!([vasp_domain_events_key, 0, 3]),
-                );
-                let events = response.result.unwrap();
-                assert_eq!(
-                    events,
-                    json!([
-                        {
-                            "data":{
-                                "domain": "diem",
-                                "removed": false,
-                                "address": address,
-                                "type":"vaspdomain"
-                            },
-                            "key": format!("0000000000000000{}", tc_address),
-                            "sequence_number": 0,
-                            "transaction_version": version1,
-                        },
-                        {
-                            "data":{
-                                "domain": "diem",
-                                "removed": true,
-                                "address": address,
-                                "type":"vaspdomain"
-                            },
-                            "key": format!("0000000000000000{}", tc_address),
-                            "sequence_number": 1,
-                            "transaction_version": version2,
-                        },
-                    ]),
-                );
             },
         },
         Test {

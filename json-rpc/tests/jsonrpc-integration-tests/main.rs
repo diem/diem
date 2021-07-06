@@ -6,6 +6,7 @@ use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
     account_config::{treasury_compliance_account_address, xus_tag},
+    diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionPayload},
@@ -49,6 +50,7 @@ fn main() -> Result<()> {
             &CancleBurnEvent,
             &UpdateExchangeRateEvent,
             &MintAndReceivedMintEvents,
+            &AddAndRemoveVaspDomain,
         ],
         network_tests: &[],
     };
@@ -1480,6 +1482,96 @@ impl PublicUsageTest for GetTransactionsWithProofs {
                 .verify(expected_hash, Some(*base_version), &hashes)
                 .is_ok());
         }
+        Ok(())
+    }
+}
+
+struct AddAndRemoveVaspDomain;
+
+impl Test for AddAndRemoveVaspDomain {
+    fn name(&self) -> &'static str {
+        "jsonrpc::add-and-remove-vasp-domain"
+    }
+}
+
+impl AdminTest for AddAndRemoveVaspDomain {
+    fn run<'t>(&self, ctx: &mut AdminContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.chain_info().json_rpc().to_owned());
+        let factory = ctx.chain_info().transaction_factory();
+
+        let vasp = ctx.random_account();
+        ctx.chain_info()
+            .create_parent_vasp_account(Currency::XUS, vasp.authentication_key())?;
+
+        // add domain
+        let domain = DiemIdVaspDomainIdentifier::new(&"diem")
+            .unwrap()
+            .as_str()
+            .as_bytes()
+            .to_vec();
+
+        let txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.add_vasp_domain(vasp.address(), domain.clone()));
+
+        let result = env.submit_and_wait(&txn);
+        let version1 = result["version"].as_u64().unwrap();
+
+        // get account
+        let address = format!("{:x}", vasp.address());
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+        assert_eq!(result["role"]["vasp_domains"], json!(["diem"]),);
+
+        // remove domain
+        let txn = ctx
+            .chain_info()
+            .treasury_compliance_account()
+            .sign_with_transaction_builder(factory.remove_vasp_domain(vasp.address(), domain));
+
+        let result = env.submit_and_wait(&txn);
+        let version2 = result["version"].as_u64().unwrap();
+
+        // get account
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+        assert_eq!(result["role"]["vasp_domains"], json!([]),);
+
+        // get event
+        let tc_address = format!("{:x}", treasury_compliance_account_address());
+        let resp = env.send("get_account", json!([tc_address]));
+        let result = resp.result.unwrap();
+        let vasp_domain_events_key = result["role"]["vasp_domain_events_key"].clone();
+        let response = env.send("get_events", json!([vasp_domain_events_key, 0, 3]));
+        let events = response.result.unwrap();
+        assert_eq!(
+            events,
+            json!([
+                {
+                    "data":{
+                        "domain": "diem",
+                        "removed": false,
+                        "address": address,
+                        "type":"vaspdomain"
+                    },
+                    "key": format!("0000000000000000{}", tc_address),
+                    "sequence_number": 0,
+                    "transaction_version": version1,
+                },
+                {
+                    "data":{
+                        "domain": "diem",
+                        "removed": true,
+                        "address": address,
+                        "type":"vaspdomain"
+                    },
+                    "key": format!("0000000000000000{}", tc_address),
+                    "sequence_number": 1,
+                    "transaction_version": version2,
+                },
+            ]),
+        );
         Ok(())
     }
 }
