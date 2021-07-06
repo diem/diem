@@ -5,7 +5,7 @@ use diem_crypto::hash::CryptoHash;
 use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
-    account_config::xus_tag,
+    account_config::{treasury_compliance_account_address, xus_tag},
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionPayload},
@@ -41,6 +41,7 @@ fn main() -> Result<()> {
             &RotateComplianceKeyEvent,
             &CreateAccountEvent,
             &GetTransactionsWithoutEvents,
+            &GetAccountTransactionsWithoutEvents,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1322,6 +1323,34 @@ impl PublicUsageTest for GetTransactionsWithoutEvents {
 
         for (index, txn) in txns.as_array().unwrap().iter().enumerate() {
             assert_eq!(txn["version"], index);
+            assert_eq!(txn["events"], json!([]));
+        }
+        Ok(())
+    }
+}
+
+struct GetAccountTransactionsWithoutEvents;
+
+impl Test for GetAccountTransactionsWithoutEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-account-transactions-without-events"
+    }
+}
+
+impl PublicUsageTest for GetAccountTransactionsWithoutEvents {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let account = ctx.random_account();
+        ctx.create_parent_vasp_account(account.authentication_key())?;
+        ctx.fund(account.address(), 10)?;
+        let response = env.send(
+            "get_account_transactions",
+            json!([treasury_compliance_account_address(), 0, 1000, false]),
+        );
+        let txns = response.result.unwrap();
+        assert!(!txns.as_array().unwrap().is_empty());
+
+        for txn in txns.as_array().unwrap() {
             assert_eq!(txn["events"], json!([]));
         }
         Ok(())

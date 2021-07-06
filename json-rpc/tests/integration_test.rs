@@ -114,22 +114,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "get_account_transactions without event",
-            run: |env: &mut testing::Env| {
-                let sender = &env.vasps[0].children[0];
-                let response = env.send(
-                    "get_account_transactions",
-                    json!([sender.address.to_string(), 0, 1000, false]),
-                );
-                let txns = response.result.unwrap();
-                assert!(!txns.as_array().unwrap().is_empty());
-
-                for txn in txns.as_array().unwrap() {
-                    assert_eq!(txn["events"], json!([]));
-                }
-            },
-        },
-        Test {
             name: "get_account_transactions_with_proofs",
             run: |env: &mut testing::Env| {
                 let sender = &env.vasps[0].children[0];
