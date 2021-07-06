@@ -42,7 +42,7 @@ impl<'t> ChainInfo<'t> {
         self.root_account
     }
 
-    pub fn tc_account(&mut self) -> &mut LocalAccount {
+    pub fn treasury_compliance_account(&mut self) -> &mut LocalAccount {
         self.treasury_compliance_account
     }
 
