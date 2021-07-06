@@ -127,7 +127,8 @@ impl PublicUsageTest for FundAccount {
         let account = ctx.random_account();
         let amount = 1000;
         let currency = Currency::XUS;
-        ctx.fund(currency, account.authentication_key(), amount)?;
+        ctx.create_parent_vasp_account(account.authentication_key())?;
+        ctx.fund(account.address(), amount)?;
         check_account_balance(&client, currency, account.address(), amount)?;
 
         Ok(())
@@ -149,7 +150,8 @@ impl PublicUsageTest for TransferCoins {
         let amount = 1000;
         let currency = Currency::XUS;
         let client = ctx.client();
-        ctx.fund(currency, account.authentication_key(), amount)?;
+        ctx.create_parent_vasp_account(account.authentication_key())?;
+        ctx.fund(account.address(), amount)?;
 
         let mut payer = ctx.random_account();
         let payee = ctx.random_account();
