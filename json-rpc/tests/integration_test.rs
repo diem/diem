@@ -63,33 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "unknown role type account",
-            run: |env: &mut testing::Env| {
-                let address = format!("{:x}", diem_types::account_config::diem_root_address());
-                let resp = env.send("get_account", json!([address]));
-                let mut result = resp.result.unwrap();
-                // as we generate account auth key, ignore it in assertion
-                assert_ne!(result["authentication_key"].as_str().unwrap(), "");
-                result["authentication_key"] = json!(null);
-                assert_eq!(
-                    result,
-                    json!({
-                        "address": address,
-                        "authentication_key": null,
-                        "balances": [],
-                        "delegated_key_rotation_capability": false,
-                        "delegated_withdrawal_capability": false,
-                        "is_frozen": false,
-                        "received_events_key": "02000000000000000000000000000000000000000a550c18",
-                        "role": { "type": "unknown" },
-                        "sent_events_key": "03000000000000000000000000000000000000000a550c18",
-                        "sequence_number": 1,
-                        "version": resp.diem_ledger_version,
-                    }),
-                );
-            },
-        },
-        Test {
             name: "designated_dealer role type account no preburns",
             run: |env: &mut testing::Env| {
                 let address = format!(
