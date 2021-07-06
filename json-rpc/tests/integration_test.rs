@@ -135,33 +135,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "get tc account",
-            run: |env: &mut testing::Env| {
-                let address = format!("{:x}", &env.tc.address);
-                let resp = env.send("get_account", json!([address]));
-                let result = resp.result.unwrap();
-                assert_eq!(
-                    result,
-                    json!({
-                        "address": address,
-                        "authentication_key": &env.tc.auth_key().to_string(),
-                        "balances": [],
-                        "delegated_key_rotation_capability": false,
-                        "delegated_withdrawal_capability": false,
-                        "is_frozen": false,
-                        "received_events_key": format!("0100000000000000{}", address),
-                        "role": {
-                            "vasp_domain_events_key": format!("0000000000000000{}", address),
-                            "type": "treasury_compliance",
-                        },
-                        "sent_events_key": format!("0200000000000000{}", address),
-                        "sequence_number": 8,
-                        "version": resp.diem_ledger_version,
-                    }),
-                );
-            }
-        },
-        Test {
             name: "get_events_with_proofs",
             run: |env: &mut testing::Env| {
                 let responses = env.send_request(json!([
