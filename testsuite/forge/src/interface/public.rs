@@ -33,8 +33,16 @@ impl<'t> PublicUsageContext<'t> {
         BlockingClient::new(&self.public_info.json_rpc_url)
     }
 
+    pub fn url(&self) -> &str {
+        &self.public_info.json_rpc_url
+    }
+
     pub fn core(&self) -> &CoreContext {
         &self.core
+    }
+
+    pub fn rng(&mut self) -> &mut ::rand::rngs::StdRng {
+        self.core.rng()
     }
 
     pub fn random_account(&mut self) -> LocalAccount {
