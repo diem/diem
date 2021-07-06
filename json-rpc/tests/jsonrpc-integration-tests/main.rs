@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_crypto::hash::CryptoHash;
+use diem_json_rpc::views::EventView;
 use diem_sdk::{transaction_builder::Currency, types::AccountKey};
 use diem_transaction_builder::stdlib;
 use diem_types::{
     account_config::{treasury_compliance_account_address, xus_tag},
+    contract_event::EventWithProof,
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -16,7 +18,7 @@ use forge::{
     PublicUsageTest, Result, Test,
 };
 use serde_json::json;
-use std::ops::Deref;
+use std::{convert::TryInto, ops::Deref};
 
 #[allow(dead_code)]
 mod helper;
@@ -45,6 +47,7 @@ fn main() -> Result<()> {
             &GetAccountTransactionsWithoutEvents,
             &GetTransactionsWithProofs,
             &GetTreasuryComplianceAccount,
+            &GetEventsWithProofs,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1613,6 +1616,89 @@ impl PublicUsageTest for GetTreasuryComplianceAccount {
                 "version": resp.diem_ledger_version,
             }),
         );
+        Ok(())
+    }
+}
+
+struct GetEventsWithProofs;
+
+impl Test for GetEventsWithProofs {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-events-with-proofs"
+    }
+}
+
+impl PublicUsageTest for GetEventsWithProofs {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+
+        // Fund and account to ensure there are some txns on the chain
+        let account = ctx.random_account();
+        ctx.create_parent_vasp_account(account.authentication_key())?;
+        ctx.fund(account.address(), 10)?;
+
+        let responses = env.send_request(json!([
+                    {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
+                    {"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": json!(["00000000000000000000000000000000000000000a550c18", 0, 3]), "id": 2}
+                ]));
+
+        let resps: Vec<serde_json::Value> =
+            serde_json::from_value(responses).expect("should be valid serde_json::Value");
+
+        // we need te get the current ledger_info in order to verify the events
+        let ledger_info_view = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
+        let li_raw = ledger_info_view["ledger_info_with_signatures"]
+            .as_str()
+            .unwrap();
+        let li: LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
+        // We want to verify the signatures of the LedgerInfo to be sure it's valid, but
+        // since we don't have a local state with the set of validators unlike an actual client,
+        // we need to get the validator set from the batched get_state_proof call.
+        let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
+        let epoch_proofs: diem_types::epoch_change::EpochChangeProof =
+            bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+        let some_li: Vec<_> = epoch_proofs.ledger_info_with_sigs;
+        assert!(!some_li.is_empty());
+        // We use the last one (but the validator set does not change in the tests and
+        // in practice the epoch change proofs should be verified).
+        let validator_set = &some_li
+            .last()
+            .unwrap()
+            .ledger_info()
+            .next_epoch_state()
+            .unwrap()
+            .verifier;
+        // And we verify the signature
+        assert!(li.verify_signatures(&validator_set).is_ok());
+
+        // We now need to verify the events using this verified ledger_info:
+        let ledger_info = li.ledger_info();
+        let data = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"]
+            .as_array()
+            .unwrap();
+        let mut events: Vec<EventView> = vec![];
+        for d in data.iter() {
+            let bcs_data = d["event_with_proof"].as_str().unwrap();
+            let event: EventWithProof = bcs::from_bytes(&hex::decode(&bcs_data).unwrap()).unwrap();
+            let hash = event.event.hash();
+
+            // We verify the proof of the event
+            assert!(event
+                .proof
+                .verify(
+                    ledger_info,
+                    hash,
+                    event.transaction_version,
+                    event.event_index
+                )
+                .is_ok());
+
+            // We can now use our verified events
+            events.push((event.transaction_version, event.event).try_into().unwrap());
+        }
+
+        assert_eq!(events.len(), 3);
+
         Ok(())
     }
 }

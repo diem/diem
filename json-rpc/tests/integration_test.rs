@@ -3,9 +3,9 @@
 
 use serde_json::json;
 
-use diem_crypto::hash::{CryptoHash, HashValue};
+use diem_crypto::hash::HashValue;
 use diem_json_rpc_types::views::{
-    AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView,
+    AccountTransactionsWithProofView, AccumulatorConsistencyProofView,
 };
 use diem_transaction_builder::stdlib::{
     self, encode_rotate_authentication_key_with_nonce_admin_script,
@@ -14,18 +14,12 @@ use diem_transaction_builder::stdlib::{
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    contract_event::EventWithProof,
-    epoch_change::EpochChangeProof,
-    ledger_info::LedgerInfoWithSignatures,
     on_chain_config::DIEM_MAX_KNOWN_VERSION,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
     transaction::{AccountTransactionsWithProof, ChangeSet, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use std::{
-    convert::{TryFrom, TryInto},
-    str::FromStr,
-};
+use std::{convert::TryFrom, str::FromStr};
 
 mod node;
 mod testing;
@@ -132,52 +126,6 @@ fn create_test_cases() -> Vec<Test> {
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
                 }
-            },
-        },
-        Test {
-            name: "get_events_with_proofs",
-            run: |env: &mut testing::Env| {
-                let responses = env.send_request(json!([
-                    {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
-                    {"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": json!(["00000000000000000000000000000000000000000a550c18", 0, 3]), "id": 2}
-                ]));
-
-                let resps:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");
-
-                // we need te get the current ledger_info in order to verify the events
-                let ledger_info_view = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
-                let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
-                let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
-                // We want to verify the signatures of the LedgerInfo to be sure it's valid, but
-                // since we don't have a local state with the set of validators unlike an actual client,
-                // we need to get the validator set from the batched get_state_proof call.
-                let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
-                let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
-                let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
-                assert!(!some_li.is_empty());
-                // We use the last one (but the validator set does not change in the tests and
-                // in practice the epoch change proofs should be verified).
-                let validator_set = &some_li.last().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
-                // And we verify the signature
-                assert!(li.verify_signatures(&validator_set).is_ok());
-
-                // We now need to verify the events using this verified ledger_info:
-                let ledger_info = li.ledger_info();
-                let data = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"].as_array().unwrap();
-                let mut events:Vec<EventView> = vec![];
-                for d in  data.iter() {
-                    let bcs_data = d["event_with_proof"].as_str().unwrap();
-                    let event:EventWithProof = bcs::from_bytes(&hex::decode(&bcs_data).unwrap()).unwrap();
-                    let hash = event.event.hash();
-
-                    // We verify the proof of the event
-                    assert!(event.proof.verify(ledger_info, hash, event.transaction_version, event.event_index).is_ok());
-
-                    // We can now use our verified events
-                    events.push((event.transaction_version, event.event).try_into().unwrap());
-                }
-
-                assert_eq!(events.len(),3);
             },
         },
         Test {
