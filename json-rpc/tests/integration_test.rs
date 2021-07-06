@@ -64,39 +64,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "currency info",
-            run: |env: &mut testing::Env| {
-                let resp = env.send("get_currencies", json!([]));
-                assert_eq!(
-                    resp.result.unwrap(),
-                    json!([
-                        {
-                            "burn_events_key": "06000000000000000000000000000000000000000a550c18",
-                            "cancel_burn_events_key": "08000000000000000000000000000000000000000a550c18",
-                            "code": "XUS",
-                            "exchange_rate_update_events_key": "09000000000000000000000000000000000000000a550c18",
-                            "fractional_part": 100,
-                            "mint_events_key": "05000000000000000000000000000000000000000a550c18",
-                            "preburn_events_key": "07000000000000000000000000000000000000000a550c18",
-                            "scaling_factor": 1000000,
-                            "to_xdx_exchange_rate": 1.0,
-                        },
-                        {
-                            "burn_events_key": "0b000000000000000000000000000000000000000a550c18",
-                            "cancel_burn_events_key": "0d000000000000000000000000000000000000000a550c18",
-                            "code": "XDX",
-                            "exchange_rate_update_events_key": "0e000000000000000000000000000000000000000a550c18",
-                            "fractional_part": 1000,
-                            "mint_events_key": "0a000000000000000000000000000000000000000a550c18",
-                            "preburn_events_key": "0c000000000000000000000000000000000000000a550c18",
-                            "scaling_factor": 1000000,
-                            "to_xdx_exchange_rate": 1.0
-                        }
-                    ])
-                )
-            },
-        },
-        Test {
             name: "block metadata",
             run: |env: &mut testing::Env| {
                 // batch request
