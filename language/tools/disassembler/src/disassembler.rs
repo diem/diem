@@ -1097,6 +1097,7 @@ impl<'a, Location: Clone + Eq> Disassembler<'a, Location> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name =
             name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n.to_string()));
+        let version = format!("{}", self.source_mapper.bytecode.version());
         let header = match name {
             Some(s) => format!("module {}", s),
             None => "script".to_owned(),
@@ -1119,7 +1120,8 @@ impl<'a, Location: Clone + Eq> Disassembler<'a, Location> {
             .collect::<Result<Vec<String>>>()?;
 
         Ok(format!(
-            "{header} {{\n{struct_defs}\n\n{function_defs}\n}}",
+            "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",
+            version = version,
             header = header,
             struct_defs = &struct_defs.join("\n"),
             function_defs = &function_defs.join("\n")

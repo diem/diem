@@ -5,12 +5,14 @@ Publishing a new module 00000000000000000000000000000042::M (wrote 56 bytes)
 Publishing a new module 00000000000000000000000000000043::N (wrote 56 bytes)
 Wrote 112 bytes of module ID's and code
 Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
+// Move bytecode v3
 module 42.M {
 
 
 
 }
 Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
+// Move bytecode v3
 module 43.N {
 
 
@@ -23,12 +25,14 @@ Updating an existing module 00000000000000000000000000000042::M (wrote 56 bytes)
 Updating an existing module 00000000000000000000000000000043::N (wrote 56 bytes)
 Wrote 112 bytes of module ID's and code
 Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
+// Move bytecode v3
 module 42.M {
 
 
 
 }
 Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
+// Move bytecode v3
 module 43.N {
 
 
