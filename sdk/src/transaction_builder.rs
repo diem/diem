@@ -257,6 +257,17 @@ impl TransactionFactory {
         }
     }
 
+    pub fn preburn(&self, currency: Currency, amount: u64) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_preburn_script_function(
+                currency.type_tag(),
+                amount,
+            ))
+        } else {
+            self.script(stdlib::encode_preburn_script(currency.type_tag(), amount))
+        }
+    }
+
     pub fn create_child_vasp_account(
         &self,
         coin_type: Currency,
