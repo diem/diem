@@ -1,9 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_crypto::hash::CryptoHash;
 use diem_sdk::transaction_builder::Currency;
 use diem_transaction_builder::stdlib;
-use diem_types::{account_config::xus_tag, event::EventKey, ledger_info::LedgerInfoWithSignatures};
+use diem_types::{
+    account_config::xus_tag,
+    event::EventKey,
+    ledger_info::LedgerInfoWithSignatures,
+    transaction::{Transaction, TransactionPayload},
+};
 use forge::{
     forge_main, ForgeConfig, LocalFactory, Options, PublicUsageContext, PublicUsageTest, Result,
     Test,
@@ -27,6 +33,7 @@ fn main() -> Result<()> {
             &ParentVaspAccountRole,
             &GetAccountByVersion,
             &ChildVaspAccountRole,
+            &PeerToPeerWithEvents,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -535,6 +542,139 @@ impl PublicUsageTest for ChildVaspAccountRole {
                 "sequence_number": 0,
                 "version": resp.diem_ledger_version,
             }),
+        );
+
+        Ok(())
+    }
+}
+
+struct PeerToPeerWithEvents;
+
+impl Test for PeerToPeerWithEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::peer-to-peer-with-events"
+    }
+}
+
+impl PublicUsageTest for PeerToPeerWithEvents {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+
+        let prev_ledger_version = env.send("get_metadata", json!([])).diem_ledger_version;
+
+        let (_parent1, mut child1_1, _child1_2) =
+            env.create_parent_and_child_accounts(ctx, 3_000_000_000)?;
+        let (_parent2, child2_1, _child2_2) =
+            env.create_parent_and_child_accounts(ctx, 3_000_000_000)?;
+
+        let txn = child1_1.sign_with_transaction_builder(factory.peer_to_peer(
+            Currency::XUS,
+            child2_1.address(),
+            200_000,
+        ));
+
+        env.submit_and_wait(&txn);
+        let txn_hex = hex::encode(bcs::to_bytes(&txn).expect("bcs txn failed"));
+
+        let sender = &child1_1;
+        let receiver = &child2_1;
+
+        let resp = env.send(
+            "get_account_transaction",
+            json!([sender.address(), 0, true]),
+        );
+        let result = resp.result.unwrap();
+        let version = result["version"].as_u64().unwrap();
+        assert_eq!(
+            true,
+            version > prev_ledger_version && version <= resp.diem_ledger_version
+        );
+
+        let gas_used = result["gas_used"].as_u64().expect("exist as u64");
+        let txn_hash = Transaction::UserTransaction(txn.clone()).hash().to_hex();
+
+        let script = match txn.payload() {
+            TransactionPayload::Script(s) => s,
+            _ => unreachable!(),
+        };
+        let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
+        let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
+
+        assert_eq!(
+            result,
+            json!({
+                "bytes": format!("00{}", txn_hex),
+                "events": [
+                    {
+                        "data": {
+                            "amount": {"amount": 200000_u64, "currency": "XUS"},
+                            "metadata": "",
+                            "receiver": format!("{:x}", receiver.address()),
+                            "sender": format!("{:x}", sender.address()),
+                            "type": "sentpayment"
+                        },
+                        "key": format!("0100000000000000{:x}", sender.address()),
+                        "sequence_number": 0,
+                        "transaction_version": version,
+                    },
+                    {
+                        "data": {
+                            "amount": {"amount": 200000_u64, "currency": "XUS"},
+                            "metadata": "",
+                            "receiver": format!("{:x}", receiver.address()),
+                            "sender": format!("{:x}", sender.address()),
+                            "type": "receivedpayment"
+                        },
+                        "key": format!("0000000000000000{:x}", receiver.address()),
+                        "sequence_number": 1,
+                        "transaction_version": version
+                    }
+                ],
+                "gas_used": gas_used,
+                "hash": txn_hash,
+                "transaction": {
+                    "chain_id": 4,
+                    "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
+                    "gas_currency": "XUS",
+                    "gas_unit_price": 0,
+                    "max_gas_amount": 1000000,
+                    "public_key": sender.public_key().to_string(),
+                    "secondary_signers": [],
+                    "secondary_signature_schemes": [],
+                    "secondary_signatures": [],
+                    "secondary_public_keys": [],
+                    "script": {
+                        "type": "peer_to_peer_with_metadata",
+                        "type_arguments": [
+                            "XUS"
+                        ],
+                        "arguments": [
+                            format!("{{ADDRESS: {:?}}}", receiver.address()),
+                            "{U64: 200000}",
+                            "{U8Vector: 0x}",
+                            "{U8Vector: 0x}"
+                        ],
+                        "code": hex::encode(script.code()),
+                        "amount": 200000,
+                        "currency": "XUS",
+                        "metadata": "",
+                        "metadata_signature": "",
+                        "receiver": format!("{:x}", receiver.address()),
+                    },
+                    "script_bytes": script_bytes,
+                    "script_hash": script_hash,
+                    "sender": format!("{:x}", sender.address()),
+                    "sequence_number": 0,
+                    "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
+                    "signature_scheme": "Scheme::Ed25519",
+                    "type": "user"
+                },
+                "version": version,
+                "vm_status": {"type": "executed"}
+            }),
+            "{:#}",
+            result,
         );
 
         Ok(())
