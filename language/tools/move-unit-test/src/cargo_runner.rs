@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_command_line_common::files::find_filenames;
+
 use crate::UnitTestingConfig;
 
 pub fn run_tests_with_config_and_filter(
@@ -12,16 +14,10 @@ pub fn run_tests_with_config_and_filter(
     let get_files = |root_path, pat| {
         let source_re = regex::Regex::new(pat)
             .unwrap_or_else(|_| panic!("Invalid regular expression: '{}'", pat));
-        move_stdlib::utils::iterate_directory(&std::path::Path::new(root_path))
-            .filter_map(|path| {
-                let name = path.to_string_lossy();
-                if source_re.is_match(&name) {
-                    Some(name.to_string())
-                } else {
-                    None
-                }
-            })
-            .collect()
+        find_filenames(&[root_path], |path| {
+            source_re.is_match(&path.to_string_lossy())
+        })
+        .unwrap()
     };
 
     let sources = get_files(root_path, source_pattern);

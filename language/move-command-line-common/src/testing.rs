@@ -15,6 +15,9 @@ pub const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
 pub const UPBL: &str = "UPBL";
 pub const UB: &str = "UB";
 
+pub const PRETTY: &str = "PRETTY";
+pub const FILTER: &str = "FILTER";
+
 pub fn read_env_update_baseline() -> bool {
     read_bool_env_var(UPDATE_BASELINE) || read_bool_env_var(UPBL) || read_bool_env_var(UB)
 }

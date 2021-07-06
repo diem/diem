@@ -20,14 +20,14 @@ pub fn compile_module_with_address(
 ) -> (CompiledModule, Module) {
     let compiled_module = Compiler {
         address: *address,
-        deps: diem_framework_releases::current_modules().to_vec(),
+        deps: diem_framework_releases::current_modules().iter().collect(),
     }
     .into_compiled_module(file_name, code)
     .expect("Module compilation failed");
     let module = Module::new(
         Compiler {
             address: *address,
-            deps: diem_framework_releases::current_modules().to_vec(),
+            deps: diem_framework_releases::current_modules().iter().collect(),
         }
         .into_module_blob(file_name, code)
         .expect("Module compilation failed"),
@@ -47,8 +47,7 @@ pub fn compile_script_with_address(
         address: *address,
         deps: diem_framework_releases::current_modules()
             .iter()
-            .cloned()
-            .chain(extra_deps)
+            .chain(extra_deps.iter())
             .collect(),
     };
     Script::new(

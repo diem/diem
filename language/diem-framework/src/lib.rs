@@ -5,7 +5,9 @@
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
-use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
+use move_command_line_common::files::{
+    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
+};
 use move_lang::{compiled_unit::CompiledUnit, Compiler};
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
@@ -39,10 +41,7 @@ pub fn diem_stdlib_modules_full_path() -> String {
 
 pub fn diem_stdlib_files_no_dependencies() -> Vec<String> {
     let path = path_in_crate(MODULES_DIR);
-    let dirfiles = move_stdlib::utils::iterate_directory(&path);
-    move_stdlib::filter_move_files(dirfiles)
-        .flat_map(|path| path.into_os_string().into_string())
-        .collect()
+    find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 
 pub fn diem_stdlib_files() -> Vec<String> {
@@ -54,30 +53,32 @@ pub fn diem_stdlib_files() -> Vec<String> {
 pub fn stdlib_bytecode_files() -> Vec<String> {
     let path = path_in_crate(COMPILED_OUTPUT_PATH);
     let names = diem_stdlib_files();
-    let dirfiles = move_stdlib::utils::iterate_directory(&path);
-    let res: Vec<String> = move_stdlib::filter_move_bytecode_files(dirfiles)
-        .filter(|path| {
-            for name in &names {
-                let suffix = "_".to_owned()
-                    + Path::new(name)
-                        .with_extension(MOVE_COMPILED_EXTENSION)
+    let res: Vec<String> =
+        find_filenames(&[path], |p| extension_equals(p, MOVE_COMPILED_EXTENSION))
+            .unwrap()
+            .into_iter()
+            .filter(|s| {
+                let path = Path::new(s);
+                for name in &names {
+                    let suffix = "_".to_owned()
+                        + Path::new(name)
+                            .with_extension(MOVE_COMPILED_EXTENSION)
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap();
+                    if path
                         .file_name()
-                        .unwrap()
-                        .to_str()
-                        .unwrap();
-                if path
-                    .file_name()
-                    .map(|f| f.to_str())
-                    .flatten()
-                    .map_or(false, |s| s.ends_with(&suffix))
-                {
-                    return true;
+                        .map(|f| f.to_str())
+                        .flatten()
+                        .map_or(false, |s| s.ends_with(&suffix))
+                    {
+                        return true;
+                    }
                 }
-            }
-            false
-        })
-        .map(|path| path.into_os_string().into_string().unwrap())
-        .collect();
+                false
+            })
+            .collect();
     assert!(
         !res.is_empty(),
         "Unexpected: no stdlib bytecode files found"

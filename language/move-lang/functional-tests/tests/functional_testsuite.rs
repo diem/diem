@@ -85,7 +85,7 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
                     }
                 }
 
-                let error_buffer = if read_bool_env_var(testsuite::PRETTY) {
+                let error_buffer = if read_bool_env_var(move_command_line_common::testing::PRETTY) {
                     move_lang::errors::report_errors_to_color_buffer(files, errors)
                 } else {
                     move_lang::errors::report_errors_to_buffer(files, errors)

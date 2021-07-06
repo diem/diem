@@ -115,6 +115,15 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
+    pub fn set_pre_compiled_lib_opt(
+        mut self,
+        pre_compiled_lib: Option<&'b FullyCompiledProgram>,
+    ) -> Self {
+        assert!(self.pre_compiled_lib.is_none());
+        self.pre_compiled_lib = pre_compiled_lib;
+        self
+    }
+
     pub fn run<const TARGET: Pass>(
         self,
     ) -> anyhow::Result<(
@@ -557,7 +566,7 @@ pub fn generate_interface_files(
     };
 
     for mv_file in mv_files {
-        let (id, interface_contents) = interface_generator::write_to_string(&mv_file)?;
+        let (id, interface_contents) = interface_generator::write_file_to_string(&mv_file)?;
         let addr_dir = dir_path!(all_addr_dir.clone(), format!("{}", id.address()));
         let file_path = file_path!(addr_dir.clone(), format!("{}", id.name()), MOVE_EXTENSION);
         // it's possible some files exist but not others due to multithreaded environments

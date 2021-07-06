@@ -84,7 +84,7 @@ main(lr_account: signer) {
 
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
-                deps: vec![module],
+                deps: vec![&module],
             };
             compiler
                 .into_script_blob("file_name", code)

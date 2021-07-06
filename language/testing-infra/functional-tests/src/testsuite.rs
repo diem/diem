@@ -11,7 +11,7 @@ use crate::{
 use difference::Changeset;
 use move_command_line_common::{
     env::read_bool_env_var,
-    testing::{read_env_update_baseline, EXP_EXT},
+    testing::{read_env_update_baseline, EXP_EXT, FILTER, PRETTY},
 };
 use regex::Regex;
 use std::{
@@ -23,9 +23,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
-
-pub const PRETTY: &str = "PRETTY";
-pub const FILTER: &str = "FILTER";
 
 fn at_most_n_chars(s: impl IntoIterator<Item = char>, n: usize) -> String {
     let mut it = s.into_iter();

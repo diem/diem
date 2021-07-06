@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use std::path::Path;
 
 /// Extension for Move source language files
@@ -19,15 +19,15 @@ pub const MOVE_ERROR_DESC_EXTENSION: &str = "errmap";
 /// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
 ///   of the file extension
 pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
-    paths: &[String],
+    paths: &[impl AsRef<Path>],
     mut is_file_desired: Predicate,
 ) -> anyhow::Result<Vec<String>> {
     let mut result = vec![];
 
     for s in paths {
-        let path = Path::new(s);
+        let path = s.as_ref();
         if !path.exists() {
-            return Err(anyhow!("No such file or directory '{}'", s));
+            bail!("No such file or directory '{}'", path.to_string_lossy())
         }
         if path.is_file() && is_file_desired(path) {
             result.push(path_to_string(path)?);
@@ -56,12 +56,16 @@ pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
 /// - If `keep_specified_files` any file explicitly passed in `paths`, will be added to the result
 ///   Otherwise, they will be discarded
 pub fn find_move_filenames(
-    paths: &[String],
+    paths: &[impl AsRef<Path>],
     keep_specified_files: bool,
 ) -> anyhow::Result<Vec<String>> {
     if keep_specified_files {
-        let (mut files, other_paths): (Vec<String>, Vec<String>) =
-            paths.iter().cloned().partition(|s| Path::new(s).is_file());
+        let (file_paths, other_paths): (Vec<&Path>, Vec<&Path>) =
+            paths.iter().map(|p| p.as_ref()).partition(|s| s.is_file());
+        let mut files = file_paths
+            .into_iter()
+            .map(path_to_string)
+            .collect::<anyhow::Result<Vec<String>>>()?;
         files.extend(find_filenames(&other_paths, |path| {
             extension_equals(path, MOVE_EXTENSION)
         })?);

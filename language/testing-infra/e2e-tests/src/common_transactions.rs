@@ -50,7 +50,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
-        deps: diem_framework_releases::current_modules().to_vec(),
+        deps: diem_framework_releases::current_modules().iter().collect(),
     };
     compiler
         .into_script_blob("file_name", code)
@@ -66,7 +66,7 @@ pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
-        deps: diem_framework_releases::current_modules().to_vec(),
+        deps: diem_framework_releases::current_modules().iter().collect(),
     };
     compiler
         .into_script_blob("file_name", code)
@@ -108,7 +108,7 @@ pub static MULTI_AGENT_SWAP_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
-        deps: diem_framework_releases::current_modules().to_vec(),
+        deps: diem_framework_releases::current_modules().iter().collect(),
     };
     compiler
         .into_script_blob("file_name", code)
@@ -153,7 +153,7 @@ pub static MULTI_AGENT_MINT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
-        deps: diem_framework_releases::current_modules().to_vec(),
+        deps: diem_framework_releases::current_modules().iter().collect(),
     };
     compiler
         .into_script_blob("file_name", code)

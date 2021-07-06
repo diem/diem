@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use log::LevelFilter;
-use move_command_line_common::files::{MOVE_COMPILED_EXTENSION, MOVE_EXTENSION};
+use move_command_line_common::files::{extension_equals, find_filenames, MOVE_EXTENSION};
 use std::path::PathBuf;
 
 #[cfg(test)]
@@ -19,28 +19,6 @@ const ERRMAP_FILE: &str = "error_description.errmap";
 
 const REFERENCES_TEMPLATE: &str = "templates/references.md";
 const OVERVIEW_TEMPLATE: &str = "templates/overview.md";
-
-pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
-    dir_iter.flat_map(|path| {
-        if path.extension()?.to_str()? == MOVE_EXTENSION {
-            Some(path)
-        } else {
-            None
-        }
-    })
-}
-
-pub fn filter_move_bytecode_files(
-    dir_iter: impl Iterator<Item = PathBuf>,
-) -> impl Iterator<Item = PathBuf> {
-    dir_iter.flat_map(|path| {
-        if path.extension()?.to_str()? == MOVE_COMPILED_EXTENSION {
-            Some(path)
-        } else {
-            None
-        }
-    })
-}
 
 pub fn unit_testing_module_file() -> String {
     path_in_crate("nursery/UnitTest.move")
@@ -76,18 +54,12 @@ pub fn move_stdlib_errmap_full_path() -> String {
 
 pub fn move_stdlib_files() -> Vec<String> {
     let path = path_in_crate(MODULES_DIR);
-    let dirfiles = utils::iterate_directory(&path);
-    filter_move_files(dirfiles)
-        .flat_map(|path| path.into_os_string().into_string())
-        .collect()
+    find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 
 pub fn move_nursery_files() -> Vec<String> {
     let path = path_in_crate(NURSERY_DIR);
-    let dirfiles = utils::iterate_directory(&path);
-    filter_move_files(dirfiles)
-        .flat_map(|path| path.into_os_string().into_string())
-        .collect()
+    find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 
 pub fn build_doc(

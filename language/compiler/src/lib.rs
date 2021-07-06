@@ -20,15 +20,15 @@ use move_ir_types::location::Loc;
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug)]
-pub struct Compiler {
+pub struct Compiler<'a> {
     /// The address used as the sender for the compiler.
     pub address: AccountAddress,
     /// Extra dependencies to compile with.
-    pub deps: Vec<CompiledModule>,
+    pub deps: Vec<&'a CompiledModule>,
 }
 
-impl Compiler {
-    pub fn new(address: AccountAddress, deps: Vec<CompiledModule>) -> Self {
+impl<'a> Compiler<'a> {
+    pub fn new(address: AccountAddress, deps: Vec<&'a CompiledModule>) -> Self {
         Self { address, deps }
     }
 
@@ -38,7 +38,7 @@ impl Compiler {
         file_name: &str,
         code: &str,
     ) -> Result<(CompiledScript, SourceMap<Loc>)> {
-        let (compiled_script, source_map, _) = self.compile_script(file_name, code)?;
+        let (compiled_script, source_map) = self.compile_script(file_name, code)?;
         Ok((compiled_script, source_map))
     }
 
@@ -69,20 +69,17 @@ impl Compiler {
         self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<CompiledModule>)> {
+    ) -> Result<(CompiledScript, SourceMap<Loc>)> {
         let parsed_script = parse_script(file_name, code)?;
-        let (compiled_script, source_map) = compile_script(None, parsed_script, &self.deps)?;
-        Ok((compiled_script, source_map, self.deps))
+        let (compiled_script, source_map) =
+            compile_script(None, parsed_script, self.deps.iter().map(|d| &**d))?;
+        Ok((compiled_script, source_map))
     }
 
-    fn compile_mod(
-        self,
-        file_name: &str,
-        code: &str,
-    ) -> Result<(CompiledModule, SourceMap<Loc>, Vec<CompiledModule>)> {
+    fn compile_mod(self, file_name: &str, code: &str) -> Result<(CompiledModule, SourceMap<Loc>)> {
         let parsed_module = parse_module(file_name, code)?;
         let (compiled_module, source_map) =
-            compile_module(self.address, parsed_module, &self.deps)?;
-        Ok((compiled_module, source_map, self.deps))
+            compile_module(self.address, parsed_module, self.deps.iter().map(|d| &**d))?;
+        Ok((compiled_module, source_map))
     }
 }

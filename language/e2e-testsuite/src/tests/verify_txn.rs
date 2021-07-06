@@ -1175,8 +1175,7 @@ fn good_module_uses_bad(
         address,
         deps: diem_framework_releases::current_modules()
             .iter()
-            .cloned()
-            .chain(std::iter::once(bad_dep))
+            .chain(std::iter::once(&bad_dep))
             .collect(),
     };
     let module = compiler
@@ -1212,7 +1211,7 @@ fn test_script_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
-        deps: vec![module],
+        deps: vec![&module],
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1293,7 +1292,7 @@ fn test_type_tag_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
-        deps: vec![module],
+        deps: vec![&module],
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1355,7 +1354,7 @@ fn test_script_transitive_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
-        deps: vec![good_module],
+        deps: vec![&good_module],
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1409,7 +1408,7 @@ fn test_module_transitive_dependency_fails_verification() {
     let module = {
         let compiler = Compiler {
             address: *sender.address(),
-            deps: vec![good_module],
+            deps: vec![&good_module],
         };
         diem_types::transaction::Module::new(
             compiler
@@ -1463,7 +1462,7 @@ fn test_type_tag_transitive_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
-        deps: vec![good_module],
+        deps: vec![&good_module],
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1584,7 +1583,7 @@ pub fn publish_and_register_new_currency() {
             "#;
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
-                deps: vec![compiled_module],
+                deps: vec![&compiled_module],
             };
             compiler
                 .into_script_blob("file_name", code)

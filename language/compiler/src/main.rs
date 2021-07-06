@@ -111,7 +111,7 @@ fn main() {
         return;
     }
 
-    let deps = {
+    let deps_owned = {
         if let Some(path) = args.deps_path {
             let deps = fs::read_to_string(path).expect("Unable to read dependency file");
             let deps_list: Vec<Vec<u8>> =
@@ -129,6 +129,7 @@ fn main() {
             vec![]
         }
     };
+    let deps = deps_owned.iter().collect::<Vec<_>>();
 
     if !args.module_input {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
@@ -155,9 +156,9 @@ fn main() {
         write_output(&source_path.with_extension(mv_extension), &script);
     } else {
         let (compiled_module, source_map) =
-            util::do_compile_module(&args.source_path, address, &deps);
+            util::do_compile_module(&args.source_path, address, &deps_owned);
         let compiled_module = if !args.no_verify {
-            do_verify_module(compiled_module, &deps)
+            do_verify_module(compiled_module, &deps_owned)
         } else {
             compiled_module
         };
