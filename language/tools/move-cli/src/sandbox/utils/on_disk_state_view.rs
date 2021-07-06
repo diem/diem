@@ -23,6 +23,7 @@ use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotato
 
 use anyhow::{anyhow, bail, Result};
 use std::{
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     fs,
     path::{Path, PathBuf},
@@ -336,6 +337,7 @@ impl OnDiskStateView {
                     .into_string()
                     .unwrap(),
             ),
+            &BTreeMap::new(),
             false,
         )?;
         Ok(())

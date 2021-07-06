@@ -16,7 +16,9 @@ use crate::{
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
+use move_core_types::language_storage::ModuleId as CompiledModuleId;
 use std::{
+    collections::BTreeMap,
     fs,
     fs::File,
     io::{Read, Write},
@@ -33,6 +35,7 @@ pub struct Compiler<'a, 'b> {
     deps: &'a [String],
     interface_files_dir_opt: Option<String>,
     pre_compiled_lib: Option<&'b FullyCompiledProgram>,
+    compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
     flags: Flags,
 }
 
@@ -87,6 +90,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             deps,
             interface_files_dir_opt: None,
             pre_compiled_lib: None,
+            compiled_module_named_address_mapping: BTreeMap::new(),
             flags: Flags::empty(),
         }
     }
@@ -124,6 +128,15 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
+    pub fn set_compiled_module_named_address_mapping(
+        mut self,
+        compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
+    ) -> Self {
+        assert!(self.compiled_module_named_address_mapping.is_empty());
+        self.compiled_module_named_address_mapping = compiled_module_named_address_mapping;
+        self
+    }
+
     pub fn run<const TARGET: Pass>(
         self,
     ) -> anyhow::Result<(
@@ -135,10 +148,15 @@ impl<'a, 'b> Compiler<'a, 'b> {
             deps,
             interface_files_dir_opt,
             pre_compiled_lib,
+            compiled_module_named_address_mapping,
             flags,
         } = self;
         let mut deps = deps.to_vec();
-        generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
+        generate_interface_files_for_deps(
+            &mut deps,
+            interface_files_dir_opt,
+            &compiled_module_named_address_mapping,
+        )?;
         let compilation_env = CompilationEnv::new(flags);
         let (source_text, pprog_and_comments_res) =
             parse_program(&compilation_env, targets, &deps)?;
@@ -516,8 +534,11 @@ pub fn output_compiled_units(
 fn generate_interface_files_for_deps(
     deps: &mut Vec<String>,
     interface_files_dir_opt: Option<String>,
+    named_address_mapping: &BTreeMap<CompiledModuleId, String>,
 ) -> anyhow::Result<()> {
-    if let Some(dir) = generate_interface_files(deps, interface_files_dir_opt, true)? {
+    if let Some(dir) =
+        generate_interface_files(deps, interface_files_dir_opt, named_address_mapping, true)?
+    {
         deps.push(dir)
     }
     Ok(())
@@ -526,6 +547,7 @@ fn generate_interface_files_for_deps(
 pub fn generate_interface_files(
     mv_file_locations: &[String],
     interface_files_dir_opt: Option<String>,
+    named_address_mapping: &BTreeMap<CompiledModuleId, String>,
     separate_by_hash: bool,
 ) -> anyhow::Result<Option<String>> {
     let mv_files = {
@@ -571,7 +593,8 @@ pub fn generate_interface_files(
     };
 
     for mv_file in mv_files {
-        let (id, interface_contents) = interface_generator::write_file_to_string(&mv_file)?;
+        let (id, interface_contents) =
+            interface_generator::write_file_to_string(named_address_mapping, &mv_file)?;
         let addr_dir = dir_path!(all_addr_dir.clone(), format!("{}", id.address()));
         let file_path = file_path!(addr_dir.clone(), format!("{}", id.name()), MOVE_EXTENSION);
         // it's possible some files exist but not others due to multithreaded environments

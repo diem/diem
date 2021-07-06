@@ -25,3 +25,5 @@ pub const TEST_SHORT: &str = "t";
 pub const COLOR_MODE_ENV_VAR: &str = "COLOR_MODE";
 
 pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";
+
+pub const COMPILED_NAMED_ADDRESS_MAPPING: &str = "compiled-module-address-name";
