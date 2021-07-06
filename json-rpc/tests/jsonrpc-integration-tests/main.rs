@@ -40,6 +40,7 @@ fn main() -> Result<()> {
             &ExpiredTransaction,
             &RotateComplianceKeyEvent,
             &CreateAccountEvent,
+            &GetTransactionsWithoutEvents,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1300,6 +1301,29 @@ impl PublicUsageTest for CreateAccountEvent {
             "{}",
             events
         );
+        Ok(())
+    }
+}
+
+struct GetTransactionsWithoutEvents;
+
+impl Test for GetTransactionsWithoutEvents {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-transactions-without-events"
+    }
+}
+
+impl PublicUsageTest for GetTransactionsWithoutEvents {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let response = env.send("get_transactions", json!([0, 1000, false]));
+        let txns = response.result.unwrap();
+        assert!(!txns.as_array().unwrap().is_empty());
+
+        for (index, txn) in txns.as_array().unwrap().iter().enumerate() {
+            assert_eq!(txn["version"], index);
+            assert_eq!(txn["events"], json!([]));
+        }
         Ok(())
     }
 }
