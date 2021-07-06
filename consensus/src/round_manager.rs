@@ -26,6 +26,7 @@ use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Round},
+    experimental::{commit_decision::CommitDecision, commit_vote::CommitVote},
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -33,7 +34,8 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
-use diem_infallible::checked;
+use core::sync::atomic::Ordering;
+use diem_infallible::{checked, Mutex};
 use diem_logger::prelude::*;
 use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 use fail::fail_point;
@@ -41,7 +43,10 @@ use fail::fail_point;
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
 use serde::Serialize;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{atomic::AtomicU64, Arc},
+    time::Duration,
+};
 use termion::color::*;
 
 #[derive(Serialize, Clone)]
@@ -49,6 +54,8 @@ pub enum UnverifiedEvent {
     ProposalMsg(Box<ProposalMsg>),
     VoteMsg(Box<VoteMsg>),
     SyncInfo(Box<SyncInfo>),
+    CommitVote(Box<CommitVote>),
+    CommitDecision(Box<CommitDecision>),
 }
 
 impl UnverifiedEvent {
@@ -66,6 +73,14 @@ impl UnverifiedEvent {
                 s.verify(validator)?;
                 VerifiedEvent::SyncInfo(s)
             }
+            UnverifiedEvent::CommitVote(cv) => {
+                cv.verify(validator)?;
+                VerifiedEvent::CommitVote(cv)
+            }
+            UnverifiedEvent::CommitDecision(cd) => {
+                cd.verify(validator)?;
+                VerifiedEvent::CommitDecision(cd)
+            }
         })
     }
 
@@ -74,6 +89,8 @@ impl UnverifiedEvent {
             UnverifiedEvent::ProposalMsg(p) => p.epoch(),
             UnverifiedEvent::VoteMsg(v) => v.epoch(),
             UnverifiedEvent::SyncInfo(s) => s.epoch(),
+            UnverifiedEvent::CommitVote(cv) => cv.epoch(),
+            UnverifiedEvent::CommitDecision(cd) => cd.epoch(),
         }
     }
 }
@@ -84,6 +101,8 @@ impl From<ConsensusMsg> for UnverifiedEvent {
             ConsensusMsg::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
             ConsensusMsg::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
             ConsensusMsg::SyncInfo(m) => UnverifiedEvent::SyncInfo(m),
+            ConsensusMsg::CommitVoteMsg(m) => UnverifiedEvent::CommitVote(m),
+            ConsensusMsg::CommitDecisionMsg(m) => UnverifiedEvent::CommitDecision(m),
             _ => unreachable!("Unexpected conversion"),
         }
     }
@@ -93,6 +112,8 @@ pub enum VerifiedEvent {
     ProposalMsg(Box<ProposalMsg>),
     VoteMsg(Box<VoteMsg>),
     SyncInfo(Box<SyncInfo>),
+    CommitVote(Box<CommitVote>),
+    CommitDecision(Box<CommitDecision>),
 }
 
 #[cfg(test)]
@@ -185,11 +206,14 @@ pub struct RoundManager {
     round_state: RoundState,
     proposer_election: Box<dyn ProposerElection + Send + Sync>,
     proposal_generator: ProposalGenerator,
-    safety_rules: MetricsSafetyRules,
+    safety_rules: Arc<Mutex<MetricsSafetyRules>>,
     network: NetworkSender,
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
     sync_only: bool,
+    back_pressure: Arc<AtomicU64>,
+    decoupled_execution: bool,
+    back_pressure_limit: u64,
 }
 
 impl RoundManager {
@@ -199,11 +223,14 @@ impl RoundManager {
         round_state: RoundState,
         proposer_election: Box<dyn ProposerElection + Send + Sync>,
         proposal_generator: ProposalGenerator,
-        safety_rules: MetricsSafetyRules,
+        safety_rules: Arc<Mutex<MetricsSafetyRules>>,
         network: NetworkSender,
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
+        back_pressure: Arc<AtomicU64>,
+        decoupled_execution: bool,
+        back_pressure_limit: u64,
     ) -> Self {
         counters::OP_COUNTERS
             .gauge("sync_only")
@@ -219,6 +246,9 @@ impl RoundManager {
             txn_manager,
             storage,
             sync_only,
+            back_pressure,
+            decoupled_execution,
+            back_pressure_limit,
         }
     }
 
@@ -278,7 +308,7 @@ impl RoundManager {
             .proposal_generator
             .generate_proposal(new_round_event.round)
             .await?;
-        let signature = self.safety_rules.sign_proposal(&proposal)?;
+        let signature = self.safety_rules.lock().sign_proposal(&proposal)?;
         let signed_proposal =
             Block::new_proposal_from_block_data_and_signature(proposal, signature);
         observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
@@ -420,6 +450,20 @@ impl RoundManager {
         Ok(())
     }
 
+    fn sync_only(&self) -> bool {
+        if self.decoupled_execution {
+            let back_pressure = self.back_pressure.load(Ordering::SeqCst);
+            let root_round = self.block_store.root().round();
+            counters::OP_COUNTERS
+                .gauge("sync_only")
+                .set((root_round - back_pressure) as i64);
+
+            self.sync_only || root_round > self.back_pressure_limit + back_pressure
+        } else {
+            self.sync_only
+        }
+    }
+
     /// The replica broadcasts a "timeout vote message", which includes the round signature, which
     /// can be aggregated to a TimeoutCertificate.
     /// The timeout vote message can be one of the following three options:
@@ -433,7 +477,7 @@ impl RoundManager {
             return Ok(());
         }
 
-        if self.sync_only {
+        if self.sync_only() {
             self.network
                 .broadcast(ConsensusMsg::SyncInfo(Box::new(
                     self.block_store.sync_info(),
@@ -461,6 +505,7 @@ impl RoundManager {
             let timeout = timeout_vote.timeout();
             let signature = self
                 .safety_rules
+                .lock()
                 .sign_timeout(&timeout)
                 .context("[RoundManager] SafetyRules signs timeout")?;
             timeout_vote.add_timeout_signature(signature);
@@ -553,16 +598,19 @@ impl RoundManager {
             .block_store
             .execute_and_insert_block(proposed_block)
             .context("[RoundManager] Failed to execute_and_insert the block")?;
-        // notify mempool about failed txn
-        let compute_result = executed_block.compute_result();
-        if let Err(e) = self
-            .txn_manager
-            .notify(executed_block.block(), compute_result)
-            .await
-        {
-            error!(
-                error = ?e, "[RoundManager] Failed to notify mempool of rejected txns",
-            );
+
+        if !self.decoupled_execution {
+            // notify mempool about failed txn
+            let compute_result = executed_block.compute_result();
+            if let Err(e) = self
+                .txn_manager
+                .notify(executed_block.block(), compute_result)
+                .await
+            {
+                error!(
+                    error = ?e, "[RoundManager] Failed to notify mempool of rejected txns",
+                );
+            }
         }
 
         // Short circuit if already voted.
@@ -573,13 +621,14 @@ impl RoundManager {
         );
 
         ensure!(
-            !self.sync_only,
+            !self.sync_only(),
             "[RoundManager] sync_only flag is set, stop voting"
         );
 
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
         let vote = self
             .safety_rules
+            .lock()
             .construct_and_sign_vote(&maybe_signed_vote_proposal)
             .context(format!(
                 "[RoundManager] SafetyRules {}Rejected{} {}",
@@ -759,11 +808,11 @@ impl RoundManager {
     /// Inspect the current consensus state.
     #[cfg(test)]
     pub fn consensus_state(&mut self) -> ConsensusState {
-        self.safety_rules.consensus_state().unwrap()
+        self.safety_rules.lock().consensus_state().unwrap()
     }
 
     #[cfg(test)]
-    pub fn set_safety_rules(&mut self, safety_rules: MetricsSafetyRules) {
+    pub fn set_safety_rules(&mut self, safety_rules: Arc<Mutex<MetricsSafetyRules>>) {
         self.safety_rules = safety_rules
     }
 
