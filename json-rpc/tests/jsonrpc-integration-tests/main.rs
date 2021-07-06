@@ -37,6 +37,7 @@ fn main() -> Result<()> {
             &PeerToPeerErrorExplination,
             &ReSubmittingTransactionWontFail,
             &MempoolValidationError,
+            &ExpiredTransaction,
         ],
         admin_tests: &[],
         network_tests: &[],
@@ -802,6 +803,39 @@ impl PublicUsageTest for MempoolValidationError {
         });
         env.wait_for_txn(&txn1);
 
+        Ok(())
+    }
+}
+
+struct ExpiredTransaction;
+
+impl Test for ExpiredTransaction {
+    fn name(&self) -> &'static str {
+        "jsonrpc::expired-transaction"
+    }
+}
+
+impl PublicUsageTest for ExpiredTransaction {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let mut env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let factory = ctx.transaction_factory();
+        let (_parent, child1, child2) = env.create_parent_and_child_accounts(ctx, 1_000_000_000)?;
+
+        env.allow_execution_failures(|env| {
+            let txn = child1.sign_transaction(
+                factory
+                    .peer_to_peer(Currency::XUS, child2.address(), 200)
+                    .sender(child1.address())
+                    .sequence_number(child1.sequence_number() + 100)
+                    .expiration_timestamp_secs(0)
+                    .build(),
+            );
+            let resp = env.submit(&txn);
+            assert_eq!(
+                resp.error.expect("error").message,
+                "Server error: VM Validation error: TRANSACTION_EXPIRED".to_string(),
+            );
+        });
         Ok(())
     }
 }
