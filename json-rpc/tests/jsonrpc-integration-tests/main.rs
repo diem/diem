@@ -48,6 +48,7 @@ fn main() -> Result<()> {
             &GetTransactionsWithProofs,
             &GetTreasuryComplianceAccount,
             &GetEventsWithProofs,
+            &MultiAgentPaymentOverDualAttestationLimit,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1698,6 +1699,70 @@ impl PublicUsageTest for GetEventsWithProofs {
         }
 
         assert_eq!(events.len(), 3);
+
+        Ok(())
+    }
+}
+
+struct MultiAgentPaymentOverDualAttestationLimit;
+
+impl Test for MultiAgentPaymentOverDualAttestationLimit {
+    fn name(&self) -> &'static str {
+        "jsonrpc::multi-agent-payment-over-dual-attestation-limit"
+    }
+}
+
+impl PublicUsageTest for MultiAgentPaymentOverDualAttestationLimit {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+
+        let limit = env.get_metadata()["dual_attestation_limit"]
+            .as_u64()
+            .unwrap();
+        let amount = limit + 1;
+
+        let (_parent1, mut sender, _child1_2) =
+            env.create_parent_and_child_accounts(ctx, limit + 3_000_000_000)?;
+        let (_parent2, mut receiver, _child2_2) =
+            env.create_parent_and_child_accounts(ctx, limit + 3_000_000_000)?;
+
+        let sender_balance = env.get_balance(sender.address(), "XUS");
+        let receiver_balance = env.get_balance(receiver.address(), "XUS");
+
+        let script =
+            diem_transaction_builder::stdlib::encode_peer_to_peer_by_signers_script_function(
+                xus_tag(),
+                amount,
+                vec![],
+            );
+        let txn = env.create_multi_agent_txn(&mut sender, &[&mut receiver], script);
+
+        let txn_view = env.submit_and_wait(&txn);
+
+        let events = txn_view["events"].as_array().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["data"]["type"], "sentpayment");
+        assert_eq!(events[1]["data"]["type"], "receivedpayment");
+        for event in events.iter() {
+            assert_eq!(
+                event["data"]["amount"],
+                json!({"amount": amount, "currency": "XUS"})
+            );
+            assert_eq!(event["data"]["sender"], format!("{:x}", sender.address()));
+            assert_eq!(
+                event["data"]["receiver"],
+                format!("{:x}", receiver.address())
+            );
+        }
+
+        assert_eq!(
+            sender_balance - amount,
+            env.get_balance(sender.address(), "XUS")
+        );
+        assert_eq!(
+            receiver_balance + amount,
+            env.get_balance(receiver.address(), "XUS")
+        );
 
         Ok(())
     }
