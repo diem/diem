@@ -63,13 +63,6 @@ pub struct Test {
 fn create_test_cases() -> Vec<Test> {
     vec![
         Test {
-            name: "account not found",
-            run: |env: &mut testing::Env| {
-                let resp = env.send("get_account", json!(["d738a0b9851305dfe1d17707f0841dbc"]));
-                assert!(resp.result.is_none());
-            },
-        },
-        Test {
             name: "unknown role type account",
             run: |env: &mut testing::Env| {
                 let address = format!("{:x}", diem_types::account_config::diem_root_address());

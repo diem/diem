@@ -15,7 +15,7 @@ use helper::JsonRpcTestHelper;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
-        public_usage_tests: &[&CurrencyInfo, &BlockMetadata, &OldMetadata],
+        public_usage_tests: &[&CurrencyInfo, &BlockMetadata, &OldMetadata, &AccoutNotFound],
         admin_tests: &[],
         network_tests: &[],
     };
@@ -163,6 +163,23 @@ impl PublicUsageTest for OldMetadata {
         assert_eq!(metadata["script_hash_allow_list"], json!(null));
         assert_eq!(metadata["module_publishing_allowed"], json!(null));
         assert_eq!(metadata["diem_version"], json!(null));
+        Ok(())
+    }
+}
+
+struct AccoutNotFound;
+
+impl Test for AccoutNotFound {
+    fn name(&self) -> &'static str {
+        "jsonrpc::account-not-found"
+    }
+}
+
+impl PublicUsageTest for AccoutNotFound {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let resp = env.send("get_account", json!(["d738a0b9851305dfe1d17707f0841dbc"]));
+        assert!(resp.result.is_none());
         Ok(())
     }
 }
