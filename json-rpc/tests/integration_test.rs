@@ -107,19 +107,6 @@ fn create_test_cases() -> Vec<Test> {
                 let _txns = AccountTransactionsWithProof::try_from(&view).unwrap();
             },
         },
-        Test {
-            name: "no unknown events so far",
-            run: |env: &mut testing::Env| {
-                let response = env.send("get_transactions", json!([0, 1000, true]));
-                let txns = response.result.unwrap();
-                for txn in txns.as_array().unwrap() {
-                    for event in txn["events"].as_array().unwrap() {
-                        let event_type = event["data"]["type"].as_str().unwrap();
-                        assert_ne!(event_type, "unknown", "{}", event);
-                    }
-                }
-            },
-        },
         // no test after this one, as your scripts may not in allow list.
         // add test before above test
     ]
