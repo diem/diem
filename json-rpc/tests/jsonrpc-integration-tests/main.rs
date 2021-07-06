@@ -15,7 +15,13 @@ use helper::JsonRpcTestHelper;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
-        public_usage_tests: &[&CurrencyInfo, &BlockMetadata, &OldMetadata, &AccoutNotFound],
+        public_usage_tests: &[
+            &CurrencyInfo,
+            &BlockMetadata,
+            &OldMetadata,
+            &AccoutNotFound,
+            &UnknownAccountRoleType,
+        ],
         admin_tests: &[],
         network_tests: &[],
     };
@@ -180,6 +186,44 @@ impl PublicUsageTest for AccoutNotFound {
         let env = JsonRpcTestHelper::new(ctx.url().to_owned());
         let resp = env.send("get_account", json!(["d738a0b9851305dfe1d17707f0841dbc"]));
         assert!(resp.result.is_none());
+        Ok(())
+    }
+}
+
+struct UnknownAccountRoleType;
+
+impl Test for UnknownAccountRoleType {
+    fn name(&self) -> &'static str {
+        "jsonrpc::unknown-account-role-type"
+    }
+}
+
+impl PublicUsageTest for UnknownAccountRoleType {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let address = format!("{:x}", diem_types::account_config::diem_root_address());
+        let resp = env.send("get_account", json!([address]));
+        let mut result = resp.result.unwrap();
+        // as we generate account auth key, ignore it in assertion
+        assert_ne!(result["authentication_key"].as_str().unwrap(), "");
+        result["authentication_key"] = json!(null);
+        let sequence_number = result["sequence_number"].as_u64().unwrap();
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": null,
+                "balances": [],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": "02000000000000000000000000000000000000000a550c18",
+                "role": { "type": "unknown" },
+                "sent_events_key": "03000000000000000000000000000000000000000a550c18",
+                "sequence_number": sequence_number,
+                "version": resp.diem_ledger_version,
+            }),
+        );
         Ok(())
     }
 }
