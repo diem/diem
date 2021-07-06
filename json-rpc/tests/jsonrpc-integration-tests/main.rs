@@ -44,6 +44,7 @@ fn main() -> Result<()> {
             &GetTransactionsWithoutEvents,
             &GetAccountTransactionsWithoutEvents,
             &GetTransactionsWithProofs,
+            &GetTreasuryComplianceAccount,
         ],
         admin_tests: &[
             &PreburnAndBurnEvents,
@@ -1571,6 +1572,46 @@ impl AdminTest for AddAndRemoveVaspDomain {
                     "transaction_version": version2,
                 },
             ]),
+        );
+        Ok(())
+    }
+}
+
+struct GetTreasuryComplianceAccount;
+
+impl Test for GetTreasuryComplianceAccount {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-treasury-compliance-account"
+    }
+}
+
+impl PublicUsageTest for GetTreasuryComplianceAccount {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+
+        let address = format!("{:x}", treasury_compliance_account_address());
+        let resp = env.send("get_account", json!([address]));
+        let result = resp.result.unwrap();
+        let authentication_key = result["authentication_key"].as_str().unwrap();
+        let sequence_number = result["sequence_number"].as_u64().unwrap();
+        assert_eq!(
+            result,
+            json!({
+                "address": address,
+                "authentication_key": authentication_key,
+                "balances": [],
+                "delegated_key_rotation_capability": false,
+                "delegated_withdrawal_capability": false,
+                "is_frozen": false,
+                "received_events_key": format!("0100000000000000{}", address),
+                "role": {
+                    "vasp_domain_events_key": format!("0000000000000000{}", address),
+                    "type": "treasury_compliance",
+                },
+                "sent_events_key": format!("0200000000000000{}", address),
+                "sequence_number": sequence_number,
+                "version": resp.diem_ledger_version,
+            }),
         );
         Ok(())
     }
