@@ -9,7 +9,6 @@ use diem_json_rpc_types::views::{
 };
 use diem_transaction_builder::stdlib::{
     self, encode_rotate_authentication_key_with_nonce_admin_script,
-    encode_rotate_authentication_key_with_nonce_admin_script_function,
 };
 use diem_types::{
     access_path::AccessPath,
@@ -51,10 +50,8 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "Upgrade diem version",
             run: |env: &mut testing::Env| {
-                let script = stdlib::encode_update_diem_version_script(
-                    0,
-                    DIEM_MAX_KNOWN_VERSION.major + 1,
-                );
+                let script =
+                    stdlib::encode_update_diem_version_script(0, DIEM_MAX_KNOWN_VERSION.major + 1);
                 let txn = env.create_txn(&env.root, script);
                 env.submit_and_wait(txn);
             },
@@ -111,7 +108,8 @@ fn create_test_cases() -> Vec<Test> {
                 // Just check that the responses deserialize correctly, we'll let
                 // the verifying client smoke tests handle the proof checking.
                 let value = response.result.unwrap();
-                let view = serde_json::from_value::<AccountTransactionsWithProofView>(value).unwrap();
+                let view =
+                    serde_json::from_value::<AccountTransactionsWithProofView>(value).unwrap();
                 let _txns = AccountTransactionsWithProof::try_from(&view).unwrap();
             },
         },
@@ -129,64 +127,6 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "multi-agent transaction with rotate_authentication_key_with_nonce_admin script function",
-            run: |env: &mut testing::Env| {
-                let root = env.root.clone();
-                let account = env.vasps[0].children[0].clone();
-                let private_key = generate_key::generate_key();
-                let public_key: diem_crypto::ed25519::Ed25519PublicKey = (&private_key).into();
-                let txn = env.create_multi_agent_txn(
-                    &root,
-                    vec![&account],
-                    encode_rotate_authentication_key_with_nonce_admin_script_function(
-                        0, public_key.to_bytes().to_vec()),
-                );
-                env.submit_and_wait(txn.clone());
-                let resp = env.send(
-                    "get_account_transaction",
-                    json!([root.address.to_string(), 3, true]),
-                );
-                let result = resp.result.unwrap();
-                let script = match txn.payload() {
-                    TransactionPayload::ScriptFunction(s) => s,
-                    _ => unreachable!(),
-                };
-                let script_hash = diem_crypto::HashValue::zero().to_hex();
-                let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
-                assert_eq!(result["vm_status"], json!({"type": "executed"}));
-                assert_eq!(
-                    result["transaction"],
-                    json!({
-                        "type": "user",
-                        "sender": format!("{:x}", &root.address),
-                        "signature_scheme": "Scheme::Ed25519",
-                        "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
-                        "public_key": root.public_key.to_string(),
-                        "secondary_signers": [ format!("{:x}", &account.address) ],
-                        "secondary_signature_schemes": [ "Scheme::Ed25519" ],
-                        "secondary_signatures": [ hex::encode(txn.authenticator().secondary_signers()[0].signature_bytes())],
-                        "secondary_public_keys": [ account.public_key.to_string() ],
-                        "sequence_number": 3,
-                        "chain_id": 4,
-                        "max_gas_amount": 1000000,
-                        "gas_unit_price": 0,
-                        "gas_currency": "XUS",
-                        "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
-                        "script_hash": script_hash,
-                        "script_bytes": script_bytes,
-                        "script": {
-                            "type": "script_function",
-                            "arguments_bcs": vec![ "0000000000000000", &hex::encode(bcs::to_bytes(&public_key).unwrap())],
-                            "type_arguments": [],
-                            "module_address": "00000000000000000000000000000001",
-                            "module_name": "AccountAdministrationScripts",
-                            "function_name": "rotate_authentication_key_with_nonce_admin"
-                        },
-                    }),
-                );
-            },
-        },
-        Test {
             name: "multi-agent transaction with rotate_authentication_key_with_nonce_admin script",
             run: |env: &mut testing::Env| {
                 let root = env.root.clone();
@@ -196,8 +136,12 @@ fn create_test_cases() -> Vec<Test> {
                 let txn = env.create_multi_agent_txn(
                     &root,
                     vec![&account],
-                    TransactionPayload::Script(encode_rotate_authentication_key_with_nonce_admin_script(
-                        0, public_key.to_bytes().to_vec())),
+                    TransactionPayload::Script(
+                        encode_rotate_authentication_key_with_nonce_admin_script(
+                            0,
+                            public_key.to_bytes().to_vec(),
+                        ),
+                    ),
                 );
                 env.submit_and_wait(txn.clone());
                 let resp = env.send(
@@ -256,18 +200,24 @@ fn create_test_cases() -> Vec<Test> {
                 ]));
 
                 // extract both responses
-                let resps: Vec<serde_json::Value> = serde_json::from_value(resp).expect("should be valid serde_json::Value");
+                let resps: Vec<serde_json::Value> =
+                    serde_json::from_value(resp).expect("should be valid serde_json::Value");
                 let metadata = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
                 let proof_view = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"];
 
                 // get the root hash and version from the metadata response
-                let metadata_root_hash = HashValue::from_str(metadata["accumulator_root_hash"].as_str().unwrap()).unwrap();
+                let metadata_root_hash =
+                    HashValue::from_str(metadata["accumulator_root_hash"].as_str().unwrap())
+                        .unwrap();
                 let version = metadata["version"].as_u64().unwrap();
 
                 // parse the consistency proof and build the accumulator
-                let proof_view = serde_json::from_value::<AccumulatorConsistencyProofView>(proof_view.clone()).unwrap();
+                let proof_view =
+                    serde_json::from_value::<AccumulatorConsistencyProofView>(proof_view.clone())
+                        .unwrap();
                 let proof = AccumulatorConsistencyProof::try_from(&proof_view).unwrap();
-                let accumulator = TransactionAccumulatorSummary::try_from_genesis_proof(proof, version).unwrap();
+                let accumulator =
+                    TransactionAccumulatorSummary::try_from_genesis_proof(proof, version).unwrap();
 
                 // root hash from metadata and the computed root hash from the
                 // accumulator summary should match
