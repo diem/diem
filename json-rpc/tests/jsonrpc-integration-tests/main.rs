@@ -15,7 +15,7 @@ use helper::JsonRpcTestHelper;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
-        public_usage_tests: &[&CurrencyInfo, &BlockMetadata],
+        public_usage_tests: &[&CurrencyInfo, &BlockMetadata, &OldMetadata],
         admin_tests: &[],
         network_tests: &[],
     };
@@ -137,6 +137,32 @@ impl PublicUsageTest for BlockMetadata {
             metadata["accumulator_root_hash"].as_str().unwrap()
         );
 
+        Ok(())
+    }
+}
+
+/// Get Metadata with older version parameter should not return version information
+struct OldMetadata;
+
+impl Test for OldMetadata {
+    fn name(&self) -> &'static str {
+        "jsonrpc::old-metadata"
+    }
+}
+
+impl PublicUsageTest for OldMetadata {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        // create a random accound in order to force the version hieght to be greater than 1
+        let account = ctx.random_account();
+        ctx.create_parent_vasp_account(account.authentication_key())?;
+
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let resp = env.send("get_metadata", json!([1]));
+        let metadata = resp.result.unwrap();
+        // no data provided for the following fields when requesting older version
+        assert_eq!(metadata["script_hash_allow_list"], json!(null));
+        assert_eq!(metadata["module_publishing_allowed"], json!(null));
+        assert_eq!(metadata["diem_version"], json!(null));
         Ok(())
     }
 }
