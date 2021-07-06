@@ -710,51 +710,6 @@ fn test_vfn_multi_network() {
     harness.assert_no_message_sent(&vfn_a, false);
 }
 
-/// The purpose of this test is to set up a network with 1 Validators, 1 VFNs, and 1 PFN.
-/// VFN1 is the subject of fallback testing, and should fallback to the PFN.
-#[test]
-fn test_failover() {
-    let (mut harness, peers) = TestHarness::bootstrap_network(
-        1,
-        Some(MempoolOverrideConfig::new()),
-        true,
-        Some(MempoolOverrideConfig::new()),
-        1,
-        Some(MempoolOverrideConfig::new()),
-    );
-    let validators = peers.get(&PeerRole::Validator).unwrap();
-    let v = validators.get(0).unwrap();
-
-    let vfns = peers.get(&PeerRole::ValidatorFullNode).unwrap();
-    let vfn = vfns.get(0).unwrap();
-    let pfn = peers.get(&PeerRole::Unknown).unwrap().get(0).unwrap();
-
-    // VFNs discover primary and fallback upstream peers
-    harness.connect(vfn, v);
-    harness.connect_with_networks(vfn, false, pfn, true);
-
-    // Send txn to VFN1
-    harness.add_txns(vfn, vec![test_transaction(0)]);
-
-    // Make sure it delivers txn to primary peer and fallbacks
-    harness.broadcast_txns_and_validate(vfn, v, 0);
-    harness.broadcast_txns_and_validate_with_networks(vfn, false, pfn, true, 0);
-
-    // Bring validator down
-    harness.disconnect(vfn, true, v, true);
-
-    // Send another txn to vfn1 now that the primary is down
-    harness.add_txns(vfn, vec![test_transaction(1)]);
-
-    // Messages still go to fallback, but don't make it to the primary
-    // Note: these two statements MUST be in this order, due to complications of the simulator
-    // TODO: This test will continue to be flaky here until some changes are made in mempool
-    // Basically, the original transaction continues to be sent out, because it's not ack'd by the
-    // primary upstream.
-    harness.broadcast_txns_and_validate_with_networks(vfn, false, pfn, true, 1);
-    harness.assert_no_message_sent(&vfn, true);
-}
-
 #[test]
 fn test_rebroadcast_mempool_is_full() {
     let mut validator_mempool_config = MempoolOverrideConfig::new();
