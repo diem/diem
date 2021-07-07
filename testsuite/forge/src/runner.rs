@@ -25,6 +25,9 @@ pub struct Options {
     /// Output minimal information
     quiet: bool,
     #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    nocapture: bool,
+    #[structopt(long)]
     /// List all tests
     list: bool,
     #[structopt(long)]
