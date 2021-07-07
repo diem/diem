@@ -8,9 +8,9 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, DesignatedDealerPreburns, DiemIdDomainEvent, FreezingBit, MintEvent,
-        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
-        SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, FreezingBit, MintEvent, NewBlockEvent,
+        NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
+        ToXDXExchangeRateUpdateEvent, VASPDomainEvent,
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -72,7 +72,7 @@ pub enum AccountRoleView {
         num_children: u64,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
-        diem_id_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
+        vasp_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {
@@ -89,7 +89,7 @@ pub enum AccountRoleView {
     #[serde(rename = "treasury_compliance")]
     TreasuryCompliance {
         #[serde(skip_serializing_if = "Option::is_none")]
-        diem_id_domain_events_key: Option<EventKey>,
+        vasp_domain_events_key: Option<EventKey>,
     },
     /// The Unknown variant is deserialized by the client if it sees
     /// a variant that it doesn't know about
@@ -366,11 +366,11 @@ pub enum EventDataView {
         created_address: AccountAddress,
         role_id: u64,
     },
-    #[serde(rename = "diemiddomain")]
-    DiemIdDomain {
+    #[serde(rename = "vaspdomain")]
+    VASPDomain {
         // Whether a domain was added or removed
         removed: bool,
-        // Diem ID Domain string of the account
+        // VASP Domain string of the account
         domain: DiemIdVaspDomainIdentifier,
         // On-chain account address
         address: AccountAddress,
@@ -499,12 +499,12 @@ impl TryFrom<ContractEvent> for EventDataView {
             EventDataView::AdminTransaction {
                 committed_timestamp_secs: admin_transaction_event.committed_timestamp_secs(),
             }
-        } else if event.type_tag() == &TypeTag::Struct(DiemIdDomainEvent::struct_tag()) {
-            let diem_id_domain_event = DiemIdDomainEvent::try_from(&event)?;
-            EventDataView::DiemIdDomain {
-                removed: diem_id_domain_event.removed(),
-                domain: diem_id_domain_event.domain().domain().clone(),
-                address: diem_id_domain_event.address(),
+        } else if event.type_tag() == &TypeTag::Struct(VASPDomainEvent::struct_tag()) {
+            let vasp_domain_event = VASPDomainEvent::try_from(&event)?;
+            EventDataView::VASPDomain {
+                removed: vasp_domain_event.removed(),
+                domain: vasp_domain_event.domain().domain().clone(),
+                address: vasp_domain_event.address(),
             }
         } else {
             EventDataView::Unknown {
@@ -1221,10 +1221,9 @@ impl From<AccountRole> for AccountRoleView {
             AccountRole::ParentVASP {
                 vasp,
                 credential,
-                diem_id_domains,
+                vasp_domains,
             } => {
-                let domains =
-                    diem_id_domains.map(|diem_id_domains| diem_id_domains.get_domains_list());
+                let domains = vasp_domains.map(|vasp_domains| vasp_domains.get_domains_list());
                 AccountRoleView::ParentVASP {
                     human_name: credential.human_name().to_string(),
                     base_url: credential.base_url().to_string(),
@@ -1235,7 +1234,7 @@ impl From<AccountRole> for AccountRoleView {
                         .compliance_key_rotation_events()
                         .key(),
                     base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
-                    diem_id_domains: domains,
+                    vasp_domains: domains,
                 }
             }
             AccountRole::DesignatedDealer {
@@ -1260,11 +1259,9 @@ impl From<AccountRole> for AccountRoleView {
                 }
             }
             AccountRole::TreasuryCompliance {
-                diem_id_domain_manager,
+                vasp_domain_manager,
             } => AccountRoleView::TreasuryCompliance {
-                diem_id_domain_events_key: Some(
-                    *diem_id_domain_manager.diem_id_domain_events().key(),
-                ),
+                vasp_domain_events_key: Some(*vasp_domain_manager.vasp_domain_events().key()),
             },
         }
     }

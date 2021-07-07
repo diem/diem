@@ -154,15 +154,15 @@ Event emitted when a new account is created
 | created_address | string | Address of the created account |
 | role_id         | u64    | Role id of the created account, see [DIP-2](https://dip.diem.com/dip-2/#move-implementation) for more details |
 
-#### diemiddomain
+#### vaspdomain
 
-Event emitted under TC account when a diem id domain is added or removed from parent VASP account
+Event emitted under TC account when a vasp domain is added or removed from parent VASP account
 
 | Name            | Type   | Description                    |
 |-----------------|--------|--------------------------------|
-| type            | string | Constant string "diemiddomain"|
+| type            | string | Constant string "vaspdomain"|
 | address | string | On-chain account address of parent VASP |
-| domain         | string    | Diem ID domain string of the account |
+| domain         | string    | VASP domain string of the account |
 | removed         | boolean    | Whether a domain was added or removed |
 
 #### unknown

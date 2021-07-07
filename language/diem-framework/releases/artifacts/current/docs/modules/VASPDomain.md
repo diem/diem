@@ -74,7 +74,7 @@ The list of <code><a href="VASPDomain.md#0x1_VASPDomain">VASPDomain</a></code>s 
 
 
 <pre><code><b>invariant</b> <b>forall</b> i in 0..len(domains):
-    <b>forall</b> j in i + 1..len(domains): domains[i] != domains[j];
+<b>forall</b> j in i + 1..len(domains): domains[i] != domains[j];
 </code></pre>
 
 

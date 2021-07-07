@@ -356,7 +356,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "diem_id_domains": [],
+                            "vasp_domains": [],
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 1,
@@ -397,7 +397,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "diem_id_domains": [],
+                            "vasp_domains": [],
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 0,
@@ -1207,13 +1207,13 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "add and remove diem id domain to parent vasp account",
+            name: "add and remove vasp domain to parent vasp account",
             run: |env: &mut testing::Env| {
                 // add domain
                 let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
                 let txn = env.create_txn_by_payload(
                     &env.tc,
-                    stdlib::encode_add_diem_id_domain_script_function(
+                    stdlib::encode_add_vasp_domain_script_function(
                         env.vasps[0].address,
                         domain,
                     ),
@@ -1227,7 +1227,7 @@ fn create_test_cases() -> Vec<Test> {
                 let resp = env.send("get_account", json!([address]));
                 let result = resp.result.unwrap();
                 assert_eq!(
-                    result["role"]["diem_id_domains"],
+                    result["role"]["vasp_domains"],
                     json!(
                         ["diem"]
                     ),
@@ -1237,7 +1237,7 @@ fn create_test_cases() -> Vec<Test> {
                 let domain = DiemIdVaspDomainIdentifier::new(&"diem").unwrap().as_str().as_bytes().to_vec();
                 let txn = env.create_txn_by_payload(
                     &env.tc,
-                    stdlib::encode_remove_diem_id_domain_script_function(
+                    stdlib::encode_remove_vasp_domain_script_function(
                         env.vasps[0].address,
                         domain,
                     ),
@@ -1251,7 +1251,7 @@ fn create_test_cases() -> Vec<Test> {
                 let resp = env.send("get_account", json!([address]));
                 let result = resp.result.unwrap();
                 assert_eq!(
-                    result["role"]["diem_id_domains"],
+                    result["role"]["vasp_domains"],
                     json!(
                         []
                     ),
@@ -1261,10 +1261,10 @@ fn create_test_cases() -> Vec<Test> {
                 let tc_address = format!("{:x}", &env.tc.address);
                 let resp = env.send("get_account", json!([tc_address]));
                 let result = resp.result.unwrap();
-                let diem_id_domain_events_key = result["role"]["diem_id_domain_events_key"].clone();
+                let vasp_domain_events_key = result["role"]["vasp_domain_events_key"].clone();
                 let response = env.send(
                     "get_events",
-                    json!([diem_id_domain_events_key, 0, 3]),
+                    json!([vasp_domain_events_key, 0, 3]),
                 );
                 let events = response.result.unwrap();
                 assert_eq!(
@@ -1275,7 +1275,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "domain": "diem",
                                 "removed": false,
                                 "address": address,
-                                "type":"diemiddomain"
+                                "type":"vaspdomain"
                             },
                             "key": format!("0000000000000000{}", tc_address),
                             "sequence_number": 0,
@@ -1286,7 +1286,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "domain": "diem",
                                 "removed": true,
                                 "address": address,
-                                "type":"diemiddomain"
+                                "type":"vaspdomain"
                             },
                             "key": format!("0000000000000000{}", tc_address),
                             "sequence_number": 1,
@@ -1313,7 +1313,7 @@ fn create_test_cases() -> Vec<Test> {
                         "is_frozen": false,
                         "received_events_key": format!("0100000000000000{}", address),
                         "role": {
-                            "diem_id_domain_events_key": format!("0000000000000000{}", address),
+                            "vasp_domain_events_key": format!("0000000000000000{}", address),
                             "type": "treasury_compliance",
                         },
                         "sent_events_key": format!("0200000000000000{}", address),

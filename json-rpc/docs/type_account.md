@@ -61,7 +61,7 @@ A Diem account.
 | num_children                       | unsigned int64               | number of children of this parent VASP                            |
 | compliance_key_rotation_events_key | string                       | key of compliance key rotation events for this parent VASP        |
 | base_url_rotation_events_key       | string                       | key of base url key rotation events for this parent VASP          |
-| diem_id_domains                    | List<string>                 | list of domains for diem ID that belong to the parent VASP          |
+| vasp_domains                    | List<string>                 | list of domains of the parent VASP          |
 
 
 ---
@@ -88,7 +88,7 @@ A Diem account.
 | Name                | Type   | Description                                |
 |---------------------|--------|--------------------------------------------|
 | type                | string | "treasury_compliance"                               |
-| diem_id_domain_events_key | string | key of diem id domain events under treasury compliance     |
+| vasp_domain_events_key | string | key of vasp domain events under treasury compliance     |
 
 
 ---

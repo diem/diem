@@ -42,13 +42,13 @@ pub struct MintParams {
     pub return_txns: Option<bool>,
     pub is_designated_dealer: Option<bool>,
     pub trade_id: Option<String>,
-    pub diem_id_domain: Option<String>,
+    pub vasp_domain: Option<String>,
     pub is_remove_domain: Option<bool>,
 }
 
 impl std::fmt::Display for MintParams {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self.diem_id_domain)
+        write!(f, "{:?}", self.vasp_domain)
     }
 }
 
@@ -144,18 +144,18 @@ impl Service {
                 txns.push(treasury_account.sign_with_transaction_builder(builder));
             }
 
-            if let (Some(ref diem_id_domain), Some(is_remove_domain)) =
-                (&params.diem_id_domain, params.is_remove_domain)
+            if let (Some(ref vasp_domain), Some(is_remove_domain)) =
+                (&params.vasp_domain, params.is_remove_domain)
             {
                 let builder = if is_remove_domain {
-                    self.transaction_factory.remove_diem_id_domain(
+                    self.transaction_factory.remove_vasp_domain(
                         params.receiver(),
-                        diem_id_domain.as_str().as_bytes().to_vec(),
+                        vasp_domain.as_str().as_bytes().to_vec(),
                     )
                 } else {
-                    self.transaction_factory.add_diem_id_domain(
+                    self.transaction_factory.add_vasp_domain(
                         params.receiver(),
-                        diem_id_domain.as_str().as_bytes().to_vec(),
+                        vasp_domain.as_str().as_bytes().to_vec(),
                     )
                 };
                 txns.push(treasury_account.sign_with_transaction_builder(builder));

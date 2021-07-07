@@ -20,7 +20,7 @@ module VASPDomain {
         invariant forall i in 0..len(domains): len(domains[i].domain) <= DOMAIN_LENGTH;
         /// The list of `VASPDomain`s are a set
         invariant forall i in 0..len(domains):
-            forall j in i + 1..len(domains): domains[i] != domains[j];
+        forall j in i + 1..len(domains): domains[i] != domains[j];
     }
 
     /// Struct to store the limit on-chain
@@ -28,8 +28,8 @@ module VASPDomain {
         domain: vector<u8>, // UTF-8 encoded and 63 characters
     }
     spec VASPDomain {
-        /// All `VASPDomain`s must be no more than 63 characters long.
-        invariant len(domain) <= DOMAIN_LENGTH;
+    /// All `VASPDomain`s must be no more than 63 characters long.
+    invariant len(domain) <= DOMAIN_LENGTH;
     }
 
     struct VASPDomainManager has key {

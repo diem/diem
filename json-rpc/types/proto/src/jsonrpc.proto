@@ -85,9 +85,9 @@ message AccountRole {
   repeated Amount preburn_balances = 11 [json_name="preburn_balances"];
   repeated PreburnQueue preburn_queues = 12 [json_name="preburn_queues"];
 
-  // DiemID
-  repeated string diem_id_domains = 13 [json_name="diem_id_domains"];
-  string diem_id_domain_events_key = 14 [json_name="diem_id_domain_events_key"];
+  // VASP Domain
+  repeated string vasp_domains = 13 [json_name="vasp_domains"];
+  string vasp_domain_events_key = 14 [json_name="vasp_domain_events_key"];
 }
 
 message PreburnQueue {
@@ -178,7 +178,7 @@ message EventData {
    */
   string bytes = 21;
 
-  // diemiddomain event only
+  // vaspdomain event only
   bool removed = 22 [json_name="removed"];
   string domain = 23 [json_name="domain"];
   string address = 24 [json_name="address"];

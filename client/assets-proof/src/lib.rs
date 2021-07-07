@@ -150,7 +150,7 @@ pub struct ParentVASPView {
     base_url: String,
     /// The number of child VASP accounts under this parent VASP account.
     num_children: u64,
-    diem_id_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
+    vasp_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
 }
 
 impl TryFrom<AccountView> for ParentVASPView {
@@ -167,7 +167,7 @@ impl TryFrom<AccountView> for ParentVASPView {
                 human_name,
                 base_url,
                 num_children,
-                diem_id_domains,
+                vasp_domains,
                 ..
             } => Ok(ParentVASPView {
                 address: account.address,
@@ -175,7 +175,7 @@ impl TryFrom<AccountView> for ParentVASPView {
                 human_name,
                 base_url,
                 num_children,
-                diem_id_domains,
+                vasp_domains,
             }),
             _ => Err(format_err!(
                 "expected parent VASP account, actual account type: {:?}",

@@ -31,11 +31,11 @@ and verifiably extend their accumulator summary to newer ledger states.
 
 ## 2021-05-25 Add `TreasuryComplianceRole`
 
-TreasuryComplianceRole has been created and has a field `diem_id_domain_events_key` that stores the event key of diem id domain events.
+TreasuryComplianceRole has been created and has a field `vasp_domain_events_key` that stores the event key of vasp domain events.
 
-## 2021-05-24 Add `diem_id_domains` field to `ParentVASPRole`
+## 2021-05-24 Add `vasp_domains` field to `ParentVASPRole`
 
-ParentVASPRole has a new field `diem_id_domains` that stores the domain names for diem ID that belong to the parent VASP.
+ParentVASPRole has a new field `vasp_domains` that stores the domain names of the parent VASP.
 
 ## 2021-05-07 Add support for secondary signers in `TransactionDataView`
 

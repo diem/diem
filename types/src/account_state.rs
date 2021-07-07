@@ -7,8 +7,8 @@ use crate::{
     account_config::{
         currency_code_from_type_tag, AccountResource, AccountRole, BalanceResource,
         ChainIdResource, ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer,
-        DesignatedDealerPreburns, DiemIdDomainManager, DiemIdDomains, FreezingBit, ParentVASP,
-        PreburnQueueResource, PreburnResource,
+        DesignatedDealerPreburns, FreezingBit, ParentVASP, PreburnQueueResource, PreburnResource,
+        VASPDomainManager, VASPDomains,
     },
     block_metadata::DiemBlockResource,
     diem_timestamp::DiemTimestampResource,
@@ -108,13 +108,13 @@ impl AccountState {
             match (
                 self.get_resource::<ParentVASP>(),
                 self.get_resource::<Credential>(),
-                self.get_resource::<DiemIdDomains>(),
+                self.get_resource::<VASPDomains>(),
             ) {
-                (Ok(Some(vasp)), Ok(Some(credential)), Ok(diem_id_domains)) => {
+                (Ok(Some(vasp)), Ok(Some(credential)), Ok(vasp_domains)) => {
                     Ok(Some(AccountRole::ParentVASP {
                         vasp,
                         credential,
-                        diem_id_domains,
+                        vasp_domains,
                     }))
                 }
                 _ => Ok(None),
@@ -151,10 +151,10 @@ impl AccountState {
                 }
                 _ => Ok(None),
             }
-        } else if self.0.contains_key(&DiemIdDomainManager::resource_path()) {
-            match self.get_resource::<DiemIdDomainManager>() {
-                Ok(Some(diem_id_domain_manager)) => Ok(Some(AccountRole::TreasuryCompliance {
-                    diem_id_domain_manager,
+        } else if self.0.contains_key(&VASPDomainManager::resource_path()) {
+            match self.get_resource::<VASPDomainManager>() {
+                Ok(Some(vasp_domain_manager)) => Ok(Some(AccountRole::TreasuryCompliance {
+                    vasp_domain_manager,
                 })),
                 _ => Ok(None),
             }

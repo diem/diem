@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_diem_id_domain() {
+    async fn test_vasp_domain() {
         let accounts = genesis_accounts();
         let service = setup(accounts.clone());
         let filter = routes(service);
@@ -343,14 +343,14 @@ mod tests {
         // times, it should success and should not create same account multiple
         // times.
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
-        let diem_id_domain = DiemIdVaspDomainIdentifier::new("diem").unwrap();
+        let vasp_domain = DiemIdVaspDomainIdentifier::new("diem").unwrap();
 
         {
             let resp = warp::test::request()
                 .method("POST")
                 .path(
                     format!(
-                        "/mint?auth_key={}&diem_id_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
+                        "/mint?auth_key={}&vasp_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
                         auth_key, "diem", false,
                     )
                     .as_str(),
@@ -363,19 +363,19 @@ mod tests {
                 AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
             let account = reader.get(&addr).expect("account should be created");
             assert_eq!(
-                account["role"]["diem_id_domains"][0],
-                serde_json::json!(diem_id_domain),
+                account["role"]["vasp_domains"][0],
+                serde_json::json!(vasp_domain),
             );
         }
 
         {
-            let diem_id_domain_to_remove = "diem";
+            let vasp_domain_to_remove = "diem";
             let resp = warp::test::request()
                 .method("POST")
                 .path(
                     format!(
-                        "/mint?auth_key={}&diem_id_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
-                        auth_key, diem_id_domain_to_remove, true,
+                        "/mint?auth_key={}&vasp_domain={}&is_remove_domain={}&amount=1&currency_code=XDX",
+                        auth_key, vasp_domain_to_remove, true,
                     )
                         .as_str(),
                 )
@@ -386,7 +386,7 @@ mod tests {
             let addr =
                 AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
             let account = reader.get(&addr).expect("account should be created");
-            assert_eq!(account["role"]["diem_id_domains"], serde_json::json!([]));
+            assert_eq!(account["role"]["vasp_domains"], serde_json::json!([]));
         }
     }
 
@@ -451,7 +451,7 @@ mod tests {
                 }
                 if let Some(script_function) = ScriptFunctionCall::decode(txn.payload()) {
                     match script_function {
-                        ScriptFunctionCall::AddDiemIdDomain {
+                        ScriptFunctionCall::AddVaspDomain {
                             address, domain, ..
                         } => {
                             let mut writer = accounts.write();
@@ -461,12 +461,12 @@ mod tests {
                                 String::from_utf8(domain).unwrap().as_str(),
                             )
                             .unwrap();
-                            account["role"]["diem_id_domains"]
+                            account["role"]["vasp_domains"]
                                 .as_array_mut()
                                 .unwrap()
                                 .push(serde_json::json!(domain));
                         }
-                        ScriptFunctionCall::RemoveDiemIdDomain {
+                        ScriptFunctionCall::RemoveVaspDomain {
                             address, domain, ..
                         } => {
                             let mut writer = accounts.write();
@@ -478,13 +478,13 @@ mod tests {
                             let account =
                                 writer.get_mut(&address).expect("account should be created");
 
-                            let index = account["role"]["diem_id_domains"]
+                            let index = account["role"]["vasp_domains"]
                                 .as_array()
                                 .unwrap()
                                 .iter()
                                 .position(|x| x == json_domain)
                                 .unwrap();
-                            account["role"]["diem_id_domains"]
+                            account["role"]["vasp_domains"]
                                 .as_array_mut()
                                 .unwrap()
                                 .remove(index);
@@ -558,7 +558,7 @@ mod tests {
                 "num_children": 0,
                 "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
                 "base_url_rotation_events_key": format!("0300000000000000{}", address),
-                "diem_id_domains": [],
+                "vasp_domains": [],
             }),
         )
     }
