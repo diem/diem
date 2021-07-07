@@ -82,6 +82,7 @@ pub enum MethodRequest {
     GetTransactionsWithProofs(GetTransactionsWithProofsParams),
     GetAccountTransactionsWithProofs(GetAccountTransactionsWithProofsParams),
     GetEventsWithProofs(GetEventsWithProofsParams),
+    GetEventByVersionWithProof(GetEventByVersionWithProof),
 }
 
 impl MethodRequest {
@@ -120,6 +121,9 @@ impl MethodRequest {
             Method::GetEventsWithProofs => {
                 MethodRequest::GetEventsWithProofs(serde_json::from_value(value)?)
             }
+            Method::GetEventByVersionWithProof => {
+                MethodRequest::GetEventByVersionWithProof(serde_json::from_value(value)?)
+            }
         };
 
         Ok(method_request)
@@ -146,6 +150,7 @@ impl MethodRequest {
                 Method::GetAccountTransactionsWithProofs
             }
             MethodRequest::GetEventsWithProofs(_) => Method::GetEventsWithProofs,
+            MethodRequest::GetEventByVersionWithProof(_) => Method::GetEventByVersionWithProof,
         }
     }
 }
@@ -359,6 +364,13 @@ pub struct GetEventsWithProofsParams {
     pub key: EventKey,
     pub start: u64,
     pub limit: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct GetEventByVersionWithProof {
+    pub key: EventKey,
+    #[serde(default)]
+    pub version: Option<u64>,
 }
 
 #[cfg(test)]
@@ -944,5 +956,34 @@ mod test {
             "limit": 11,
             "foo": 11,
         }));
+    }
+
+    #[test]
+    fn get_event_by_version_with_proof() {
+        let parse = |value| serde_json::from_value::<GetEventByVersionWithProof>(value);
+        let parse_ok = |value| parse(value).unwrap();
+        let parse_err = |value| parse(value).unwrap_err();
+
+        let key = "13000000000000000000000000000000000000000a550c18";
+
+        // Correct arguments
+        parse_ok(json!([key, 10]));
+        parse_ok(json!([key]));
+
+        // Incorrect arguments
+        parse_err(json!([key, 10, false]));
+        parse_err(json!(["foo", 10]));
+        parse_err(json!([]));
+        parse_err(json!({}));
+
+        // Object params
+        parse_ok(json!({ "key": key, "version": 10 }));
+        parse_ok(json!({ "key": key }));
+
+        // Object without all required params
+        parse_err(json!({ "version": 10 }));
+
+        // Object with more params
+        parse_ok(json!({ "key": key, "version": 10, "foo": 99 }));
     }
 }

@@ -579,6 +579,22 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_event_by_version_with_proof: version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_event_by_version_with_proof", "params": ["13000000000000000000000000000000000000000a550c18", version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param version should be <= known latest version {}", version),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
             "get_account_transaction: invalid account",
             json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["invalid", 1, false], "id": 1}),
             json!({

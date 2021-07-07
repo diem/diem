@@ -7,8 +7,8 @@ use crate::{
     errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
-        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionListView, TransactionView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventByVersionWithProofView, EventView,
+        EventWithProofView, MetadataView, StateProofView, TransactionListView, TransactionView,
         TransactionsWithProofsView,
     },
 };
@@ -17,9 +17,10 @@ use diem_config::config::RoleType;
 use diem_json_rpc_types::request::{
     GetAccountParams, GetAccountStateWithProofParams, GetAccountTransactionParams,
     GetAccountTransactionsParams, GetAccountTransactionsWithProofsParams,
-    GetAccumulatorConsistencyProofParams, GetCurrenciesParams, GetEventsParams,
-    GetEventsWithProofsParams, GetMetadataParams, GetNetworkStatusParams, GetStateProofParams,
-    GetTransactionsParams, GetTransactionsWithProofsParams, MethodRequest, SubmitParams,
+    GetAccumulatorConsistencyProofParams, GetCurrenciesParams, GetEventByVersionWithProof,
+    GetEventsParams, GetEventsWithProofsParams, GetMetadataParams, GetNetworkStatusParams,
+    GetStateProofParams, GetTransactionsParams, GetTransactionsWithProofsParams, MethodRequest,
+    SubmitParams,
 };
 use diem_mempool::{MempoolClientSender, SubmissionStatus};
 use diem_types::{
@@ -185,6 +186,9 @@ impl<'a> Handler<'a> {
             MethodRequest::GetEventsWithProofs(params) => {
                 serde_json::to_value(self.get_events_with_proofs(params).await?)?
             }
+            MethodRequest::GetEventByVersionWithProof(params) => {
+                serde_json::to_value(self.get_event_by_version_with_proof(params).await?)?
+            }
         };
         Ok(response)
     }
@@ -348,6 +352,24 @@ impl<'a> Handler<'a> {
 
         self.service.validate_page_size_limit(limit as usize)?;
         data::get_events_with_proofs(self.service.db.borrow(), self.version(), key, start, limit)
+    }
+
+    /// Returns the latest event at or below the requested version along with proof.
+    async fn get_event_by_version_with_proof(
+        &self,
+        params: GetEventByVersionWithProof,
+    ) -> Result<EventByVersionWithProofView, JsonRpcError> {
+        let GetEventByVersionWithProof { key, version } = params;
+
+        let version = self.version_param(version, "version")?;
+        let ledger_version = self.version();
+
+        data::get_event_by_version_with_proof(
+            self.service.db.borrow(),
+            ledger_version,
+            key,
+            version,
+        )
     }
 
     /// Returns meta information about supported currencies

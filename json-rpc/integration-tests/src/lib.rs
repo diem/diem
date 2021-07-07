@@ -2,14 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_sdk::{
-    client::views::{AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView},
+    client::views::{
+        AccountTransactionsWithProofView, AccumulatorConsistencyProofView,
+        EventByVersionWithProofView, EventView,
+    },
     crypto::{hash::CryptoHash, HashValue},
     transaction_builder::{stdlib, Currency},
     types::{
         access_path::AccessPath,
         account_address::AccountAddress,
         account_config::{treasury_compliance_account_address, xus_tag},
-        contract_event::EventWithProof,
+        block_metadata::new_block_event_key,
+        contract_event::{EventByVersionWithProof, EventWithProof},
         diem_id_identifier::DiemIdVaspDomainIdentifier,
         event::EventKey,
         ledger_info::LedgerInfoWithSignatures,
@@ -1693,6 +1697,34 @@ impl PublicUsageTest for GetEventsWithProofs {
         }
 
         assert_eq!(events.len(), 3);
+
+        Ok(())
+    }
+}
+
+pub struct GetEventByVersionWithProofTest;
+
+impl Test for GetEventByVersionWithProofTest {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-event-by-version-with-proof-test"
+    }
+}
+
+impl PublicUsageTest for GetEventByVersionWithProofTest {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+
+        let event_key = new_block_event_key();
+        let response = env.send(
+            "get_event_by_version_with_proof",
+            json!([event_key.to_string()]),
+        );
+
+        // Just check that the responses deserialize correctly, we'll let
+        // the verifying client smoke tests handle the proof checking.
+        let value = response.result.unwrap();
+        let view = serde_json::from_value::<EventByVersionWithProofView>(value).unwrap();
+        let _proof = EventByVersionWithProof::try_from(&view).unwrap();
 
         Ok(())
     }

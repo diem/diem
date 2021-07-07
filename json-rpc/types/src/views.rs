@@ -14,7 +14,7 @@ use diem_types::{
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     diem_id_identifier::DiemIdVaspDomainIdentifier,
     event::EventKey,
     proof::{
@@ -292,6 +292,51 @@ impl TryFrom<&EventWithProof> for EventWithProofView {
     fn try_from(event: &EventWithProof) -> Result<Self> {
         Ok(Self {
             event_with_proof: BytesView::from(bcs::to_bytes(event)?),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct EventByVersionWithProofView {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lower_bound_incl: Option<EventWithProofView>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upper_bound_excl: Option<EventWithProofView>,
+}
+
+impl TryFrom<&EventByVersionWithProofView> for EventByVersionWithProof {
+    type Error = Error;
+
+    fn try_from(view: &EventByVersionWithProofView) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            view.lower_bound_incl
+                .as_ref()
+                .map(EventWithProof::try_from)
+                .transpose()?,
+            view.upper_bound_excl
+                .as_ref()
+                .map(EventWithProof::try_from)
+                .transpose()?,
+        ))
+    }
+}
+
+impl TryFrom<&EventByVersionWithProof> for EventByVersionWithProofView {
+    type Error = Error;
+
+    fn try_from(proof: &EventByVersionWithProof) -> Result<Self, Self::Error> {
+        Ok(Self {
+            lower_bound_incl: proof
+                .lower_bound_incl
+                .as_ref()
+                .map(EventWithProofView::try_from)
+                .transpose()?,
+            upper_bound_excl: proof
+                .upper_bound_excl
+                .as_ref()
+                .map(EventWithProofView::try_from)
+                .transpose()?,
         })
     }
 }

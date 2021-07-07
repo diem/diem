@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-07-07 Add `get_event_by_version_with_proof` API
+
+This new API allows light clients to request an event at or below a version.
+Concretely, light clients can now fully support `get_metadata` by using this API.
+
 ## 2021-06-08 Add `get_account_transactions_with_proofs` API
 
 This new API allows verifying client users to get transactions under an account

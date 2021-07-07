@@ -57,6 +57,7 @@ pub enum Method {
     GetTransactionsWithProofs,
     GetAccountTransactionsWithProofs,
     GetEventsWithProofs,
+    GetEventByVersionWithProof,
 }
 
 impl Method {
@@ -77,6 +78,7 @@ impl Method {
             Method::GetTransactionsWithProofs => "get_transactions_with_proofs",
             Method::GetAccountTransactionsWithProofs => "get_account_transactions_with_proofs",
             Method::GetEventsWithProofs => "get_events_with_proofs",
+            Method::GetEventByVersionWithProof => "get_event_by_version_with_proof",
         }
     }
 }

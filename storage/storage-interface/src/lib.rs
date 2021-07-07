@@ -219,7 +219,7 @@ pub trait DbReader: Send + Sync {
     fn get_event_by_version_with_proof(
         &self,
         event_key: &EventKey,
-        version: u64,
+        event_version: u64,
         proof_version: u64,
     ) -> Result<EventByVersionWithProof>;
 

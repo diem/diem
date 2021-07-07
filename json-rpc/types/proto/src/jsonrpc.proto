@@ -436,3 +436,19 @@ message AccountTransactionsWithProof {
     // list of hex-encoded bcs bytes
     repeated string serialized_txns_with_proofs = 1 [json_name="serialized_txns_with_proofs"];
 }
+
+/**
+ * This is for the experimental API get_events_with_proofs response. It is unstable and likely to be changed.
+ */
+message EventWithProof {
+    // hex-encoded bcs bytes
+    string event_with_proof = 1 [json_name="event_with_proof"];
+}
+
+/**
+ * This is for the experimental API get_event_by_version_with_proof response. It is unstable and likely to be changed.
+ */
+message EventByVersionWithProof {
+    EventWithProof lower_bound_incl = 1 [json_name="lower_bound_incl"];
+    EventWithProof upper_bound_excl = 2 [json_name="upper_bound_excl"];
+}

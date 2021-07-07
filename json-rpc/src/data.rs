@@ -5,8 +5,8 @@ use crate::{
     errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
-        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionListView, TransactionView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventByVersionWithProofView, EventView,
+        EventWithProofView, MetadataView, StateProofView, TransactionListView, TransactionView,
         TransactionsWithProofsView,
     },
 };
@@ -226,6 +226,18 @@ pub fn get_events_with_proofs(
         .collect::<Result<Vec<_>>>()?;
 
     Ok(views)
+}
+
+/// Returns the latest event at or below the requested version along with proof.
+pub fn get_event_by_version_with_proof(
+    db: &dyn DbReader,
+    ledger_version: u64,
+    event_key: EventKey,
+    version: u64,
+) -> Result<EventByVersionWithProofView, JsonRpcError> {
+    let event_by_version =
+        db.get_event_by_version_with_proof(&event_key, version, ledger_version)?;
+    EventByVersionWithProofView::try_from(&event_by_version).map_err(Into::into)
 }
 
 /// Returns meta information about supported currencies
