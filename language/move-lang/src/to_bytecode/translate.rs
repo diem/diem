@@ -10,7 +10,7 @@ use crate::{
         ast::{self as H},
         translate::{display_var, DisplayVar},
     },
-    naming::ast::{BuiltinTypeName_, TParam},
+    naming::ast::{BuiltinTypeName_, StructTypeParameter, TParam},
     parser::ast::{
         Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp,
         UnaryOp_, Var, Visibility,
@@ -733,12 +733,12 @@ fn fun_type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, BTreeSet<IR::Abili
         .collect()
 }
 
-fn struct_type_parameters(tps: Vec<TParam>) -> Vec<IR::StructTypeParameter> {
+fn struct_type_parameters(tps: Vec<StructTypeParameter>) -> Vec<IR::StructTypeParameter> {
     tps.into_iter()
-        .map(|tp| {
-            let name = type_var(tp.user_specified_name);
-            let constraints = abilities(&tp.abilities);
-            (/* is_phantom */ false, name, constraints)
+        .map(|StructTypeParameter { is_phantom, param }| {
+            let name = type_var(param.user_specified_name);
+            let constraints = abilities(&param.abilities);
+            (is_phantom, name, constraints)
         })
         .collect()
 }
