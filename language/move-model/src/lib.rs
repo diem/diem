@@ -89,14 +89,14 @@ pub fn run_model_builder_with_compilation_flags(
     };
     let (compiler, parsed_prog) = compiler.into_ast();
     // Add source files for targets and dependencies
-    let dep_sources: BTreeSet<_> = parsed_prog
+    let dep_files: BTreeSet<_> = parsed_prog
         .lib_definitions
         .iter()
         .map(|def| def.file())
         .collect();
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
-        env.add_source(fname, fsrc, dep_sources.contains(fname));
+        env.add_source(fname, fsrc, dep_files.contains(fname));
     }
 
     // Add any documentation comments found by the Move compiler to the env.
@@ -125,42 +125,50 @@ pub fn run_model_builder_with_compilation_flags(
         Ok(compiler) => compiler.into_ast(),
     };
     // Extract the module/script closure
+    let mut visited_addresses = BTreeSet::new();
     let mut visited_modules = BTreeSet::new();
-    for (mident, mdef) in expansion_ast.modules.key_cloned_iter() {
+    for (_, mident, mdef) in &expansion_ast.modules {
         let src_file = mdef.loc.file();
-        if !dep_sources.contains(src_file) {
-            collect_related_modules_recursive(mident, &expansion_ast.modules, &mut visited_modules);
+        if !dep_files.contains(src_file) {
+            collect_related_modules_recursive(
+                mident,
+                &expansion_ast.modules,
+                &mut visited_addresses,
+                &mut visited_modules,
+            );
         }
     }
     for sdef in expansion_ast.scripts.values() {
         let src_file = sdef.loc.file();
-        if !dep_sources.contains(src_file) {
-            for (mident, _neighbor) in sdef.immediate_neighbors.key_cloned_iter() {
+        if !dep_files.contains(src_file) {
+            for (_, mident, _neighbor) in &sdef.immediate_neighbors {
                 collect_related_modules_recursive(
                     mident,
                     &expansion_ast.modules,
+                    &mut visited_addresses,
                     &mut visited_modules,
                 );
             }
-        }
-    }
-    let mut visited_addresses = BTreeSet::new();
-    for mident in &visited_modules {
-        if let Address::Named(n) = &mident.value.address {
-            visited_addresses.insert(n);
+            for addr in &sdef.used_addresses {
+                if let Address::Named(n) = &addr {
+                    visited_addresses.insert(&n.value);
+                }
+            }
         }
     }
 
     // Step 3: selective compilation.
     let expansion_ast = {
+        let addresses = expansion_ast
+            .addresses
+            .filter_map(|n, val| visited_addresses.contains(n.value.as_str()).then(|| val));
         let E::Program {
-            addresses,
+            addresses: _,
             modules,
             scripts,
         } = expansion_ast;
-        let addresses = addresses.filter_map(|n, val| visited_addresses.contains(&n).then(|| val));
         let modules = modules.filter_map(|mident, mut mdef| {
-            visited_modules.contains(&mident).then(|| {
+            visited_modules.contains(&mident.value).then(|| {
                 mdef.is_source_module = true;
                 mdef
             })
@@ -195,23 +203,34 @@ pub fn run_model_builder_with_compilation_flags(
     Ok(env)
 }
 
-fn collect_related_modules_recursive(
-    mident: ModuleIdent,
-    modules: &UniqueMap<ModuleIdent, ModuleDefinition>,
-    visited: &mut BTreeSet<ModuleIdent>,
+fn collect_used_addresses<'a>(
+    used_addresses: &'a BTreeSet<Address>,
+    visited_addresses: &mut BTreeSet<&'a str>,
 ) {
-    if visited.contains(&mident) {
+    for addr in used_addresses {
+        if let Address::Named(n) = &addr {
+            visited_addresses.insert(&n.value);
+        }
+    }
+}
+
+fn collect_related_modules_recursive<'a>(
+    mident: &'a ModuleIdent_,
+    modules: &'a UniqueMap<ModuleIdent, ModuleDefinition>,
+    visited_addresses: &mut BTreeSet<&'a str>,
+    visited_modules: &mut BTreeSet<ModuleIdent_>,
+) {
+    if visited_modules.contains(&mident) {
         return;
     }
-    let mdef = modules.get(&mident).unwrap();
-    let deps: BTreeSet<_> = mdef
-        .immediate_neighbors
-        .key_cloned_iter()
-        .map(|(mident, _neighbor)| mident)
-        .collect();
-    visited.insert(mident);
-    for next_mident in deps {
-        collect_related_modules_recursive(next_mident, modules, visited);
+    let mdef = modules.get_(mident).unwrap();
+    if let Address::Named(n) = &mident.address {
+        visited_addresses.insert(&n.value);
+    }
+    collect_used_addresses(&mdef.used_addresses, visited_addresses);
+    visited_modules.insert(mident.clone());
+    for (_, next_mident, _) in &mdef.immediate_neighbors {
+        collect_related_modules_recursive(next_mident, modules, visited_addresses, visited_modules);
     }
 }
 
@@ -430,6 +449,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: E:
                         attributes,
                         loc,
                         immediate_neighbors,
+                        used_addresses,
                         function_name,
                         constants,
                         function,
@@ -462,6 +482,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: E:
                         loc,
                         dependency_order: usize::MAX,
                         immediate_neighbors,
+                        used_addresses,
                         is_source_module: true,
                         friends: UniqueMap::new(),
                         structs: UniqueMap::new(),

@@ -3,12 +3,12 @@
 
 use crate::{
     errors::{diagnostic_codes::*, new::Diagnostic},
-    expansion::ast::{self as E, ModuleIdent},
+    expansion::ast::{self as E, Address, ModuleIdent},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
 use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry
@@ -27,6 +27,7 @@ pub fn verify(
     let Context {
         module_neighbors,
         neighbors_by_node,
+        addresses_by_node,
         ..
     } = context;
     let graph = dependency_graph(&module_neighbors);
@@ -45,10 +46,24 @@ pub fn verify(
     for (node, neighbors) in neighbors_by_node {
         match node {
             NodeIdent::Module(mident) => {
-                modules.get_mut(&mident).unwrap().immediate_neighbors = neighbors;
+                let module = modules.get_mut(&mident).unwrap();
+                module.immediate_neighbors = neighbors;
             }
             NodeIdent::Script(sname) => {
-                scripts.get_mut(&sname).unwrap().immediate_neighbors = neighbors;
+                let script = scripts.get_mut(&sname).unwrap();
+                script.immediate_neighbors = neighbors;
+            }
+        }
+    }
+    for (node, used_addresses) in addresses_by_node {
+        match node {
+            NodeIdent::Module(mident) => {
+                let module = modules.get_mut(&mident).unwrap();
+                module.used_addresses = used_addresses;
+            }
+            NodeIdent::Script(sname) => {
+                let script = scripts.get_mut(&sname).unwrap();
+                script.used_addresses = used_addresses;
             }
         }
     }
@@ -76,6 +91,8 @@ struct Context<'a> {
     module_neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
     // A summary of neighbors keyed by module or script
     neighbors_by_node: BTreeMap<NodeIdent, UniqueMap<ModuleIdent, E::Neighbor>>,
+    // All addresses used by a node
+    addresses_by_node: BTreeMap<NodeIdent, BTreeSet<Address>>,
     // The module or script we are currently exploring
     current_node: Option<NodeIdent>,
 }
@@ -86,6 +103,7 @@ impl<'a> Context<'a> {
             modules,
             module_neighbors: BTreeMap::new(),
             neighbors_by_node: BTreeMap::new(),
+            addresses_by_node: BTreeMap::new(),
             current_node: None,
         }
     }
@@ -112,8 +130,13 @@ impl<'a> Context<'a> {
             .neighbors_by_node
             .entry(current.clone())
             .or_insert_with(UniqueMap::new);
+        let current_used_addresses = self
+            .addresses_by_node
+            .entry(current.clone())
+            .or_insert_with(BTreeSet::new);
         current_neighbors.remove(&mident);
         current_neighbors.add(mident.clone(), neighbor).unwrap();
+        current_used_addresses.insert(mident.value.address.clone());
 
         match current {
             NodeIdent::Module(current_mident) => {
@@ -142,6 +165,13 @@ impl<'a> Context<'a> {
 
     fn add_friend(&mut self, mident: ModuleIdent, loc: Loc) {
         self.add_neighbor(mident, DepType::Friend, loc);
+    }
+
+    fn add_address_usage(&mut self, address: Address) {
+        self.addresses_by_node
+            .entry(self.current_node.clone().unwrap())
+            .or_insert_with(BTreeSet::new)
+            .insert(address);
     }
 }
 
@@ -391,8 +421,10 @@ fn lvalue(context: &mut Context, sp!(_loc, a_): &E::LValue) {
 }
 
 fn exp(context: &mut Context, sp!(_loc, e_): &E::Exp) {
-    use E::Exp_ as E;
+    use crate::expansion::ast::{Exp_ as E, Value_ as V};
     match e_ {
+        E::Value(sp!(_, V::Address(a))) => context.add_address_usage(a.clone()),
+
         E::Unit { .. }
         | E::UnresolvedError
         | E::Break

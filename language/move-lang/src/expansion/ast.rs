@@ -66,6 +66,7 @@ pub struct Script {
     pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub immediate_neighbors: UniqueMap<ModuleIdent, Neighbor>,
+    pub used_addresses: BTreeSet<Address>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
@@ -97,6 +98,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
     pub immediate_neighbors: UniqueMap<ModuleIdent, Neighbor>,
+    pub used_addresses: BTreeSet<Address>,
     pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -772,6 +774,7 @@ impl AstDebug for Script {
             attributes,
             loc: _loc,
             immediate_neighbors,
+            used_addresses,
             constants,
             function_name,
             function,
@@ -781,6 +784,10 @@ impl AstDebug for Script {
         for (mident, neighbor) in immediate_neighbors.key_cloned_iter() {
             w.write(&format!("{} {};", neighbor, mident));
             w.new_line();
+        }
+        for addr in used_addresses {
+            w.write(&format!("uses address {};", addr));
+            w.new_line()
         }
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
@@ -802,6 +809,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             dependency_order,
             immediate_neighbors,
+            used_addresses,
             friends,
             structs,
             functions,
@@ -818,6 +826,10 @@ impl AstDebug for ModuleDefinition {
         for (mident, neighbor) in immediate_neighbors.key_cloned_iter() {
             w.write(&format!("{} {};", neighbor, mident));
             w.new_line();
+        }
+        for addr in used_addresses {
+            w.write(&format!("uses address {};", addr));
+            w.new_line()
         }
         for (mident, _loc) in friends.key_cloned_iter() {
             w.write(&format!("friend {};", mident));
