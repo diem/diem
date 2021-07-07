@@ -40,6 +40,7 @@ static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| {
             },
         ],
         vec![],
+        None, // Some("Std".to_owned()),
     )
 });
 
@@ -52,6 +53,7 @@ static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
             exclusion: HashSet::new(),
         }],
         vec![&PACKAGE_MOVE_STDLIB],
+        None, // Some("Diem".to_owned()),
     )
 });
 

@@ -75,6 +75,9 @@ pub struct MovePackage {
     sources: Vec<SourceFilter<'static>>,
     /// Dependencies
     deps: Vec<&'static Lazy<MovePackage>>,
+    /// Hack to support named addresses. Works now since our current packages only have one address
+    // TODO properly support named addresses, will require migrating to new/planned build system
+    named_address_hack: Option<String>,
 }
 
 impl MovePackage {
@@ -82,11 +85,13 @@ impl MovePackage {
         name: String,
         sources: Vec<SourceFilter<'static>>,
         deps: Vec<&'static Lazy<MovePackage>>,
+        named_address: Option<String>,
     ) -> Self {
         MovePackage {
             name,
             sources,
             deps,
+            named_address_hack: named_address,
         }
     }
 
@@ -181,8 +186,7 @@ impl MovePackage {
         })? {
             let module = CompiledModule::deserialize(&fs::read(Path::new(&entry)).unwrap())
                 .map_err(|e| anyhow!("Failure deserializing module {}: {:?}", entry, e))?;
-            // TODO support named addresses, will require migrating to new/planned build system
-            modules.push(((module.self_id(), None), module));
+            modules.push(((module.self_id(), self.named_address_hack.clone()), module));
         }
         Ok(modules)
     }
