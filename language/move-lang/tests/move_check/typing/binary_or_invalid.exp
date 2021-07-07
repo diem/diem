@@ -1,266 +1,187 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/binary_or_invalid.move:8:9
+  │
+8 │         0 || 1;
+  │         ^ -- Expected: 'bool'
+  │         │  
+  │         Invalid argument to '||'
+  │         Given: integer
 
-   ┌── tests/move_check/typing/binary_or_invalid.move:8:9 ───
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/binary_or_invalid.move:8:14
+  │
+8 │         0 || 1;
+  │           -- ^
+  │           │  │
+  │           │  Invalid argument to '||'
+  │           │  Given: integer
+  │           Expected: 'bool'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/binary_or_invalid.move:9:9
+  │
+9 │         1 || false;
+  │         ^ -- Expected: 'bool'
+  │         │  
+  │         Invalid argument to '||'
+  │         Given: integer
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:10:18
    │
- 8 │         0 || 1;
-   │         ^ Incompatible arguments to '||'
-   ·
- 8 │         0 || 1;
-   │         - The type: integer
-   ·
- 8 │         0 || 1;
-   │         - Is not compatible with: 'bool'
+10 │         false || 1;
+   │               -- ^
+   │               │  │
+   │               │  Invalid argument to '||'
+   │               │  Given: integer
+   │               Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:11:9
    │
+11 │         @0x0 || @0x1;
+   │         ^^^^ -- Expected: 'bool'
+   │         │     
+   │         Invalid argument to '||'
+   │         Given: 'address'
 
-error: 
-
-   ┌── tests/move_check/typing/binary_or_invalid.move:8:14 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:11:17
    │
- 8 │         0 || 1;
-   │              ^ Incompatible arguments to '||'
-   ·
- 8 │         0 || 1;
-   │              - The type: integer
-   ·
- 8 │         0 || 1;
-   │         - Is not compatible with: 'bool'
+11 │         @0x0 || @0x1;
+   │              -- ^^^^
+   │              │  │
+   │              │  Invalid argument to '||'
+   │              │  Given: 'address'
+   │              Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:12:9
    │
+12 │         (0: u8) || (1: u128);
+   │         ^^^^^^^ -- Expected: 'bool'
+   │         │   │    
+   │         │   Given: 'u8'
+   │         Invalid argument to '||'
 
-error: 
-
-   ┌── tests/move_check/typing/binary_or_invalid.move:9:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:12:20
    │
- 9 │         1 || false;
-   │         ^ Incompatible arguments to '||'
-   ·
- 9 │         1 || false;
-   │         - The type: integer
-   ·
- 9 │         1 || false;
-   │         - Is not compatible with: 'bool'
+12 │         (0: u8) || (1: u128);
+   │                 -- ^^^^^^^^^
+   │                 │  │   │
+   │                 │  │   Given: 'u128'
+   │                 │  Invalid argument to '||'
+   │                 Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:13:9
    │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Given: '0x8675309::M::R'
+   ·
+13 │         r || r;
+   │         ^ -- Expected: 'bool'
+   │         │  
+   │         Invalid argument to '||'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:13:14
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Given: '0x8675309::M::R'
+   ·
+13 │         r || r;
+   │           -- ^ Invalid argument to '||'
+   │           │   
+   │           Expected: 'bool'
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:10:18 ───
-    │
- 10 │         false || 1;
-    │                  ^ Incompatible arguments to '||'
-    ·
- 10 │         false || 1;
-    │                  - The type: integer
-    ·
- 10 │         false || 1;
-    │         ----- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:14:9
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Given: '0x8675309::M::S'
+   ·
+14 │         s || s;
+   │         ^ -- Expected: 'bool'
+   │         │  
+   │         Invalid argument to '||'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:14:14
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Given: '0x8675309::M::S'
+   ·
+14 │         s || s;
+   │           -- ^ Invalid argument to '||'
+   │           │   
+   │           Expected: 'bool'
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:11:9 ───
-    │
- 11 │         @0x0 || @0x1;
-    │         ^^^^ Incompatible arguments to '||'
-    ·
- 11 │         @0x0 || @0x1;
-    │         ---- The type: 'address'
-    ·
- 11 │         @0x0 || @0x1;
-    │         ---- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:15:9
+   │
+15 │         () || ();
+   │         ^^ -- Expected: 'bool'
+   │         │   
+   │         Invalid argument to '||'
+   │         Given: '()'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:15:15
+   │
+15 │         () || ();
+   │            -- ^^
+   │            │  │
+   │            │  Invalid argument to '||'
+   │            │  Given: '()'
+   │            Expected: 'bool'
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:11:17 ───
-    │
- 11 │         @0x0 || @0x1;
-    │                 ^^^^ Incompatible arguments to '||'
-    ·
- 11 │         @0x0 || @0x1;
-    │                 ---- The type: 'address'
-    ·
- 11 │         @0x0 || @0x1;
-    │         ---- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:16:17
+   │
+16 │         true || ();
+   │              -- ^^
+   │              │  │
+   │              │  Invalid argument to '||'
+   │              │  Given: '()'
+   │              Expected: 'bool'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:17:9
+   │
+17 │         (true, false) || (true, false, true);
+   │         ^^^^^^^^^^^^^ -- Expected: 'bool'
+   │         │              
+   │         Invalid argument to '||'
+   │         Given: '(bool, bool)'
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:12:9 ───
-    │
- 12 │         (0: u8) || (1: u128);
-    │         ^^^^^^^ Incompatible arguments to '||'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │             -- The type: 'u8'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │         ------- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:17:26
+   │
+17 │         (true, false) || (true, false, true);
+   │                       -- ^^^^^^^^^^^^^^^^^^^
+   │                       │  │
+   │                       │  Invalid argument to '||'
+   │                       │  Given: '(bool, bool, bool)'
+   │                       Expected: 'bool'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:18:9
+   │
+18 │         (true, true) || (false, false);
+   │         ^^^^^^^^^^^^ -- Expected: 'bool'
+   │         │             
+   │         Invalid argument to '||'
+   │         Given: '(bool, bool)'
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:12:20 ───
-    │
- 12 │         (0: u8) || (1: u128);
-    │                    ^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │                        ---- The type: 'u128'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │         ------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:13:9 ───
-    │
- 13 │         r || r;
-    │         ^ Incompatible arguments to '||'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - The type: '0x8675309::M::R'
-    ·
- 13 │         r || r;
-    │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:13:14 ───
-    │
- 13 │         r || r;
-    │              ^ Incompatible arguments to '||'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - The type: '0x8675309::M::R'
-    ·
- 13 │         r || r;
-    │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:14:9 ───
-    │
- 14 │         s || s;
-    │         ^ Incompatible arguments to '||'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - The type: '0x8675309::M::S'
-    ·
- 14 │         s || s;
-    │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:14:14 ───
-    │
- 14 │         s || s;
-    │              ^ Incompatible arguments to '||'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - The type: '0x8675309::M::S'
-    ·
- 14 │         s || s;
-    │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:15:9 ───
-    │
- 15 │         () || ();
-    │         ^^ Incompatible arguments to '||'
-    ·
- 15 │         () || ();
-    │         -- The type: '()'
-    ·
- 15 │         () || ();
-    │         -- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:15:15 ───
-    │
- 15 │         () || ();
-    │               ^^ Incompatible arguments to '||'
-    ·
- 15 │         () || ();
-    │               -- The type: '()'
-    ·
- 15 │         () || ();
-    │         -- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:16:17 ───
-    │
- 16 │         true || ();
-    │                 ^^ Incompatible arguments to '||'
-    ·
- 16 │         true || ();
-    │                 -- The type: '()'
-    ·
- 16 │         true || ();
-    │         ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:17:9 ───
-    │
- 17 │         (true, false) || (true, false, true);
-    │         ^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 17 │         (true, false) || (true, false, true);
-    │         ------------- The type: '(bool, bool)'
-    ·
- 17 │         (true, false) || (true, false, true);
-    │         ------------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:17:26 ───
-    │
- 17 │         (true, false) || (true, false, true);
-    │                          ^^^^^^^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 17 │         (true, false) || (true, false, true);
-    │                          ------------------- The type: '(bool, bool, bool)'
-    ·
- 17 │         (true, false) || (true, false, true);
-    │         ------------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:18:9 ───
-    │
- 18 │         (true, true) || (false, false);
-    │         ^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 18 │         (true, true) || (false, false);
-    │         ------------ The type: '(bool, bool)'
-    ·
- 18 │         (true, true) || (false, false);
-    │         ------------ Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:18:25 ───
-    │
- 18 │         (true, true) || (false, false);
-    │                         ^^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 18 │         (true, true) || (false, false);
-    │                         -------------- The type: '(bool, bool)'
-    ·
- 18 │         (true, true) || (false, false);
-    │         ------------ Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_or_invalid.move:18:25
+   │
+18 │         (true, true) || (false, false);
+   │                      -- ^^^^^^^^^^^^^^
+   │                      │  │
+   │                      │  Invalid argument to '||'
+   │                      │  Given: '(bool, bool)'
+   │                      Expected: 'bool'
 

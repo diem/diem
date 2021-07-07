@@ -1,3 +1,25 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_extra_arg.move:15:9
+   │
+14 │     fun t0<T>(s: &signer, a: address) {
+   │                              ------- Given: 'address'
+15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid call of 'move_to'. Invalid argument for parameter '0'
+   │         Expected: '&signer'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_extra_arg.move:15:9
+   │
+14 │     fun t0<T>(s: &signer, a: address) {
+   │                  ------- Given: '&signer'
+15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │       │
+   │         │       Expected: '0x8675309::N::R<bool>'
+   │         Invalid call of 'move_to'. Invalid argument for parameter '1'
+
 error: 
 
    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_extra_arg.move:5:9 ───
@@ -18,33 +40,5 @@ error:
     ·
  15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
     │                         ------------------------------- Found 4 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_extra_arg.move:15:9 ───
-    │
- 15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
-    ·
- 14 │     fun t0<T>(s: &signer, a: address) {
-    │                              ------- The type: 'address'
-    ·
- 15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
-    │         ------- Is not compatible with: '&signer'
-    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_extra_arg.move:15:9 ───
-    │
- 15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
-    ·
- 14 │     fun t0<T>(s: &signer, a: address) {
-    │                  ------- The type: '&signer'
-    ·
- 15 │         move_to<R<bool>>(a, s, a, R<bool> { f: false });
-    │                 ------- Is not compatible with: '0x8675309::N::R<bool>'
     │
 

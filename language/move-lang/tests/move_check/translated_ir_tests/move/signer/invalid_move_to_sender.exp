@@ -16,17 +16,14 @@ error[E05001]: ability constraint not satisfied
   │                           Invalid field type. The struct was declared with the ability 'key' so all fields require the ability 'store'
   │                           The type 'signer' does not have the ability 'store'
 
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:10:9 ───
-    │
- 10 │         move_to<R>(s1, move s);
-    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
-    ·
-  9 │     fun t(s1: &signer, s: signer) {
-    │                           ------ The type: 'signer'
-    ·
- 10 │         move_to<R>(s1, move s);
-    │                 - Is not compatible with: '0x8675309::N::R'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:10:9
+   │
+ 9 │     fun t(s1: &signer, s: signer) {
+   │                           ------ Given: 'signer'
+10 │         move_to<R>(s1, move s);
+   │         ^^^^^^^^^^^^^^^^^^^^^^
+   │         │       │
+   │         │       Expected: '0x8675309::N::R'
+   │         Invalid call of 'move_to'. Invalid argument for parameter '1'
 

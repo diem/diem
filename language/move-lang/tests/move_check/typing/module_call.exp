@@ -1,3 +1,15 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:43:18
+   │
+ 8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                           -------------- Given: '(bool, (address, u64), _)'
+   ·
+11 │     public fun bing(b: bool, a: address, x: u64) {
+   │                        ---- Expected: 'bool'
+   ·
+43 │         let () = X::bing(X::baz(X::bar(X::foo())));
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:43:26
    │
@@ -6,6 +18,18 @@ error[E04004]: expected a single non-reference type
    ·
 43 │         let () = X::bing(X::baz(X::bar(X::foo())));
    │                          ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:44:18
+   │
+ 8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                           -------------- Given: '(bool, (address, u64), _)'
+   ·
+11 │     public fun bing(b: bool, a: address, x: u64) {
+   │                        ---- Expected: 'bool'
+   ·
+44 │         let () = X::bing (X::baz (X::bar (X::foo())));
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
 
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:44:27
@@ -16,6 +40,18 @@ error[E04004]: expected a single non-reference type
 44 │         let () = X::bing (X::baz (X::bar (X::foo())));
    │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:45:18
+   │
+ 8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                           -------------- Given: '(bool, (address, u64), _)'
+   ·
+11 │     public fun bing(b: bool, a: address, x: u64) {
+   │                        ---- Expected: 'bool'
+   ·
+45 │         let () = X::bing (X::baz (X::bar(1)));
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:45:27
    │
@@ -24,6 +60,30 @@ error[E04004]: expected a single non-reference type
    ·
 45 │         let () = X::bing (X::baz (X::bar(1)));
    │                           ^^^^^^^^^^^^^^^^^^ Invalid type argument
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:46:18
+   │
+ 8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                           -------------- Given: '(bool, address, {integer})'
+   ·
+11 │     public fun bing(b: bool, a: address, x: u64) {
+   │                        ---- Expected: 'bool'
+   ·
+46 │         let () = X::bing (X::baz (@0x0, 1));
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:51:18
+   │
+22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                    -------------- Given: '(bool, (address, u64), _)'
+   ·
+25 │     fun bing(b: bool, a: address, x: u64) {
+   │                 ---- Expected: 'bool'
+   ·
+51 │         let () = bing(baz(bar(foo())));
+   │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
 
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:51:23
@@ -34,6 +94,18 @@ error[E04004]: expected a single non-reference type
 51 │         let () = bing(baz(bar(foo())));
    │                       ^^^^^^^^^^^^^^^ Invalid type argument
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:52:18
+   │
+22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                    -------------- Given: '(bool, (address, u64), _)'
+   ·
+25 │     fun bing(b: bool, a: address, x: u64) {
+   │                 ---- Expected: 'bool'
+   ·
+52 │         let () = bing (baz (bar (foo())));
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:52:24
    │
@@ -42,6 +114,18 @@ error[E04004]: expected a single non-reference type
    ·
 52 │         let () = bing (baz (bar (foo())));
    │                        ^^^^^^^^^^^^^^^^^ Invalid type argument
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:53:18
+   │
+22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                    -------------- Given: '(bool, (address, u64), _)'
+   ·
+25 │     fun bing(b: bool, a: address, x: u64) {
+   │                 ---- Expected: 'bool'
+   ·
+53 │         let () = bing (baz (bar(1)));
+   │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
 
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/module_call.move:53:24
@@ -52,6 +136,18 @@ error[E04004]: expected a single non-reference type
 53 │         let () = bing (baz (bar(1)));
    │                        ^^^^^^^^^^^^ Invalid type argument
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call.move:54:18
+   │
+22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
+   │                                    -------------- Given: '(bool, address, {integer})'
+   ·
+25 │     fun bing(b: bool, a: address, x: u64) {
+   │                 ---- Expected: 'bool'
+   ·
+54 │         let () = bing (baz (@0x0, 1));
+   │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+
 error: 
 
     ┌── tests/move_check/typing/module_call.move:43:18 ───
@@ -61,20 +157,6 @@ error:
     ·
  43 │         let () = X::bing(X::baz(X::bar(X::foo())));
     │                         -------------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call.move:43:18 ───
-    │
- 43 │         let () = X::bing(X::baz(X::bar(X::foo())));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
-    ·
-  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                           -------------- The type: '(bool, (address, u64), _)'
-    ·
- 11 │     public fun bing(b: bool, a: address, x: u64) {
-    │                        ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -101,20 +183,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call.move:44:18 ───
-    │
- 44 │         let () = X::bing (X::baz (X::bar (X::foo())));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
-    ·
-  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                           -------------- The type: '(bool, (address, u64), _)'
-    ·
- 11 │     public fun bing(b: bool, a: address, x: u64) {
-    │                        ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call.move:44:27 ───
     │
  44 │         let () = X::bing (X::baz (X::bar (X::foo())));
@@ -133,20 +201,6 @@ error:
     ·
  45 │         let () = X::bing (X::baz (X::bar(1)));
     │                          -------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call.move:45:18 ───
-    │
- 45 │         let () = X::bing (X::baz (X::bar(1)));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
-    ·
-  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                           -------------- The type: '(bool, (address, u64), _)'
-    ·
- 11 │     public fun bing(b: bool, a: address, x: u64) {
-    │                        ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -173,20 +227,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call.move:46:18 ───
-    │
- 46 │         let () = X::bing (X::baz (@0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
-    ·
-  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                           -------------- The type: '(bool, address, {integer})'
-    ·
- 11 │     public fun bing(b: bool, a: address, x: u64) {
-    │                        ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call.move:51:18 ───
     │
  51 │         let () = bing(baz(bar(foo())));
@@ -194,20 +234,6 @@ error:
     ·
  51 │         let () = bing(baz(bar(foo())));
     │                      ----------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call.move:51:18 ───
-    │
- 51 │         let () = bing(baz(bar(foo())));
-    │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
-    ·
- 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                    -------------- The type: '(bool, (address, u64), _)'
-    ·
- 25 │     fun bing(b: bool, a: address, x: u64) {
-    │                 ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -234,20 +260,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call.move:52:18 ───
-    │
- 52 │         let () = bing (baz (bar (foo())));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
-    ·
- 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                    -------------- The type: '(bool, (address, u64), _)'
-    ·
- 25 │     fun bing(b: bool, a: address, x: u64) {
-    │                 ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call.move:52:24 ───
     │
  52 │         let () = bing (baz (bar (foo())));
@@ -270,20 +282,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call.move:53:18 ───
-    │
- 53 │         let () = bing (baz (bar(1)));
-    │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
-    ·
- 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                    -------------- The type: '(bool, (address, u64), _)'
-    ·
- 25 │     fun bing(b: bool, a: address, x: u64) {
-    │                 ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call.move:53:24 ───
     │
  53 │         let () = bing (baz (bar(1)));
@@ -302,19 +300,5 @@ error:
     ·
  54 │         let () = bing (baz (@0x0, 1));
     │                       --------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call.move:54:18 ───
-    │
- 54 │         let () = bing (baz (@0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
-    ·
- 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
-    │                                    -------------- The type: '(bool, address, {integer})'
-    ·
- 25 │     fun bing(b: bool, a: address, x: u64) {
-    │                 ---- Is not compatible with: 'bool'
     │
 

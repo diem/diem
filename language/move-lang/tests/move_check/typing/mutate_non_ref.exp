@@ -1,3 +1,61 @@
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/mutate_non_ref.move:7:10
+  │
+6 │         let u = 0;
+  │             - Given: integer
+7 │         *u = 1;
+  │          ^
+  │          │
+  │          Invalid mutation. Expected a mutable reference
+  │          Expected: '&mut _'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:10:10
+   │
+ 9 │         let s = S { f: 0 };
+   │                 ---------- Given: '0x8675309::M::S'
+10 │         *s = S { f: 0 };
+   │          ^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:11:10
+   │
+ 2 │     struct S has copy, drop { f: u64 }
+   │                                  --- Given: 'u64'
+   ·
+11 │         *s.f = 0;
+   │          ^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:14:10
+   │
+ 2 │     struct S has copy, drop { f: u64 }
+   │                                  --- Given: 'u64'
+   ·
+14 │         *s_ref.f = 0;
+   │          ^^^^^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:17:10
+   │
+ 3 │     struct X has copy, drop { s: S }
+   │                                  - Given: '0x8675309::M::S'
+   ·
+17 │         *x.s = S { f: 0 };
+   │          ^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
+
 error[E05002]: type not implicitly copyable
    ┌─ tests/move_check/typing/mutate_non_ref.move:17:10
    │
@@ -6,6 +64,30 @@ error[E05002]: type not implicitly copyable
    ·
 17 │         *x.s = S { f: 0 };
    │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:18:10
+   │
+ 2 │     struct S has copy, drop { f: u64 }
+   │                                  --- Given: 'u64'
+   ·
+18 │         *x.s.f = 0;
+   │          ^^^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:21:10
+   │
+ 3 │     struct X has copy, drop { s: S }
+   │                                  - Given: '0x8675309::M::S'
+   ·
+21 │         *x_ref.s = S{ f: 0 };
+   │          ^^^^^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
 
 error[E05002]: type not implicitly copyable
    ┌─ tests/move_check/typing/mutate_non_ref.move:21:10
@@ -16,115 +98,15 @@ error[E05002]: type not implicitly copyable
 21 │         *x_ref.s = S{ f: 0 };
    │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
 
-error: 
-
-   ┌── tests/move_check/typing/mutate_non_ref.move:7:10 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/mutate_non_ref.move:22:10
    │
- 7 │         *u = 1;
-   │          ^ Invalid mutation. Expected a mutable reference
+ 2 │     struct S has copy, drop { f: u64 }
+   │                                  --- Given: 'u64'
    ·
- 6 │         let u = 0;
-   │             - The type: integer
-   ·
- 7 │         *u = 1;
-   │          - Is not compatible with: '&mut _'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:10:10 ───
-    │
- 10 │         *s = S { f: 0 };
-    │          ^ Invalid mutation. Expected a mutable reference
-    ·
-  9 │         let s = S { f: 0 };
-    │                 ---------- The type: '0x8675309::M::S'
-    ·
- 10 │         *s = S { f: 0 };
-    │          - Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:11:10 ───
-    │
- 11 │         *s.f = 0;
-    │          ^^^ Invalid mutation. Expected a mutable reference
-    ·
-  2 │     struct S has copy, drop { f: u64 }
-    │                                  --- The type: 'u64'
-    ·
- 11 │         *s.f = 0;
-    │          --- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:14:10 ───
-    │
- 14 │         *s_ref.f = 0;
-    │          ^^^^^^^ Invalid mutation. Expected a mutable reference
-    ·
-  2 │     struct S has copy, drop { f: u64 }
-    │                                  --- The type: 'u64'
-    ·
- 14 │         *s_ref.f = 0;
-    │          ------- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:17:10 ───
-    │
- 17 │         *x.s = S { f: 0 };
-    │          ^^^ Invalid mutation. Expected a mutable reference
-    ·
-  3 │     struct X has copy, drop { s: S }
-    │                                  - The type: '0x8675309::M::S'
-    ·
- 17 │         *x.s = S { f: 0 };
-    │          --- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:18:10 ───
-    │
- 18 │         *x.s.f = 0;
-    │          ^^^^^ Invalid mutation. Expected a mutable reference
-    ·
-  2 │     struct S has copy, drop { f: u64 }
-    │                                  --- The type: 'u64'
-    ·
- 18 │         *x.s.f = 0;
-    │          ----- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:21:10 ───
-    │
- 21 │         *x_ref.s = S{ f: 0 };
-    │          ^^^^^^^ Invalid mutation. Expected a mutable reference
-    ·
-  3 │     struct X has copy, drop { s: S }
-    │                                  - The type: '0x8675309::M::S'
-    ·
- 21 │         *x_ref.s = S{ f: 0 };
-    │          ------- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:22:10 ───
-    │
- 22 │         *x_ref.s.f = 0;
-    │          ^^^^^^^^^ Invalid mutation. Expected a mutable reference
-    ·
-  2 │     struct S has copy, drop { f: u64 }
-    │                                  --- The type: 'u64'
-    ·
- 22 │         *x_ref.s.f = 0;
-    │          --------- Is not compatible with: '&mut _'
-    │
+22 │         *x_ref.s.f = 0;
+   │          ^^^^^^^^^
+   │          │
+   │          Invalid mutation. Expected a mutable reference
+   │          Expected: '&mut _'
 

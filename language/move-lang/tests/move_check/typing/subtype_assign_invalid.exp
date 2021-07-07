@@ -1,70 +1,49 @@
-error: 
+error[E04006]: invalid subtype
+  ┌─ tests/move_check/typing/subtype_assign_invalid.move:5:16
+  │
+5 │         let x: &mut u64 = &0;
+  │                ^^^^^^^^   -- Given: '&{integer}'
+  │                │           
+  │                Invalid type annotation
+  │                Expected: '&mut u64'
 
-   ┌── tests/move_check/typing/subtype_assign_invalid.move:5:16 ───
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/subtype_assign_invalid.move:10:10
    │
- 5 │         let x: &mut u64 = &0;
-   │                ^^^^^^^^ Invalid type annotation
-   ·
- 5 │         let x: &mut u64 = &0;
-   │                           -- The type: '&{integer}'
-   ·
- 5 │         let x: &mut u64 = &0;
-   │                -------- Is not a subtype of: '&mut u64'
+ 9 │         let (x, y): (&mut u64, &mut u64);
+   │                      -------- Expected: '&mut u64'
+10 │         (x, y) = (&0, &0);
+   │          ^        -- Given: '&{integer}'
+   │          │         
+   │          Invalid assignment to local 'x'
+
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/subtype_assign_invalid.move:10:13
    │
+ 9 │         let (x, y): (&mut u64, &mut u64);
+   │                                -------- Expected: '&mut u64'
+10 │         (x, y) = (&0, &0);
+   │             ^         -- Given: '&{integer}'
+   │             │          
+   │             Invalid assignment to local 'y'
 
-error: 
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/subtype_assign_invalid.move:13:10
+   │
+12 │         let (x, y): (&mut u64, &u64);
+   │                      -------- Expected: '&mut u64'
+13 │         (x, y) = (&0, &0);
+   │          ^        -- Given: '&{integer}'
+   │          │         
+   │          Invalid assignment to local 'x'
 
-    ┌── tests/move_check/typing/subtype_assign_invalid.move:10:10 ───
-    │
- 10 │         (x, y) = (&0, &0);
-    │          ^ Invalid assignment to local 'x'
-    ·
- 10 │         (x, y) = (&0, &0);
-    │                   -- The type: '&{integer}'
-    ·
-  9 │         let (x, y): (&mut u64, &mut u64);
-    │                      -------- Is not a subtype of: '&mut u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/subtype_assign_invalid.move:10:13 ───
-    │
- 10 │         (x, y) = (&0, &0);
-    │             ^ Invalid assignment to local 'y'
-    ·
- 10 │         (x, y) = (&0, &0);
-    │                       -- The type: '&{integer}'
-    ·
-  9 │         let (x, y): (&mut u64, &mut u64);
-    │                                -------- Is not a subtype of: '&mut u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/subtype_assign_invalid.move:13:10 ───
-    │
- 13 │         (x, y) = (&0, &0);
-    │          ^ Invalid assignment to local 'x'
-    ·
- 13 │         (x, y) = (&0, &0);
-    │                   -- The type: '&{integer}'
-    ·
- 12 │         let (x, y): (&mut u64, &u64);
-    │                      -------- Is not a subtype of: '&mut u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/subtype_assign_invalid.move:16:13 ───
-    │
- 16 │         (x, y)= (&0, &0);
-    │             ^ Invalid assignment to local 'y'
-    ·
- 16 │         (x, y)= (&0, &0);
-    │                      -- The type: '&{integer}'
-    ·
- 15 │         let (x, y): (&u64, &mut u64);
-    │                            -------- Is not a subtype of: '&mut u64'
-    │
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/subtype_assign_invalid.move:16:13
+   │
+15 │         let (x, y): (&u64, &mut u64);
+   │                            -------- Expected: '&mut u64'
+16 │         (x, y)= (&0, &0);
+   │             ^        -- Given: '&{integer}'
+   │             │         
+   │             Invalid assignment to local 'y'
 

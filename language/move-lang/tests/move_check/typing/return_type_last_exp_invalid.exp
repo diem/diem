@@ -1,70 +1,55 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/return_type_last_exp_invalid.move:5:9
+  │
+4 │     fun t0(): u64 {
+  │               --- Expected: 'u64'
+5 │         ()
+  │         ^^
+  │         │
+  │         Invalid return expression
+  │         Given: '()'
 
-   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:5:9 ───
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/return_type_last_exp_invalid.move:9:9
+  │
+8 │     fun t1(): () {
+  │               -- Expected: '()'
+9 │         0
+  │         ^
+  │         │
+  │         Invalid return expression
+  │         Given: integer
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/return_type_last_exp_invalid.move:13:9
    │
- 5 │         ()
-   │         ^^ Invalid return expression
-   ·
- 5 │         ()
-   │         -- The type: '()'
-   ·
- 4 │     fun t0(): u64 {
-   │               --- Is not compatible with: 'u64'
+12 │     fun t2(): (u64, bool) {
+   │               ----------- Expected expression list of length 2: '(u64, bool)'
+13 │         (0, false, R{})
+   │         ^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid return expression
+   │         Given expression list of length 3: '({integer}, bool, 0x8675309::M::R)'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/return_type_last_exp_invalid.move:17:9
    │
+16 │     fun t3(): (u64, bool, R, bool) {
+   │               -------------------- Expected expression list of length 4: '(u64, bool, 0x8675309::M::R, bool)'
+17 │         (0, false, R{})
+   │         ^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid return expression
+   │         Given expression list of length 3: '({integer}, bool, 0x8675309::M::R)'
 
-error: 
-
-   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:9:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/return_type_last_exp_invalid.move:21:9
    │
- 9 │         0
-   │         ^ Invalid return expression
-   ·
- 9 │         0
-   │         - The type: integer
-   ·
- 8 │     fun t1(): () {
-   │               -- Is not compatible with: '()'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:13:9 ───
-    │
- 13 │         (0, false, R{})
-    │         ^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 13 │         (0, false, R{})
-    │         --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
- 12 │     fun t2(): (u64, bool) {
-    │               ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:17:9 ───
-    │
- 17 │         (0, false, R{})
-    │         ^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 17 │         (0, false, R{})
-    │         --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
- 16 │     fun t3(): (u64, bool, R, bool) {
-    │               -------------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, bool)'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:21:9 ───
-    │
- 21 │         (0, false, R{})
-    │         ^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 21 │         (0, false, R{})
-    │          - The type: integer
-    ·
- 20 │     fun t4(): (bool, u64, R) {
-    │                ---- Is not compatible with: 'bool'
-    │
+20 │     fun t4(): (bool, u64, R) {
+   │                ---- Expected: 'bool'
+21 │         (0, false, R{})
+   │         ^^^^^^^^^^^^^^^
+   │         ││
+   │         │Given: integer
+   │         Invalid return expression
 

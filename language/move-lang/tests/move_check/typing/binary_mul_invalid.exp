@@ -15,6 +15,15 @@ error[E04003]: built-in operation not supported
   │         │        
   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/binary_mul_invalid.move:9:11
+  │
+9 │         1 * false;
+  │         - ^ ----- Found: 'bool'. It is not compatible with the other type.
+  │         │ │  
+  │         │ Incompatible arguments to '*'
+  │         Found: integer. It is not compatible with the other type.
+
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:10:9
    │
@@ -23,6 +32,15 @@ error[E04003]: built-in operation not supported
    │         │
    │         Invalid argument to '*'
    │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:10:15
+   │
+10 │         false * 1;
+   │         ----- ^ - Found: integer. It is not compatible with the other type.
+   │         │     │  
+   │         │     Incompatible arguments to '*'
+   │         Found: 'bool'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:10:17
@@ -48,6 +66,15 @@ error[E04003]: built-in operation not supported
    │         ----   ^^^^ Invalid argument to '*'
    │         │       
    │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:12:17
+   │
+12 │         (0: u8) * (1: u128);
+   │             --  ^     ---- Found: 'u128'. It is not compatible with the other type.
+   │             │   │      
+   │             │   Incompatible arguments to '*'
+   │             Found: 'u8'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:13:9
@@ -102,8 +129,8 @@ error[E04003]: built-in operation not supported
    │
 15 │         1 * false * @0x0 * 0;
    │         ^^^^^^^^^
-   │         │   │
-   │         │   Found: '_'. But expected: 'u8', 'u64', 'u128'
+   │         │ │
+   │         │ Found: '_'. But expected: 'u8', 'u64', 'u128'
    │         Invalid argument to '*'
 
 error[E04003]: built-in operation not supported
@@ -115,13 +142,31 @@ error[E04003]: built-in operation not supported
    │         │           Found: 'address'. But expected: 'u8', 'u64', 'u128'
    │         Invalid argument to '*'
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:15:11
+   │
+15 │         1 * false * @0x0 * 0;
+   │         - ^ ----- Found: 'bool'. It is not compatible with the other type.
+   │         │ │  
+   │         │ Incompatible arguments to '*'
+   │         Found: integer. It is not compatible with the other type.
+
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:15:21
    │
 15 │         1 * false * @0x0 * 0;
-   │             -----   ^^^^ Invalid argument to '*'
-   │             │        
-   │             Found: '_'. But expected: 'u8', 'u64', 'u128'
+   │           -         ^^^^ Invalid argument to '*'
+   │           │          
+   │           Found: '_'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:15:26
+   │
+15 │         1 * false * @0x0 * 0;
+   │                     ---- ^ - Found: integer. It is not compatible with the other type.
+   │                     │    │  
+   │                     │    Incompatible arguments to '*'
+   │                     Found: 'address'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:15:28
@@ -148,6 +193,15 @@ error[E04003]: built-in operation not supported
    │         │     
    │         Found: '()'. But expected: 'u8', 'u64', 'u128'
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:17:11
+   │
+17 │         1 * ();
+   │         - ^ -- Found: '()'. It is not compatible with the other type.
+   │         │ │  
+   │         │ Incompatible arguments to '*'
+   │         Found: integer. It is not compatible with the other type.
+
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:18:9
    │
@@ -156,6 +210,15 @@ error[E04003]: built-in operation not supported
    │         │
    │         Invalid argument to '*'
    │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_mul_invalid.move:18:16
+   │
+18 │         (0, 1) * (0, 1, 2);
+   │         ------ ^ --------- Found expression list of length 3: '({integer}, {integer}, {integer})'. It is not compatible with the other type of length 2.
+   │         │      │  
+   │         │      Incompatible arguments to '*'
+   │         Found expression list of length 2: '({integer}, {integer})'. It is not compatible with the other type of length 3.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:18:18
@@ -181,102 +244,4 @@ error[E04003]: built-in operation not supported
    │         ------   ^^^^^^ Invalid argument to '*'
    │         │         
    │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-
-error: 
-
-   ┌── tests/move_check/typing/binary_mul_invalid.move:9:13 ───
-   │
- 9 │         1 * false;
-   │             ^^^^^ Incompatible arguments to '*'
-   ·
- 9 │         1 * false;
-   │         - The type: integer
-   ·
- 9 │         1 * false;
-   │             ----- Is not compatible with: 'bool'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:10:17 ───
-    │
- 10 │         false * 1;
-    │                 ^ Incompatible arguments to '*'
-    ·
- 10 │         false * 1;
-    │                 - The type: integer
-    ·
- 10 │         false * 1;
-    │         ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:12:19 ───
-    │
- 12 │         (0: u8) * (1: u128);
-    │                   ^^^^^^^^^ Incompatible arguments to '*'
-    ·
- 12 │         (0: u8) * (1: u128);
-    │             -- The type: 'u8'
-    ·
- 12 │         (0: u8) * (1: u128);
-    │                       ---- Is not compatible with: 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:15:13 ───
-    │
- 15 │         1 * false * @0x0 * 0;
-    │             ^^^^^ Incompatible arguments to '*'
-    ·
- 15 │         1 * false * @0x0 * 0;
-    │         - The type: integer
-    ·
- 15 │         1 * false * @0x0 * 0;
-    │             ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:15:28 ───
-    │
- 15 │         1 * false * @0x0 * 0;
-    │                            ^ Incompatible arguments to '*'
-    ·
- 15 │         1 * false * @0x0 * 0;
-    │                            - The type: integer
-    ·
- 15 │         1 * false * @0x0 * 0;
-    │                     ---- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:17:13 ───
-    │
- 17 │         1 * ();
-    │             ^^ Incompatible arguments to '*'
-    ·
- 17 │         1 * ();
-    │         - The type: integer
-    ·
- 17 │         1 * ();
-    │             -- Is not compatible with: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mul_invalid.move:18:18 ───
-    │
- 18 │         (0, 1) * (0, 1, 2);
-    │                  ^^^^^^^^^ Incompatible arguments to '*'
-    ·
- 18 │         (0, 1) * (0, 1, 2);
-    │         ------ The expression list type of length 2: '({integer}, {integer})'
-    ·
- 18 │         (0, 1) * (0, 1, 2);
-    │                  --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
-    │
 

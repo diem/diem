@@ -7,17 +7,13 @@ error[E05001]: ability constraint not satisfied
   │         │       The type 'u64' does not have the ability 'key'
   │         Invalid call of 'move_to'
 
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_non_struct.move:13:9 ───
-    │
- 13 │         move_to<R<u64>>(s, 0)
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
-    ·
- 13 │         move_to<R<u64>>(s, 0)
-    │                            - The type: integer
-    ·
- 13 │         move_to<R<u64>>(s, 0)
-    │                 ------ Is not compatible with: '0x8675309::N::R<u64>'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_non_struct.move:13:9
+   │
+13 │         move_to<R<u64>>(s, 0)
+   │         ^^^^^^^^^^^^^^^^^^^^^
+   │         │       │          │
+   │         │       │          Given: integer
+   │         │       Expected: '0x8675309::N::R<u64>'
+   │         Invalid call of 'move_to'. Invalid argument for parameter '1'
 

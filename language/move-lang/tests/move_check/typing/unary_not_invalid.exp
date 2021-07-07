@@ -1,112 +1,84 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/unary_not_invalid.move:7:10
+  │
+7 │         !&true;
+  │          ^^^^^
+  │          │
+  │          Invalid argument to '!'
+  │          Expected: 'bool'
+  │          Given: '&bool'
 
-   ┌── tests/move_check/typing/unary_not_invalid.move:7:10 ───
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/unary_not_invalid.move:8:10
+  │
+8 │         !&false;
+  │          ^^^^^^
+  │          │
+  │          Invalid argument to '!'
+  │          Expected: 'bool'
+  │          Given: '&bool'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/unary_not_invalid.move:9:10
+  │
+9 │         !0;
+  │          ^
+  │          │
+  │          Invalid argument to '!'
+  │          Expected: 'bool'
+  │          Given: integer
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/unary_not_invalid.move:10:10
    │
- 7 │         !&true;
-   │          ^^^^^ Invalid argument to '!'
-   ·
- 7 │         !&true;
-   │          ----- The type: '&bool'
-   ·
- 7 │         !&true;
-   │          ----- Is not compatible with: 'bool'
+10 │         !1;
+   │          ^
+   │          │
+   │          Invalid argument to '!'
+   │          Expected: 'bool'
+   │          Given: integer
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/unary_not_invalid.move:11:10
    │
-
-error: 
-
-   ┌── tests/move_check/typing/unary_not_invalid.move:8:10 ───
-   │
- 8 │         !&false;
-   │          ^^^^^^ Invalid argument to '!'
+ 6 │     fun t0(x: bool, r: R) {
+   │                        - Given: '0x8675309::M::R'
    ·
- 8 │         !&false;
-   │          ------ The type: '&bool'
-   ·
- 8 │         !&false;
-   │          ------ Is not compatible with: 'bool'
+11 │         !r;
+   │          ^
+   │          │
+   │          Invalid argument to '!'
+   │          Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/unary_not_invalid.move:12:10
    │
-
-error: 
-
-   ┌── tests/move_check/typing/unary_not_invalid.move:9:10 ───
-   │
- 9 │         !0;
-   │          ^ Invalid argument to '!'
+ 6 │     fun t0(x: bool, r: R) {
+   │                        - Given: '0x8675309::M::R'
    ·
- 9 │         !0;
-   │          - The type: integer
-   ·
- 9 │         !0;
-   │          - Is not compatible with: 'bool'
+12 │         !r;
+   │          ^
+   │          │
+   │          Invalid argument to '!'
+   │          Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/unary_not_invalid.move:13:10
    │
+13 │         !(0, false);
+   │          ^^^^^^^^^^
+   │          │
+   │          Invalid argument to '!'
+   │          Expected: 'bool'
+   │          Given: '({integer}, bool)'
 
-error: 
-
-    ┌── tests/move_check/typing/unary_not_invalid.move:10:10 ───
-    │
- 10 │         !1;
-    │          ^ Invalid argument to '!'
-    ·
- 10 │         !1;
-    │          - The type: integer
-    ·
- 10 │         !1;
-    │          - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unary_not_invalid.move:11:10 ───
-    │
- 11 │         !r;
-    │          ^ Invalid argument to '!'
-    ·
-  6 │     fun t0(x: bool, r: R) {
-    │                        - The type: '0x8675309::M::R'
-    ·
- 11 │         !r;
-    │          - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unary_not_invalid.move:12:10 ───
-    │
- 12 │         !r;
-    │          ^ Invalid argument to '!'
-    ·
-  6 │     fun t0(x: bool, r: R) {
-    │                        - The type: '0x8675309::M::R'
-    ·
- 12 │         !r;
-    │          - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unary_not_invalid.move:13:10 ───
-    │
- 13 │         !(0, false);
-    │          ^^^^^^^^^^ Invalid argument to '!'
-    ·
- 13 │         !(0, false);
-    │          ---------- The type: '({integer}, bool)'
-    ·
- 13 │         !(0, false);
-    │          ---------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/unary_not_invalid.move:14:10 ───
-    │
- 14 │         !();
-    │          ^^ Invalid argument to '!'
-    ·
- 14 │         !();
-    │          -- The type: '()'
-    ·
- 14 │         !();
-    │          -- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/unary_not_invalid.move:14:10
+   │
+14 │         !();
+   │          ^^
+   │          │
+   │          Invalid argument to '!'
+   │          Expected: 'bool'
+   │          Given: '()'
 

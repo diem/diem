@@ -147,6 +147,10 @@ codes!(
         BuiltinOperation: { msg: "built-in operation not supported", severity: BlockingError },
         ExpectedBaseType: { msg: "expected a single non-reference type", severity: BlockingError },
         ExpectedSingleType: { msg: "expected a single type", severity: BlockingError },
+        SubtypeError: { msg: "invalid subtype", severity: BlockingError },
+        JoinError: { msg: "incompatible types", severity: BlockingError },
+        RecursiveType: { msg: "invalid type. recursive type found", severity: BlockingError },
+
     ],
     // errors for ability rules. mostly typing/translate
     AbilitySafety: [

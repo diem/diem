@@ -1,3 +1,11 @@
+error[E04008]: invalid type. recursive type found
+  ┌─ tests/move_check/typing/recursive_local.move:5:9
+  │
+4 │         let x;
+  │             - Unable to infer the type. Recursive type found.
+5 │         x = (x, 0);
+  │         ^ Invalid assignment to local 'x'
+
 error[E04005]: expected a single type
   ┌─ tests/move_check/typing/recursive_local.move:5:9
   │
@@ -12,17 +20,6 @@ error:
    │
  4 │         let x;
    │             ^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/recursive_local.move:5:9 ───
-   │
- 5 │         x = (x, 0);
-   │         ^ Invalid assignment to local 'x'
-   ·
- 4 │         let x;
-   │             - Unable to infer the type. Recursive type found.
    │
 
 error: 

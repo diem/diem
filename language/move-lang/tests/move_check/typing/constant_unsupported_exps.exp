@@ -34,6 +34,18 @@ error[E04001]: restricted visibility
 28 │         0x42::X::f_private();
    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x42::X::f_private'
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/constant_unsupported_exps.move:31:9
+   │
+16 │         let s: signer = abort 0;
+   │                ------ Given: 'signer'
+   ·
+31 │         move_to(s, R{});
+   │         ^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid call of 'move_to'. Invalid argument for parameter '0'
+   │         Expected: '&signer'
+
 error: 
 
     ┌── tests/move_check/typing/constant_unsupported_exps.move:15:9 ───
@@ -176,20 +188,6 @@ error:
     │
  30 │         borrow_global_mut<R>(@0x42);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global_mut' is not supported in constants
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/constant_unsupported_exps.move:31:9 ───
-    │
- 31 │         move_to(s, R{});
-    │         ^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
-    ·
- 16 │         let s: signer = abort 0;
-    │                ------ The type: 'signer'
-    ·
- 31 │         move_to(s, R{});
-    │         ------- Is not compatible with: '&signer'
     │
 
 error: 

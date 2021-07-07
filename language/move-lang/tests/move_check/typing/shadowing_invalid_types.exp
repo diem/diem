@@ -1,154 +1,124 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/shadowing_invalid_types.move:8:13
+  │
+5 │         let x = 0;
+  │             - Given: integer
+  ·
+8 │         (x: bool);
+  │             ^^^^
+  │             │
+  │             Invalid type annotation
+  │             Expected: 'bool'
 
-   ┌── tests/move_check/typing/shadowing_invalid_types.move:8:13 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:10:30
    │
- 8 │         (x: bool);
-   │             ^^^^ Invalid type annotation
-   ·
+10 │         { let x = false; (x: u64); };
+   │                   -----      ^^^
+   │                   │          │
+   │                   │          Invalid type annotation
+   │                   │          Expected: 'u64'
+   │                   Given: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:11:13
+   │
  5 │         let x = 0;
-   │             - The type: integer
+   │             - Given: integer
    ·
- 8 │         (x: bool);
-   │             ---- Is not compatible with: 'bool'
+11 │         (x: bool);
+   │             ^^^^
+   │             │
+   │             Invalid type annotation
+   │             Expected: 'bool'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:13:46
    │
+13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+   │                                    ----      ^^^
+   │                                    │         │
+   │                                    │         Invalid type annotation
+   │                                    │         Expected: 'u64'
+   │                                    Given: 'address'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:13:59
+   │
+13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+   │                   -----                                   ^^^^^^^
+   │                   │                                       │
+   │                   │                                       Invalid type annotation
+   │                   │                                       Expected: 'address'
+   │                   Given: 'bool'
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:10:30 ───
-    │
- 10 │         { let x = false; (x: u64); };
-    │                              ^^^ Invalid type annotation
-    ·
- 10 │         { let x = false; (x: u64); };
-    │                   ----- The type: 'bool'
-    ·
- 10 │         { let x = false; (x: u64); };
-    │                              --- Is not compatible with: 'u64'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:14:13
+   │
+ 5 │         let x = 0;
+   │             - Given: integer
+   ·
+14 │         (x: bool);
+   │             ^^^^
+   │             │
+   │             Invalid type annotation
+   │             Expected: 'bool'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:21:17
+   │
+20 │             let (a, x) = (false, false);
+   │                                  ----- Given: 'bool'
+21 │             (x: u64);
+   │                 ^^^
+   │                 │
+   │                 Invalid type annotation
+   │                 Expected: 'u64'
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:11:13 ───
-    │
- 11 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
-  5 │         let x = 0;
-    │             - The type: integer
-    ·
- 11 │         (x: bool);
-    │             ---- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:25:17
+   │
+24 │             let x = @0x0;
+   │                     ---- Given: 'address'
+25 │             (x: u64);
+   │                 ^^^
+   │                 │
+   │                 Invalid type annotation
+   │                 Expected: 'u64'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:27:13
+   │
+18 │         let x = 0;
+   │             - Given: integer
+   ·
+27 │         (x: address);
+   │             ^^^^^^^
+   │             │
+   │             Invalid type annotation
+   │             Expected: 'address'
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:46 ───
-    │
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                                              ^^^ Invalid type annotation
-    ·
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                                    ---- The type: 'address'
-    ·
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                                              --- Is not compatible with: 'u64'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:34:17
+   │
+ 2 │     struct S {f: u64, b: bool}
+   │                          ---- Given: 'bool'
+   ·
+34 │             (x: u64);
+   │                 ^^^
+   │                 │
+   │                 Invalid type annotation
+   │                 Expected: 'u64'
 
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:59 ───
-    │
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                                                           ^^^^^^^ Invalid type annotation
-    ·
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                   ----- The type: 'bool'
-    ·
- 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
-    │                                                           ------- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:14:13 ───
-    │
- 14 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
-  5 │         let x = 0;
-    │             - The type: integer
-    ·
- 14 │         (x: bool);
-    │             ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:21:17 ───
-    │
- 21 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
- 20 │             let (a, x) = (false, false);
-    │                                  ----- The type: 'bool'
-    ·
- 21 │             (x: u64);
-    │                 --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:25:17 ───
-    │
- 25 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
- 24 │             let x = @0x0;
-    │                     ---- The type: 'address'
-    ·
- 25 │             (x: u64);
-    │                 --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:27:13 ───
-    │
- 27 │         (x: address);
-    │             ^^^^^^^ Invalid type annotation
-    ·
- 18 │         let x = 0;
-    │             - The type: integer
-    ·
- 27 │         (x: address);
-    │             ------- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:34:17 ───
-    │
- 34 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
-  2 │     struct S {f: u64, b: bool}
-    │                          ---- The type: 'bool'
-    ·
- 34 │             (x: u64);
-    │                 --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:37:13 ───
-    │
- 37 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
- 31 │         let x = 0;
-    │             - The type: integer
-    ·
- 37 │         (x: bool);
-    │             ---- Is not compatible with: 'bool'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/shadowing_invalid_types.move:37:13
+   │
+31 │         let x = 0;
+   │             - Given: integer
+   ·
+37 │         (x: bool);
+   │             ^^^^
+   │             │
+   │             Invalid type annotation
+   │             Expected: 'bool'
 

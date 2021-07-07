@@ -1,126 +1,90 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/if_mismatched_branches.move:3:9
+  │
+3 │         if (cond) () else 0;
+  │         ^^^^^^^^^^^^^^^^^^^
+  │         │         │       │
+  │         │         │       Found: integer. It is not compatible with the other type.
+  │         │         Found: '()'. It is not compatible with the other type.
+  │         Incompatible branches
 
-   ┌── tests/move_check/typing/if_mismatched_branches.move:3:9 ───
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/if_mismatched_branches.move:4:9
+  │
+4 │         if (cond) 0 else ();
+  │         ^^^^^^^^^^^^^^^^^^^
+  │         │         │      │
+  │         │         │      Found: '()'. It is not compatible with the other type.
+  │         │         Found: integer. It is not compatible with the other type.
+  │         Incompatible branches
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/if_mismatched_branches.move:8:9
+  │
+8 │         if (cond) @0x0 else 0;
+  │         ^^^^^^^^^^^^^^^^^^^^^
+  │         │         │         │
+  │         │         │         Found: integer. It is not compatible with the other type.
+  │         │         Found: 'address'. It is not compatible with the other type.
+  │         Incompatible branches
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/if_mismatched_branches.move:9:9
+  │
+9 │         if (cond) 0 else false;
+  │         ^^^^^^^^^^^^^^^^^^^^^^
+  │         │         │      │
+  │         │         │      Found: 'bool'. It is not compatible with the other type.
+  │         │         Found: integer. It is not compatible with the other type.
+  │         Incompatible branches
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/if_mismatched_branches.move:13:9
    │
- 3 │         if (cond) () else 0;
-   │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 3 │         if (cond) () else 0;
-   │                           - The type: integer
-   ·
- 3 │         if (cond) () else 0;
-   │                   -- Is not compatible with: '()'
+13 │         if (cond) (0, false) else (1, 1);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │             │               │
+   │         │             │               Found: integer. It is not compatible with the other type.
+   │         │             Found: 'bool'. It is not compatible with the other type.
+   │         Incompatible branches
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/if_mismatched_branches.move:14:9
    │
+14 │         if (cond) (0, false) else (false, false);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │          │               │
+   │         │          │               Found: 'bool'. It is not compatible with the other type.
+   │         │          Found: integer. It is not compatible with the other type.
+   │         Incompatible branches
 
-error: 
-
-   ┌── tests/move_check/typing/if_mismatched_branches.move:4:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/if_mismatched_branches.move:15:9
    │
- 4 │         if (cond) 0 else ();
-   │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 4 │         if (cond) 0 else ();
-   │                   - The type: integer
-   ·
- 4 │         if (cond) 0 else ();
-   │                          -- Is not compatible with: '()'
+15 │         if (cond) (0, false) else (true, @0x0);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │          │               │
+   │         │          │               Found: 'bool'. It is not compatible with the other type.
+   │         │          Found: integer. It is not compatible with the other type.
+   │         Incompatible branches
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/if_mismatched_branches.move:19:9
    │
+19 │         if (cond) (0, false, 0) else (0, false);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │         │                  │
+   │         │         │                  Found expression list of length 2: '({integer}, bool)'. It is not compatible with the other type of length 3.
+   │         │         Found expression list of length 3: '({integer}, bool, {integer})'. It is not compatible with the other type of length 2.
+   │         Incompatible branches
 
-error: 
-
-   ┌── tests/move_check/typing/if_mismatched_branches.move:8:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/if_mismatched_branches.move:20:9
    │
- 8 │         if (cond) @0x0 else 0;
-   │         ^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 8 │         if (cond) @0x0 else 0;
-   │                             - The type: integer
-   ·
- 8 │         if (cond) @0x0 else 0;
-   │                   ---- Is not compatible with: 'address'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/if_mismatched_branches.move:9:9 ───
-   │
- 9 │         if (cond) 0 else false;
-   │         ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 9 │         if (cond) 0 else false;
-   │                   - The type: integer
-   ·
- 9 │         if (cond) 0 else false;
-   │                          ----- Is not compatible with: 'bool'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/if_mismatched_branches.move:13:9 ───
-    │
- 13 │         if (cond) (0, false) else (1, 1);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 13 │         if (cond) (0, false) else (1, 1);
-    │                                       - The type: integer
-    ·
- 13 │         if (cond) (0, false) else (1, 1);
-    │                       ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_mismatched_branches.move:14:9 ───
-    │
- 14 │         if (cond) (0, false) else (false, false);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 14 │         if (cond) (0, false) else (false, false);
-    │                    - The type: integer
-    ·
- 14 │         if (cond) (0, false) else (false, false);
-    │                                    ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_mismatched_branches.move:15:9 ───
-    │
- 15 │         if (cond) (0, false) else (true, @0x0);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 15 │         if (cond) (0, false) else (true, @0x0);
-    │                    - The type: integer
-    ·
- 15 │         if (cond) (0, false) else (true, @0x0);
-    │                                    ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_mismatched_branches.move:19:9 ───
-    │
- 19 │         if (cond) (0, false, 0) else (0, false);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 19 │         if (cond) (0, false, 0) else (0, false);
-    │                   ------------- The expression list type of length 3: '({integer}, bool, {integer})'
-    ·
- 19 │         if (cond) (0, false, 0) else (0, false);
-    │                                      ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_mismatched_branches.move:20:9 ───
-    │
- 20 │         if (cond) (0, false) else (0, false, 0);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 20 │         if (cond) (0, false) else (0, false, 0);
-    │                   ---------- The expression list type of length 2: '({integer}, bool)'
-    ·
- 20 │         if (cond) (0, false) else (0, false, 0);
-    │                                   ------------- Is not compatible with the expression list type of length 3: '({integer}, bool, {integer})'
-    │
+20 │         if (cond) (0, false) else (0, false, 0);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │         │               │
+   │         │         │               Found expression list of length 3: '({integer}, bool, {integer})'. It is not compatible with the other type of length 2.
+   │         │         Found expression list of length 2: '({integer}, bool)'. It is not compatible with the other type of length 3.
+   │         Incompatible branches
 

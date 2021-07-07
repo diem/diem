@@ -1,3 +1,23 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:13:24
+   │
+13 │         let _ : bool = exists<R>(0);
+   │                        ^^^^^^^^^^^^
+   │                        │         │
+   │                        │         Given: integer
+   │                        Invalid call of 'exists'. Invalid argument for parameter '0'
+   │                        Expected: 'address'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:14:18
+   │
+14 │         let () = move_to<R>(a, 0);
+   │                  ^^^^^^^^^^^^^^^^
+   │                  │       │     │
+   │                  │       │     Given: integer
+   │                  │       Expected: '0x8675309::M::R'
+   │                  Invalid call of 'move_to'. Invalid argument for parameter '1'
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/global_builtins_invalid.move:15:18
    │
@@ -6,6 +26,36 @@ error[E05001]: ability constraint not satisfied
    │                  │          │
    │                  │          The type 'u64' does not have the ability 'key'
    │                  Invalid call of 'move_to'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:16:22
+   │
+16 │         let _ : &R = borrow_global<R>(0);
+   │                      ^^^^^^^^^^^^^^^^^^^
+   │                      │                │
+   │                      │                Given: integer
+   │                      Invalid call of 'borrow_global'. Invalid argument for parameter '0'
+   │                      Expected: 'address'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:17:26
+   │
+17 │         let _ : &mut R = borrow_global_mut<R>(0);
+   │                          ^^^^^^^^^^^^^^^^^^^^^^^
+   │                          │                    │
+   │                          │                    Given: integer
+   │                          Invalid call of 'borrow_global_mut'. Invalid argument for parameter '0'
+   │                          Expected: 'address'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:18:20
+   │
+18 │         let R {} = move_from<R>(0);
+   │                    ^^^^^^^^^^^^^^^
+   │                    │            │
+   │                    │            Given: integer
+   │                    Invalid call of 'move_from'. Invalid argument for parameter '0'
+   │                    Expected: 'address'
 
 error: 
 
@@ -61,76 +111,6 @@ error:
  9 │         let R {} = move_from<R>();
    │                                -- Found 0 argument(s) here
    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:13:24 ───
-    │
- 13 │         let _ : bool = exists<R>(0);
-    │                        ^^^^^^^^^^^^ Invalid call of 'exists'. Invalid argument for parameter '0'
-    ·
- 13 │         let _ : bool = exists<R>(0);
-    │                                  - The type: integer
-    ·
- 13 │         let _ : bool = exists<R>(0);
-    │                        ------ Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:14:18 ───
-    │
- 14 │         let () = move_to<R>(a, 0);
-    │                  ^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
-    ·
- 14 │         let () = move_to<R>(a, 0);
-    │                                - The type: integer
-    ·
- 14 │         let () = move_to<R>(a, 0);
-    │                          - Is not compatible with: '0x8675309::M::R'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:16:22 ───
-    │
- 16 │         let _ : &R = borrow_global<R>(0);
-    │                      ^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'. Invalid argument for parameter '0'
-    ·
- 16 │         let _ : &R = borrow_global<R>(0);
-    │                                       - The type: integer
-    ·
- 16 │         let _ : &R = borrow_global<R>(0);
-    │                      ------------- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:17:26 ───
-    │
- 17 │         let _ : &mut R = borrow_global_mut<R>(0);
-    │                          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'. Invalid argument for parameter '0'
-    ·
- 17 │         let _ : &mut R = borrow_global_mut<R>(0);
-    │                                               - The type: integer
-    ·
- 17 │         let _ : &mut R = borrow_global_mut<R>(0);
-    │                          ----------------- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:18:20 ───
-    │
- 18 │         let R {} = move_from<R>(0);
-    │                    ^^^^^^^^^^^^^^^ Invalid call of 'move_from'. Invalid argument for parameter '0'
-    ·
- 18 │         let R {} = move_from<R>(0);
-    │                                 - The type: integer
-    ·
- 18 │         let R {} = move_from<R>(0);
-    │                    --------- Is not compatible with: 'address'
-    │
 
 error: 
 

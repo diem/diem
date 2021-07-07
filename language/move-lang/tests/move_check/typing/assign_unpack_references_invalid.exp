@@ -1,84 +1,65 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:9:9
+  │
+8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
+  │                     - Expected: '&u64'
+9 │         f = 0;
+  │         ^
+  │         │
+  │         Invalid assignment to local 'f'
+  │         Given: integer
 
-   ┌── tests/move_check/typing/assign_unpack_references_invalid.move:9:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:10:9
    │
- 9 │         f = 0;
-   │         ^ Invalid assignment to local 'f'
-   ·
- 9 │         f = 0;
-   │         - The type: integer
-   ·
  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-   │                     - Is not compatible with: '&u64'
+   │                          -- Expected: '&0x8675309::M::S'
+ 9 │         f = 0;
+10 │         s2 = S { f: 0 }
+   │         ^^   ---------- Given: '0x8675309::M::S'
+   │         │     
+   │         Invalid assignment to local 's2'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:17:9
    │
+16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
+   │                     - Expected: '&mut u64'
+17 │         f = 0;
+   │         ^
+   │         │
+   │         Invalid assignment to local 'f'
+   │         Given: integer
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:18:9
+   │
+16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
+   │                          -- Expected: '&mut 0x8675309::M::S'
+17 │         f = 0;
+18 │         s2 = S { f: 0 }
+   │         ^^   ---------- Given: '0x8675309::M::S'
+   │         │     
+   │         Invalid assignment to local 's2'
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:10:9 ───
-    │
- 10 │         s2 = S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 10 │         s2 = S { f: 0 }
-    │              ---------- The type: '0x8675309::M::S'
-    ·
-  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-    │                          -- Is not compatible with: '&0x8675309::M::S'
-    │
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:26:9
+   │
+25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
+   │                     - Expected: '&mut u64'
+26 │         f = &0;
+   │         ^   -- Given: '&{integer}'
+   │         │    
+   │         Invalid assignment to local 'f'
 
-error: 
-
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:17:9 ───
-    │
- 17 │         f = 0;
-    │         ^ Invalid assignment to local 'f'
-    ·
- 17 │         f = 0;
-    │         - The type: integer
-    ·
- 16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                     - Is not compatible with: '&mut u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:18:9 ───
-    │
- 18 │         s2 = S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 18 │         s2 = S { f: 0 }
-    │              ---------- The type: '0x8675309::M::S'
-    ·
- 16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                          -- Is not compatible with: '&mut 0x8675309::M::S'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:26:9 ───
-    │
- 26 │         f = &0;
-    │         ^ Invalid assignment to local 'f'
-    ·
- 26 │         f = &0;
-    │             -- The type: '&{integer}'
-    ·
- 25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                     - Is not a subtype of: '&mut u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:27:9 ───
-    │
- 27 │         s2 = &S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 27 │         s2 = &S { f: 0 }
-    │              ----------- The type: '&0x8675309::M::S'
-    ·
- 25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                          -- Is not a subtype of: '&mut 0x8675309::M::S'
-    │
+error[E04006]: invalid subtype
+   ┌─ tests/move_check/typing/assign_unpack_references_invalid.move:27:9
+   │
+25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
+   │                          -- Expected: '&mut 0x8675309::M::S'
+26 │         f = &0;
+27 │         s2 = &S { f: 0 }
+   │         ^^   ----------- Given: '&0x8675309::M::S'
+   │         │     
+   │         Invalid assignment to local 's2'
 

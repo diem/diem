@@ -7,6 +7,15 @@ error[E04003]: built-in operation not supported
    │         Invalid argument to '+'
    │         Found: '()'. But expected: 'u8', 'u64', 'u128'
 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:32:17
+   │
+32 │         spec {} + 1;
+   │         ------- ^ - Found: integer. It is not compatible with the other type.
+   │         │       │  
+   │         │       Incompatible arguments to '+'
+   │         Found: '()'. It is not compatible with the other type.
+
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:32:19
    │
@@ -14,6 +23,25 @@ error[E04003]: built-in operation not supported
    │         -------   ^ Invalid argument to '+'
    │         │          
    │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:33:9
+   │
+33 │         spec {} && spec {};
+   │         ^^^^^^^ -- Expected: 'bool'
+   │         │        
+   │         Invalid argument to '&&'
+   │         Given: '()'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:33:20
+   │
+33 │         spec {} && spec {};
+   │                 -- ^^^^^^^
+   │                 │  │
+   │                 │  Invalid argument to '&&'
+   │                 │  Given: '()'
+   │                 Expected: 'bool'
 
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:34:9
@@ -23,46 +51,4 @@ error[E04004]: expected a single non-reference type
    │         │    │
    │         │    Expected a single non-reference type, but found: '()'
    │         Invalid borrow
-
-error: 
-
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:19 ───
-    │
- 32 │         spec {} + 1;
-    │                   ^ Incompatible arguments to '+'
-    ·
- 32 │         spec {} + 1;
-    │                   - The type: integer
-    ·
- 32 │         spec {} + 1;
-    │         ------- Is not compatible with: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:33:9 ───
-    │
- 33 │         spec {} && spec {};
-    │         ^^^^^^^ Incompatible arguments to '&&'
-    ·
- 33 │         spec {} && spec {};
-    │         ------- The type: '()'
-    ·
- 33 │         spec {} && spec {};
-    │         ------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:33:20 ───
-    │
- 33 │         spec {} && spec {};
-    │                    ^^^^^^^ Incompatible arguments to '&&'
-    ·
- 33 │         spec {} && spec {};
-    │                    ------- The type: '()'
-    ·
- 33 │         spec {} && spec {};
-    │         ------- Is not compatible with: 'bool'
-    │
 

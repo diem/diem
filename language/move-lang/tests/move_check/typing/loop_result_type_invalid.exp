@@ -1,3 +1,37 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/loop_result_type_invalid.move:11:9
+   │
+10 │     fun t0(): X::R {
+   │               ---- Expected: '0x2::X::R'
+11 │         loop { if (false) break }
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid return expression
+   │         Given: '()'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/loop_result_type_invalid.move:15:9
+   │
+14 │     fun t1(): u64 {
+   │               --- Expected: 'u64'
+15 │         loop { let x = 0; break }
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid return expression
+   │         Given: '()'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/loop_result_type_invalid.move:19:9
+   │
+19 │         foo(loop { break })
+   │         ^^^^^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   Given: '()'
+   │         Invalid call of '0x2::M::foo'. Invalid argument for parameter 'x'
+   ·
+22 │     fun foo(x: u64) {}
+   │                --- Expected: 'u64'
+
 error[E04005]: expected a single type
    ┌─ tests/move_check/typing/loop_result_type_invalid.move:25:13
    │
@@ -6,59 +40,12 @@ error[E04005]: expected a single type
    │             │    
    │             Invalid type for local
 
-error: 
-
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:11:9 ───
-    │
- 11 │         loop { if (false) break }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 11 │         loop { if (false) break }
-    │         ------------------------- The type: '()'
-    ·
- 10 │     fun t0(): X::R {
-    │               ---- Is not compatible with: '0x2::X::R'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:15:9 ───
-    │
- 15 │         loop { let x = 0; break }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 15 │         loop { let x = 0; break }
-    │         ------------------------- The type: '()'
-    ·
- 14 │     fun t1(): u64 {
-    │               --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:19:9 ───
-    │
- 19 │         foo(loop { break })
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::foo'. Invalid argument for parameter 'x'
-    ·
- 19 │         foo(loop { break })
-    │             -------------- The type: '()'
-    ·
- 22 │     fun foo(x: u64) {}
-    │                --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:26:13 ───
-    │
- 26 │         let (x, y) = loop { if (false) break };
-    │             ^^^^^^ Invalid value for binding
-    ·
- 26 │         let (x, y) = loop { if (false) break };
-    │             ------ The type: '(_, _)'
-    ·
- 26 │         let (x, y) = loop { if (false) break };
-    │                      ------------------------- Is not compatible with: '()'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/loop_result_type_invalid.move:26:13
+   │
+26 │         let (x, y) = loop { if (false) break };
+   │             ^^^^^^   ------------------------- Given: '()'
+   │             │         
+   │             Invalid value for binding
+   │             Expected: '(_, _)'
 

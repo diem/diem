@@ -1,98 +1,84 @@
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:24:9
+   │
+17 │     public fun foo(s: S) {
+   │                       - Expected: '0x2::M::S'
+   ·
+24 │         foo(0);
+   │         ^^^^^^
+   │         │   │
+   │         │   Given: integer
+   │         Invalid call of '0x2::M::foo'. Invalid argument for parameter 's'
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:24:9 ───
-    │
- 24 │         foo(0);
-    │         ^^^^^^ Invalid call of '0x2::M::foo'. Invalid argument for parameter 's'
-    ·
- 24 │         foo(0);
-    │             - The type: integer
-    ·
- 17 │     public fun foo(s: S) {
-    │                       - Is not compatible with: '0x2::M::S'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:25:9
+   │
+20 │     public fun bar(x: u64) {
+   │                       --- Expected: 'u64'
+   ·
+25 │         bar(S{});
+   │         ^^^^^^^^
+   │         │   │
+   │         │   Given: '0x2::M::S'
+   │         Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:26:9
+   │
+20 │     public fun bar(x: u64) {
+   │                       --- Expected: 'u64'
+   ·
+26 │         bar(@0x0);
+   │         ^^^^^^^^^
+   │         │   │
+   │         │   Given: 'address'
+   │         Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:25:9 ───
-    │
- 25 │         bar(S{});
-    │         ^^^^^^^^ Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
-    ·
- 25 │         bar(S{});
-    │             --- The type: '0x2::M::S'
-    ·
- 20 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:30:9
+   │
+ 6 │     public fun foo(s: S) {
+   │                       - Expected: '0x2::X::S'
+   ·
+30 │         X::foo(S{});
+   │         ^^^^^^^^^^^
+   │         │      │
+   │         │      Given: '0x2::M::S'
+   │         Invalid call of '0x2::X::foo'. Invalid argument for parameter 's'
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:31:9
+   │
+ 6 │     public fun foo(s: S) {
+   │                       - Expected: '0x2::X::S'
+   ·
+31 │         X::foo(0);
+   │         ^^^^^^^^^
+   │         │      │
+   │         │      Given: integer
+   │         Invalid call of '0x2::X::foo'. Invalid argument for parameter 's'
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:26:9 ───
-    │
- 26 │         bar(@0x0);
-    │         ^^^^^^^^^ Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
-    ·
- 26 │         bar(@0x0);
-    │             ---- The type: 'address'
-    ·
- 20 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:32:9
+   │
+ 9 │     public fun bar(x: u64) {
+   │                       --- Expected: 'u64'
+   ·
+32 │         X::bar(S{});
+   │         ^^^^^^^^^^^
+   │         │      │
+   │         │      Given: '0x2::M::S'
+   │         Invalid call of '0x2::X::bar'. Invalid argument for parameter 'x'
 
-error: 
-
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:30:9 ───
-    │
- 30 │         X::foo(S{});
-    │         ^^^^^^^^^^^ Invalid call of '0x2::X::foo'. Invalid argument for parameter 's'
-    ·
- 30 │         X::foo(S{});
-    │                --- The type: '0x2::M::S'
-    ·
-  6 │     public fun foo(s: S) {
-    │                       - Is not compatible with: '0x2::X::S'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:31:9 ───
-    │
- 31 │         X::foo(0);
-    │         ^^^^^^^^^ Invalid call of '0x2::X::foo'. Invalid argument for parameter 's'
-    ·
- 31 │         X::foo(0);
-    │                - The type: integer
-    ·
-  6 │     public fun foo(s: S) {
-    │                       - Is not compatible with: '0x2::X::S'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:32:9 ───
-    │
- 32 │         X::bar(S{});
-    │         ^^^^^^^^^^^ Invalid call of '0x2::X::bar'. Invalid argument for parameter 'x'
-    ·
- 32 │         X::bar(S{});
-    │                --- The type: '0x2::M::S'
-    ·
-  9 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:33:9 ───
-    │
- 33 │         X::bar(false);
-    │         ^^^^^^^^^^^^^ Invalid call of '0x2::X::bar'. Invalid argument for parameter 'x'
-    ·
- 33 │         X::bar(false);
-    │                ----- The type: 'bool'
-    ·
-  9 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_wrong_single_argument.move:33:9
+   │
+ 9 │     public fun bar(x: u64) {
+   │                       --- Expected: 'u64'
+   ·
+33 │         X::bar(false);
+   │         ^^^^^^^^^^^^^
+   │         │      │
+   │         │      Given: 'bool'
+   │         Invalid call of '0x2::X::bar'. Invalid argument for parameter 'x'
 

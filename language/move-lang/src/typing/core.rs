@@ -1513,13 +1513,23 @@ fn join_impl(
                 join_tvar(subst, case, *loc1, *id1, *loc2, *id2)
             }
         }
-        (sp!(loc, Var(id)), other) | (other, sp!(loc, Var(id))) if subst.get(*id).is_none() => {
+        (sp!(loc, Var(id)), other) if subst.get(*id).is_none() => {
             if join_bind_tvar(&mut subst, *loc, *id, other.clone())? {
                 Ok((subst, sp(*loc, Var(*id))))
             } else {
                 Err(TypingError::Incompatible(
                     Box::new(sp(*loc, Var(*id))),
                     Box::new(other.clone()),
+                ))
+            }
+        }
+        (other, sp!(loc, Var(id))) if subst.get(*id).is_none() => {
+            if join_bind_tvar(&mut subst, *loc, *id, other.clone())? {
+                Ok((subst, sp(*loc, Var(*id))))
+            } else {
+                Err(TypingError::Incompatible(
+                    Box::new(other.clone()),
+                    Box::new(sp(*loc, Var(*id))),
                 ))
             }
         }

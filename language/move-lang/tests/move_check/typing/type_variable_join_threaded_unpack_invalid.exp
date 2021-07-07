@@ -1,3 +1,15 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/type_variable_join_threaded_unpack_invalid.move:34:9
+   │
+30 │     fun t0(): bool {
+   │               ---- Expected: 'bool'
+31 │         let v = Container::new();
+32 │         let Box { f1, f2 }  = Container::get(&v);
+   │             -------------- Given: integer
+33 │         Container::put(&mut v, Box { f1: 0, f2: 0});
+34 │         f1
+   │         ^^ Invalid return expression
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/type_variable_join_threaded_unpack_invalid.move:39:31
    │
@@ -9,18 +21,4 @@ error[E05001]: ability constraint not satisfied
    │             │                  
    │             The type '0x2::M::Box<0x2::M::R>' does not have the ability 'drop'
    │             The type '0x2::M::Box<0x2::M::R>' can have the ability 'drop' but the type argument '0x2::M::R' does not have the required ability 'drop'
-
-error: 
-
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_invalid.move:34:9 ───
-    │
- 34 │         f1
-    │         ^^ Invalid return expression
-    ·
- 32 │         let Box { f1, f2 }  = Container::get(&v);
-    │             -------------- The type: integer
-    ·
- 30 │     fun t0(): bool {
-    │               ---- Is not compatible with: 'bool'
-    │
 

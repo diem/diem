@@ -1,3 +1,85 @@
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:13:17
+   │
+13 │         (0: u8) != (1: u128);
+   │             --  ^^     ---- Found: 'u128'. It is not compatible with the other type.
+   │             │   │       
+   │             │   Incompatible arguments to '!='
+   │             Found: 'u8'. It is not compatible with the other type.
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:14:11
+   │
+14 │         0 != false;
+   │         - ^^ ----- Found: 'bool'. It is not compatible with the other type.
+   │         │ │   
+   │         │ Incompatible arguments to '!='
+   │         Found: integer. It is not compatible with the other type.
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:15:12
+   │
+15 │         &0 != 1;
+   │         -- ^^ - Found: integer. It is not compatible with the other type.
+   │         │  │   
+   │         │  Incompatible arguments to '!='
+   │         Found: '&{integer}'. It is not compatible with the other type.
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:16:11
+   │
+16 │         1 != &0;
+   │         - ^^ -- Found: '&{integer}'. It is not compatible with the other type.
+   │         │ │   
+   │         │ Incompatible arguments to '!='
+   │         Found: integer. It is not compatible with the other type.
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:17:9
+   │
+ 2 │     struct S { u: u64 }
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+   │                                     - The type '0x8675309::M::S' does not have the ability 'drop'
+   ·
+17 │         s != s_ref;
+   │         ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:17:11
+   │
+12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+   │                                     -         -- Found: '&0x8675309::M::S'. It is not compatible with the other type.
+   │                                     │          
+   │                                     Found: '0x8675309::M::S'. It is not compatible with the other type.
+   ·
+17 │         s != s_ref;
+   │           ^^ Incompatible arguments to '!='
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:18:15
+   │
+12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+   │                                     -                    ------ Found: '&mut 0x8675309::M::S'. It is not compatible with the other type.
+   │                                     │                     
+   │                                     Found: '0x8675309::M::S'. It is not compatible with the other type.
+   ·
+18 │         s_mut != s;
+   │               ^^ Incompatible arguments to '!='
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:18:18
+   │
+ 2 │     struct S { u: u64 }
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+   │                                     - The type '0x8675309::M::S' does not have the ability 'drop'
+   ·
+18 │         s_mut != s;
+   │                  ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:22:9
    │
@@ -7,7 +89,18 @@ error[E05001]: ability constraint not satisfied
 21 │     fun t1(r: R) {
    │               - The type '0x8675309::M::R' does not have the ability 'drop'
 22 │         r != r;
-   │         ^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │         ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:22:14
+   │
+ 3 │     struct R {
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+21 │     fun t1(r: R) {
+   │               - The type '0x8675309::M::R' does not have the ability 'drop'
+22 │         r != r;
+   │              ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:27:9
@@ -16,10 +109,22 @@ error[E05001]: ability constraint not satisfied
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 27 │         G1{} != G1{};
-   │         ^^^^^^^^^^^^
-   │         │       │
-   │         │       The type '0x8675309::M::G1<_>' does not have the ability 'drop'
+   │         ^^^^
+   │         │
    │         '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │         The type '0x8675309::M::G1<_>' does not have the ability 'drop'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:27:17
+   │
+ 7 │     struct G1<T: key> {}
+   │            -- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+27 │         G1{} != G1{};
+   │                 ^^^^
+   │                 │
+   │                 '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │                 The type '0x8675309::M::G1<_>' does not have the ability 'drop'
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:28:9
@@ -28,10 +133,22 @@ error[E05001]: ability constraint not satisfied
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 28 │         G2{} != G2{};
-   │         ^^^^^^^^^^^^
-   │         │       │
-   │         │       The type '0x8675309::M::G2<_>' does not have the ability 'drop'
+   │         ^^^^
+   │         │
    │         '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │         The type '0x8675309::M::G2<_>' does not have the ability 'drop'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:28:17
+   │
+ 8 │     struct G2<T> {}
+   │            -- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+28 │         G2{} != G2{};
+   │                 ^^^^
+   │                 │
+   │                 '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │                 The type '0x8675309::M::G2<_>' does not have the ability 'drop'
 
 error[E04005]: expected a single type
    ┌─ tests/move_check/typing/neq_invalid.move:32:9
@@ -40,7 +157,7 @@ error[E04005]: expected a single type
    │         ^^^^^^^^
    │         │     │
    │         │     Expected a single type, but found expression list type: '()'
-   │         Invalid arguments to '!='
+   │         Incompatible arguments to '!='
 
 error[E04005]: expected a single type
    ┌─ tests/move_check/typing/neq_invalid.move:33:9
@@ -49,91 +166,25 @@ error[E04005]: expected a single type
    │         ^^^^^^^^^^^^^^^^
    │         │         │
    │         │         Expected a single type, but found expression list type: '(u64, u64)'
-   │         Invalid arguments to '!='
+   │         Incompatible arguments to '!='
 
-error: 
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:34:19
+   │
+34 │         (1, 2, 3) != (0, 1);
+   │         --------- ^^ ------ Found expression list of length 2: '({integer}, {integer})'. It is not compatible with the other type of length 3.
+   │         │         │   
+   │         │         Incompatible arguments to '!='
+   │         Found expression list of length 3: '({integer}, {integer}, {integer})'. It is not compatible with the other type of length 2.
 
-    ┌── tests/move_check/typing/neq_invalid.move:13:20 ───
-    │
- 13 │         (0: u8) != (1: u128);
-    │                    ^^^^^^^^^ Incompatible arguments to '!='
-    ·
- 13 │         (0: u8) != (1: u128);
-    │             -- The type: 'u8'
-    ·
- 13 │         (0: u8) != (1: u128);
-    │                        ---- Is not compatible with: 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:14:14 ───
-    │
- 14 │         0 != false;
-    │              ^^^^^ Incompatible arguments to '!='
-    ·
- 14 │         0 != false;
-    │         - The type: integer
-    ·
- 14 │         0 != false;
-    │              ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:15:15 ───
-    │
- 15 │         &0 != 1;
-    │               ^ Incompatible arguments to '!='
-    ·
- 15 │         &0 != 1;
-    │               - The type: integer
-    ·
- 15 │         &0 != 1;
-    │         -- Is not compatible with: '&{integer}'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:16:14 ───
-    │
- 16 │         1 != &0;
-    │              ^^ Incompatible arguments to '!='
-    ·
- 16 │         1 != &0;
-    │         - The type: integer
-    ·
- 16 │         1 != &0;
-    │              -- Is not compatible with: '&{integer}'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:17:14 ───
-    │
- 17 │         s != s_ref;
-    │              ^^^^^ Incompatible arguments to '!='
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                     - The type: '0x8675309::M::S'
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                               -- Is not compatible with: '&0x8675309::M::S'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:18:18 ───
-    │
- 18 │         s_mut != s;
-    │                  ^ Incompatible arguments to '!='
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                                          ------ The type: '&mut 0x8675309::M::S'
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                     - Is not compatible with: '0x8675309::M::S'
-    │
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/neq_invalid.move:35:16
+   │
+35 │         (0, 1) != (1, 2, 3);
+   │         ------ ^^ --------- Found expression list of length 3: '({integer}, {integer}, {integer})'. It is not compatible with the other type of length 2.
+   │         │      │   
+   │         │      Incompatible arguments to '!='
+   │         Found expression list of length 2: '({integer}, {integer})'. It is not compatible with the other type of length 3.
 
 error: 
 
@@ -181,33 +232,5 @@ error:
     │
  28 │         G2{} != G2{};
     │                 ^^^^ Could not infer this type. Try adding an annotation
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:34:22 ───
-    │
- 34 │         (1, 2, 3) != (0, 1);
-    │                      ^^^^^^ Incompatible arguments to '!='
-    ·
- 34 │         (1, 2, 3) != (0, 1);
-    │         --------- The expression list type of length 3: '({integer}, {integer}, {integer})'
-    ·
- 34 │         (1, 2, 3) != (0, 1);
-    │                      ------ Is not compatible with the expression list type of length 2: '({integer}, {integer})'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:35:19 ───
-    │
- 35 │         (0, 1) != (1, 2, 3);
-    │                   ^^^^^^^^^ Incompatible arguments to '!='
-    ·
- 35 │         (0, 1) != (1, 2, 3);
-    │         ------ The expression list type of length 2: '({integer}, {integer})'
-    ·
- 35 │         (0, 1) != (1, 2, 3);
-    │                   --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
     │
 

@@ -1,126 +1,95 @@
-error: 
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9
+  │
+6 │         foo<u64, u64>(false, false);
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │   │         │
+  │         │   │         Given: 'bool'
+  │         │   Expected: 'u64'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
 
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9 ───
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9
+  │
+6 │         foo<u64, u64>(false, false);
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │        │           │
+  │         │        │           Given: 'bool'
+  │         │        Expected: 'u64'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:7:9
+  │
+7 │         foo<bool, bool>(0, false);
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │   │           │
+  │         │   │           Given: integer
+  │         │   Expected: 'bool'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:8:9
+  │
+8 │         foo<bool, bool>(false, 0);
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │         │            │
+  │         │         │            Given: integer
+  │         │         Expected: 'bool'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9
+  │
+9 │         foo<bool, bool>(0, 0);
+  │         ^^^^^^^^^^^^^^^^^^^^^
+  │         │   │           │
+  │         │   │           Given: integer
+  │         │   Expected: 'bool'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9
+  │
+9 │         foo<bool, bool>(0, 0);
+  │         ^^^^^^^^^^^^^^^^^^^^^
+  │         │         │        │
+  │         │         │        Given: integer
+  │         │         Expected: 'bool'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:13:9
    │
- 6 │         foo<u64, u64>(false, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
-   ·
- 6 │         foo<u64, u64>(false, false);
-   │                       ----- The type: 'bool'
-   ·
- 6 │         foo<u64, u64>(false, false);
-   │             --- Is not compatible with: 'u64'
+12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+   │                        - Given: 'T'
+13 │         foo<U, u64>(t, 0);
+   │         ^^^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   Expected: 'U'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9
    │
+12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+   │                              - Given: 'U'
+13 │         foo<U, u64>(t, 0);
+14 │         foo<V, T>(u, v);
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   Expected: 'V'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
 
-error: 
-
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9 ───
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9
    │
- 6 │         foo<u64, u64>(false, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
-   ·
- 6 │         foo<u64, u64>(false, false);
-   │                              ----- The type: 'bool'
-   ·
- 6 │         foo<u64, u64>(false, false);
-   │                  --- Is not compatible with: 'u64'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:7:9 ───
-   │
- 7 │         foo<bool, bool>(0, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
-   ·
- 7 │         foo<bool, bool>(0, false);
-   │                         - The type: integer
-   ·
- 7 │         foo<bool, bool>(0, false);
-   │             ---- Is not compatible with: 'bool'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:8:9 ───
-   │
- 8 │         foo<bool, bool>(false, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
-   ·
- 8 │         foo<bool, bool>(false, 0);
-   │                                - The type: integer
-   ·
- 8 │         foo<bool, bool>(false, 0);
-   │                   ---- Is not compatible with: 'bool'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9 ───
-   │
- 9 │         foo<bool, bool>(0, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
-   ·
- 9 │         foo<bool, bool>(0, 0);
-   │                         - The type: integer
-   ·
- 9 │         foo<bool, bool>(0, 0);
-   │             ---- Is not compatible with: 'bool'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9 ───
-   │
- 9 │         foo<bool, bool>(0, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
-   ·
- 9 │         foo<bool, bool>(0, 0);
-   │                            - The type: integer
-   ·
- 9 │         foo<bool, bool>(0, 0);
-   │                   ---- Is not compatible with: 'bool'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:13:9 ───
-    │
- 13 │         foo<U, u64>(t, 0);
-    │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
-    ·
- 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                        - The type: 'T'
-    ·
- 13 │         foo<U, u64>(t, 0);
-    │             - Is not compatible with: 'U'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9 ───
-    │
- 14 │         foo<V, T>(u, v);
-    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
-    ·
- 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                              - The type: 'U'
-    ·
- 14 │         foo<V, T>(u, v);
-    │             - Is not compatible with: 'V'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9 ───
-    │
- 14 │         foo<V, T>(u, v);
-    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
-    ·
- 12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
-    │                                    - The type: 'V'
-    ·
- 14 │         foo<V, T>(u, v);
-    │                - Is not compatible with: 'T'
-    │
+12 │     fun t2<T, U, V>(t: T, u: U, v: V) {
+   │                                    - Given: 'V'
+13 │         foo<U, u64>(t, 0);
+14 │         foo<V, T>(u, v);
+   │         ^^^^^^^^^^^^^^^
+   │         │      │
+   │         │      Expected: 'T'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
 

@@ -8,15 +8,6 @@ error[E04003]: built-in operation not supported
   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
 error[E04003]: built-in operation not supported
-  ┌─ tests/move_check/typing/binary_bit_and_invalid.move:8:9
-  │
-8 │         false & true;
-  │         ^^^^^^^^^^^^
-  │         │       │
-  │         │       Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-  │         Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:8:17
   │
 8 │         false & true;
@@ -24,14 +15,14 @@ error[E04003]: built-in operation not supported
   │         │        
   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
-error[E04003]: built-in operation not supported
-  ┌─ tests/move_check/typing/binary_bit_and_invalid.move:9:9
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/binary_bit_and_invalid.move:9:11
   │
 9 │         1 & false;
-  │         ^^^^^^^^^
-  │         │   │
-  │         │   Found: '_'. But expected: 'u8', 'u64', 'u128'
-  │         Invalid argument to '&'
+  │         - ^ ----- Found: 'bool'. It is not compatible with the other type.
+  │         │ │  
+  │         │ Incompatible arguments to '&'
+  │         Found: integer. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:10:9
@@ -42,14 +33,14 @@ error[E04003]: built-in operation not supported
    │         Invalid argument to '&'
    │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:10:9
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:10:15
    │
 10 │         false & 1;
-   │         ^^^^^^^^^
-   │         │       │
-   │         │       Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
+   │         ----- ^ - Found: integer. It is not compatible with the other type.
+   │         │     │  
+   │         │     Incompatible arguments to '&'
+   │         Found: 'bool'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:10:17
@@ -69,15 +60,6 @@ error[E04003]: built-in operation not supported
    │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
 
 error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:11:9
-   │
-11 │         @0x0 & @0x1;
-   │         ^^^^^^^^^^^
-   │         │      │
-   │         │      Found: 'address'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:11:16
    │
 11 │         @0x0 & @0x1;
@@ -85,14 +67,14 @@ error[E04003]: built-in operation not supported
    │         │       
    │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
 
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:12:9
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:12:17
    │
 12 │         (0: u8) & (1: u128);
-   │         ^^^^^^^^^^^^^^^^^^^
-   │         │         │
-   │         │         Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
+   │             --  ^     ---- Found: 'u128'. It is not compatible with the other type.
+   │             │   │      
+   │             │   Incompatible arguments to '&'
+   │             Found: 'u8'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:13:9
@@ -102,15 +84,6 @@ error[E04003]: built-in operation not supported
    ·
 13 │         r & r;
    │         ^ Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:13:9
-   │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
-   ·
-13 │         r & r;
-   │         ^^^^^ Invalid argument to '&'
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:13:9
@@ -143,15 +116,6 @@ error[E04003]: built-in operation not supported
    │         ^ Invalid argument to '&'
 
 error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:14:9
-   │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
-   ·
-14 │         s & s;
-   │         ^^^^^ Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:14:13
    │
  7 │     fun t0(x: u64, r: R, s: S) {
@@ -165,8 +129,8 @@ error[E04003]: built-in operation not supported
    │
 15 │         1 & false & @0x0 & 0;
    │         ^^^^^^^^^
-   │         │   │
-   │         │   Found: '_'. But expected: 'u8', 'u64', 'u128'
+   │         │ │
+   │         │ Found: '_'. But expected: 'u8', 'u64', 'u128'
    │         Invalid argument to '&'
 
 error[E04003]: built-in operation not supported
@@ -178,22 +142,31 @@ error[E04003]: built-in operation not supported
    │         │           Found: 'address'. But expected: 'u8', 'u64', 'u128'
    │         Invalid argument to '&'
 
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:9
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:11
    │
 15 │         1 & false & @0x0 & 0;
-   │         ^^^^^^^^^^^^^^^^^^^^
-   │         │                  │
-   │         │                  Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
+   │         - ^ ----- Found: 'bool'. It is not compatible with the other type.
+   │         │ │  
+   │         │ Incompatible arguments to '&'
+   │         Found: integer. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:21
    │
 15 │         1 & false & @0x0 & 0;
-   │             -----   ^^^^ Invalid argument to '&'
-   │             │        
-   │             Found: '_'. But expected: 'u8', 'u64', 'u128'
+   │           -         ^^^^ Invalid argument to '&'
+   │           │          
+   │           Found: '_'. But expected: 'u8', 'u64', 'u128'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:26
+   │
+15 │         1 & false & @0x0 & 0;
+   │                     ---- ^ - Found: integer. It is not compatible with the other type.
+   │                     │    │  
+   │                     │    Incompatible arguments to '&'
+   │                     Found: 'address'. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:28
@@ -213,15 +186,6 @@ error[E04003]: built-in operation not supported
    │         Found: '()'. But expected: 'u8', 'u64', 'u128'
 
 error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:16:9
-   │
-16 │         () & ();
-   │         ^^^^^^^
-   │         │    │
-   │         │    Found: '()'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:16:14
    │
 16 │         () & ();
@@ -229,14 +193,14 @@ error[E04003]: built-in operation not supported
    │         │     
    │         Found: '()'. But expected: 'u8', 'u64', 'u128'
 
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:17:9
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:17:11
    │
 17 │         1 & ();
-   │         ^^^^^^
-   │         │   │
-   │         │   Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
+   │         - ^ -- Found: '()'. It is not compatible with the other type.
+   │         │ │  
+   │         │ Incompatible arguments to '&'
+   │         Found: integer. It is not compatible with the other type.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:18:9
@@ -247,14 +211,14 @@ error[E04003]: built-in operation not supported
    │         Invalid argument to '&'
    │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
 
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:18:9
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:18:16
    │
 18 │         (0, 1) & (0, 1, 2);
-   │         ^^^^^^^^^^^^^^^^^^
-   │         │        │
-   │         │        Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
+   │         ------ ^ --------- Found expression list of length 3: '({integer}, {integer}, {integer})'. It is not compatible with the other type of length 2.
+   │         │      │  
+   │         │      Incompatible arguments to '&'
+   │         Found expression list of length 2: '({integer}, {integer})'. It is not compatible with the other type of length 3.
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:18:18
@@ -274,117 +238,10 @@ error[E04003]: built-in operation not supported
    │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
 
 error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:19:9
-   │
-19 │         (1, 2) & (0, 1);
-   │         ^^^^^^^^^^^^^^^
-   │         │        │
-   │         │        Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:19:18
    │
 19 │         (1, 2) & (0, 1);
    │         ------   ^^^^^^ Invalid argument to '&'
    │         │         
    │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-
-error: 
-
-   ┌── tests/move_check/typing/binary_bit_and_invalid.move:9:13 ───
-   │
- 9 │         1 & false;
-   │             ^^^^^ Incompatible arguments to '&'
-   ·
- 9 │         1 & false;
-   │         - The type: integer
-   ·
- 9 │         1 & false;
-   │             ----- Is not compatible with: 'bool'
-   │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:10:17 ───
-    │
- 10 │         false & 1;
-    │                 ^ Incompatible arguments to '&'
-    ·
- 10 │         false & 1;
-    │                 - The type: integer
-    ·
- 10 │         false & 1;
-    │         ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:12:19 ───
-    │
- 12 │         (0: u8) & (1: u128);
-    │                   ^^^^^^^^^ Incompatible arguments to '&'
-    ·
- 12 │         (0: u8) & (1: u128);
-    │             -- The type: 'u8'
-    ·
- 12 │         (0: u8) & (1: u128);
-    │                       ---- Is not compatible with: 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:15:13 ───
-    │
- 15 │         1 & false & @0x0 & 0;
-    │             ^^^^^ Incompatible arguments to '&'
-    ·
- 15 │         1 & false & @0x0 & 0;
-    │         - The type: integer
-    ·
- 15 │         1 & false & @0x0 & 0;
-    │             ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:15:28 ───
-    │
- 15 │         1 & false & @0x0 & 0;
-    │                            ^ Incompatible arguments to '&'
-    ·
- 15 │         1 & false & @0x0 & 0;
-    │                            - The type: integer
-    ·
- 15 │         1 & false & @0x0 & 0;
-    │                     ---- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:17:13 ───
-    │
- 17 │         1 & ();
-    │             ^^ Incompatible arguments to '&'
-    ·
- 17 │         1 & ();
-    │         - The type: integer
-    ·
- 17 │         1 & ();
-    │             -- Is not compatible with: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_and_invalid.move:18:18 ───
-    │
- 18 │         (0, 1) & (0, 1, 2);
-    │                  ^^^^^^^^^ Incompatible arguments to '&'
-    ·
- 18 │         (0, 1) & (0, 1, 2);
-    │         ------ The expression list type of length 2: '({integer}, {integer})'
-    ·
- 18 │         (0, 1) & (0, 1, 2);
-    │                  --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
-    │
 

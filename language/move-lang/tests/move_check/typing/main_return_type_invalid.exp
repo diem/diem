@@ -1,14 +1,9 @@
-error: 
-
-   ┌── tests/move_check/typing/main_return_type_invalid.move:2:5 ───
-   │
- 2 │ fun main(): u64 {
-   │     ^^^^ Invalid 'script' function return type. The function entry point to a 'script' must have the return type '()'
-   ·
- 2 │ fun main(): u64 {
-   │             --- The type: 'u64'
-   ·
- 2 │ fun main(): u64 {
-   │     ---- Is not compatible with: '()'
-   │
+error[E04007]: incompatible types
+  ┌─ tests/move_check/typing/main_return_type_invalid.move:2:5
+  │
+2 │ fun main(): u64 {
+  │     ^^^^    --- Given: 'u64'
+  │     │        
+  │     Invalid 'script' function return type. The function entry point to a 'script' must have the return type '()'
+  │     Expected: '()'
 

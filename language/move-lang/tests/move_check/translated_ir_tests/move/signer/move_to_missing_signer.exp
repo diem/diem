@@ -1,3 +1,23 @@
+error[E04007]: incompatible types
+  ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:4:9
+  │
+4 │         move_to<R>(R { f: false })
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │          │
+  │         │          Given: '0x8675309::M::R'
+  │         Invalid call of 'move_to'. Invalid argument for parameter '0'
+  │         Expected: '&signer'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:14:14
+   │
+14 │         () = move_to<R<bool>>(R<bool> { f: false });
+   │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │              │                │
+   │              │                Given: '0x8675309::N::R<bool>'
+   │              Invalid call of 'move_to'. Invalid argument for parameter '0'
+   │              Expected: '&signer'
+
 error: 
 
    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:4:9 ───
@@ -11,20 +31,6 @@ error:
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:4:9 ───
-   │
- 4 │         move_to<R>(R { f: false })
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
-   ·
- 4 │         move_to<R>(R { f: false })
-   │                    -------------- The type: '0x8675309::M::R'
-   ·
- 4 │         move_to<R>(R { f: false })
-   │         ------- Is not compatible with: '&signer'
-   │
-
-error: 
-
     ┌── tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:14:14 ───
     │
  14 │         () = move_to<R<bool>>(R<bool> { f: false });
@@ -32,19 +38,5 @@ error:
     ·
  14 │         () = move_to<R<bool>>(R<bool> { f: false });
     │                              ---------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/move_to_missing_signer.move:14:14 ───
-    │
- 14 │         () = move_to<R<bool>>(R<bool> { f: false });
-    │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
-    ·
- 14 │         () = move_to<R<bool>>(R<bool> { f: false });
-    │                               -------------------- The type: '0x8675309::N::R<bool>'
-    ·
- 14 │         () = move_to<R<bool>>(R<bool> { f: false });
-    │              ------- Is not compatible with: '&signer'
     │
 
