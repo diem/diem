@@ -38,20 +38,20 @@ module A {
     // I2: <concrete, generic>
     invariant
         forall t: type:
-            exists<S::Storage<u64, t>>(@0x22)
-                ==> global<S::Storage<u64, t>>(@0x22).x > 0;
+            exists<S::Storage<u64, t>>(@0x23)
+                ==> global<S::Storage<u64, t>>(@0x23).x > 0;
 
     // I3: <generic, concrete>
     invariant
         forall t: type:
-            exists<S::Storage<t, bool>>(@0x22)
-                ==> global<S::Storage<t, bool>>(@0x22).y;
+            exists<S::Storage<t, bool>>(@0x24)
+                ==> global<S::Storage<t, bool>>(@0x24).y;
 
     // I4: <generic, generic>
     invariant
         forall t1: type, t2: type:
-            (exists<S::Storage<t1, t2>>(@0x22) && exists<S::Storage<t1, t2>>(@0x23))
-                ==> global<S::Storage<t1, t2>>(@0x22) == global<S::Storage<t1, t2>>(@0x23);
+            (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+                ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
 
     public fun good(account1: signer, account2: signer) {
         S::publish_x_y<u64, bool>(account1, 1, true);
@@ -59,6 +59,3 @@ module A {
     }
 }
 }
-
-// TODO (mengxu): none of I1, I2, I3, I4 should verify in any of F1, F2, F3, F4. But currently
-// we can only disapprove I1 in F1.
