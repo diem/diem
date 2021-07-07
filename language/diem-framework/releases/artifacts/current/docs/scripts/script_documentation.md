@@ -1483,11 +1483,11 @@ This module holds transactions that can be used to administer accounts in the Di
 
 
 <pre><code><b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
-<b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">0x1::SharedEd25519PublicKey</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain">0x1::VASPDomain</a>;
 </code></pre>
 
 
@@ -2553,16 +2553,16 @@ may be used as a recovery account for those accounts.
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_create_diem_id_domains"></a>
+<a name="0x1_AccountAdministrationScripts_create_vasp_domains"></a>
 
-##### Function `create_diem_id_domains`
+##### Function `create_vasp_domains`
 
 
 <a name="@Summary_129"></a>
 
 ###### Summary
 
-Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under a parent VASP account.
+Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource under a parent VASP account.
 The sending account must be a parent VASP account.
 
 
@@ -2570,9 +2570,9 @@ The sending account must be a parent VASP account.
 
 ###### Technical Description
 
-Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>.
-The The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource's <code>domains</code> field is a vector
-of DiemIdDomain, and will be empty on at the end of processing this transaction.
+Publishes a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource under <code>account</code>.
+The The <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource's <code>domains</code> field is a vector
+of VASPDomain, and will be empty on at the end of processing this transaction.
 
 
 <a name="@Parameters_131"></a>
@@ -2590,11 +2590,11 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 
 | Error Category              | Error Reason              | Description                                                                    |
 | ----------------            | --------------            | -------------                                                                  |
-| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code> | A <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>. |
+| <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAINS">VASPDomain::EVASP_DOMAINS</a></code> | A <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource has already been published under <code>account</code>. |
 | <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_vasp_domains">create_vasp_domains</a>(account: signer)
 </code></pre>
 
 
@@ -2603,8 +2603,8 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer) {
-    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&account)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_create_vasp_domains">create_vasp_domains</a>(account: signer) {
+    <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_publish_vasp_domains">VASPDomain::publish_vasp_domains</a>(&account)
 }
 </code></pre>
 
@@ -2620,8 +2620,8 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <pre><code><b>let</b> vasp_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>;
-<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_PublishDiemIdDomainsAbortsIf">DiemId::PublishDiemIdDomainsAbortsIf</a> { vasp_addr };
-<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_PublishDiemIdDomainsEnsures">DiemId::PublishDiemIdDomainsEnsures</a> { vasp_addr };
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_PublishVASPDomainsAbortsIf">VASPDomain::PublishVASPDomainsAbortsIf</a> { vasp_addr };
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_PublishVASPDomainsEnsures">VASPDomain::PublishVASPDomainsEnsures</a> { vasp_addr };
 <b>aborts_with</b> [check]
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
@@ -3815,11 +3815,11 @@ per-transaction basis.
 <pre><code><b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
-<b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
 <b>use</b> <a href="">0x1::FixedPoint32</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 <b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
+<b>use</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain">0x1::VASPDomain</a>;
 </code></pre>
 
 
@@ -4917,16 +4917,16 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 </details>
 
-<a name="0x1_TreasuryComplianceScripts_add_diem_id_domain"></a>
+<a name="0x1_TreasuryComplianceScripts_add_vasp_domain"></a>
 
-##### Function `add_diem_id_domain`
+##### Function `add_vasp_domain`
 
 
 <a name="@Summary_235"></a>
 
 ###### Summary
 
-Add a DiemID domain to parent VASP account. The transaction can only be sent by
+Add a VASP domain to parent VASP account. The transaction can only be sent by
 the Treasury Compliance account.
 
 
@@ -4934,7 +4934,7 @@ the Treasury Compliance account.
 
 ###### Technical Description
 
-Adds a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> to the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+Adds a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomain">VASPDomain::VASPDomain</a></code> to the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under
 the account at <code>address</code>.
 
 
@@ -4957,13 +4957,13 @@ the account at <code>address</code>.
 | ----------------           | --------------                           | -------------                                                                                                                          |
 | <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDOMAIN_ALREADY_EXISTS">DiemId::EDOMAIN_ALREADY_EXISTS</a></code>         | The <code>domain</code> already exists in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAIN_MANAGER">VASPDomain::EVASP_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomainManager">VASPDomain::VASPDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAINS_NOT_PUBLISHED">VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under it.                                                         |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code>VASPDomain::EDOMAIN_ALREADY_EXISTS</code>         | The <code>domain</code> already exists in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomain">VASPDomain::VASPDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under <code>address</code>. |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EINVALID_VASP_DOMAIN">VASPDomain::EINVALID_VASP_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_DOMAIN_LENGTH">VASPDomain::DOMAIN_LENGTH</a></code>.                                                                        |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_vasp_domain">add_vasp_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -4972,12 +4972,12 @@ the account at <code>address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_diem_id_domain">add_diem_id_domain</a> (
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_add_vasp_domain">add_vasp_domain</a> (
     tc_account: signer,
     address: address,
     domain: vector&lt;u8&gt;,
 ) {
-    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_add_diem_id_domain">DiemId::add_diem_id_domain</a>(&tc_account, address, domain);
+    <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_add_vasp_domain">VASPDomain::add_vasp_domain</a>(&tc_account, address, domain);
 }
 </code></pre>
 
@@ -4991,9 +4991,9 @@ the account at <code>address</code>.
 
 
 <pre><code><b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
-<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainAbortsIf">DiemId::AddDiemIdDomainAbortsIf</a>;
-<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEnsures">DiemId::AddDiemIdDomainEnsures</a>;
-<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_AddDiemIdDomainEmits">DiemId::AddDiemIdDomainEmits</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_AddVASPDomainAbortsIf">VASPDomain::AddVASPDomainAbortsIf</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_AddVASPDomainEnsures">VASPDomain::AddVASPDomainEnsures</a>;
+<b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_AddVASPDomainEmits">VASPDomain::AddVASPDomainEmits</a>;
 <b>aborts_with</b> [check]
     <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -5005,16 +5005,16 @@ the account at <code>address</code>.
 
 </details>
 
-<a name="0x1_TreasuryComplianceScripts_remove_diem_id_domain"></a>
+<a name="0x1_TreasuryComplianceScripts_remove_vasp_domain"></a>
 
-##### Function `remove_diem_id_domain`
+##### Function `remove_vasp_domain`
 
 
 <a name="@Summary_239"></a>
 
 ###### Summary
 
-Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+Remove a VASP domain from parent VASP account. The transaction can only be sent by
 the Treasury Compliance account.
 
 
@@ -5022,7 +5022,7 @@ the Treasury Compliance account.
 
 ###### Technical Description
 
-Removes a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code> from the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under
+Removes a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomain">VASPDomain::VASPDomain</a></code> from the <code>domains</code> field of the <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under
 account with <code>address</code>.
 
 
@@ -5045,13 +5045,13 @@ account with <code>address</code>.
 | ----------------           | --------------                           | -------------                                                                                                                          |
 | <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>            | The sending account is not the Treasury Compliance account.                                                                            |
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>    | <code>tc_account</code> is not the Treasury Compliance account.                                                                                   |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN_MANAGER">DiemId::EDIEM_ID_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomainManager">DiemId::DiemIdDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDIEM_ID_DOMAINS_NOT_PUBLISHED">DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under it.                                                         |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EINVALID_DIEM_ID_DOMAIN">DiemId::EINVALID_DIEM_ID_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DOMAIN_LENGTH">DiemId::DOMAIN_LENGTH</a></code>.                                                                        |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_EDOMAIN_NOT_FOUND">DiemId::EDOMAIN_NOT_FOUND</a></code>              | The <code>domain</code> does not exist in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomain">DiemId::DiemIdDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource published under <code>address</code>. |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAIN_MANAGER">VASPDomain::EVASP_DOMAIN_MANAGER</a></code>        | The <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomainManager">VASPDomain::VASPDomainManager</a></code> resource is not yet published under the Treasury Compliance account.                                 |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAINS_NOT_PUBLISHED">VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED</a></code> | <code>address</code> does not have a <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under it.                                                         |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EINVALID_VASP_DOMAIN">VASPDomain::EINVALID_VASP_DOMAIN</a></code>        | The <code>domain</code> is greater in length than <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_DOMAIN_LENGTH">VASPDomain::DOMAIN_LENGTH</a></code>.                                                                        |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_EVASP_DOMAIN_NOT_FOUND">VASPDomain::EVASP_DOMAIN_NOT_FOUND</a></code>              | The <code>domain</code> does not exist in the list of <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomain">VASPDomain::VASPDomain</a></code>s  in the <code><a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource published under <code>address</code>. |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_vasp_domain">remove_vasp_domain</a>(tc_account: signer, address: address, domain: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -5060,12 +5060,12 @@ account with <code>address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_diem_id_domain">remove_diem_id_domain</a> (
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_remove_vasp_domain">remove_vasp_domain</a> (
     tc_account: signer,
     address: address,
     domain: vector&lt;u8&gt;,
 ) {
-    <a href="../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId_remove_diem_id_domain">DiemId::remove_diem_id_domain</a>(&tc_account, address, domain);
+    <a href="../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain_remove_vasp_domain">VASPDomain::remove_vasp_domain</a>(&tc_account, address, domain);
 }
 </code></pre>
 
@@ -5430,7 +5430,6 @@ a reconfiguration of the system.
 -  [`0x1::DiemBlock`](../../../../../releases/artifacts/current/docs/modules/DiemBlock.md#0x1_DiemBlock)
 -  [`0x1::DiemConfig`](../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig)
 -  [`0x1::DiemConsensusConfig`](../../../../../releases/artifacts/current/docs/modules/DiemConsensusConfig.md#0x1_DiemConsensusConfig)
--  [`0x1::DiemId`](../../../../../releases/artifacts/current/docs/modules/DiemId.md#0x1_DiemId)
 -  [`0x1::DiemSystem`](../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem)
 -  [`0x1::DiemTimestamp`](../../../../../releases/artifacts/current/docs/modules/DiemTimestamp.md#0x1_DiemTimestamp)
 -  [`0x1::DiemTransactionPublishingOption`](../../../../../releases/artifacts/current/docs/modules/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption)
@@ -5449,6 +5448,7 @@ a reconfiguration of the system.
 -  [`0x1::TransactionFee`](../../../../../releases/artifacts/current/docs/modules/TransactionFee.md#0x1_TransactionFee)
 -  [`0x1::TreasuryComplianceScripts`](script_documentation.md#0x1_TreasuryComplianceScripts)
 -  [`0x1::VASP`](../../../../../releases/artifacts/current/docs/modules/VASP.md#0x1_VASP)
+-  [`0x1::VASPDomain`](../../../../../releases/artifacts/current/docs/modules/VASPDomain.md#0x1_VASPDomain)
 -  [`0x1::ValidatorAdministrationScripts`](script_documentation.md#0x1_ValidatorAdministrationScripts)
 -  [`0x1::ValidatorConfig`](../../../../../releases/artifacts/current/docs/modules/ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](../../../../../releases/artifacts/current/docs/modules/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)

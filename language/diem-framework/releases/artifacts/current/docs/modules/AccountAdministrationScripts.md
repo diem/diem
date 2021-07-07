@@ -67,7 +67,7 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Parameters](#@Parameters_48)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_49)
     -  [Related Scripts](#@Related_Scripts_50)
--  [Function `create_diem_id_domains`](#0x1_AccountAdministrationScripts_create_diem_id_domains)
+-  [Function `create_vasp_domains`](#0x1_AccountAdministrationScripts_create_vasp_domains)
     -  [Summary](#@Summary_51)
     -  [Technical Description](#@Technical_Description_52)
     -  [Parameters](#@Parameters_53)
@@ -75,11 +75,11 @@ This module holds transactions that can be used to administer accounts in the Di
 
 
 <pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
-<b>use</b> <a href="DiemId.md#0x1_DiemId">0x1::DiemId</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
 <b>use</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
 <b>use</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">0x1::SharedEd25519PublicKey</a>;
 <b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="VASPDomain.md#0x1_VASPDomain">0x1::VASPDomain</a>;
 </code></pre>
 
 
@@ -1145,16 +1145,16 @@ may be used as a recovery account for those accounts.
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_create_diem_id_domains"></a>
+<a name="0x1_AccountAdministrationScripts_create_vasp_domains"></a>
 
-## Function `create_diem_id_domains`
+## Function `create_vasp_domains`
 
 
 <a name="@Summary_51"></a>
 
 ### Summary
 
-Publishes a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under a parent VASP account.
+Publishes a <code><a href="VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource under a parent VASP account.
 The sending account must be a parent VASP account.
 
 
@@ -1162,9 +1162,9 @@ The sending account must be a parent VASP account.
 
 ### Technical Description
 
-Publishes a <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource under <code>account</code>.
-The The <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource's <code>domains</code> field is a vector
-of DiemIdDomain, and will be empty on at the end of processing this transaction.
+Publishes a <code><a href="VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource under <code>account</code>.
+The The <code><a href="VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource's <code>domains</code> field is a vector
+of VASPDomain, and will be empty on at the end of processing this transaction.
 
 
 <a name="@Parameters_53"></a>
@@ -1182,11 +1182,11 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 
 | Error Category              | Error Reason              | Description                                                                    |
 | ----------------            | --------------            | -------------                                                                  |
-| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="DiemId.md#0x1_DiemId_EDIEM_ID_DOMAIN">DiemId::EDIEM_ID_DOMAIN</a></code> | A <code><a href="DiemId.md#0x1_DiemId_DiemIdDomains">DiemId::DiemIdDomains</a></code> resource has already been published under <code>account</code>. |
+| <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="VASPDomain.md#0x1_VASPDomain_EVASP_DOMAINS">VASPDomain::EVASP_DOMAINS</a></code> | A <code><a href="VASPDomain.md#0x1_VASPDomain_VASPDomains">VASPDomain::VASPDomains</a></code> resource has already been published under <code>account</code>. |
 | <code><a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>     | The sending <code>account</code> was not a parent VASP account.                           |
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_vasp_domains">create_vasp_domains</a>(account: signer)
 </code></pre>
 
 
@@ -1195,8 +1195,8 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_diem_id_domains">create_diem_id_domains</a>(account: signer) {
-    <a href="DiemId.md#0x1_DiemId_publish_diem_id_domains">DiemId::publish_diem_id_domains</a>(&account)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_vasp_domains">create_vasp_domains</a>(account: signer) {
+    <a href="VASPDomain.md#0x1_VASPDomain_publish_vasp_domains">VASPDomain::publish_vasp_domains</a>(&account)
 }
 </code></pre>
 
@@ -1212,8 +1212,8 @@ of DiemIdDomain, and will be empty on at the end of processing this transaction.
 <pre><code><b>let</b> vasp_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>;
-<b>include</b> <a href="DiemId.md#0x1_DiemId_PublishDiemIdDomainsAbortsIf">DiemId::PublishDiemIdDomainsAbortsIf</a> { vasp_addr };
-<b>include</b> <a href="DiemId.md#0x1_DiemId_PublishDiemIdDomainsEnsures">DiemId::PublishDiemIdDomainsEnsures</a> { vasp_addr };
+<b>include</b> <a href="VASPDomain.md#0x1_VASPDomain_PublishVASPDomainsAbortsIf">VASPDomain::PublishVASPDomainsAbortsIf</a> { vasp_addr };
+<b>include</b> <a href="VASPDomain.md#0x1_VASPDomain_PublishVASPDomainsEnsures">VASPDomain::PublishVASPDomainsEnsures</a> { vasp_addr };
 <b>aborts_with</b> [check]
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;

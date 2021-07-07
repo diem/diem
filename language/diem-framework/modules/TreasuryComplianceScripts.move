@@ -14,7 +14,7 @@ module TreasuryComplianceScripts {
     use 0x1::AccountFreezing;
     use 0x1::DualAttestation;
     use 0x1::FixedPoint32;
-    use 0x1::DiemId;
+    use 0x1::VASPDomain;
 
     /// # Summary
     /// Cancels and returns the coins held in the preburn area under
@@ -647,11 +647,11 @@ module TreasuryComplianceScripts {
     }
 
     /// # Summary
-    /// Add a DiemID domain to parent VASP account. The transaction can only be sent by
+    /// Add a VASP domain to parent VASP account. The transaction can only be sent by
     /// the Treasury Compliance account.
     ///
     /// # Technical Description
-    /// Adds a `DiemId::DiemIdDomain` to the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// Adds a `VASPDomain::VASPDomain` to the `domains` field of the `VASPDomain::VASPDomains` resource published under
     /// the account at `address`.
     ///
     /// # Parameters
@@ -666,23 +666,23 @@ module TreasuryComplianceScripts {
     /// | ----------------           | --------------                           | -------------                                                                                                                          |
     /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
-    public(script) fun add_diem_id_domain (
+    /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAIN_MANAGER`        | The `VASPDomain::VASPDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED` | `address` does not have a `VASPDomain::VASPDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `VASPDomain::VASPDomain`s  in the `VASPDomain::VASPDomains` resource published under `address`. |
+    /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EINVALID_VASP_DOMAIN`        | The `domain` is greater in length than `VASPDomain::DOMAIN_LENGTH`.                                                                        |
+    public(script) fun add_vasp_domain (
         tc_account: signer,
         address: address,
         domain: vector<u8>,
     ) {
-        DiemId::add_diem_id_domain(&tc_account, address, domain);
+        VASPDomain::add_vasp_domain(&tc_account, address, domain);
     }
-    spec add_diem_id_domain {
+    spec add_vasp_domain {
         use 0x1::Errors;
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
-        include DiemId::AddDiemIdDomainAbortsIf;
-        include DiemId::AddDiemIdDomainEnsures;
-        include DiemId::AddDiemIdDomainEmits;
+        include VASPDomain::AddVASPDomainAbortsIf;
+        include VASPDomain::AddVASPDomainEnsures;
+        include VASPDomain::AddVASPDomainEmits;
         aborts_with [check]
             Errors::REQUIRES_ROLE,
             Errors::REQUIRES_ADDRESS,
@@ -691,11 +691,11 @@ module TreasuryComplianceScripts {
     }
 
     /// # Summary
-    /// Remove a DiemID domain from parent VASP account. The transaction can only be sent by
+    /// Remove a VASP domain from parent VASP account. The transaction can only be sent by
     /// the Treasury Compliance account.
     ///
     /// # Technical Description
-    /// Removes a `DiemId::DiemIdDomain` from the `domains` field of the `DiemId::DiemIdDomains` resource published under
+    /// Removes a `VASPDomain::VASPDomain` from the `domains` field of the `VASPDomain::VASPDomains` resource published under
     /// account with `address`.
     ///
     /// # Parameters
@@ -710,18 +710,18 @@ module TreasuryComplianceScripts {
     /// | ----------------           | --------------                           | -------------                                                                                                                          |
     /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`            | The sending account is not the Treasury Compliance account.                                                                            |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`    | `tc_account` is not the Treasury Compliance account.                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAIN_MANAGER`        | The `DiemId::DiemIdDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemId::EDIEM_ID_DOMAINS_NOT_PUBLISHED` | `address` does not have a `DiemId::DiemIdDomains` resource published under it.                                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EINVALID_DIEM_ID_DOMAIN`        | The `domain` is greater in length than `DiemId::DOMAIN_LENGTH`.                                                                        |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemId::EDOMAIN_NOT_FOUND`              | The `domain` does not exist in the list of `DiemId::DiemIdDomain`s  in the `DiemId::DiemIdDomains` resource published under `address`. |
-    public(script) fun remove_diem_id_domain (
+    /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAIN_MANAGER`        | The `VASPDomain::VASPDomainManager` resource is not yet published under the Treasury Compliance account.                                 |
+    /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED` | `address` does not have a `VASPDomain::VASPDomains` resource published under it.                                                         |
+    /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EINVALID_VASP_DOMAIN`        | The `domain` is greater in length than `VASPDomain::DOMAIN_LENGTH`.                                                                        |
+    /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EVASP_DOMAIN_NOT_FOUND`              | The `domain` does not exist in the list of `VASPDomain::VASPDomain`s  in the `VASPDomain::VASPDomains` resource published under `address`. |
+    public(script) fun remove_vasp_domain (
         tc_account: signer,
         address: address,
         domain: vector<u8>,
     ) {
-        DiemId::remove_diem_id_domain(&tc_account, address, domain);
+        VASPDomain::remove_vasp_domain(&tc_account, address, domain);
     }
-    spec remove_diem_id_domain {
+    spec remove_vasp_domain {
         use 0x1::Errors;
         aborts_with [check]
             Errors::REQUIRES_ROLE,
