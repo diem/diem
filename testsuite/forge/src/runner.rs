@@ -113,13 +113,16 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
     }
 
     pub fn list(&self) -> Result<()> {
-        for test in self.tests.all_tests() {
+        for test in self.filter_tests(self.tests.all_tests()) {
             println!("{}: test", test.name());
         }
 
         if self.options.format == Format::Pretty {
             println!();
-            println!("{} tests", self.tests.all_tests().count());
+            println!(
+                "{} tests",
+                self.filter_tests(self.tests.all_tests()).count()
+            );
         }
 
         Ok(())
