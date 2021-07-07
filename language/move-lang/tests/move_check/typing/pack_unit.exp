@@ -1,11 +1,9 @@
-error: 
-
-   ┌── tests/move_check/typing/pack_unit.move:5:9 ───
-   │
- 5 │         Box { f: () };
-   │         ^^^^^^^^^^^^^ Invalid type argument
-   ·
- 5 │         Box { f: () };
-   │                  -- Expected a single non-reference type, but found: '()'
-   │
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/pack_unit.move:5:9
+  │
+5 │         Box { f: () };
+  │         ^^^^^^^^^^^^^
+  │         │        │
+  │         │        Expected a single non-reference type, but found: '()'
+  │         Invalid type argument
 

@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::*,
+    diag,
+    errors::{
+        diagnostic_codes::{AbilitySafety, NameResolution, TypeSafety},
+        new::Diagnostic,
+        *,
+    },
     expansion::ast::{AbilitySet, ModuleIdent},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, TParam, TParamID, TVar,
@@ -245,10 +250,10 @@ impl<'env> Context<'env> {
     pub fn get_local(&mut self, loc: Loc, verb: &str, var: &Var) -> Type {
         match self.get_local_(var) {
             None => {
-                self.env.add_error_deprecated(vec![(
-                    loc,
-                    format!("Invalid {}. Unbound local '{}'", verb, var),
-                )]);
+                self.env.add_diag(diag!(
+                    NameResolution::UnboundVariable,
+                    (loc, format!("Invalid {}. Unbound variable '{}'", verb, var)),
+                ));
                 self.error_type(loc)
             }
             Some(t) => t,
@@ -692,23 +697,22 @@ pub fn make_field_type(
     let fields_map = match &sdef.fields {
         N::StructFields::Native(nloc) => {
             let nloc = *nloc;
-            context.env.add_error_deprecated(vec![
-                (
-                    loc,
-                    format!("Unbound field '{}' for native struct '{}::{}'", field, m, n),
-                ),
-                (nloc, "Declared 'native' here".into()),
-            ]);
+            let msg = format!("Unbound field '{}' for native struct '{}::{}'", field, m, n);
+            context.env.add_diag(diag!(
+                NameResolution::UnboundField,
+                (loc, msg),
+                (nloc, "Struct declared 'native' here")
+            ));
             return context.error_type(loc);
         }
         N::StructFields::Defined(m) => m,
     };
     match fields_map.get(field).cloned() {
         None => {
-            context.env.add_error_deprecated(vec![(
-                loc,
-                format!("Unbound field '{}' in '{}::{}'", field, m, n),
-            )]);
+            context.env.add_diag(diag!(
+                NameResolution::UnboundField,
+                (loc, format!("Unbound field '{}' in '{}::{}'", field, m, n)),
+            ));
             context.error_type(loc)
         }
         Some((_, field_ty)) => {
@@ -744,9 +748,11 @@ pub fn make_constant_type(
         };
         let internal_msg = "Constants are internal to their module, and cannot can be accessed \
                             outside of their module";
-        context
-            .env
-            .add_error_deprecated(vec![(loc, msg), (defined_loc, internal_msg.into())]);
+        context.env.add_diag(diag!(
+            TypeSafety::Visibility,
+            (loc, msg),
+            (defined_loc, internal_msg)
+        ));
     }
 
     signature
@@ -823,10 +829,11 @@ pub fn make_function_type(
                 Visibility::SCRIPT,
                 Visibility::FRIEND
             );
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                TypeSafety::Visibility,
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, internal_msg),
-            ])
+            ));
         }
         Visibility::Script(_) if context.is_in_script_context() => (),
         Visibility::Script(vis_loc) => {
@@ -835,10 +842,11 @@ pub fn make_function_type(
                  or a '{}' function",
                 Visibility::SCRIPT
             );
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                TypeSafety::ScriptContext,
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
-            ])
+            ));
         }
         Visibility::Friend(_) if in_current_module || context.current_module_is_a_friend_of(m) => {}
         Visibility::Friend(vis_loc) => {
@@ -846,10 +854,11 @@ pub fn make_function_type(
                 "This function can only be called from a 'friend' of module '{}'",
                 m
             );
-            context.env.add_error_deprecated(vec![
+            context.env.add_diag(diag!(
+                TypeSafety::Visibility,
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
-            ])
+            ));
         }
         Visibility::Public(_) => (),
     };
@@ -927,10 +936,10 @@ fn solve_ability_constraint(
             Some(s) => s.clone(),
             None => format!("'{}' constraint not satisifed", constraint),
         };
-        let mut error = vec![(loc, constraint_msg)];
+        let mut secondary_labels = vec![];
         ability_not_satisified_tips(
             &context.subst,
-            &mut error,
+            &mut secondary_labels,
             constraint.value,
             &ty,
             declared_loc_opt,
@@ -943,12 +952,16 @@ fn solve_ability_constraint(
 
         // is none if it is from a user constraint and not a part of the type system
         if given_msg_opt.is_none() {
-            error.push((
+            secondary_labels.push((
                 constraint.loc,
                 format!("'{}' constraint declared here", constraint),
             ));
         }
-        context.env.add_error_deprecated(error)
+        context.env.add_diag(Diagnostic::new(
+            AbilitySafety::Constraint,
+            (loc, constraint_msg),
+            secondary_labels,
+        ))
     }
 }
 
@@ -1045,18 +1058,16 @@ fn solve_implicitly_copyable_constraint(
     let ty = unfold_type(&context.subst, ty);
     let tloc = ty.loc;
     if !is_implicitly_copyable(&context.subst, &ty) {
-        let ty_str = error_format(&ty, &context.subst);
-        context.env.add_error_deprecated(vec![
+        let ty_msg = format!(
+            "The type {} is not implicitly copyable. Implicit copies are limited to simple \
+             primitive values",
+            error_format(&ty, &context.subst),
+        );
+        context.env.add_diag(diag!(
+            AbilitySafety::ImplicitlyCopyable,
             (loc, format!("{} {}", msg, fix)),
-            (
-                tloc,
-                format!(
-                    "The type {} is not implicitly copyable. Implicit copies are limited to \
-                     simple primitive values",
-                    ty_str
-                ),
-            ),
-        ])
+            (tloc, ty_msg),
+        ))
     }
 }
 
@@ -1071,7 +1082,7 @@ fn solve_builtin_type_constraint(
     use Type_::*;
     let t = unfold_type(&context.subst, ty);
     let tloc = t.loc;
-    let tmsg = || {
+    let mk_tmsg = || {
         let set_msg = if builtin_set.is_empty() {
             "the operation is not yet supported on any type".to_string()
         } else {
@@ -1097,11 +1108,12 @@ fn solve_builtin_type_constraint(
             assert!(args.is_empty());
         }
         _ => {
-            let error = vec![
+            let tmsg = mk_tmsg();
+            context.env.add_diag(diag!(
+                TypeSafety::BuiltinOperation,
                 (loc, format!("Invalid argument to '{}'", op)),
-                (tloc, tmsg()),
-            ];
-            context.env.add_error_deprecated(error)
+                (tloc, tmsg)
+            ))
         }
     }
 }
@@ -1115,9 +1127,11 @@ fn solve_base_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: 
         Unit | Ref(_, _) | Apply(_, sp!(_, Multiple(_)), _) => {
             let tystr = error_format(ty, &context.subst);
             let tmsg = format!("Expected a single non-reference type, but found: {}", tystr);
-            context
-                .env
-                .add_error_deprecated(vec![(loc, msg), (tyloc, tmsg)])
+            context.env.add_diag(diag!(
+                TypeSafety::ExpectedBaseType,
+                (loc, msg),
+                (tyloc, tmsg)
+            ))
         }
         UnresolvedError | Anything | Param(_) | Apply(_, _, _) => (),
     }
@@ -1130,14 +1144,15 @@ fn solve_single_type_constraint(context: &mut Context, loc: Loc, msg: String, ty
     match unfolded_ {
         Var(_) => unreachable!(),
         Unit | Apply(_, sp!(_, Multiple(_)), _) => {
-            let tystr = error_format(ty, &context.subst);
             let tmsg = format!(
                 "Expected a single type, but found expression list type: {}",
-                tystr
+                error_format(ty, &context.subst)
             );
-            context
-                .env
-                .add_error_deprecated(vec![(loc, msg), (tyloc, tmsg)])
+            context.env.add_diag(diag!(
+                TypeSafety::ExpectedSingleType,
+                (loc, msg),
+                (tyloc, tmsg)
+            ))
         }
         UnresolvedError | Anything | Ref(_, _) | Param(_) | Apply(_, _, _) => (),
     }
@@ -1320,15 +1335,18 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
     let args_len = ty_args.len();
     let arity = tparam_constraints.len();
     if args_len != arity {
-        context.env.add_error_deprecated(vec![(
-            loc,
-            format!(
-                "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
-                name_f(),
-                arity,
-                args_len
-            ),
-        )])
+        let code = if args_len < arity {
+            NameResolution::TooFewTypeArguments
+        } else {
+            NameResolution::TooManyTypeArguments
+        };
+        let msg = format!(
+            "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
+            name_f(),
+            arity,
+            args_len
+        );
+        context.env.add_diag(diag!(code, (loc, msg)));
     }
 
     while ty_args.len() > arity {

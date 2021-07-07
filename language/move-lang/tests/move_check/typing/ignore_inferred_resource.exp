@@ -1,16 +1,14 @@
-error: 
-
-   ┌── tests/move_check/typing/ignore_inferred_resource.move:4:9 ───
-   │
- 4 │         S{};
-   │         ^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 4 │         S{};
-   │         --- The type '0x8675309::M::S<_>' does not have the ability 'drop'
-   ·
- 2 │     struct S<T> {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/ignore_inferred_resource.move:4:9
+  │
+2 │     struct S<T> {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+3 │     fun no() {
+4 │         S{};
+  │         ^^^
+  │         │
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '0x8675309::M::S<_>' does not have the ability 'drop'
 
 error: 
 

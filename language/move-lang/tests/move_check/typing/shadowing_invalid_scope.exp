@@ -1,8 +1,6 @@
-error: 
-
-   ┌── tests/move_check/typing/shadowing_invalid_scope.move:5:10 ───
-   │
- 5 │         (x: bool);
-   │          ^ Invalid local usage. Unbound local 'x'
-   │
+error[E03009]: unbound variable
+  ┌─ tests/move_check/typing/shadowing_invalid_scope.move:5:10
+  │
+5 │         (x: bool);
+  │          ^ Invalid variable usage. Unbound variable 'x'
 

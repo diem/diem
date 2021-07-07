@@ -1,24 +1,20 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:3:9
+  │
+3 │         move_to<signer>(s1, move s)
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │       │
+  │         │       The type 'signer' does not have the ability 'key'
+  │         Invalid call of 'move_to'
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:3:9 ───
-   │
- 3 │         move_to<signer>(s1, move s)
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
-   ·
- 3 │         move_to<signer>(s1, move s)
-   │                 ------ The type 'signer' does not have the ability 'key'
-   │
-
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:8:27 ───
-   │
- 8 │     struct R has key { s: signer }
-   │                           ^^^^^^ Invalid field type. The struct was declared with the ability 'key' so all fields require the ability 'store'
-   ·
- 8 │     struct R has key { s: signer }
-   │                           ------ The type 'signer' does not have the ability 'store'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/invalid_move_to_sender.move:8:27
+  │
+8 │     struct R has key { s: signer }
+  │                           ^^^^^^
+  │                           │
+  │                           Invalid field type. The struct was declared with the ability 'key' so all fields require the ability 'store'
+  │                           The type 'signer' does not have the ability 'store'
 
 error: 
 

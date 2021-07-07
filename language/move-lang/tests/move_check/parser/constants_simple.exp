@@ -1,3 +1,9 @@
+error[E03009]: unbound variable
+  ┌─ tests/move_check/parser/constants_simple.move:8:24
+  │
+8 │     const C4: u8 = if (cond) 0 else 1;
+  │                        ^^^^ Invalid variable usage. Unbound variable 'cond'
+
 error: 
 
    ┌── tests/move_check/parser/constants_simple.move:5:21 ───
@@ -20,14 +26,6 @@ error:
    │
  8 │     const C4: u8 = if (cond) 0 else 1;
    │                    ^^^^^^^^^^^^^^^^^^ 'if' expressions are not supported in constants
-   │
-
-error: 
-
-   ┌── tests/move_check/parser/constants_simple.move:8:24 ───
-   │
- 8 │     const C4: u8 = if (cond) 0 else 1;
-   │                        ^^^^ Invalid local usage. Unbound local 'cond'
    │
 
 error: 

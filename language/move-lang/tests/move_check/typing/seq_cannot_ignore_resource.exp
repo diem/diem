@@ -1,56 +1,44 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/seq_cannot_ignore_resource.move:5:9
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         R{};
+  │         ^^^
+  │         │
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '0x8675309::M::R' does not have the ability 'drop'
 
-   ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:5:9 ───
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/seq_cannot_ignore_resource.move:10:9
    │
- 5 │         R{};
-   │         ^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 5 │         R{};
-   │         --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
  2 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+ 9 │         let r = R{};
+   │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
+10 │         r;
+   │         ^ Cannot ignore values without the 'drop' ability. The value must be used
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/seq_cannot_ignore_resource.move:14:9
    │
+14 │         (0, false, R{});
+   │         ^^^^^^^^^^^^^^^
+   │         │          │
+   │         │          The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
+   │         Cannot ignore values without the 'drop' ability. The value must be used
+   │         The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
 
-error: 
-
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:10:9 ───
-    │
- 10 │         r;
-    │         ^ Cannot ignore values without the 'drop' ability. The value must be used
-    ·
-  9 │         let r = R{};
-    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  2 │     struct R {}
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:14:9 ───
-    │
- 14 │         (0, false, R{});
-    │         ^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-    ·
- 14 │         (0, false, R{});
-    │         --------------- The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
-    ·
- 14 │         (0, false, R{});
-    │                    --- The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:19:9 ───
-    │
- 19 │         if (true) (0, false, R{}) else (0, false, r);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-    ·
- 19 │         if (true) (0, false, R{}) else (0, false, r);
-    │                                        ------------- The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
-    ·
- 18 │         let r = R{};
-    │                 --- The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/seq_cannot_ignore_resource.move:19:9
+   │
+18 │         let r = R{};
+   │                 --- The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
+19 │         if (true) (0, false, R{}) else (0, false, r);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                              │
+   │         │                              The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
+   │         Cannot ignore values without the 'drop' ability. The value must be used
 

@@ -1,3 +1,15 @@
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/block_with_statements_invalid.move:7:9
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+7 │         ({ let r = { let r = R {}; r }; r } : R);
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │                                     │
+  │         │                                     The type '0x8675309::M::R' does not have the ability 'drop'
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+
 error: 
 
    ┌── tests/move_check/typing/block_with_statements_invalid.move:4:29 ───
@@ -38,20 +50,6 @@ error:
    ·
  6 │         ({ let y = 0; &mut (y + 1) } : ());
    │                                        -- Is not compatible with: '()'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/block_with_statements_invalid.move:7:9 ───
-   │
- 7 │         ({ let r = { let r = R {}; r }; r } : R);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 7 │         ({ let r = { let r = R {}; r }; r } : R);
-   │                                               - The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 2 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
    │
 
 error: 

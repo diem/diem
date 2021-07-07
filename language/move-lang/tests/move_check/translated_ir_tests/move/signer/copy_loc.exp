@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/signer/copy_loc.move:3:9 ───
-   │
- 3 │         copy s
-   │         ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
-   ·
- 2 │     fun t(s: signer): signer {
-   │              ------ The type 'signer' does not have the ability 'copy'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/copy_loc.move:3:9
+  │
+2 │     fun t(s: signer): signer {
+  │              ------ The type 'signer' does not have the ability 'copy'
+3 │         copy s
+  │         ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
 

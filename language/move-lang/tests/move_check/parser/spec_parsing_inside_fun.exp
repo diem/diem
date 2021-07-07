@@ -1,13 +1,28 @@
-error: 
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:32:9
+   │
+32 │         spec {} + 1;
+   │         ^^^^^^^
+   │         │
+   │         Invalid argument to '+'
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
 
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:9 ───
-    │
- 32 │         spec {} + 1;
-    │         ^^^^^^^ Invalid argument to '+'
-    ·
- 32 │         spec {} + 1;
-    │         ------- Found: '()'. But expected: 'u8', 'u64', 'u128'
-    │
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:32:19
+   │
+32 │         spec {} + 1;
+   │         -------   ^ Invalid argument to '+'
+   │         │          
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/parser/spec_parsing_inside_fun.move:34:9
+   │
+34 │         &mut spec {};
+   │         ^^^^^^^^^^^^
+   │         │    │
+   │         │    Expected a single non-reference type, but found: '()'
+   │         Invalid borrow
 
 error: 
 
@@ -21,17 +36,6 @@ error:
     ·
  32 │         spec {} + 1;
     │         ------- Is not compatible with: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:19 ───
-    │
- 32 │         spec {} + 1;
-    │                   ^ Invalid argument to '+'
-    ·
- 32 │         spec {} + 1;
-    │         ------- Found: '()'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -60,16 +64,5 @@ error:
     ·
  33 │         spec {} && spec {};
     │         ------- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:34:9 ───
-    │
- 34 │         &mut spec {};
-    │         ^^^^^^^^^^^^ Invalid borrow
-    ·
- 34 │         &mut spec {};
-    │              ------- Expected a single non-reference type, but found: '()'
     │
 

@@ -1,3 +1,15 @@
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:43:27
+   │
+10 │     public fun get<V: drop>(self: &T<V>): V {
+   │                       ---- 'drop' constraint declared here
+   ·
+43 │         Box { f1, f2 }  = Container::get(&v);
+   │         --------------    ^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
+   │         │                  
+   │         The type '0x2::M::Box<0x2::M::R>' does not have the ability 'drop'
+   │         The type '0x2::M::Box<0x2::M::R>' can have the ability 'drop' but the type argument '0x2::M::R' does not have the required ability 'drop'
+
 error: 
 
     ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:36:9 ───
@@ -10,22 +22,5 @@ error:
     ·
  30 │     fun t0(): bool {
     │               ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:43:27 ───
-    │
- 43 │         Box { f1, f2 }  = Container::get(&v);
-    │                           ^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 43 │         Box { f1, f2 }  = Container::get(&v);
-    │         -------------- The type '0x2::M::Box<0x2::M::R>' does not have the ability 'drop'
-    ·
- 43 │         Box { f1, f2 }  = Container::get(&v);
-    │         -------------- The type '0x2::M::Box<0x2::M::R>' can have the ability 'drop' but the type argument '0x2::M::R' does not have the required ability 'drop'
-    ·
- 10 │     public fun get<V: drop>(self: &T<V>): V {
-    │                       ---- 'drop' constraint declared here
     │
 

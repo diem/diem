@@ -1,3 +1,57 @@
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:13:9
+   │
+13 │         baz (if (cond) (false, @0x0) else (true, @0x1));
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                                 │
+   │         │                                 Expected a single non-reference type, but found: '(bool, address)'
+   │         Invalid type argument
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:19:9
+   │
+19 │         baz(if (cond) (false, @0x0) else (true, @0x1));
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                                │
+   │         │                                Expected a single non-reference type, but found: '(bool, address)'
+   │         Invalid type argument
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:31:9
+   │
+31 │         baz({ (a, x) });
+   │         ^^^^^^^^^^^^^^^
+   │         │     │
+   │         │     Expected a single non-reference type, but found: '(address, u64)'
+   │         Invalid type argument
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:32:9
+   │
+32 │         baz({ let a = false; (a, x) });
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                    │
+   │         │                    Expected a single non-reference type, but found: '(bool, u64)'
+   │         Invalid type argument
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:44:9
+   │
+44 │         baz({ (a, x) });
+   │         ^^^^^^^^^^^^^^^
+   │         │     │
+   │         │     Expected a single non-reference type, but found: '(address, u64)'
+   │         Invalid type argument
+
+error[E04004]: expected a single non-reference type
+   ┌─ tests/move_check/typing/module_call_complicated_rhs.move:45:9
+   │
+45 │         baz({ let a = false; (a, x) });
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                    │
+   │         │                    Expected a single non-reference type, but found: '(bool, u64)'
+   │         Invalid type argument
+
 error: 
 
     ┌── tests/move_check/typing/module_call_complicated_rhs.move:11:9 ───
@@ -22,17 +76,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:13:9 ───
-    │
- 13 │         baz (if (cond) (false, @0x0) else (true, @0x1));
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 13 │         baz (if (cond) (false, @0x0) else (true, @0x1));
-    │                                           ------------ Expected a single non-reference type, but found: '(bool, address)'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call_complicated_rhs.move:17:9 ───
     │
  17 │         foo(if (cond) () else ());
@@ -51,17 +94,6 @@ error:
     ·
  19 │         baz(if (cond) (false, @0x0) else (true, @0x1));
     │            ------------------------------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:19:9 ───
-    │
- 19 │         baz(if (cond) (false, @0x0) else (true, @0x1));
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 19 │         baz(if (cond) (false, @0x0) else (true, @0x1));
-    │                                          ------------ Expected a single non-reference type, but found: '(bool, address)'
     │
 
 error: 
@@ -99,17 +131,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:31:9 ───
-    │
- 31 │         baz({ (a, x) });
-    │         ^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 31 │         baz({ (a, x) });
-    │               ------ Expected a single non-reference type, but found: '(address, u64)'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call_complicated_rhs.move:32:9 ───
     │
  32 │         baz({ let a = false; (a, x) });
@@ -117,17 +138,6 @@ error:
     ·
  32 │         baz({ let a = false; (a, x) });
     │            --------------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:32:9 ───
-    │
- 32 │         baz({ let a = false; (a, x) });
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 32 │         baz({ let a = false; (a, x) });
-    │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 
 error: 
@@ -165,17 +175,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:44:9 ───
-    │
- 44 │         baz({ (a, x) });
-    │         ^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 44 │         baz({ (a, x) });
-    │               ------ Expected a single non-reference type, but found: '(address, u64)'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/module_call_complicated_rhs.move:45:9 ───
     │
  45 │         baz({ let a = false; (a, x) });
@@ -183,16 +182,5 @@ error:
     ·
  45 │         baz({ let a = false; (a, x) });
     │            --------------------------- Found 1 argument(s) here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/module_call_complicated_rhs.move:45:9 ───
-    │
- 45 │         baz({ let a = false; (a, x) });
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 45 │         baz({ let a = false; (a, x) });
-    │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 

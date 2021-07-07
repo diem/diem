@@ -1,42 +1,33 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/assign_pop_resource.move:5:9
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         _ = R{};
+  │         ^   --- The type '0x8675309::M::R' does not have the ability 'drop'
+  │         │    
+  │         Cannot ignore values without the 'drop' ability. The value must be used
 
-   ┌── tests/move_check/typing/assign_pop_resource.move:5:9 ───
-   │
- 5 │         _ = R{};
-   │         ^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 5 │         _ = R{};
-   │             --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 2 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/assign_pop_resource.move:6:10
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+6 │         (_, _) = (R{}, R{});
+  │          ^        --- The type '0x8675309::M::R' does not have the ability 'drop'
+  │          │         
+  │          Cannot ignore values without the 'drop' ability. The value must be used
 
-error: 
-
-   ┌── tests/move_check/typing/assign_pop_resource.move:6:10 ───
-   │
- 6 │         (_, _) = (R{}, R{});
-   │          ^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 6 │         (_, _) = (R{}, R{});
-   │                   --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 2 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/assign_pop_resource.move:6:13 ───
-   │
- 6 │         (_, _) = (R{}, R{});
-   │             ^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 6 │         (_, _) = (R{}, R{});
-   │                        --- The type '0x8675309::M::R' does not have the ability 'drop'
-   ·
- 2 │     struct R {}
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/assign_pop_resource.move:6:13
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+6 │         (_, _) = (R{}, R{});
+  │             ^          --- The type '0x8675309::M::R' does not have the ability 'drop'
+  │             │           
+  │             Cannot ignore values without the 'drop' ability. The value must be used
 

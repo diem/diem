@@ -75,11 +75,9 @@ error[E01010]: syntax item restricted to spec contexts
    │         ^ Unexpected assignment of module access without fields outside of a spec context.
 If you are trying to unpack a struct, try adding fields, e.g. '0x42::M::R {}'
 
-error: 
-
-    ┌── tests/move_check/expansion/assign_non_simple_name.move:39:9 ───
-    │
- 39 │         Y = 0;
-    │         ^ Invalid assignment. Unbound local 'Y'
-    │
+error[E03009]: unbound variable
+   ┌─ tests/move_check/expansion/assign_non_simple_name.move:39:9
+   │
+39 │         Y = 0;
+   │         ^ Invalid assignment. Unbound variable 'Y'
 

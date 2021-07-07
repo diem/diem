@@ -1,24 +1,174 @@
-error: 
+error[E04003]: built-in operation not supported
+  ┌─ tests/move_check/typing/binary_geq_invalid.move:8:9
+  │
+8 │         false >= true;
+  │         ^^^^^
+  │         │
+  │         Invalid argument to '>='
+  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
-   ┌── tests/move_check/typing/binary_geq_invalid.move:8:9 ───
+error[E04003]: built-in operation not supported
+  ┌─ tests/move_check/typing/binary_geq_invalid.move:8:18
+  │
+8 │         false >= true;
+  │         -----    ^^^^ Invalid argument to '>='
+  │         │         
+  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:10:9
    │
- 8 │         false >= true;
-   │         ^^^^^ Invalid argument to '>='
+10 │         false >= 1;
+   │         ^^^^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:10:18
+   │
+10 │         false >= 1;
+   │         -----    ^ Invalid argument to '>='
+   │         │         
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:11:9
+   │
+11 │         @0x0 >= @0x1;
+   │         ^^^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:11:17
+   │
+11 │         @0x0 >= @0x1;
+   │         ----    ^^^^ Invalid argument to '>='
+   │         │        
+   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:13:9
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
    ·
- 8 │         false >= true;
-   │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-   │
+13 │         r >= r;
+   │         ^ Invalid argument to '>='
 
-error: 
-
-   ┌── tests/move_check/typing/binary_geq_invalid.move:8:18 ───
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:13:14
    │
- 8 │         false >= true;
-   │                  ^^^^ Invalid argument to '>='
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
    ·
- 8 │         false >= true;
-   │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+13 │         r >= r;
+   │              ^ Invalid argument to '>='
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:14:9
    │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   ·
+14 │         s >= s;
+   │         ^ Invalid argument to '>='
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:14:14
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   ·
+14 │         s >= s;
+   │              ^ Invalid argument to '>='
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:15:9
+   │
+15 │         0 >= 1 >= 2;
+   │         ^^^^^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:15:19
+   │
+15 │         0 >= 1 >= 2;
+   │         ------    ^ Invalid argument to '>='
+   │         │          
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:16:26
+   │
+16 │         (1 >= false) && (@0x0 >= 0);
+   │                          ^^^^
+   │                          │
+   │                          Invalid argument to '>='
+   │                          Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:16:34
+   │
+16 │         (1 >= false) && (@0x0 >= 0);
+   │                          ----    ^ Invalid argument to '>='
+   │                          │        
+   │                          Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:17:9
+   │
+17 │         () >= ();
+   │         ^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:17:15
+   │
+17 │         () >= ();
+   │         --    ^^ Invalid argument to '>='
+   │         │      
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:19:9
+   │
+19 │         (0, 1) >= (0, 1, 2);
+   │         ^^^^^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:19:19
+   │
+19 │         (0, 1) >= (0, 1, 2);
+   │         ------    ^^^^^^^^^ Invalid argument to '>='
+   │         │          
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:20:9
+   │
+20 │         (1, 2) >= (0, 1);
+   │         ^^^^^^
+   │         │
+   │         Invalid argument to '>='
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_geq_invalid.move:20:19
+   │
+20 │         (1, 2) >= (0, 1);
+   │         ------    ^^^^^^ Invalid argument to '>='
+   │         │          
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
 
 error: 
 
@@ -36,17 +186,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_geq_invalid.move:10:9 ───
-    │
- 10 │         false >= 1;
-    │         ^^^^^ Invalid argument to '>='
-    ·
- 10 │         false >= 1;
-    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_geq_invalid.move:10:18 ───
     │
  10 │         false >= 1;
@@ -57,39 +196,6 @@ error:
     ·
  10 │         false >= 1;
     │         ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:10:18 ───
-    │
- 10 │         false >= 1;
-    │                  ^ Invalid argument to '>='
-    ·
- 10 │         false >= 1;
-    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:11:9 ───
-    │
- 11 │         @0x0 >= @0x1;
-    │         ^^^^ Invalid argument to '>='
-    ·
- 11 │         @0x0 >= @0x1;
-    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:11:17 ───
-    │
- 11 │         @0x0 >= @0x1;
-    │                 ^^^^ Invalid argument to '>='
-    ·
- 11 │         @0x0 >= @0x1;
-    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -108,61 +214,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_geq_invalid.move:13:9 ───
-    │
- 13 │         r >= r;
-    │         ^ Invalid argument to '>='
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:13:14 ───
-    │
- 13 │         r >= r;
-    │              ^ Invalid argument to '>='
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:14:9 ───
-    │
- 14 │         s >= s;
-    │         ^ Invalid argument to '>='
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:14:14 ───
-    │
- 14 │         s >= s;
-    │              ^ Invalid argument to '>='
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:15:9 ───
-    │
- 15 │         0 >= 1 >= 2;
-    │         ^^^^^^ Invalid argument to '>='
-    ·
- 15 │         0 >= 1 >= 2;
-    │         ------ Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_geq_invalid.move:15:19 ───
     │
  15 │         0 >= 1 >= 2;
@@ -173,17 +224,6 @@ error:
     ·
  15 │         0 >= 1 >= 2;
     │         ------ Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:15:19 ───
-    │
- 15 │         0 >= 1 >= 2;
-    │                   ^ Invalid argument to '>='
-    ·
- 15 │         0 >= 1 >= 2;
-    │         ------ Found: 'bool'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -202,17 +242,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_geq_invalid.move:16:26 ───
-    │
- 16 │         (1 >= false) && (@0x0 >= 0);
-    │                          ^^^^ Invalid argument to '>='
-    ·
- 16 │         (1 >= false) && (@0x0 >= 0);
-    │                          ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_geq_invalid.move:16:34 ───
     │
  16 │         (1 >= false) && (@0x0 >= 0);
@@ -223,39 +252,6 @@ error:
     ·
  16 │         (1 >= false) && (@0x0 >= 0);
     │                          ---- Is not compatible with: 'address'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:16:34 ───
-    │
- 16 │         (1 >= false) && (@0x0 >= 0);
-    │                                  ^ Invalid argument to '>='
-    ·
- 16 │         (1 >= false) && (@0x0 >= 0);
-    │                          ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:17:9 ───
-    │
- 17 │         () >= ();
-    │         ^^ Invalid argument to '>='
-    ·
- 17 │         () >= ();
-    │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:17:15 ───
-    │
- 17 │         () >= ();
-    │               ^^ Invalid argument to '>='
-    ·
- 17 │         () >= ();
-    │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -274,17 +270,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_geq_invalid.move:19:9 ───
-    │
- 19 │         (0, 1) >= (0, 1, 2);
-    │         ^^^^^^ Invalid argument to '>='
-    ·
- 19 │         (0, 1) >= (0, 1, 2);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_geq_invalid.move:19:19 ───
     │
  19 │         (0, 1) >= (0, 1, 2);
@@ -295,38 +280,5 @@ error:
     ·
  19 │         (0, 1) >= (0, 1, 2);
     │                   --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:19:19 ───
-    │
- 19 │         (0, 1) >= (0, 1, 2);
-    │                   ^^^^^^^^^ Invalid argument to '>='
-    ·
- 19 │         (0, 1) >= (0, 1, 2);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:20:9 ───
-    │
- 20 │         (1, 2) >= (0, 1);
-    │         ^^^^^^ Invalid argument to '>='
-    ·
- 20 │         (1, 2) >= (0, 1);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_geq_invalid.move:20:19 ───
-    │
- 20 │         (1, 2) >= (0, 1);
-    │                   ^^^^^^ Invalid argument to '>='
-    ·
- 20 │         (1, 2) >= (0, 1);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
     │
 

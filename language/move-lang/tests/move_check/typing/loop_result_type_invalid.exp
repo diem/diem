@@ -1,3 +1,11 @@
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/loop_result_type_invalid.move:25:13
+   │
+25 │         let x = loop { break };
+   │             ^   -------------- Expected a single type, but found expression list type: '()'
+   │             │    
+   │             Invalid type for local
+
 error: 
 
     ┌── tests/move_check/typing/loop_result_type_invalid.move:11:9 ───
@@ -38,17 +46,6 @@ error:
     ·
  22 │     fun foo(x: u64) {}
     │                --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:25:13 ───
-    │
- 25 │         let x = loop { break };
-    │             ^ Invalid type for local
-    ·
- 25 │         let x = loop { break };
-    │                 -------------- Expected a single type, but found expression list type: '()'
     │
 
 error: 

@@ -1,3 +1,21 @@
+error[E05002]: type not implicitly copyable
+   ┌─ tests/move_check/typing/mutate_non_ref.move:17:10
+   │
+ 3 │     struct X has copy, drop { s: S }
+   │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
+   ·
+17 │         *x.s = S { f: 0 };
+   │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+
+error[E05002]: type not implicitly copyable
+   ┌─ tests/move_check/typing/mutate_non_ref.move:21:10
+   │
+ 3 │     struct X has copy, drop { s: S }
+   │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
+   ·
+21 │         *x_ref.s = S{ f: 0 };
+   │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+
 error: 
 
    ┌── tests/move_check/typing/mutate_non_ref.move:7:10 ───
@@ -70,17 +88,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_non_ref.move:17:10 ───
-    │
- 17 │         *x.s = S { f: 0 };
-    │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
-    ·
-  3 │     struct X has copy, drop { s: S }
-    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
-    │
-
-error: 
-
     ┌── tests/move_check/typing/mutate_non_ref.move:18:10 ───
     │
  18 │         *x.s.f = 0;
@@ -105,17 +112,6 @@ error:
     ·
  21 │         *x_ref.s = S{ f: 0 };
     │          ------- Is not compatible with: '&mut _'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutate_non_ref.move:21:10 ───
-    │
- 21 │         *x_ref.s = S{ f: 0 };
-    │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
-    ·
-  3 │     struct X has copy, drop { s: S }
-    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
     │
 
 error: 

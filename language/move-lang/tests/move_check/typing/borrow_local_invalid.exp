@@ -1,44 +1,35 @@
-error: 
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/borrow_local_invalid.move:3:9
+  │
+2 │     fun t0(r: &u64, r_mut: &mut u64) {
+  │               ---- Expected a single non-reference type, but found: '&u64'
+3 │         &r;
+  │         ^^ Invalid borrow
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:3:9 ───
-   │
- 3 │         &r;
-   │         ^^ Invalid borrow
-   ·
- 2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │               ---- Expected a single non-reference type, but found: '&u64'
-   │
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/borrow_local_invalid.move:4:9
+  │
+2 │     fun t0(r: &u64, r_mut: &mut u64) {
+  │                            -------- Expected a single non-reference type, but found: '&mut u64'
+3 │         &r;
+4 │         &r_mut;
+  │         ^^^^^^ Invalid borrow
 
-error: 
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/borrow_local_invalid.move:5:9
+  │
+2 │     fun t0(r: &u64, r_mut: &mut u64) {
+  │               ---- Expected a single non-reference type, but found: '&u64'
+  ·
+5 │         &mut r;
+  │         ^^^^^^ Invalid borrow
 
-   ┌── tests/move_check/typing/borrow_local_invalid.move:4:9 ───
-   │
- 4 │         &r_mut;
-   │         ^^^^^^ Invalid borrow
-   ·
- 2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │                            -------- Expected a single non-reference type, but found: '&mut u64'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/borrow_local_invalid.move:5:9 ───
-   │
- 5 │         &mut r;
-   │         ^^^^^^ Invalid borrow
-   ·
- 2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │               ---- Expected a single non-reference type, but found: '&u64'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/borrow_local_invalid.move:6:9 ───
-   │
- 6 │         &mut r_mut;
-   │         ^^^^^^^^^^ Invalid borrow
-   ·
- 2 │     fun t0(r: &u64, r_mut: &mut u64) {
-   │                            -------- Expected a single non-reference type, but found: '&mut u64'
-   │
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/borrow_local_invalid.move:6:9
+  │
+2 │     fun t0(r: &u64, r_mut: &mut u64) {
+  │                            -------- Expected a single non-reference type, but found: '&mut u64'
+  ·
+6 │         &mut r_mut;
+  │         ^^^^^^^^^^ Invalid borrow
 

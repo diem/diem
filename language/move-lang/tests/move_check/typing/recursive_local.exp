@@ -1,3 +1,11 @@
+error[E04005]: expected a single type
+  ┌─ tests/move_check/typing/recursive_local.move:5:9
+  │
+5 │         x = (x, 0);
+  │         ^   ------ Expected a single type, but found expression list type: '(_, u64)'
+  │         │    
+  │         Invalid type for local
+
 error: 
 
    ┌── tests/move_check/typing/recursive_local.move:4:13 ───
@@ -15,17 +23,6 @@ error:
    ·
  4 │         let x;
    │             - Unable to infer the type. Recursive type found.
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/recursive_local.move:5:9 ───
-   │
- 5 │         x = (x, 0);
-   │         ^ Invalid type for local
-   ·
- 5 │         x = (x, 0);
-   │             ------ Expected a single type, but found expression list type: '(_, u64)'
    │
 
 error: 

@@ -1785,9 +1785,8 @@ fn parse_constant_decl(
 ) -> Result<Constant, Diagnostic> {
     let Modifiers { visibility, native } = modifiers;
     if let Some(vis) = visibility {
-        let msg =
-            "Invalid constant declaration. Constants cannot have visibility modifiers as they are \
-        always internal";
+        let msg = "Invalid constant declaration. Constants cannot have visibility modifiers as \
+                   they are always internal";
         return Err(diag!(Syntax::InvalidModifier, (vis.loc().unwrap(), msg)));
     }
     if let Some(loc) = native {

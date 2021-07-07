@@ -1003,7 +1003,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (ty, TE::Copy { var, from_user })
         }
         NE::Use(var) => {
-            let ty = context.get_local(eloc, "local usage", &var);
+            let ty = context.get_local(eloc, "variable usage", &var);
             (ty, TE::Use(var))
         }
 

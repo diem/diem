@@ -1,3 +1,19 @@
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/bind_wrong_type.move:11:13
+   │
+11 │         let x = ();
+   │             ^   -- Expected a single type, but found expression list type: '()'
+   │             │    
+   │             Invalid type for local
+
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/bind_wrong_type.move:18:13
+   │
+18 │         let x: () = 0;
+   │             ^  -- Expected a single type, but found expression list type: '()'
+   │             │   
+   │             Invalid type for local
+
 error: 
 
    ┌── tests/move_check/typing/bind_wrong_type.move:6:13 ───
@@ -25,17 +41,6 @@ error:
  7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
    │                                   --------- Is not compatible with: '0x8675309::M::R'
    │
-
-error: 
-
-    ┌── tests/move_check/typing/bind_wrong_type.move:11:13 ───
-    │
- 11 │         let x = ();
-    │             ^ Invalid type for local
-    ·
- 11 │         let x = ();
-    │                 -- Expected a single type, but found expression list type: '()'
-    │
 
 error: 
 
@@ -77,17 +82,6 @@ error:
     ·
  14 │         let (x, b, R{f}) = (0, false);
     │                            ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/bind_wrong_type.move:18:13 ───
-    │
- 18 │         let x: () = 0;
-    │             ^ Invalid type for local
-    ·
- 18 │         let x: () = 0;
-    │                -- Expected a single type, but found expression list type: '()'
     │
 
 error: 

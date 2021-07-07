@@ -1,24 +1,26 @@
-error: 
+error[E04005]: expected a single type
+  ┌─ tests/move_check/typing/assign_wrong_arity.move:5:13
+  │
+5 │         let x;
+  │             ^ Invalid type for local
+6 │         x = ();
+  │             -- Expected a single type, but found expression list type: '()'
 
-   ┌── tests/move_check/typing/assign_wrong_arity.move:5:13 ───
-   │
- 5 │         let x;
-   │             ^ Invalid type for local
-   ·
- 6 │         x = ();
-   │             -- Expected a single type, but found expression list type: '()'
-   │
+error[E04005]: expected a single type
+  ┌─ tests/move_check/typing/assign_wrong_arity.move:6:9
+  │
+6 │         x = ();
+  │         ^   -- Expected a single type, but found expression list type: '()'
+  │         │    
+  │         Invalid type for local
 
-error: 
-
-   ┌── tests/move_check/typing/assign_wrong_arity.move:6:9 ───
-   │
- 6 │         x = ();
-   │         ^ Invalid type for local
-   ·
- 6 │         x = ();
-   │             -- Expected a single type, but found expression list type: '()'
-   │
+error[E04005]: expected a single type
+  ┌─ tests/move_check/typing/assign_wrong_arity.move:7:9
+  │
+7 │         x = (0, 1, 2);
+  │         ^   --------- Expected a single type, but found expression list type: '(u64, u64, u64)'
+  │         │    
+  │         Invalid type for local
 
 error: 
 
@@ -32,17 +34,6 @@ error:
    ·
  6 │         x = ();
    │             -- Is not compatible with: '()'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/assign_wrong_arity.move:7:9 ───
-   │
- 7 │         x = (0, 1, 2);
-   │         ^ Invalid type for local
-   ·
- 7 │         x = (0, 1, 2);
-   │             --------- Expected a single type, but found expression list type: '(u64, u64, u64)'
    │
 
 error: 

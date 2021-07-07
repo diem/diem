@@ -1,44 +1,32 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/exp_list_resource_drop.move:7:9
+  │
+7 │         (0, S{}, R<u64> {});
+  │         ^^^^^^^^^^^^^^^^^^^
+  │         │   │
+  │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' does not have the ability 'drop'
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:7:9 ───
-   │
- 7 │         (0, S{}, R<u64> {});
-   │         ^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 7 │         (0, S{}, R<u64> {});
-   │         ------------------- The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' does not have the ability 'drop'
-   ·
- 7 │         (0, S{}, R<u64> {});
-   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/exp_list_resource_drop.move:8:9
+  │
+8 │         (0, S{}, Box<R<u64>> {});
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │   │
+  │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' does not have the ability 'drop'
 
-error: 
-
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:8:9 ───
-   │
- 8 │         (0, S{}, Box<R<u64>> {});
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 8 │         (0, S{}, Box<R<u64>> {});
-   │         ------------------------ The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' does not have the ability 'drop'
-   ·
- 8 │         (0, S{}, Box<R<u64>> {});
-   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:9:9 ───
-   │
- 9 │         (0, S{}, Box {});
-   │         ^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-   ·
- 9 │         (0, S{}, Box {});
-   │         ---------------- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' does not have the ability 'drop'
-   ·
- 9 │         (0, S{}, Box {});
-   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/exp_list_resource_drop.move:9:9
+  │
+9 │         (0, S{}, Box {});
+  │         ^^^^^^^^^^^^^^^^
+  │         │   │
+  │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' does not have the ability 'drop'
 
 error: 
 

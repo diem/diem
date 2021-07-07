@@ -1,11 +1,9 @@
-error: 
-
-    ┌── tests/move_check/typing/module_call_internal.move:10:9 ───
-    │
- 10 │         X::foo()
-    │         ^^^^^^^^ Invalid call to '0x2::X::foo'
-    ·
-  4 │     fun foo() {}
-    │         --- This function is internal to its module. Only 'public', 'public(script)', and 'public(friend)' functions can be called outside of their module
-    │
+error[E04001]: restricted visibility
+   ┌─ tests/move_check/typing/module_call_internal.move:10:9
+   │
+ 4 │     fun foo() {}
+   │         --- This function is internal to its module. Only 'public', 'public(script)', and 'public(friend)' functions can be called outside of their module
+   ·
+10 │         X::foo()
+   │         ^^^^^^^^ Invalid call to '0x2::X::foo'
 

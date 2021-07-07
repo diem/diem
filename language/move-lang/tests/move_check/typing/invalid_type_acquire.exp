@@ -28,6 +28,111 @@ error[E02011]: invalid 'acquires' item
 21 │         S,
    │         ^ Invalid acquires item. Expected a struct with the 'key' ability.
 
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:32:26
+   │
+32 │         destroy(account, move_from<u64>(a));
+   │                          ^^^^^^^^^^^^^^^^^
+   │                          │         │
+   │                          │         The type 'u64' does not have the ability 'key'
+   │                          Invalid call of 'move_from'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:34:26
+   │
+10 │     struct S has store {}
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+34 │         destroy(account, move_from<S>(a));
+   │                          ^^^^^^^^^^^^^^^
+   │                          │         │
+   │                          │         The type '0x2::M::S' does not have the ability 'key'
+   │                          Invalid call of 'move_from'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:38:9
+   │
+38 │         borrow_global<u64>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^
+   │         │             │
+   │         │             The type 'u64' does not have the ability 'key'
+   │         Invalid call of 'borrow_global'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:40:9
+   │
+10 │     struct S has store {}
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+40 │         borrow_global<S>(a);
+   │         ^^^^^^^^^^^^^^^^^^^
+   │         │             │
+   │         │             The type '0x2::M::S' does not have the ability 'key'
+   │         Invalid call of 'borrow_global'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:44:9
+   │
+44 │         borrow_global_mut<u64>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                 │
+   │         │                 The type 'u64' does not have the ability 'key'
+   │         Invalid call of 'borrow_global_mut'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:46:9
+   │
+10 │     struct S has store {}
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+46 │         borrow_global_mut<S>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                 │
+   │         │                 The type '0x2::M::S' does not have the ability 'key'
+   │         Invalid call of 'borrow_global_mut'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:50:9
+   │
+50 │         exists<u64>(a);
+   │         ^^^^^^^^^^^^^^
+   │         │      │
+   │         │      The type 'u64' does not have the ability 'key'
+   │         Invalid call of 'exists'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:52:9
+   │
+10 │     struct S has store {}
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+52 │         exists<S>(a);
+   │         ^^^^^^^^^^^^
+   │         │      │
+   │         │      The type '0x2::M::S' does not have the ability 'key'
+   │         Invalid call of 'exists'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:56:9
+   │
+56 │         move_to<u64>(account, any());
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │       │
+   │         │       The type 'u64' does not have the ability 'key'
+   │         Invalid call of 'move_to'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/invalid_type_acquire.move:58:9
+   │
+10 │     struct S has store {}
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+58 │         move_to<S>(account, any());
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │       │
+   │         │       The type '0x2::M::S' does not have the ability 'key'
+   │         Invalid call of 'move_to'
+
 error: 
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:30:9 ───
@@ -57,17 +162,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:32:26 ───
-    │
- 32 │         destroy(account, move_from<u64>(a));
-    │                          ^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'
-    ·
- 32 │         destroy(account, move_from<u64>(a));
-    │                                    --- The type 'u64' does not have the ability 'key'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:33:26 ───
     │
  33 │         destroy(account, move_from<X::R>(a));
@@ -75,20 +169,6 @@ error:
     ·
  33 │         destroy(account, move_from<X::R>(a));
     │                                    ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:34:26 ───
-    │
- 34 │         destroy(account, move_from<S>(a));
-    │                          ^^^^^^^^^^^^^^^ Invalid call of 'move_from'
-    ·
- 34 │         destroy(account, move_from<S>(a));
-    │                                    - The type '0x2::M::S' does not have the ability 'key'
-    ·
- 10 │     struct S has store {}
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -123,17 +203,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:38:9 ───
-    │
- 38 │         borrow_global<u64>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
-    ·
- 38 │         borrow_global<u64>(a);
-    │                       --- The type 'u64' does not have the ability 'key'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:39:9 ───
     │
  39 │         borrow_global<X::R>(a);
@@ -141,20 +210,6 @@ error:
     ·
  39 │         borrow_global<X::R>(a);
     │                       ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
-    │
- 40 │         borrow_global<S>(a);
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
-    ·
- 40 │         borrow_global<S>(a);
-    │                       - The type '0x2::M::S' does not have the ability 'key'
-    ·
- 10 │     struct S has store {}
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -189,17 +244,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:44:9 ───
-    │
- 44 │         borrow_global_mut<u64>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
-    ·
- 44 │         borrow_global_mut<u64>(a);
-    │                           --- The type 'u64' does not have the ability 'key'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:45:9 ───
     │
  45 │         borrow_global_mut<X::R>(a);
@@ -207,20 +251,6 @@ error:
     ·
  45 │         borrow_global_mut<X::R>(a);
     │                           ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
-    │
- 46 │         borrow_global_mut<S>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
-    ·
- 46 │         borrow_global_mut<S>(a);
-    │                           - The type '0x2::M::S' does not have the ability 'key'
-    ·
- 10 │     struct S has store {}
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -255,17 +285,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:50:9 ───
-    │
- 50 │         exists<u64>(a);
-    │         ^^^^^^^^^^^^^^ Invalid call of 'exists'
-    ·
- 50 │         exists<u64>(a);
-    │                --- The type 'u64' does not have the ability 'key'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:51:9 ───
     │
  51 │         exists<X::R>(a);
@@ -273,20 +292,6 @@ error:
     ·
  51 │         exists<X::R>(a);
     │                ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:52:9 ───
-    │
- 52 │         exists<S>(a);
-    │         ^^^^^^^^^^^^ Invalid call of 'exists'
-    ·
- 52 │         exists<S>(a);
-    │                - The type '0x2::M::S' does not have the ability 'key'
-    ·
- 10 │     struct S has store {}
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -318,17 +323,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:56:9 ───
-    │
- 56 │         move_to<u64>(account, any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
-    ·
- 56 │         move_to<u64>(account, any());
-    │                 --- The type 'u64' does not have the ability 'key'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/invalid_type_acquire.move:57:9 ───
     │
  57 │         move_to<X::R>(account, any());
@@ -336,19 +330,5 @@ error:
     ·
  57 │         move_to<X::R>(account, any());
     │                 ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/invalid_type_acquire.move:58:9 ───
-    │
- 58 │         move_to<S>(account, any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
-    ·
- 58 │         move_to<S>(account, any());
-    │                 - The type '0x2::M::S' does not have the ability 'key'
-    ·
- 10 │     struct S has store {}
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 

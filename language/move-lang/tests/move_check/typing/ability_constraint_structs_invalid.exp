@@ -1,714 +1,601 @@
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:19:9 ───
-    │
- 19 │         c<NoC>();
-    │         ^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 19 │         c<NoC>();
-    │           --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
-  9 │     fun c<T: copy>() {}
-    │              ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:20:9 ───
-    │
- 20 │         c<Cup<u64>>();
-    │         ^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 20 │         c<Cup<u64>>();
-    │           -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
-  9 │     fun c<T: copy>() {}
-    │              ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:21:9 ───
-    │
- 21 │         c<Box<NoC>>();
-    │         ^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 21 │         c<Box<NoC>>();
-    │           -------- The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 21 │         c<Box<NoC>>();
-    │               --- The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
-  9 │     fun c<T: copy>() {}
-    │              ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:22:9 ───
-    │
- 22 │         k<NoK>();
-    │         ^^^^^^^^ 'key' constraint not satisifed
-    ·
- 22 │         k<NoK>();
-    │           --- The type '0x42::M::NoK' does not have the ability 'key'
-    ·
-  4 │     struct NoK has copy, drop, store {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 10 │     fun k<T: key>() {}
-    │              --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:23:9 ───
-    │
- 23 │         k<Cup<u64>>();
-    │         ^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 23 │         k<Cup<u64>>();
-    │           -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 10 │     fun k<T: key>() {}
-    │              --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:24:9 ───
-    │
- 24 │         k<Box<Cup<u64>>>();
-    │         ^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 24 │         k<Box<Cup<u64>>>();
-    │           ------------- The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
-    ·
- 24 │         k<Box<Cup<u64>>>();
-    │               -------- The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
-    ·
- 10 │     fun k<T: key>() {}
-    │              --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:25:9 ───
-    │
- 25 │         cds<NoC>();
-    │         ^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 25 │         cds<NoC>();
-    │             --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:26:9 ───
-    │
- 26 │         cds<Cup<u64>>();
-    │         ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 26 │         cds<Cup<u64>>();
-    │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:26:9 ───
-    │
- 26 │         cds<Cup<u64>>();
-    │         ^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 26 │         cds<Cup<u64>>();
-    │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                       ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:26:9 ───
-    │
- 26 │         cds<Cup<u64>>();
-    │         ^^^^^^^^^^^^^^^ 'store' constraint not satisifed
-    ·
- 26 │         cds<Cup<u64>>();
-    │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                              ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:27:9 ───
-    │
- 27 │         cds<Cup<NoC>>();
-    │         ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 27 │         cds<Cup<NoC>>();
-    │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:27:9 ───
-    │
- 27 │         cds<Cup<NoC>>();
-    │         ^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 27 │         cds<Cup<NoC>>();
-    │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                       ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:27:9 ───
-    │
- 27 │         cds<Cup<NoC>>();
-    │         ^^^^^^^^^^^^^^^ 'store' constraint not satisifed
-    ·
- 27 │         cds<Cup<NoC>>();
-    │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                              ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:28:9 ───
-    │
- 28 │         cds<Pair<u64, NoC>>();
-    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 28 │         cds<Pair<u64, NoC>>();
-    │             -------------- The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 28 │         cds<Pair<u64, NoC>>();
-    │                       --- The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
- 11 │     fun cds<T: copy + drop + store>() {}
-    │                ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:29:13 ───
-    │
- 29 │         let Sc {} = Sc<NoC> {};
-    │             ^^^^^ 'copy' constraint not satisifed
-    ·
- 29 │         let Sc {} = Sc<NoC> {};
-    │                        --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:29:21 ───
-    │
- 29 │         let Sc {} = Sc<NoC> {};
-    │                     ^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 29 │         let Sc {} = Sc<NoC> {};
-    │                        --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:30:13 ───
-    │
- 30 │         let Sc {} = Sc<Cup<u64>> {};
-    │             ^^^^^ 'copy' constraint not satisifed
-    ·
- 30 │         let Sc {} = Sc<Cup<u64>> {};
-    │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:30:21 ───
-    │
- 30 │         let Sc {} = Sc<Cup<u64>> {};
-    │                     ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 30 │         let Sc {} = Sc<Cup<u64>> {};
-    │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:31:13 ───
-    │
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │             ^^^^^ 'copy' constraint not satisifed
-    ·
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │                        -------- The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │                            --- The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:31:21 ───
-    │
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │                     ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │                        -------- The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 31 │         let Sc {} = Sc<Box<NoC>> {};
-    │                            --- The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
- 13 │     struct Sc<T: copy> {}
-    │                  ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:32:13 ───
-    │
- 32 │         let Sk {} = Sk<NoK> {};
-    │             ^^^^^ 'key' constraint not satisifed
-    ·
- 32 │         let Sk {} = Sk<NoK> {};
-    │                        --- The type '0x42::M::NoK' does not have the ability 'key'
-    ·
-  4 │     struct NoK has copy, drop, store {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:32:21 ───
-    │
- 32 │         let Sk {} = Sk<NoK> {};
-    │                     ^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 32 │         let Sk {} = Sk<NoK> {};
-    │                        --- The type '0x42::M::NoK' does not have the ability 'key'
-    ·
-  4 │     struct NoK has copy, drop, store {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:33:13 ───
-    │
- 33 │         let Sk {} = Sk<Cup<u64>> {};
-    │             ^^^^^ 'key' constraint not satisifed
-    ·
- 33 │         let Sk {} = Sk<Cup<u64>> {};
-    │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:33:21 ───
-    │
- 33 │         let Sk {} = Sk<Cup<u64>> {};
-    │                     ^^^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 33 │         let Sk {} = Sk<Cup<u64>> {};
-    │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'key' ability would need to be added here
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:34:13 ───
-    │
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │             ^^^^^ 'key' constraint not satisifed
-    ·
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │                        ------------- The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
-    ·
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │                            -------- The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:34:21 ───
-    │
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │                     ^^^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │                        ------------- The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
-    ·
- 34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
-    │                            -------- The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
-    ·
- 14 │     struct Sk<T: key> {}
-    │                  --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:35:13 ───
-    │
- 35 │         let Scds {} = Scds<NoC> {};
-    │             ^^^^^^^ 'copy' constraint not satisifed
-    ·
- 35 │         let Scds {} = Scds<NoC> {};
-    │                            --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:35:23 ───
-    │
- 35 │         let Scds {} = Scds<NoC> {};
-    │                       ^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 35 │         let Scds {} = Scds<NoC> {};
-    │                            --- The type '0x42::M::NoC' does not have the ability 'copy'
-    ·
-  3 │     struct NoC has drop, store, key {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:13 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │             ^^^^^^^ 'copy' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:13 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │             ^^^^^^^ 'drop' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                           ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:13 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │             ^^^^^^^ 'store' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                                  ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:23 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:23 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                           ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:36:23 ───
-    │
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'store' constraint not satisifed
-    ·
- 36 │         let Scds {} = Scds<Cup<u64>> {};
-    │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                                  ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:13 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │             ^^^^^^^ 'copy' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:13 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │             ^^^^^^^ 'drop' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                           ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:13 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │             ^^^^^^^ 'store' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                                  ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:23 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:23 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                           ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:37:23 ───
-    │
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                       ^^^^^^^^^^^^^^^^^ 'store' constraint not satisifed
-    ·
- 37 │         let Scds {} = Scds<Cup<NoC>> {};
-    │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
-    ·
-  5 │     struct Cup<T> {}
-    │            --- To satisfy the constraint, the 'store' ability would need to be added here
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                                  ----- 'store' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:38:13 ───
-    │
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │             ^^^^^^^ 'copy' constraint not satisifed
-    ·
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │                            -------------- The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │                                      --- The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/ability_constraint_structs_invalid.move:38:23 ───
-    │
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │                       ^^^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
-    ·
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │                            -------------- The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
-    ·
- 38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
-    │                                      --- The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
-    ·
- 15 │     struct Scds<T: copy + drop + store> {}
-    │                    ---- 'copy' constraint declared here
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:19:9
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+ 9 │     fun c<T: copy>() {}
+   │              ---- 'copy' constraint declared here
+   ·
+19 │         c<NoC>();
+   │         ^^^^^^^^
+   │         │ │
+   │         │ The type '0x42::M::NoC' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:20:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+ 9 │     fun c<T: copy>() {}
+   │              ---- 'copy' constraint declared here
+   ·
+20 │         c<Cup<u64>>();
+   │         ^^^^^^^^^^^^^
+   │         │ │
+   │         │ The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:21:9
+   │
+ 9 │     fun c<T: copy>() {}
+   │              ---- 'copy' constraint declared here
+   ·
+21 │         c<Box<NoC>>();
+   │         ^^^^^^^^^^^^^
+   │         │ │   │
+   │         │ │   The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │         │ The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:22:9
+   │
+ 4 │     struct NoK has copy, drop, store {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+10 │     fun k<T: key>() {}
+   │              --- 'key' constraint declared here
+   ·
+22 │         k<NoK>();
+   │         ^^^^^^^^
+   │         │ │
+   │         │ The type '0x42::M::NoK' does not have the ability 'key'
+   │         'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:23:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+10 │     fun k<T: key>() {}
+   │              --- 'key' constraint declared here
+   ·
+23 │         k<Cup<u64>>();
+   │         ^^^^^^^^^^^^^
+   │         │ │
+   │         │ The type '0x42::M::Cup<u64>' does not have the ability 'key'
+   │         'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:24:9
+   │
+10 │     fun k<T: key>() {}
+   │              --- 'key' constraint declared here
+   ·
+24 │         k<Box<Cup<u64>>>();
+   │         ^^^^^^^^^^^^^^^^^^
+   │         │ │   │
+   │         │ │   The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
+   │         │ The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
+   │         'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:25:9
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                ---- 'copy' constraint declared here
+   ·
+25 │         cds<NoC>();
+   │         ^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::NoC' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:26:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                ---- 'copy' constraint declared here
+   ·
+26 │         cds<Cup<u64>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:26:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                       ---- 'drop' constraint declared here
+   ·
+26 │         cds<Cup<u64>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<u64>' does not have the ability 'drop'
+   │         'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:26:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                              ----- 'store' constraint declared here
+   ·
+26 │         cds<Cup<u64>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<u64>' does not have the ability 'store'
+   │         'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:27:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                ---- 'copy' constraint declared here
+   ·
+27 │         cds<Cup<NoC>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:27:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                       ---- 'drop' constraint declared here
+   ·
+27 │         cds<Cup<NoC>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
+   │         'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:27:9
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+11 │     fun cds<T: copy + drop + store>() {}
+   │                              ----- 'store' constraint declared here
+   ·
+27 │         cds<Cup<NoC>>();
+   │         ^^^^^^^^^^^^^^^
+   │         │   │
+   │         │   The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
+   │         'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:28:9
+   │
+11 │     fun cds<T: copy + drop + store>() {}
+   │                ---- 'copy' constraint declared here
+   ·
+28 │         cds<Pair<u64, NoC>>();
+   │         ^^^^^^^^^^^^^^^^^^^^^
+   │         │   │         │
+   │         │   │         The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │         │   The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:29:13
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+29 │         let Sc {} = Sc<NoC> {};
+   │             ^^^^^      --- The type '0x42::M::NoC' does not have the ability 'copy'
+   │             │           
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:29:21
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+29 │         let Sc {} = Sc<NoC> {};
+   │                     ^^^^^^^^^^
+   │                     │  │
+   │                     │  The type '0x42::M::NoC' does not have the ability 'copy'
+   │                     'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:30:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+30 │         let Sc {} = Sc<Cup<u64>> {};
+   │             ^^^^^      -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │             │           
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:30:21
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+30 │         let Sc {} = Sc<Cup<u64>> {};
+   │                     ^^^^^^^^^^^^^^^
+   │                     │  │
+   │                     │  The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │                     'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:31:13
+   │
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+31 │         let Sc {} = Sc<Box<NoC>> {};
+   │             ^^^^^      --------
+   │             │          │   │
+   │             │          │   The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │             │          The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:31:21
+   │
+13 │     struct Sc<T: copy> {}
+   │                  ---- 'copy' constraint declared here
+   ·
+31 │         let Sc {} = Sc<Box<NoC>> {};
+   │                     ^^^^^^^^^^^^^^^
+   │                     │  │   │
+   │                     │  │   The type '0x42::M::Box<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │                     │  The type '0x42::M::Box<0x42::M::NoC>' does not have the ability 'copy'
+   │                     'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:32:13
+   │
+ 4 │     struct NoK has copy, drop, store {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+32 │         let Sk {} = Sk<NoK> {};
+   │             ^^^^^      --- The type '0x42::M::NoK' does not have the ability 'key'
+   │             │           
+   │             'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:32:21
+   │
+ 4 │     struct NoK has copy, drop, store {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+32 │         let Sk {} = Sk<NoK> {};
+   │                     ^^^^^^^^^^
+   │                     │  │
+   │                     │  The type '0x42::M::NoK' does not have the ability 'key'
+   │                     'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:33:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+33 │         let Sk {} = Sk<Cup<u64>> {};
+   │             ^^^^^      -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
+   │             │           
+   │             'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:33:21
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'key' ability would need to be added here
+   ·
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+33 │         let Sk {} = Sk<Cup<u64>> {};
+   │                     ^^^^^^^^^^^^^^^
+   │                     │  │
+   │                     │  The type '0x42::M::Cup<u64>' does not have the ability 'key'
+   │                     'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:34:13
+   │
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
+   │             ^^^^^      -------------
+   │             │          │   │
+   │             │          │   The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
+   │             │          The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
+   │             'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:34:21
+   │
+14 │     struct Sk<T: key> {}
+   │                  --- 'key' constraint declared here
+   ·
+34 │         let Sk {} = Sk<Box<Cup<u64>>> {};
+   │                     ^^^^^^^^^^^^^^^^^^^^
+   │                     │  │   │
+   │                     │  │   The type '0x42::M::Box<0x42::M::Cup<u64>>' can have the ability 'key' but the type argument '0x42::M::Cup<u64>' does not have the required ability 'store'
+   │                     │  The type '0x42::M::Box<0x42::M::Cup<u64>>' does not have the ability 'key'
+   │                     'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:35:13
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+35 │         let Scds {} = Scds<NoC> {};
+   │             ^^^^^^^        --- The type '0x42::M::NoC' does not have the ability 'copy'
+   │             │               
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:35:23
+   │
+ 3 │     struct NoC has drop, store, key {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+35 │         let Scds {} = Scds<NoC> {};
+   │                       ^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::NoC' does not have the ability 'copy'
+   │                       'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │             │               
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                           ---- 'drop' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
+   │             │               
+   │             'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                                  ----- 'store' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
+   │             │               
+   │             'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<u64>' does not have the ability 'copy'
+   │                       'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                           ---- 'drop' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<u64>' does not have the ability 'drop'
+   │                       'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:36:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                                  ----- 'store' constraint declared here
+   ·
+36 │         let Scds {} = Scds<Cup<u64>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<u64>' does not have the ability 'store'
+   │                       'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
+   │             │               
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                           ---- 'drop' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
+   │             │               
+   │             'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:13
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                                  ----- 'store' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │             ^^^^^^^        -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
+   │             │               
+   │             'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
+   │                       'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                           ---- 'drop' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
+   │                       'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:37:23
+   │
+ 5 │     struct Cup<T> {}
+   │            --- To satisfy the constraint, the 'store' ability would need to be added here
+   ·
+15 │     struct Scds<T: copy + drop + store> {}
+   │                                  ----- 'store' constraint declared here
+   ·
+37 │         let Scds {} = Scds<Cup<NoC>> {};
+   │                       ^^^^^^^^^^^^^^^^^
+   │                       │    │
+   │                       │    The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
+   │                       'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:38:13
+   │
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
+   │             ^^^^^^^        --------------
+   │             │              │         │
+   │             │              │         The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │             │              The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
+   │             'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/ability_constraint_structs_invalid.move:38:23
+   │
+15 │     struct Scds<T: copy + drop + store> {}
+   │                    ---- 'copy' constraint declared here
+   ·
+38 │         let Scds {} = Scds<Pair<u64, NoC>> {};
+   │                       ^^^^^^^^^^^^^^^^^^^^^^^
+   │                       │    │         │
+   │                       │    │         The type '0x42::M::Pair<u64, 0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+   │                       │    The type '0x42::M::Pair<u64, 0x42::M::NoC>' does not have the ability 'copy'
+   │                       'copy' constraint not satisifed
 

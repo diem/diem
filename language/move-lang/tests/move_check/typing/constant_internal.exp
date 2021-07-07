@@ -1,22 +1,18 @@
-error: 
+error[E04001]: restricted visibility
+   ┌─ tests/move_check/typing/constant_internal.move:10:9
+   │
+ 4 │     const C: u64 = 0;
+   │           - Constants are internal to their module, and cannot can be accessed outside of their module
+   ·
+10 │         X::C;
+   │         ^^^^ Invalid access of '0x2::X::C'
 
-    ┌── tests/move_check/typing/constant_internal.move:10:9 ───
-    │
- 10 │         X::C;
-    │         ^^^^ Invalid access of '0x2::X::C'
-    ·
-  4 │     const C: u64 = 0;
-    │           - Constants are internal to their module, and cannot can be accessed outside of their module
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/constant_internal.move:11:9 ───
-    │
- 11 │         C;
-    │         ^ Invalid access of '0x2::X::C'
-    ·
-  4 │     const C: u64 = 0;
-    │           - Constants are internal to their module, and cannot can be accessed outside of their module
-    │
+error[E04001]: restricted visibility
+   ┌─ tests/move_check/typing/constant_internal.move:11:9
+   │
+ 4 │     const C: u64 = 0;
+   │           - Constants are internal to their module, and cannot can be accessed outside of their module
+   ·
+11 │         C;
+   │         ^ Invalid access of '0x2::X::C'
 

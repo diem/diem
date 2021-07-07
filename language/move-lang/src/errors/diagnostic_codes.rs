@@ -136,11 +136,22 @@ codes!(
         NamePositionMismatch: { msg: "unexpected name in this position", severity: BlockingError },
         TooManyTypeArguments: { msg: "too many type arguments", severity: NonblockingError },
         TooFewTypeArguments: { msg: "too few type arguments", severity: BlockingError },
+        UnboundVariable: { msg: "unbound variable", severity: BlockingError },
+        UnboundField: { msg: "unbound field", severity: BlockingError },
     ],
     // errors for typing rules. mostly typing/translate
-    TypeSafety: [],
+    TypeSafety: [
+        Visibility: { msg: "restricted visibility", severity: NonblockingError },
+        ScriptContext: { msg: "requires script context", severity: NonblockingError },
+        BuiltinOperation: { msg: "built-in operation not supported", severity: BlockingError },
+        ExpectedBaseType: { msg: "expected a single non-reference type", severity: BlockingError },
+        ExpectedSingleType: { msg: "expected a single type", severity: BlockingError },
+    ],
     // errors for ability rules. mostly typing/translate
-    AbilitySafety: [],
+    AbilitySafety: [
+        Constraint: { msg: "ability constraint not satisfied", severity: NonblockingError },
+        ImplicitlyCopyable: { msg: "type not implicitly copyable", severity: NonblockingError },
+    ],
     // errors for move rules. mostly cfgir/locals
     MoveSafety: [],
     // errors for move rules. mostly cfgir/borrows

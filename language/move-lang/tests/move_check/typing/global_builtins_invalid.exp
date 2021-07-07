@@ -1,3 +1,12 @@
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/global_builtins_invalid.move:15:18
+   │
+15 │         let () = move_to(a, 0);
+   │                  ^^^^^^^^^^^^^
+   │                  │          │
+   │                  │          The type 'u64' does not have the ability 'key'
+   │                  Invalid call of 'move_to'
+
 error: 
 
    ┌── tests/move_check/typing/global_builtins_invalid.move:5:24 ───
@@ -79,17 +88,6 @@ error:
     ·
  14 │         let () = move_to<R>(a, 0);
     │                          - Is not compatible with: '0x8675309::M::R'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/global_builtins_invalid.move:15:18 ───
-    │
- 15 │         let () = move_to(a, 0);
-    │                  ^^^^^^^^^^^^^ Invalid call of 'move_to'
-    ·
- 15 │         let () = move_to(a, 0);
-    │                             - The type 'u64' does not have the ability 'key'
     │
 
 error: 

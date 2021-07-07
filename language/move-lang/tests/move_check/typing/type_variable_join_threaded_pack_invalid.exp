@@ -1,3 +1,18 @@
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:47:17
+   │
+10 │     public fun get<V: drop>(self: &T<V>): V {
+   │                       ---- 'drop' constraint declared here
+   ·
+27 │     struct Box<T> { f1: T, f2: T }
+   │            --- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+47 │         let x = Container::get(&v);
+   │                 ^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
+48 │         let b = Box { f1: x, f2: x };
+49 │         Container::put(&mut v, Box {f1: R{}, f2: R{}});
+   │                                ---------------------- The type '0x2::M::Box<0x2::M::R>' does not have the ability 'drop'
+
 error: 
 
     ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:42:9 ───
@@ -10,22 +25,5 @@ error:
     ·
  35 │     fun t0(): Box<bool> {
     │                   ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:47:17 ───
-    │
- 47 │         let x = Container::get(&v);
-    │                 ^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 49 │         Container::put(&mut v, Box {f1: R{}, f2: R{}});
-    │                                ---------------------- The type '0x2::M::Box<0x2::M::R>' does not have the ability 'drop'
-    ·
- 27 │     struct Box<T> { f1: T, f2: T }
-    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
- 10 │     public fun get<V: drop>(self: &T<V>): V {
-    │                       ---- 'drop' constraint declared here
     │
 

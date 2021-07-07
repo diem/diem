@@ -1,3 +1,12 @@
+error[E03010]: unbound field
+   ┌─ tests/move_check/typing/native_structs_pack_unpack.move:15:17
+   │
+ 3 │     native struct T;
+   │     ------ Struct declared 'native' here
+   ·
+15 │         let f = c.f;
+   │                 ^^^ Unbound field 'f' for native struct '0x42::C::T'
+
 error: 
 
    ┌── tests/move_check/typing/native_structs_pack_unpack.move:9:9 ───
@@ -44,16 +53,5 @@ error:
     │
  15 │         let f = c.f;
     │                 ^^^ Invalid access of field 'f' on '0x42::C::T'. Fields can only be accessed inside the struct's module
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/native_structs_pack_unpack.move:15:17 ───
-    │
- 15 │         let f = c.f;
-    │                 ^^^ Unbound field 'f' for native struct '0x42::C::T'
-    ·
-  3 │     native struct T;
-    │     ------ Declared 'native' here
     │
 

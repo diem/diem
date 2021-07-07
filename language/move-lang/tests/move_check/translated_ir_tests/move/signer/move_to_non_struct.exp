@@ -1,13 +1,11 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/signer/move_to_non_struct.move:3:9 ───
-   │
- 3 │         move_to<u64>(s, 0)
-   │         ^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
-   ·
- 3 │         move_to<u64>(s, 0)
-   │                 --- The type 'u64' does not have the ability 'key'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_non_struct.move:3:9
+  │
+3 │         move_to<u64>(s, 0)
+  │         ^^^^^^^^^^^^^^^^^^
+  │         │       │
+  │         │       The type 'u64' does not have the ability 'key'
+  │         Invalid call of 'move_to'
 
 error: 
 

@@ -1,3 +1,20 @@
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/assign_wrong_type.move:13:13
+   │
+13 │         let x;
+   │             ^ Invalid type for local
+   ·
+16 │         x = ();
+   │             -- Expected a single type, but found expression list type: '()'
+
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/assign_wrong_type.move:16:9
+   │
+16 │         x = ();
+   │         ^   -- Expected a single type, but found expression list type: '()'
+   │         │    
+   │         Invalid type for local
+
 error: 
 
    ┌── tests/move_check/typing/assign_wrong_type.move:8:9 ───
@@ -25,28 +42,6 @@ error:
  9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
    │                               --------- Is not compatible with: '0x8675309::M::R'
    │
-
-error: 
-
-    ┌── tests/move_check/typing/assign_wrong_type.move:13:13 ───
-    │
- 13 │         let x;
-    │             ^ Invalid type for local
-    ·
- 16 │         x = ();
-    │             -- Expected a single type, but found expression list type: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/assign_wrong_type.move:16:9 ───
-    │
- 16 │         x = ();
-    │         ^ Invalid type for local
-    ·
- 16 │         x = ();
-    │             -- Expected a single type, but found expression list type: '()'
-    │
 
 error: 
 

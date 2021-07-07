@@ -1,14 +1,12 @@
-error: 
-
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign.move:44:42 ───
-    │
- 44 │         Container::put(&mut v, Box { f1: *&f1, f2 });
-    │                                          ^^^^ Invalid dereference. Dereference requires the 'copy' ability
-    ·
- 39 │     fun t1(): Box<Box<u64>> {
-    │               ------------- The type '0x2::M::Box<0x2::M::Box<u64>>' does not have the ability 'copy'
-    ·
- 23 │     struct Box<T> has drop { f1: T, f2: T }
-    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/type_variable_join_threaded_unpack_assign.move:44:42
+   │
+23 │     struct Box<T> has drop { f1: T, f2: T }
+   │            --- To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+39 │     fun t1(): Box<Box<u64>> {
+   │               ------------- The type '0x2::M::Box<0x2::M::Box<u64>>' does not have the ability 'copy'
+   ·
+44 │         Container::put(&mut v, Box { f1: *&f1, f2 });
+   │                                          ^^^^ Invalid dereference. Dereference requires the 'copy' ability
 

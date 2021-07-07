@@ -1,3 +1,56 @@
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:22:9
+   │
+ 3 │     struct R {
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+21 │     fun t1(r: R) {
+   │               - The type '0x8675309::M::R' does not have the ability 'drop'
+22 │         r != r;
+   │         ^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:27:9
+   │
+ 7 │     struct G1<T: key> {}
+   │            -- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+27 │         G1{} != G1{};
+   │         ^^^^^^^^^^^^
+   │         │       │
+   │         │       The type '0x8675309::M::G1<_>' does not have the ability 'drop'
+   │         '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/neq_invalid.move:28:9
+   │
+ 8 │     struct G2<T> {}
+   │            -- To satisfy the constraint, the 'drop' ability would need to be added here
+   ·
+28 │         G2{} != G2{};
+   │         ^^^^^^^^^^^^
+   │         │       │
+   │         │       The type '0x8675309::M::G2<_>' does not have the ability 'drop'
+   │         '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/neq_invalid.move:32:9
+   │
+32 │         () != ();
+   │         ^^^^^^^^
+   │         │     │
+   │         │     Expected a single type, but found expression list type: '()'
+   │         Invalid arguments to '!='
+
+error[E04005]: expected a single type
+   ┌─ tests/move_check/typing/neq_invalid.move:33:9
+   │
+33 │         (0, 1) != (0, 1);
+   │         ^^^^^^^^^^^^^^^^
+   │         │         │
+   │         │         Expected a single type, but found expression list type: '(u64, u64)'
+   │         Invalid arguments to '!='
+
 error: 
 
     ┌── tests/move_check/typing/neq_invalid.move:13:20 ───
@@ -84,20 +137,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/neq_invalid.move:22:9 ───
-    │
- 22 │         r != r;
-    │         ^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
-    ·
- 21 │     fun t1(r: R) {
-    │               - The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  3 │     struct R {
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
     ┌── tests/move_check/typing/neq_invalid.move:26:9 ───
     │
  26 │         G0{} != G0{};
@@ -122,20 +161,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/neq_invalid.move:27:9 ───
-    │
- 27 │         G1{} != G1{};
-    │         ^^^^^^^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
-    ·
- 27 │         G1{} != G1{};
-    │                 ---- The type '0x8675309::M::G1<_>' does not have the ability 'drop'
-    ·
-  7 │     struct G1<T: key> {}
-    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
     ┌── tests/move_check/typing/neq_invalid.move:27:17 ───
     │
  27 │         G1{} != G1{};
@@ -152,46 +177,10 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/neq_invalid.move:28:9 ───
-    │
- 28 │         G2{} != G2{};
-    │         ^^^^^^^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
-    ·
- 28 │         G2{} != G2{};
-    │                 ---- The type '0x8675309::M::G2<_>' does not have the ability 'drop'
-    ·
-  8 │     struct G2<T> {}
-    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
     ┌── tests/move_check/typing/neq_invalid.move:28:17 ───
     │
  28 │         G2{} != G2{};
     │                 ^^^^ Could not infer this type. Try adding an annotation
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:32:9 ───
-    │
- 32 │         () != ();
-    │         ^^^^^^^^ Invalid arguments to '!='
-    ·
- 32 │         () != ();
-    │               -- Expected a single type, but found expression list type: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/neq_invalid.move:33:9 ───
-    │
- 33 │         (0, 1) != (0, 1);
-    │         ^^^^^^^^^^^^^^^^ Invalid arguments to '!='
-    ·
- 33 │         (0, 1) != (0, 1);
-    │                   ------ Expected a single type, but found expression list type: '(u64, u64)'
     │
 
 error: 

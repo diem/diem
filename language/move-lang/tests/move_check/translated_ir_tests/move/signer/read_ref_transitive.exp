@@ -1,25 +1,19 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:5:9
+  │
+4 │         let x = S<signer> { s };
+  │                 ---------------
+  │                 │ │
+  │                 │ The type '0x8675309::M::S<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
+  │                 The type '0x8675309::M::S<signer>' does not have the ability 'copy'
+5 │         *&x
+  │         ^^^ Invalid dereference. Dereference requires the 'copy' ability
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:5:9 ───
+error[E05002]: type not implicitly copyable
+   ┌─ tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:15:9
    │
- 5 │         *&x
-   │         ^^^ Invalid dereference. Dereference requires the 'copy' ability
-   ·
- 4 │         let x = S<signer> { s };
-   │                 --------------- The type '0x8675309::M::S<signer>' does not have the ability 'copy'
-   ·
- 4 │         let x = S<signer> { s };
-   │                   ------ The type '0x8675309::M::S<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
-   │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:15:9 ───
-    │
- 15 │         x.s
-    │         ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
-    ·
- 14 │         let x = S<signer> { s };
-    │                   ------ The type 'signer' is not implicitly copyable. Implicit copies are limited to simple primitive values
-    │
+14 │         let x = S<signer> { s };
+   │                   ------ The type 'signer' is not implicitly copyable. Implicit copies are limited to simple primitive values
+15 │         x.s
+   │         ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
 

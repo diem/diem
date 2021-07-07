@@ -1,13 +1,11 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/signer/address_arg_is_not_signer.move:3:27 ───
-   │
- 3 │     struct R has key { s: signer }
-   │                           ^^^^^^ Invalid field type. The struct was declared with the ability 'key' so all fields require the ability 'store'
-   ·
- 3 │     struct R has key { s: signer }
-   │                           ------ The type 'signer' does not have the ability 'store'
-   │
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/translated_ir_tests/move/signer/address_arg_is_not_signer.move:3:27
+  │
+3 │     struct R has key { s: signer }
+  │                           ^^^^^^
+  │                           │
+  │                           Invalid field type. The struct was declared with the ability 'key' so all fields require the ability 'store'
+  │                           The type 'signer' does not have the ability 'store'
 
 error: 
 

@@ -1,56 +1,40 @@
-error: 
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/valid_acquire.move:43:16
+   │
+43 │         R3{} = move_from<R3<R1>>(a);
+   │                ^^^^^^^^^^^^^^^^^^^^
+   │                │         │  │
+   │                │         │  The type '0x8675309::M::R3<0x8675309::M::R1>' can have the ability 'key' but the type argument '0x8675309::M::R1' does not have the required ability 'store'
+   │                │         The type '0x8675309::M::R3<0x8675309::M::R1>' does not have the ability 'key'
+   │                Invalid call of 'move_from'
 
-    ┌── tests/move_check/typing/valid_acquire.move:43:16 ───
-    │
- 43 │         R3{} = move_from<R3<R1>>(a);
-    │                ^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'
-    ·
- 43 │         R3{} = move_from<R3<R1>>(a);
-    │                          ------ The type '0x8675309::M::R3<0x8675309::M::R1>' does not have the ability 'key'
-    ·
- 43 │         R3{} = move_from<R3<R1>>(a);
-    │                             -- The type '0x8675309::M::R3<0x8675309::M::R1>' can have the ability 'key' but the type argument '0x8675309::M::R1' does not have the required ability 'store'
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/valid_acquire.move:45:9
+   │
+45 │         borrow_global_mut<R3<R2>>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                 │  │
+   │         │                 │  The type '0x8675309::M::R3<0x8675309::M::R2>' can have the ability 'key' but the type argument '0x8675309::M::R2' does not have the required ability 'store'
+   │         │                 The type '0x8675309::M::R3<0x8675309::M::R2>' does not have the ability 'key'
+   │         Invalid call of 'borrow_global_mut'
 
-error: 
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/valid_acquire.move:50:9
+   │
+50 │         exists<R3<R1>>(a);
+   │         ^^^^^^^^^^^^^^^^^
+   │         │      │  │
+   │         │      │  The type '0x8675309::M::R3<0x8675309::M::R1>' can have the ability 'key' but the type argument '0x8675309::M::R1' does not have the required ability 'store'
+   │         │      The type '0x8675309::M::R3<0x8675309::M::R1>' does not have the ability 'key'
+   │         Invalid call of 'exists'
 
-    ┌── tests/move_check/typing/valid_acquire.move:45:9 ───
-    │
- 45 │         borrow_global_mut<R3<R2>>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
-    ·
- 45 │         borrow_global_mut<R3<R2>>(a);
-    │                           ------ The type '0x8675309::M::R3<0x8675309::M::R2>' does not have the ability 'key'
-    ·
- 45 │         borrow_global_mut<R3<R2>>(a);
-    │                              -- The type '0x8675309::M::R3<0x8675309::M::R2>' can have the ability 'key' but the type argument '0x8675309::M::R2' does not have the required ability 'store'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/valid_acquire.move:50:9 ───
-    │
- 50 │         exists<R3<R1>>(a);
-    │         ^^^^^^^^^^^^^^^^^ Invalid call of 'exists'
-    ·
- 50 │         exists<R3<R1>>(a);
-    │                ------ The type '0x8675309::M::R3<0x8675309::M::R1>' does not have the ability 'key'
-    ·
- 50 │         exists<R3<R1>>(a);
-    │                   -- The type '0x8675309::M::R3<0x8675309::M::R1>' can have the ability 'key' but the type argument '0x8675309::M::R1' does not have the required ability 'store'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/valid_acquire.move:52:9 ───
-    │
- 52 │         move_to<R3<R2>>(account, R3{});
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
-    ·
- 52 │         move_to<R3<R2>>(account, R3{});
-    │                 ------ The type '0x8675309::M::R3<0x8675309::M::R2>' does not have the ability 'key'
-    ·
- 52 │         move_to<R3<R2>>(account, R3{});
-    │                    -- The type '0x8675309::M::R3<0x8675309::M::R2>' can have the ability 'key' but the type argument '0x8675309::M::R2' does not have the required ability 'store'
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/valid_acquire.move:52:9
+   │
+52 │         move_to<R3<R2>>(account, R3{});
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │       │  │
+   │         │       │  The type '0x8675309::M::R3<0x8675309::M::R2>' can have the ability 'key' but the type argument '0x8675309::M::R2' does not have the required ability 'store'
+   │         │       The type '0x8675309::M::R3<0x8675309::M::R2>' does not have the ability 'key'
+   │         Invalid call of 'move_to'
 

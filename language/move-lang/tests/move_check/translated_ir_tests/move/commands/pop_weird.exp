@@ -1,3 +1,11 @@
+error[E04005]: expected a single type
+   ┌─ tests/move_check/translated_ir_tests/move/commands/pop_weird.move:14:9
+   │
+14 │         (_) = ();
+   │         ^^^   -- Expected a single type, but found expression list type: '()'
+   │         │      
+   │         Invalid type for local
+
 error: 
 
     ┌── tests/move_check/translated_ir_tests/move/commands/pop_weird.move:13:9 ───
@@ -10,16 +18,5 @@ error:
     ·
  13 │         (_, _) = ();
     │                  -- Is not compatible with: '()'
-    │
-
-error: 
-
-    ┌── tests/move_check/translated_ir_tests/move/commands/pop_weird.move:14:9 ───
-    │
- 14 │         (_) = ();
-    │         ^^^ Invalid type for local
-    ·
- 14 │         (_) = ();
-    │               -- Expected a single type, but found expression list type: '()'
     │
 

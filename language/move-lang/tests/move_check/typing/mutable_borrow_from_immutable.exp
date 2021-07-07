@@ -1,3 +1,9 @@
+error[E03010]: unbound field
+   ┌─ tests/move_check/typing/mutable_borrow_from_immutable.move:11:14
+   │
+11 │         &mut xref.v;
+   │              ^^^^^^ Unbound field 'v' in '0x8675309::M::X'
+
 error: 
 
    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:6:9 ───
@@ -40,14 +46,6 @@ error:
     ·
   9 │         let xref = &s.x;
     │                    ---- Immutable because of this position
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:11:14 ───
-    │
- 11 │         &mut xref.v;
-    │              ^^^^^^ Unbound field 'v' in '0x8675309::M::X'
     │
 
 error: 

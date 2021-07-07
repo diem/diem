@@ -1,33 +1,27 @@
-error: 
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/pack_multiple.move:5:9
+  │
+5 │         Box { f: (0, 1) };
+  │         ^^^^^^^^^^^^^^^^^
+  │         │        │
+  │         │        Expected a single non-reference type, but found: '(u64, u64)'
+  │         Invalid type argument
 
-   ┌── tests/move_check/typing/pack_multiple.move:5:9 ───
-   │
- 5 │         Box { f: (0, 1) };
-   │         ^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 5 │         Box { f: (0, 1) };
-   │                  ------ Expected a single non-reference type, but found: '(u64, u64)'
-   │
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/pack_multiple.move:6:9
+  │
+6 │         Box { f: (0, 1, 2) };
+  │         ^^^^^^^^^^^^^^^^^^^^
+  │         │        │
+  │         │        Expected a single non-reference type, but found: '(u64, u64, u64)'
+  │         Invalid type argument
 
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:6:9 ───
-   │
- 6 │         Box { f: (0, 1, 2) };
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 6 │         Box { f: (0, 1, 2) };
-   │                  --------- Expected a single non-reference type, but found: '(u64, u64, u64)'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_multiple.move:7:9 ───
-   │
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 7 │         Box { f: (true, Box { f: 0 }) };
-   │                  -------------------- Expected a single non-reference type, but found: '(bool, 0x8675309::M::Box<u64>)'
-   │
+error[E04004]: expected a single non-reference type
+  ┌─ tests/move_check/typing/pack_multiple.move:7:9
+  │
+7 │         Box { f: (true, Box { f: 0 }) };
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │         │        │
+  │         │        Expected a single non-reference type, but found: '(bool, 0x8675309::M::Box<u64>)'
+  │         Invalid type argument
 

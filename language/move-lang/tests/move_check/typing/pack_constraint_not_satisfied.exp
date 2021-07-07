@@ -1,169 +1,136 @@
-error: 
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:7:9
+  │
+3 │     struct R<T: key>  { r: T }
+  │                 --- 'key' constraint declared here
+  ·
+7 │         R {r:_ } = R { r: 0 };
+  │         ^^^^^^^^          - The type 'u64' does not have the ability 'key'
+  │         │                  
+  │         'key' constraint not satisifed
 
-   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:7:9 ───
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:7:20
+  │
+3 │     struct R<T: key>  { r: T }
+  │                 --- 'key' constraint declared here
+  ·
+7 │         R {r:_ } = R { r: 0 };
+  │                    ^^^^^^^^^^
+  │                    │      │
+  │                    │      The type 'u64' does not have the ability 'key'
+  │                    'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:8:9
+  │
+2 │     struct Coin {}
+  │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
+3 │     struct R<T: key>  { r: T }
+4 │     struct S<T: drop> has drop { c: T }
+  │                 ---- 'drop' constraint declared here
+  ·
+8 │         S { c: Coin {} };
+  │         ^^^^^^^^^^^^^^^^
+  │         │      │
+  │         │      The type '0x8675309::M::Coin' does not have the ability 'drop'
+  │         'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+  ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:8:9
+  │
+8 │         S { c: Coin {} };
+  │         ^^^^^^^^^^^^^^^^
+  │         │
+  │         Cannot ignore values without the 'drop' ability. The value must be used
+  │         The type '0x8675309::M::S<0x8675309::M::Coin>' can have the ability 'drop' but the type argument '0x8675309::M::Coin' does not have the required ability 'drop'
+  │         The type '0x8675309::M::S<0x8675309::M::Coin>' does not have the ability 'drop'
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:12:9
    │
- 7 │         R {r:_ } = R { r: 0 };
-   │         ^^^^^^^^ 'key' constraint not satisifed
+ 3 │     struct R<T: key>  { r: T }
+   │            -    --- 'key' constraint declared here
+   │            │     
+   │            To satisfy the constraint, the 'key' ability would need to be added here
    ·
- 7 │         R {r:_ } = R { r: 0 };
-   │                           - The type 'u64' does not have the ability 'key'
-   ·
+12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+   │         ^^^^^^^^^^^^^^^^^^          ---------- The type '0x8675309::M::R<u64>' does not have the ability 'key'
+   │         │                            
+   │         'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:12:15
+   │
  3 │     struct R<T: key>  { r: T }
    │                 --- 'key' constraint declared here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:7:20 ───
-   │
- 7 │         R {r:_ } = R { r: 0 };
-   │                    ^^^^^^^^^^ 'key' constraint not satisifed
    ·
- 7 │         R {r:_ } = R { r: 0 };
-   │                           - The type 'u64' does not have the ability 'key'
+12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+   │               ^^^^^^^^^^                   - The type 'u64' does not have the ability 'key'
+   │               │                             
+   │               'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:12:30
+   │
+ 3 │     struct R<T: key>  { r: T }
+   │            -    --- 'key' constraint declared here
+   │            │     
+   │            To satisfy the constraint, the 'key' ability would need to be added here
    ·
+12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+   │                              ^^^^^^^^^^^^^^^^^^
+   │                              │      │
+   │                              │      The type '0x8675309::M::R<u64>' does not have the ability 'key'
+   │                              'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:12:37
+   │
  3 │     struct R<T: key>  { r: T }
    │                 --- 'key' constraint declared here
-   │
+   ·
+12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
+   │                                     ^^^^^^^^^^
+   │                                     │      │
+   │                                     │      The type 'u64' does not have the ability 'key'
+   │                                     'key' constraint not satisifed
 
-error: 
-
-   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:8:9 ───
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:13:9
    │
- 8 │         S { c: Coin {} };
-   │         ^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-   ·
- 8 │         S { c: Coin {} };
-   │                ------- The type '0x8675309::M::Coin' does not have the ability 'drop'
-   ·
- 2 │     struct Coin {}
-   │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
-   ·
  4 │     struct S<T: drop> has drop { c: T }
    │                 ---- 'drop' constraint declared here
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:8:9 ───
-   │
- 8 │         S { c: Coin {} };
-   │         ^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
    ·
- 8 │         S { c: Coin {} };
-   │         ---------------- The type '0x8675309::M::S<0x8675309::M::Coin>' does not have the ability 'drop'
-   ·
- 8 │         S { c: Coin {} };
-   │         ---------------- The type '0x8675309::M::S<0x8675309::M::Coin>' can have the ability 'drop' but the type argument '0x8675309::M::Coin' does not have the required ability 'drop'
+13 │         S { c: S { c: Coin {} } };
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │      │      │
+   │         │      │      The type '0x8675309::M::S<0x8675309::M::Coin>' can have the ability 'drop' but the type argument '0x8675309::M::Coin' does not have the required ability 'drop'
+   │         │      The type '0x8675309::M::S<0x8675309::M::Coin>' does not have the ability 'drop'
+   │         'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:13:9
    │
+13 │         S { c: S { c: Coin {} } };
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │
+   │         Cannot ignore values without the 'drop' ability. The value must be used
+   │         The type '0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>' can have the ability 'drop' but the type argument '0x8675309::M::S<0x8675309::M::Coin>' does not have the required ability 'drop'
+   │         The type '0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>' does not have the ability 'drop'
 
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:12:9 ───
-    │
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │         ^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                     ---------- The type '0x8675309::M::R<u64>' does not have the ability 'key'
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │                 --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:12:15 ───
-    │
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │               ^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                            - The type 'u64' does not have the ability 'key'
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │                 --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:12:30 ───
-    │
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                              ^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                     ---------- The type '0x8675309::M::R<u64>' does not have the ability 'key'
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │            - To satisfy the constraint, the 'key' ability would need to be added here
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │                 --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:12:37 ───
-    │
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                     ^^^^^^^^^^ 'key' constraint not satisifed
-    ·
- 12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                            - The type 'u64' does not have the ability 'key'
-    ·
-  3 │     struct R<T: key>  { r: T }
-    │                 --- 'key' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:13:9 ───
-    │
- 13 │         S { c: S { c: Coin {} } };
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 13 │         S { c: S { c: Coin {} } };
-    │                ---------------- The type '0x8675309::M::S<0x8675309::M::Coin>' does not have the ability 'drop'
-    ·
- 13 │         S { c: S { c: Coin {} } };
-    │                       ------- The type '0x8675309::M::S<0x8675309::M::Coin>' can have the ability 'drop' but the type argument '0x8675309::M::Coin' does not have the required ability 'drop'
-    ·
-  4 │     struct S<T: drop> has drop { c: T }
-    │                 ---- 'drop' constraint declared here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:13:9 ───
-    │
- 13 │         S { c: S { c: Coin {} } };
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-    ·
- 13 │         S { c: S { c: Coin {} } };
-    │         ------------------------- The type '0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>' does not have the ability 'drop'
-    ·
- 13 │         S { c: S { c: Coin {} } };
-    │         ------------------------- The type '0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>' can have the ability 'drop' but the type argument '0x8675309::M::S<0x8675309::M::Coin>' does not have the required ability 'drop'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/pack_constraint_not_satisfied.move:13:16 ───
-    │
- 13 │         S { c: S { c: Coin {} } };
-    │                ^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
-    ·
- 13 │         S { c: S { c: Coin {} } };
-    │                       ------- The type '0x8675309::M::Coin' does not have the ability 'drop'
-    ·
-  2 │     struct Coin {}
-    │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
-    ·
-  4 │     struct S<T: drop> has drop { c: T }
-    │                 ---- 'drop' constraint declared here
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack_constraint_not_satisfied.move:13:16
+   │
+ 2 │     struct Coin {}
+   │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
+ 3 │     struct R<T: key>  { r: T }
+ 4 │     struct S<T: drop> has drop { c: T }
+   │                 ---- 'drop' constraint declared here
+   ·
+13 │         S { c: S { c: Coin {} } };
+   │                ^^^^^^^^^^^^^^^^
+   │                │      │
+   │                │      The type '0x8675309::M::Coin' does not have the ability 'drop'
+   │                'drop' constraint not satisifed
 

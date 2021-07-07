@@ -1,14 +1,12 @@
-error: 
-
-    ┌── tests/move_check/typing/pack.move:14:27 ───
-    │
- 14 │         let n2 = Nat { f: *&s };
-    │                           ^^^ Invalid dereference. Dereference requires the 'copy' ability
-    ·
- 12 │         let s = S{ f: 0 };
-    │                 --------- The type '0x8675309::M::S' does not have the ability 'copy'
-    ·
-  2 │     struct S has drop { f: u64 }
-    │            - To satisfy the constraint, the 'copy' ability would need to be added here
-    │
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/pack.move:14:27
+   │
+ 2 │     struct S has drop { f: u64 }
+   │            - To satisfy the constraint, the 'copy' ability would need to be added here
+   ·
+12 │         let s = S{ f: 0 };
+   │                 --------- The type '0x8675309::M::S' does not have the ability 'copy'
+13 │         let n1 = Nat { f };
+14 │         let n2 = Nat { f: *&s };
+   │                           ^^^ Invalid dereference. Dereference requires the 'copy' ability
 

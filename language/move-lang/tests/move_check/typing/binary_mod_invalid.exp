@@ -1,24 +1,186 @@
-error: 
+error[E04003]: built-in operation not supported
+  ┌─ tests/move_check/typing/binary_mod_invalid.move:8:9
+  │
+8 │         false % true;
+  │         ^^^^^
+  │         │
+  │         Invalid argument to '%'
+  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
 
-   ┌── tests/move_check/typing/binary_mod_invalid.move:8:9 ───
+error[E04003]: built-in operation not supported
+  ┌─ tests/move_check/typing/binary_mod_invalid.move:8:17
+  │
+8 │         false % true;
+  │         -----   ^^^^ Invalid argument to '%'
+  │         │        
+  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:10:9
    │
- 8 │         false % true;
-   │         ^^^^^ Invalid argument to '%'
+10 │         false % 1;
+   │         ^^^^^
+   │         │
+   │         Invalid argument to '%'
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:10:17
+   │
+10 │         false % 1;
+   │         -----   ^ Invalid argument to '%'
+   │         │        
+   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:11:9
+   │
+11 │         @0x0 % @0x1;
+   │         ^^^^
+   │         │
+   │         Invalid argument to '%'
+   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:11:16
+   │
+11 │         @0x0 % @0x1;
+   │         ----   ^^^^ Invalid argument to '%'
+   │         │       
+   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:13:9
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
    ·
- 8 │         false % true;
-   │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-   │
+13 │         r % r;
+   │         ^ Invalid argument to '%'
 
-error: 
-
-   ┌── tests/move_check/typing/binary_mod_invalid.move:8:17 ───
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:13:9
    │
- 8 │         false % true;
-   │                 ^^^^ Invalid argument to '%'
+ 3 │     struct R {
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
    ·
- 8 │         false % true;
-   │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+13 │         r % r;
+   │         ^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:13:13
    │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+   ·
+13 │         r % r;
+   │             ^ Invalid argument to '%'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:14:9
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   ·
+14 │         s % s;
+   │         ^ Invalid argument to '%'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:14:13
+   │
+ 7 │     fun t0(x: u64, r: R, s: S) {
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   ·
+14 │         s % s;
+   │             ^ Invalid argument to '%'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:15:9
+   │
+15 │         1 % false % @0x0 % 0;
+   │         ^^^^^^^^^
+   │         │   │
+   │         │   Found: '_'. But expected: 'u8', 'u64', 'u128'
+   │         Invalid argument to '%'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:15:9
+   │
+15 │         1 % false % @0x0 % 0;
+   │         ^^^^^^^^^^^^^^^^
+   │         │           │
+   │         │           Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │         Invalid argument to '%'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:15:21
+   │
+15 │         1 % false % @0x0 % 0;
+   │             -----   ^^^^ Invalid argument to '%'
+   │             │        
+   │             Found: '_'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:15:28
+   │
+15 │         1 % false % @0x0 % 0;
+   │                     ----   ^ Invalid argument to '%'
+   │                     │       
+   │                     Found: 'address'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:16:9
+   │
+16 │         () % ();
+   │         ^^
+   │         │
+   │         Invalid argument to '%'
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:16:14
+   │
+16 │         () % ();
+   │         --   ^^ Invalid argument to '%'
+   │         │     
+   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:18:9
+   │
+18 │         (0, 1) % (0, 1, 2);
+   │         ^^^^^^
+   │         │
+   │         Invalid argument to '%'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:18:18
+   │
+18 │         (0, 1) % (0, 1, 2);
+   │         ------   ^^^^^^^^^ Invalid argument to '%'
+   │         │         
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:19:9
+   │
+19 │         (1, 2) % (0, 1);
+   │         ^^^^^^
+   │         │
+   │         Invalid argument to '%'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+
+error[E04003]: built-in operation not supported
+   ┌─ tests/move_check/typing/binary_mod_invalid.move:19:18
+   │
+19 │         (1, 2) % (0, 1);
+   │         ------   ^^^^^^ Invalid argument to '%'
+   │         │         
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
 
 error: 
 
@@ -36,17 +198,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:10:9 ───
-    │
- 10 │         false % 1;
-    │         ^^^^^ Invalid argument to '%'
-    ·
- 10 │         false % 1;
-    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_mod_invalid.move:10:17 ───
     │
  10 │         false % 1;
@@ -57,39 +208,6 @@ error:
     ·
  10 │         false % 1;
     │         ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:10:17 ───
-    │
- 10 │         false % 1;
-    │                 ^ Invalid argument to '%'
-    ·
- 10 │         false % 1;
-    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:11:9 ───
-    │
- 11 │         @0x0 % @0x1;
-    │         ^^^^ Invalid argument to '%'
-    ·
- 11 │         @0x0 % @0x1;
-    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:11:16 ───
-    │
- 11 │         @0x0 % @0x1;
-    │                ^^^^ Invalid argument to '%'
-    ·
- 11 │         @0x0 % @0x1;
-    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -108,86 +226,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:13:9 ───
-    │
- 13 │         r % r;
-    │         ^ Invalid argument to '%'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:13:9 ───
-    │
- 13 │         r % r;
-    │         ^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - The type '0x8675309::M::R' does not have the ability 'drop'
-    ·
-  3 │     struct R {
-    │            - To satisfy the constraint, the 'drop' ability would need to be added here
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:13:13 ───
-    │
- 13 │         r % r;
-    │             ^ Invalid argument to '%'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:14:9 ───
-    │
- 14 │         s % s;
-    │         ^ Invalid argument to '%'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:14:13 ───
-    │
- 14 │         s % s;
-    │             ^ Invalid argument to '%'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:9 ───
-    │
- 15 │         1 % false % @0x0 % 0;
-    │         ^^^^^^^^^ Invalid argument to '%'
-    ·
- 15 │         1 % false % @0x0 % 0;
-    │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:9 ───
-    │
- 15 │         1 % false % @0x0 % 0;
-    │         ^^^^^^^^^^^^^^^^ Invalid argument to '%'
-    ·
- 15 │         1 % false % @0x0 % 0;
-    │                     ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_mod_invalid.move:15:13 ───
     │
  15 │         1 % false % @0x0 % 0;
@@ -198,17 +236,6 @@ error:
     ·
  15 │         1 % false % @0x0 % 0;
     │             ----- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:21 ───
-    │
- 15 │         1 % false % @0x0 % 0;
-    │                     ^^^^ Invalid argument to '%'
-    ·
- 15 │         1 % false % @0x0 % 0;
-    │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -227,39 +254,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:15:28 ───
-    │
- 15 │         1 % false % @0x0 % 0;
-    │                            ^ Invalid argument to '%'
-    ·
- 15 │         1 % false % @0x0 % 0;
-    │                     ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:16:9 ───
-    │
- 16 │         () % ();
-    │         ^^ Invalid argument to '%'
-    ·
- 16 │         () % ();
-    │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:16:14 ───
-    │
- 16 │         () % ();
-    │              ^^ Invalid argument to '%'
-    ·
- 16 │         () % ();
-    │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_mod_invalid.move:17:13 ───
     │
  17 │         1 % ();
@@ -274,17 +268,6 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/binary_mod_invalid.move:18:9 ───
-    │
- 18 │         (0, 1) % (0, 1, 2);
-    │         ^^^^^^ Invalid argument to '%'
-    ·
- 18 │         (0, 1) % (0, 1, 2);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
     ┌── tests/move_check/typing/binary_mod_invalid.move:18:18 ───
     │
  18 │         (0, 1) % (0, 1, 2);
@@ -295,38 +278,5 @@ error:
     ·
  18 │         (0, 1) % (0, 1, 2);
     │                  --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:18:18 ───
-    │
- 18 │         (0, 1) % (0, 1, 2);
-    │                  ^^^^^^^^^ Invalid argument to '%'
-    ·
- 18 │         (0, 1) % (0, 1, 2);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:19:9 ───
-    │
- 19 │         (1, 2) % (0, 1);
-    │         ^^^^^^ Invalid argument to '%'
-    ·
- 19 │         (1, 2) % (0, 1);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_mod_invalid.move:19:18 ───
-    │
- 19 │         (1, 2) % (0, 1);
-    │                  ^^^^^^ Invalid argument to '%'
-    ·
- 19 │         (1, 2) % (0, 1);
-    │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
     │
 
