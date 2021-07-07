@@ -6,7 +6,6 @@ use log::LevelFilter;
 use move_binary_format::{compatibility::Compatibility, normalized::Module, CompiledModule};
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_ERROR_DESC_EXTENSION,
-    MOVE_EXTENSION,
 };
 use move_core_types::language_storage::ModuleId;
 use std::{
@@ -387,7 +386,7 @@ pub fn create_release(output_path: impl AsRef<Path>, options: &ReleaseOptions) {
 /// module docs.
 pub fn sync_doc_files(output_path: &str) {
     let sync = |from: &Path, to: &Path| {
-        for s in find_filenames(&[&from], |p| extension_equals(p, MOVE_EXTENSION)).unwrap() {
+        for s in find_filenames(&[&from], |p| extension_equals(p, "md")).unwrap() {
             let path = Path::new(&s);
             std::fs::copy(&path, to.join(path.strip_prefix(from).unwrap())).unwrap();
         }
