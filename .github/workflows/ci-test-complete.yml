@@ -25,14 +25,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow_run_id: ${{ github.event.workflow_run.id }}
           artifacts: "unit-test-results codegen-unit-test-results"
-          target_dir: ${{ github.workspace }}/downloads
+          target_dir: downloads/
           decompress: true
       - name: Publish unit test results
         uses: diem/publish-unit-test-result-action@07dbf21c1095745d5149a54007f28231936c9da4
         with:
           commit: ${{ github.event.workflow_run.head_sha }}
           check_name: Test results
-          files: "${{ github.workspace }}/downloads/*/**/*.xml"
+          files: "downloads/**/*.xml"
           # Don't comment on PRs at the moment: might be too noisy and the test deltas are incorrect:
           # https://github.com/EnricoMi/publish-unit-test-result-action/issues/115
           comment_on_pr: false
