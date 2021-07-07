@@ -30,7 +30,7 @@ module DiemAccount {
     use 0x1::Diem::{Self, Diem};
     use 0x1::Option::{Self, Option};
     use 0x1::Roles;
-    use 0x1::DiemId;
+    use 0x1::VASPDomain;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
     struct DiemAccount has key {
@@ -1274,7 +1274,7 @@ module DiemAccount {
         Roles::grant_treasury_compliance_role(&new_account, dr_account);
         SlidingNonce::publish(&new_account);
         Event::publish_generator(&new_account);
-        DiemId::publish_diem_id_domain_manager(&new_account);
+        VASPDomain::publish_vasp_domain_manager(&new_account);
         make_account(&new_account, auth_key_prefix)
     }
     spec create_treasury_compliance_account {
@@ -1289,7 +1289,7 @@ module DiemAccount {
         let post post_account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures post_account_ops_cap == update_field(account_ops_cap, creation_events, account_ops_cap.creation_events);
         include MakeAccountEmits{new_account_address: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
-        aborts_if DiemId::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
+        aborts_if VASPDomain::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountModifies {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1300,7 +1300,7 @@ module DiemAccount {
         modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         modifies global<Event::EventHandleGenerator>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
-        modifies global<DiemId::DiemIdDomainManager>(tc_addr);
+        modifies global<VASPDomain::VASPDomainManager>(tc_addr);
     }
     spec schema CreateTreasuryComplianceAccountAbortsIf {
         dr_account: signer;
@@ -1309,7 +1309,7 @@ module DiemAccount {
         include Roles::GrantRole{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), role_id: Roles::TREASURY_COMPLIANCE_ROLE_ID};
         aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
             with Errors::ALREADY_PUBLISHED;
-        aborts_if DiemId::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
+        aborts_if VASPDomain::tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
     }
     spec schema CreateTreasuryComplianceAccountEnsures {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1319,7 +1319,7 @@ module DiemAccount {
         ensures AccountFreezing::spec_account_is_not_frozen(tc_addr);
         ensures spec_holds_own_key_rotation_cap(tc_addr);
         ensures spec_holds_own_withdraw_cap(tc_addr);
-        ensures exists<DiemId::DiemIdDomainManager>(tc_addr);
+        ensures exists<VASPDomain::VASPDomainManager>(tc_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1393,7 +1393,7 @@ module DiemAccount {
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
         Event::publish_generator(&new_account);
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
-        DiemId::publish_diem_id_domains(&new_account);
+        VASPDomain::publish_vasp_domains(&new_account);
         make_account(&new_account, auth_key_prefix);
         add_currencies_for_account<Token>(&new_account, add_all_currencies)
     }
@@ -1411,7 +1411,7 @@ module DiemAccount {
         add_all_currencies: bool;
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
-        include DiemId::PublishDiemIdDomainsAbortsIf{vasp_addr: new_account_address};
+        include VASPDomain::PublishVASPDomainsAbortsIf{vasp_addr: new_account_address};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if VASP::is_vasp(new_account_address) with Errors::ALREADY_PUBLISHED;
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
@@ -1424,7 +1424,7 @@ module DiemAccount {
         ensures exists_at(new_account_address);
         ensures Roles::spec_has_parent_VASP_role_addr(new_account_address);
         include AddCurrencyForAccountEnsures<Token>{addr: new_account_address};
-        include DiemId::PublishDiemIdDomainsEnsures{ vasp_addr: new_account_address };
+        include VASPDomain::PublishVASPDomainsEnsures{ vasp_addr: new_account_address };
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
