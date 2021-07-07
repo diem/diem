@@ -174,17 +174,27 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         &'a self,
         tests: I,
     ) -> impl Iterator<Item = T> + 'a {
-        tests.filter(move |test| {
-            if let Some(filter) = &self.options.filter {
-                if self.options.filter_exact {
-                    test.name() == &filter[..]
+        tests
+            // Filter by ignored
+            .filter(
+                move |test| match (self.options.include_ignored, self.options.ignored) {
+                    (true, _) => true, // Don't filter anything
+                    (false, true) => test.ignored(),
+                    (false, false) => !test.ignored(),
+                },
+            )
+            // Filter by test name
+            .filter(move |test| {
+                if let Some(filter) = &self.options.filter {
+                    if self.options.filter_exact {
+                        test.name() == &filter[..]
+                    } else {
+                        test.name().contains(&filter[..])
+                    }
                 } else {
-                    test.name().contains(&filter[..])
+                    true
                 }
-            } else {
-                true
-            }
-        })
+            })
     }
 }
 
