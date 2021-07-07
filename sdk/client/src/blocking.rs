@@ -12,8 +12,9 @@ use crate::{
     move_deserialize::{self, Event},
     views::{
         AccountStateWithProofView, AccountTransactionsWithProofView, AccountView,
-        AccumulatorConsistencyProofView, CurrencyInfoView, EventView, EventWithProofView,
-        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
+        AccumulatorConsistencyProofView, CurrencyInfoView, EventByVersionWithProofView, EventView,
+        EventWithProofView, MetadataView, StateProofView, TransactionView,
+        TransactionsWithProofsView,
     },
     Error, Result, Retry, State,
 };
@@ -280,6 +281,14 @@ impl BlockingClient {
         limit: u64,
     ) -> Result<Response<Vec<EventWithProofView>>> {
         self.send(MethodRequest::get_events_with_proofs(key, start_seq, limit))
+    }
+
+    pub fn get_event_by_version_with_proof(
+        &self,
+        key: EventKey,
+        version: Option<u64>,
+    ) -> Result<Response<EventByVersionWithProofView>> {
+        self.send(MethodRequest::get_event_by_version_with_proof(key, version))
     }
 
     /// Return the events of type `T` that have been emitted to `event_key` since `start_seq`, with a max of `limit`

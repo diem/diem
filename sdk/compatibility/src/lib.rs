@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use diem_sdk::{
+    client::MethodRequest,
     crypto::HashValue,
     transaction_builder::{
         stdlib::{self, ScriptCall},
@@ -14,6 +15,11 @@ use diem_sdk::{
     },
     types::{
         account_address::AccountAddress,
+        account_config::{diem_root_address, events::new_block::NewBlockEvent},
+        account_state::AccountState,
+        account_state_blob::AccountStateWithProof,
+        block_metadata::new_block_event_key,
+        contract_event::EventByVersionWithProof,
         ledger_info::LedgerInfoWithSignatures,
         proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
         transaction::{AccountTransactionsWithProof, Script},
@@ -367,6 +373,58 @@ fn get_account_transactions_with_proofs() -> Result<()> {
         true,
         ledger_version,
     )?;
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn get_event_by_version_with_proof() -> Result<()> {
+    let env = Environment::from_env();
+    let client = env.client();
+
+    // Grab the latest block event using get_event_by_version_with_proof and
+    // verify that everything checks out.
+
+    let batch = vec![
+        MethodRequest::get_state_proof(0),
+        MethodRequest::get_account_state_with_proof(diem_root_address(), None, None),
+        MethodRequest::get_event_by_version_with_proof(new_block_event_key(), None),
+    ];
+
+    let resps = client.batch(batch)?;
+    let mut resps_iter = resps.into_iter();
+    let resp0 = resps_iter.next().unwrap()?.into_inner();
+    let resp1 = resps_iter.next().unwrap()?.into_inner();
+    let resp2 = resps_iter.next().unwrap()?.into_inner();
+    assert!(resps_iter.next().is_none());
+
+    let state_view = resp0.try_into_get_state_proof()?;
+    let account_view = resp1.try_into_get_account_state_with_proof()?;
+    let event_view = resp2.try_into_get_event_by_version_with_proof()?;
+
+    let latest_li_w_sigs = bcs::from_bytes::<LedgerInfoWithSignatures>(
+        state_view.ledger_info_with_signatures.as_ref(),
+    )?;
+    let latest_li = latest_li_w_sigs.ledger_info();
+    let account_proof = AccountStateWithProof::try_from(&account_view)?;
+    let account_state = AccountState::try_from(account_proof.blob.as_ref().unwrap())?;
+    let block_height = account_state.get_diem_block_resource()?.unwrap().height();
+
+    let event_proof = EventByVersionWithProof::try_from(&event_view)?;
+    event_proof.verify(
+        latest_li,
+        &new_block_event_key(),
+        Some(block_height),
+        latest_li.version(),
+    )?;
+    // should be the latest block event, so no upper bound event.
+    assert_eq!(None, event_proof.upper_bound_excl);
+
+    let event = event_proof.lower_bound_incl.unwrap().event;
+    let new_block_event = NewBlockEvent::try_from(&event)?;
+    assert_eq!(latest_li.timestamp_usecs(), new_block_event.proposed_time());
+    assert_eq!(latest_li.round(), new_block_event.round());
 
     Ok(())
 }

@@ -97,6 +97,10 @@ impl DiemBlockResource {
     pub fn new_block_events(&self) -> &EventHandle {
         &self.new_block_events
     }
+
+    pub fn height(&self) -> u64 {
+        self.height
+    }
 }
 
 impl MoveStructType for DiemBlockResource {

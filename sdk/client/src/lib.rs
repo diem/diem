@@ -83,6 +83,7 @@ pub enum Method {
     GetTransactionsWithProofs,
     GetAccountTransactionsWithProofs,
     GetEventsWithProofs,
+    GetEventByVersionWithProof,
 }
 
 cfg_async_or_blocking! {

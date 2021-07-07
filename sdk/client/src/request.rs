@@ -31,6 +31,7 @@ pub enum MethodRequest {
     GetTransactionsWithProofs(u64, u64, bool),
     GetAccountTransactionsWithProofs(AccountAddress, u64, u64, bool, Option<u64>),
     GetEventsWithProofs(EventKey, u64, u64),
+    GetEventByVersionWithProof(EventKey, Option<u64>),
 }
 
 impl MethodRequest {
@@ -139,6 +140,10 @@ impl MethodRequest {
         Self::GetEventsWithProofs(key, start_seq, limit)
     }
 
+    pub fn get_event_by_version_with_proof(key: EventKey, version: Option<u64>) -> Self {
+        Self::GetEventByVersionWithProof(key, version)
+    }
+
     pub fn method(&self) -> Method {
         match self {
             MethodRequest::Submit(_) => Method::Submit,
@@ -160,6 +165,7 @@ impl MethodRequest {
                 Method::GetAccountTransactionsWithProofs
             }
             MethodRequest::GetEventsWithProofs(_, _, _) => Method::GetEventsWithProofs,
+            MethodRequest::GetEventByVersionWithProof(_, _) => Method::GetEventByVersionWithProof,
         }
     }
 }
