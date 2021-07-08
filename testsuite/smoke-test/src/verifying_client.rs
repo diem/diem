@@ -283,7 +283,17 @@ fn arb_request(
     );
     let arb_acct_txn = (arb_account.clone(), arb_seq_num, arb_include_events);
 
+    let arb_metadata_version = prop_oneof! [
+        // note: the exclusive upper bound is intentional so we don't get super
+        // unlucky and call get_metadata(current_state_version) on a ledger state
+        // with the same version.
+        20 => 0u64..current_state_version,
+        1 => Just(u64::MAX / 2),
+        1 => Just(u64::MAX),
+    ];
+
     prop_oneof![
+        arb_metadata_version.prop_map(MethodRequest::get_metadata_by_version),
         (arb_account, arb_version).prop_map(|(a, v)| MethodRequest::GetAccount(a, Some(v))),
         (arb_version_and_limit, arb_include_events)
             .prop_map(|((v, l), i)| MethodRequest::GetTransactions(v, l, i)),
@@ -430,4 +440,43 @@ fn test_submit() {
 
     assert_eq!(balance_1.amount, start_amount - transfer_amount);
     assert_eq!(balance_2.amount, start_amount + transfer_amount);
+}
+
+#[test]
+fn test_get_latest_metadata() {
+    let rt = Builder::new_current_thread().enable_all().build().unwrap();
+    let env = Environment::new();
+
+    rt.block_on(env.verifying_client.sync()).unwrap();
+
+    let (resp_nv, resp_v) = rt.block_on(env.request(MethodRequest::get_metadata()));
+
+    let meta_nv = resp_nv
+        .unwrap()
+        .into_inner()
+        .try_into_get_metadata()
+        .unwrap();
+    let meta_v = resp_v
+        .unwrap()
+        .into_inner()
+        .try_into_get_metadata()
+        .unwrap();
+
+    // only check that the "non-volatile" fields match up, since we're not 100%
+    // guaranteed that these requests are fulfilled at the same exact version.
+
+    assert_eq!(meta_nv.chain_id, meta_v.chain_id);
+    assert_eq!(
+        meta_nv.script_hash_allow_list,
+        meta_v.script_hash_allow_list
+    );
+    assert_eq!(
+        meta_nv.module_publishing_allowed,
+        meta_v.module_publishing_allowed
+    );
+    assert_eq!(meta_nv.diem_version, meta_v.diem_version);
+    assert_eq!(
+        meta_nv.dual_attestation_limit,
+        meta_v.dual_attestation_limit
+    );
 }
