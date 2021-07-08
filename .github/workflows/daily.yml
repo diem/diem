@@ -43,7 +43,7 @@ jobs:
           echo "ISSUE_BODY<<EOF" >> $GITHUB_ENV
           echo "Found RUSTSEC in dependencies in job ${JOB_URL}" >> $GITHUB_ENV
           echo "\`\`\`" >> $GITHUB_ENV
-          cat $AUDIT_SUMMARY_FILE >> $GITHUB_ENV
+          head -100 $AUDIT_SUMMARY_FILE >> $GITHUB_ENV
           echo "\`\`\`" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - uses: diem/actions/create-issue@04f4286ca22e4b9efbc5eb49a20e2e5389c5318b
