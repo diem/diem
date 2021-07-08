@@ -168,6 +168,16 @@ impl MethodResponse {
         }
     }
 
+    pub fn try_into_get_metadata(self) -> Result<MetadataView, Error> {
+        match self {
+            MethodResponse::GetMetadata(view) => Ok(view),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetMetadata found MethodResponse::{:?}",
+                self.method()
+            ))),
+        }
+    }
+
     pub fn try_into_get_state_proof(self) -> Result<StateProofView, Error> {
         match self {
             MethodResponse::GetStateProof(state_proof) => Ok(state_proof),

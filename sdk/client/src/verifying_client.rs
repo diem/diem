@@ -10,14 +10,16 @@ use crate::{
 };
 use diem_crypto::hash::{CryptoHash, HashValue};
 use diem_json_rpc_types::views::{
-    AccountView, CurrencyInfoView, EventView, TransactionListView, TransactionView,
+    AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
+    TransactionListView, TransactionView,
 };
 use diem_types::{
     account_address::AccountAddress,
-    account_config::diem_root_address,
+    account_config::{diem_root_address, NewBlockEvent},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
-    contract_event::EventWithProof,
+    block_metadata::new_block_event_key,
+    contract_event::{EventByVersionWithProof, EventWithProof},
     event::EventKey,
     ledger_info::LedgerInfo,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
@@ -320,6 +322,21 @@ impl<S: Storage> VerifyingClient<S> {
             .and_then(MethodResponse::try_into_submit)
     }
 
+    pub async fn get_metadata_by_version(
+        &self,
+        version: Version,
+    ) -> Result<Response<MetadataView>> {
+        self.request(MethodRequest::get_metadata_by_version(version))
+            .await?
+            .and_then(MethodResponse::try_into_get_metadata)
+    }
+
+    pub async fn get_metadata(&self) -> Result<Response<MetadataView>> {
+        self.request(MethodRequest::get_metadata())
+            .await?
+            .and_then(MethodResponse::try_into_get_metadata)
+    }
+
     pub async fn get_account(
         &self,
         address: AccountAddress,
@@ -579,7 +596,6 @@ struct RequestContext<'a> {
     #[allow(dead_code)]
     start_version: Version,
 
-    #[allow(dead_code)]
     state: &'a State,
 
     state_proof: &'a StateProof,
@@ -667,6 +683,10 @@ impl From<MethodRequest> for VerifyingRequest {
     fn from(request: MethodRequest) -> Self {
         match request {
             MethodRequest::Submit((txn,)) => verifying_submit(txn),
+            MethodRequest::GetMetadata((None,)) => verifying_get_latest_metadata(),
+            MethodRequest::GetMetadata((Some(version),)) => {
+                verifying_get_historical_metadata(version)
+            }
             MethodRequest::GetAccount(address, version) => verifying_get_account(address, version),
             MethodRequest::GetTransactions(start_version, limit, include_events) => {
                 verifying_get_transactions(start_version, limit, include_events)
@@ -722,6 +742,133 @@ fn verifying_submit(txn: String) -> VerifyingRequest {
     VerifyingRequest::new(request, subrequests, callback)
 }
 
+fn verifying_get_latest_metadata() -> VerifyingRequest {
+    let request = MethodRequest::GetMetadata((None,));
+    let subrequests = vec![MethodRequest::GetAccountStateWithProof(
+        diem_root_address(),
+        None,
+        None,
+    )];
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
+        let diem_root = match subresponses {
+            [MethodResponse::GetAccountStateWithProof(ref account)] => account,
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetAccountStateWithProof] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        let latest_li = ctxt.state_proof.latest_ledger_info();
+        let diem_root = verify_account_state(ctxt, &diem_root, diem_root_address(), None)?
+            .ok_or_else(|| Error::rpc_response("DiemRoot account is missing"))?;
+
+        let version = latest_li.version();
+        let accumulator_root_hash = latest_li.transaction_accumulator_hash();
+        let timestamp = latest_li.timestamp_usecs();
+        let chain_id = ctxt.state.chain_id;
+
+        let mut metadata_view =
+            MetadataView::new(version, accumulator_root_hash, timestamp, chain_id);
+        metadata_view
+            .with_diem_root(&diem_root)
+            .map_err(Error::rpc_response)?;
+
+        Ok(MethodResponse::GetMetadata(metadata_view))
+    });
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verifying_get_historical_metadata(version: Version) -> VerifyingRequest {
+    let request = MethodRequest::GetMetadata((Some(version),));
+    let subrequests = vec![
+        MethodRequest::GetAccumulatorConsistencyProof(None, Some(version)),
+        MethodRequest::GetAccumulatorConsistencyProof(Some(version), None),
+        MethodRequest::GetEventByVersionWithProof(new_block_event_key(), Some(version)),
+    ];
+    let callback: RequestCallback = Box::new(move |ctxt, subresponses| {
+        let (consistency_pg2v, consistency_v2li, block_event) = match subresponses {
+            [MethodResponse::GetAccumulatorConsistencyProof(ref c1), MethodResponse::GetAccumulatorConsistencyProof(ref c2), MethodResponse::GetEventByVersionWithProof(ref e)] => (c1, c2, e),
+            subresponses => {
+                return Err(Error::rpc_response(format!(
+                    "expected [GetAccumulatorConsistencyProof, GetAccumulatorConsistencyProof, GetEventByVersionWithProof] subresponses, received: {:?}",
+                    subresponses,
+                )))
+            }
+        };
+
+        let latest_li = ctxt.state_proof.latest_ledger_info();
+
+        // deserialize
+        let consistency_pg2v =
+            AccumulatorConsistencyProof::try_from(consistency_pg2v).map_err(Error::decode)?;
+        let consistency_v2li =
+            AccumulatorConsistencyProof::try_from(consistency_v2li).map_err(Error::decode)?;
+        let block_event = EventByVersionWithProof::try_from(block_event).map_err(Error::decode)?;
+
+        // build the accumulator summary from pre-genesis to the requested version
+        let accumulator_summary =
+            TransactionAccumulatorSummary::try_from_genesis_proof(consistency_pg2v, version)
+                .map_err(Error::invalid_proof)?;
+        // compute the root hash at the requested version
+        let accumulator_root_hash = accumulator_summary.root_hash();
+
+        // verify that the historical accumulator_summary is actually a prefix of
+        // our latest verified accumulator_summary.
+        let _ = accumulator_summary
+            .try_extend_with_proof(&consistency_v2li, &latest_li)
+            .map_err(Error::invalid_proof)?;
+
+        // NewBlockEvent can be special cased so we don't need to lookup the diem_root::DiemBlock->height
+        let event_count = None;
+        // verify the block event for the requested version
+        block_event
+            .verify(latest_li, &new_block_event_key(), event_count, version)
+            .map_err(Error::invalid_proof)?;
+
+        // extract the timestamp
+        let timestamp = match (block_event.lower_bound_incl, block_event.upper_bound_excl) {
+            // For block events specifically, these cases should only happen at genesis.
+            (None, None) | (None, Some(_)) => {
+                if version == 0 {
+                    0 // genesis timestamp is 0
+                } else {
+                    return Err(Error::rpc_response("not genesis"));
+                }
+            }
+            // This logic is for all request versions before the current, latest block.
+            (Some(block_event), Some(_)) => {
+                let block_event =
+                    NewBlockEvent::try_from(&block_event.event).map_err(Error::decode)?;
+                block_event.proposed_time()
+            }
+            // This logic is for the current, latest block.
+            (Some(block_event), None) => {
+                let block_event =
+                    NewBlockEvent::try_from(&block_event.event).map_err(Error::decode)?;
+                let timestamp = block_event.proposed_time();
+                // since the timestamp must increment across an epoch boundary,
+                // (round, timestamp) provides a total order across blocks.
+                //
+                // If these two values don't match with our verified latest ledger
+                // info, then we know this can't be the latest block.
+                if block_event.round() != latest_li.round()
+                    || timestamp != latest_li.timestamp_usecs()
+                {
+                    return Err(Error::rpc_response("not latest block"));
+                }
+                timestamp
+            }
+        };
+
+        let chain_id = ctxt.state.chain_id;
+        let metadata_view = MetadataView::new(version, accumulator_root_hash, timestamp, chain_id);
+        Ok(MethodResponse::GetMetadata(metadata_view))
+    });
+    VerifyingRequest::new(request, subrequests, callback)
+}
+
 fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> VerifyingRequest {
     let request = MethodRequest::GetAccount(address, version);
     let subrequests = vec![MethodRequest::GetAccountStateWithProof(
@@ -738,21 +885,11 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
             }
         };
 
-        let account_state_with_proof =
-            AccountStateWithProof::try_from(account).map_err(Error::decode)?;
-
-        let latest_li = ctxt.state_proof.latest_ledger_info();
-        let ledger_version = latest_li.version();
+        let ledger_version = ctxt.state_proof.latest_ledger_info().version();
         let version = version.unwrap_or(ledger_version);
-
-        account_state_with_proof
-            .verify(latest_li, version, address)
-            .map_err(Error::invalid_proof)?;
-
-        let maybe_account_view = account_state_with_proof
-            .blob
-            .map(|blob| {
-                let account_state = AccountState::try_from(&blob).map_err(Error::decode)?;
+        let maybe_account_state = verify_account_state(ctxt, &account, address, Some(version))?;
+        let maybe_account_view = maybe_account_state
+            .map(|account_state| {
                 AccountView::try_from_account_state(address, account_state, version)
                     .map_err(Error::decode)
             })
@@ -974,22 +1111,8 @@ fn verifying_get_currencies() -> VerifyingRequest {
             }
         };
 
-        let diem_root_with_proof =
-            AccountStateWithProof::try_from(diem_root).map_err(Error::decode)?;
-
-        let latest_li = ctxt.state_proof.latest_ledger_info();
-        let version = latest_li.version();
-
-        diem_root_with_proof
-            .verify(latest_li, version, diem_root_address())
-            .map_err(Error::invalid_proof)?;
-
-        // Deserialize the DiemRoot account state, pull out its currency infos,
-        // and project them into json-rpc currency views.
-        let diem_root_blob = diem_root_with_proof
-            .blob
-            .ok_or_else(|| Error::unknown("missing diem_root account"))?;
-        let diem_root = AccountState::try_from(&diem_root_blob).map_err(Error::decode)?;
+        let diem_root = verify_account_state(ctxt, &diem_root, diem_root_address(), None)?
+            .ok_or_else(|| Error::rpc_response("DiemRoot account is missing"))?;
         let currency_infos = diem_root
             .get_registered_currency_info_resources()
             .map_err(Error::decode)?;
@@ -1016,6 +1139,28 @@ fn verifying_get_network_status() -> VerifyingRequest {
         Ok(MethodResponse::GetNetworkStatus(status))
     });
     VerifyingRequest::new(request, subrequests, callback)
+}
+
+fn verify_account_state(
+    ctxt: RequestContext<'_>,
+    view: &AccountStateWithProofView,
+    address: AccountAddress,
+    version: Option<Version>,
+) -> Result<Option<AccountState>> {
+    let account_state_with_proof = AccountStateWithProof::try_from(view).map_err(Error::decode)?;
+
+    let latest_li = ctxt.state_proof.latest_ledger_info();
+    let ledger_version = latest_li.version();
+    let version = version.unwrap_or(ledger_version);
+
+    account_state_with_proof
+        .verify(latest_li, version, address)
+        .map_err(Error::invalid_proof)?;
+
+    account_state_with_proof
+        .blob
+        .map(|blob| AccountState::try_from(&blob).map_err(Error::decode))
+        .transpose()
 }
 
 mod private {
