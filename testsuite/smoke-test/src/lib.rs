@@ -7,6 +7,9 @@ pub use event_fetcher::EventFetcher;
 mod transaction;
 pub use transaction::ExternalTransactionSigner;
 
+mod verifying_client;
+pub use verifying_client::{VerifyingClientEquivalence, VerifyingSubmit};
+
 #[cfg(test)]
 mod client;
 
@@ -48,9 +51,6 @@ mod smoke_test_environment;
 
 #[cfg(test)]
 mod test_utils;
-
-#[cfg(test)]
-mod verifying_client;
 
 #[cfg(test)]
 mod workspace_builder;
