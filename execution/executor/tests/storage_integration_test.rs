@@ -35,18 +35,12 @@ fn test_genesis() {
         .reader
         .get_accumulator_summary(trusted_state.version())
         .unwrap();
-    let (li, epoch_change_proof, consistency_proof) =
-        db.reader.get_state_proof(trusted_state.version()).unwrap();
+    let state_proof = db.reader.get_state_proof(trusted_state.version()).unwrap();
 
     trusted_state
-        .verify_and_ratchet(
-            &li,
-            &epoch_change_proof,
-            &consistency_proof,
-            Some(&initial_accumulator),
-        )
+        .verify_and_ratchet(&state_proof, Some(&initial_accumulator))
         .unwrap();
-    let li = li.ledger_info();
+    let li = state_proof.latest_ledger_info();
     assert_eq!(li.version(), 0);
 
     let diem_root_account = db
@@ -74,9 +68,8 @@ fn test_reconfiguration() {
     let validator_account = signer.author();
 
     // test the current keys in the validator's account equals to the key in the validator set
-    let (li, _epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(0).unwrap();
-    let current_version = li.ledger_info().version();
+    let state_proof = db.reader.get_state_proof(0).unwrap();
+    let current_version = state_proof.latest_ledger_info().version();
     let validator_account_state_with_proof = db
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
@@ -160,9 +153,8 @@ fn test_reconfiguration() {
         .commit_blocks(vec![block_id], ledger_info_with_sigs)
         .unwrap();
 
-    let (li, _epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(0).unwrap();
-    let current_version = li.ledger_info().version();
+    let state_proof = db.reader.get_state_proof(0).unwrap();
+    let current_version = state_proof.latest_ledger_info().version();
 
     let t3 = db
         .reader
@@ -339,15 +331,9 @@ fn test_change_publishing_option_to_custom() {
         .reader
         .get_accumulator_summary(trusted_state.version())
         .unwrap();
-    let (li, epoch_change_proof, consistency_proof) =
-        db.reader.get_state_proof(trusted_state.version()).unwrap();
+    let state_proof = db.reader.get_state_proof(trusted_state.version()).unwrap();
     let trusted_state_change = trusted_state
-        .verify_and_ratchet(
-            &li,
-            &epoch_change_proof,
-            &consistency_proof,
-            Some(&initial_accumulator),
-        )
+        .verify_and_ratchet(&state_proof, Some(&initial_accumulator))
         .unwrap();
     assert!(trusted_state_change.is_epoch_change());
     let trusted_state = trusted_state_change.new_state().unwrap();
@@ -395,14 +381,13 @@ fn test_change_publishing_option_to_custom() {
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
-    let (li, epoch_change_proof, consistency_proof) =
-        db.reader.get_state_proof(current_version).unwrap();
+    let state_proof = db.reader.get_state_proof(current_version).unwrap();
     let trusted_state_change = trusted_state
-        .verify_and_ratchet(&li, &epoch_change_proof, &consistency_proof, None)
+        .verify_and_ratchet(&state_proof, None)
         .unwrap();
     assert!(!trusted_state_change.is_epoch_change());
 
-    let current_version = li.ledger_info().version();
+    let current_version = state_proof.latest_ledger_info().version();
     assert_eq!(current_version, 5);
     // Transaction 2 is committed.
     let txn2 = db

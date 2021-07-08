@@ -18,10 +18,10 @@ use diem_types::{
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    epoch_change::EpochChangeProof,
     event::EventKey,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    ledger_info::LedgerInfo,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
+    state_proof::StateProof,
     transaction::{AccountTransactionsWithProof, SignedTransaction, Transaction, Version},
     trusted_state::TrustedState,
     waypoint::Waypoint,
@@ -39,15 +39,6 @@ use std::{
 // TODO(philiphayes): fill out rest of the methods
 // TODO(philiphayes): all clients should validate chain id (allow users to trust-on-first-use or pre-configure)
 // TODO(philiphayes): we could abstract the async client so VerifyingClient takes a dyn Trait?
-
-// TODO(philiphayes): we should really add a real StateProof type (not alias) that
-// collects these types together. StateProof isn't a very descriptive name though...
-
-type StateProof = (
-    LedgerInfoWithSignatures,
-    EpochChangeProof,
-    AccumulatorConsistencyProof,
-);
 
 /// The `VerifyingClient` is a [Diem JSON-RPC client] that verifies Diem's
 /// cryptographic proofs when it makes API calls.
@@ -216,7 +207,7 @@ impl<S: Storage> VerifyingClient<S> {
         )?;
 
         // return true if we need to sync more epoch changes
-        Ok(state_proof.1.more)
+        Ok(state_proof.epoch_changes().more)
     }
 
     async fn get_state_proof_and_maybe_accumulator(
@@ -274,7 +265,7 @@ impl<S: Storage> VerifyingClient<S> {
             .transpose()?;
 
         // check the response metadata matches the state proof
-        verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
+        verify_latest_li_matches_state(state_proof.latest_ledger_info(), &state)?;
 
         Ok((state_proof, maybe_accumulator))
     }
@@ -287,19 +278,12 @@ impl<S: Storage> VerifyingClient<S> {
         state_proof: &StateProof,
         maybe_accumulator: Option<&TransactionAccumulatorSummary>,
     ) -> Result<()> {
-        let (latest_li, epoch_change_proof, consistency_proof) = state_proof;
-
         // Verify the response's state proof starting from the trusted state when
         // we first made the request. If successful, this means the potential new
         // trusted state is at least a descendent of the request trusted state,
         // though not necessarily the globally most-recent trusted state.
         let change = request_trusted_state
-            .verify_and_ratchet(
-                latest_li,
-                epoch_change_proof,
-                consistency_proof,
-                maybe_accumulator,
-            )
+            .verify_and_ratchet(state_proof, maybe_accumulator)
             .map_err(Error::invalid_proof)?;
 
         // Try to compare-and-swap the new trusted state into the state store.
@@ -483,14 +467,14 @@ impl<S: Storage> VerifyingClient<S> {
         let state_proof = StateProof::try_from(&state_proof_view).map_err(Error::decode)?;
 
         // check the response metadata matches the state proof
-        verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
+        verify_latest_li_matches_state(state_proof.latest_ledger_info(), &state)?;
 
         // try to ratchet our trusted state using the state proof
         self.verify_and_ratchet(&request_trusted_state, &state_proof, None)?;
 
         // remote says we're too far behind and need to sync. we have to throw
         // out the batch since we can't verify any proofs
-        if state_proof.1.more {
+        if state_proof.epoch_changes().more {
             // TODO(philiphayes): what is the right behaviour here? it would obv.
             // be more convenient to just call `self.sync` here and then retry,
             // but maybe a client would like to control the syncs itself?
@@ -757,7 +741,7 @@ fn verifying_get_account(address: AccountAddress, version: Option<Version>) -> V
         let account_state_with_proof =
             AccountStateWithProof::try_from(account).map_err(Error::decode)?;
 
-        let latest_li = ctxt.state_proof.0.ledger_info();
+        let latest_li = ctxt.state_proof.latest_ledger_info();
         let ledger_version = latest_li.version();
         let version = version.unwrap_or(ledger_version);
 
@@ -827,7 +811,7 @@ fn verifying_get_transactions(
             .map_err(Error::decode)?;
 
         // Verify the proofs
-        let latest_li = ctxt.state_proof.0.ledger_info();
+        let latest_li = ctxt.state_proof.latest_ledger_info();
         txn_list_with_proof
             .verify(latest_li, Some(start_version))
             .map_err(Error::invalid_proof)?;
@@ -871,7 +855,7 @@ fn verifying_get_account_transactions(
             AccountTransactionsWithProof::try_from(acct_txns_with_proof_view)
                 .map_err(Error::decode)?;
 
-        let latest_li = ctxt.state_proof.0.ledger_info();
+        let latest_li = ctxt.state_proof.latest_ledger_info();
         let ledger_version = latest_li.version();
 
         acct_txns_with_proof
@@ -936,7 +920,7 @@ fn verifying_get_events(key: EventKey, start_seq: u64, limit: u64) -> VerifyingR
             )));
         }
 
-        let latest_li = ctxt.state_proof.0.ledger_info();
+        let latest_li = ctxt.state_proof.latest_ledger_info();
         let event_views = event_with_proof_views
             .iter()
             .enumerate()
@@ -993,7 +977,7 @@ fn verifying_get_currencies() -> VerifyingRequest {
         let diem_root_with_proof =
             AccountStateWithProof::try_from(diem_root).map_err(Error::decode)?;
 
-        let latest_li = ctxt.state_proof.0.ledger_info();
+        let latest_li = ctxt.state_proof.latest_ledger_info();
         let version = latest_li.version();
 
         diem_root_with_proof

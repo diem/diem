@@ -266,7 +266,7 @@ proptest! {
             expected_latest_version,
         );
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, Some(&initial_accumulator))
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, Some(&initial_accumulator))
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
@@ -309,7 +309,7 @@ proptest! {
             expected_latest_version,
         );
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
@@ -352,7 +352,7 @@ proptest! {
         );
         // should fail since there's a missing epoch change li in the change proof.
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should always return Err with an invalid change proof");
     }
 
@@ -390,13 +390,13 @@ proptest! {
             expected_latest_version,
         );
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should return Err when more is false and there's a gap");
 
         // ratcheting with more = true is fine
         change_proof.more = true;
         let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect("Should succeed with more in EpochChangeProof");
 
         match trusted_state_change {
@@ -444,7 +444,7 @@ proptest! {
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Should always return Err with an invalid change proof");
     }
 
@@ -507,12 +507,12 @@ proptest! {
         *bad_sigs.values_mut().next().unwrap() = Ed25519Signature::dummy_signature();
         let bad_li_6 = LedgerInfoWithSignatures::new(good_li.clone(), bad_sigs);
 
-        trusted_state.verify_and_ratchet(&bad_li_1, &change_proof, &consistency_proof, None).unwrap_err();
-        trusted_state.verify_and_ratchet(&bad_li_2, &change_proof, &consistency_proof, None).unwrap_err();
-        trusted_state.verify_and_ratchet(&bad_li_3, &change_proof, &consistency_proof, None).unwrap_err();
-        trusted_state.verify_and_ratchet(&bad_li_4, &change_proof, &consistency_proof, None).unwrap_err();
-        trusted_state.verify_and_ratchet(&bad_li_5, &change_proof, &consistency_proof, None).unwrap_err();
-        trusted_state.verify_and_ratchet(&bad_li_6, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_1, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_2, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_3, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_4, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_5, &change_proof, &consistency_proof, None).unwrap_err();
+        trusted_state.verify_and_ratchet_inner(&bad_li_6, &change_proof, &consistency_proof, None).unwrap_err();
     }
 }
 
@@ -545,7 +545,7 @@ proptest! {
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let consistency_proof = accumulator.get_consistency_proof(Some(start_version), end_version);
         trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof, &consistency_proof, None)
+            .verify_and_ratchet_inner(&latest_li, &change_proof, &consistency_proof, None)
             .expect_err("Expected stale change, got valid change");
     }
 }

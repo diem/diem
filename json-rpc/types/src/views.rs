@@ -16,13 +16,12 @@ use diem_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     diem_id_identifier::DiemIdVaspDomainIdentifier,
-    epoch_change::EpochChangeProof,
     event::EventKey,
-    ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, SparseMerkleProof,
         TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
+    state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, Script, ScriptFunction, Transaction, TransactionArgument,
         TransactionInfo, TransactionListWithProof, TransactionPayload,
@@ -1303,46 +1302,28 @@ pub struct StateProofView {
     pub ledger_consistency_proof: BytesView,
 }
 
-impl
-    TryFrom<(
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> for StateProofView
-{
+impl TryFrom<&StateProof> for StateProofView {
     type Error = Error;
 
-    fn try_from(
-        (ledger_info_with_signatures, epoch_change_proof, ledger_consistency_proof): (
-            LedgerInfoWithSignatures,
-            EpochChangeProof,
-            AccumulatorConsistencyProof,
-        ),
-    ) -> Result<StateProofView, Self::Error> {
-        Ok(StateProofView {
+    fn try_from(proof: &StateProof) -> Result<Self, Self::Error> {
+        Ok(Self {
             ledger_info_with_signatures: BytesView::new(bcs::to_bytes(
-                &ledger_info_with_signatures,
+                proof.latest_ledger_info_w_sigs(),
             )?),
-            epoch_change_proof: BytesView::new(bcs::to_bytes(&epoch_change_proof)?),
-            ledger_consistency_proof: BytesView::new(bcs::to_bytes(&ledger_consistency_proof)?),
+            epoch_change_proof: BytesView::new(bcs::to_bytes(proof.epoch_changes())?),
+            ledger_consistency_proof: BytesView::new(bcs::to_bytes(&proof.consistency_proof())?),
         })
     }
 }
 
-impl TryFrom<&StateProofView>
-    for (
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )
-{
+impl TryFrom<&StateProofView> for StateProof {
     type Error = Error;
 
-    fn try_from(state_proof_view: &StateProofView) -> Result<Self, Self::Error> {
-        Ok((
-            bcs::from_bytes(state_proof_view.ledger_info_with_signatures.inner())?,
-            bcs::from_bytes(state_proof_view.epoch_change_proof.inner())?,
-            bcs::from_bytes(state_proof_view.ledger_consistency_proof.inner())?,
+    fn try_from(view: &StateProofView) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            bcs::from_bytes(view.ledger_info_with_signatures.inner())?,
+            bcs::from_bytes(view.epoch_change_proof.inner())?,
+            bcs::from_bytes(view.ledger_consistency_proof.inner())?,
         ))
     }
 }

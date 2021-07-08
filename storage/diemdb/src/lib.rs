@@ -70,6 +70,7 @@ use diem_types::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
         TransactionListProof,
     },
+    state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
         TransactionToCommit, TransactionWithProof, Version, PRE_GENESIS_VERSION,
@@ -780,8 +781,8 @@ impl DbReader for DiemDB {
     fn get_state_proof_with_ledger_info(
         &self,
         known_version: u64,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Result<StateProof> {
         gauged_api("get_state_proof_with_ledger_info", || {
             let ledger_info = ledger_info_with_sigs.ledger_info();
             ensure!(
@@ -818,30 +819,21 @@ impl DbReader for DiemDB {
                 ledger_info
             };
 
-            let ledger_consistency_proof = self
+            let consistency_proof = self
                 .ledger_store
                 .get_consistency_proof(Some(known_version), verifiable_li.version())?;
-            Ok((epoch_change_proof, ledger_consistency_proof))
+            Ok(StateProof::new(
+                ledger_info_with_sigs,
+                epoch_change_proof,
+                consistency_proof,
+            ))
         })
     }
 
-    fn get_state_proof(
-        &self,
-        known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
+    fn get_state_proof(&self, known_version: u64) -> Result<StateProof> {
         gauged_api("get_state_proof", || {
             let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-            let (epoch_change_proof, ledger_consistency_proof) =
-                self.get_state_proof_with_ledger_info(known_version, &ledger_info_with_sigs)?;
-            Ok((
-                ledger_info_with_sigs,
-                epoch_change_proof,
-                ledger_consistency_proof,
-            ))
+            self.get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs)
         })
     }
 

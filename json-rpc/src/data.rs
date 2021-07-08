@@ -254,10 +254,10 @@ pub fn get_network_status(_role: &str) -> Result<u64, JsonRpcError> {
 pub fn get_state_proof(
     db: &dyn DbReader,
     version: u64,
-    ledger_info: &LedgerInfoWithSignatures,
+    ledger_info: LedgerInfoWithSignatures,
 ) -> Result<StateProofView, JsonRpcError> {
-    let proofs = db.get_state_proof_with_ledger_info(version, &ledger_info)?;
-    StateProofView::try_from((ledger_info.clone(), proofs.0, proofs.1)).map_err(Into::into)
+    let state_proof = db.get_state_proof_with_ledger_info(version, ledger_info)?;
+    StateProofView::try_from(&state_proof).map_err(Into::into)
 }
 
 /// Returns a proof that allows a client to extend their accumulator summary from

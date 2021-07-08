@@ -18,6 +18,7 @@ use diem_types::{
         definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof,
         TransactionAccumulatorSummary,
     },
+    state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
         TransactionToCommit, TransactionWithProof, Version,
@@ -281,18 +282,11 @@ pub trait DbReader: Send + Sync {
     fn get_state_proof_with_ledger_info(
         &self,
         known_version: u64,
-        ledger_info: &LedgerInfoWithSignatures,
-    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)>;
+        ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<StateProof>;
 
     /// Returns proof of new state relative to version known to client
-    fn get_state_proof(
-        &self,
-        known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )>;
+    fn get_state_proof(&self, known_version: u64) -> Result<StateProof>;
 
     /// Returns the account state corresponding to the given version and account address with proof
     /// based on `ledger_version`

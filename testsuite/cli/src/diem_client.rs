@@ -1,16 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Result};
+use anyhow::Result;
 use diem_client::{views, BlockingClient, Response, WaitForTransactionError};
 use diem_logger::prelude::info;
 use diem_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
+    state_proof::StateProof,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
@@ -41,12 +41,6 @@ pub struct DiemClient {
     /// latest state.
     latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
 }
-
-type StateProof = (
-    LedgerInfoWithSignatures,
-    EpochChangeProof,
-    AccumulatorConsistencyProof,
-);
 
 impl DiemClient {
     /// Construct a new Client instance.
@@ -167,23 +161,8 @@ impl DiemClient {
     ) -> Result<()> {
         let state = self.trusted_state();
 
-        let (li, epoch_change_proof, consistency_proof) = state_proof;
-
-        // check ledger info version
-        ensure!(
-            li.ledger_info().version() >= state.version(),
-            "Got stale ledger_info with version {}, known version: {}",
-            li.ledger_info().version(),
-            state.version(),
-        );
-
         // trusted_state_change
-        match state.verify_and_ratchet(
-            &li,
-            &epoch_change_proof,
-            &consistency_proof,
-            maybe_accumulator,
-        )? {
+        match state.verify_and_ratchet(state_proof, maybe_accumulator)? {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,

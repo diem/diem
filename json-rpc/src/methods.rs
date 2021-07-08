@@ -372,7 +372,7 @@ impl<'a> Handler<'a> {
         params: GetStateProofParams,
     ) -> Result<StateProofView, JsonRpcError> {
         let version = self.version_param(Some(params.version), "version")?;
-        data::get_state_proof(self.service.db.borrow(), version, &self.ledger_info)
+        data::get_state_proof(self.service.db.borrow(), version, self.ledger_info.clone())
     }
 
     async fn get_accumulator_consistency_proof(

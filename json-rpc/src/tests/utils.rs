@@ -28,6 +28,7 @@ use diem_types::{
         AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
         TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
     },
+    state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, SignedTransaction, Transaction, TransactionInfo,
         TransactionListWithProof, TransactionWithProof, Version,
@@ -294,29 +295,18 @@ impl DbReader for MockDiemDB {
         unimplemented!()
     }
 
-    fn get_state_proof(
-        &self,
-        known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
+    fn get_state_proof(&self, known_version: u64) -> Result<StateProof> {
         let li = self.get_latest_ledger_info()?;
-        let proofs = self.get_state_proof_with_ledger_info(known_version, &li)?;
-        Ok((
-            LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new()),
-            proofs.0,
-            proofs.1,
-        ))
+        self.get_state_proof_with_ledger_info(known_version, li)
     }
 
     fn get_state_proof_with_ledger_info(
         &self,
         _known_version: u64,
-        _ledger_info: &LedgerInfoWithSignatures,
-    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
-        Ok((
+        li: LedgerInfoWithSignatures,
+    ) -> Result<StateProof> {
+        Ok(StateProof::new(
+            LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new()),
             EpochChangeProof::new(vec![], false),
             AccumulatorConsistencyProof::new(vec![]),
         ))

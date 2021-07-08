@@ -405,7 +405,8 @@ impl PersistentLivenessStorage for StorageWriteProxy {
         let (_, proofs, _) = self
             .diem_db
             .get_state_proof(version)
-            .map_err(DbError::from)?;
+            .map_err(DbError::from)?
+            .into_inner();
         Ok(proofs)
     }
 

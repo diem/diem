@@ -15,7 +15,8 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     event::{EventHandle, EventKey},
     ledger_info::LedgerInfoWithSignatures,
-    proof::{AccumulatorConsistencyProof, SparseMerkleProof},
+    proof::SparseMerkleProof,
+    state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, TransactionListWithProof, TransactionWithProof, Version,
     },
@@ -112,19 +113,12 @@ impl DbReader for MockDbReader {
     fn get_state_proof_with_ledger_info(
         &self,
         _known_version: u64,
-        _ledger_info: &LedgerInfoWithSignatures,
-    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
+        _ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<StateProof> {
         unimplemented!()
     }
 
-    fn get_state_proof(
-        &self,
-        _known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
+    fn get_state_proof(&self, _known_version: u64) -> Result<StateProof> {
         unimplemented!()
     }
 

@@ -6,6 +6,7 @@ use crate::{
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
+    state_proof::StateProof,
     transaction::Version,
     waypoint::Waypoint,
 };
@@ -153,6 +154,19 @@ impl TrustedState {
     /// ratchet our trusted version forward, update our verifier to contain
     /// the new validator set, and return `Ok(TrustedStateChange::Epoch { .. })`.
     pub fn verify_and_ratchet<'a>(
+        &self,
+        state_proof: &'a StateProof,
+        initial_accumulator: Option<&'a TransactionAccumulatorSummary>,
+    ) -> Result<TrustedStateChange<'a>> {
+        self.verify_and_ratchet_inner(
+            state_proof.latest_ledger_info_w_sigs(),
+            state_proof.epoch_changes(),
+            state_proof.consistency_proof(),
+            initial_accumulator,
+        )
+    }
+
+    pub fn verify_and_ratchet_inner<'a>(
         &self,
         latest_li: &'a LedgerInfoWithSignatures,
         epoch_change_proof: &'a EpochChangeProof,
