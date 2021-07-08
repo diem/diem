@@ -8,9 +8,9 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, DesignatedDealerPreburns, FreezingBit, MintEvent, NewBlockEvent,
-        NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
-        ToXDXExchangeRateUpdateEvent, VASPDomainEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, FreezingBit, Limit, MintEvent,
+        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
+        SentPaymentEvent, ToXDXExchangeRateUpdateEvent, VASPDomainEvent,
     },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -570,6 +570,40 @@ pub struct MetadataView {
     pub module_publishing_allowed: Option<bool>,
     pub diem_version: Option<u64>,
     pub dual_attestation_limit: Option<u64>,
+}
+
+impl MetadataView {
+    pub fn new(
+        version: u64,
+        accumulator_root_hash: HashValue,
+        timestamp: u64,
+        chain_id: u8,
+    ) -> Self {
+        Self {
+            version,
+            accumulator_root_hash,
+            timestamp,
+            chain_id,
+            script_hash_allow_list: None,
+            module_publishing_allowed: None,
+            diem_version: None,
+            dual_attestation_limit: None,
+        }
+    }
+
+    pub fn with_diem_root(&mut self, diem_root: &AccountState) -> Result<()> {
+        if let Some(vm_publishing_option) = diem_root.get_vm_publishing_option()? {
+            self.script_hash_allow_list = Some(vm_publishing_option.script_allow_list);
+            self.module_publishing_allowed = Some(vm_publishing_option.is_open_module);
+        }
+        if let Some(diem_version) = diem_root.get_diem_version()? {
+            self.diem_version = Some(diem_version.major);
+        }
+        if let Some(limit) = diem_root.get_resource::<Limit>()? {
+            self.dual_attestation_limit = Some(limit.micro_xdx_limit);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq)]

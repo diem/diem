@@ -11,13 +11,9 @@ use crate::{
     },
 };
 use anyhow::Result;
-use diem_crypto::HashValue;
 use diem_types::{
-    account_address::AccountAddress,
-    account_config::{diem_root_address, resources::dual_attestation::Limit},
-    account_state::AccountState,
-    chain_id::ChainId,
-    event::EventKey,
+    account_address::AccountAddress, account_config::diem_root_address,
+    account_state::AccountState, chain_id::ChainId, event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
 };
 use std::convert::{TryFrom, TryInto};
@@ -47,35 +43,16 @@ pub fn get_metadata(
     chain_id: ChainId,
     version: u64,
 ) -> Result<MetadataView, JsonRpcError> {
-    let mut script_hash_allow_list: Option<Vec<HashValue>> = None;
-    let mut module_publishing_allowed: Option<bool> = None;
-    let mut diem_version: Option<u64> = None;
-    let mut dual_attestation_limit: Option<u64> = None;
+    let accumulator_root_hash = db.get_accumulator_root_hash(version)?;
+    let timestamp = db.get_block_timestamp(version)?;
+    let mut metadata_view =
+        MetadataView::new(version, accumulator_root_hash, timestamp, chain_id.id());
     if version == ledger_version {
-        if let Some(account) = get_account_state(db, diem_root_address(), version)? {
-            if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
-                script_hash_allow_list = Some(vm_publishing_option.script_allow_list);
-
-                module_publishing_allowed = Some(vm_publishing_option.is_open_module);
-            }
-            if let Some(v) = account.get_diem_version()? {
-                diem_version = Some(v.major)
-            }
-            if let Some(limit) = account.get_resource::<Limit>()? {
-                dual_attestation_limit = Some(limit.micro_xdx_limit)
-            }
+        if let Some(diem_root) = get_account_state(db, diem_root_address(), version)? {
+            metadata_view.with_diem_root(&diem_root)?;
         }
     }
-    Ok(MetadataView {
-        version,
-        accumulator_root_hash: db.get_accumulator_root_hash(version)?,
-        timestamp: db.get_block_timestamp(version)?,
-        chain_id: chain_id.id(),
-        script_hash_allow_list,
-        module_publishing_allowed,
-        diem_version,
-        dual_attestation_limit,
-    })
+    Ok(metadata_view)
 }
 
 /// Returns account state (AccountView) by given address
