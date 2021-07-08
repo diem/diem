@@ -2,11 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use forge::{forge_main, ForgeConfig, LocalFactory, Options, Result};
-use smoke_test::{EventFetcher, ExternalTransactionSigner};
+use smoke_test::{
+    event_fetcher::EventFetcher,
+    transaction::ExternalTransactionSigner,
+    verifying_client::{VerifyingClientEquivalence, VerifyingGetLatestMetadata, VerifyingSubmit},
+};
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
-        public_usage_tests: &[&EventFetcher, &ExternalTransactionSigner],
+        public_usage_tests: &[
+            &EventFetcher,
+            &ExternalTransactionSigner,
+            &VerifyingSubmit,
+            &VerifyingClientEquivalence,
+            &VerifyingGetLatestMetadata,
+        ],
         admin_tests: &[],
         network_tests: &[],
     };

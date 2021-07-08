@@ -1,11 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod event_fetcher;
-pub use event_fetcher::EventFetcher;
-
-mod transaction;
-pub use transaction::ExternalTransactionSigner;
+pub mod event_fetcher;
+pub mod transaction;
+pub mod verifying_client;
 
 #[cfg(test)]
 mod client;
@@ -48,9 +46,6 @@ mod smoke_test_environment;
 
 #[cfg(test)]
 mod test_utils;
-
-#[cfg(test)]
-mod verifying_client;
 
 #[cfg(test)]
 mod workspace_builder;
