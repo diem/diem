@@ -4,6 +4,9 @@
 mod event_fetcher;
 pub use event_fetcher::EventFetcher;
 
+mod transaction;
+pub use transaction::ExternalTransactionSigner;
+
 #[cfg(test)]
 mod client;
 
@@ -45,9 +48,6 @@ mod smoke_test_environment;
 
 #[cfg(test)]
 mod test_utils;
-
-#[cfg(test)]
-mod transaction;
 
 #[cfg(test)]
 mod verifying_client;
