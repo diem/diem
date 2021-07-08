@@ -64,13 +64,14 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
 
         // Create variants for possible function instantiations
         let mut func_variants = vec![];
-        for (i, (ty_args, global_ids)) in func_insts.into_iter().enumerate() {
+        for (i, (ty_args, mut global_ids)) in func_insts.into_iter().enumerate() {
             let variant_data = data.fork_with_instantiation(
                 env,
                 &ty_params,
                 &ty_args,
                 FunctionVariant::Verification(VerificationFlavor::Instantiated(i)),
             );
+            global_ids.extend(plain.clone().into_iter());
             func_variants.push((variant_data, global_ids));
         }
 
@@ -126,12 +127,10 @@ impl Analyzer {
 
         // filter non-applicable global invariants
         for invariant_id in invariants_for_used_memory {
-            if self.check_gloabl_invariant_applicability(
+            self.check_gloabl_invariant_applicability(
                 target,
                 env.get_global_invariant(invariant_id).unwrap(),
-            ) {
-                self.plain.insert(invariant_id);
-            }
+            );
         }
     }
 
@@ -139,9 +138,12 @@ impl Analyzer {
         &mut self,
         target: &FunctionTarget,
         invariant: &GlobalInvariant,
-    ) -> bool {
+    ) {
         let env = target.global_env();
         let ty_params = target.get_type_parameters();
+
+        // marks whether the invariant will be checked however this function is instantiated
+        let mut is_generic = false;
 
         // collect instantiations of this function that are needed to check this global invariant
         let mut func_insts = BTreeSet::new();
@@ -170,7 +172,9 @@ impl Analyzer {
                                 _ => panic!("Only TypeParameter is expected in the substitution"),
                             })
                             .collect();
-                        if !inst.is_empty() {
+                        if inst.is_empty() {
+                            is_generic = true;
+                        } else {
                             func_insts.insert(inst);
                         }
                     }
@@ -178,19 +182,15 @@ impl Analyzer {
             }
         }
 
-        if func_insts.is_empty() {
-            // this global invariant is applicable in this function
-            true
-        } else {
-            // save the instantiation required to evaluate this invariant
-            for inst in func_insts {
-                self.func_insts
-                    .entry(inst)
-                    .or_insert_with(BTreeSet::new)
-                    .insert(invariant.id);
-            }
-            // this global invariant is not applicable to be evaluated in this function
-            false
+        // save the instantiation required to evaluate this invariant
+        for inst in func_insts {
+            self.func_insts
+                .entry(inst)
+                .or_insert_with(BTreeSet::new)
+                .insert(invariant.id);
+        }
+        if is_generic {
+            self.plain.insert(invariant.id);
         }
     }
 }
