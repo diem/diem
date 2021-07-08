@@ -7206,6 +7206,7 @@ dependencies = [
  "diem-vault-client",
  "diem-workspace-hack",
  "diem-writeset-generator",
+ "forge",
  "generate-key",
  "hex",
  "move-command-line-common",

@@ -57,3 +57,8 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator" }
 diem-framework = { path = "../../language/diem-framework" }
 diem-transaction-builder = { path = "../../sdk/transaction-builder" }
+forge = { path = "../forge" }
+
+[[test]]
+name = "forge"
+harness = false
