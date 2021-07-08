@@ -7,7 +7,6 @@ use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    mono_analysis::MonoAnalysisProcessor,
     stackless_bytecode::Bytecode,
     usage_analysis,
 };
@@ -385,15 +384,7 @@ impl FunctionTargetProcessor for MonoProcessorV2 {
         builder.data
     }
 
-    fn finalize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
-        // TODO(mengxu) type quantifier elimination on axioms
-
-        // fill in the MonoInfo
-        let analyzer = MonoAnalysisProcessor::new();
-        analyzer.analyze(env, None, targets);
-    }
-
     fn name(&self) -> String {
-        "mono_analysis".to_owned()
+        "invariant_instantiation".to_owned()
     }
 }
