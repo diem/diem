@@ -78,50 +78,42 @@ public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 
 
 [variant baseline]
-fun Borrow::borrow_s($t0|a: address) {
-     var $t1: address
-     var $t2: &Borrow::S
-  0: $t1 := copy($t0)
-  1: $t2 := borrow_global<Borrow::S>($t1)
-  2: destroy($t2)
-  3: return ()
+fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
+     var $t1|a: vector<address>
+     var $t2: ReadVector::S
+     var $t3: vector<address>
+     var $t4: &vector<address>
+     var $t5: u64
+     var $t6: &address
+     var $t7: address
+  0: $t2 := move($t0)
+  1: $t3 := unpack ReadVector::S($t2)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t5 := 0
+  5: $t6 := Vector::borrow<address>($t4, $t5)
+  6: $t7 := read_ref($t6)
+  7: return $t7
 }
 
 
 [variant baseline]
-fun Borrow::borrow_s_mut($t0|a: address) {
-     var $t1: address
-     var $t2: &mut Borrow::S
-  0: $t1 := copy($t0)
-  1: $t2 := borrow_global<Borrow::S>($t1)
-  2: destroy($t2)
-  3: return ()
-}
-
-
-[variant baseline]
-fun Borrow::borrow_vec($t0|v: &vector<u64>) {
-     var $t1: &vector<u64>
-     var $t2: u64
-     var $t3: &u64
-  0: $t1 := move($t0)
-  1: $t2 := 7
-  2: $t3 := Vector::borrow<u64>($t1, $t2)
-  3: destroy($t3)
-  4: return ()
-}
-
-
-[variant baseline]
-fun Borrow::borrow_vec_mut($t0|v: &mut vector<u64>) {
-     var $t1: &mut vector<u64>
-     var $t2: u64
-     var $t3: &mut u64
-  0: $t1 := move($t0)
-  1: $t2 := 7
-  2: $t3 := Vector::borrow_mut<u64>($t1, $t2)
-  3: destroy($t3)
-  4: return ()
+fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
+     var $t1|a: address
+     var $t2: ReadVector::S
+     var $t3: address
+     var $t4: address
+     var $t5: &ReadVector::Glob
+     var $t6: &bool
+     var $t7: bool
+  0: $t2 := move($t0)
+  1: $t3 := ReadVector::extract_addr_from_vec($t2)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
+  4: $t5 := borrow_global<ReadVector::Glob>($t4)
+  5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
+  6: $t7 := read_ref($t6)
+  7: return $t7
 }
 
 ============ after pipeline `read_write_set` ================
@@ -209,70 +201,57 @@ public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 
 
 [variant baseline]
-fun Borrow::borrow_s($t0|a: address) {
-     var $t1: address
-     var $t2: &Borrow::S
+fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
+     var $t1|a: vector<address>
+     var $t2: ReadVector::S
+     var $t3: vector<address>
+     var $t4: &vector<address>
+     var $t5: u64
+     var $t6: &address
+     var $t7: address
      # Accesses:
      # Formal(0): Read
+     # Formal(0)/a: Read
+     # Formal(0)/a/[_]: Read
      #
      # Locals:
+     # Ret(0): Formal(0)/a/[_]
      #
-  0: $t1 := copy($t0)
-  1: $t2 := borrow_global<Borrow::S>($t1)
-  2: destroy($t2)
-  3: return ()
+  0: $t2 := move($t0)
+  1: $t3 := unpack ReadVector::S($t2)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t5 := 0
+  5: $t6 := Vector::borrow<address>($t4, $t5)
+  6: $t7 := read_ref($t6)
+  7: return $t7
 }
 
 
 [variant baseline]
-fun Borrow::borrow_s_mut($t0|a: address) {
-     var $t1: address
-     var $t2: &mut Borrow::S
+fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
+     var $t1|a: address
+     var $t2: ReadVector::S
+     var $t3: address
+     var $t4: address
+     var $t5: &ReadVector::Glob
+     var $t6: &bool
+     var $t7: bool
      # Accesses:
      # Formal(0): Read
+     # Formal(0)/a: Read
+     # Formal(0)/a/[_]: Read
+     # Formal(0)/a/[_]/0x2::ReadVector::Glob/b: Read
      #
      # Locals:
+     # Ret(0): Formal(0)/a/[_]/0x2::ReadVector::Glob/b
      #
-  0: $t1 := copy($t0)
-  1: $t2 := borrow_global<Borrow::S>($t1)
-  2: destroy($t2)
-  3: return ()
-}
-
-
-[variant baseline]
-fun Borrow::borrow_vec($t0|v: &vector<u64>) {
-     var $t1: &vector<u64>
-     var $t2: u64
-     var $t3: &u64
-     # Accesses:
-     # Formal(0): Read
-     # Formal(0)/[_]: Read
-     #
-     # Locals:
-     #
-  0: $t1 := move($t0)
-  1: $t2 := 7
-  2: $t3 := Vector::borrow<u64>($t1, $t2)
-  3: destroy($t3)
-  4: return ()
-}
-
-
-[variant baseline]
-fun Borrow::borrow_vec_mut($t0|v: &mut vector<u64>) {
-     var $t1: &mut vector<u64>
-     var $t2: u64
-     var $t3: &mut u64
-     # Accesses:
-     # Formal(0): Read
-     # Formal(0)/[_]: Read
-     #
-     # Locals:
-     #
-  0: $t1 := move($t0)
-  1: $t2 := 7
-  2: $t3 := Vector::borrow_mut<u64>($t1, $t2)
-  3: destroy($t3)
-  4: return ()
+  0: $t2 := move($t0)
+  1: $t3 := ReadVector::extract_addr_from_vec($t2)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
+  4: $t5 := borrow_global<ReadVector::Glob>($t4)
+  5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
+  6: $t7 := read_ref($t6)
+  7: return $t7
 }

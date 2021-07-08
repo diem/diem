@@ -1,0 +1,200 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun NestedFields::nested_fields_direct($t0|a: &NestedFields::A): address {
+     var $t1: &NestedFields::A
+     var $t2: &NestedFields::B
+     var $t3: &NestedFields::C
+     var $t4: &address
+     var $t5: address
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::A>.b($t1)
+  2: $t3 := borrow_field<NestedFields::B>.c($t2)
+  3: $t4 := borrow_field<NestedFields::C>.f($t3)
+  4: $t5 := read_ref($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_helper1($t0|c: &NestedFields::C): address {
+     var $t1: &NestedFields::C
+     var $t2: &address
+     var $t3: address
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::C>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_helper2($t0|b: &NestedFields::B): address {
+     var $t1: &NestedFields::B
+     var $t2: &NestedFields::C
+     var $t3: &address
+     var $t4: address
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::B>.c($t1)
+  2: $t3 := borrow_field<NestedFields::C>.f($t2)
+  3: $t4 := read_ref($t3)
+  4: return $t4
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &NestedFields::A, $t2|flag: bool): address {
+     var $t3|tmp#$3: address
+     var $t4: bool
+     var $t5: &NestedFields::A
+     var $t6: &NestedFields::A
+     var $t7: &NestedFields::B
+     var $t8: &NestedFields::C
+     var $t9: address
+     var $t10: &NestedFields::A
+     var $t11: &NestedFields::A
+     var $t12: &NestedFields::B
+     var $t13: address
+     var $t14: address
+  0: $t4 := copy($t2)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 13
+  4: label L0
+  5: $t5 := move($t1)
+  6: destroy($t5)
+  7: $t6 := move($t0)
+  8: $t7 := borrow_field<NestedFields::A>.b($t6)
+  9: $t8 := borrow_field<NestedFields::B>.c($t7)
+ 10: $t9 := NestedFields::nested_fields_helper1($t8)
+ 11: $t3 := $t9
+ 12: goto 21
+ 13: label L2
+ 14: $t10 := move($t0)
+ 15: destroy($t10)
+ 16: $t11 := move($t1)
+ 17: $t12 := borrow_field<NestedFields::A>.b($t11)
+ 18: $t13 := NestedFields::nested_fields_helper2($t12)
+ 19: $t3 := $t13
+ 20: goto 21
+ 21: label L3
+ 22: $t14 := move($t3)
+ 23: return $t14
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun NestedFields::nested_fields_direct($t0|a: &NestedFields::A): address {
+     var $t1: &NestedFields::A
+     var $t2: &NestedFields::B
+     var $t3: &NestedFields::C
+     var $t4: &address
+     var $t5: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/b/c/f: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/b/c/f
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::A>.b($t1)
+  2: $t3 := borrow_field<NestedFields::B>.c($t2)
+  3: $t4 := borrow_field<NestedFields::C>.f($t3)
+  4: $t5 := read_ref($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_helper1($t0|c: &NestedFields::C): address {
+     var $t1: &NestedFields::C
+     var $t2: &address
+     var $t3: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/f: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/f
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::C>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_helper2($t0|b: &NestedFields::B): address {
+     var $t1: &NestedFields::B
+     var $t2: &NestedFields::C
+     var $t3: &address
+     var $t4: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/c/f: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/c/f
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<NestedFields::B>.c($t1)
+  2: $t3 := borrow_field<NestedFields::C>.f($t2)
+  3: $t4 := read_ref($t3)
+  4: return $t4
+}
+
+
+[variant baseline]
+fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &NestedFields::A, $t2|flag: bool): address {
+     var $t3|tmp#$3: address
+     var $t4: bool
+     var $t5: &NestedFields::A
+     var $t6: &NestedFields::A
+     var $t7: &NestedFields::B
+     var $t8: &NestedFields::C
+     var $t9: address
+     var $t10: &NestedFields::A
+     var $t11: &NestedFields::A
+     var $t12: &NestedFields::B
+     var $t13: address
+     var $t14: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/b/c: Read
+     # Formal(0)/b/c/f: Read
+     # Formal(1): Read
+     # Formal(1)/b: Read
+     # Formal(1)/b/c/f: Read
+     # Formal(2): Read
+     #
+     # Locals:
+     # Ret(0): {Formal(0)/b/c/f, Formal(1)/b/c/f, }
+     #
+  0: $t4 := copy($t2)
+  1: if ($t4) goto 4 else goto 2
+  2: label L1
+  3: goto 13
+  4: label L0
+  5: $t5 := move($t1)
+  6: destroy($t5)
+  7: $t6 := move($t0)
+  8: $t7 := borrow_field<NestedFields::A>.b($t6)
+  9: $t8 := borrow_field<NestedFields::B>.c($t7)
+ 10: $t9 := NestedFields::nested_fields_helper1($t8)
+ 11: $t3 := $t9
+ 12: goto 21
+ 13: label L2
+ 14: $t10 := move($t0)
+ 15: destroy($t10)
+ 16: $t11 := move($t1)
+ 17: $t12 := borrow_field<NestedFields::A>.b($t11)
+ 18: $t13 := NestedFields::nested_fields_helper2($t12)
+ 19: $t3 := $t13
+ 20: goto 21
+ 21: label L3
+ 22: $t14 := move($t3)
+ 23: return $t14
+}

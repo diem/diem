@@ -1,8 +1,8 @@
-address 0x1 {
-module Borrow {
-    // TODO: figure out how to allow this dependency
+// dep: ../../move-stdlib/modules/Vector.move
+
+module 0x1::Borrow {
     // ensure that borrows get counted as reads when appropriate
-    //use 0x1::Vector;
+    use 0x1::Vector;
 
     struct S has key { }
 
@@ -16,15 +16,13 @@ module Borrow {
         _ = borrow_global_mut<S>(a)
     }
 
-    /*// expected: read v/size
+    // expected: read v/size
     fun borrow_vec(v: &vector<u64>) {
         let _ = Vector::borrow(v, 7);
     }
 
     // expected: read v/size
-    fun borrow_vec_mut(v: &vector<u64>) {
-        let _ = Vector::borrow_mut(v, 7);
-    }*/
-
-}
+    fun borrow_vec_mut(v: &mut vector<u64>) {
+        let _ = Vector::borrow_mut<u64>(v, 7);
+    }
 }

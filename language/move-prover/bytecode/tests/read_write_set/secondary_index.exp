@@ -1,0 +1,171 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A): address {
+     var $t1: &SecondaryIndex::A
+     var $t2: &address
+     var $t3: address
+     var $t4: &SecondaryIndex::B
+     var $t5: &address
+     var $t6: address
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<SecondaryIndex::A>.a_addr($t1)
+  2: $t3 := read_ref($t2)
+  3: $t4 := borrow_global<SecondaryIndex::B>($t3)
+  4: $t5 := borrow_field<SecondaryIndex::B>.b_addr($t4)
+  5: $t6 := read_ref($t5)
+  6: return $t6
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_formal_interproc($t0|a_addr: address): address {
+     var $t1|a: SecondaryIndex::A
+     var $t2: address
+     var $t3: SecondaryIndex::A
+     var $t4: &SecondaryIndex::A
+     var $t5: address
+  0: $t2 := copy($t0)
+  1: $t3 := pack SecondaryIndex::A($t2)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t5 := SecondaryIndex::read_secondary_index_from_formal($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_global($t0|a: address): address {
+     var $t1|addr: address
+     var $t2: address
+     var $t3: &SecondaryIndex::A
+     var $t4: &address
+     var $t5: address
+     var $t6: address
+     var $t7: &SecondaryIndex::B
+     var $t8: &address
+     var $t9: address
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<SecondaryIndex::A>($t2)
+  2: $t4 := borrow_field<SecondaryIndex::A>.a_addr($t3)
+  3: $t5 := read_ref($t4)
+  4: $t1 := $t5
+  5: $t6 := copy($t1)
+  6: $t7 := borrow_global<SecondaryIndex::B>($t6)
+  7: $t8 := borrow_field<SecondaryIndex::B>.b_addr($t7)
+  8: $t9 := read_ref($t8)
+  9: return $t9
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_global_interproc($t0|a: address): address {
+     var $t1: address
+     var $t2: &SecondaryIndex::A
+     var $t3: address
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<SecondaryIndex::A>($t1)
+  2: $t3 := SecondaryIndex::read_secondary_index_from_formal($t2)
+  3: return $t3
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A): address {
+     var $t1: &SecondaryIndex::A
+     var $t2: &address
+     var $t3: address
+     var $t4: &SecondaryIndex::B
+     var $t5: &address
+     var $t6: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/a_addr: Read
+     # Formal(0)/a_addr/0x1::SecondaryIndex::B/b_addr: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/a_addr/0x1::SecondaryIndex::B/b_addr
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<SecondaryIndex::A>.a_addr($t1)
+  2: $t3 := read_ref($t2)
+  3: $t4 := borrow_global<SecondaryIndex::B>($t3)
+  4: $t5 := borrow_field<SecondaryIndex::B>.b_addr($t4)
+  5: $t6 := read_ref($t5)
+  6: return $t6
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_formal_interproc($t0|a_addr: address): address {
+     var $t1|a: SecondaryIndex::A
+     var $t2: address
+     var $t3: SecondaryIndex::A
+     var $t4: &SecondaryIndex::A
+     var $t5: address
+     # Accesses:
+     # Formal(0): Read
+     #
+     # Locals:
+     #
+  0: $t2 := copy($t0)
+  1: $t3 := pack SecondaryIndex::A($t2)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t5 := SecondaryIndex::read_secondary_index_from_formal($t4)
+  5: return $t5
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_global($t0|a: address): address {
+     var $t1|addr: address
+     var $t2: address
+     var $t3: &SecondaryIndex::A
+     var $t4: &address
+     var $t5: address
+     var $t6: address
+     var $t7: &SecondaryIndex::B
+     var $t8: &address
+     var $t9: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/0x1::SecondaryIndex::A/a_addr: Read
+     # Formal(0)/0x1::SecondaryIndex::A/a_addr/0x1::SecondaryIndex::B/b_addr: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/0x1::SecondaryIndex::A/a_addr/0x1::SecondaryIndex::B/b_addr
+     #
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<SecondaryIndex::A>($t2)
+  2: $t4 := borrow_field<SecondaryIndex::A>.a_addr($t3)
+  3: $t5 := read_ref($t4)
+  4: $t1 := $t5
+  5: $t6 := copy($t1)
+  6: $t7 := borrow_global<SecondaryIndex::B>($t6)
+  7: $t8 := borrow_field<SecondaryIndex::B>.b_addr($t7)
+  8: $t9 := read_ref($t8)
+  9: return $t9
+}
+
+
+[variant baseline]
+fun SecondaryIndex::read_secondary_index_from_global_interproc($t0|a: address): address {
+     var $t1: address
+     var $t2: &SecondaryIndex::A
+     var $t3: address
+     # Accesses:
+     # Formal(0): Read
+     # Formal(0)/0x1::SecondaryIndex::A: Read
+     # Formal(0)/0x1::SecondaryIndex::A/a_addr: Read
+     # Formal(0)/0x1::SecondaryIndex::A/a_addr/0x1::SecondaryIndex::B/b_addr: Read
+     #
+     # Locals:
+     # Ret(0): Formal(0)/0x1::SecondaryIndex::A/a_addr/0x1::SecondaryIndex::B/b_addr
+     #
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<SecondaryIndex::A>($t1)
+  2: $t3 := SecondaryIndex::read_secondary_index_from_formal($t2)
+  3: return $t3
+}
