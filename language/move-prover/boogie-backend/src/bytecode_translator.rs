@@ -723,6 +723,7 @@ impl<'env> FunctionTranslator<'env> {
         // Translate the bytecode instruction.
         match bytecode {
             SaveMem(_, label, mem) => {
+                let mem = &mem.to_owned().instantiate(self.type_inst);
                 let snapshot = boogie_resource_memory_name(env, mem, &Some(*label));
                 let current = boogie_resource_memory_name(env, mem, &None);
                 emitln!(writer, "{} := {};", snapshot, current);
