@@ -292,7 +292,7 @@ where
 
         let (txn_state_roots, current_state_tree) = parent_trees
             .state_tree()
-            .serial_update(
+            .batches_update(
                 txn_blobs
                     .iter()
                     .map(|m| {

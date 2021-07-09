@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::sparse_merkle::{MAX_PARALLELIZABLE_DEPTH, MIN_PARALLELIZABLE_SIZE};
 use crate::{
     sparse_merkle::{
         node::{InternalNode, Node, NodeHandle},
@@ -265,11 +266,6 @@ impl<'a, V: Send + Sync + Clone + CryptoHash> SubTreeUpdater<'a, V> {
     }
 
     fn run(self, proof_reader: &impl ProofRead<V>) -> Result<InMemSubTreeInfo<V>> {
-        // Limit total tasks that are potentially sent to other threads.
-        const MAX_PARALLELIZABLE_DEPTH: usize = 8;
-        // No point to introduce Rayon overhead if work is small.
-        const MIN_PARALLELIZABLE_SIZE: usize = 2;
-
         let depth = self.depth;
         match self.maybe_end_recursion() {
             Either::A(ended) => Ok(ended),
