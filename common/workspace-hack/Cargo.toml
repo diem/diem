@@ -45,7 +45,7 @@ num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
 once_cell = { version = "1.7.2", features = ["alloc", "default", "race", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
-prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
+prost = { version = "0.8.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
@@ -58,7 +58,7 @@ serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tiny-keccak = { version = "2.0.2", features = ["default", "sha3"] }
-tokio = { version = "1.6.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
+tokio = { version = "1.8.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-tungstenite = { version = "0.13.0", features = ["connect", "default", "stream"] }
 tokio-util = { version = "0.6.4", features = ["codec", "compat", "default", "futures-io", "io"] }
 toml = { version = "0.5.8", features = ["default"] }
@@ -104,7 +104,7 @@ once_cell = { version = "1.7.2", features = ["alloc", "default", "race", "std"] 
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
-prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
+prost = { version = "0.8.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
@@ -120,7 +120,7 @@ subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.72", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tiny-keccak = { version = "2.0.2", features = ["default", "sha3"] }
-tokio = { version = "1.6.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
+tokio = { version = "1.8.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-tungstenite = { version = "0.13.0", features = ["connect", "default", "stream"] }
 tokio-util = { version = "0.6.4", features = ["codec", "compat", "default", "futures-io", "io"] }
 toml = { version = "0.5.8", features = ["default"] }
@@ -164,7 +164,7 @@ num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
 once_cell = { version = "1.7.2", features = ["alloc", "default", "race", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
-prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
+prost = { version = "0.8.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
@@ -177,7 +177,7 @@ serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tiny-keccak = { version = "2.0.2", features = ["default", "sha3"] }
-tokio = { version = "1.6.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
+tokio = { version = "1.8.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-tungstenite = { version = "0.13.0", features = ["connect", "default", "stream"] }
 tokio-util = { version = "0.6.4", features = ["codec", "compat", "default", "futures-io", "io"] }
 toml = { version = "0.5.8", features = ["default"] }
@@ -223,7 +223,7 @@ once_cell = { version = "1.7.2", features = ["alloc", "default", "race", "std"] 
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
-prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
+prost = { version = "0.8.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
@@ -239,7 +239,7 @@ subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.72", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tiny-keccak = { version = "2.0.2", features = ["default", "sha3"] }
-tokio = { version = "1.6.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
+tokio = { version = "1.8.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-tungstenite = { version = "0.13.0", features = ["connect", "default", "stream"] }
 tokio-util = { version = "0.6.4", features = ["codec", "compat", "default", "futures-io", "io"] }
 toml = { version = "0.5.8", features = ["default"] }
