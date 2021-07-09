@@ -46,13 +46,12 @@ jobs:
           head -100 $AUDIT_SUMMARY_FILE >> $GITHUB_ENV
           echo "\`\`\`" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-      - uses: diem/actions/create-issue@04f4286ca22e4b9efbc5eb49a20e2e5389c5318b
+      - uses: diem/actions/create-issue@faadd16607b77dfa2231a8f366883e01717b3225
         if: ${{ failure() }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           title: "RUSTSEC in dependencies in branch ${{ matrix.target-branch }}"
           body: ${{ env.ISSUE_BODY }}
-          assignees: "@diem/diem-core-oncall"
           labels: "dependecies"
       - uses: ./.github/actions/build-teardown
 
