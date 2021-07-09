@@ -85,7 +85,7 @@ impl<V: VMExecutor> GenesisCommitter<V> {
         self.waypoint
     }
 
-    pub fn commit(mut self) -> Result<()> {
+    pub fn commit(self) -> Result<()> {
         self.executor
             .commit_blocks(vec![genesis_block_id()], self.ledger_info_with_sigs)?;
         info!("Genesis commited.");
@@ -104,7 +104,7 @@ pub fn calculate_genesis<V: VMExecutor>(
     // In the very extreme and sad situation of losing quorum among validators, we refer to the
     // second use case said above.
     let genesis_version = tree_state.num_transactions;
-    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);
+    let executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);
 
     let block_id = HashValue::zero();
     let epoch = if genesis_version == 0 {

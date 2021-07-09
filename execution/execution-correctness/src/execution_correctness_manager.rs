@@ -12,7 +12,6 @@ use crate::{
 use diem_config::config::{ExecutionCorrectnessService, NodeConfig};
 use diem_crypto::ed25519::Ed25519PrivateKey;
 use diem_global_constants::EXECUTION_KEY;
-use diem_infallible::Mutex;
 use diem_secure_storage::{CryptoStorage, Storage};
 use diem_vm::DiemVM;
 use executor::Executor;
@@ -45,9 +44,9 @@ pub fn extract_execution_prikey(config: &NodeConfig) -> Option<Ed25519PrivateKey
 }
 
 enum ExecutionCorrectnessWrapper {
-    Local(Arc<Mutex<LocalService>>),
+    Local(Arc<LocalService>),
     Process(ProcessService),
-    Serializer(Arc<Mutex<SerializerService>>),
+    Serializer(Arc<SerializerService>),
     Thread(ThreadService),
 }
 
@@ -94,7 +93,7 @@ impl ExecutionCorrectnessManager {
         ));
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Local(Arc::new(
-                Mutex::new(LocalService::new(block_executor, execution_prikey)),
+                LocalService::new(block_executor, execution_prikey),
             )),
         }
     }
@@ -117,7 +116,7 @@ impl ExecutionCorrectnessManager {
         let serializer_service = SerializerService::new(block_executor, execution_prikey);
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Serializer(Arc::new(
-                Mutex::new(serializer_service),
+                serializer_service,
             )),
         }
     }

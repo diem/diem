@@ -62,7 +62,7 @@ fn test_reconfiguration() {
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
-    let (_, db, mut executor, _waypoint) = create_db_and_executor(path.path(), &genesis_txn);
+    let (_, db, executor, _waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
     let signer = ValidatorSigner::new(validators[0].data.address, validators[0].key.clone());
     let validator_account = signer.author();
@@ -233,7 +233,7 @@ fn test_change_publishing_option_to_custom() {
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
 
-    let (_, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
+    let (_, db, executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();

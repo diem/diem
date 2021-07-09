@@ -35,7 +35,7 @@ pub fn fuzz_execute_and_commit_chunk(
     txn_list_with_proof: TransactionListWithProof,
     verified_target_li: LedgerInfoWithSignatures,
 ) {
-    let mut executor = create_test_executor();
+    let executor = create_test_executor();
     let _events = executor.execute_and_commit_chunk(txn_list_with_proof, verified_target_li, None);
 }
 
@@ -43,7 +43,7 @@ pub fn fuzz_execute_and_commit_blocks(
     blocks: Vec<(HashValue, Vec<Transaction>)>,
     ledger_info_with_sigs: LedgerInfoWithSignatures,
 ) {
-    let mut executor = create_test_executor();
+    let executor = create_test_executor();
 
     let mut parent_block_id = *SPARSE_MERKLE_PLACEHOLDER_HASH;
     let mut block_ids = vec![];

@@ -30,12 +30,12 @@ use storage_interface::TreeState;
 type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
 type SparseMerkleTree = scratchpad::SparseMerkleTree<AccountStateBlob>;
 
-pub trait ChunkExecutor: Send {
+pub trait ChunkExecutor: Send + Sync {
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
     /// Returns a vector of reconfiguration events in the chunk
     fn execute_and_commit_chunk(
-        &mut self,
+        &self,
         txn_list_with_proof: TransactionListWithProof,
         // Target LI that has been verified independently: the proofs are relative to this version.
         verified_target_li: LedgerInfoWithSignatures,
@@ -45,16 +45,16 @@ pub trait ChunkExecutor: Send {
     ) -> Result<Vec<ContractEvent>>;
 }
 
-pub trait BlockExecutor: Send {
+pub trait BlockExecutor: Send + Sync {
     /// Get the latest committed block id
-    fn committed_block_id(&mut self) -> Result<HashValue, Error>;
+    fn committed_block_id(&self) -> Result<HashValue, Error>;
 
     /// Reset the internal state including cache with newly fetched latest committed block from storage.
-    fn reset(&mut self) -> Result<(), Error>;
+    fn reset(&self) -> Result<(), Error>;
 
     /// Executes a block.
     fn execute_block(
-        &mut self,
+        &self,
         block: (HashValue, Vec<Transaction>),
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error>;
@@ -69,7 +69,7 @@ pub trait BlockExecutor: Send {
     /// then `D` and `E` later in the another batch.
     /// Commits a block and all its ancestors in a batch manner.
     fn commit_blocks(
-        &mut self,
+        &self,
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(), Error>;
@@ -77,7 +77,7 @@ pub trait BlockExecutor: Send {
 
 pub trait TransactionReplayer: Send {
     fn replay_chunk(
-        &mut self,
+        &self,
         first_version: Version,
         txns: Vec<Transaction>,
         txn_infos: Vec<TransactionInfo>,

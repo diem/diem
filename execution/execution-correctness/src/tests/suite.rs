@@ -9,7 +9,7 @@ use executor_test_helpers::{extract_signer, gen_ledger_info_with_sigs};
 pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25519PublicKey>)) {
     let (mut config, _genesis_key) = diem_genesis_tool::test_config();
     let signer = extract_signer(&mut config);
-    let (mut executor, execution_pubkey) = executor_pair;
+    let (executor, execution_pubkey) = executor_pair;
     let parent_block_id = executor.committed_block_id().unwrap();
 
     let block = Block::make_genesis_block();

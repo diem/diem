@@ -5,6 +5,7 @@ use crate::serializer::{
     ExecutionCorrectnessInput, SerializerClient, SerializerService, TSerializerClient,
 };
 use diem_crypto::ed25519::Ed25519PrivateKey;
+use diem_infallible::Mutex;
 use diem_logger::warn;
 use diem_secure_net::{NetworkClient, NetworkServer};
 use diem_vm::DiemVM;
@@ -17,7 +18,7 @@ pub trait RemoteService {
     fn client(&self) -> SerializerClient {
         let network_client =
             NetworkClient::new("execution", self.server_address(), self.network_timeout());
-        let service = Box::new(RemoteClient::new(network_client));
+        let service = Box::new(RemoteClient::new(Mutex::new(network_client)));
         SerializerClient::new_client(service)
     }
 
@@ -34,11 +35,11 @@ pub fn execute(
     let block_executor = Box::new(Executor::<DiemVM>::new(
         StorageClient::new(&storage_addr, network_timeout).into(),
     ));
-    let mut serializer_service = SerializerService::new(block_executor, prikey);
+    let serializer_service = SerializerService::new(block_executor, prikey);
     let mut network_server = NetworkServer::new("execution", listen_addr, network_timeout);
 
     loop {
-        if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {
+        if let Err(e) = process_one_message(&mut network_server, &serializer_service) {
             warn!("Warning: Failed to process message: {}", e);
         }
     }
@@ -46,7 +47,7 @@ pub fn execute(
 
 fn process_one_message(
     network_server: &mut NetworkServer,
-    serializer_service: &mut SerializerService,
+    serializer_service: &SerializerService,
 ) -> Result<(), Error> {
     let request = network_server.read()?;
     let response = serializer_service.handle_message(request)?;
@@ -55,22 +56,23 @@ fn process_one_message(
 }
 
 struct RemoteClient {
-    network_client: NetworkClient,
+    network_client: Mutex<NetworkClient>,
 }
 
 impl RemoteClient {
-    pub fn new(network_client: NetworkClient) -> Self {
+    pub fn new(network_client: Mutex<NetworkClient>) -> Self {
         Self { network_client }
     }
 
-    fn process_one_message(&mut self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        self.network_client.write(&input)?;
-        self.network_client.read().map_err(|e| e.into())
+    fn process_one_message(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
+        let mut client = self.network_client.lock();
+        client.write(&input)?;
+        client.read().map_err(|e| e.into())
     }
 }
 
 impl TSerializerClient for RemoteClient {
-    fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
+    fn request(&self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
         let input_message = bcs::to_bytes(&input)?;
         loop {
             match self.process_one_message(&input_message) {

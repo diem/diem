@@ -39,7 +39,7 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
 
     let path = diem_temppath::TempPath::new();
     path.create_as_dir().unwrap();
-    let (diem_db, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
+    let (diem_db, db, executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
 
     let parent_block_id = executor.committed_block_id();
     let signer = diem_types::validator_signer::ValidatorSigner::new(

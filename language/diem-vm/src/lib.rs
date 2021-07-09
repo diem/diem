@@ -151,7 +151,7 @@ pub trait VMValidator {
 }
 
 /// This trait describes the VM's execution interface.
-pub trait VMExecutor: Send {
+pub trait VMExecutor: Send + Sync {
     // NOTE: At the moment there are no persistent caches that live past the end of a block (that's
     // why execute_block doesn't take &self.)
     // There are some cache invalidation issues around transactions publishing code that need to be

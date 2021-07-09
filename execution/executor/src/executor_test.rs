@@ -23,7 +23,7 @@ use rand::Rng;
 use std::collections::BTreeMap;
 
 fn execute_and_commit_block(
-    executor: &mut TestExecutor,
+    executor: &TestExecutor,
     parent_block_id: HashValue,
     txn_index: u64,
 ) -> HashValue {
@@ -115,7 +115,7 @@ fn gen_ledger_info(
 
 #[test]
 fn test_executor_status() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
     let block_id = gen_block_id(1);
 
@@ -139,7 +139,7 @@ fn test_executor_status() {
 
 #[test]
 fn test_executor_one_block() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
     let block_id = gen_block_id(1);
 
@@ -160,17 +160,17 @@ fn test_executor_one_block() {
 
 #[test]
 fn test_executor_multiple_blocks() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let mut parent_block_id = executor.committed_block_id();
 
     for i in 0..100 {
-        parent_block_id = execute_and_commit_block(&mut executor, parent_block_id, i);
+        parent_block_id = execute_and_commit_block(&executor, parent_block_id, i);
     }
 }
 
 #[test]
 fn test_executor_two_blocks_with_failed_txns() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
 
     let block1_id = gen_block_id(1);
@@ -202,7 +202,7 @@ fn test_executor_two_blocks_with_failed_txns() {
 
 #[test]
 fn test_executor_commit_twice() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
     let block1_txns = (0..5)
         .map(|i| encode_mint_transaction(gen_address(i), 100))
@@ -223,7 +223,7 @@ fn test_executor_commit_twice() {
 
 #[test]
 fn test_executor_execute_same_block_multiple_times() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
     let block_id = gen_block_id(1);
     let version = 100;
@@ -262,7 +262,7 @@ fn create_transaction_chunks(
     let TestExecutor {
         _path,
         db: _,
-        mut executor,
+        executor,
     } = TestExecutor::new();
 
     let mut txns = vec![];
@@ -322,7 +322,7 @@ fn test_executor_execute_and_commit_chunk() {
     let TestExecutor {
         _path,
         db,
-        mut executor,
+        executor,
     } = TestExecutor::new();
 
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
@@ -386,7 +386,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
     let TestExecutor {
         _path,
         db,
-        mut executor,
+        executor,
     } = TestExecutor::new();
 
     // First we simulate syncing the first chunk of transactions.
@@ -401,7 +401,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
 
     // Then we restart executor and resume to the next chunk.
     {
-        let mut executor = Executor::<MockVM>::new(db.clone());
+        let executor = Executor::<MockVM>::new(db.clone());
 
         executor
             .execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), None)
@@ -428,7 +428,7 @@ fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
     let TestExecutor {
         _path,
         db: _,
-        mut executor,
+        executor,
     } = TestExecutor::new();
     // commit 5 txns first.
     {
@@ -453,7 +453,7 @@ fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
 
 #[test]
 fn test_noop_block_after_reconfiguration() {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let mut parent_block_id = executor.committed_block_id();
     let first_txn = encode_reconfiguration_transaction(gen_address(1));
     let first_block_id = gen_block_id(1);
@@ -487,7 +487,7 @@ impl TestBlock {
 // Executes a list of transactions by executing and immediately commtting one at a time. Returns
 // the root hash after all transactions are committed.
 fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
-    let mut executor = TestExecutor::new();
+    let executor = TestExecutor::new();
     let mut parent_block_id = executor.committed_block_id();
 
     let mut iter = transactions.into_iter();
@@ -535,7 +535,7 @@ proptest! {
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(2));
         let block_c = TestBlock::new(0..c_size, amount, gen_block_id(3));
         // Execute block A, B and C. Hold all results in memory.
-        let mut executor = TestExecutor::new();
+        let executor = TestExecutor::new();
         let parent_block_id = executor.committed_block_id();
 
         let output_a = executor.execute_block(
@@ -583,7 +583,7 @@ proptest! {
             let block_id = gen_block_id(1);
             let mut block = TestBlock::new(0..num_txns, 10, block_id);
             block.txns[reconfig_txn_index as usize] = encode_reconfiguration_transaction(gen_address(reconfig_txn_index));
-            let mut executor = TestExecutor::new();
+            let executor = TestExecutor::new();
 
             let parent_block_id = executor.committed_block_id();
             let output = executor.execute_block(
@@ -620,7 +620,7 @@ proptest! {
 
             // replay txns in one batch across epoch boundary,
             // and the replayer should deal with `Retry`s automatically
-            let mut replayer = TestExecutor::new();
+            let replayer = TestExecutor::new();
             replayer.replay_chunk(1 /* first version */, block.txns, txn_infos).unwrap();
             let replayed_db = replayer.db.reader.clone();
             prop_assert_eq!(replayed_db.get_latest_state_root().unwrap(), db.get_latest_state_root().unwrap())
@@ -631,7 +631,7 @@ proptest! {
         let block_a = TestBlock::new(0..a_size, amount, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(2));
 
-        let TestExecutor { _path, db, mut executor } = TestExecutor::new();
+        let TestExecutor { _path, db, executor } = TestExecutor::new();
         let mut parent_block_id;
         let mut root_hash;
 
@@ -649,7 +649,7 @@ proptest! {
 
         // Now we construct a new executor and run one more block.
         {
-            let mut executor = Executor::<MockVM>::new(db);
+            let executor = Executor::<MockVM>::new(db);
             let output_b = executor.execute_block((block_b.id, block_b.txns.clone()), parent_block_id).unwrap();
             root_hash = output_b.root_hash();
             let ledger_info = gen_ledger_info(
@@ -680,7 +680,7 @@ proptest! {
                 overlap_start..overlap_end
             ]);
 
-        let TestExecutor { _path, db: _, mut executor } = TestExecutor::new();
+        let TestExecutor { _path, db: _, executor } = TestExecutor::new();
         let parent_block_id = executor.committed_block_id();
 
         let overlap_txn_list_with_proof = chunks.pop().unwrap();
