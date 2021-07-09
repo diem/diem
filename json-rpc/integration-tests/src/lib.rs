@@ -1,31 +1,29 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_crypto::{hash::CryptoHash, HashValue};
-use diem_json_rpc::views::{
-    AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView,
-};
-use diem_sdk::{transaction_builder::Currency, types::AccountKey};
-use diem_transaction_builder::stdlib;
-use diem_types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    account_config::{treasury_compliance_account_address, xus_tag},
-    contract_event::EventWithProof,
-    diem_id_identifier::DiemIdVaspDomainIdentifier,
-    event::EventKey,
-    ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::DIEM_MAX_KNOWN_VERSION,
-    proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
-    transaction::{
-        AccountTransactionsWithProof, ChangeSet, Transaction, TransactionPayload, WriteSetPayload,
+use diem_sdk::{
+    client::views::{AccountTransactionsWithProofView, AccumulatorConsistencyProofView, EventView},
+    crypto::{hash::CryptoHash, HashValue},
+    transaction_builder::{stdlib, Currency},
+    types::{
+        access_path::AccessPath,
+        account_address::AccountAddress,
+        account_config::{treasury_compliance_account_address, xus_tag},
+        contract_event::EventWithProof,
+        diem_id_identifier::DiemIdVaspDomainIdentifier,
+        event::EventKey,
+        ledger_info::LedgerInfoWithSignatures,
+        on_chain_config::DIEM_MAX_KNOWN_VERSION,
+        proof::{AccumulatorConsistencyProof, TransactionAccumulatorSummary},
+        transaction::{
+            AccountTransactionsWithProof, ChangeSet, Transaction, TransactionPayload,
+            WriteSetPayload,
+        },
+        write_set::{WriteOp, WriteSet, WriteSetMut},
+        AccountKey,
     },
-    write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use forge::{
-    forge_main, AdminContext, AdminTest, ForgeConfig, LocalFactory, Options, PublicUsageContext,
-    PublicUsageTest, Result, Test,
-};
+use forge::{AdminContext, AdminTest, PublicUsageContext, PublicUsageTest, Result, Test};
 use serde_json::json;
 use std::{
     convert::{TryFrom, TryInto},
@@ -36,54 +34,7 @@ use std::{
 mod helper;
 use helper::JsonRpcTestHelper;
 
-fn main() -> Result<()> {
-    let tests = ForgeConfig {
-        public_usage_tests: &[
-            &CurrencyInfo,
-            &BlockMetadata,
-            &OldMetadata,
-            &AccoutNotFound,
-            &UnknownAccountRoleType,
-            &DesignatedDealerPreburns,
-            &ParentVaspAccountRole,
-            &GetAccountByVersion,
-            &ChildVaspAccountRole,
-            &PeerToPeerWithEvents,
-            &PeerToPeerErrorExplination,
-            &ReSubmittingTransactionWontFail,
-            &MempoolValidationError,
-            &ExpiredTransaction,
-            &RotateComplianceKeyEvent,
-            &CreateAccountEvent,
-            &GetTransactionsWithoutEvents,
-            &GetAccountTransactionsWithoutEvents,
-            &GetAccountTransactionsWithProofs,
-            &GetTransactionsWithProofs,
-            &GetTreasuryComplianceAccount,
-            &GetEventsWithProofs,
-            &MultiAgentPaymentOverDualAttestationLimit,
-            &GetAccumulatorConsistencyProof,
-            &NoUnknownEvents,
-        ],
-        admin_tests: &[
-            &PreburnAndBurnEvents,
-            &CancleBurnEvent,
-            &UpdateExchangeRateEvent,
-            &MintAndReceivedMintEvents,
-            &AddAndRemoveVaspDomain,
-            &MultiAgentRotateAuthenticationKeyAdminScript,
-            &MultiAgentRotateAuthenticationKeyAdminScriptFunction,
-            &UpgradeEventAndNewEpoch,
-            &UpgradeDiemVersion,
-        ],
-        network_tests: &[],
-    };
-
-    let options = Options::from_args();
-    forge_main(tests, LocalFactory::from_workspace()?, &options)
-}
-
-struct CurrencyInfo;
+pub struct CurrencyInfo;
 
 impl Test for CurrencyInfo {
     fn name(&self) -> &'static str {
@@ -127,7 +78,7 @@ impl PublicUsageTest for CurrencyInfo {
     }
 }
 
-struct BlockMetadata;
+pub struct BlockMetadata;
 
 impl Test for BlockMetadata {
     fn name(&self) -> &'static str {
@@ -201,7 +152,7 @@ impl PublicUsageTest for BlockMetadata {
 }
 
 /// Get Metadata with older version parameter should not return version information
-struct OldMetadata;
+pub struct OldMetadata;
 
 impl Test for OldMetadata {
     fn name(&self) -> &'static str {
@@ -226,7 +177,7 @@ impl PublicUsageTest for OldMetadata {
     }
 }
 
-struct AccoutNotFound;
+pub struct AccoutNotFound;
 
 impl Test for AccoutNotFound {
     fn name(&self) -> &'static str {
@@ -243,7 +194,7 @@ impl PublicUsageTest for AccoutNotFound {
     }
 }
 
-struct UnknownAccountRoleType;
+pub struct UnknownAccountRoleType;
 
 impl Test for UnknownAccountRoleType {
     fn name(&self) -> &'static str {
@@ -254,7 +205,7 @@ impl Test for UnknownAccountRoleType {
 impl PublicUsageTest for UnknownAccountRoleType {
     fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
         let env = JsonRpcTestHelper::new(ctx.url().to_owned());
-        let address = format!("{:x}", diem_types::account_config::diem_root_address());
+        let address = format!("{:x}", diem_sdk::types::account_config::diem_root_address());
         let resp = env.send("get_account", json!([address]));
         let mut result = resp.result.unwrap();
         // as we generate account auth key, ignore it in assertion
@@ -281,7 +232,7 @@ impl PublicUsageTest for UnknownAccountRoleType {
     }
 }
 
-struct DesignatedDealerPreburns;
+pub struct DesignatedDealerPreburns;
 
 impl Test for DesignatedDealerPreburns {
     fn name(&self) -> &'static str {
@@ -431,7 +382,7 @@ impl PublicUsageTest for DesignatedDealerPreburns {
     }
 }
 
-struct ParentVaspAccountRole;
+pub struct ParentVaspAccountRole;
 
 impl Test for ParentVaspAccountRole {
     fn name(&self) -> &'static str {
@@ -481,7 +432,7 @@ impl PublicUsageTest for ParentVaspAccountRole {
     }
 }
 
-struct GetAccountByVersion;
+pub struct GetAccountByVersion;
 
 impl Test for GetAccountByVersion {
     fn name(&self) -> &'static str {
@@ -540,7 +491,7 @@ impl PublicUsageTest for GetAccountByVersion {
     }
 }
 
-struct ChildVaspAccountRole;
+pub struct ChildVaspAccountRole;
 
 impl Test for ChildVaspAccountRole {
     fn name(&self) -> &'static str {
@@ -588,7 +539,7 @@ impl PublicUsageTest for ChildVaspAccountRole {
     }
 }
 
-struct PeerToPeerWithEvents;
+pub struct PeerToPeerWithEvents;
 
 impl Test for PeerToPeerWithEvents {
     fn name(&self) -> &'static str {
@@ -638,7 +589,7 @@ impl PublicUsageTest for PeerToPeerWithEvents {
             TransactionPayload::Script(s) => s,
             _ => unreachable!(),
         };
-        let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
+        let script_hash = HashValue::sha3_256_of(script.code()).to_hex();
         let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
 
         assert_eq!(
@@ -721,7 +672,7 @@ impl PublicUsageTest for PeerToPeerWithEvents {
     }
 }
 
-struct PeerToPeerErrorExplination;
+pub struct PeerToPeerErrorExplination;
 
 impl Test for PeerToPeerErrorExplination {
     fn name(&self) -> &'static str {
@@ -772,7 +723,7 @@ impl PublicUsageTest for PeerToPeerErrorExplination {
     }
 }
 
-struct ReSubmittingTransactionWontFail;
+pub struct ReSubmittingTransactionWontFail;
 
 impl Test for ReSubmittingTransactionWontFail {
     fn name(&self) -> &'static str {
@@ -800,7 +751,7 @@ impl PublicUsageTest for ReSubmittingTransactionWontFail {
     }
 }
 
-struct MempoolValidationError;
+pub struct MempoolValidationError;
 
 impl Test for MempoolValidationError {
     fn name(&self) -> &'static str {
@@ -843,7 +794,7 @@ impl PublicUsageTest for MempoolValidationError {
     }
 }
 
-struct ExpiredTransaction;
+pub struct ExpiredTransaction;
 
 impl Test for ExpiredTransaction {
     fn name(&self) -> &'static str {
@@ -876,7 +827,7 @@ impl PublicUsageTest for ExpiredTransaction {
     }
 }
 
-struct PreburnAndBurnEvents;
+pub struct PreburnAndBurnEvents;
 
 impl Test for PreburnAndBurnEvents {
     fn name(&self) -> &'static str {
@@ -994,7 +945,7 @@ impl AdminTest for PreburnAndBurnEvents {
     }
 }
 
-struct CancleBurnEvent;
+pub struct CancleBurnEvent;
 
 impl Test for CancleBurnEvent {
     fn name(&self) -> &'static str {
@@ -1077,7 +1028,7 @@ impl AdminTest for CancleBurnEvent {
     }
 }
 
-struct UpdateExchangeRateEvent;
+pub struct UpdateExchangeRateEvent;
 
 impl Test for UpdateExchangeRateEvent {
     fn name(&self) -> &'static str {
@@ -1142,7 +1093,7 @@ impl AdminTest for UpdateExchangeRateEvent {
     }
 }
 
-struct MintAndReceivedMintEvents;
+pub struct MintAndReceivedMintEvents;
 
 impl Test for MintAndReceivedMintEvents {
     fn name(&self) -> &'static str {
@@ -1228,7 +1179,7 @@ impl AdminTest for MintAndReceivedMintEvents {
     }
 }
 
-struct RotateComplianceKeyEvent;
+pub struct RotateComplianceKeyEvent;
 
 impl Test for RotateComplianceKeyEvent {
     fn name(&self) -> &'static str {
@@ -1286,7 +1237,7 @@ impl PublicUsageTest for RotateComplianceKeyEvent {
     }
 }
 
-struct CreateAccountEvent;
+pub struct CreateAccountEvent;
 
 impl Test for CreateAccountEvent {
     fn name(&self) -> &'static str {
@@ -1333,7 +1284,7 @@ impl PublicUsageTest for CreateAccountEvent {
     }
 }
 
-struct GetTransactionsWithoutEvents;
+pub struct GetTransactionsWithoutEvents;
 
 impl Test for GetTransactionsWithoutEvents {
     fn name(&self) -> &'static str {
@@ -1356,7 +1307,7 @@ impl PublicUsageTest for GetTransactionsWithoutEvents {
     }
 }
 
-struct GetAccountTransactionsWithoutEvents;
+pub struct GetAccountTransactionsWithoutEvents;
 
 impl Test for GetAccountTransactionsWithoutEvents {
     fn name(&self) -> &'static str {
@@ -1384,7 +1335,7 @@ impl PublicUsageTest for GetAccountTransactionsWithoutEvents {
     }
 }
 
-struct GetAccountTransactionsWithProofs;
+pub struct GetAccountTransactionsWithProofs;
 
 impl Test for GetAccountTransactionsWithProofs {
     fn name(&self) -> &'static str {
@@ -1408,7 +1359,7 @@ impl PublicUsageTest for GetAccountTransactionsWithProofs {
     }
 }
 
-struct GetTransactionsWithProofs;
+pub struct GetTransactionsWithProofs;
 
 impl Test for GetTransactionsWithProofs {
     fn name(&self) -> &'static str {
@@ -1450,7 +1401,7 @@ impl PublicUsageTest for GetTransactionsWithProofs {
             // we need to get the validator set from the batched get_state_proof call.
             let ledger_info_view = &f.iter().find(|g| g["id"] == 1).unwrap()["result"];
             let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
-            let epoch_proofs: diem_types::epoch_change::EpochChangeProof =
+            let epoch_proofs: diem_sdk::types::epoch_change::EpochChangeProof =
                 bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
             let some_li: Vec<_> = epoch_proofs.ledger_info_with_sigs;
             assert!(!some_li.is_empty());
@@ -1468,11 +1419,11 @@ impl PublicUsageTest for GetTransactionsWithProofs {
             let raw_hex_li = proofs["ledger_info_to_transaction_infos_proof"]
                 .as_str()
                 .unwrap();
-            let li_to_tip: diem_types::proof::TransactionAccumulatorRangeProof =
+            let li_to_tip: diem_sdk::types::proof::TransactionAccumulatorRangeProof =
                 bcs::from_bytes(&hex::decode(&raw_hex_li).unwrap()).unwrap();
             // The txs for which we got the proofs
             let raw_hex_txs = proofs["transaction_infos"].as_str().unwrap();
-            let txs_infos: Vec<diem_types::transaction::TransactionInfo> =
+            let txs_infos: Vec<diem_sdk::types::transaction::TransactionInfo> =
                 bcs::from_bytes(&hex::decode(&raw_hex_txs).unwrap()).unwrap();
             let hashes: Vec<_> = txs_infos.iter().map(CryptoHash::hash).collect();
 
@@ -1534,7 +1485,7 @@ impl PublicUsageTest for GetTransactionsWithProofs {
     }
 }
 
-struct AddAndRemoveVaspDomain;
+pub struct AddAndRemoveVaspDomain;
 
 impl Test for AddAndRemoveVaspDomain {
     fn name(&self) -> &'static str {
@@ -1624,7 +1575,7 @@ impl AdminTest for AddAndRemoveVaspDomain {
     }
 }
 
-struct GetTreasuryComplianceAccount;
+pub struct GetTreasuryComplianceAccount;
 
 impl Test for GetTreasuryComplianceAccount {
     fn name(&self) -> &'static str {
@@ -1664,7 +1615,7 @@ impl PublicUsageTest for GetTreasuryComplianceAccount {
     }
 }
 
-struct GetEventsWithProofs;
+pub struct GetEventsWithProofs;
 
 impl Test for GetEventsWithProofs {
     fn name(&self) -> &'static str {
@@ -1699,7 +1650,7 @@ impl PublicUsageTest for GetEventsWithProofs {
         // since we don't have a local state with the set of validators unlike an actual client,
         // we need to get the validator set from the batched get_state_proof call.
         let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
-        let epoch_proofs: diem_types::epoch_change::EpochChangeProof =
+        let epoch_proofs: diem_sdk::types::epoch_change::EpochChangeProof =
             bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
         let some_li: Vec<_> = epoch_proofs.ledger_info_with_sigs;
         assert!(!some_li.is_empty());
@@ -1747,7 +1698,7 @@ impl PublicUsageTest for GetEventsWithProofs {
     }
 }
 
-struct MultiAgentPaymentOverDualAttestationLimit;
+pub struct MultiAgentPaymentOverDualAttestationLimit;
 
 impl Test for MultiAgentPaymentOverDualAttestationLimit {
     fn name(&self) -> &'static str {
@@ -1773,11 +1724,7 @@ impl PublicUsageTest for MultiAgentPaymentOverDualAttestationLimit {
         let receiver_balance = env.get_balance(receiver.address(), "XUS");
 
         let script =
-            diem_transaction_builder::stdlib::encode_peer_to_peer_by_signers_script_function(
-                xus_tag(),
-                amount,
-                vec![],
-            );
+            stdlib::encode_peer_to_peer_by_signers_script_function(xus_tag(), amount, vec![]);
         let txn = env.create_multi_agent_txn(&mut sender, &[&mut receiver], script);
 
         let txn_view = env.submit_and_wait(&txn);
@@ -1811,7 +1758,7 @@ impl PublicUsageTest for MultiAgentPaymentOverDualAttestationLimit {
     }
 }
 
-struct MultiAgentRotateAuthenticationKeyAdminScriptFunction;
+pub struct MultiAgentRotateAuthenticationKeyAdminScriptFunction;
 
 impl Test for MultiAgentRotateAuthenticationKeyAdminScriptFunction {
     fn name(&self) -> &'static str {
@@ -1843,7 +1790,7 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScriptFunction {
             TransactionPayload::ScriptFunction(s) => s,
             _ => unreachable!(),
         };
-        let script_hash = diem_crypto::HashValue::zero().to_hex();
+        let script_hash = HashValue::zero().to_hex();
         let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
         assert_eq!(result["vm_status"], json!({"type": "executed"}));
         assert_eq!(
@@ -1881,7 +1828,7 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScriptFunction {
     }
 }
 
-struct MultiAgentRotateAuthenticationKeyAdminScript;
+pub struct MultiAgentRotateAuthenticationKeyAdminScript;
 
 impl Test for MultiAgentRotateAuthenticationKeyAdminScript {
     fn name(&self) -> &'static str {
@@ -1915,7 +1862,7 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScript {
             TransactionPayload::Script(s) => s,
             _ => unreachable!(),
         };
-        let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
+        let script_hash = HashValue::sha3_256_of(script.code()).to_hex();
         let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
         assert_eq!(result["vm_status"], json!({"type": "executed"}));
         assert_eq!(
@@ -1954,7 +1901,7 @@ impl AdminTest for MultiAgentRotateAuthenticationKeyAdminScript {
     }
 }
 
-struct GetAccumulatorConsistencyProof;
+pub struct GetAccumulatorConsistencyProof;
 
 impl Test for GetAccumulatorConsistencyProof {
     fn name(&self) -> &'static str {
@@ -1997,7 +1944,7 @@ impl PublicUsageTest for GetAccumulatorConsistencyProof {
     }
 }
 
-struct NoUnknownEvents;
+pub struct NoUnknownEvents;
 
 impl Test for NoUnknownEvents {
     fn name(&self) -> &'static str {
@@ -2020,7 +1967,7 @@ impl PublicUsageTest for NoUnknownEvents {
     }
 }
 
-struct UpgradeEventAndNewEpoch;
+pub struct UpgradeEventAndNewEpoch;
 
 impl Test for UpgradeEventAndNewEpoch {
     fn name(&self) -> &'static str {
@@ -2091,7 +2038,7 @@ fn create_common_write_set() -> WriteSet {
     .unwrap()
 }
 
-struct UpgradeDiemVersion;
+pub struct UpgradeDiemVersion;
 
 impl Test for UpgradeDiemVersion {
     fn name(&self) -> &'static str {

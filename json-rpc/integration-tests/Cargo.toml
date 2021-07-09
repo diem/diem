@@ -1,0 +1,25 @@
+[package]
+name = "jsonrpc-integration-tests"
+version = "0.0.0"
+authors = ["Diem Association <opensource@diem.com>"]
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+bcs = "0.1.2"
+hex = "0.4.3"
+reqwest = { version = "0.11.2", features = ["blocking", "json"], default_features = false }
+serde_json = "1.0.64"
+
+diem-json-rpc-types = { path = "../types" }
+diem-sdk = { path = "../../sdk" }
+forge = { path = "../../testsuite/forge" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+
+[[test]]
+name = "jsonrpc-forge"
+harness = false

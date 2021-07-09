@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Result};
-use diem_crypto::hash::CryptoHash;
 use diem_json_rpc_types::response::JsonRpcResponse;
-use diem_sdk::{transaction_builder::Currency, types::LocalAccount};
-use diem_types::{
-    account_address::AccountAddress, account_config::XUS_NAME, chain_id::ChainId,
-    transaction::SignedTransaction,
+use diem_sdk::{
+    crypto::hash::CryptoHash,
+    transaction_builder::Currency,
+    types::{
+        account_address::AccountAddress,
+        account_config::XUS_NAME,
+        chain_id::ChainId,
+        transaction::{SignedTransaction, Transaction},
+        LocalAccount,
+    },
 };
 use forge::PublicUsageContext;
 use serde_json::{json, Value};
@@ -115,9 +120,7 @@ impl JsonRpcTestHelper {
     }
 
     pub fn wait_for_txn(&self, txn: &SignedTransaction) -> Value {
-        let txn_hash = diem_types::transaction::Transaction::UserTransaction(txn.clone())
-            .hash()
-            .to_hex();
+        let txn_hash = Transaction::UserTransaction(txn.clone()).hash().to_hex();
         for _i in 0..60 {
             let resp = self.get_account_transaction(&txn.sender(), txn.sequence_number(), true);
             if let Some(result) = resp.result {
@@ -184,7 +187,7 @@ impl JsonRpcTestHelper {
         &self,
         sender: &mut LocalAccount,
         secondary_signers: &[&mut LocalAccount],
-        payload: diem_types::transaction::TransactionPayload,
+        payload: diem_sdk::types::transaction::TransactionPayload,
     ) -> SignedTransaction {
         let seq_onchain = self
             .get_account_sequence(sender.address())
@@ -192,7 +195,7 @@ impl JsonRpcTestHelper {
         let seq = sender.sequence_number();
         assert_eq!(seq, seq_onchain);
         *sender.sequence_number_mut() += 1;
-        let raw_txn = diem_types::transaction::helpers::create_unsigned_txn(
+        let raw_txn = diem_sdk::types::transaction::helpers::create_unsigned_txn(
             payload,
             sender.address(),
             seq,

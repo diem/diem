@@ -3,6 +3,7 @@ version = "0.8.0"
 
 [system-tests]
 smoke-test = { path = "smoke-test" }
+jsonrpc-integration-tests = { path = "json-rpc/integration-tests" }
 
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"
@@ -196,6 +197,7 @@ members = [
     "generate-format",
     "invalid-mutations",
     "ir-testsuite",
+    "jsonrpc-integration-tests",
     "jsonrpc-types-proto",
     "language-benchmarks",
     "language-e2e-tests",
