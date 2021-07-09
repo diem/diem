@@ -5,6 +5,7 @@ use crate::*;
 use rand::{Rng, SeedableRng};
 use std::{
     io::{self, Write},
+    num::NonZeroUsize,
     process,
 };
 use structopt::{clap::arg_enum, StructOpt};
@@ -21,6 +22,10 @@ pub struct Options {
     #[structopt(long = "exact")]
     /// Exactly match filters rather than by substring
     filter_exact: bool,
+    #[structopt(long, default_value = "1", env = "RUST_TEST_THREADS")]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    /// Number of threads used for running tests in parallel
+    test_threads: NonZeroUsize,
     #[structopt(short = "q", long)]
     /// Output minimal information
     quiet: bool,
