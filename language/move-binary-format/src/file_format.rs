@@ -28,7 +28,6 @@
 
 use crate::{
     access::ModuleAccess,
-    check_bounds::BoundsChecker,
     errors::{PartialVMError, PartialVMResult},
     file_format_common,
     internals::ModuleIndex,
@@ -1863,15 +1862,6 @@ impl CompiledModule {
         }
     }
 
-    /// Converts this instance into `CompiledModule` after verifying it for basic internal
-    /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> PartialVMResult<CompiledModule> {
-        // Impossible to access self_id for location as it might not be safe due to bounds failing
-        let module = self;
-        BoundsChecker::verify_module(&module)?;
-        Ok(module)
-    }
-
     /// Returns the code key of `module_handle`
     pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
         ModuleId::new(
@@ -1937,7 +1927,7 @@ pub fn basic_test_module() -> CompiledModule {
         acquires_global_resources: vec![],
         code: Some(CodeUnit {
             locals: SignatureIndex(0),
-            code: vec![],
+            code: vec![Bytecode::Ret],
         }),
     });
 

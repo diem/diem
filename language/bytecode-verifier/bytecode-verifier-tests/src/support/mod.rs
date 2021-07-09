@@ -31,5 +31,5 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
 
     module.function_handles.push(fun_handle);
     module.function_defs.push(fun_def);
-    module.freeze().unwrap()
+    module
 }
