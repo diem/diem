@@ -1,0 +1,244 @@
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:11:12
+   │
+ 9 │     struct S1<T: drop + copy + store + key> { a: T }
+   │                         ---- 'copy' constraint declared here
+10 │     struct S2 {
+11 │         a: S1<HasAbilities<NoAbilities, NoAbilities>>,
+   │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │            │  │            │
+   │            │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'copy' but the type argument '0x42::M::NoAbilities' does not have the required ability 'copy'
+   │            │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'copy'
+   │            'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:11:12
+   │
+ 9 │     struct S1<T: drop + copy + store + key> { a: T }
+   │                  ---- 'drop' constraint declared here
+10 │     struct S2 {
+11 │         a: S1<HasAbilities<NoAbilities, NoAbilities>>,
+   │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │            │  │            │
+   │            │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'drop' but the type argument '0x42::M::NoAbilities' does not have the required ability 'drop'
+   │            │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
+   │            'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:11:12
+   │
+ 9 │     struct S1<T: drop + copy + store + key> { a: T }
+   │                                ----- 'store' constraint declared here
+10 │     struct S2 {
+11 │         a: S1<HasAbilities<NoAbilities, NoAbilities>>,
+   │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │            │  │            │
+   │            │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'store' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │            │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'store'
+   │            'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:11:12
+   │
+ 9 │     struct S1<T: drop + copy + store + key> { a: T }
+   │                                        --- 'key' constraint declared here
+10 │     struct S2 {
+11 │         a: S1<HasAbilities<NoAbilities, NoAbilities>>,
+   │            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │            │  │            │
+   │            │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'key' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │            │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'key'
+   │            'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:16:12
+   │  
+14 │       struct S3<T1: drop, T2: copy, T3: store, T4: key> { a: T1, b: T2, c: T3, d: T4 }
+   │                     ---- 'drop' constraint declared here
+15 │       struct S4 {
+16 │           a: S3< HasDrop<NoAbilities, NoAbilities>,
+   │                  ---------------------------------
+   │                  │       │
+   │                  │       The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'drop' but the type argument '0x42::M::NoAbilities' does not have the required ability 'drop'
+   │                  The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
+   │ ╭────────────^
+17 │ │                HasCopy<NoAbilities, NoAbilities>,
+18 │ │                HasStore<NoAbilities, NoAbilities>,
+19 │ │                HasKey<NoAbilities, NoAbilities>
+20 │ │              >
+   │ ╰──────────────^ 'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:16:12
+   │  
+14 │       struct S3<T1: drop, T2: copy, T3: store, T4: key> { a: T1, b: T2, c: T3, d: T4 }
+   │                               ---- 'copy' constraint declared here
+15 │       struct S4 {
+16 │           a: S3< HasDrop<NoAbilities, NoAbilities>,
+   │ ╭────────────^
+17 │ │                HasCopy<NoAbilities, NoAbilities>,
+   │ │                ---------------------------------
+   │ │                │       │
+   │ │                │       The type '0x42::M::HasCopy<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'copy' but the type argument '0x42::M::NoAbilities' does not have the required ability 'copy'
+   │ │                The type '0x42::M::HasCopy<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'copy'
+18 │ │                HasStore<NoAbilities, NoAbilities>,
+19 │ │                HasKey<NoAbilities, NoAbilities>
+20 │ │              >
+   │ ╰──────────────^ 'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:16:12
+   │  
+14 │       struct S3<T1: drop, T2: copy, T3: store, T4: key> { a: T1, b: T2, c: T3, d: T4 }
+   │                                         ----- 'store' constraint declared here
+15 │       struct S4 {
+16 │           a: S3< HasDrop<NoAbilities, NoAbilities>,
+   │ ╭────────────^
+17 │ │                HasCopy<NoAbilities, NoAbilities>,
+18 │ │                HasStore<NoAbilities, NoAbilities>,
+   │ │                ----------------------------------
+   │ │                │        │
+   │ │                │        The type '0x42::M::HasStore<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'store' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │ │                The type '0x42::M::HasStore<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'store'
+19 │ │                HasKey<NoAbilities, NoAbilities>
+20 │ │              >
+   │ ╰──────────────^ 'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:16:12
+   │  
+14 │       struct S3<T1: drop, T2: copy, T3: store, T4: key> { a: T1, b: T2, c: T3, d: T4 }
+   │                                                    --- 'key' constraint declared here
+15 │       struct S4 {
+16 │           a: S3< HasDrop<NoAbilities, NoAbilities>,
+   │ ╭────────────^
+17 │ │                HasCopy<NoAbilities, NoAbilities>,
+18 │ │                HasStore<NoAbilities, NoAbilities>,
+19 │ │                HasKey<NoAbilities, NoAbilities>
+   │ │                --------------------------------
+   │ │                │      │
+   │ │                │      The type '0x42::M::HasKey<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'key' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │ │                The type '0x42::M::HasKey<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'key'
+20 │ │              >
+   │ ╰──────────────^ 'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:25:9
+   │
+23 │     fun f1<T: drop + copy + store + key>() { }
+   │                      ---- 'copy' constraint declared here
+24 │     fun f2() {
+25 │         f1<HasAbilities<NoAbilities, NoAbilities>>();
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │  │            │
+   │         │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'copy' but the type argument '0x42::M::NoAbilities' does not have the required ability 'copy'
+   │         │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'copy'
+   │         'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:25:9
+   │
+23 │     fun f1<T: drop + copy + store + key>() { }
+   │               ---- 'drop' constraint declared here
+24 │     fun f2() {
+25 │         f1<HasAbilities<NoAbilities, NoAbilities>>();
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │  │            │
+   │         │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'drop' but the type argument '0x42::M::NoAbilities' does not have the required ability 'drop'
+   │         │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
+   │         'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:25:9
+   │
+23 │     fun f1<T: drop + copy + store + key>() { }
+   │                             ----- 'store' constraint declared here
+24 │     fun f2() {
+25 │         f1<HasAbilities<NoAbilities, NoAbilities>>();
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │  │            │
+   │         │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'store' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │         │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'store'
+   │         'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:25:9
+   │
+23 │     fun f1<T: drop + copy + store + key>() { }
+   │                                     --- 'key' constraint declared here
+24 │     fun f2() {
+25 │         f1<HasAbilities<NoAbilities, NoAbilities>>();
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │  │            │
+   │         │  │            The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'key' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │         │  The type '0x42::M::HasAbilities<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'key'
+   │         'key' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:30:9
+   │  
+28 │       fun f3<T1: drop, T2: copy, T3: store, T4: key>() { }
+   │                  ---- 'drop' constraint declared here
+29 │       fun f4() {
+30 │ ╭         f3< HasDrop<NoAbilities, NoAbilities>,
+   │               ---------------------------------
+   │               │       │
+   │               │       The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'drop' but the type argument '0x42::M::NoAbilities' does not have the required ability 'drop'
+   │               The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
+31 │ │             HasCopy<NoAbilities, NoAbilities>,
+32 │ │             HasStore<NoAbilities, NoAbilities>,
+33 │ │             HasKey<NoAbilities, NoAbilities>
+34 │ │           >();
+   │ ╰─────────────^ 'drop' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:30:9
+   │  
+28 │       fun f3<T1: drop, T2: copy, T3: store, T4: key>() { }
+   │                            ---- 'copy' constraint declared here
+29 │       fun f4() {
+30 │ ╭         f3< HasDrop<NoAbilities, NoAbilities>,
+31 │ │             HasCopy<NoAbilities, NoAbilities>,
+   │ │             ---------------------------------
+   │ │             │       │
+   │ │             │       The type '0x42::M::HasCopy<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'copy' but the type argument '0x42::M::NoAbilities' does not have the required ability 'copy'
+   │ │             The type '0x42::M::HasCopy<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'copy'
+32 │ │             HasStore<NoAbilities, NoAbilities>,
+33 │ │             HasKey<NoAbilities, NoAbilities>
+34 │ │           >();
+   │ ╰─────────────^ 'copy' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:30:9
+   │  
+28 │       fun f3<T1: drop, T2: copy, T3: store, T4: key>() { }
+   │                                      ----- 'store' constraint declared here
+29 │       fun f4() {
+30 │ ╭         f3< HasDrop<NoAbilities, NoAbilities>,
+31 │ │             HasCopy<NoAbilities, NoAbilities>,
+32 │ │             HasStore<NoAbilities, NoAbilities>,
+   │ │             ----------------------------------
+   │ │             │        │
+   │ │             │        The type '0x42::M::HasStore<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'store' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │ │             The type '0x42::M::HasStore<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'store'
+33 │ │             HasKey<NoAbilities, NoAbilities>
+34 │ │           >();
+   │ ╰─────────────^ 'store' constraint not satisifed
+
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_params_constraint_abilities_invalid.move:30:9
+   │  
+28 │       fun f3<T1: drop, T2: copy, T3: store, T4: key>() { }
+   │                                                 --- 'key' constraint declared here
+29 │       fun f4() {
+30 │ ╭         f3< HasDrop<NoAbilities, NoAbilities>,
+31 │ │             HasCopy<NoAbilities, NoAbilities>,
+32 │ │             HasStore<NoAbilities, NoAbilities>,
+33 │ │             HasKey<NoAbilities, NoAbilities>
+   │ │             --------------------------------
+   │ │             │      │
+   │ │             │      The type '0x42::M::HasKey<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'key' but the type argument '0x42::M::NoAbilities' does not have the required ability 'store'
+   │ │             The type '0x42::M::HasKey<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'key'
+34 │ │           >();
+   │ ╰─────────────^ 'key' constraint not satisifed
+
