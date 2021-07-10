@@ -120,7 +120,12 @@ impl MonoRewriter {
                 // i.e, `exists t: type: P<t>`...
 
                 // eliminate the type quantifiers
-                let prop_insts = self.analyze_instantiation(env, condition.as_ref(), body);
+                let prop_insts = self.analyze_instantiation(
+                    env,
+                    &builder.data.type_args,
+                    condition.as_ref(),
+                    body,
+                );
 
                 let mut expanded = vec![];
                 for inst in &prop_insts {
@@ -163,6 +168,7 @@ impl MonoRewriter {
     fn analyze_instantiation(
         &mut self,
         env: &GlobalEnv,
+        inst: &BTreeMap<u16, Type>,
         cond: Option<&Exp>,
         body: &Exp,
     ) -> Vec<BTreeMap<Symbol, Type>> {
@@ -196,10 +202,17 @@ impl MonoRewriter {
                         for (k, v) in subst_rhs {
                             match k {
                                 Type::TypeLocal(local_idx) => {
+                                    let v_with_inst = match v {
+                                        Type::TypeParameter(param_idx) => inst
+                                            .get(&param_idx)
+                                            .cloned()
+                                            .unwrap_or(Type::TypeParameter(param_idx)),
+                                        _ => v,
+                                    };
                                     prop_insts
                                         .entry(local_idx)
                                         .or_insert_with(BTreeSet::new)
-                                        .insert(v);
+                                        .insert(v_with_inst);
                                 }
                                 _ => panic!("Only TypeLocal is expected in the substitution"),
                             }

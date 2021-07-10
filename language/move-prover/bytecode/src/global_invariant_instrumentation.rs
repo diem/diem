@@ -142,6 +142,7 @@ impl<'a> Instrumenter<'a> {
         let mut translated = SpecTranslator::translate_invariants(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
+            &[],
             invariants.iter().filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
                     if inv.kind == ConditionKind::Invariant {
@@ -211,6 +212,7 @@ impl<'a> Instrumenter<'a> {
         let mut translated = SpecTranslator::translate_invariants(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
+            &[],
             invariants.iter().cloned(),
         );
 

@@ -198,6 +198,7 @@ impl Analyzer {
 struct Instrumenter<'a> {
     options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
+    function_inst: Vec<Type>,
     related_invariants: BTreeSet<GlobalId>,
     saved_from_before_instr_or_call: Option<(TranslatedSpec, BTreeSet<GlobalId>)>,
 }
@@ -215,10 +216,12 @@ impl<'a> Instrumenter<'a> {
 
         let global_env = fun_env.module_env.env;
         let options = ProverOptions::get(global_env);
+        let function_inst = data.get_type_instantiation(fun_env);
         let builder = FunctionDataBuilder::new(fun_env, data);
         let mut instrumenter = Instrumenter {
             options: options.as_ref(),
             builder,
+            function_inst,
             related_invariants,
             saved_from_before_instr_or_call: None,
         };
@@ -243,6 +246,7 @@ impl<'a> Instrumenter<'a> {
         let xlated_spec = SpecTranslator::translate_invariants_by_id(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
+            &self.function_inst,
             &entrypoint_invariants,
         );
         self.assert_or_assume_translated_invariants(
@@ -272,6 +276,7 @@ impl<'a> Instrumenter<'a> {
             let xlated_spec = SpecTranslator::translate_invariants_by_id(
                 self.options.auto_trace_level.invariants(),
                 &mut self.builder,
+                &self.function_inst,
                 &return_invariants,
             );
             self.assert_or_assume_translated_invariants(
@@ -380,6 +385,7 @@ impl<'a> Instrumenter<'a> {
                     let xlated_spec = SpecTranslator::translate_invariants_by_id(
                         self.options.auto_trace_level.invariants(),
                         &mut self.builder,
+                        &self.function_inst,
                         &global_target_invs,
                     );
                     self.assert_or_assume_translated_invariants(
@@ -508,6 +514,7 @@ impl<'a> Instrumenter<'a> {
         let mut xlated_invs = SpecTranslator::translate_invariants_by_id(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
+            &self.function_inst,
             &modified_invs,
         );
         // separate out the update invariants, which need to be handled differently from global invs.
