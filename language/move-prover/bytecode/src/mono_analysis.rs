@@ -238,7 +238,7 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
 // ======================
 
 impl MonoAnalysisProcessor {
-    fn analyze<'a>(
+    pub fn analyze<'a>(
         &self,
         env: &'a GlobalEnv,
         rewritten_axioms: Option<&[Condition]>,
@@ -293,13 +293,12 @@ impl<'a> Analyzer<'a> {
         for module in self.env.get_modules() {
             for fun in module.get_functions() {
                 for (_, target) in self.targets.get_targets(&fun) {
-                    let is_verified: bool;
                     let options = ProverOptions::get(self.env);
-                    if options.invariants_v2 {
-                        is_verified = verification_analysis_v2::get_info(&target).verified;
+                    let is_verified = if options.invariants_v2 {
+                        verification_analysis_v2::get_info(&target).verified
                     } else {
-                        is_verified = verification_analysis::get_info(&target).verified;
-                    }
+                        verification_analysis::get_info(&target).verified
+                    };
                     if is_verified {
                         self.analyze_fun(target.clone());
 
@@ -547,7 +546,6 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                 for (i, (var, range)) in ranges.iter().enumerate() {
                     let ty = env.get_node_type(range.node_id());
                     if let Type::TypeDomain(bt) = ty.skip_reference() {
-                        self.quants_eliminated = true;
                         if matches!(bt.as_ref(), Type::Primitive(PrimitiveType::TypeValue)) {
                             if !triggers.is_empty() {
                                 env.error(
@@ -563,6 +561,7 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                                 );
                                 return Err(e);
                             }
+                            self.quants_eliminated = true;
                             let mut remaining_ranges = ranges.clone();
                             remaining_ranges.remove(i);
                             return Ok(self.eliminate_type_quant(

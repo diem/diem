@@ -257,6 +257,13 @@ impl BorrowNode {
             None
         }
     }
+
+    pub fn instantiate(&self, params: &[Type]) -> Self {
+        match self {
+            Self::GlobalRoot(qid) => Self::GlobalRoot(qid.instantiate_ref(params)),
+            _ => self.clone(),
+        }
+    }
 }
 
 /// A borrow edge.
@@ -278,6 +285,17 @@ impl BorrowEdge {
             edges.iter().collect_vec()
         } else {
             vec![self]
+        }
+    }
+
+    pub fn instantiate(&self, params: &[Type]) -> Self {
+        match self {
+            Self::Field(qid, offset) => Self::Field(qid.instantiate_ref(params), *offset),
+            Self::Hyper(edges) => {
+                let new_edges = edges.iter().map(|e| e.instantiate(params)).collect();
+                Self::Hyper(new_edges)
+            }
+            _ => self.clone(),
         }
     }
 }
@@ -520,6 +538,83 @@ impl Bytecode {
             }
         };
         ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite_exp(exp)
+    }
+
+    pub fn instantiate(&self, env: &GlobalEnv, params: &[Type]) -> Self {
+        use Operation::*;
+        match self {
+            Self::Call(attr_id, dsts, op, srcs, on_abort) => {
+                let new_op = match op {
+                    // function
+                    Function(mid, fid, tys) => {
+                        Function(*mid, *fid, Type::instantiate_slice(tys, params))
+                    }
+                    OpaqueCallBegin(mid, fid, tys) => {
+                        OpaqueCallBegin(*mid, *fid, Type::instantiate_slice(tys, params))
+                    }
+                    OpaqueCallEnd(mid, fid, tys) => {
+                        OpaqueCallEnd(*mid, *fid, Type::instantiate_slice(tys, params))
+                    }
+                    // struct
+                    Pack(mid, sid, tys) => Pack(*mid, *sid, Type::instantiate_slice(tys, params)),
+                    Unpack(mid, sid, tys) => {
+                        Unpack(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    BorrowField(mid, sid, tys, field_num) => {
+                        BorrowField(*mid, *sid, Type::instantiate_slice(tys, params), *field_num)
+                    }
+                    GetField(mid, sid, tys, field_num) => {
+                        GetField(*mid, *sid, Type::instantiate_slice(tys, params), *field_num)
+                    }
+                    // storage
+                    MoveTo(mid, sid, tys) => {
+                        MoveTo(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    MoveFrom(mid, sid, tys) => {
+                        MoveFrom(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    Exists(mid, sid, tys) => {
+                        Exists(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    BorrowGlobal(mid, sid, tys) => {
+                        BorrowGlobal(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    GetGlobal(mid, sid, tys) => {
+                        GetGlobal(*mid, *sid, Type::instantiate_slice(tys, params))
+                    }
+                    // memory model
+                    IsParent(node, edge) => {
+                        IsParent(node.instantiate(params), edge.instantiate(params))
+                    }
+                    WriteBack(node, edge) => {
+                        WriteBack(node.instantiate(params), edge.instantiate(params))
+                    }
+                    // others
+                    _ => op.clone(),
+                };
+                Self::Call(
+                    *attr_id,
+                    dsts.clone(),
+                    new_op,
+                    srcs.clone(),
+                    on_abort.clone(),
+                )
+            }
+            Self::SaveMem(attr_id, label, qid) => {
+                Self::SaveMem(*attr_id, *label, qid.instantiate_ref(params))
+            }
+            Self::SaveSpecVar(attr_id, label, qid) => {
+                Self::SaveSpecVar(*attr_id, *label, qid.instantiate_ref(params))
+            }
+            Self::Prop(attr_id, kind, exp) => Self::Prop(
+                *attr_id,
+                *kind,
+                ExpData::rewrite_node_id(exp.clone(), &mut |id| {
+                    ExpData::instantiate_node(env, id, params)
+                }),
+            ),
+            _ => self.clone(),
+        }
     }
 
     /// Return the temporaries this instruction modifies and how the temporaries are modified.

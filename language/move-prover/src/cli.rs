@@ -212,6 +212,11 @@ impl Options {
                     .help("whether to use the old v1 invariant processing (without disabled invariants)")
             )
             .arg(
+                Arg::with_name("mono-v2")
+                    .long("mono-v2")
+                    .help("whether to use the new v2 monomorphization processing")
+            )
+            .arg(
                 Arg::with_name("negative")
                     .long("negative")
                     .help("runs negative verification checks")

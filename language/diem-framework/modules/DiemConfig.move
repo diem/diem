@@ -121,9 +121,7 @@ module DiemConfig {
         reconfigure_();
     }
     spec set {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         modifies global<DiemConfig<Config>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include SetAbortsIf<Config>;
@@ -164,9 +162,7 @@ module DiemConfig {
         reconfigure_();
     }
     spec set_with_capability_and_reconfigure {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include AbortsIfNotPublished<Config>;
         include ReconfigureAbortsIf;
@@ -221,9 +217,7 @@ module DiemConfig {
         ModifyConfigCapability<Config> {}
     }
     spec publish_new_config_and_get_capability {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<DiemConfig<Config>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include AbortsIfPublished<Config>;
@@ -420,6 +414,8 @@ module DiemConfig {
                 config_address == CoreAddresses::DIEM_ROOT_ADDRESS();
 
         /// After genesis, no new configurations are added.
+        /// TODO(mengxu): this invariant looks suspicious to me. I don't see how this can hold in the
+        /// `publish_new_config_and_get_capability` function (which is a public function)
         invariant update
             DiemTimestamp::is_operating() ==>
                 (forall config_type: type where spec_is_published<config_type>(): old(spec_is_published<config_type>()));

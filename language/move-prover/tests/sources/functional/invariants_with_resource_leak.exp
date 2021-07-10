@@ -1,0 +1,17 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+
+    ┌── tests/sources/functional/invariants_with_resource_leak.move:19:5 ───
+    │
+ 19 │ ╭     invariant
+ 20 │ │         exists<S::Storage<Wrap>>(@0x22)
+ 21 │ │             ==> global<S::Storage<Wrap>>(@0x22).value.content > 0;
+    │ ╰──────────────────────────────────────────────────────────────────^
+    │
+    =     at tests/sources/functional/invariants_with_resource_leak.move:7: publish
+    =         account = <redacted>
+    =         value = <redacted>
+    =     at tests/sources/functional/invariants_with_resource_leak.move:8: publish
+    =     at tests/sources/functional/invariants_with_resource_leak.move:7: publish
+    =     at tests/sources/functional/invariants_with_resource_leak.move:8: publish
+    =     at tests/sources/functional/invariants_with_resource_leak.move:19
