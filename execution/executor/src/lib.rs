@@ -967,8 +967,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         let mut write_lock = self.cache.write();
         let arc_blocks = block_ids
             .iter()
-            .rev()
-            .skip(1)
             .map(|id| write_lock.get_block(id))
             .collect::<Result<Vec<_>, Error>>()?;
         let blocks = arc_blocks.iter().map(|b| b.lock()).collect::<Vec<_>>();
