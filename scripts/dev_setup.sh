@@ -65,17 +65,17 @@ function update_path_and_profile {
     add_to_profile "export CARGO_HOME=\"${CARGO_HOME}\""
     add_to_profile "export PATH=\"${HOME}/bin:${CARGO_HOME}/bin:\$PATH\""
   else
-    add_to_profile "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\""
+    add_to_profile "export PATH=\"${HOME}/bin:${HOME}/.dotnet:${HOME}/.cargo/bin:\$PATH\""
   fi
   if [[ "$INSTALL_PROVER" == "true" ]]; then
-     add_to_profile "export DOTNET_ROOT=\$HOME/.dotnet"
-     add_to_profile "export PATH=\"${HOME}/.dotnet/tools:\$PATH\""
-     add_to_profile "export Z3_EXE=$HOME/bin/z3"
-     add_to_profile "export CVC4_EXE=$HOME/bin/cvc4"
-     add_to_profile "export BOOGIE_EXE=$HOME/.dotnet/tools/boogie"
+    add_to_profile "export DOTNET_ROOT=\$HOME/.dotnet"
+    add_to_profile "export PATH=\"${HOME}/.dotnet/tools:\$PATH\""
+    add_to_profile "export Z3_EXE=$HOME/bin/z3"
+    add_to_profile "export CVC4_EXE=$HOME/bin/cvc4"
+    add_to_profile "export BOOGIE_EXE=$HOME/.dotnet/tools/boogie"
   fi
   if [[ "$INSTALL_CODEGEN" == "true" ]] && [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-     add_to_profile "export PATH=\$PATH:/usr/lib/golang/bin:\$GOBIN"
+    add_to_profile "export PATH=\$PATH:/usr/lib/golang/bin:\$GOBIN"
   fi
 }
 
@@ -389,7 +389,7 @@ function install_grcov {
 
 function install_dotnet {
   echo "Installing .Net"
-  if [[ $(dotnet --list-sdks | grep -c "^$DOTNET_VERSION" || true) == "0" ]]; then
+  if [[ $("${HOME}/.dotnet/dotnet" --list-sdks | grep -c "^${DOTNET_VERSION}" || true) == "0" ]]; then
     if [[ "$(uname)" == "Linux" ]]; then
         # Install various prerequisites for .dotnet. There are known bugs
         # in the dotnet installer to warn even if they are present. We try
@@ -414,6 +414,8 @@ function install_dotnet {
     # in some environments (b) use bash not sh because the installer uses bash features.
     curl -sSL https://dot.net/v1/dotnet-install.sh \
         | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --version latest
+  else
+    echo Dotnet already installed.
   fi
 }
 
