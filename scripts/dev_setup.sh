@@ -389,30 +389,32 @@ function install_grcov {
 
 function install_dotnet {
   echo "Installing .Net"
-  if [[ "$(uname)" == "Linux" ]]; then
-      # Install various prerequisites for .dotnet. There are known bugs
-      # in the dotnet installer to warn even if they are present. We try
-      # to install anyway based on the warnings the dotnet installer creates.
-      if [ "$PACKAGE_MANAGER" == "apk" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-        install_pkg libintl "$PACKAGE_MANAGER"
-        install_pkg libcurl "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
-        install_pkg gettext "$PACKAGE_MANAGER"
-        install_pkg zlib1g "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-      fi
+  if [[ $(dotnet --list-sdks | grep -c "^$DOTNET_VERSION" || true) == "0" ]]; then
+    if [[ "$(uname)" == "Linux" ]]; then
+        # Install various prerequisites for .dotnet. There are known bugs
+        # in the dotnet installer to warn even if they are present. We try
+        # to install anyway based on the warnings the dotnet installer creates.
+        if [ "$PACKAGE_MANAGER" == "apk" ]; then
+          install_pkg icu "$PACKAGE_MANAGER"
+          install_pkg zlib "$PACKAGE_MANAGER"
+          install_pkg libintl "$PACKAGE_MANAGER"
+          install_pkg libcurl "$PACKAGE_MANAGER"
+        elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
+          install_pkg gettext "$PACKAGE_MANAGER"
+          install_pkg zlib1g "$PACKAGE_MANAGER"
+        elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+          install_pkg icu "$PACKAGE_MANAGER"
+          install_pkg zlib "$PACKAGE_MANAGER"
+        elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
+          install_pkg icu "$PACKAGE_MANAGER"
+          install_pkg zlib "$PACKAGE_MANAGER"
+        fi
+    fi
+    # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
+    # in some environments (b) use bash not sh because the installer uses bash features.
+    curl -sSL https://dot.net/v1/dotnet-install.sh \
+        | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --version latest
   fi
-  # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
-  # in some environments (b) use bash not sh because the installer uses bash features.
-  curl -sSL https://dot.net/v1/dotnet-install.sh \
-       | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --version latest
 }
 
 function install_boogie {
@@ -490,25 +492,27 @@ function install_cvc4 {
 }
 
 function install_golang {
-    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-      if ! grep -q 'buster-backports main' /etc/apt/sources.list; then
-        (
-          echo "deb http://http.us.debian.org/debian/ buster-backports main"
-          echo "deb-src http://http.us.debian.org/debian/ buster-backports main"
-        ) | "${PRE_COMMAND[@]}" tee -a /etc/apt/sources.list
-        "${PRE_COMMAND[@]}" apt-get update
+    if [[ $(go version | grep -c "go1.14" || true) == "0" ]]; then
+      if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+        if ! grep -q 'buster-backports main' /etc/apt/sources.list; then
+          (
+            echo "deb http://http.us.debian.org/debian/ buster-backports main"
+            echo "deb-src http://http.us.debian.org/debian/ buster-backports main"
+          ) | "${PRE_COMMAND[@]}" tee -a /etc/apt/sources.list
+          "${PRE_COMMAND[@]}" apt-get update
+        fi
+        "${PRE_COMMAND[@]}" apt-get install -y golang-1.14-go/buster-backports
+        "${PRE_COMMAND[@]}" ln -sf /usr/lib/go-1.14 /usr/lib/golang
+      elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
+        apk --update add --no-cache git make musl-dev go
+      elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
+        failed=$(brew install go || echo "failed")
+        if [[ "$failed" == "failed" ]]; then
+          brew link --overwrite go
+        fi
+      else
+        install_pkg golang "$PACKAGE_MANAGER"
       fi
-      "${PRE_COMMAND[@]}" apt-get install -y golang-1.14-go/buster-backports
-      "${PRE_COMMAND[@]}" ln -sf /usr/lib/go-1.14 /usr/lib/golang
-    elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-      apk --update add --no-cache git make musl-dev go
-    elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-      failed=$(brew install go || echo "failed")
-      if [[ "$failed" == "failed" ]]; then
-        brew link --overwrite go
-      fi
-    else
-      install_pkg golang "$PACKAGE_MANAGER"
     fi
 }
 
