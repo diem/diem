@@ -26,7 +26,7 @@ HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
 CVC4_VERSION=aac53f51
-DOTNET_VERSION=5.0
+DOTNET_VERSION=5.0.301
 BOOGIE_VERSION=2.9.0
 PYRE_CHECK_VERSION=0.0.59
 NUMPY_VERSION=1.20.1
@@ -389,30 +389,34 @@ function install_grcov {
 
 function install_dotnet {
   echo "Installing .Net"
+  if which "$HOME/.dotnet/dotnet" &>/dev/null && [[ "$("$HOME/.dotnet/dotnet" --version || true)" =~ .*${DOTNET_VERSION}.* ]]; then
+    echo "dotnet ${DOTNET_VERSION} already installed"
+    return
+  fi
   if [[ "$(uname)" == "Linux" ]]; then
-      # Install various prerequisites for .dotnet. There are known bugs
-      # in the dotnet installer to warn even if they are present. We try
-      # to install anyway based on the warnings the dotnet installer creates.
-      if [ "$PACKAGE_MANAGER" == "apk" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-        install_pkg libintl "$PACKAGE_MANAGER"
-        install_pkg libcurl "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
-        install_pkg gettext "$PACKAGE_MANAGER"
-        install_pkg zlib1g "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
-        install_pkg icu "$PACKAGE_MANAGER"
-        install_pkg zlib "$PACKAGE_MANAGER"
-      fi
+    # Install various prerequisites for .dotnet. There are known bugs
+    # in the dotnet installer to warn even if they are present. We try
+    # to install anyway based on the warnings the dotnet installer creates.
+    if [ "$PACKAGE_MANAGER" == "apk" ]; then
+      install_pkg icu "$PACKAGE_MANAGER"
+      install_pkg zlib "$PACKAGE_MANAGER"
+      install_pkg libintl "$PACKAGE_MANAGER"
+      install_pkg libcurl "$PACKAGE_MANAGER"
+    elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
+      install_pkg gettext "$PACKAGE_MANAGER"
+      install_pkg zlib1g "$PACKAGE_MANAGER"
+    elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+      install_pkg icu "$PACKAGE_MANAGER"
+      install_pkg zlib "$PACKAGE_MANAGER"
+    elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
+      install_pkg icu "$PACKAGE_MANAGER"
+      install_pkg zlib "$PACKAGE_MANAGER"
+    fi
   fi
   # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
   # in some environments (b) use bash not sh because the installer uses bash features.
   curl -sSL https://dot.net/v1/dotnet-install.sh \
-       | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --version latest
+    | TERM=linux /bin/bash -s -- --version $DOTNET_VERSION
 }
 
 function install_boogie {
