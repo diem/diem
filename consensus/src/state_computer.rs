@@ -5,7 +5,6 @@ use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
-use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
@@ -18,7 +17,7 @@ use std::{boxed::Box, sync::Arc};
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
+    execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
     synchronizer: StateSyncClient,
 }
 
@@ -28,7 +27,7 @@ impl ExecutionProxy {
         synchronizer: StateSyncClient,
     ) -> Self {
         Self {
-            execution_correctness_client: Mutex::new(execution_correctness_client),
+            execution_correctness_client,
             synchronizer,
         }
     }
@@ -58,7 +57,6 @@ impl StateComputer for ExecutionProxy {
         monitor!(
             "execute_block",
             self.execution_correctness_client
-                .lock()
                 .execute_block(block.clone(), parent_block_id)
         )
     }
@@ -82,7 +80,6 @@ impl StateComputer for ExecutionProxy {
         monitor!(
             "commit_block",
             self.execution_correctness_client
-                .lock()
                 .commit_blocks(block_ids, finality_proof)?
         );
 
@@ -108,7 +105,7 @@ impl StateComputer for ExecutionProxy {
         let res = monitor!("sync_to", self.synchronizer.sync_to(target).await);
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
-        self.execution_correctness_client.lock().reset()?;
+        self.execution_correctness_client.reset()?;
 
         res.map_err(|error| {
             let anyhow_error: anyhow::Error = error.into();
