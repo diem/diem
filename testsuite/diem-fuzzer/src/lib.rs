@@ -7,7 +7,7 @@ use proptest::{
     test_runner::{self, RngAlgorithm, TestRunner},
 };
 use rand::RngCore;
-use std::{fmt, ops::Deref, str::FromStr};
+use std::{ffi::CString, fmt, ops::Deref, os::raw::c_char, str::FromStr};
 
 pub mod commands;
 #[cfg(test)]
@@ -92,4 +92,13 @@ pub fn fuzz_data_to_value<T: std::fmt::Debug>(
     // create a value based on the arbitrary implementation of T
     let strategy_tree = strategy.new_tree(&mut runner).expect("should not happen");
     strategy_tree.current()
+}
+
+/// Bake lsan suppressions into the binary
+#[no_mangle]
+pub extern "C" fn __lsan_default_suppressions() -> *const c_char {
+    let s = CString::new(include_str!("../lsan_suppressions.txt")).unwrap();
+    let p = s.as_ptr();
+    std::mem::forget(s);
+    p
 }
