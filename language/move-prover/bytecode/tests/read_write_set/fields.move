@@ -2,7 +2,7 @@ address 0x2 {
 module Fields {
     struct S { f: u64 }
 
-    struct T<A> { f: u64 }
+    struct T<phantom A> { f: u64 }
 
     public fun borrow_read(s: &S): u64 {
         s.f

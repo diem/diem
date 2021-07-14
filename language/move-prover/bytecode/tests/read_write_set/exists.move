@@ -4,7 +4,7 @@ module Exists {
 
     struct S has key { f: address }
 
-    struct V<A> has key { }
+    struct V<phantom A> has key { }
 
     public fun exists_const(): bool {
         exists<T>(@0x1)

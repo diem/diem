@@ -1,7 +1,7 @@
 module 0x2::A {
     use Std::Event;
 
-    struct MyEvent<T> has copy, drop, store { b: bool }
+    struct MyEvent<phantom T> has copy, drop, store { b: bool }
 
     public fun do_emit<T: copy + drop + store>(account: &signer) {
         let handle = Event::new_event_handle<MyEvent<T>>(account);
