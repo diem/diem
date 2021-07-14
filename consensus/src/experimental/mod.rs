@@ -22,6 +22,7 @@
 //                               │ Decision    │ (Asynchronously)
 //                               └─────────────┘
 
-pub mod commit_phase;
+pub mod commit_phase_v2;
 pub mod execution_phase;
 pub mod ordering_state_computer;
+pub mod commit_phase;

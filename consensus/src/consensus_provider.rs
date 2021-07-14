@@ -8,6 +8,7 @@ use crate::{
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     persistent_liveness_storage::StorageWriteProxy,
     state_computer::ExecutionProxy,
+    state_replication::StateComputer,
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
@@ -47,27 +48,48 @@ pub fn start_consensus(
     ));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
 
-    let state_computer = Arc::new(ExecutionProxy::new(
-        execution_correctness_manager.client(),
-        state_sync_client,
-    ));
-
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
-    let epoch_mgr = EpochManager::new(
-        node_config,
-        time_service,
-        self_sender,
-        network_sender,
-        timeout_sender,
-        txn_manager,
-        state_computer,
-        storage,
-        reconfig_events,
-    );
+    let epoch_mgr = if node_config.consensus.decoupled {
+        let execution_proxy_handle: Arc<dyn StateComputer> = Arc::new(ExecutionProxy::new(
+            execution_correctness_manager.client(),
+            state_sync_client,
+        ));
+
+        EpochManager::new(
+            node_config,
+            time_service,
+            self_sender,
+            network_sender,
+            timeout_sender,
+            txn_manager,
+            None,
+            storage,
+            reconfig_events,
+            execution_proxy_handle,
+        )
+    } else {
+        let state_computer: Arc<dyn StateComputer> = Arc::new(ExecutionProxy::new(
+            execution_correctness_manager.client(),
+            state_sync_client,
+        ));
+
+        EpochManager::new(
+            node_config,
+            time_service,
+            self_sender,
+            network_sender,
+            timeout_sender,
+            txn_manager,
+            Some(state_computer.clone()),
+            storage,
+            reconfig_events,
+            state_computer,
+        )
+    };
 
     let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);
 
