@@ -1,10 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block::Block;
-use diem_crypto::{ed25519::Ed25519Signature, hash::TransactionAccumulatorHasher};
+use crate::{block::Block, vote_data::VoteData};
+use diem_crypto::{
+    ed25519::Ed25519Signature,
+    hash::{TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH},
+};
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
-use diem_types::{epoch_state::EpochState, proof::AccumulatorExtensionProof};
+use diem_types::{
+    epoch_state::EpochState,
+    proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof},
+};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
@@ -50,6 +56,34 @@ impl VoteProposal {
 
     pub fn next_epoch_state(&self) -> Option<&EpochState> {
         self.next_epoch_state.as_ref()
+    }
+
+    /// This function returns the vote data with a dummy executed_state_id and version
+    pub fn vote_data_ordering_only(&self) -> VoteData {
+        VoteData::new(
+            self.block().gen_block_info(
+                *ACCUMULATOR_PLACEHOLDER_HASH,
+                0,
+                self.next_epoch_state().cloned(),
+            ),
+            self.block().quorum_cert().certified_block().clone(),
+        )
+    }
+
+    /// This function returns the vote data with a extension proof.
+    /// Attention: this function itself does not verify the proof.
+    pub fn vote_data_with_extension_proof(
+        &self,
+        new_tree: &InMemoryAccumulator<TransactionAccumulatorHasher>,
+    ) -> VoteData {
+        VoteData::new(
+            self.block().gen_block_info(
+                new_tree.root_hash(),
+                new_tree.version(),
+                self.next_epoch_state().cloned(),
+            ),
+            self.block().quorum_cert().certified_block().clone(),
+        )
     }
 }
 

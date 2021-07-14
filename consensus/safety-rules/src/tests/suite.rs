@@ -56,8 +56,7 @@ pub type Callback = Box<
     ),
 >;
 
-pub fn run_test_suite(safety_rules: &Callback) {
-    test_bad_execution_output(safety_rules);
+pub fn run_test_suite(safety_rules: &Callback, decoupled_execution: bool) {
     test_commit_rule_consecutive_rounds(safety_rules);
     test_end_to_end(safety_rules);
     test_initialize(safety_rules);
@@ -76,7 +75,11 @@ pub fn run_test_suite(safety_rules: &Callback) {
     test_key_not_in_store(safety_rules);
     test_2chain_rules(safety_rules);
     test_2chain_timeout(safety_rules);
-    test_sign_commit_vote(safety_rules);
+    if decoupled_execution {
+        test_sign_commit_vote(safety_rules);
+    } else {
+        test_bad_execution_output(safety_rules);
+    };
 }
 
 fn test_bad_execution_output(safety_rules: &Callback) {
@@ -114,7 +117,7 @@ fn test_bad_execution_output(safety_rules: &Callback) {
     );
 
     let evil_a3 = make_proposal_with_qc_and_proof(
-        round,
+        round + 3,
         evil_proof,
         a3.block().quorum_cert().clone(),
         &signer,
@@ -122,7 +125,11 @@ fn test_bad_execution_output(safety_rules: &Callback) {
     );
 
     let evil_a3_block = safety_rules.construct_and_sign_vote(&evil_a3);
-    assert!(evil_a3_block.is_err());
+
+    assert!(matches!(
+        evil_a3_block.unwrap_err(),
+        Error::InvalidAccumulatorExtension(_)
+    ));
 
     let a3_block = safety_rules.construct_and_sign_vote(&a3);
     a3_block.unwrap();
@@ -689,7 +696,7 @@ fn test_reconcile_key(_safety_rules: &Callback) {
     let mut storage = test_utils::test_storage(&signer);
 
     let new_pub_key = storage.internal_store().rotate_key(CONSENSUS_KEY).unwrap();
-    let mut safety_rules = Box::new(SafetyRules::new(storage, false, false));
+    let mut safety_rules = Box::new(SafetyRules::new(storage, false, false, false));
 
     let (mut proof, genesis_qc) = test_utils::make_genesis(&signer);
     let round = genesis_qc.certified_block().round();

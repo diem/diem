@@ -10,10 +10,16 @@ fn test() {
     let boolean_values = [false, true];
     for verify_vote_proposal_signature in &boolean_values {
         for export_consensus_key in &boolean_values {
-            suite::run_test_suite(&safety_rules(
-                *verify_vote_proposal_signature,
-                *export_consensus_key,
-            ));
+            for decoupled_execution in &boolean_values {
+                suite::run_test_suite(
+                    &safety_rules(
+                        *verify_vote_proposal_signature,
+                        *export_consensus_key,
+                        *decoupled_execution,
+                    ),
+                    *decoupled_execution,
+                );
+            }
         }
     }
 }
@@ -21,6 +27,7 @@ fn test() {
 fn safety_rules(
     verify_vote_proposal_signature: bool,
     export_consensus_key: bool,
+    decouppled_execution: bool,
 ) -> suite::Callback {
     Box::new(move || {
         let signer = ValidatorSigner::from_int(0);
@@ -32,6 +39,7 @@ fn safety_rules(
             verify_vote_proposal_signature,
             export_consensus_key,
             network_timeout,
+            decouppled_execution,
         );
         let safety_rules = safety_rules_manager.client();
         (

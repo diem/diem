@@ -48,6 +48,7 @@ pub struct SafetyRules {
     pub(crate) export_consensus_key: bool,
     pub(crate) validator_signer: Option<ConfigurableValidatorSigner>,
     pub(crate) epoch_state: Option<EpochState>,
+    pub(crate) decoupled_execution: bool,
 }
 
 impl SafetyRules {
@@ -57,8 +58,9 @@ impl SafetyRules {
         persistent_storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
         export_consensus_key: bool,
+        decoupled_execution: bool,
     ) -> Self {
-        let execution_public_key = if verify_vote_proposal_signature {
+        let execution_public_key = if verify_vote_proposal_signature && !decoupled_execution {
             Some(
                 persistent_storage
                     .execution_public_key()
@@ -73,6 +75,7 @@ impl SafetyRules {
             export_consensus_key,
             validator_signer: None,
             epoch_state: None,
+            decoupled_execution,
         }
     }
 
@@ -103,7 +106,12 @@ impl SafetyRules {
         proposed_block
             .verify_well_formed()
             .map_err(|error| Error::InvalidProposal(error.to_string()))?;
-        self.extension_check(vote_proposal)
+
+        if self.decoupled_execution {
+            Ok(vote_proposal.vote_data_ordering_only())
+        } else {
+            self.extension_check(vote_proposal)
+        }
     }
 
     pub(crate) fn sign<T: Serialize + CryptoHash>(
@@ -161,14 +169,7 @@ impl SafetyRules {
                     .executed_state_id(),
             )
             .map_err(|e| Error::InvalidAccumulatorExtension(e.to_string()))?;
-        Ok(VoteData::new(
-            proposed_block.gen_block_info(
-                new_tree.root_hash(),
-                new_tree.version(),
-                vote_proposal.next_epoch_state().cloned(),
-            ),
-            proposed_block.quorum_cert().certified_block().clone(),
-        ))
+        Ok(vote_proposal.vote_data_with_extension_proof(&new_tree))
     }
 
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain
@@ -492,6 +493,7 @@ impl SafetyRules {
             .map_err(|error| Error::InvalidQuorumCertificate(error.to_string()))?;
 
         // TODO: add guarding rules in unhappy path
+        // TODO: add extension check
 
         let signature = self.sign(&new_ledger_info)?;
 
