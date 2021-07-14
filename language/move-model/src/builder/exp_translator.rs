@@ -1837,7 +1837,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         // the build. This is because we also need to inherently borrow self via the
         // type_display_context which is passed into unification.
         let mut subs = std::mem::replace(&mut self.subs, Substitution::new());
-        let result = match subs.unify(&self.type_display_context(), Variance::Allow, ty, expected) {
+        let result = match subs.unify(
+            &self.type_display_context(),
+            Variance::Shallow,
+            ty,
+            expected,
+        ) {
             Ok(t) => t,
             Err(err) => {
                 self.error(&loc, &format!("{} {}", err.message, context_msg));

@@ -510,12 +510,14 @@ impl Type {
     }
 }
 
-/// A parameter for type unification, indicating whether the outest types are allowed for
-/// co-variance. Types used in instantiations are always unified in `Variance::Disallow`
-/// mode, that is, co-variance is not allowed.
+/// A parameter for type unification that specifies the type compatibility rules to follow.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Variance {
+    /// Co-variance is allowed in all depths of the recursive type unification process
     Allow,
+    /// Co-variance is only allowed for the outermost type unification round
+    Shallow,
+    /// Co-variance is not allowed at all
     Disallow,
 }
 
@@ -541,8 +543,12 @@ impl Substitution {
     ///
     /// This currently implements the following notion of type compatibility:
     ///
-    /// - References are dropped (i.e. &T and T are compatible)
-    /// - All integer types are compatible if co-variance is allowed.
+    /// - 1) References are dropped (i.e. &T and T are compatible)
+    /// - 2) All integer types are compatible if co-variance is allowed.
+    /// - 3) With the joint effect of 1) and 2), if (P, Q) is compatible under co-variance,
+    ///      (&P, Q), (P, &Q), and (&P, &Q) are all compatible under co-variance.
+    /// - 4) If in two tuples (P1, P2, ..., Pn) and (Q1, Q2, ..., Qn), all (Pi, Qi) pairs are
+    ///      compatible under co-variance, then the two tuples are compatible under co-variance.
     ///
     /// The substitution will be refined by variable assignments as needed to perform
     /// unification. If unification fails, the substitution will be in some intermediate state;
@@ -557,6 +563,12 @@ impl Substitution {
         t1: &Type,
         t2: &Type,
     ) -> Result<Type, TypeError> {
+        // Derive the variance level for recursion
+        let sub_variance = match variance {
+            Variance::Allow => Variance::Allow,
+            Variance::Shallow | Variance::Disallow => Variance::Disallow,
+        };
+
         // If any of the arguments is a reference, drop it for unification, but ensure
         // it is put back since we need to maintain this information for later phases.
         if let Type::Reference(is_mut, bt1) = t1 {
@@ -568,13 +580,13 @@ impl Substitution {
             };
             return Ok(Type::Reference(
                 *is_mut,
-                Box::new(self.unify(display_context, Variance::Disallow, bt1.as_ref(), t2)?),
+                Box::new(self.unify(display_context, sub_variance, bt1.as_ref(), t2)?),
             ));
         }
         if let Type::Reference(is_mut, bt2) = t2 {
             return Ok(Type::Reference(
                 *is_mut,
-                Box::new(self.unify(display_context, Variance::Disallow, t1, bt2.as_ref())?),
+                Box::new(self.unify(display_context, sub_variance, t1, bt2.as_ref())?),
             ));
         }
 
@@ -591,15 +603,10 @@ impl Substitution {
         }
 
         // Accept any error type.
-        if t1 == &Type::Error {
+        if matches!(t1, Type::Error) {
             return Ok(t2.clone());
         }
-        if t2 == &Type::Error {
-            return Ok(t1.clone());
-        }
-
-        // All number types are compatible if variance is allowed.
-        if variance == Variance::Allow && t1.is_number() && t2.is_number() {
+        if matches!(t2, Type::Error) {
             return Ok(t1.clone());
         }
 
@@ -608,6 +615,13 @@ impl Substitution {
             (Type::Primitive(p1), Type::Primitive(p2)) => {
                 if p1 == p2 {
                     return Ok(t1.clone());
+                }
+                // All integer types are compatible if co-variance is allowed.
+                if matches!(variance, Variance::Allow | Variance::Shallow)
+                    && t1.is_number()
+                    && t2.is_number()
+                {
+                    return Ok(Type::Primitive(PrimitiveType::Num));
                 }
             }
             (Type::TypeParameter(idx1), Type::TypeParameter(idx2)) => {
@@ -618,6 +632,7 @@ impl Substitution {
             (Type::Tuple(ts1), Type::Tuple(ts2)) => {
                 return Ok(Type::Tuple(self.unify_vec(
                     display_context,
+                    sub_variance,
                     ts1,
                     ts2,
                     "tuples",
@@ -625,8 +640,8 @@ impl Substitution {
             }
             (Type::Fun(ts1, r1), Type::Fun(ts2, r2)) => {
                 return Ok(Type::Fun(
-                    self.unify_vec(display_context, ts1, ts2, "functions")?,
-                    Box::new(self.unify(display_context, Variance::Disallow, &*r1, &*r2)?),
+                    self.unify_vec(display_context, sub_variance, ts1, ts2, "functions")?,
+                    Box::new(self.unify(display_context, sub_variance, &*r1, &*r2)?),
                 ));
             }
             (Type::Struct(m1, s1, ts1), Type::Struct(m2, s2, ts2)) => {
@@ -634,14 +649,14 @@ impl Substitution {
                     return Ok(Type::Struct(
                         *m1,
                         *s1,
-                        self.unify_vec(display_context, ts1, ts2, "structs")?,
+                        self.unify_vec(display_context, sub_variance, ts1, ts2, "structs")?,
                     ));
                 }
             }
             (Type::Vector(e1), Type::Vector(e2)) => {
                 return Ok(Type::Vector(Box::new(self.unify(
                     display_context,
-                    Variance::Disallow,
+                    sub_variance,
                     &*e1,
                     &*e2,
                 )?)));
@@ -649,7 +664,7 @@ impl Substitution {
             (Type::TypeDomain(e1), Type::TypeDomain(e2)) => {
                 return Ok(Type::TypeDomain(Box::new(self.unify(
                     display_context,
-                    Variance::Disallow,
+                    sub_variance,
                     &*e1,
                     &*e2,
                 )?)));
@@ -673,6 +688,7 @@ impl Substitution {
     fn unify_vec<'a>(
         &mut self,
         display_context: &'a TypeDisplayContext<'a>,
+        variance: Variance,
         ts1: &[Type],
         ts2: &[Type],
         item_name: &str,
@@ -687,7 +703,7 @@ impl Substitution {
         }
         let mut rs = vec![];
         for i in 0..ts1.len() {
-            rs.push(self.unify(display_context, Variance::Disallow, &ts1[i], &ts2[i])?);
+            rs.push(self.unify(display_context, variance, &ts1[i], &ts2[i])?);
         }
         Ok(rs)
     }
