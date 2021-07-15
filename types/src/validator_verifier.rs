@@ -43,6 +43,8 @@ pub enum VerifyError {
     #[error("Signature is invalid")]
     /// The signature does not match the hash.
     InvalidSignature,
+    #[error("Inconsistent Block Info")]
+    InconsistentBlockInfo,
 }
 
 /// Helper struct to manage validator information for validation
