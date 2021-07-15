@@ -194,7 +194,7 @@ pub fn run_model_builder_with_compilation_flags(
     // Check for bytecode verifier errors (there should not be any)
     let (verified_units, errors) = compiled_unit::verify_units(units);
     if !errors.is_empty() {
-        add_move_lang_errors(&mut env, errors);
+        add_move_lang_errors(&mut env, Errors::from(errors));
         return Ok(env);
     }
 

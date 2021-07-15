@@ -6,8 +6,7 @@ use crate::{
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
     compiled_unit::CompiledUnit,
-    errors,
-    errors::*,
+    errors::{self, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
     shared::{CompilationEnv, Flags},
@@ -465,7 +464,7 @@ macro_rules! file_path {
 pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<CompiledUnit>) {
     let (_, ice_errors) = compiled_unit::verify_units(compiled_units);
     if !ice_errors.is_empty() {
-        errors::report_errors(files, ice_errors)
+        errors::report_errors(files, Errors::from(ice_errors))
     }
 }
 
@@ -526,7 +525,7 @@ pub fn output_compiled_units(
     }
 
     if !ice_errors.is_empty() {
-        errors::report_errors(files, ice_errors)
+        errors::report_errors(files, Errors::from(ice_errors))
     }
     Ok(())
 }

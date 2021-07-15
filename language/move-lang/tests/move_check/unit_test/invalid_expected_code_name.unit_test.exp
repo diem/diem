@@ -1,33 +1,27 @@
-error: 
+error[E10002]: invalid attribute name
+  ┌─ tests/move_check/unit_test/invalid_expected_code_name.move:4:24
+  │
+4 │     #[expected_failure(cod=1)]
+  │                        ^^^--
+  │                        │
+  │                        Invalid name in this assignment
+  │                        Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
 
-   ┌── tests/move_check/unit_test/invalid_expected_code_name.move:4:24 ───
+error[E10002]: invalid attribute name
+  ┌─ tests/move_check/unit_test/invalid_expected_code_name.move:8:24
+  │
+8 │     #[expected_failure(code=1)]
+  │                        ^^^^--
+  │                        │
+  │                        Invalid name in this assignment
+  │                        Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
+
+error[E10002]: invalid attribute name
+   ┌─ tests/move_check/unit_test/invalid_expected_code_name.move:12:24
    │
- 4 │     #[expected_failure(cod=1)]
-   │                        ^^^ Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
-   ·
- 4 │     #[expected_failure(cod=1)]
-   │                        ----- In this assignment
-   │
-
-error: 
-
-   ┌── tests/move_check/unit_test/invalid_expected_code_name.move:8:24 ───
-   │
- 8 │     #[expected_failure(code=1)]
-   │                        ^^^^ Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
-   ·
- 8 │     #[expected_failure(code=1)]
-   │                        ------ In this assignment
-   │
-
-error: 
-
-    ┌── tests/move_check/unit_test/invalid_expected_code_name.move:12:24 ───
-    │
- 12 │     #[expected_failure(abort_cod=1)]
-    │                        ^^^^^^^^^ Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
-    ·
- 12 │     #[expected_failure(abort_cod=1)]
-    │                        ----------- In this assignment
-    │
+12 │     #[expected_failure(abort_cod=1)]
+   │                        ^^^^^^^^^--
+   │                        │
+   │                        Invalid name in this assignment
+   │                        Invalid name in expected failure code assignment. Did you mean to use 'abort_code'?
 

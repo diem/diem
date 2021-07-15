@@ -10,6 +10,7 @@ pub enum Severity {
     Warning = 0,
     NonblockingError = 1,
     BlockingError = 2,
+    Bug = 3,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
@@ -121,11 +122,13 @@ codes!(
         InvalidConstant: { msg: "invalid 'const' declaration", severity: NonblockingError },
         InvalidFunction: { msg: "invalid 'fun' declaration", severity: NonblockingError },
         InvalidStruct: { msg: "invalid 'struct' declaration", severity: NonblockingError },
+        InvalidSpec: { msg: "invalid 'spec' declaration", severity: NonblockingError },
         InvalidName: { msg: "invalid name", severity: BlockingError },
         InvalidFriendDeclaration:
             { msg: "invalid 'friend' declaration", severity: NonblockingError },
         InvalidAcquiresItem: { msg: "invalid 'acquires' item", severity: NonblockingError },
-        InvalidPhantomUse: { msg: "invalid phantom type parameter usage", severity: NonblockingError },
+        InvalidPhantomUse:
+            { msg: "invalid phantom type parameter usage", severity: NonblockingError },
     ],
     // errors name resolution, mostly expansion/translate and naming/translate
     NameResolution: [
@@ -172,14 +175,44 @@ codes!(
         ImplicitlyCopyable: { msg: "type not implicitly copyable", severity: NonblockingError },
     ],
     // errors for move rules. mostly cfgir/locals
-    MoveSafety: [],
+    MoveSafety: [
+        UnusedUndroppable: { msg: "unused value without 'drop'", severity: NonblockingError },
+        UnassignedVariable: { msg: "use of unassigned variable", severity: NonblockingError },
+    ],
     // errors for move rules. mostly cfgir/borrows
     ReferenceSafety: [
         RefTrans: { msg: "referential transparency violated", severity: BlockingError },
+        MutOwns: { msg: "mutable ownership violated", severity: NonblockingError },
+        Dangling: {
+            msg: "invalid operation, could create dangling a reference",
+            severity: NonblockingError,
+        },
+        InvalidReturn:
+            { msg: "invalid return of locally borrowed state", severity: NonblockingError },
+        InvalidTransfer: { msg: "invalid transfer of references", severity: NonblockingError },
+    ],
+    BytecodeGeneration: [
+        UnfoldableConstant: { msg: "cannot compute constant value", severity: NonblockingError },
+        UnassignedAddress: { msg: "unassigned named address", severity: NonblockingError },
     ],
     // errors for any unused code or items
     UnusedItem: [
         Alias: { msg: "unused alias", severity: Warning },
+        Variable: { msg: "unused variable", severity: Warning },
+        Assignment: { msg: "unused assignment", severity: Warning },
+        TrailingSemi: { msg: "unnecessary trailing semicolon", severity: Warning },
+        DeadCode: { msg: "dead or unreachable code", severity: Warning },
+    ],
+    Attributes: [
+        Duplicate: { msg: "invalid duplicate attribute", severity: NonblockingError },
+        InvalidName: { msg: "invalid attribute name", severity: NonblockingError },
+        InvalidValue: { msg: "invalid attribute value", severity: NonblockingError },
+        InvalidUsage: { msg: "invalid usage of known attribute", severity: NonblockingError },
+        InvalidTest: { msg: "unable to generate test", severity: NonblockingError },
+    ],
+    Bug: [
+        BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
+        BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
     ],
 );
 
@@ -198,6 +231,7 @@ impl DiagnosticInfo {
         let sev_prefix = match severity {
             Severity::BlockingError | Severity::NonblockingError => "E",
             Severity::Warning => "W",
+            Severity::Bug => "ICE",
         };
         let cat_prefix: u8 = category as u8;
         debug_assert!(cat_prefix <= 99);
@@ -208,11 +242,12 @@ impl DiagnosticInfo {
 
 impl Severity {
     pub const MIN: Self = Self::Warning;
-    pub const MAX: Self = Self::BlockingError;
+    pub const MAX: Self = Self::Bug;
 
     pub fn into_codespan_severity(self) -> codespan_reporting_new::diagnostic::Severity {
         use codespan_reporting_new::diagnostic::Severity as CSRSeverity;
         match self {
+            Severity::Bug => CSRSeverity::Bug,
             Severity::BlockingError | Severity::NonblockingError => CSRSeverity::Error,
             Severity::Warning => CSRSeverity::Warning,
         }

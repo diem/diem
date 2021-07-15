@@ -3,6 +3,8 @@
 
 use crate::{
     cfgir::ast as G,
+    diag,
+    errors::diagnostic_codes::{Attributes, DiagnosticCode},
     expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
     shared::{
         known_attributes, unique_map::UniqueMap, AddressBytes, CompilationEnv, Identifier, Name,
@@ -33,12 +35,13 @@ impl<'env> Context<'env> {
         &mut self,
         loc: Loc,
         addr: &Address,
+        code: impl DiagnosticCode,
         case: impl FnOnce() -> String,
     ) -> Option<AddressBytes> {
         let resolved = addr.clone().into_addr_bytes_opt(self.addresses);
         if resolved.is_none() {
             let msg = format!("{}. No value specified for address '{}'", case(), addr);
-            self.env.add_error_deprecated(vec![(loc, msg)]);
+            self.env.add_diag(diag!(code, (loc, msg)))
         }
         resolved
     }
@@ -86,7 +89,7 @@ fn construct_module_test_plan(
         None
     } else {
         let sp!(loc, ModuleIdent_ { address, module }) = &module_ident;
-        let addr_bytes = context.resolve_address(*loc, address, || {
+        let addr_bytes = context.resolve_address(*loc, address, Attributes::InvalidTest, || {
             format!("Unable to generate test plan for module {}", module_ident)
         })?;
         Some(ModuleTestPlan::new(&addr_bytes, &module.0.value, tests))
@@ -108,7 +111,7 @@ fn build_test_info(
     };
 
     let previously_annotated_msg = "Previously annotated here";
-    let in_this_test_msg = "In this test";
+    let in_this_test_msg = "Error found in this test";
     let make_duplicate_msg = |attr_name: &str| {
         format!(
             "Duplicate '#[{0}]' attribute. Only one #[{0}] attribute is allowed",
@@ -125,10 +128,11 @@ fn build_test_info(
         let fn_msg = "Only functions defined as a test with #[test] can also have an \
                       #[expected_failure] attribute";
         let abort_msg = "Attributed as #[expected_failure] here";
-        context.env.add_error_deprecated(vec![
+        context.env.add_diag(diag!(
+            Attributes::InvalidUsage,
             (fn_loc, fn_msg),
             (abort_attributes.last().unwrap().loc, abort_msg),
-        ])
+        ))
     }
 
     if test_attributes.is_empty() {
@@ -137,47 +141,41 @@ fn build_test_info(
 
     // Check for duplicate #[test(...)] attributes
     if test_attributes.len() > 1 {
+        let msg = make_duplicate_msg(known_attributes::TestingAttributes::TEST);
         let len = test_attributes.len();
-        context.env.add_error_deprecated(vec![
-            (
-                test_attributes[len - 1].loc,
-                make_duplicate_msg(known_attributes::TestingAttributes::TEST),
-            ),
-            (
-                test_attributes[len - 2].loc,
-                previously_annotated_msg.into(),
-            ),
-            (fn_loc, in_this_test_msg.into()),
-        ])
+
+        context.env.add_diag(diag!(
+            Attributes::Duplicate,
+            (test_attributes[len - 1].loc, msg),
+            (test_attributes[len - 2].loc, previously_annotated_msg),
+            (fn_loc, in_this_test_msg),
+        ))
     }
 
     // A #[test] function cannot also be annotated #[test_only]
     if !test_only_attributes.is_empty() {
         let msg = "Function annotated as both #[test(...)] and #[test_only]. You need to declare \
                    it as either one or the other";
-        context.env.add_error_deprecated(vec![
+        context.env.add_diag(diag!(
+            Attributes::InvalidUsage,
             (test_only_attributes.last().unwrap().loc, msg),
             (
                 test_attributes.last().unwrap().loc,
                 previously_annotated_msg,
             ),
             (fn_loc, in_this_test_msg),
-        ])
+        ))
     }
 
     // Only one abort can be specified
     if abort_attributes.len() > 1 {
+        let msg = make_duplicate_msg(known_attributes::TestingAttributes::EXPECTED_FAILURE);
         let len = abort_attributes.len();
-        context.env.add_error_deprecated(vec![
-            (
-                abort_attributes[len - 1].loc,
-                make_duplicate_msg(known_attributes::TestingAttributes::EXPECTED_FAILURE),
-            ),
-            (
-                abort_attributes[len - 2].loc,
-                previously_annotated_msg.into(),
-            ),
-        ])
+        context.env.add_diag(diag!(
+            Attributes::Duplicate,
+            (abort_attributes[len - 1].loc, msg),
+            (abort_attributes[len - 2].loc, previously_annotated_msg),
+        ))
     }
 
     let test_attribute = test_attributes.last().unwrap();
@@ -190,11 +188,12 @@ fn build_test_info(
             None => {
                 let missing_param_msg = "Missing test parameter assignment in test. Expected a \
                                          parameter to be assigned in this attribute";
-                context.env.add_error_deprecated(vec![
+                context.env.add_diag(diag!(
+                    Attributes::InvalidTest,
                     (test_attribute.loc, missing_param_msg),
                     (var.loc(), "Corresponding to this parameter"),
                     (fn_loc, in_this_test_msg),
-                ])
+                ))
             }
         }
     }
@@ -235,10 +234,11 @@ fn parse_test_attribute(
             let value = match convert_attribute_value_to_move_value(context, attr_value) {
                 Some(move_value) => move_value,
                 None => {
-                    context.env.add_error_deprecated(vec![
+                    context.env.add_diag(diag!(
+                        Attributes::InvalidValue,
                         (*assign_loc, "Unsupported attribute value"),
                         (*aloc, "Assigned in this attribute"),
-                    ]);
+                    ));
                     return BTreeMap::new();
                 }
             };
@@ -280,10 +280,11 @@ fn parse_failure_attribute(
                 "Expect an #[expected_failure({}=...)] attribute for abort code assignment",
                 known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
             );
-            context.env.add_error_deprecated(vec![
-                (assign_loc, invalid_assignment_msg.into()),
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (assign_loc, invalid_assignment_msg),
                 (*aloc, expected_msg),
-            ]);
+            ));
             None
         }
         EA::Parameterized(sp!(_, nm), attrs) => {
@@ -294,7 +295,7 @@ fn parse_failure_attribute(
                 );
                 context
                     .env
-                    .add_error_deprecated(vec![(*aloc, invalid_attr_msg)]);
+                    .add_diag(diag!(Attributes::InvalidValue, (*aloc, invalid_attr_msg)));
                 return None;
             }
             assert!(
@@ -316,20 +317,20 @@ fn parse_failure_attribute(
                         }
                         sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
                         | sp!(vloc, EAV::Value(sp!(_, EV::U128(_)))) => {
-                            context.env.add_error_deprecated(vec![
-                                (
-                                    *assign_loc,
-                                    "Invalid value in expected failure code assignment",
-                                ),
+                            let msg = "Invalid value in expected failure code assignment";
+                            context.env.add_diag(diag!(
+                                Attributes::InvalidValue,
+                                (*assign_loc, msg),
                                 (*vloc, "Annotated non-u64 literals are not permitted"),
-                            ]);
+                            ));
                             None
                         }
                         sp!(vloc, _) => {
-                            context.env.add_error_deprecated(vec![
+                            context.env.add_diag(diag!(
+                                Attributes::InvalidValue,
                                 (*vloc, "Invalid value in expected failure code assignment"),
-                                (*assign_loc, "In this assignment"),
-                            ]);
+                                (*assign_loc, "Unsupported value in this assignment"),
+                            ));
                             None
                         }
                     }
@@ -340,17 +341,20 @@ fn parse_failure_attribute(
                          '{}'?",
                         known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME
                     );
-                    context.env.add_error_deprecated(vec![
+                    context.env.add_diag(diag!(
+                        Attributes::InvalidName,
                         (*nmloc, invalid_name_msg),
-                        (*assign_loc, "In this assignment".into()),
-                    ]);
+                        (*assign_loc, "Invalid name in this assignment"),
+                    ));
                     None
                 }
                 sp!(loc, _) => {
                     let msg = "Unsupported attribute value for expected failure attribute";
-                    context
-                        .env
-                        .add_error_deprecated(vec![(*aloc, msg), (*loc, "In this assignment")]);
+                    context.env.add_diag(diag!(
+                        Attributes::InvalidValue,
+                        (*aloc, msg),
+                        (*loc, "Unsupported value in this assignment")
+                    ));
                     None
                 }
             }
@@ -367,7 +371,9 @@ fn convert_attribute_value_to_move_value(
         // Only addresses are allowed
         EAV::Value(sp!(loc, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(
             context
-                .resolve_address(*loc, a, || "Unable to convert attribute value".to_owned())?
+                .resolve_address(*loc, a, Attributes::InvalidTest, || {
+                    "Unable to convert attribute value".to_owned()
+                })?
                 .into_bytes(),
         ))),
         _ => None,

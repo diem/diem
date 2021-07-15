@@ -1,14 +1,10 @@
-error: 
-
-   ┌── tests/move_check/liveness/loop_weirdness.move:9:43 ───
-   │
- 9 │                 if (my_local >= 0) { break; };
-   │                                           ^ Invalid trailing ';'
-   ·
- 9 │                 if (my_local >= 0) { break; };
-   │                                      ----- Any code after this expression will not be reached
-   ·
- 9 │                 if (my_local >= 0) { break; };
-   │                                           - A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
-   │
+warning[W09004]: unnecessary trailing semicolon
+  ┌─ tests/move_check/liveness/loop_weirdness.move:9:43
+  │
+9 │                 if (my_local >= 0) { break; };
+  │                                      -----^
+  │                                      │    │
+  │                                      │    Invalid trailing ';'
+  │                                      │    A trailing ';' in an expression block implicitly adds a '()' value after the semicolon. That '()' value will not be reachable
+  │                                      Any code after this expression will not be reached
 

@@ -16,7 +16,7 @@ error[E03002]: unbound module
 3 │     use B::M;
   │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
 
-error[E02010]: invalid 'friend' declaration
+error[E02011]: invalid 'friend' declaration
   ┌─ tests/move_check/expansion/unbound_named_address.move:5:5
   │
 5 │     friend C::M;

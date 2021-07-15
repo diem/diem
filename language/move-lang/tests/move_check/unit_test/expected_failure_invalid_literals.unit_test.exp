@@ -1,22 +1,18 @@
-error: 
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_invalid_literals.move:14:24
+   │
+14 │     #[expected_failure(abort_code=0u8)]
+   │                        ^^^^^^^^^^^^^^
+   │                        │          │
+   │                        │          Annotated non-u64 literals are not permitted
+   │                        Invalid value in expected failure code assignment
 
-    ┌── tests/move_check/unit_test/expected_failure_invalid_literals.move:14:24 ───
-    │
- 14 │     #[expected_failure(abort_code=0u8)]
-    │                        ^^^^^^^^^^^^^^ Invalid value in expected failure code assignment
-    ·
- 14 │     #[expected_failure(abort_code=0u8)]
-    │                                   --- Annotated non-u64 literals are not permitted
-    │
-
-error: 
-
-    ┌── tests/move_check/unit_test/expected_failure_invalid_literals.move:18:24 ───
-    │
- 18 │     #[expected_failure(abort_code=0u128)]
-    │                        ^^^^^^^^^^^^^^^^ Invalid value in expected failure code assignment
-    ·
- 18 │     #[expected_failure(abort_code=0u128)]
-    │                                   ----- Annotated non-u64 literals are not permitted
-    │
+error[E10003]: invalid attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_invalid_literals.move:18:24
+   │
+18 │     #[expected_failure(abort_code=0u128)]
+   │                        ^^^^^^^^^^^^^^^^
+   │                        │          │
+   │                        │          Annotated non-u64 literals are not permitted
+   │                        Invalid value in expected failure code assignment
 

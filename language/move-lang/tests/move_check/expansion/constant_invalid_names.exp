@@ -1,34 +1,34 @@
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/constant_invalid_names.move:3:11
   │
 3 │     const c1: u64 = 0;
   │           ^^ Invalid constant name 'c1'. Constant names must start with 'A'..'Z'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/constant_invalid_names.move:4:11
   │
 4 │     const _C1: u64 = 0;
   │           ^^^ Invalid constant name '_C1'. Constant names must start with 'A'..'Z'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/constant_invalid_names.move:5:11
   │
 5 │     const Self: u64 = 0;
   │           ^^^^ Invalid constant name 'Self'. 'Self' is restricted and cannot be used to name a constant
 
-error[E02009]: invalid name
+error[E02010]: invalid name
    ┌─ tests/move_check/expansion/constant_invalid_names.move:11:11
    │
 11 │     const c1: u64 = 0;
    │           ^^ Invalid constant name 'c1'. Constant names must start with 'A'..'Z'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
    ┌─ tests/move_check/expansion/constant_invalid_names.move:12:11
    │
 12 │     const _C1: u64 = 0;
    │           ^^^ Invalid constant name '_C1'. Constant names must start with 'A'..'Z'
 
-error[E02009]: invalid name
+error[E02010]: invalid name
    ┌─ tests/move_check/expansion/constant_invalid_names.move:13:11
    │
 13 │     const Self: u64 = 0;

@@ -1,88 +1,69 @@
-error: 
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_after_move_loop.move:4:20
+  │
+4 │         loop { _ = move x }
+  │                    ^^^^^^
+  │                    │
+  │                    Invalid usage of variable 'x'
+  │                    The variable might not have a value due to this position. The variable must be assigned a value before being used
 
-   ┌── tests/move_check/locals/use_after_move_loop.move:4:20 ───
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_after_move_loop.move:9:37
+  │
+9 │         loop { if (cond) break; _ = move x }
+  │                                     ^^^^^^
+  │                                     │
+  │                                     Invalid usage of variable 'x'
+  │                                     The variable might not have a value due to this position. The variable must be assigned a value before being used
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:14:24
    │
- 4 │         loop { _ = move x }
-   │                    ^^^^^^ Invalid usage of local 'x'
-   ·
- 4 │         loop { _ = move x }
-   │                    ------ The local might not have a value due to this position. The local must be assigned a value before being used
+14 │         loop { let y = x; _ = move x; y; }
+   │                        ^      ------ The variable might not have a value due to this position. The variable must be assigned a value before being used
+   │                        │       
+   │                        Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:14:31
    │
+14 │         loop { let y = x; _ = move x; y; }
+   │                               ^^^^^^
+   │                               │
+   │                               Invalid usage of variable 'x'
+   │                               The variable might not have a value due to this position. The variable must be assigned a value before being used
 
-error: 
-
-   ┌── tests/move_check/locals/use_after_move_loop.move:9:37 ───
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:19:24
    │
- 9 │         loop { if (cond) break; _ = move x }
-   │                                     ^^^^^^ Invalid usage of local 'x'
-   ·
- 9 │         loop { if (cond) break; _ = move x }
-   │                                     ------ The local might not have a value due to this position. The local must be assigned a value before being used
+19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
+   │                        ^                          ------ The variable might not have a value due to this position. The variable must be assigned a value before being used
+   │                        │                           
+   │                        Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:19:51
    │
+19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
+   │                                                   ^^^^^^
+   │                                                   │
+   │                                                   Invalid usage of variable 'x'
+   │                                                   The variable might not have a value due to this position. The variable must be assigned a value before being used
 
-error: 
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:24:24
+   │
+24 │         loop { let y = &x; _ = move y; _ = move x }
+   │                        ^^                  ------ The variable might not have a value due to this position. The variable must be assigned a value before being used
+   │                        │                    
+   │                        Invalid usage of variable 'x'
 
-    ┌── tests/move_check/locals/use_after_move_loop.move:14:24 ───
-    │
- 14 │         loop { let y = x; _ = move x; y; }
-    │                        ^ Invalid usage of local 'x'
-    ·
- 14 │         loop { let y = x; _ = move x; y; }
-    │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_after_move_loop.move:14:31 ───
-    │
- 14 │         loop { let y = x; _ = move x; y; }
-    │                               ^^^^^^ Invalid usage of local 'x'
-    ·
- 14 │         loop { let y = x; _ = move x; y; }
-    │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_after_move_loop.move:19:24 ───
-    │
- 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
-    │                        ^ Invalid usage of local 'x'
-    ·
- 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
-    │                                                   ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_after_move_loop.move:19:51 ───
-    │
- 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
-    │                                                   ^^^^^^ Invalid usage of local 'x'
-    ·
- 19 │         loop { let y = x; if (cond) continue; _ = move x; y; }
-    │                                                   ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_after_move_loop.move:24:24 ───
-    │
- 24 │         loop { let y = &x; _ = move y; _ = move x }
-    │                        ^^ Invalid usage of local 'x'
-    ·
- 24 │         loop { let y = &x; _ = move y; _ = move x }
-    │                                            ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_after_move_loop.move:24:44 ───
-    │
- 24 │         loop { let y = &x; _ = move y; _ = move x }
-    │                                            ^^^^^^ Invalid usage of local 'x'
-    ·
- 24 │         loop { let y = &x; _ = move y; _ = move x }
-    │                                            ------ The local might not have a value due to this position. The local must be assigned a value before being used
-    │
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_after_move_loop.move:24:44
+   │
+24 │         loop { let y = &x; _ = move y; _ = move x }
+   │                                            ^^^^^^
+   │                                            │
+   │                                            Invalid usage of variable 'x'
+   │                                            The variable might not have a value due to this position. The variable must be assigned a value before being used
 

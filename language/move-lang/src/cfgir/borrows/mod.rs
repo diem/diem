@@ -5,7 +5,7 @@ mod state;
 
 use super::absint::*;
 use crate::{
-    errors::*,
+    errors::new::Diagnostics,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
@@ -35,7 +35,7 @@ impl BorrowSafety {
 struct Context<'a, 'b> {
     local_numbers: &'a UniqueMap<Var, usize>,
     borrow_state: &'b mut BorrowState,
-    errors: Errors,
+    diags: Diagnostics,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
@@ -44,16 +44,16 @@ impl<'a, 'b> Context<'a, 'b> {
         Self {
             local_numbers,
             borrow_state,
-            errors: Errors::new(),
+            diags: Diagnostics::new(),
         }
     }
 
-    fn get_errors(self) -> Errors {
-        self.errors
+    fn get_diags(self) -> Diagnostics {
+        self.diags
     }
 
-    fn add_errors_deprecated(&mut self, additional: Errors) {
-        self.errors.extend_deprecated(additional);
+    fn add_diags(&mut self, additional: Diagnostics) {
+        self.diags.extend(additional);
     }
 }
 
@@ -66,13 +66,13 @@ impl TransferFunctions for BorrowSafety {
         _lbl: Label,
         _idx: usize,
         cmd: &Command,
-    ) -> Errors {
+    ) -> Diagnostics {
         let mut context = Context::new(self, pre);
         command(&mut context, cmd);
         context
             .borrow_state
             .canonicalize_locals(&context.local_numbers);
-        context.get_errors()
+        context.get_diags()
     }
 }
 
@@ -90,8 +90,8 @@ pub fn verify(
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
-    let (final_state, es) = safety.analyze_function(cfg, initial_state);
-    compilation_env.add_errors_deprecated(es);
+    let (final_state, ds) = safety.analyze_function(cfg, initial_state);
+    compilation_env.add_diags(ds);
     final_state
 }
 
@@ -110,8 +110,8 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             let value = assert_single_value(exp(context, er));
             assert!(!value.is_ref());
             let lvalue = assert_single_value(exp(context, el));
-            let errors = context.borrow_state.mutate(*loc, lvalue);
-            context.add_errors_deprecated(errors);
+            let diags = context.borrow_state.mutate(*loc, lvalue);
+            context.add_diags(diags);
         }
         C::JumpIf { cond: e, .. } => {
             let value = assert_single_value(exp(context, e));
@@ -124,8 +124,8 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
 
         C::Return { exp: e, .. } => {
             let values = exp(context, e);
-            let errors = context.borrow_state.return_(*loc, values);
-            context.add_errors_deprecated(errors);
+            let diags = context.borrow_state.return_(*loc, values);
+            context.add_diags(diags);
         }
         C::Abort(e) => {
             let value = assert_single_value(exp(context, e));
@@ -151,8 +151,8 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue, value: Value) {
             context.borrow_state.release_value(value);
         }
         L::Var(v, _) => {
-            let errors = context.borrow_state.assign_local(*loc, v, value);
-            context.add_errors_deprecated(errors)
+            let diags = context.borrow_state.assign_local(*loc, v, value);
+            context.add_diags(diags)
         }
         L::Unpack(_, _, fields) => {
             assert!(!value.is_ref());
@@ -169,37 +169,37 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
     let svalue = || vec![Value::NonRef];
     match &parent_e.exp.value {
         E::Move { var, .. } => {
-            let (errors, value) = context.borrow_state.move_local(*eloc, var);
-            context.add_errors_deprecated(errors);
+            let (diags, value) = context.borrow_state.move_local(*eloc, var);
+            context.add_diags(diags);
             vec![value]
         }
         E::Copy { var, .. } => {
-            let (errors, value) = context.borrow_state.copy_local(*eloc, var);
-            context.add_errors_deprecated(errors);
+            let (diags, value) = context.borrow_state.copy_local(*eloc, var);
+            context.add_diags(diags);
             vec![value]
         }
         E::BorrowLocal(mut_, var) => {
-            let (errors, value) = context.borrow_state.borrow_local(*eloc, *mut_, var);
-            context.add_errors_deprecated(errors);
+            let (diags, value) = context.borrow_state.borrow_local(*eloc, *mut_, var);
+            context.add_diags(diags);
             assert!(value.is_ref());
             vec![value]
         }
         E::Freeze(e) => {
             let evalue = assert_single_value(exp(context, e));
-            let (errors, value) = context.borrow_state.freeze(*eloc, evalue);
-            context.add_errors_deprecated(errors);
+            let (diags, value) = context.borrow_state.freeze(*eloc, evalue);
+            context.add_diags(diags);
             vec![value]
         }
         E::Dereference(e) => {
             let evalue = assert_single_value(exp(context, e));
             let (errors, value) = context.borrow_state.dereference(*eloc, evalue);
-            context.add_errors_deprecated(errors);
+            context.add_diags(errors);
             vec![value]
         }
         E::Borrow(mut_, e, f) => {
             let evalue = assert_single_value(exp(context, e));
-            let (errors, value) = context.borrow_state.borrow_field(*eloc, *mut_, evalue, f);
-            context.add_errors_deprecated(errors);
+            let (diags, value) = context.borrow_state.borrow_field(*eloc, *mut_, evalue, f);
+            context.add_diags(diags);
             vec![value]
         }
 
@@ -209,24 +209,24 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
             match b {
                 sp!(_, BuiltinFunction_::BorrowGlobal(mut_, t)) => {
                     assert!(!assert_single_value(evalues).is_ref());
-                    let (errors, value) = context.borrow_state.borrow_global(*eloc, *mut_, t);
-                    context.add_errors_deprecated(errors);
+                    let (diags, value) = context.borrow_state.borrow_global(*eloc, *mut_, t);
+                    context.add_diags(diags);
                     vec![value]
                 }
                 sp!(_, BuiltinFunction_::MoveFrom(t)) => {
                     assert!(!assert_single_value(evalues).is_ref());
-                    let (errors, value) = context.borrow_state.move_from(*eloc, t);
+                    let (diags, value) = context.borrow_state.move_from(*eloc, t);
                     assert!(!value.is_ref());
-                    context.add_errors_deprecated(errors);
+                    context.add_diags(diags);
                     vec![value]
                 }
                 _ => {
                     let ret_ty = &parent_e.ty;
-                    let (errors, values) =
+                    let (diags, values) =
                         context
                             .borrow_state
                             .call(*eloc, evalues, &BTreeMap::new(), ret_ty);
-                    context.add_errors_deprecated(errors);
+                    context.add_diags(diags);
                     values
                 }
             }
@@ -235,11 +235,11 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         E::ModuleCall(mcall) => {
             let evalues = exp(context, &mcall.arguments);
             let ret_ty = &parent_e.ty;
-            let (errors, values) =
+            let (diags, values) =
                 context
                     .borrow_state
                     .call(*eloc, evalues, &mcall.acquires, ret_ty);
-            context.add_errors_deprecated(errors);
+            context.add_diags(diags);
             values
         }
 

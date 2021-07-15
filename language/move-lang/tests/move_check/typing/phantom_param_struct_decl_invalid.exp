@@ -1,4 +1,4 @@
-error[E02012]: invalid phantom type parameter usage
+error[E02013]: invalid phantom type parameter usage
   ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:4:12
   │
 2 │     struct S1<phantom T> {
@@ -7,7 +7,7 @@ error[E02012]: invalid phantom type parameter usage
 4 │         a: T,
   │            ^ Phantom type parameter cannot be used as a field type
 
-error[E02012]: invalid phantom type parameter usage
+error[E02013]: invalid phantom type parameter usage
   ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:6:19
   │
 2 │     struct S1<phantom T> {
@@ -16,7 +16,7 @@ error[E02012]: invalid phantom type parameter usage
 6 │         b: vector<T>
   │                   ^ Phantom type parameter cannot be used as an argument to a parameter not declared as phantom
 
-error[E02012]: invalid phantom type parameter usage
+error[E02013]: invalid phantom type parameter usage
    ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:12:15
    │
 11 │     struct S3<phantom T> {
@@ -24,7 +24,7 @@ error[E02012]: invalid phantom type parameter usage
 12 │         a: S2<T>
    │               ^ Phantom type parameter cannot be used as an argument to a parameter not declared as phantom
 
-error[E02012]: invalid phantom type parameter usage
+error[E02013]: invalid phantom type parameter usage
    ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:17:18
    │
 16 │     struct S4<phantom T> {
@@ -32,7 +32,7 @@ error[E02012]: invalid phantom type parameter usage
 17 │         a: S2<S2<T>>
    │                  ^ Phantom type parameter cannot be used as an argument to a parameter not declared as phantom
 
-error[E02012]: invalid phantom type parameter usage
+error[E02013]: invalid phantom type parameter usage
    ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:23:12
    │
 21 │     struct S5<T1, phantom T2, T3> {

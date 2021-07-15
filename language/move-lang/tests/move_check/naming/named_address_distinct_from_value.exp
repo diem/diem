@@ -4,7 +4,7 @@ error[E03002]: unbound module
 13 │     use 0x42::M;
    │         ^^^^^^^ Invalid 'use'. Unbound module: '0x42::M'
 
-error[E02010]: invalid 'friend' declaration
+error[E02011]: invalid 'friend' declaration
    ┌─ tests/move_check/naming/named_address_distinct_from_value.move:14:5
    │
 14 │     friend 0x42::M;

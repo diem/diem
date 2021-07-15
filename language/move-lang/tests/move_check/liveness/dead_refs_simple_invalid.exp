@@ -1,44 +1,34 @@
-error: 
+error[E07002]: mutable ownership violated
+  ┌─ tests/move_check/liveness/dead_refs_simple_invalid.move:5:13
+  │
+4 │         let x_ref = &mut x;
+  │                     ------ It is still being mutably borrowed by this reference
+5 │         _ = x;
+  │             ^ Invalid copy of local 'x'
 
-   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:5:13 ───
+error[E07003]: invalid operation, could create dangling a reference
+  ┌─ tests/move_check/liveness/dead_refs_simple_invalid.move:6:13
+  │
+4 │         let x_ref = &mut x;
+  │                     ------ It is still being mutably borrowed by this reference
+5 │         _ = x;
+6 │         _ = move x;
+  │             ^^^^^^ Invalid move of local 'x'
+
+error[E07002]: mutable ownership violated
+   ┌─ tests/move_check/liveness/dead_refs_simple_invalid.move:13:13
    │
- 5 │         _ = x;
+12 │         let x_ref = &mut x;
+   │                     ------ It is still being mutably borrowed by this reference
+13 │         _ = x;
    │             ^ Invalid copy of local 'x'
-   ·
- 4 │         let x_ref = &mut x;
+
+error[E07003]: invalid operation, could create dangling a reference
+   ┌─ tests/move_check/liveness/dead_refs_simple_invalid.move:14:13
+   │
+12 │         let x_ref = &mut x;
    │                     ------ It is still being mutably borrowed by this reference
-   │
-
-error: 
-
-   ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:6:13 ───
-   │
- 6 │         _ = move x;
+13 │         _ = x;
+14 │         _ = move x;
    │             ^^^^^^ Invalid move of local 'x'
-   ·
- 4 │         let x_ref = &mut x;
-   │                     ------ It is still being mutably borrowed by this reference
-   │
-
-error: 
-
-    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:13:13 ───
-    │
- 13 │         _ = x;
-    │             ^ Invalid copy of local 'x'
-    ·
- 12 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
-    │
-
-error: 
-
-    ┌── tests/move_check/liveness/dead_refs_simple_invalid.move:14:13 ───
-    │
- 14 │         _ = move x;
-    │             ^^^^^^ Invalid move of local 'x'
-    ·
- 12 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
-    │
 

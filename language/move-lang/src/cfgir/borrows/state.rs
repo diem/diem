@@ -7,7 +7,11 @@
 
 use crate::{
     cfgir::absint::*,
-    errors::*,
+    diag,
+    errors::{
+        diagnostic_codes::{DiagnosticCode, ReferenceSafety},
+        new::Diagnostics,
+    },
     hlir::{
         ast::{TypeName_, *},
         translate::{display_var, DisplayVar},
@@ -44,7 +48,7 @@ pub struct BorrowState {
     borrows: BorrowGraph,
     next_id: usize,
     // true if the previous pass had errors
-    prev_errors: bool,
+    prev_had_errors: bool,
 }
 
 //**************************************************************************************************
@@ -83,14 +87,14 @@ impl BorrowState {
     pub fn initial<T>(
         locals: &UniqueMap<Var, T>,
         acquired_resources: BTreeMap<StructName, Loc>,
-        prev_errors: bool,
+        prev_had_errors: bool,
     ) -> Self {
         let mut new_state = BorrowState {
             locals: locals.ref_map(|_, _| Value::NonRef),
             borrows: BorrowGraph::new(),
             next_id: locals.len() + 1,
             acquired_resources,
-            prev_errors,
+            prev_had_errors,
         };
         new_state.borrows.new_ref(Self::LOCAL_ROOT, true);
         new_state
@@ -101,10 +105,11 @@ impl BorrowState {
         loc: Loc,
         full_borrows: &BTreeMap<RefID, Loc>,
         field_borrows: &BTreeMap<Label, BTreeMap<RefID, Loc>>,
+        code: impl DiagnosticCode,
         msg: F,
-    ) -> Errors {
+    ) -> Diagnostics {
         if full_borrows.is_empty() && field_borrows.is_empty() {
-            return Errors::new();
+            return Diagnostics::new();
         }
 
         let mut_adj = |id| {
@@ -114,10 +119,10 @@ impl BorrowState {
                 ""
             }
         };
-        let mut error = vec![(loc, msg())];
+        let mut diag = diag!(code, (loc, msg()));
         for (borrower, rloc) in full_borrows {
             let adj = mut_adj(*borrower);
-            error.push((
+            diag.add_secondary_label((
                 *rloc,
                 format!("It is still being {}borrowed by this reference", adj),
             ))
@@ -132,7 +137,7 @@ impl BorrowState {
                          the virtual 'root' reference"
                     ),
                 };
-                error.push((
+                diag.add_secondary_label((
                     *rloc,
                     format!(
                         "Field '{}' is still being {}borrowed by this reference",
@@ -141,8 +146,8 @@ impl BorrowState {
                 ))
             }
         }
-        assert!(error.len() >= 2);
-        Errors::from(vec![error])
+        assert!(diag.secondary_labels_len() >= 1);
+        Diagnostics::from(vec![diag])
     }
 
     const LOCAL_ROOT: RefID = RefID::new(0);
@@ -208,19 +213,27 @@ impl BorrowState {
         )
     }
 
-    fn writable<F: Fn() -> String>(&self, loc: Loc, msg: F, id: RefID) -> Errors {
+    fn writable<F: Fn() -> String>(&self, loc: Loc, msg: F, id: RefID) -> Diagnostics {
         assert!(self.borrows.is_mutable(id), "ICE type checking failed");
         let (full_borrows, field_borrows) = self.borrows.borrowed_by(id);
-        Self::borrow_error(&self.borrows, loc, &full_borrows, &field_borrows, msg)
+        Self::borrow_error(
+            &self.borrows,
+            loc,
+            &full_borrows,
+            &field_borrows,
+            ReferenceSafety::Dangling,
+            msg,
+        )
     }
 
     fn freezable<F: Fn() -> String>(
         &self,
         loc: Loc,
+        code: impl DiagnosticCode,
         msg: F,
         id: RefID,
         at_field_opt: Option<&Field>,
-    ) -> Errors {
+    ) -> Diagnostics {
         assert!(self.borrows.is_mutable(id), "ICE type checking failed");
         let (full_borrows, field_borrows) = self.borrows.borrowed_by(id);
         let mut_filter_set = |s: BTreeMap<RefID, Loc>| {
@@ -253,6 +266,7 @@ impl BorrowState {
             loc,
             &mut_full_borrows,
             &mut_field_borrows,
+            code,
             msg,
         )
     }
@@ -260,16 +274,17 @@ impl BorrowState {
     fn readable<F: Fn() -> String>(
         &self,
         loc: Loc,
+        code: impl DiagnosticCode,
         msg: F,
         id: RefID,
         at_field_opt: Option<&Field>,
-    ) -> Errors {
+    ) -> Diagnostics {
         let is_mutable = self.borrows.is_mutable(id);
         if is_mutable {
-            self.freezable(loc, msg, id, at_field_opt)
+            self.freezable(loc, code, msg, id, at_field_opt)
         } else {
             // immutable reference is always readable
-            Errors::new()
+            Diagnostics::new()
         }
     }
 
@@ -281,7 +296,7 @@ impl BorrowState {
         *self = Self::initial(
             &self.locals,
             self.acquired_resources.clone(),
-            self.prev_errors,
+            self.prev_had_errors,
         );
     }
 
@@ -308,15 +323,23 @@ impl BorrowState {
         loc: Loc,
         local: &Var,
         full_borrows: &BTreeMap<RefID, Loc>,
+        code: impl DiagnosticCode,
         verb: &'static str,
-    ) -> Errors {
-        Self::borrow_error(borrows, loc, full_borrows, &BTreeMap::new(), move || {
-            let local_str = match display_var(local.value()) {
-                DisplayVar::Tmp => panic!("ICE invalid use of tmp local {}", local.value()),
-                DisplayVar::Orig(s) => s,
-            };
-            format!("Invalid {} of local '{}'", verb, local_str)
-        })
+    ) -> Diagnostics {
+        Self::borrow_error(
+            borrows,
+            loc,
+            full_borrows,
+            &BTreeMap::new(),
+            code,
+            move || {
+                let local_str = match display_var(local.value()) {
+                    DisplayVar::Tmp => panic!("ICE invalid use of tmp local {}", local.value()),
+                    DisplayVar::Orig(s) => s,
+                };
+                format!("Invalid {} of local '{}'", verb, local_str)
+            },
+        )
     }
 
     //**********************************************************************************************
@@ -326,8 +349,8 @@ impl BorrowState {
     pub fn bind_arguments(&mut self, parameter_types: &[(Var, SingleType)]) {
         for (local, ty) in parameter_types.iter() {
             let value = self.single_type_value(ty);
-            let errors = self.assign_local(local.loc(), local, value);
-            assert!(errors.is_empty())
+            let diags = self.assign_local(local.loc(), local, value);
+            assert!(diags.is_empty())
         }
     }
 
@@ -343,36 +366,47 @@ impl BorrowState {
         }
     }
 
-    pub fn assign_local(&mut self, loc: Loc, local: &Var, new_value: Value) -> Errors {
+    pub fn assign_local(&mut self, loc: Loc, local: &Var, new_value: Value) -> Diagnostics {
         let old_value = self.locals.remove(local).unwrap();
         self.locals.add(local.clone(), new_value).unwrap();
         match old_value {
             Value::Ref(id) => {
                 self.release(id);
-                Errors::new()
+                Diagnostics::new()
             }
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
-                Self::check_use_borrowed_by(&self.borrows, loc, local, &borrowed_by, "assignment")
+                Self::check_use_borrowed_by(
+                    &self.borrows,
+                    loc,
+                    local,
+                    &borrowed_by,
+                    ReferenceSafety::Dangling,
+                    "assignment",
+                )
             }
         }
     }
 
-    pub fn mutate(&mut self, loc: Loc, rvalue: Value) -> Errors {
+    pub fn mutate(&mut self, loc: Loc, rvalue: Value) -> Diagnostics {
         let id = match rvalue {
             Value::NonRef => {
-                assert!(self.prev_errors, "ICE borrow checking failed {:#?}", loc);
-                return Errors::new();
+                assert!(
+                    self.prev_had_errors,
+                    "ICE borrow checking failed {:#?}",
+                    loc
+                );
+                return Diagnostics::new();
             }
             Value::Ref(id) => id,
         };
 
-        let errors = self.writable(loc, || "Invalid mutation of reference.".into(), id);
+        let diags = self.writable(loc, || "Invalid mutation of reference.".into(), id);
         self.release(id);
-        errors
+        diags
     }
 
-    pub fn return_(&mut self, loc: Loc, rvalues: Values) -> Errors {
+    pub fn return_(&mut self, loc: Loc, rvalues: Values) -> Diagnostics {
         let mut released = BTreeSet::new();
         for (_, _local, stored_value) in &self.locals {
             if let Value::Ref(id) = stored_value {
@@ -382,29 +416,44 @@ impl BorrowState {
         released.into_iter().for_each(|id| self.release(id));
 
         // Check locals are not borrowed
-        let mut errors = Errors::new();
+        let mut diags = Diagnostics::new();
         for (local, stored_value) in self.locals.key_cloned_iter() {
             if let Value::NonRef = stored_value {
                 let borrowed_by = self.local_borrowed_by(&local);
-                let local_errors =
-                    Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
-                        format!("Invalid return. Local '{}' is still being borrowed.", local)
-                    });
-                errors.extend_deprecated(local_errors)
+                let local_diags = Self::borrow_error(
+                    &self.borrows,
+                    loc,
+                    &borrowed_by,
+                    &BTreeMap::new(),
+                    ReferenceSafety::InvalidReturn,
+                    || {
+                        format!(
+                            "Invalid return. Local variable '{}' is still being borrowed.",
+                            local
+                        )
+                    },
+                );
+                diags.extend(local_diags)
             }
         }
 
         // Check resources are not borrowed
         for resource in self.acquired_resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
-            let resource_errors =
-                Self::borrow_error(&self.borrows, loc, &borrowed_by, &BTreeMap::new(), || {
+            let resource_diags = Self::borrow_error(
+                &self.borrows,
+                loc,
+                &borrowed_by,
+                &BTreeMap::new(),
+                ReferenceSafety::InvalidReturn,
+                || {
                     format!(
-                        "Invalid return. Resource '{}' is still being borrowed.",
+                        "Invalid return. Resource variable '{}' is still being borrowed.",
                         resource
                     )
-                });
-            errors.extend_deprecated(resource_errors)
+                },
+            );
+            diags.extend(resource_diags)
         }
 
         // check any returned reference is not borrowed
@@ -417,15 +466,22 @@ impl BorrowState {
                          being borrowed"
                             .into()
                     };
-                    let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                    errors.extend_deprecated(es);
+                    let ds = Self::borrow_error(
+                        &self.borrows,
+                        loc,
+                        &fulls,
+                        &fields,
+                        ReferenceSafety::InvalidTransfer,
+                        msg,
+                    );
+                    diags.extend(ds);
                 }
                 _ => (),
             }
         }
 
         self.divergent_control_flow();
-        errors
+        diags
     }
 
     pub fn abort(&mut self) {
@@ -436,27 +492,33 @@ impl BorrowState {
     // Expression Entry Points
     //**********************************************************************************************
 
-    pub fn move_local(&mut self, loc: Loc, local: &Var) -> (Errors, Value) {
+    pub fn move_local(&mut self, loc: Loc, local: &Var) -> (Diagnostics, Value) {
         let old_value = self.locals.remove(local).unwrap();
         self.locals.add(local.clone(), Value::NonRef).unwrap();
         match old_value {
-            Value::Ref(id) => (Errors::new(), Value::Ref(id)),
+            Value::Ref(id) => (Diagnostics::new(), Value::Ref(id)),
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
-                let errors =
-                    Self::check_use_borrowed_by(&self.borrows, loc, local, &borrowed_by, "move");
-                (errors, Value::NonRef)
+                let diags = Self::check_use_borrowed_by(
+                    &self.borrows,
+                    loc,
+                    local,
+                    &borrowed_by,
+                    ReferenceSafety::Dangling,
+                    "move",
+                );
+                (diags, Value::NonRef)
             }
         }
     }
 
-    pub fn copy_local(&mut self, loc: Loc, local: &Var) -> (Errors, Value) {
+    pub fn copy_local(&mut self, loc: Loc, local: &Var) -> (Diagnostics, Value) {
         match self.locals.get(local).unwrap() {
             Value::Ref(id) => {
                 let id = *id;
                 let new_id = self.declare_new_ref(self.borrows.is_mutable(id));
                 self.add_copy(loc, id, new_id);
-                (Errors::new(), Value::Ref(new_id))
+                (Diagnostics::new(), Value::Ref(new_id))
             }
             Value::NonRef => {
                 let borrowed_by = self.local_borrowed_by(local);
@@ -466,14 +528,20 @@ impl BorrowState {
                     .into_iter()
                     .filter(|(id, _loc)| borrows.is_mutable(*id))
                     .collect();
-                let errors =
-                    Self::check_use_borrowed_by(&self.borrows, loc, local, &mut_borrows, "copy");
-                (errors, Value::NonRef)
+                let diags = Self::check_use_borrowed_by(
+                    &self.borrows,
+                    loc,
+                    local,
+                    &mut_borrows,
+                    ReferenceSafety::MutOwns,
+                    "copy",
+                );
+                (diags, Value::NonRef)
             }
         }
     }
 
-    pub fn borrow_local(&mut self, loc: Loc, mut_: bool, local: &Var) -> (Errors, Value) {
+    pub fn borrow_local(&mut self, loc: Loc, mut_: bool, local: &Var) -> (Diagnostics, Value) {
         assert!(
             !self.locals.get(local).unwrap().is_ref(),
             "ICE borrow ref {:#?}. Should have been caught in typing",
@@ -482,49 +550,76 @@ impl BorrowState {
         let new_id = self.declare_new_ref(mut_);
         // fails if there are full/epsilon borrows on the local
         let borrowed_by = self.local_borrowed_by(local);
-        let errors = if !mut_ {
+        let diags = if !mut_ {
             let borrows = &self.borrows;
             // check that it is 'readable'
             let mut_borrows = borrowed_by
                 .into_iter()
                 .filter(|(id, _loc)| borrows.is_mutable(*id))
                 .collect();
-            Self::check_use_borrowed_by(borrows, loc, local, &mut_borrows, "borrow")
+            Self::check_use_borrowed_by(
+                borrows,
+                loc,
+                local,
+                &mut_borrows,
+                ReferenceSafety::RefTrans,
+                "borrow",
+            )
         } else {
-            Errors::new()
+            Diagnostics::new()
         };
         self.add_local_borrow(loc, local, new_id);
-        (errors, Value::Ref(new_id))
+        (diags, Value::Ref(new_id))
     }
 
-    pub fn freeze(&mut self, loc: Loc, rvalue: Value) -> (Errors, Value) {
+    pub fn freeze(&mut self, loc: Loc, rvalue: Value) -> (Diagnostics, Value) {
         let id = match rvalue {
             Value::NonRef => {
-                assert!(self.prev_errors, "ICE borrow checking failed {:#?}", loc);
-                return (Errors::new(), Value::NonRef);
+                assert!(
+                    self.prev_had_errors,
+                    "ICE borrow checking failed {:#?}",
+                    loc
+                );
+                return (Diagnostics::new(), Value::NonRef);
             }
             Value::Ref(id) => id,
         };
 
-        let errors = self.freezable(loc, || "Invalid freeze.".into(), id, None);
+        let diags = self.freezable(
+            loc,
+            ReferenceSafety::MutOwns,
+            || "Invalid freeze.".into(),
+            id,
+            None,
+        );
         let frozen_id = self.declare_new_ref(false);
         self.add_copy(loc, id, frozen_id);
         self.release(id);
-        (errors, Value::Ref(frozen_id))
+        (diags, Value::Ref(frozen_id))
     }
 
-    pub fn dereference(&mut self, loc: Loc, rvalue: Value) -> (Errors, Value) {
+    pub fn dereference(&mut self, loc: Loc, rvalue: Value) -> (Diagnostics, Value) {
         let id = match rvalue {
             Value::NonRef => {
-                assert!(self.prev_errors, "ICE borrow checking failed {:#?}", loc);
-                return (Errors::new(), Value::NonRef);
+                assert!(
+                    self.prev_had_errors,
+                    "ICE borrow checking failed {:#?}",
+                    loc
+                );
+                return (Diagnostics::new(), Value::NonRef);
             }
             Value::Ref(id) => id,
         };
 
-        let errors = self.readable(loc, || "Invalid dereference.".into(), id, None);
+        let diags = self.readable(
+            loc,
+            ReferenceSafety::MutOwns,
+            || "Invalid dereference.".into(),
+            id,
+            None,
+        );
         self.release(id);
-        (errors, Value::NonRef)
+        (diags, Value::NonRef)
     }
 
     pub fn borrow_field(
@@ -533,31 +628,42 @@ impl BorrowState {
         mut_: bool,
         rvalue: Value,
         field: &Field,
-    ) -> (Errors, Value) {
+    ) -> (Diagnostics, Value) {
         let id = match rvalue {
             Value::NonRef => {
-                assert!(self.prev_errors, "ICE borrow checking failed {:#?}", loc);
-                return (Errors::new(), Value::NonRef);
+                assert!(
+                    self.prev_had_errors,
+                    "ICE borrow checking failed {:#?}",
+                    loc
+                );
+                return (Diagnostics::new(), Value::NonRef);
             }
             Value::Ref(id) => id,
         };
 
-        let errors = if mut_ {
+        let diags = if mut_ {
             let msg = || format!("Invalid mutable borrow at field '{}'.", field);
             let (full_borrows, _field_borrows) = self.borrows.borrowed_by(id);
             // Any field borrows will be factored out
-            Self::borrow_error(&self.borrows, loc, &full_borrows, &BTreeMap::new(), msg)
+            Self::borrow_error(
+                &self.borrows,
+                loc,
+                &full_borrows,
+                &BTreeMap::new(),
+                ReferenceSafety::MutOwns,
+                msg,
+            )
         } else {
             let msg = || format!("Invalid immutable borrow at field '{}'.", field);
-            self.readable(loc, msg, id, Some(&field))
+            self.readable(loc, ReferenceSafety::RefTrans, msg, id, Some(&field))
         };
         let field_borrow_id = self.declare_new_ref(mut_);
         self.add_field_borrow(loc, id, field.clone(), field_borrow_id);
         self.release(id);
-        (errors, Value::Ref(field_borrow_id))
+        (diags, Value::Ref(field_borrow_id))
     }
 
-    pub fn borrow_global(&mut self, loc: Loc, mut_: bool, t: &BaseType) -> (Errors, Value) {
+    pub fn borrow_global(&mut self, loc: Loc, mut_: bool, t: &BaseType) -> (Diagnostics, Value) {
         let new_id = self.declare_new_ref(mut_);
         let resource = match &t.value {
             BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
@@ -566,20 +672,34 @@ impl BorrowState {
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid borrowing of resource '{}'", resource);
-        let errors = if mut_ {
-            Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg)
+        let diags = if mut_ {
+            Self::borrow_error(
+                borrows,
+                loc,
+                &borrowed_by,
+                &BTreeMap::new(),
+                ReferenceSafety::MutOwns,
+                msg,
+            )
         } else {
             let mut_borrows = borrowed_by
                 .into_iter()
                 .filter(|(id, _loc)| borrows.is_mutable(*id))
                 .collect();
-            Self::borrow_error(borrows, loc, &mut_borrows, &BTreeMap::new(), msg)
+            Self::borrow_error(
+                borrows,
+                loc,
+                &mut_borrows,
+                &BTreeMap::new(),
+                ReferenceSafety::RefTrans,
+                msg,
+            )
         };
         self.add_resource_borrow(loc, resource, new_id);
-        (errors, Value::Ref(new_id))
+        (diags, Value::Ref(new_id))
     }
 
-    pub fn move_from(&mut self, loc: Loc, t: &BaseType) -> (Errors, Value) {
+    pub fn move_from(&mut self, loc: Loc, t: &BaseType) -> (Diagnostics, Value) {
         let resource = match &t.value {
             BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
             _ => panic!("ICE type checking failed"),
@@ -587,8 +707,15 @@ impl BorrowState {
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid extraction of resource '{}'", resource);
-        let errors = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
-        (errors, Value::NonRef)
+        let diags = Self::borrow_error(
+            borrows,
+            loc,
+            &borrowed_by,
+            &BTreeMap::new(),
+            ReferenceSafety::Dangling,
+            msg,
+        );
+        (diags, Value::NonRef)
     }
 
     pub fn call(
@@ -597,16 +724,23 @@ impl BorrowState {
         args: Values,
         resources: &BTreeMap<StructName, Loc>,
         return_ty: &Type,
-    ) -> (Errors, Values) {
-        let mut errors = Errors::new();
+    ) -> (Diagnostics, Values) {
+        let mut diags = Diagnostics::new();
         // Check acquires
         for resource in resources.keys() {
             let borrowed_by = self.resource_borrowed_by(resource);
             let borrows = &self.borrows;
             // TODO point to location of acquire
             let msg = || format!("Invalid acquiring of resource '{}'", resource);
-            let es = Self::borrow_error(borrows, loc, &borrowed_by, &BTreeMap::new(), msg);
-            errors.extend_deprecated(es);
+            let ds = Self::borrow_error(
+                borrows,
+                loc,
+                &borrowed_by,
+                &BTreeMap::new(),
+                ReferenceSafety::Dangling,
+                msg,
+            );
+            diags.extend(ds);
         }
 
         // Check mutable arguments are not borrowed
@@ -619,8 +753,15 @@ impl BorrowState {
                      reference that is being borrowed"
                         .into()
                 };
-                let es = Self::borrow_error(&self.borrows, loc, &fulls, &fields, msg);
-                errors.extend_deprecated(es);
+                let ds = Self::borrow_error(
+                    &self.borrows,
+                    loc,
+                    &fulls,
+                    &fields,
+                    ReferenceSafety::InvalidTransfer,
+                    msg,
+                );
+                diags.extend(ds);
             });
 
         let mut all_parents = BTreeSet::new();
@@ -651,7 +792,7 @@ impl BorrowState {
         }
         all_parents.into_iter().for_each(|id| self.release(id));
 
-        (errors, values)
+        (diags, values)
     }
 
     //**********************************************************************************************
@@ -707,18 +848,18 @@ impl BorrowState {
         let borrows = self.borrows.join(&other.borrows);
         let next_id = locals.len() + 1;
         let acquired_resources = self.acquired_resources.clone();
-        let prev_errors = self.prev_errors;
+        let prev_had_errors = self.prev_had_errors;
         assert!(next_id == self.next_id);
         assert!(next_id == other.next_id);
         assert!(acquired_resources == other.acquired_resources);
-        assert!(prev_errors == other.prev_errors);
+        assert!(prev_had_errors == other.prev_had_errors);
 
         Self {
             locals,
             acquired_resources,
             borrows,
             next_id,
-            prev_errors,
+            prev_had_errors,
         }
     }
 
@@ -728,14 +869,14 @@ impl BorrowState {
             borrows: self_borrows,
             next_id: self_next,
             acquired_resources: self_resources,
-            prev_errors: self_prev_errors,
+            prev_had_errors: self_prev_had_errors,
         } = self;
         let BorrowState {
             locals: other_locals,
             borrows: other_borrows,
             next_id: other_next,
             acquired_resources: other_resources,
-            prev_errors: other_prev_errors,
+            prev_had_errors: other_prev_had_errors,
         } = other;
         assert!(self_next == other_next, "ICE canonicalization failed");
         assert!(
@@ -743,7 +884,7 @@ impl BorrowState {
             "ICE acquired resources static for the function"
         );
         assert!(
-            self_prev_errors == other_prev_errors,
+            self_prev_had_errors == other_prev_had_errors,
             "ICE previous errors flag changed"
         );
         self_locals == other_locals && self_borrows.leq(other_borrows)

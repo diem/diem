@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::Error,
+    diag,
+    errors::new::Diagnostic,
     parser::ast::{
         Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName, QuantKind,
         SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
@@ -456,7 +457,7 @@ impl Address {
         addresses: &UniqueMap<Name, AddressBytes>,
         loc: Loc,
         case: &str,
-    ) -> Result<AddressBytes, Error> {
+    ) -> Result<AddressBytes, Diagnostic> {
         match self {
             Self::Anonymous(sp!(_, bytes)) => Ok(bytes),
             Self::Named(n) => match addresses.get(&n) {
@@ -464,7 +465,11 @@ impl Address {
                 None => {
                     let unable_msg = format!("Unable to fully compile and resolve {}", case);
                     let addr_msg = format!("No value specified for address '{}'", n);
-                    Err(vec![(loc, unable_msg), (n.loc, addr_msg)])
+                    Err(diag!(
+                        BytecodeGeneration::UnassignedAddress,
+                        (loc, unable_msg),
+                        (n.loc, addr_msg)
+                    ))
                 }
             },
         }

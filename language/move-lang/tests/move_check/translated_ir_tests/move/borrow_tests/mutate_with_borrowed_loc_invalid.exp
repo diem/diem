@@ -1,11 +1,8 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/borrow_tests/mutate_with_borrowed_loc_invalid.move:5:9 ───
-   │
- 5 │         x = 0;
-   │         ^ Invalid assignment of local 'x'
-   ·
- 4 │         let y = &x;
-   │                 -- It is still being borrowed by this reference
-   │
+error[E07003]: invalid operation, could create dangling a reference
+  ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/mutate_with_borrowed_loc_invalid.move:5:9
+  │
+4 │         let y = &x;
+  │                 -- It is still being borrowed by this reference
+5 │         x = 0;
+  │         ^ Invalid assignment of local 'x'
 

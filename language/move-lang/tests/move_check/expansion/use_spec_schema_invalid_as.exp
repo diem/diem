@@ -1,4 +1,4 @@
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/use_spec_schema_invalid_as.move:9:25
   │
 9 │     use 0x2::X::{Foo as foo};

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::*,
+    diag,
+    errors::new::Diagnostics,
     expansion::ast::{ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{FunctionName, ModuleName, Var},
@@ -151,7 +152,7 @@ impl CompiledUnit {
         }
     }
 
-    pub fn verify(self) -> (Self, Errors) {
+    pub fn verify(self) -> (Self, Diagnostics) {
         match self {
             CompiledUnit::Module {
                 ident,
@@ -189,39 +190,39 @@ impl CompiledUnit {
     }
 }
 
-fn verify_module(loc: Loc, cm: F::CompiledModule) -> (F::CompiledModule, Errors) {
+fn verify_module(loc: Loc, cm: F::CompiledModule) -> (F::CompiledModule, Diagnostics) {
     match move_bytecode_verifier::verifier::verify_module(&cm) {
-        Ok(_) => (cm, Errors::new()),
+        Ok(_) => (cm, Diagnostics::new()),
         Err(e) => (
             cm,
-            Errors::from(vec![vec![(
-                loc,
-                format!("ICE failed bytecode verifier: {:#?}", e),
-            )]]),
+            Diagnostics::from(vec![diag!(
+                Bug::BytecodeVerification,
+                (loc, format!("ICE failed bytecode verifier: {:#?}", e)),
+            )]),
         ),
     }
 }
 
-fn verify_script(loc: Loc, cs: F::CompiledScript) -> (F::CompiledScript, Errors) {
+fn verify_script(loc: Loc, cs: F::CompiledScript) -> (F::CompiledScript, Diagnostics) {
     match move_bytecode_verifier::verifier::verify_script(&cs) {
-        Ok(_) => (cs, Errors::new()),
+        Ok(_) => (cs, Diagnostics::new()),
         Err(e) => (
             cs,
-            Errors::from(vec![vec![(
-                loc,
-                format!("ICE failed bytecode verifier: {:#?}", e),
-            )]]),
+            Diagnostics::from(vec![diag!(
+                Bug::BytecodeVerification,
+                (loc, format!("ICE failed bytecode verifier: {:#?}", e)),
+            )]),
         ),
     }
 }
 
-pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Errors) {
+pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Diagnostics) {
     let mut new_units = vec![];
-    let mut errors = Errors::new();
+    let mut diags = Diagnostics::new();
     for unit in units {
-        let (unit, es) = unit.verify();
+        let (unit, ds) = unit.verify();
         new_units.push(unit);
-        errors.extend_deprecated(es);
+        diags.extend(ds);
     }
-    (new_units, errors)
+    (new_units, diags)
 }

@@ -1,4 +1,4 @@
-error[E02009]: invalid name
+error[E02010]: invalid name
   ┌─ tests/move_check/expansion/invalid_spec_schema_name.move:2:17
   │
 2 │     spec schema foo<T> {

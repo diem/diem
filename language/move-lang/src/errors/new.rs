@@ -193,6 +193,10 @@ impl Diagnostic {
     pub(crate) fn add_secondary_label(&mut self, (loc, msg): (Loc, impl ToString)) {
         self.secondary_labels.push((loc, msg.to_string()))
     }
+
+    pub(crate) fn secondary_labels_len(&self) -> usize {
+        self.secondary_labels.len()
+    }
 }
 
 #[macro_export]
@@ -200,7 +204,11 @@ macro_rules! diag {
     ($code: expr, $primary: expr $(,)?) => {{
         #[allow(unused)]
         use crate::errors::diagnostic_codes::*;
-        crate::errors::new::Diagnostic::new($code, $primary, std::iter::empty::<(Loc, String)>())
+        crate::errors::new::Diagnostic::new(
+            $code,
+            $primary,
+            std::iter::empty::<(move_ir_types::location::Loc, String)>(),
+        )
     }};
     ($code: expr, $primary: expr, $($secondary: expr),+ $(,)?) => {{
         #[allow(unused)]

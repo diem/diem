@@ -1,33 +1,27 @@
-error: 
+error[E06002]: use of unassigned variable
+  ┌─ tests/move_check/locals/use_before_assign_if.move:5:17
+  │
+3 │         let x: u64;
+  │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+4 │         if (cond) { x = 0 };
+5 │         let _ = move x + 1;
+  │                 ^^^^^^ Invalid usage of variable 'x'
 
-   ┌── tests/move_check/locals/use_before_assign_if.move:5:17 ───
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_if.move:11:17
    │
- 5 │         let _ = move x + 1;
-   │                 ^^^^^^ Invalid usage of local 'x'
-   ·
- 3 │         let x: u64;
-   │             - The local might not have a value due to this position. The local must be assigned a value before being used
+ 9 │         let x: u64;
+   │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+10 │         if (cond) { x = 0 };
+11 │         let _ = x + 1;
+   │                 ^ Invalid usage of variable 'x'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/locals/use_before_assign_if.move:17:17
    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_if.move:11:17 ───
-    │
- 11 │         let _ = x + 1;
-    │                 ^ Invalid usage of local 'x'
-    ·
-  9 │         let x: u64;
-    │             - The local might not have a value due to this position. The local must be assigned a value before being used
-    │
-
-error: 
-
-    ┌── tests/move_check/locals/use_before_assign_if.move:17:17 ───
-    │
- 17 │         let _ = &x;
-    │                 ^^ Invalid usage of local 'x'
-    ·
- 15 │         let x: u64;
-    │             - The local might not have a value due to this position. The local must be assigned a value before being used
-    │
+15 │         let x: u64;
+   │             - The variable might not have a value due to this position. The variable must be assigned a value before being used
+16 │         if (cond) { x = 0 };
+17 │         let _ = &x;
+   │                 ^^ Invalid usage of variable 'x'
 

@@ -1,17 +1,14 @@
-error: 
-
-   ┌── tests/move_check/translated_ir_tests/move/borrow_tests/return_with_borrowed_loc_resource_invalid.move:7:15 ───
-   │
- 7 │         copy u;
-   │               ^ Invalid return
-   ·
- 5 │         let s = X { u: 0 };
-   │             - The local 's' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-   ·
- 5 │         let s = X { u: 0 };
-   │                 ---------- The type '0x8675309::M::X' does not have the ability 'drop'
-   ·
- 2 │     struct X has key { u: u64 }
-   │            - To satisfy the constraint, the 'drop' ability would need to be added here
-   │
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/return_with_borrowed_loc_resource_invalid.move:7:15
+  │
+2 │     struct X has key { u: u64 }
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+5 │         let s = X { u: 0 };
+  │             -   ---------- The type '0x8675309::M::X' does not have the ability 'drop'
+  │             │    
+  │             The local variable 's' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+6 │         let u = &s.u;
+7 │         copy u;
+  │               ^ Invalid return
 

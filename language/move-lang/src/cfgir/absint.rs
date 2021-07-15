@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::cfg::CFG;
-use crate::{errors::*, hlir::ast::*};
+use crate::{errors::new::Diagnostics, hlir::ast::*};
 use std::collections::BTreeMap;
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
@@ -24,7 +24,7 @@ enum BlockPostcondition {
     /// Analyzing block was successful
     Success,
     /// Analyzing block ended in an error
-    Error(Errors),
+    Error(Diagnostics),
 }
 
 #[derive(Clone)]
@@ -38,18 +38,20 @@ struct BlockInvariant<State> {
 /// A map from block id's to the pre/post of each block after a fixed point is reached.
 type InvariantMap<State> = BTreeMap<Label, BlockInvariant<State>>;
 
-fn collect_states_and_errors<State>(map: InvariantMap<State>) -> (BTreeMap<Label, State>, Errors) {
-    let mut errors = Errors::new();
+fn collect_states_and_diagnostics<State>(
+    map: InvariantMap<State>,
+) -> (BTreeMap<Label, State>, Diagnostics) {
+    let mut diags = Diagnostics::new();
     let final_states = map
         .into_iter()
         .map(|(lbl, BlockInvariant { pre, post })| {
-            if let BlockPostcondition::Error(es) = post {
-                errors.extend_deprecated(es)
+            if let BlockPostcondition::Error(ds) = post {
+                diags.extend(ds)
             }
             (lbl, pre)
         })
         .collect();
-    (final_states, errors)
+    (final_states, diags)
 }
 
 /// Take a pre-state + instruction and mutate it to produce a post-state
@@ -73,7 +75,7 @@ pub trait TransferFunctions {
         lbl: Label,
         idx: usize,
         command: &Command,
-    ) -> Errors;
+    ) -> Diagnostics;
 }
 
 pub trait AbstractInterpreter: TransferFunctions {
@@ -82,7 +84,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         cfg: &dyn CFG,
         initial_state: Self::State,
-    ) -> (BTreeMap<Label, Self::State>, Errors) {
+    ) -> (BTreeMap<Label, Self::State>, Diagnostics) {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
         let start = cfg.start_block();
         let mut work_list = vec![start];
@@ -138,7 +140,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             }
         }
 
-        collect_states_and_errors(inv_map)
+        collect_states_and_diagnostics(inv_map)
     }
 
     fn execute_block(
@@ -146,12 +148,12 @@ pub trait AbstractInterpreter: TransferFunctions {
         cfg: &dyn CFG,
         pre_state: &Self::State,
         block_lbl: Label,
-    ) -> (Self::State, Errors) {
+    ) -> (Self::State, Diagnostics) {
         let mut state = pre_state.clone();
-        let mut errors = Errors::new();
+        let mut diags = Diagnostics::new();
         for (idx, cmd) in cfg.commands(block_lbl) {
-            errors.extend_deprecated(self.execute(&mut state, block_lbl, idx, cmd));
+            diags.extend(self.execute(&mut state, block_lbl, idx, cmd));
         }
-        (state, errors)
+        (state, diags)
     }
 }
