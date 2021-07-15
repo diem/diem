@@ -5,11 +5,9 @@ pub mod account;
 pub mod signature;
 
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
-use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_runtime::native_functions::{NativeFunction, NativeFunctionTable};
 
-pub fn all_natives(
-    diem_framework_addr: AccountAddress,
-) -> Vec<(AccountAddress, Identifier, Identifier, NativeFunction)> {
+pub fn all_natives(diem_framework_addr: AccountAddress) -> NativeFunctionTable {
     const NATIVES: &[(&str, &str, NativeFunction)] = &[
         (
             "DiemAccount",

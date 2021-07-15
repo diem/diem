@@ -27,7 +27,7 @@ use move_lang::{
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
 };
 use move_model::{model::GlobalEnv, run_model_builder_with_compilation_flags};
-use move_vm_runtime::move_vm::MoveVM;
+use move_vm_runtime::{move_vm::MoveVM, native_functions::NativeFunctionTable};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
@@ -35,18 +35,17 @@ use resource_viewer::MoveValueAnnotator;
 use std::{io::Write, marker::Send, sync::Mutex, time::Instant};
 
 /// Test state common to all tests
-#[derive(Debug)]
 pub struct SharedTestingConfig {
     save_storage_state_on_failure: bool,
     execution_bound: u64,
     cost_table: CostTable,
+    native_function_table: NativeFunctionTable,
     starting_storage_state: InMemoryStorage,
     source_files: Vec<String>,
     check_stackless_vm: bool,
     verbose: bool,
 }
 
-#[derive(Debug)]
 pub struct TestRunner {
     num_threads: usize,
     testing_config: SharedTestingConfig,
@@ -116,6 +115,7 @@ impl TestRunner {
         verbose: bool,
         save_storage_state_on_failure: bool,
         tests: TestPlan,
+        native_function_table: Option<NativeFunctionTable>,
     ) -> Result<Self> {
         let source_files = tests
             .files
@@ -124,11 +124,15 @@ impl TestRunner {
             .collect();
         let modules = tests.module_info.values().map(|info| &info.0);
         let starting_storage_state = setup_test_storage(modules)?;
+        let native_function_table = native_function_table.unwrap_or_else(|| {
+            move_stdlib::natives::all_natives(AccountAddress::from_hex_literal("0x1").unwrap())
+        });
         Ok(Self {
             testing_config: SharedTestingConfig {
                 save_storage_state_on_failure,
                 starting_storage_state,
                 execution_bound,
+                native_function_table,
                 cost_table: unit_cost_table(),
                 source_files,
                 check_stackless_vm,
@@ -178,10 +182,7 @@ impl SharedTestingConfig {
         function_name: &str,
         test_info: &TestCase,
     ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
-        let move_vm = MoveVM::new(move_stdlib::natives::all_natives(
-            AccountAddress::from_hex_literal("0x1").unwrap(),
-        ))
-        .unwrap();
+        let move_vm = MoveVM::new(self.native_function_table.clone()).unwrap();
         let mut session = move_vm.new_session(&self.starting_storage_state);
         let mut gas_meter = GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound));
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set

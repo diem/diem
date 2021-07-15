@@ -22,6 +22,8 @@ use std::{
 pub type NativeFunction =
     fn(&mut NativeContext, Vec<Type>, VecDeque<Value>) -> PartialVMResult<NativeResult>;
 
+pub type NativeFunctionTable = Vec<(AccountAddress, Identifier, Identifier, NativeFunction)>;
+
 pub(crate) struct NativeFunctions(
     HashMap<AccountAddress, HashMap<String, HashMap<String, NativeFunction>>>,
 );

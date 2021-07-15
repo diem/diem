@@ -39,6 +39,8 @@ smallvec = "1.6.1"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
+move-unit-test = { path = "../tools/move-unit-test" }
+diem-vm = { path = "../diem-vm" }
 
 tempfile = "3.2.0"
 dir-diff = "0.3.2"
