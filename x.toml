@@ -226,6 +226,15 @@ members = [
 ]
 
 [workspace.move-to-diem-deps]
+# By default, all crates in the language directory are considered Move crates
+# and are forbidden from depending on any Diem crates.
+#
+# Adding a crate's name to this list will mark it as a Diem crate so that the
+# linter will not impose said restriction on it.
+#
+# Note: if your crate is indeed a Move crate and you are getting the linter
+# yelling at you, you should redesign your crate and properly remove that
+# dependency, instead of adding the crate to this list and silencing the lint.
 diem_crates_in_language = [
     "diem-e2e-tests-replay",
     "diem-framework",
@@ -250,12 +259,17 @@ diem_crates_in_language = [
     "diem-resource-viewer",
     "df-cli",
 ]
+# A special set of diem crates Move crates are allowed to depend on.
+#
+# You should not add new entries to this list unless you have a rare justifiable
+# reason. (read: Just don't.)
+#
+# Particularly, please do not abuse this to silence the lint when it complains
+# about Move crates depending on Diem ones. Again, you should instead fix
+# the design of your crate so it doesn't have to depend on Diem.
 exclude = [
     "diem-workspace-hack",
 ]
-# This is a list of existing move to diem dependencies that we plan to eliminate over time.
-# You should refrain from adding new entries to this list in general.
-existing_deps = []
 
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.

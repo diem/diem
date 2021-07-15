@@ -160,7 +160,6 @@ pub struct DirectDepDupsConfig {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct MoveToDiemDepsConfig {
     pub diem_crates_in_language: HashSet<String>,
-    pub existing_deps: HashSet<(String, String)>,
     pub exclude: HashSet<String>,
 }
 

@@ -572,12 +572,6 @@ impl<'cfg> PackageLinter for MoveCratesDontDependOnDiemCrates<'cfg> {
             false
         };
 
-        let is_existing_move_to_diem_dep = |name1: &str, name2: &str| {
-            self.config
-                .existing_deps
-                .contains(&(name1.to_string(), name2.to_string()))
-        };
-
         if is_move_crate(&crate_path, crate_name) {
             for direct_dep in metadata.direct_links() {
                 let dep = direct_dep.to();
@@ -586,7 +580,6 @@ impl<'cfg> PackageLinter for MoveCratesDontDependOnDiemCrates<'cfg> {
                 if dep.in_workspace()
                     && !self.config.exclude.contains(dep_name)
                     && !is_move_crate(&dep.source().to_string(), dep_name)
-                    && !is_existing_move_to_diem_dep(crate_name, dep_name)
                 {
                     println!("(\"{}\", \"{}\"),", crate_name, dep_name);
                     out.write(
