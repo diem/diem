@@ -6177,6 +6177,7 @@ dependencies = [
  "move-bytecode-utils",
  "move-core-types",
  "move-model",
+ "move-stdlib",
  "move-vm-runtime",
  "read-write-set-types",
  "resource-viewer",

@@ -894,7 +894,7 @@ impl AccessPath {
 }
 
 impl ReadWriteSetState {
-    pub fn make_canonical(self, env: &GlobalEnv) -> Option<ReadWriteSet> {
+    pub fn make_canonical(&self, env: &GlobalEnv) -> Option<ReadWriteSet> {
         let mut analysis_result = ReadWriteSet::new();
         self.accesses.iter_paths(|access_path, access| {
             // TODO: Replace the unwrap here?
