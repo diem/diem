@@ -43,7 +43,7 @@ use codespan::LineIndex;
 use move_model::{
     ast::TempIndex,
     model::{Loc, NodeId},
-    ty::BOOL_TYPE,
+    ty::{TypeDisplayContext, BOOL_TYPE},
 };
 
 pub struct BoogieTranslator<'env> {
@@ -426,6 +426,9 @@ impl<'env> FunctionTranslator<'env> {
 
                 let suffix = match flavor {
                     VerificationFlavor::Regular => "$verify".to_string(),
+                    VerificationFlavor::Instantiated(_) => {
+                        format!("$verify_{}", flavor)
+                    }
                     VerificationFlavor::Inconsistency => {
                         attribs.push(format!(
                             "{{:msg_if_verifies \"inconsistency_detected{}\"}} ",
@@ -500,6 +503,7 @@ impl<'env> FunctionTranslator<'env> {
         let writer = self.parent.writer;
         let fun_target = self.fun_target;
         let variant = &fun_target.data.variant;
+        let instantiation = &fun_target.data.type_args;
         let env = fun_target.global_env();
 
         // Be sure to set back location to the whole function definition as a default.
@@ -507,6 +511,19 @@ impl<'env> FunctionTranslator<'env> {
 
         emitln!(writer, "{");
         writer.indent();
+
+        // Print instantiation information
+        if !instantiation.is_empty() {
+            let display_ctxt = TypeDisplayContext::WithEnv {
+                env,
+                type_param_names: None,
+            };
+            emitln!(writer, "// function instantiation");
+            for (ty_var, ty_inst) in instantiation {
+                emitln!(writer, "#{} := {}", ty_var, ty_inst.display(&display_ctxt));
+            }
+            emitln!(writer, "");
+        }
 
         // Generate local variable declarations. They need to appear first in boogie.
         emitln!(writer, "// declare local variables");
