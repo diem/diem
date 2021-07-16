@@ -20,8 +20,14 @@ use diem_types::{
     vm_status::{KeptVMStatus, StatusCode},
 };
 use language_e2e_tests::{
-    account, common_transactions::rotate_key_txn, currencies, gas_costs, keygen::KeyGen,
-    test_with_different_versions, versioning::CURRENT_RELEASE_VERSIONS,
+    account::{self, Account},
+    common_transactions::rotate_key_txn,
+    currencies, current_function_name,
+    executor::FakeExecutor,
+    gas_costs,
+    keygen::KeyGen,
+    test_with_different_versions,
+    versioning::CURRENT_RELEASE_VERSIONS,
 };
 use move_core_types::language_storage::TypeTag;
 
@@ -1159,105 +1165,105 @@ fn recovery_address() {
 
 #[test]
 fn add_child_currencies() {
-    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
-        let mut executor = test_env.executor;
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-        let vasp_a = executor.create_raw_account();
-        let vasp_a_child1 = executor.create_raw_account();
-        let vasp_b = executor.create_raw_account();
-        let vasp_b_child1 = executor.create_raw_account();
-        let vasp_b_child2 = executor.create_raw_account();
-        let blessed = test_env.tc_account;
+    let vasp_a = executor.create_raw_account();
+    let vasp_a_child1 = executor.create_raw_account();
+    let vasp_b = executor.create_raw_account();
+    let vasp_b_child1 = executor.create_raw_account();
+    let vasp_b_child2 = executor.create_raw_account();
+    let blessed = Account::new_blessed_tc();
+    let dr_account = Account::new_diem_root();
+    let tc_sequence_number = 0;
 
-        currencies::add_currency_to_system(&mut executor, "COIN", &test_env.dr_account, test_env.dr_sequence_number);
+    currencies::add_currency_to_system(&mut executor, "COIN", &dr_account, 1);
 
-        executor.execute_and_apply(
-            blessed
-                .transaction()
-                .script(encode_create_parent_vasp_account_script(
-                    account_config::xus_tag(),
-                    0,
-                    *vasp_a.address(),
-                    vasp_a.auth_key_prefix(),
-                    vec![],
-                    false,
-                ))
-                .sequence_number(test_env.tc_sequence_number)
-                .sign(),
-        );
+    executor.execute_and_apply(
+        blessed
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::xus_tag(),
+                0,
+                *vasp_a.address(),
+                vasp_a.auth_key_prefix(),
+                vec![],
+                false,
+            ))
+            .sequence_number(tc_sequence_number)
+            .sign(),
+    );
 
-        // Adding a child with the same currency is no issue
-        executor.execute_and_apply(
-            vasp_a
-                .transaction()
-                .script(encode_create_child_vasp_account_script(
-                    account_config::xus_tag(),
-                    *vasp_a_child1.address(),
-                    vasp_a_child1.auth_key_prefix(),
-                    false,
-                    0,
-                ))
-                .sequence_number(0)
-                .sign(),
-        );
+    // Adding a child with the same currency is no issue
+    executor.execute_and_apply(
+        vasp_a
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::xus_tag(),
+                *vasp_a_child1.address(),
+                vasp_a_child1.auth_key_prefix(),
+                false,
+                0,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
-        executor.execute_and_apply(
-            vasp_a
-                .transaction()
-                .script(encode_add_currency_to_account_script(
-                    account_config::type_tag_for_currency_code(account::currency_code("COIN")),
-                ))
-                .sequence_number(1)
-                .sign(),
-        );
+    executor.execute_and_apply(
+        vasp_a
+            .transaction()
+            .script(encode_add_currency_to_account_script(
+                account_config::type_tag_for_currency_code(account::currency_code("COIN")),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
-        ///////////////////////////////////////////////////////////////////////////
-        // Now make a parent with all currencies, and make sure the children are fine
-        ///////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+    // Now make a parent with all currencies, and make sure the children are fine
+    ///////////////////////////////////////////////////////////////////////////
 
-        executor.execute_and_apply(
-            blessed
-                .transaction()
-                .script(encode_create_parent_vasp_account_script(
-                    account_config::xus_tag(),
-                    0,
-                    *vasp_b.address(),
-                    vasp_b.auth_key_prefix(),
-                    vec![],
-                    true,
-                ))
-                .sequence_number(test_env.tc_sequence_number.checked_add(1).unwrap())
-                .sign(),
-        );
+    executor.execute_and_apply(
+        blessed
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::xus_tag(),
+                0,
+                *vasp_b.address(),
+                vasp_b.auth_key_prefix(),
+                vec![],
+                true,
+            ))
+            .sequence_number(tc_sequence_number.checked_add(1).unwrap())
+            .sign(),
+    );
 
-        // Adding a child with the same currency and all other currencies isn't an issue
-        executor.execute_and_apply(
-            vasp_b
-                .transaction()
-                .script(encode_create_child_vasp_account_script(
-                    account_config::xus_tag(),
-                    *vasp_b_child1.address(),
-                    vasp_b_child1.auth_key_prefix(),
-                    true,
-                    0,
-                ))
-                .sequence_number(0)
-                .sign(),
-        );
-        // Adding a child with a different currency than the parent VASP is OK
-        executor.execute_and_apply(
-            vasp_b
-                .transaction()
-                .script(encode_create_child_vasp_account_script(
-                    account_config::type_tag_for_currency_code(account::currency_code("COIN")),
-                    *vasp_b_child2.address(),
-                    vasp_b_child2.auth_key_prefix(),
-                    false,
-                    0,
-                ))
-                .sequence_number(1)
-                .sign(),
-        );
-    }
-    }
+    // Adding a child with the same currency and all other currencies isn't an issue
+    executor.execute_and_apply(
+        vasp_b
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::xus_tag(),
+                *vasp_b_child1.address(),
+                vasp_b_child1.auth_key_prefix(),
+                true,
+                0,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
+    // Adding a child with a different currency than the parent VASP is OK
+    executor.execute_and_apply(
+        vasp_b
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::type_tag_for_currency_code(account::currency_code("COIN")),
+                *vasp_b_child2.address(),
+                vasp_b_child2.auth_key_prefix(),
+                false,
+                0,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 }
