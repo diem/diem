@@ -540,13 +540,14 @@ impl DiemDB {
             .map(|txn_to_commit| txn_to_commit.account_states().clone())
             .collect::<Vec<_>>();
 
-        let node_hashes = txns_to_commit
+        let _node_hashes = txns_to_commit
             .iter()
             .map(|txn_to_commit| txn_to_commit.jf_node_hashes())
             .collect::<Option<Vec<_>>>();
         let state_root_hashes = self.state_store.put_account_state_sets(
             account_state_sets,
-            node_hashes,
+            // TODO(aldenhu): change back
+            None, // node_hashes,
             first_version,
             &mut cs,
         )?;

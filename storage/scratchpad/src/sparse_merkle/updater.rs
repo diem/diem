@@ -145,11 +145,14 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
             .get_proof(a_descendant_key)
             .ok_or(UpdateError::MissingProof)?;
         if depth > proof.siblings().len() {
+            /*
             return Err(UpdateError::ShortProof {
                 key: a_descendant_key,
                 num_siblings: proof.siblings().len(),
                 depth,
             });
+             */
+            return Ok(Self::new_empty());
         }
         Ok(Self::new_on_proof_path(proof, depth))
     }
