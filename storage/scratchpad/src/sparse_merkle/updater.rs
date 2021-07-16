@@ -25,7 +25,6 @@ type InMemInternal<V> = super::node::InternalNode<V>;
 enum InMemSubTreeInfo<V> {
     Internal {
         subtree: InMemSubTree<V>,
-        // TODO(aldenhu): make it lazy (going up)
         node: InMemInternal<V>,
     },
     Leaf {
@@ -40,18 +39,17 @@ enum InMemSubTreeInfo<V> {
 
 impl<V: Clone + CryptoHash> InMemSubTreeInfo<V> {
     fn create_leaf_with_update(update: (HashValue, &V)) -> Self {
-        let subtree = InMemSubTree::new_leaf_with_value(update.0, (*update.1).clone());
+        let (key, value) = update;
         Self::Leaf {
-            key: update.0,
-            subtree,
+            subtree: InMemSubTree::new_leaf_with_value(key, value.clone()),
+            key,
         }
     }
 
     fn create_leaf_with_proof(leaf: &SparseMerkleLeafNode) -> Self {
-        let subtree = InMemSubTree::new_leaf_with_value_hash(leaf.key(), leaf.value_hash());
         Self::Leaf {
+            subtree: InMemSubTree::new_leaf_with_value_hash(leaf.key(), leaf.value_hash()),
             key: leaf.key(),
-            subtree,
         }
     }
 
@@ -76,7 +74,7 @@ impl<V: Clone + CryptoHash> InMemSubTreeInfo<V> {
 
     fn into_subtree(self) -> InMemSubTree<V> {
         match self {
-            Self::Leaf { subtree, .. } => subtree,
+            Self::Leaf { subtree, ..} => subtree,
             Self::Internal { subtree, .. } => subtree,
             Self::Unknown { subtree } => subtree,
             Self::Empty => InMemSubTree::Empty,
@@ -157,16 +155,25 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
     fn from_in_mem(subtree: &InMemSubTree<V>) -> Self {
         match &subtree {
             InMemSubTree::Empty => SubTreeInfo::new_empty(),
-            InMemSubTree::NonEmpty { root, .. } => match root.get_node_if_in_mem() {
+            InMemSubTree::NonEmpty { root, .. } => match root.get_if_in_mem() {
                 Some(arc_node) => match arc_node.borrow() {
-                    Node::Internal(node) => SubTreeInfo::InMem(InMemSubTreeInfo::Internal {
-                        node: (*node).clone(),
+                    Node::Internal(internal_node) => SubTreeInfo::InMem(InMemSubTreeInfo::Internal {
+                        node: internal_node.clone(),
                         subtree: subtree.weak(),
                     }),
-                    Node::Leaf(node) => SubTreeInfo::InMem(InMemSubTreeInfo::Leaf {
-                        key: node.key,
-                        subtree: subtree.weak(),
-                    }),
+                    Node::Leaf(leaf_node) => {
+                        // TODO(aldenhu): doc
+                        let node = Node::Leaf(leaf_node.clone_with_weak_value());
+                        let subtree = InMemSubTree::NonEmpty {
+                            hash: subtree.hash(),
+                            root: NodeHandle::new_shared(node),
+                        };
+
+                        SubTreeInfo::InMem(InMemSubTreeInfo::Leaf {
+                            key: leaf_node.key,
+                            subtree,
+                        })
+                    },
                 },
                 None => SubTreeInfo::InMem(InMemSubTreeInfo::Unknown {
                     subtree: subtree.weak(),
@@ -203,6 +210,9 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
                     swap_if(myself, SubTreeInfo::new_empty(), key.bit(depth))
                 }
                 InMemSubTreeInfo::Internal { node, .. } => (
+                    // n.b. When we recurse into either side, the updates can be empty, where the
+                    // specific type of the in-mem node is irrelevant, so the parsing of it can be
+                    // lazy. But the saving seem not worth the complexity.
                     SubTreeInfo::from_in_mem(&node.left),
                     SubTreeInfo::from_in_mem(&node.right),
                 ),

@@ -40,7 +40,7 @@ impl<V: CryptoHash> InternalNode<V> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct LeafNode<V> {
     pub key: HashValue,
     pub value: LeafValue<V>,
@@ -50,19 +50,27 @@ impl<V: CryptoHash> LeafNode<V> {
     pub fn new(key: HashValue, value: LeafValue<V>) -> Self {
         Self { key, value }
     }
+
     pub fn calc_hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.key, self.value.calc_hash()).hash()
+        SparseMerkleLeafNode::new(self.key, self.value.hash).hash()
+    }
+
+    pub fn clone_with_weak_value(&self) -> Self {
+        Self {
+            key: self.key,
+            value: self.value.weak(),
+        }
     }
 }
 
-impl<V> From<SparseMerkleLeafNode> for LeafNode<V>
+impl<V> From<&SparseMerkleLeafNode> for LeafNode<V>
 where
     V: CryptoHash,
 {
-    fn from(leaf_node: SparseMerkleLeafNode) -> Self {
+    fn from(leaf_node: &SparseMerkleLeafNode) -> Self {
         Self {
             key: leaf_node.key(),
-            value: LeafValue::ValueHash(leaf_node.value_hash()),
+            value: LeafValue::new_with_value_hash(leaf_node.value_hash()),
         }
     }
 }
@@ -90,19 +98,19 @@ impl<V: CryptoHash> Node<V> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum NodeHandle<V> {
-    Shared(Arc<Node<V>>),
-    Weak(Weak<Node<V>>),
+#[derive(Debug)]
+pub enum Ref<R> {
+    Shared(Arc<R>),
+    Weak(Weak<R>),
 }
 
-impl<V> NodeHandle<V> {
+impl<R> Ref<R> {
     pub fn new_unknown() -> Self {
         Self::Weak(Weak::new())
     }
 
-    pub fn new_shared(node: Node<V>) -> Self {
-        Self::Shared(Arc::new(node))
+    pub fn new_shared(referee: R) -> Self {
+        Self::Shared(Arc::new(referee))
     }
 
     pub fn weak(&self) -> Self {
@@ -112,13 +120,24 @@ impl<V> NodeHandle<V> {
         })
     }
 
-    pub fn get_node_if_in_mem(&self) -> Option<Arc<Node<V>>> {
+    pub fn get_if_in_mem(&self) -> Option<Arc<R>> {
         match self {
             Self::Shared(arc) => Some(arc.clone()),
             Self::Weak(weak) => weak.upgrade(),
         }
     }
 }
+
+impl<R> Clone for Ref<R> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Shared(arc) => Self::Shared(arc.clone()),
+            Self::Weak(weak) => Self::Weak(weak.clone()),
+        }
+    }
+}
+
+pub(crate) type NodeHandle<V> = Ref<Node<V>>;
 
 #[derive(Clone, Debug)]
 pub(crate) enum SubTree<V> {
@@ -142,11 +161,12 @@ impl<V: CryptoHash> SubTree<V> {
     }
 
     pub fn new_leaf_with_value(key: HashValue, value: V) -> Self {
-        Self::new_leaf_impl(key, LeafValue::Value(value))
+        Self::new_leaf_impl(key, LeafValue::new_with_value(value))
+
     }
 
     pub fn new_leaf_with_value_hash(key: HashValue, value_hash: HashValue) -> Self {
-        Self::new_leaf_impl(key, LeafValue::ValueHash(value_hash))
+        Self::new_leaf_impl(key, LeafValue::new_with_value_hash(value_hash))
     }
 
     fn new_leaf_impl(key: HashValue, value: LeafValue<V>) -> Self {
@@ -187,7 +207,7 @@ impl<V: CryptoHash> SubTree<V> {
     pub fn get_node_if_in_mem(&self) -> Option<Arc<Node<V>>> {
         match self {
             Self::Empty => None,
-            Self::NonEmpty { root, .. } => root.get_node_if_in_mem(),
+            Self::NonEmpty { root, .. } => root.get_if_in_mem(),
         }
     }
 
@@ -208,20 +228,39 @@ impl<V: CryptoHash> SubTree<V> {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum LeafValue<V> {
-    /// The content of the leaf.
-    Value(V),
-
-    /// The hash of the leaf content.
-    ValueHash(HashValue),
+#[derive(Clone, Debug)]
+pub struct LeafValue<V> {
+    pub hash: HashValue,
+    pub data: Ref<V>,
 }
 
+impl<V> PartialEq for LeafValue<V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
+}
+
+impl<V> Eq for LeafValue<V> {}
+
 impl<V: CryptoHash> LeafValue<V> {
-    pub fn calc_hash(&self) -> HashValue {
-        match self {
-            LeafValue::Value(val) => val.hash(),
-            LeafValue::ValueHash(val_hash) => *val_hash,
+    pub fn new_with_value(value: V) -> Self {
+        Self {
+            hash: value.hash(),
+            data: Ref::new_shared(value),
+        }
+    }
+
+    pub fn new_with_value_hash(value_hash: HashValue) -> Self {
+        Self {
+            hash: value_hash,
+            data: Ref::new_unknown(),
+        }
+    }
+
+    pub fn weak(&self) -> Self {
+        Self {
+            hash: self.hash,
+            data: self.data.weak(),
         }
     }
 }
