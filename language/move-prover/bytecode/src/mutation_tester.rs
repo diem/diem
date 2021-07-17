@@ -12,16 +12,20 @@ use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, Operation},
     options::ProverOptions,
+    stackless_bytecode::{Bytecode, Operation},
 };
 
-use move_model::{exp_generator::ExpGenerator, model::FunctionEnv, model::GlobalEnv};
+use move_model::{
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, GlobalEnv},
+};
 
 pub struct MutationTester {}
 
-struct MutationCounter {
-    value : usize
+pub struct MutationManager {
+    pub mutated: bool,
+    add_sub: usize,
 }
 
 impl MutationTester {
@@ -33,7 +37,10 @@ impl MutationTester {
 impl FunctionTargetProcessor for MutationTester {
     fn initialize(&self, global_env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
         let options = ProverOptions::get(global_env);
-        global_env.set_extension(MutationCounter{value : options.mutas});
+        global_env.set_extension(MutationManager {
+            mutated: false,
+            add_sub: options.mutation_add_sub,
+        });
     }
 
     fn process(
@@ -52,26 +59,38 @@ impl FunctionTargetProcessor for MutationTester {
         let mut builder = FunctionDataBuilder::new(fun_env, data);
         let code = std::mem::take(&mut builder.data.code);
 
-        // Emit trace instructions for parameters at entry.
         builder.set_loc(builder.fun_env.get_loc().at_start());
+        let global_env = fun_env.module_env.env;
+        let m = global_env.get_extension::<MutationManager>().unwrap();
 
         for bc in code {
-            match &bc {
-                Call(attrid, indices, Operation::Add, tempindices, ab) => {
-                    let global_env = fun_env.module_env.env;
-                    let mc = global_env.get_extension::<MutationCounter>().unwrap().value;
-                    if mc == 1 {
-                        builder.emit(Call((*attrid).clone(), (*indices).clone(),
-                            Operation::Sub, (*tempindices).clone(), (*ab).clone()));
+            match bc {
+                Call(ref attrid, ref indices, Operation::Add, ref srcs, ref dests) => {
+                    let mv = m.add_sub;
+                    if mv == 1 {
+                        builder.emit(Call(
+                            *attrid,
+                            (*indices).clone(),
+                            Operation::Sub,
+                            (*srcs).clone(),
+                            (*dests).clone(),
+                        ));
+                        global_env.set_extension(MutationManager {
+                            mutated: true,
+                            add_sub: mv - 1,
+                        });
                     } else {
-                        builder.emit(bc.clone());
+                        builder.emit(bc);
                     }
-                    if mc > 0 {
-                        global_env.set_extension(MutationCounter{value : mc-1});
+                    if mv > 0 {
+                        global_env.set_extension(MutationManager {
+                            add_sub: mv - 1,
+                            mutated: m.mutated,
+                        });
                     }
                 }
                 _ => {
-                    builder.emit(bc.clone());
+                    builder.emit(bc);
                 }
             }
         }
