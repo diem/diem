@@ -89,8 +89,8 @@ impl BlockingClient {
         timeout: Option<Duration>,
         delay: Option<Duration>,
     ) -> Result<Response<TransactionView>, WaitForTransactionError> {
-        const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
-        const DEFAULT_DELAY: Duration = Duration::from_millis(50);
+        const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
+        const DEFAULT_DELAY: Duration = Duration::from_millis(500);
 
         let start = std::time::Instant::now();
         while start.elapsed() < timeout.unwrap_or(DEFAULT_TIMEOUT) {
