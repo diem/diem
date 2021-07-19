@@ -97,6 +97,13 @@ impl LocalFactory {
         versions.insert(revision.version(), revision);
         Ok(Self::new(versions))
     }
+
+    /// Create a LocalFactory with a diem-node version built at the tip of upstream/main and the
+    /// current workspace, suitable for compatibility testing.
+    pub fn with_upstream_and_workspace() -> Result<Self> {
+        let upstream_main = cargo::git_get_upstream_remote().map(|r| format!("{}/main", r))?;
+        Self::with_revision_and_workspace(&upstream_main)
+    }
 }
 
 impl Factory for LocalFactory {

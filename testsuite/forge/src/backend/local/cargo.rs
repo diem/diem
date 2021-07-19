@@ -104,6 +104,29 @@ fn git_is_worktree_dirty() -> Result<bool> {
         .map(|output| !output.stdout.is_empty())
 }
 
+/// Attempt to query the local git repository's remotes for the one that points to the upstream
+/// diem/diem repository, falling back to "origin" if unable to locate the remote
+pub fn git_get_upstream_remote() -> Result<String> {
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg("git remote -v | grep \"https://github.com/diem/diem.* (fetch)\" | cut -f1")
+        .output()
+        .context("Failed to get upstream remote")?;
+
+    if output.status.success() {
+        let remote = String::from_utf8(output.stdout).map(|s| s.trim().to_owned())?;
+
+        // If its empty, fall back to "origin"
+        if remote.is_empty() {
+            Ok("origin".into())
+        } else {
+            Ok(remote)
+        }
+    } else {
+        Ok("origin".into())
+    }
+}
+
 fn cargo_build_diem_node<D, T>(directory: D, target_directory: T) -> Result<PathBuf>
 where
     D: AsRef<Path>,
