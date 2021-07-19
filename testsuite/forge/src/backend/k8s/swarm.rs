@@ -183,6 +183,10 @@ impl Swarm for K8sSwarm {
             .map(|v| v as &mut dyn Validator)
     }
 
+    fn upgrade_validator(&mut self, _id: PeerId, _version: &Version) -> Result<()> {
+        todo!()
+    }
+
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
         Box::new(self.fullnodes.values().map(|v| v as &'a dyn FullNode))
     }

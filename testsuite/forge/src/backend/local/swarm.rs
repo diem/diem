@@ -322,6 +322,19 @@ impl Swarm for LocalSwarm {
             .map(|v| v as &mut dyn Validator)
     }
 
+    fn upgrade_validator(&mut self, id: PeerId, version: &Version) -> Result<()> {
+        let version = self
+            .versions
+            .get(&version)
+            .cloned()
+            .ok_or_else(|| anyhow!("Invalid version: {:?}", version))?;
+        let validator = self
+            .validators
+            .get_mut(&id)
+            .ok_or_else(|| anyhow!("Invalid id: {}", id))?;
+        validator.upgrade(version)
+    }
+
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
         todo!()
     }

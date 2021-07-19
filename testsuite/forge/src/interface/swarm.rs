@@ -22,6 +22,9 @@ pub trait Swarm {
     /// Returns a mutable reference to the Validator with the provided PeerId
     fn validator_mut(&mut self, id: PeerId) -> Option<&mut dyn Validator>;
 
+    /// Upgrade a Validator to run specified `Version`
+    fn upgrade_validator(&mut self, id: PeerId, version: &Version) -> Result<()>;
+
     /// Returns an Iterator of references to all the FullNodes in the Swarm
     fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a>;
 

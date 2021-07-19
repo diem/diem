@@ -131,6 +131,12 @@ impl LocalNode {
         &self.config
     }
 
+    pub fn upgrade(&mut self, version: LocalVersion) -> Result<()> {
+        self.stop();
+        self.version = version;
+        self.start()
+    }
+
     pub fn get_log_contents(&self) -> Result<String> {
         fs::read_to_string(self.log_path()).map_err(Into::into)
     }
