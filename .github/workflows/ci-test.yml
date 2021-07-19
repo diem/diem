@@ -27,6 +27,7 @@ jobs:
       need-base-images: ${{ steps.need-base-images.outputs.need-extra }}
       test-land-blocking: ${{ steps.need-land-blocking-test.outputs.need-lbt }}
       test-compatibility: ${{ steps.need-compat-tests.outputs.need-compat }}
+      test-rust-environment: ${{ steps.environment.outputs.name }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
       test-helm: ${{ steps.helm-changes.outputs.changes-found }}
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
@@ -84,6 +85,18 @@ jobs:
           echo "::set-output name=need-extra::$(echo $res)";
       - id: need-compat-tests
         name: determine if compat tests should run
+        run: |
+          res=true
+          branches="${{ secrets.BRANCHES_TO_DISABLE_COMPAT_TESTS }}"
+          if ! [[ -z "${branches}" ]] && [[ "${branches}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]];  then
+            echo "compatibility suite is NOT enabled."
+            res=false
+          else
+            echo "compatibility suite is enabled."
+          fi
+          echo "::set-output name=need-compat::$(echo $res)";
+      - id: environment
+        name: Which environment should we use for secrets.
         run: |
           res=false
           branches="${{ secrets.BRANCHES_TO_DISABLE_COMPAT_TESTS }}"
@@ -610,34 +623,23 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
 
   forge-test:
-    runs-on: ubuntu-20.04-xl
+    runs-on: ubuntu-latest-xl
     timeout-minutes: 40
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && needs.prepare.outputs.test-compatibility == 'true' }}
     container:
-      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v2.3.4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.6
-        with:
-          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
-          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: "crates-${{ runner.os }}"
       - name: compatibility tests
         run: |
-          $pre_command && cargo test -p testcases --test forge-local-compatibility
-      - uses: ./.github/actions/build-teardown
-      - name: Early terminate workflow
-        if: ${{ failure() }}
-        uses: ./.github/actions/early-terminator
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          cargo test -p compatibility-test
 
   docker-compose-test:
     runs-on: ubuntu-20.04-xl

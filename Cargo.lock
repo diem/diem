@@ -1082,6 +1082,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "compatibility-test"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "diem-logger",
+ "diem-sdk",
+ "diem-workspace-hack",
+ "forge",
+ "rand 0.8.3",
+ "tokio",
+]
+
+[[package]]
 name = "compiler"
 version = "0.1.0"
 dependencies = [
