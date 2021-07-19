@@ -1330,6 +1330,20 @@ impl<'env> SpecTranslator<'env> {
                 } else {
                     emit!(self.writer, "true");
                 }
+
+                if let Type::Primitive(PrimitiveType::Signer) = ty {
+                    let name = &format!("$t{}", idx);
+                    let target = if ty.is_reference() {
+                        format!("$Dereference({})", name)
+                    } else {
+                        name.to_owned()
+                    };
+                    let assume = format!(
+                        " && $1_Signer_is_signer($1_Signer_spec_address_of({}))",
+                        target
+                    );
+                    emit!(self.writer, &assume);
+                }
             }
             ExpData::LocalVar(_, sym) => {
                 // For specification locals (which never can be references) directly emit them.

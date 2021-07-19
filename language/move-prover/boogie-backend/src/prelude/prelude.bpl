@@ -591,6 +591,8 @@ function {:inline} $1_Signer_$borrow_address(signer: int): int
     signer
 }
 
+function {:inline} $1_Signer_is_signer(addr: int): bool;
+
 // ==================================================================================
 // Native Event module
 

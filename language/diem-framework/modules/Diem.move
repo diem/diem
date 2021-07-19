@@ -1779,19 +1779,11 @@ module DiemFramework::Diem {
 
 
     /// ## Update Exchange Rates
-    spec schema ExchangeRateRemainsSame<CoinType> {
-        /// The exchange rate to XDX stays constant.
-        ensures old(spec_is_currency<CoinType>())
-            ==> spec_currency_info<CoinType>().to_xdx_exchange_rate
-                == old(spec_currency_info<CoinType>().to_xdx_exchange_rate);
-    }
     spec module {
-        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H5]][PERMISSION].
-        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to update_xdx_exchange_rate<FromCoinType>;
-
-        /// Only update_xdx_exchange_rate can change the exchange rate [[H5]][PERMISSION].
-        apply ExchangeRateRemainsSame<CoinType> to *<CoinType>
-            except update_xdx_exchange_rate<CoinType>;
+        /// Only TreasuryCompliance can change the exchange rate [[H5]][PERMISSION].
+        invariant update forall coin_type: type where old(spec_is_currency<coin_type>()):
+            (spec_currency_info<coin_type>().to_xdx_exchange_rate != old(spec_currency_info<coin_type>().to_xdx_exchange_rate))
+                ==> (exists a: address: Signer::is_signer(a) && Roles::spec_has_treasury_compliance_role_addr(a));
     }
 
     /// # Helper Functions

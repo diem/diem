@@ -21,4 +21,6 @@ module Std::Signer {
     /// Specification version of `Self::address_of`.
     spec native fun spec_address_of(account: signer): address;
 
+    /// Return true only if `a` is a transaction signer. This is a spec function only available in spec.
+    spec native fun is_signer(addr: address): bool;
 }

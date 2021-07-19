@@ -1,0 +1,73 @@
+Move prover returns: exiting with boogie verification errors
+error: unknown assertion failed
+
+   ┌── tests/sources/functional/is_signer.move:9:16 ───
+   │
+ 9 │         spec { assert Signer::is_signer(@0x7); } // This is unprovable because it is not true in general.
+   │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/is_signer.move:9: f1_incorrect
+
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/is_signer.move:13:16 ───
+    │
+ 13 │         spec { assert Signer::is_signer(@0x7); } // This is unprovable because it is not true in general.
+    │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/is_signer.move:12: f2_incorrect
+    =         _account = <redacted>
+    =     at tests/sources/functional/is_signer.move:13: f2_incorrect
+
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/is_signer.move:23:16 ───
+    │
+ 23 │         spec { assert Signer::is_signer(@0x7); } // This is unprovable because it is not true in general.
+    │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/is_signer.move:21: f4_incorrect
+    =         account = <redacted>
+    =     at tests/sources/functional/is_signer.move:22: f4_incorrect
+    =         <redacted> = <redacted>
+
+error: precondition does not hold at this call
+
+    ┌── tests/sources/functional/is_signer.move:30:9 ───
+    │
+ 30 │         requires Signer::is_signer(@0x7); // f5 requires this to be true at its callers' sites
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/is_signer.move:30
+
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/is_signer.move:58:13 ───
+    │
+ 58 │             assert exists addr:address: hasPermissionAddr(addr);
+    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/is_signer.move:56: g_incorrect
+    =         _a = <redacted>
+    =         _b = <redacted>
+    =     at tests/sources/functional/is_signer.move:58: g_incorrect
+
+error: global memory invariant does not hold
+
+     ┌── tests/sources/functional/is_signer.move:134:9 ───
+     │
+ 134 │ ╭         invariant update (old(exists<Counter>(ADMIN_ADDRESS())) && global<Counter>(ADMIN_ADDRESS()).i != old(global<Counter>(ADMIN_ADDRESS()).i))
+ 135 │ │             ==> Signer::is_signer(ADMIN_ADDRESS());
+     │ ╰───────────────────────────────────────────────────^
+     │
+     =     at tests/sources/functional/is_signer.move:127: increment_incorrect
+     =         _account = <redacted>
+     =     at tests/sources/functional/is_signer.move:128: increment_incorrect
+     =     at tests/sources/functional/is_signer.move:104: ADMIN_ADDRESS
+     =         result = <redacted>
+     =     at tests/sources/functional/is_signer.move:105: ADMIN_ADDRESS
+     =         c_ref = <redacted>
+     =     at tests/sources/functional/is_signer.move:129: increment_incorrect
+     =     at tests/sources/functional/is_signer.move:127: increment_incorrect
+     =     at tests/sources/functional/is_signer.move:129: increment_incorrect
+     =     at tests/sources/functional/is_signer.move:134

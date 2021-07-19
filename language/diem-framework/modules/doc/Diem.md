@@ -4162,33 +4162,12 @@ resource struct <code><a href="Diem.md#0x1_Diem_MintCapability">MintCapability</
 #### Update Exchange Rates
 
 
-
-<a name="0x1_Diem_ExchangeRateRemainsSame"></a>
-
-The exchange rate to XDX stays constant.
+Only TreasuryCompliance can change the exchange rate [[H5]][PERMISSION].
 
 
-<pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; {
-    <b>ensures</b> <b>old</b>(<a href="Diem.md#0x1_Diem_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;())
-        ==&gt; <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_xdx_exchange_rate
-            == <b>old</b>(<a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_xdx_exchange_rate);
-}
-</code></pre>
-
-
-
-The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H5]][PERMISSION].
-
-
-<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="Diem.md#0x1_Diem_update_xdx_exchange_rate">update_xdx_exchange_rate</a>&lt;FromCoinType&gt;;
-</code></pre>
-
-
-Only update_xdx_exchange_rate can change the exchange rate [[H5]][PERMISSION].
-
-
-<pre><code><b>apply</b> <a href="Diem.md#0x1_Diem_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
-    <b>except</b> <a href="Diem.md#0x1_Diem_update_xdx_exchange_rate">update_xdx_exchange_rate</a>&lt;CoinType&gt;;
+<pre><code><b>invariant</b> <b>update</b> <b>forall</b> coin_type: type <b>where</b> <b>old</b>(<a href="Diem.md#0x1_Diem_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;()):
+    (<a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;coin_type&gt;().to_xdx_exchange_rate != <b>old</b>(<a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;coin_type&gt;().to_xdx_exchange_rate))
+        ==&gt; (<b>exists</b> a: address: <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_is_signer">Signer::is_signer</a>(a) && <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(a));
 </code></pre>
 
 
