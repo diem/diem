@@ -163,6 +163,7 @@ members = [
     "testsuite/cli",
     "testsuite/cli/diem-wallet",
     "testsuite/cluster-test",
+    "testsuite/compatibility-test",
     "testsuite/diem-fuzzer",
     "testsuite/diem-fuzzer/fuzz",
     "testsuite/diem-swarm",
