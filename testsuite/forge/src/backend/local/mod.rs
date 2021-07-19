@@ -72,6 +72,31 @@ impl LocalFactory {
         versions.insert(new_version.version.clone(), new_version);
         Ok(Self::new(versions))
     }
+
+    pub fn with_revision_and_workspace(revision: &str) -> Result<Self> {
+        let workspace = cargo::get_diem_node_binary_from_worktree().map(|(revision, bin)| {
+            let version = Version::new(usize::max_value(), revision.clone());
+            LocalVersion {
+                revision,
+                bin,
+                version,
+            }
+        })?;
+        let revision =
+            cargo::get_diem_node_binary_at_revision(revision).map(|(revision, bin)| {
+                let version = Version::new(usize::min_value(), revision.clone());
+                LocalVersion {
+                    revision,
+                    bin,
+                    version,
+                }
+            })?;
+
+        let mut versions = HashMap::new();
+        versions.insert(workspace.version(), workspace);
+        versions.insert(revision.version(), revision);
+        Ok(Self::new(versions))
+    }
 }
 
 impl Factory for LocalFactory {
