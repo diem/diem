@@ -1519,6 +1519,7 @@ dependencies = [
  "diem-workspace-hack",
  "move-cli",
  "move-core-types",
+ "structopt 0.3.21",
 ]
 
 [[package]]

@@ -59,6 +59,16 @@ pub struct Move {
     /// Print additional diagnostics
     #[structopt(short = "v", global = true)]
     verbose: bool,
+}
+
+/// MoveCLI is the CLI that will be executed by the `move-cli` command
+/// The `cmd` argument is added here rather than in `Move` to make it
+/// easier for other crates to extend `move-cli`
+#[derive(StructOpt)]
+pub struct MoveCLI {
+    #[structopt(flatten)]
+    move_args: Move,
+
     #[structopt(subcommand)]
     cmd: Command,
 }
@@ -344,14 +354,15 @@ fn handle_sandbox_commands(
     }
 }
 
-pub fn move_cli(
+pub fn run_cli(
     natives: Vec<NativeFunctionRecord>,
     error_descriptions: &ErrorMapping,
+    move_args: &Move,
+    cmd: &Command,
 ) -> Result<()> {
-    let move_args = Move::from_args();
     let mode = Mode::new(move_args.mode);
 
-    match &move_args.cmd {
+    match cmd {
         Command::Compile {
             source_files,
             no_source_maps,
@@ -383,4 +394,12 @@ pub fn move_cli(
         }
         Command::Experimental { cmd } => handle_experimental_commands(&move_args, &mode, cmd),
     }
+}
+
+pub fn move_cli(
+    natives: Vec<NativeFunctionRecord>,
+    error_descriptions: &ErrorMapping,
+) -> Result<()> {
+    let args = MoveCLI::from_args();
+    run_cli(natives, error_descriptions, &args.move_args, &args.cmd)
 }
