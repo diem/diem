@@ -31,10 +31,10 @@ jobs:
         run: cargo install --force cargo-audit
       - name: audit crates
         # List of ignored RUSTSEC
-        # 1. RUSTSEC-2021-0020 - Not impacted, see #7723
-        # 2. RUSTSEC-2020-0146 - Not impacted, see #7826
+        # 1. RUSTSEC-2021-0073 - Not impacted.
+        # 2. RUSTSEC-2021-0072 - Not impacted.
         run: |
-          cargo audit --color never --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2020-0146 > $AUDIT_SUMMARY_FILE
+          cargo audit --color never --ignore RUSTSEC-2021-0073 --ignore RUSTSEC-2021-0072 > $AUDIT_SUMMARY_FILE
       - name: set issue body content
         if: ${{ failure() }}
         env:
