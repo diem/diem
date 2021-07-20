@@ -5,7 +5,11 @@ use crate::{Result, Version};
 use debug_interface::NodeDebugClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_sdk::{client::Client as JsonRpcClient, types::PeerId};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    thread,
+    time::{Duration, Instant},
+};
 use url::Url;
 
 #[derive(Debug)]
@@ -160,5 +164,29 @@ pub trait NodeExt: Node {
         }
 
         Ok(())
+    }
+
+    fn wait_until_healthy(&mut self, deadline: Instant) -> Result<()> {
+        while Instant::now() < deadline {
+            match self.health_check() {
+                Ok(()) => return Ok(()),
+                Err(HealthCheckError::NotRunning) => {
+                    return Err(anyhow::anyhow!(
+                        "Node {}:{} not running",
+                        self.name(),
+                        self.peer_id()
+                    ))
+                }
+                Err(_) => {} // For other errors we'll retry
+            }
+
+            thread::sleep(Duration::from_millis(500));
+        }
+
+        Err(anyhow::anyhow!(
+            "Timed out waiting for Node {}:{} to be healthy",
+            self.name(),
+            self.peer_id()
+        ))
     }
 }
