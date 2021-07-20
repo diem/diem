@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::source_package::parsed_manifest as PM;
+use crate::source_package::parsed_manifest::{self as PM, NamedAddress, PackageName};
 use anyhow::{bail, format_err, Context, Result};
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::account_address::AccountAddress;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::PathBuf,
@@ -106,7 +106,7 @@ pub fn parse_package_info(tval: TV) -> Result<PM::PackageInfo> {
             let name = name
                 .as_str()
                 .ok_or_else(|| format_err!("Package name must be a string"))?;
-            let name = Identifier::new(name).context("Invalid package name")?;
+            let name = PackageName::from(name);
             let version = parse_version(version)?;
             let license = table.remove("license").map(|x| x.to_string());
             let authors = match table.remove("authors") {
@@ -150,8 +150,7 @@ pub fn parse_dependencies(tval: TV) -> Result<PM::Dependencies> {
         TV::Table(table) => {
             let mut deps = BTreeMap::new();
             for (dep_name, dep) in table.into_iter() {
-                let dep_name_ident =
-                    Identifier::new(dep_name).context("Invalid dependency name")?;
+                let dep_name_ident = PackageName::from(dep_name);
                 let dep = parse_dependency(dep)?;
                 deps.insert(dep_name_ident, dep);
             }
@@ -189,7 +188,7 @@ pub fn parse_addresses(tval: TV) -> Result<PM::AddressDeclarations> {
         TV::Table(table) => {
             let mut addresses = BTreeMap::new();
             for (addr_name, entry) in table.into_iter() {
-                let ident = Identifier::new(addr_name).context("Invalid address name")?;
+                let ident = NamedAddress::from(addr_name);
                 match entry.as_str() {
                     Some(entry_str) => {
                         if entry_str == EMPTY_ADDR_STR {
@@ -231,7 +230,7 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
         TV::Table(table) => {
             let mut addresses = BTreeMap::new();
             for (addr_name, entry) in table.into_iter() {
-                let ident = Identifier::new(addr_name).context("Invalid address name")?;
+                let ident = NamedAddress::from(addr_name);
                 match entry.as_str() {
                     Some(entry_str) => {
                         if entry_str == EMPTY_ADDR_STR {
@@ -285,7 +284,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                         subst,
                         version,
                         digest,
-                        local: Some(local_path),
+                        local: local_path,
                     })
                 }
                 None => {
@@ -302,14 +301,13 @@ fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
         TV::Table(table) => {
             let mut subst = BTreeMap::new();
             for (addr_name, tval) in table.into_iter() {
-                let addr_ident =
-                    Identifier::new(addr_name.as_str()).context("Invalid address name")?;
+                let addr_ident = NamedAddress::from(addr_name.as_str());
                 match tval {
                     TV::String(addr_or_name) => {
                         if let Ok(addr) = AccountAddress::from_hex_literal(&addr_or_name) {
                             subst.insert(addr_ident, PM::SubstOrRename::Assign(addr));
                         } else {
-                            let rename_from = Identifier::new(addr_or_name.as_str()).context("Invalid address name")?;
+                            let rename_from = NamedAddress::from(addr_or_name.as_str());
                             subst.insert(addr_ident, PM::SubstOrRename::RenameFrom(rename_from));
                         }
                     }

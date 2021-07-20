@@ -1,0 +1,67 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: "test",
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: Some(
+            {
+                "A": Some(
+                    00000000000000000000000000000000,
+                ),
+            },
+        ),
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {},
+        dev_dependencies: {},
+    },
+    graph: {
+        "test": [],
+    },
+    package_table: {
+        "test": ResolutionPackage {
+            resolution_graph_index: "test",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "test",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "A": Some(
+                            00000000000000000000000000000000,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "A": 00000000000000000000000000000000,
+            },
+            source_digest: "Iwk3XLXy9aHQGrL1jboByIjTE8W59QiDFSr+gUIFyzPfuBB+5ehc2mvzAtGmii2areSTohOI6T76GLWSQz23Dg==",
+        },
+    },
+}

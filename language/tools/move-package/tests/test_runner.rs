@@ -2,19 +2,49 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_command_line_common::testing::{format_diff, read_env_update_baseline, EXP_EXT};
-use move_package::source_package::manifest_parser as MP;
-use std::{fs, path::Path};
+use move_package::{
+    resolution::resolution_graph as RG, source_package::manifest_parser as MP, BuildConfig,
+};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Component, Path, PathBuf},
+};
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     let update_baseline = read_env_update_baseline();
+    if path
+        .components()
+        .any(|component| component == Component::Normal(OsStr::new("deps_only")))
+    {
+        return Ok(());
+    }
     let exp_path = path.with_extension(EXP_EXT);
 
     let exp_exists = exp_path.is_file();
 
     let contents = fs::read_to_string(path)?;
-    let output = match MP::parse_move_manifest_string(contents).and_then(MP::parse_source_manifest)
+    let output = match MP::parse_move_manifest_string(contents)
+        .and_then(MP::parse_source_manifest)
+        .and_then(|parsed_manifest| {
+            RG::ResolutionGraph::new(
+                parsed_manifest,
+                path.parent().unwrap().to_path_buf(),
+                BuildConfig {
+                    dev_mode: true,
+                    generate_transaction_builders: false,
+                    generate_abis: false,
+                },
+            )
+        })
+        .and_then(|rg| rg.resolve())
     {
-        Ok(parsed_package) => format!("{:#?}\n", parsed_package),
+        Ok(mut resolved_package) => {
+            for (_, package) in resolved_package.package_table.iter_mut() {
+                package.package_path = PathBuf::from("ELIDED_FOR_TEST");
+            }
+            format!("{:#?}\n", resolved_package)
+        }
         Err(error) => format!("{:#}\n", error),
     };
 

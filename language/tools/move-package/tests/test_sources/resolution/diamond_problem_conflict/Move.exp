@@ -1,0 +1,1 @@
+Unable to resolve packages for package 'Root': While resolving dependency 'B' in package 'Root': Unable to assign value to named address BA in dependency B: Attempted to assign a different value '0x2' to an a already-assigned named address '0x1'

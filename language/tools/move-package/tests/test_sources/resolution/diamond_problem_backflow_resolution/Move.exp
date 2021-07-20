@@ -1,0 +1,251 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: "Root",
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: None,
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {
+            "A": Dependency {
+                local: "./deps_only/A",
+                subst: None,
+                version: None,
+                digest: None,
+            },
+            "B": Dependency {
+                local: "./deps_only/B",
+                subst: Some(
+                    {
+                        "BA": Assign(
+                            00000000000000000000000000000001,
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+        },
+        dev_dependencies: {},
+    },
+    graph: {
+        "Root": [
+            (
+                "A",
+                Outgoing,
+            ),
+            (
+                "B",
+                Outgoing,
+            ),
+        ],
+        "A": [
+            (
+                "Root",
+                Incoming,
+            ),
+            (
+                "C",
+                Outgoing,
+            ),
+        ],
+        "C": [
+            (
+                "A",
+                Incoming,
+            ),
+            (
+                "B",
+                Incoming,
+            ),
+        ],
+        "B": [
+            (
+                "Root",
+                Incoming,
+            ),
+            (
+                "C",
+                Outgoing,
+            ),
+        ],
+    },
+    package_table: {
+        "A": ResolutionPackage {
+            resolution_graph_index: "A",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "A",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "C": Dependency {
+                        local: "../C",
+                        subst: Some(
+                            {
+                                "AA": RenameFrom(
+                                    "A",
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {
+                "AA": (
+                    "C",
+                    "A",
+                ),
+            },
+            resolution_table: {
+                "AA": 00000000000000000000000000000001,
+            },
+            source_digest: "RKDJP427gh7wB53mAr+ShTJaIoc2LtYgpV7ZoRAg/usx7yKnCFmwLfAX0fMcNosm3LScnTlYcWQtjt+s91VOTw==",
+        },
+        "B": ResolutionPackage {
+            resolution_graph_index: "B",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "B",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "C": Dependency {
+                        local: "../C",
+                        subst: Some(
+                            {
+                                "BA": RenameFrom(
+                                    "A",
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {
+                "BA": (
+                    "C",
+                    "A",
+                ),
+            },
+            resolution_table: {
+                "BA": 00000000000000000000000000000001,
+            },
+            source_digest: "4PNTCTeEoW27SZgbB/EhqjVN4Zed7cp86zbkPanspcrAGG6Iz9+h4CLEVVHhwqd031dist8uWgLRINKoBjH6jA==",
+        },
+        "C": ResolutionPackage {
+            resolution_graph_index: "C",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "C",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "A": None,
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "A": 00000000000000000000000000000001,
+            },
+            source_digest: "Qt5NEzA9LrfIZGWS4AGt2jm1v/Aq8ar3wJ3jQ620Z4A/jMVjq4TFemyM923u4bcMx+5MBw1OOi+U5xnIsn4dxQ==",
+        },
+        "Root": ResolutionPackage {
+            resolution_graph_index: "Root",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "Root",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "A": Dependency {
+                        local: "./deps_only/A",
+                        subst: None,
+                        version: None,
+                        digest: None,
+                    },
+                    "B": Dependency {
+                        local: "./deps_only/B",
+                        subst: Some(
+                            {
+                                "BA": Assign(
+                                    00000000000000000000000000000001,
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "AA": 00000000000000000000000000000001,
+                "BA": 00000000000000000000000000000001,
+            },
+            source_digest: "6MfPcZBilVZ5lOTRNgdTsXbbqjKOn5JtPpSthSYMHzwg3orpIPnAmnBcxUb8xgdfnHHUnIsMSia2HqxcUfn5AQ==",
+        },
+    },
+}

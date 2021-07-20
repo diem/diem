@@ -1,0 +1,6 @@
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+OtherDep = { local = "./deps_only/other_dep", addr_subst = { "A" = "B" } }

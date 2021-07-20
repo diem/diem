@@ -1,0 +1,53 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: "®´∑œ",
+            version: (
+                0,
+                1,
+                2,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: None,
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {},
+        dev_dependencies: {},
+    },
+    graph: {
+        "®´∑œ": [],
+    },
+    package_table: {
+        "®´∑œ": ResolutionPackage {
+            resolution_graph_index: "®´∑œ",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "®´∑œ",
+                    version: (
+                        0,
+                        1,
+                        2,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {},
+            source_digest: "91jPsx5esx7vez9zSDH+IBrz1qhYx1XVHIcOs/gUcbW7xxzasOOmJGxbQVmO1XfATALlp5Jgq3P3BP4r/reHMA==",
+        },
+    },
+}

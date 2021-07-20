@@ -1,0 +1,142 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: "Root",
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: Some(
+            {
+                "B": Some(
+                    00000000000000000000000000000002,
+                ),
+            },
+        ),
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {
+            "OtherDep": Dependency {
+                local: "./deps_only/other_dep",
+                subst: Some(
+                    {
+                        "A": RenameFrom(
+                            "B",
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+        },
+        dev_dependencies: {},
+    },
+    graph: {
+        "Root": [
+            (
+                "OtherDep",
+                Outgoing,
+            ),
+        ],
+        "OtherDep": [
+            (
+                "Root",
+                Incoming,
+            ),
+        ],
+    },
+    package_table: {
+        "OtherDep": ResolutionPackage {
+            resolution_graph_index: "OtherDep",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "OtherDep",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "B": Some(
+                            00000000000000000000000000000001,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "B": 00000000000000000000000000000001,
+            },
+            source_digest: "TtoI7WiRpV3wToRtefOtalgDAbAqRREfC13KnlJ4ekjW3mt6hgihXXkjK/PWls+tVAeZdS4d0xDge4D7lA86yw==",
+        },
+        "Root": ResolutionPackage {
+            resolution_graph_index: "Root",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "Root",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "B": Some(
+                            00000000000000000000000000000002,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "OtherDep": Dependency {
+                        local: "./deps_only/other_dep",
+                        subst: Some(
+                            {
+                                "A": RenameFrom(
+                                    "B",
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {
+                "A": (
+                    "OtherDep",
+                    "B",
+                ),
+            },
+            resolution_table: {
+                "A": 00000000000000000000000000000001,
+                "B": 00000000000000000000000000000002,
+            },
+            source_digest: "MYXwTmNxnBpMJRhXb2vGiGcuApl3R+EJGpzNFtsN0svEGrt0yutXOmR8C/XiN9+uH7RpcpMznzkh/z0ZwVgsFw==",
+        },
+    },
+}

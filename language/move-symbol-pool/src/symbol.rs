@@ -37,7 +37,7 @@ use std::{borrow::Cow, cmp::Ordering, fmt, num::NonZeroU64, ops::Deref};
 ///
 /// [`as_str()`]: crate::Symbol::as_str
 /// [`Display`]: std::fmt::Display
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Symbol(NonZeroU64);
 
 impl Symbol {
@@ -83,6 +83,12 @@ impl AsRef<str> for Symbol {
 }
 
 impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }

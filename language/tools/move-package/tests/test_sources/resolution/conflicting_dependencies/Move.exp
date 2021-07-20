@@ -1,0 +1,1 @@
+Unable to parse Move package manifest: duplicate key: `OtherDep` for key `dependencies` at line 5 column 1

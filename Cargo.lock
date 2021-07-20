@@ -92,7 +92,7 @@ dependencies = [
  "cipher",
  "ctr",
  "ghash",
- "subtle",
+ "subtle 2.4.0",
 ]
 
 [[package]]
@@ -362,6 +362,15 @@ checksum = "a4521f3e3d031370679b3b140beb36dfe4801b09ac77e30c61941f97df3ef28b"
 
 [[package]]
 name = "base64"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
+name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
@@ -455,6 +464,18 @@ dependencies = [
  "radium",
  "tap",
  "wyz",
+]
+
+[[package]]
+name = "blake2"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94cb07b0da6a73955f8fb85d24c466778e70cda767a568229b104f0264089330"
+dependencies = [
+ "byte-tools",
+ "crypto-mac 0.7.0",
+ "digest 0.8.1",
+ "opaque-debug 0.2.3",
 ]
 
 [[package]]
@@ -841,6 +862,17 @@ dependencies = [
  "diem-workspace-hack",
  "futures",
  "tokio",
+]
+
+[[package]]
+name = "checksumdir"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a48b858f7551e2b128a3313e520e06b6def2171bafb321edd110718439d6232a"
+dependencies = [
+ "base64 0.10.1",
+ "blake2",
+ "walkdir",
 ]
 
 [[package]]
@@ -1260,17 +1292,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crev-recursive-digest"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a2311e13cb92890481e096346c189285b63ca513d1a9735c947e878f15729a9"
-dependencies = [
- "digest 0.8.1",
- "thiserror",
- "walkdir",
-]
-
-[[package]]
 name = "criterion"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1392,12 +1413,22 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
 name = "crypto-mac"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
+dependencies = [
+ "generic-array 0.12.4",
+ "subtle 1.0.0",
+]
+
+[[package]]
+name = "crypto-mac"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4857fd85a0c34b3c3297875b747c1e02e06b6a0ea32dd892d8192b9ce0813ea6"
 dependencies = [
  "generic-array 0.14.4",
- "subtle",
+ "subtle 2.4.0",
 ]
 
 [[package]]
@@ -1451,7 +1482,7 @@ dependencies = [
  "digest 0.9.0",
  "fiat-crypto",
  "rand_core 0.6.2",
- "subtle",
+ "subtle 2.4.0",
  "zeroize",
 ]
 
@@ -1893,7 +1924,7 @@ dependencies = [
 name = "diem-github-client"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "diem-workspace-hack",
  "proxy",
  "serde",
@@ -2192,7 +2223,7 @@ dependencies = [
 name = "diem-network-address-encryption"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bcs",
  "diem-global-constants",
  "diem-infallible",
@@ -2254,7 +2285,7 @@ name = "diem-operational-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.13.0",
  "bcs",
  "diem-client",
  "diem-config",
@@ -2425,7 +2456,7 @@ dependencies = [
 name = "diem-secure-storage"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bcs",
  "chrono",
  "diem-crypto",
@@ -2644,7 +2675,7 @@ dependencies = [
 name = "diem-vault-client"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "chrono",
  "diem-crypto",
  "diem-proptest-helpers",
@@ -2758,7 +2789,7 @@ dependencies = [
  "serde",
  "serde_json",
  "standback",
- "subtle",
+ "subtle 2.4.0",
  "syn 0.15.44",
  "syn 1.0.74",
  "tiny-keccak",
@@ -3347,7 +3378,7 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.13.0",
  "debug-interface",
  "diem-config",
  "diem-framework-releases",
@@ -3862,7 +3893,7 @@ version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0b7591fb62902706ae8e7aaff416b1b0fa2c0fd0878b46dc13baa3712d8a855"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bitflags",
  "bytes",
  "headers-core",
@@ -3921,7 +3952,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1441c6b1e930e2817404b5046f1f989899143a12bf92de603b69f4e0aee1e15"
 dependencies = [
- "crypto-mac",
+ "crypto-mac 0.10.0",
  "digest 0.9.0",
 ]
 
@@ -4385,7 +4416,7 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcc1f973542059e6d5a6d63de6a9539d0ec784f82b2327f3c1915d33200bc6a4"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bytes",
  "chrono",
  "serde",
@@ -4406,7 +4437,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d47a55e9f881dc5027dcaf026670fa24b41f67926ab6517e2155488fe9c012a"
 dependencies = [
  "Inflector",
- "base64",
+ "base64 0.13.0",
  "bytes",
  "chrono",
  "dirs-next",
@@ -4995,8 +5026,8 @@ dependencies = [
  "anyhow",
  "bcs",
  "bytecode-source-map",
+ "checksumdir",
  "colored",
- "crev-recursive-digest",
  "datatest-stable",
  "diem-workspace-hack",
  "docgen",
@@ -5004,8 +5035,8 @@ dependencies = [
  "move-binary-format",
  "move-command-line-common",
  "move-core-types",
- "move-ir-types",
  "move-lang",
+ "move-symbol-pool",
  "petgraph",
  "serde",
  "serde_json",
@@ -5646,7 +5677,7 @@ checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
 name = "offchain"
 version = "0.1.0"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bech32",
  "diem-sdk",
  "diem-workspace-hack",
@@ -5847,7 +5878,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "309c95c5f738c85920eb7062a2de29f3840d4f96974453fc9ac1ba078da9c627"
 dependencies = [
  "base64ct",
- "crypto-mac",
+ "crypto-mac 0.10.0",
  "hmac",
  "password-hash",
  "sha2",
@@ -5865,7 +5896,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "once_cell",
  "regex",
 ]
@@ -6605,7 +6636,7 @@ version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf12057f289428dbf5c591c74bf10392e4a8003f993405a902f20117019022d4"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -6719,7 +6750,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02aff20978970d47630f08de5f0d04799497818d16cafee5aec90c4b4d0806cf"
 dependencies = [
  "async-trait",
- "base64",
+ "base64 0.13.0",
  "bytes",
  "crc32fast",
  "futures",
@@ -6789,7 +6820,7 @@ version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5486e6b1673ab3e0ba1ded284fb444845fe1b7f41d13989a54dd60f62a7b2baa"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bytes",
  "futures",
  "hex",
@@ -6829,7 +6860,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b18820d944b33caa75a71378964ac46f58517c92b6ae5f762636247c09e78fb"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "blake2b_simd",
  "constant_time_eq",
  "crossbeam-utils",
@@ -6882,7 +6913,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "064fd21ff87c6e87ed4506e68beb42459caa4a0e2eb144932e6776768556980b"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "log",
  "ring",
  "sct",
@@ -7475,7 +7506,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "backup-cli",
- "base64",
+ "base64 0.13.0",
  "bcs",
  "compiler",
  "debug-interface",
@@ -7815,6 +7846,12 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
 ]
+
+[[package]]
+name = "subtle"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 
 [[package]]
 name = "subtle"
@@ -8488,7 +8525,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ada8297e8d70872fa9a551d93250a9f407beb9f37ef86494eb20012a2ff7c24"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "byteorder",
  "bytes",
  "http",
@@ -8507,7 +8544,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fe8dada8c1a3aeca77d6b51a4f1314e0f4b8e438b7b1b71e3ddaca8080e4093"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "byteorder",
  "bytes",
  "http",
@@ -8672,7 +8709,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8326b2c654932e3e4f9196e69d08fdf7cfd718e1dc6f66b347e6024a0c961402"
 dependencies = [
  "generic-array 0.14.4",
- "subtle",
+ "subtle 2.4.0",
 ]
 
 [[package]]
@@ -8687,7 +8724,7 @@ version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "294b85ef5dbc3670a72e82a89971608a1fcc4ed5c7c5a2895230d31a95f0569b"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "chunked_transfer",
  "log",
  "native-tls",

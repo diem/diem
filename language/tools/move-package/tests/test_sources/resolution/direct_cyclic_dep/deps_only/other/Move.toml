@@ -1,0 +1,6 @@
+[package]
+name = "Other"
+version = "0.0.0"
+
+[dependencies]
+Root = { local = "../.." }

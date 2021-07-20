@@ -1,0 +1,200 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: "test",
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: None,
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {
+            "C": Dependency {
+                local: "./deps_only/C",
+                subst: Some(
+                    {
+                        "CA": RenameFrom(
+                            "A",
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+            "D": Dependency {
+                local: "./deps_only/D",
+                subst: Some(
+                    {
+                        "DA": RenameFrom(
+                            "A",
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+        },
+        dev_dependencies: {},
+    },
+    graph: {
+        "test": [
+            (
+                "C",
+                Outgoing,
+            ),
+            (
+                "D",
+                Outgoing,
+            ),
+        ],
+        "C": [
+            (
+                "test",
+                Incoming,
+            ),
+        ],
+        "D": [
+            (
+                "test",
+                Incoming,
+            ),
+        ],
+    },
+    package_table: {
+        "C": ResolutionPackage {
+            resolution_graph_index: "C",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "C",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "A": Some(
+                            00000000000000000000000000000001,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "A": 00000000000000000000000000000001,
+            },
+            source_digest: "/kLZQpM2eOR4h/dUwxr9Y91DJdrmS4kHZEpjSMjxjMhASFFAiwGHGPbOQ3KHo1gXoPJWc4Qdj2EIMtlZxt89lw==",
+        },
+        "D": ResolutionPackage {
+            resolution_graph_index: "D",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "D",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        "A": Some(
+                            00000000000000000000000000000002,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "A": 00000000000000000000000000000002,
+            },
+            source_digest: "jJgsYIkxxN2HkgedFQo0VUvP9R9sUuH+J4G6cYsmMyNxMWvgG2iUXM2Aa9JszkkssY6bunF/LXpSFVGw0frObg==",
+        },
+        "test": ResolutionPackage {
+            resolution_graph_index: "test",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "test",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "C": Dependency {
+                        local: "./deps_only/C",
+                        subst: Some(
+                            {
+                                "CA": RenameFrom(
+                                    "A",
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                    "D": Dependency {
+                        local: "./deps_only/D",
+                        subst: Some(
+                            {
+                                "DA": RenameFrom(
+                                    "A",
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {
+                "CA": (
+                    "C",
+                    "A",
+                ),
+                "DA": (
+                    "D",
+                    "A",
+                ),
+            },
+            resolution_table: {
+                "CA": 00000000000000000000000000000001,
+                "DA": 00000000000000000000000000000002,
+            },
+            source_digest: "VLHK1p0S9clgk+CZyso3i/AzTlMRjPUTRsbqv8qgM0giP7kYnAXm063vni2hbuTTyRryZx5elfpvXC1aPOzrjQ==",
+        },
+    },
+}
