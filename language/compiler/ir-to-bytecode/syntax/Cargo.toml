@@ -15,6 +15,7 @@ codespan = { version = "0.8.0", features = ["serialization"] }
 hex = "0.4.3"
 move-ir-types = { path = "../../../move-ir/types" }
 move-core-types = { path = "../../../move-core/types" }
+move-symbol-pool = { path = "../../../move-symbol-pool" }
 diem-workspace-hack = { path = "../../../../common/workspace-hack" }
 
 [features]

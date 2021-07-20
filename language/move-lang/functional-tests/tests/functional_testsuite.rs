@@ -81,7 +81,7 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
                 for (file_name, text) in &self.pre_compiled_deps.files {
                     // TODO This is bad. Rethink this when errors are redone
                     if !files.contains_key(file_name) {
-                        files.insert(&**file_name, text.clone());
+                        files.insert(*file_name, text.clone());
                     }
                 }
 

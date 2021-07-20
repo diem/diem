@@ -17,6 +17,7 @@ move-ir-types = { path = "../move-ir/types" }
 move-core-types = { path = "../move-core/types" }
 disassembler = { path = "../tools/disassembler" }
 move-command-line-common = { path = "../move-command-line-common" }
+move-symbol-pool = { path = "../move-symbol-pool" }
 
 # external dependencies
 codespan = "0.8.0"

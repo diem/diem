@@ -8,6 +8,7 @@ use codespan_reporting_new::{
     term::{emit, termcolor::WriteColor, Config},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::FromIterator,
@@ -20,8 +21,8 @@ use std::{
 
 pub type FileId = usize;
 
-pub type FilesSourceText = HashMap<&'static str, String>;
-type FileMapping = HashMap<&'static str, FileId>;
+pub type FilesSourceText = HashMap<Symbol, String>;
+type FileMapping = HashMap<Symbol, FileId>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Diagnostic {
@@ -56,7 +57,7 @@ pub(crate) fn output_diagnostics<W: WriteColor>(
 
 fn render_diagnostics(
     writer: &mut dyn WriteColor,
-    files: &SimpleFiles<&'static str, &str>,
+    files: &SimpleFiles<Symbol, &str>,
     file_mapping: &FileMapping,
     mut diags: Diagnostics,
 ) {
@@ -77,8 +78,7 @@ fn render_diagnostics(
 }
 
 fn convert_loc(file_mapping: &FileMapping, loc: Loc) -> (FileId, Range<usize>) {
-    let fname = loc.file();
-    let id = *file_mapping.get(fname).unwrap();
+    let id = *file_mapping.get(&loc.file()).unwrap();
     let start = loc.span().start().to_usize();
     let end = loc.span().end().to_usize();
     (id, Range { start, end })

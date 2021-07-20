@@ -11,6 +11,7 @@ anyhow = "1.0.38"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
+move-symbol-pool = { path = "../../move-symbol-pool" }
 move-binary-format = { path = "../../move-binary-format" }
 bcs = "0.1.2"
 codespan = "0.8.0"

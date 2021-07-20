@@ -676,6 +676,7 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-ir-types",
+ "move-symbol-pool",
  "serde",
 ]
 
@@ -4090,6 +4091,7 @@ dependencies = [
  "hex",
  "move-core-types",
  "move-ir-types",
+ "move-symbol-pool",
 ]
 
 [[package]]
@@ -4734,6 +4736,7 @@ dependencies = [
  "move-ir-types",
  "move-lang-test-utils",
  "move-stdlib",
+ "move-symbol-pool",
  "once_cell",
  "petgraph",
  "regex",
@@ -4800,6 +4803,7 @@ dependencies = [
  "move-ir-types",
  "move-lang",
  "move-prover-test-utils",
+ "move-symbol-pool",
  "num 0.4.0",
  "once_cell",
  "regex",

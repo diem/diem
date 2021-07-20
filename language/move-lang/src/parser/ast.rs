@@ -3,6 +3,7 @@
 
 use crate::shared::{ast_debug::*, AddressBytes, Identifier, Name, TName, ADDRESS_LENGTH};
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::{fmt, hash::Hash};
 
 macro_rules! new_name {
@@ -696,7 +697,7 @@ impl LeadingNameAccess_ {
 }
 
 impl Definition {
-    pub fn file(&self) -> &'static str {
+    pub fn file(&self) -> Symbol {
         match self {
             Definition::Module(m) => m.loc.file(),
             Definition::Address(a) => a.loc.file(),

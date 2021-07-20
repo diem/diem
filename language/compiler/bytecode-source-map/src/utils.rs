@@ -13,6 +13,7 @@ use codespan_reporting::{
     },
 };
 use move_ir_types::location::Loc;
+use move_symbol_pool::Symbol;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, fs::File, io::Read, path::Path};
 
@@ -70,7 +71,7 @@ pub fn remap_owned_loc_to_loc(m: SourceMap<OwnedLoc>) -> SourceMap<Loc> {
         let file = *table
             .entry(file.clone())
             .or_insert_with(|| Box::leak(Box::new(file)));
-        Loc::new(file, span)
+        Loc::new(Symbol::from(file), span)
     };
     m.remap_locations(&mut f)
 }

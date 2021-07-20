@@ -81,7 +81,7 @@ pub fn run_model_builder_with_compilation_flags(
             // Add source files so that the env knows how to translate locations of parse errors
             for fname in files.keys().sorted() {
                 let fsrc = &files[fname];
-                env.add_source(fname, fsrc, /* is_dep */ false);
+                env.add_source(fname.as_str(), fsrc, /* is_dep */ false);
             }
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
@@ -97,7 +97,7 @@ pub fn run_model_builder_with_compilation_flags(
         .collect();
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
-        env.add_source(fname, fsrc, dep_files.contains(fname));
+        env.add_source(fname.as_str(), fsrc, dep_files.contains(fname));
     }
 
     // Add any documentation comments found by the Move compiler to the env.
@@ -130,7 +130,7 @@ pub fn run_model_builder_with_compilation_flags(
     let mut visited_modules = BTreeSet::new();
     for (_, mident, mdef) in &expansion_ast.modules {
         let src_file = mdef.loc.file();
-        if !dep_files.contains(src_file) {
+        if !dep_files.contains(&src_file) {
             collect_related_modules_recursive(
                 mident,
                 &expansion_ast.modules,
@@ -141,7 +141,7 @@ pub fn run_model_builder_with_compilation_flags(
     }
     for sdef in expansion_ast.scripts.values() {
         let src_file = sdef.loc.file();
-        if !dep_files.contains(src_file) {
+        if !dep_files.contains(&src_file) {
             for (_, mident, _neighbor) in &sdef.immediate_neighbors {
                 collect_related_modules_recursive(
                     mident,
