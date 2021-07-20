@@ -1,0 +1,24 @@
+# Tests that resolved addresses can backflow in the resolution graph
+#                    +---- 0x1  -----+
+#                    |               |
+#                    v               |
+#                 +----+            0x1
+#           +---->| A  |----+        |
+#           |     +----+    |        |
+#           ?               ?        |
+# +----+    |               |     +----+
+# |Root|----+               +---->| C  |
+# +----+    |               |     +----+
+#          0x1             0x1
+#           |     +----+    |
+#           +---->| B  +----+
+#                 +----+
+
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+# This should be resolved to 0x1 by backflow from the BA instantiation
+A = { local = "./deps_only/A" }
+B = { local = "./deps_only/B", addr_subst = { "BA" = "0x1" } }

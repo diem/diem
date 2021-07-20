@@ -1,0 +1,259 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: Identifier(
+                "test",
+            ),
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: None,
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {
+            Identifier(
+                "C",
+            ): Dependency {
+                local: "./deps_only/C",
+                subst: Some(
+                    {
+                        Identifier(
+                            "CA",
+                        ): RenameFrom(
+                            Identifier(
+                                "A",
+                            ),
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+            Identifier(
+                "D",
+            ): Dependency {
+                local: "./deps_only/D",
+                subst: Some(
+                    {
+                        Identifier(
+                            "DA",
+                        ): RenameFrom(
+                            Identifier(
+                                "A",
+                            ),
+                        ),
+                    },
+                ),
+                version: None,
+                digest: None,
+            },
+        },
+        dev_dependencies: {},
+    },
+    graph: {
+        14402189752926126668: [
+            (
+                16567872259610830857,
+                Outgoing,
+            ),
+            (
+                8815055729445589973,
+                Outgoing,
+            ),
+        ],
+        16567872259610830857: [
+            (
+                14402189752926126668,
+                Incoming,
+            ),
+        ],
+        8815055729445589973: [
+            (
+                14402189752926126668,
+                Incoming,
+            ),
+        ],
+    },
+    package_table: {
+        Identifier(
+            "C",
+        ): ResolutionPackage {
+            resolution_graph_index: 16567872259610830857,
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: Identifier(
+                        "C",
+                    ),
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        Identifier(
+                            "A",
+                        ): Some(
+                            00000000000000000000000000000001,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                Identifier(
+                    "A",
+                ): 00000000000000000000000000000001,
+            },
+        },
+        Identifier(
+            "D",
+        ): ResolutionPackage {
+            resolution_graph_index: 8815055729445589973,
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: Identifier(
+                        "D",
+                    ),
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        Identifier(
+                            "A",
+                        ): Some(
+                            00000000000000000000000000000002,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                Identifier(
+                    "A",
+                ): 00000000000000000000000000000002,
+            },
+        },
+        Identifier(
+            "test",
+        ): ResolutionPackage {
+            resolution_graph_index: 14402189752926126668,
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: Identifier(
+                        "test",
+                    ),
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: None,
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    Identifier(
+                        "C",
+                    ): Dependency {
+                        local: "./deps_only/C",
+                        subst: Some(
+                            {
+                                Identifier(
+                                    "CA",
+                                ): RenameFrom(
+                                    Identifier(
+                                        "A",
+                                    ),
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                    Identifier(
+                        "D",
+                    ): Dependency {
+                        local: "./deps_only/D",
+                        subst: Some(
+                            {
+                                Identifier(
+                                    "DA",
+                                ): RenameFrom(
+                                    Identifier(
+                                        "A",
+                                    ),
+                                ),
+                            },
+                        ),
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {
+                Identifier(
+                    "CA",
+                ): (
+                    Identifier(
+                        "C",
+                    ),
+                    Identifier(
+                        "A",
+                    ),
+                ),
+                Identifier(
+                    "DA",
+                ): (
+                    Identifier(
+                        "D",
+                    ),
+                    Identifier(
+                        "A",
+                    ),
+                ),
+            },
+            resolution_table: {
+                Identifier(
+                    "CA",
+                ): 00000000000000000000000000000001,
+                Identifier(
+                    "DA",
+                ): 00000000000000000000000000000002,
+            },
+        },
+    },
+}

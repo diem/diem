@@ -30,7 +30,7 @@ pub struct PackageInfo {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Dependency {
-    pub local: Option<PathBuf>,
+    pub local: PathBuf,
     pub subst: Option<Substitution>,
     pub version: Option<Version>,
     pub digest: Option<Vec<u8>>,

@@ -1,0 +1,7 @@
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+A = { local = "./deps_only/A", addr_subst = { "AA" = "0x1" } }
+B = { local = "./deps_only/B", addr_subst = { "BA" = "0x1" } }

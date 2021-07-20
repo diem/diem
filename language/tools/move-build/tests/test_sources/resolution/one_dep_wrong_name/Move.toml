@@ -1,0 +1,9 @@
+[package]
+name = "Root"
+version = "0.0.0"
+
+[addresses]
+A = "_"
+
+[dependencies]
+WrongNameForDep = { local = "./deps_only/other_dep", addr_subst = { "A" = "B" } }

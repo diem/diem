@@ -280,12 +280,12 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                     let local_str = local
                         .as_str()
                         .ok_or_else(|| format_err!("Local source path not a string"))?;
-                    let local_path = PathBuf::from(local_str);
+                    let local = PathBuf::from(local_str);
                     Ok(PM::Dependency {
+                        local,
                         subst,
                         version,
                         digest,
-                        local: Some(local_path),
                     })
                 }
                 None => {

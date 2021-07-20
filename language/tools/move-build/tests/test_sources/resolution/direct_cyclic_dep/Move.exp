@@ -1,0 +1,1 @@
+Unable to resolve packages for package 'Root': While resolving dependency 'Other' in package 'Root': Unable to resolve package dependency 'Other': While resolving dependency 'Root' in package 'Other': Unable to resolve package dependency 'Root': Found cycle between packages: Root -> Other -> Root
