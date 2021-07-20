@@ -187,7 +187,7 @@ impl Swarm for K8sSwarm {
         todo!()
     }
 
-    fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
+    fn full_nodes<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
         Box::new(self.fullnodes.values().map(|v| v as &'a dyn FullNode))
     }
 

@@ -335,7 +335,7 @@ impl Swarm for LocalSwarm {
         validator.upgrade(version)
     }
 
-    fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
+    fn full_nodes<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
         todo!()
     }
 
