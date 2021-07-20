@@ -642,6 +642,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     match &member.value {
                         EA::SpecBlockMember_::Condition {
                             kind,
+                            type_parameters,
                             properties,
                             exp,
                             additional_exps,
@@ -664,6 +665,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                     loc,
                                     &context,
                                     kind,
+                                    type_parameters,
                                     properties,
                                     exp,
                                     additional_exps,
@@ -931,6 +933,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         match &member.value {
             Condition {
                 kind,
+                type_parameters,
                 properties,
                 exp,
                 additional_exps,
@@ -943,7 +946,15 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             None
                         }
                     });
-                    self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
+                    self.def_ana_condition(
+                        loc,
+                        context,
+                        kind,
+                        type_parameters,
+                        properties,
+                        exp,
+                        additional_exps,
+                    )
                 }
             }
             Function {
@@ -1531,17 +1542,40 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         loc: &Loc,
         context: &SpecBlockContext,
         kind: ConditionKind,
+        type_parameters: &[(Name, EA::AbilitySet)],
         properties: PropertyBag,
         exp: &EA::Exp,
         additional_exps: &[EA::Exp],
     ) {
-        if kind == ConditionKind::Decreases {
-            self.parent
-                .error(loc, "decreases specification not supported currently");
+        if matches!(kind, ConditionKind::Decreases | ConditionKind::SucceedsIf) {
+            self.parent.error(loc, "condition kind is not supported");
             return;
         }
-        if matches!(kind, ConditionKind::SucceedsIf) {
-            self.parent.error(loc, "condition kind is not supported");
+        if !matches!(
+            kind,
+            ConditionKind::Assert
+                | ConditionKind::Assume
+                | ConditionKind::Axiom
+                | ConditionKind::AbortsIf
+                | ConditionKind::SucceedsIf
+                | ConditionKind::Ensures
+                | ConditionKind::Requires
+                | ConditionKind::Invariant
+                | ConditionKind::InvariantUpdate
+        ) && !type_parameters.is_empty()
+        {
+            let msg = "type parameters are not allowed here";
+            let note = "type parameters are only allowed on the following cases: \
+                `assert`, `assume`, `axiom, `aborts_if`, `succeeds_if`, `ensures`, `requires`, and \
+                `invariant`.";
+            self.parent
+                .error_with_notes(loc, msg, vec![note.to_owned()]);
+            return;
+        }
+        // TODO(mengxu): add support for generic conditions
+        if !type_parameters.is_empty() {
+            self.parent
+                .error(loc, "generic specification condition is not supported");
             return;
         }
         let expected_type = self.expected_type_for_condition(&kind);
@@ -1836,6 +1870,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 EA::SpecBlockMember_::Let { .. } => { /* handled above */ }
                 EA::SpecBlockMember_::Condition {
                     kind,
+                    type_parameters,
                     properties,
                     exp,
                     additional_exps,
@@ -1853,6 +1888,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             &member_loc,
                             &context,
                             kind,
+                            type_parameters,
                             properties,
                             exp,
                             additional_exps,

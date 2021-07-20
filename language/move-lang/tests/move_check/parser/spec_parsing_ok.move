@@ -123,7 +123,9 @@ module 0x8675309::M {
 
     spec schema ModuleInvariant<X, Y> {
         requires global<X>(0x0).f == global<X>(0x1).f;
+        requires<Z> exists<Z>(0x1) <==> exists<Z>(0x1);
         ensures global<X>(0x0).f == global<X>(0x1).f;
+        ensures<Z> exists<Z>(0x1) <==> exists<Z>(0x1);
     }
 
     spec some_generic {
@@ -140,5 +142,7 @@ module 0x8675309::M {
         invariant forall x: num, y: num, z: num : x == y && y == z ==> x == z;
         invariant forall x: num : exists y: num : y >= x;
         invariant exists x in 1..10, y in 8..12 : x == y;
+        invariant<X: key> exists<X>(0x0) <==> exists<X>(0x0);
+        invariant<X: key, Y: key> exists<X>(0x0) && exists<Y>(0x1) <==> exists<Y>(0x1) && exists<X>(0x0);
     }
 }
