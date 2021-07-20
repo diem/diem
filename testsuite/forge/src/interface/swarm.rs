@@ -11,7 +11,7 @@ pub trait Swarm {
     fn health_check(&mut self) -> Result<()>;
 
     /// Returns an Iterator of references to all the Validators in the Swarm
-    fn validators<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a>;
+    fn validators<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a>;
 
     /// Returns an Iterator of mutable references to all the Validators in the Swarm
     fn validators_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn Validator> + 'a>;

@@ -300,7 +300,7 @@ impl Swarm for LocalSwarm {
         todo!()
     }
 
-    fn validators<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a> {
+    fn validators<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a> {
         Box::new(self.validators.values().map(|v| v as &'a dyn Validator))
     }
 
