@@ -272,3 +272,37 @@ pub static BLOCK_RETRIEVAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+///////////////////
+// DECOUPLED EXECUTION CHANNEL COUNTERS
+///////////////////
+
+/// Counter for the decoupling execution channel of ordered blocks
+/// from ordering state computer to execution phase
+pub static DECOUPLED_EXECUTION__EXECUTION_PHASE_CHANNEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "decoupled_execution__execution_phase_channel",
+        "Number of pending ordered only blocks"
+    )
+    .unwrap()
+});
+
+/// Counter for the decoupling execution channel of executed blocks
+/// from execution phase to commit phase
+pub static DECOUPLED_EXECUTION__COMMIT_PHASE_CHANNEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "decoupled_execution__commit_phase_channel",
+        "Number of pending executed blocks"
+    )
+    .unwrap()
+});
+
+/// Counter for the decoupling execution channel of commit messages
+/// from epoch_manager to commit phase
+pub static DECOUPLED_EXECUTION__COMMIT_MESSAGE_CHANNEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "decoupled_execution__commit_message_channel",
+        "Number of pending commit phase messages (CommitVote/CommitDecision)"
+    )
+    .unwrap()
+});

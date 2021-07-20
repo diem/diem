@@ -3,7 +3,8 @@
 
 use crate::{
     counters, experimental::errors::Error, metrics_safety_rules::MetricsSafetyRules,
-    network::NetworkSender, network_interface::ConsensusMsg, state_replication::StateComputer,
+    network::NetworkSender, network_interface::ConsensusMsg, round_manager::VerifiedEvent,
+    state_replication::StateComputer,
 };
 use channel::Receiver;
 use consensus_types::{
@@ -92,17 +93,11 @@ impl PendingBlocks {
     }
 }
 
-#[derive(Debug)]
-pub enum CommitPhaseMessage {
-    CommitVote(Author, LedgerInfo, Ed25519Signature),
-    CommitDecision(LedgerInfoWithSignatures),
-}
-
 pub struct CommitPhase {
     commit_channel_recv: Receiver<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
     execution_proxy: Arc<dyn StateComputer>,
     blocks: Option<PendingBlocks>,
-    commit_msg_receiver: channel::Receiver<ConsensusMsg>,
+    commit_msg_rx: channel::Receiver<VerifiedEvent>,
     verifier: ValidatorVerifier,
     safety_rules: Arc<Mutex<MetricsSafetyRules>>,
     author: Author,
@@ -140,7 +135,7 @@ impl CommitPhase {
     pub fn new(
         commit_channel_recv: Receiver<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
         execution_proxy: Arc<dyn StateComputer>,
-        commit_msg_receiver: channel::Receiver<ConsensusMsg>,
+        commit_msg_rx: channel::Receiver<VerifiedEvent>,
         verifier: ValidatorVerifier,
         safety_rules: Arc<Mutex<MetricsSafetyRules>>,
         author: Author,
@@ -151,7 +146,7 @@ impl CommitPhase {
             commit_channel_recv,
             execution_proxy,
             blocks: None,
-            commit_msg_receiver,
+            commit_msg_rx,
             verifier,
             safety_rules,
             author,
@@ -160,7 +155,7 @@ impl CommitPhase {
         }
     }
 
-    /// Notified when receiving a commit vote message
+    /// Notified when receiving a commit vote message (assuming verified)
     pub async fn process_commit_vote(
         &mut self,
         commit_vote: &CommitVote,
@@ -176,10 +171,6 @@ impl CommitPhase {
                 )); // ignore the message
             }
 
-            commit_vote
-                .verify(&self.verifier)
-                .map_err(|_| Error::VerificationError)?;
-
             // add the signature into the signature tree
             pending_blocks
                 .ledger_info_sig_mut()
@@ -191,6 +182,7 @@ impl CommitPhase {
         Ok(())
     }
 
+    /// Notified when receiving a commit decision message (assuming verified)
     pub async fn process_commit_decision(
         &mut self,
         commit_decision: &CommitDecision,
@@ -205,10 +197,6 @@ impl CommitPhase {
                     pending_blocks.block_info().clone(),
                 )); // ignore the message
             }
-
-            commit_decision
-                .verify(&self.verifier)
-                .map_err(|_| Error::VerificationError)?;
 
             // replace the signature tree
             pending_blocks.replace_ledger_info_sig(commit_ledger_info.clone());
@@ -238,7 +226,7 @@ impl CommitPhase {
                 .await
                 .expect("Failed to commit the executed blocks.");
 
-                // update the back pressure (will appear in later PR)
+                // update the back pressure
                 self.back_pressure
                     .store(pending_blocks.round(), Ordering::SeqCst);
 
@@ -310,18 +298,18 @@ impl CommitPhase {
                 // if we are still collecting the signatures
                 select! {
                     // process messages dispatched from epoch_manager
-                    msg = self.commit_msg_receiver.select_next_some() => {
+                    msg = self.commit_msg_rx.select_next_some() => {
                         match msg {
-                            ConsensusMsg::CommitVoteMsg(request) => {
+                            VerifiedEvent::CommitVote(cv) => {
                                 monitor!(
                                     "process_commit_vote",
-                                    report_err!(self.process_commit_vote(&*request).await, "Error in processing commit vote.")
+                                    report_err!(self.process_commit_vote(&*cv).await, "Error in processing commit vote.")
                                 );
                             }
-                            ConsensusMsg::CommitDecisionMsg(request) => {
+                            VerifiedEvent::CommitDecision(cd) => {
                                 monitor!(
                                     "process_commit_decision",
-                                    report_err!(self.process_commit_decision(&*request).await, "Error in processing commit decision.")
+                                    report_err!(self.process_commit_decision(&*cd).await, "Error in processing commit decision.")
                                 );
                             }
                             _ => {

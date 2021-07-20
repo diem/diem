@@ -36,6 +36,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, Uniform};
+use diem_infallible::Mutex;
 use diem_secure_storage::Storage;
 use diem_types::{
     epoch_state::EpochState,
@@ -214,7 +215,7 @@ impl NodeSetup {
             round_state,
             proposer_election,
             proposal_generator,
-            safety_rules,
+            Arc::new(Mutex::new(safety_rules)),
             network,
             Arc::new(MockTransactionManager::new(None)),
             storage.clone(),
@@ -889,7 +890,8 @@ fn safety_rules_crash() {
             SafetyRulesManager::new_local(safety_storage, false, false, false);
         let safety_rules =
             MetricsSafetyRules::new(node.safety_rules_manager.client(), node.storage.clone());
-        node.round_manager.set_safety_rules(safety_rules);
+        let safety_rules_container = Arc::new(Mutex::new(safety_rules));
+        node.round_manager.set_safety_rules(safety_rules_container);
     }
 
     timed_block_on(&mut runtime, async {

@@ -49,12 +49,15 @@ use crate::test_utils::timed_block_on;
 use consensus_types::experimental::{commit_decision::CommitDecision, commit_vote::CommitVote};
 use diem_types::block_info::BlockInfo;
 
-use crate::experimental::{commit_phase::PendingBlocks, errors::Error};
+use crate::{
+    experimental::{commit_phase::PendingBlocks, errors::Error},
+    round_manager::VerifiedEvent,
+};
 use executor_types::StateComputeResult;
 
 fn prepare_commit_phase() -> (
     Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
-    Sender<ConsensusMsg>,
+    Sender<VerifiedEvent>,
     Receiver<(Vec<Block>, LedgerInfoWithSignatures)>,
     Receiver<Event<ConsensusMsg>>,
     Arc<Mutex<MetricsSafetyRules>>,
@@ -118,7 +121,7 @@ fn prepare_commit_phase() -> (
     let (commit_tx, commit_rx) =
         channel::new_test::<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>(channel_size);
 
-    let (msg_tx, msg_rx) = channel::new_test::<ConsensusMsg>(channel_size);
+    let (msg_tx, msg_rx) = channel::new_test::<VerifiedEvent>(channel_size);
 
     let commit_phase = CommitPhase::new(
         commit_rx,
@@ -225,6 +228,8 @@ fn generate_random_commit_decision(signer: &ValidatorSigner) -> CommitDecision {
 
 mod commit_phase_e2e_tests {
     use super::*;
+    use crate::round_manager::UnverifiedEvent;
+
     /// happy path test
     #[test]
     fn test_happy_path() {
@@ -237,7 +242,7 @@ mod commit_phase_e2e_tests {
             _safety_rules_container,
             signers,
             _state_computer,
-            _validator,
+            validator,
             commit_phase,
         ) = prepare_commit_phase();
 
@@ -254,8 +259,9 @@ mod commit_phase_e2e_tests {
 
             match self_loop_rx.next().await {
                 Some(Event::Message(_, msg)) => {
-                    // send the message into self loop
-                    msg_tx.send(msg).await.ok();
+                    let event: UnverifiedEvent = msg.into();
+                    // verify the message and send the message into self loop
+                    msg_tx.send(event.verify(&validator).unwrap()).await.ok();
                 }
                 _ => {
                     panic!("We are expecting a commit vote message.");
@@ -306,7 +312,7 @@ mod commit_phase_e2e_tests {
                     let mut signatures = BTreeMap::<AccountAddress, Ed25519Signature>::new();
                     signatures.insert(commit_vote.author(), commit_vote.signature().clone());
                     // construct a good commit decision from request
-                    let commit_decision = ConsensusMsg::CommitDecisionMsg(Box::new(
+                    let commit_decision = VerifiedEvent::CommitDecision(Box::new(
                         CommitDecision::new(LedgerInfoWithSignatures::new(
                             commit_vote.ledger_info().clone(),
                             signatures,
@@ -419,7 +425,7 @@ mod commit_phase_e2e_tests {
             // send a bad vote
 
             msg_tx
-                .send(ConsensusMsg::CommitVoteMsg(Box::new(
+                .send(VerifiedEvent::CommitVote(Box::new(
                     generate_random_commit_vote(&signers[0]),
                 )))
                 .await
@@ -451,18 +457,20 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             let (vecblocks, li_sig) = prepare_executed_blocks_with_ordered_ledger_info(&signers[0]);
-            commit_tx.send((vecblocks, li_sig.clone())).await.ok();
+            commit_tx.send((vecblocks, li_sig)).await.ok();
+
+            let (_, li_sig_prime) = prepare_executed_blocks_with_ordered_ledger_info(&signers[0]);
 
             // it sends itself a commit vote
             let self_msg = self_loop_rx.next().await;
 
             assert!(matches!(self_msg, Some(Event::Message(_, _),)));
 
-            // send a bad commit decision without signatures
+            // send a bad commit decision with inconsistent block info
             msg_tx
-                .send(ConsensusMsg::CommitDecisionMsg(Box::new(
+                .send(VerifiedEvent::CommitDecision(Box::new(
                     CommitDecision::new(LedgerInfoWithSignatures::new(
-                        li_sig.ledger_info().clone(),
+                        li_sig_prime.ledger_info().clone(),
                         BTreeMap::<AccountAddress, Ed25519Signature>::new(),
                     )),
                 )))
@@ -498,11 +506,6 @@ mod commit_phase_function_tests {
 
             let (vecblocks, li_sig) = prepare_executed_blocks_with_executed_ledger_info(signer);
 
-            let good_ledger_info = LedgerInfo::new(
-                vecblocks.last().unwrap().block_info(),
-                li_sig.ledger_info().consensus_data_hash(),
-            );
-
             commit_phase.set_blocks(Some(PendingBlocks::new(vecblocks, li_sig)));
 
             let random_commit_vote = generate_random_commit_vote(signer);
@@ -510,19 +513,6 @@ mod commit_phase_function_tests {
             assert!(matches!(
                 commit_phase.process_commit_vote(&random_commit_vote).await,
                 Err(Error::InconsistentBlockInfo(_, _))
-            ));
-
-            let commit_vote_with_bad_signature = CommitVote::new_with_signature(
-                signer.author(),
-                good_ledger_info,
-                signer.sign(random_commit_vote.ledger_info()),
-            );
-
-            assert!(matches!(
-                commit_phase
-                    .process_commit_vote(&commit_vote_with_bad_signature)
-                    .await,
-                Err(Error::VerificationError)
             ));
         });
     }
@@ -547,11 +537,6 @@ mod commit_phase_function_tests {
 
             let (vecblocks, li_sig) = prepare_executed_blocks_with_executed_ledger_info(signer);
 
-            let good_ledger_info = LedgerInfo::new(
-                vecblocks.last().unwrap().block_info(),
-                li_sig.ledger_info().consensus_data_hash(),
-            );
-
             commit_phase.set_blocks(Some(PendingBlocks::new(vecblocks, li_sig)));
 
             let random_commit_decision = generate_random_commit_decision(signer);
@@ -562,19 +547,6 @@ mod commit_phase_function_tests {
                     .await,
                 Err(Error::InconsistentBlockInfo(_, _))
             ));
-
-            let commit_decision_with_bad_signature =
-                CommitDecision::new(LedgerInfoWithSignatures::new(
-                    good_ledger_info,
-                    BTreeMap::<AccountAddress, Ed25519Signature>::new(),
-                ));
-
-            assert_eq!(
-                commit_phase
-                    .process_commit_decision(&commit_decision_with_bad_signature)
-                    .await,
-                Err(Error::VerificationError)
-            );
         });
     }
 
