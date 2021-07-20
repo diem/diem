@@ -137,36 +137,41 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
     }
 
     pub fn run(&self) -> Result<()> {
-        let mut summary = TestSummary::new(self.filter_tests(self.tests.all_tests()).count(), 0);
+        let test_count = self.filter_tests(self.tests.all_tests()).count();
+        let filtered_out = test_count.saturating_sub(self.tests.all_tests().count());
+
+        let mut summary = TestSummary::new(test_count, filtered_out);
         summary.write_starting_msg()?;
 
-        let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
-        let mut swarm = self.factory.launch_swarm(1);
+        if test_count > 0 {
+            let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
+            let mut swarm = self.factory.launch_swarm(1);
 
-        // Run PublicUsageTests
-        for test in self.filter_tests(self.tests.public_usage_tests.iter()) {
-            let mut public_ctx = PublicUsageContext::new(
-                CoreContext::from_rng(&mut rng),
-                swarm.chain_info().into_public_info(),
-            );
-            let result = run_test(|| test.run(&mut public_ctx));
-            summary.handle_result(test.name().to_owned(), result)?;
-        }
+            // Run PublicUsageTests
+            for test in self.filter_tests(self.tests.public_usage_tests.iter()) {
+                let mut public_ctx = PublicUsageContext::new(
+                    CoreContext::from_rng(&mut rng),
+                    swarm.chain_info().into_public_info(),
+                );
+                let result = run_test(|| test.run(&mut public_ctx));
+                summary.handle_result(test.name().to_owned(), result)?;
+            }
 
-        // Run AdminTests
-        for test in self.filter_tests(self.tests.admin_tests.iter()) {
-            let mut admin_ctx =
-                AdminContext::new(CoreContext::from_rng(&mut rng), swarm.chain_info());
-            let result = run_test(|| test.run(&mut admin_ctx));
-            summary.handle_result(test.name().to_owned(), result)?;
-        }
+            // Run AdminTests
+            for test in self.filter_tests(self.tests.admin_tests.iter()) {
+                let mut admin_ctx =
+                    AdminContext::new(CoreContext::from_rng(&mut rng), swarm.chain_info());
+                let result = run_test(|| test.run(&mut admin_ctx));
+                summary.handle_result(test.name().to_owned(), result)?;
+            }
 
-        for test in self.filter_tests(self.tests.network_tests.iter()) {
-            let report = TestReport::new();
-            let mut network_ctx =
-                NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm, report);
-            let result = run_test(|| test.run(&mut network_ctx));
-            summary.handle_result(test.name().to_owned(), result)?;
+            for test in self.filter_tests(self.tests.network_tests.iter()) {
+                let report = TestReport::new();
+                let mut network_ctx =
+                    NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm, report);
+                let result = run_test(|| test.run(&mut network_ctx));
+                summary.handle_result(test.name().to_owned(), result)?;
+            }
         }
 
         summary.write_summary()?;
