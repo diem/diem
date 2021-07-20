@@ -595,12 +595,10 @@ fn vm_thread_safe() {
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
 
-    use crate::{DiemVM, DiemVMValidator};
+    use crate::DiemVM;
 
     assert_send::<DiemVM>();
     assert_sync::<DiemVM>();
-    assert_send::<DiemVMValidator>();
-    assert_sync::<DiemVMValidator>();
     assert_send::<MoveVM>();
     assert_sync::<MoveVM>();
 }
