@@ -183,8 +183,8 @@ impl ProverTask for RunBoogieWithSeeds {
 
     async fn run(&mut self, task_id: Self::TaskId, sem: Arc<Semaphore>) -> Self::TaskResult {
         let _guard = sem.acquire().await;
-        let args = self.get_boogie_command(task_id);
-        debug!("runing Boogie command with seed {}", task_id);
+        let args = self.get_boogie_command(task_id).map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
+        debug!("running Boogie command with seed {}", task_id);
         Command::new(&args[0])
             .args(&args[1..])
             .kill_on_drop(true)
@@ -212,7 +212,7 @@ impl ProverTask for RunBoogieWithSeeds {
 
 impl RunBoogieWithSeeds {
     /// Returns command line to call boogie.
-    pub fn get_boogie_command(&mut self, seed: usize) -> Vec<String> {
+    pub fn get_boogie_command(&mut self, seed: usize) -> anyhow::Result<Vec<String>> {
         self.options
             .boogie_flags
             .push(format!("-proverOpt:O:smt.random_seed={}", seed));
