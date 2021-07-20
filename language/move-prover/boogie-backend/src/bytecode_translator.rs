@@ -520,7 +520,12 @@ impl<'env> FunctionTranslator<'env> {
             };
             emitln!(writer, "// function instantiation");
             for (ty_var, ty_inst) in instantiation {
-                emitln!(writer, "#{} := {}", ty_var, ty_inst.display(&display_ctxt));
+                emitln!(
+                    writer,
+                    "// #{} := {};",
+                    ty_var,
+                    ty_inst.display(&display_ctxt)
+                );
             }
             emitln!(writer, "");
         }
