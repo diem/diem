@@ -774,21 +774,27 @@ impl Default for Substitution {
 /// first before re-using the algorithm in `Substitution`.
 ///
 /// Similarly, in the monomorphization use case, we need to check whether a property over `S<t>`
-/// can be reduced to `S<u64>` where `t` is a `Type::TypeLocal`. We need a convertion from
+/// can be reduced to `S<u64>` where `t` is a `Type::TypeLocal`. We need a conversion from
 /// `Type::TypeLocal` to `Type::Var` as well.
 ///
-/// This is why we need `TypeUnifier`. The `TypeUnifier` wrapper takes care of
+/// TODO: we might remove `Type::TypeLocal` when
+/// 1) we have generic invariant (i.e., `invariant<T>`) as a replacement of universal quantification
+///    over type and
+/// 2) we cannot find much practical value for existential quantification over type (one dummy
+///    example is: `exists t: type: global<Config<T>>(0x1) == global<Config<T>>(0x2)`)
+///
+/// This is why we need `TypeUnificationAdapter`. The adapter takes care of
 /// 1) converting a `Type::TypeParameter` and `Type::TypeLocal` into type variables `Type::Var`,
 /// 2) invoking the type unification algorithm on the adapted types, and
 /// 3) subsequently mapping the type unification results back to corresponding `Type::TypeParameter`
 ///    and `Type::TypeLocals`.
-pub struct TypeUnifier {
+pub struct TypeUnificationAdapter {
     type_vars_map: BTreeMap<u16, (bool, Type)>,
     types_adapted_lhs: Vec<Type>,
     types_adapted_rhs: Vec<Type>,
 }
 
-impl TypeUnifier {
+impl TypeUnificationAdapter {
     /// Initialize the context for the type unifier.
     ///
     /// - If `treat_type_param_as_var` is set, all `Type::TypeParameter` in the types are converted
