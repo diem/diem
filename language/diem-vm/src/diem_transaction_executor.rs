@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    adapter_common::validate_signature_checked_transaction,
     counters::*,
     data_cache::StateViewCache,
-    diem_transaction_validator::validate_signature_checked_transaction,
     diem_vm::{
         charge_global_write_gas_usage, convert_changeset_and_events, get_transaction_output,
         DiemVMImpl, DiemVMInternals,
@@ -22,7 +22,7 @@ use diem_types::{
     access_path::AccessPath,
     account_config,
     block_metadata::BlockMetadata,
-    on_chain_config::DIEM_VERSION_3,
+    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_3},
     transaction::{
         ChangeSet, Module, SignatureCheckedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
@@ -46,13 +46,34 @@ use std::{
     convert::{AsMut, AsRef},
 };
 
-pub struct DiemVM(DiemVMImpl);
+#[derive(Clone)]
+pub struct DiemVM(pub(crate) DiemVMImpl);
 
 impl DiemVM {
     pub fn new<S: StateView>(state: &S) -> Self {
         Self(DiemVMImpl::new(state))
     }
 
+    pub fn new_for_validation<S: StateView>(state: &S) -> Self {
+        info!(
+            AdapterLogSchema::new(state.id(), 0),
+            "Adapter created for Validation"
+        );
+        Self::new(state)
+    }
+
+    pub fn init_with_config(
+        version: DiemVersion,
+        on_chain_config: VMConfig,
+        publishing_option: VMPublishingOption,
+    ) -> Self {
+        info!("Adapter restarted for Validation");
+        DiemVM(DiemVMImpl::init_with_config(
+            version,
+            on_chain_config,
+            publishing_option,
+        ))
+    }
     pub fn internals(&self) -> DiemVMInternals {
         DiemVMInternals::new(&self.0)
     }
@@ -298,8 +319,8 @@ impl DiemVM {
 
         // Revalidate the transaction.
         let mut session = self.0.new_session(storage);
-        let account_currency_symbol = match validate_signature_checked_transaction(
-            &self.0,
+        let account_currency_symbol = match validate_signature_checked_transaction::<S, Self>(
+            &self,
             &mut session,
             txn,
             storage,
@@ -522,8 +543,8 @@ impl DiemVM {
 
         // Revalidate the transaction.
         let mut session = self.0.new_session(storage);
-        if let Err(e) = validate_signature_checked_transaction(
-            &self.0,
+        if let Err(e) = validate_signature_checked_transaction::<S, Self>(
+            &self,
             &mut session,
             &txn,
             storage,

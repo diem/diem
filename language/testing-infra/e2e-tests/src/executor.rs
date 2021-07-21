@@ -35,7 +35,7 @@ use diem_types::{
     write_set::WriteSet,
 };
 use diem_vm::{
-    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, DiemVMValidator, VMExecutor,
+    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor,
     VMValidator,
 };
 use move_core_types::{
@@ -403,7 +403,7 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> VMValidatorResult {
-        let vm = DiemVMValidator::new(self.get_state_view());
+        let vm = DiemVM::new(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }
 
