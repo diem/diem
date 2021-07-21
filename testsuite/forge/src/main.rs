@@ -236,7 +236,7 @@ impl NetworkTest for EmitTransaction {
             .swarm()
             .validators()
             .into_iter()
-            .map(|n| n.json_rpc_client())
+            .map(|n| n.async_json_rpc_client())
             .collect_vec();
         let mut emitter = TxnEmitter::new(ctx.swarm().chain_info(), rng);
         let rt = Runtime::new().unwrap();

@@ -4,7 +4,10 @@
 use crate::{Result, Version};
 use debug_interface::NodeDebugClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
-use diem_sdk::{client::Client as JsonRpcClient, types::PeerId};
+use diem_sdk::{
+    client::{BlockingClient, Client as JsonRpcClient},
+    types::PeerId,
+};
 use std::{
     collections::HashMap,
     thread,
@@ -87,8 +90,13 @@ impl<T: ?Sized> NodeExt for T where T: Node {}
 
 pub trait NodeExt: Node {
     /// Return JSON-RPC client of this Node
-    fn json_rpc_client(&self) -> JsonRpcClient {
+    fn async_json_rpc_client(&self) -> JsonRpcClient {
         JsonRpcClient::new(self.json_rpc_endpoint().to_string())
+    }
+
+    /// Return JSON-RPC client of this Node
+    fn json_rpc_client(&self) -> BlockingClient {
+        BlockingClient::new(self.json_rpc_endpoint())
     }
 
     /// Return a NodeDebugClient for this Node
