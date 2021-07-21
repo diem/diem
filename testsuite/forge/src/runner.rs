@@ -86,12 +86,34 @@ pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F, options: &Opti
 }
 
 pub struct ForgeConfig<'cfg> {
-    pub public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
-    pub admin_tests: &'cfg [&'cfg dyn AdminTest],
-    pub network_tests: &'cfg [&'cfg dyn NetworkTest],
+    public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
+    admin_tests: &'cfg [&'cfg dyn AdminTest],
+    network_tests: &'cfg [&'cfg dyn NetworkTest],
 }
 
 impl<'cfg> ForgeConfig<'cfg> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_public_usage_tests(
+        mut self,
+        public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
+    ) -> Self {
+        self.public_usage_tests = public_usage_tests;
+        self
+    }
+
+    pub fn with_admin_tests(mut self, admin_tests: &'cfg [&'cfg dyn AdminTest]) -> Self {
+        self.admin_tests = admin_tests;
+        self
+    }
+
+    pub fn with_network_tests(mut self, network_tests: &'cfg [&'cfg dyn NetworkTest]) -> Self {
+        self.network_tests = network_tests;
+        self
+    }
+
     pub fn number_of_tests(&self) -> usize {
         self.public_usage_tests.len() + self.admin_tests.len() + self.network_tests.len()
     }
@@ -102,6 +124,16 @@ impl<'cfg> ForgeConfig<'cfg> {
             .map(|t| t as &dyn Test)
             .chain(self.admin_tests.iter().map(|t| t as &dyn Test))
             .chain(self.network_tests.iter().map(|t| t as &dyn Test))
+    }
+}
+
+impl<'cfg> Default for ForgeConfig<'cfg> {
+    fn default() -> Self {
+        Self {
+            public_usage_tests: &[],
+            admin_tests: &[],
+            network_tests: &[],
+        }
     }
 }
 

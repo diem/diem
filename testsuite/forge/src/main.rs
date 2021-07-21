@@ -52,19 +52,17 @@ fn main() -> Result<()> {
 }
 
 fn local_test_suite() -> ForgeConfig<'static> {
-    ForgeConfig {
-        public_usage_tests: &[&FundAccount, &TransferCoins],
-        admin_tests: &[&GetMetadata],
-        network_tests: &[&RestartValidator, &EmitTransaction],
-    }
+    ForgeConfig::default()
+        .with_public_usage_tests(&[&FundAccount, &TransferCoins])
+        .with_admin_tests(&[&GetMetadata])
+        .with_network_tests(&[&RestartValidator, &EmitTransaction])
 }
 
 fn k8s_test_suite() -> ForgeConfig<'static> {
-    ForgeConfig {
-        public_usage_tests: &[&FundAccount, &TransferCoins],
-        admin_tests: &[&GetMetadata],
-        network_tests: &[&EmitTransaction],
-    }
+    ForgeConfig::default()
+        .with_public_usage_tests(&[&FundAccount, &TransferCoins])
+        .with_admin_tests(&[&GetMetadata])
+        .with_network_tests(&[&EmitTransaction])
 }
 
 //TODO Make public test later
