@@ -62,7 +62,6 @@ impl NodeInfo {
             &config_path,
             diem_framework_releases::current_module_blobs().to_vec(),
         )
-        .num_validators(1)
         .template(template)
         .randomize_first_validator_ports(true);
         let test_config =

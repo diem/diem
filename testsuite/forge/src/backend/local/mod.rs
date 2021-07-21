@@ -114,7 +114,7 @@ impl Factory for LocalFactory {
 
     fn launch_swarm(&self, node_num: NonZeroUsize, version: &Version) -> Result<Box<dyn Swarm>> {
         let mut swarm = LocalSwarm::builder(self.versions.clone())
-            .number_of_validators(node_num.get())
+            .number_of_validators(node_num)
             .initial_version(version.clone())
             .build()?;
         swarm.launch()?;

@@ -15,7 +15,9 @@ use diem_sdk::{
 use std::{
     collections::HashMap,
     convert::TryFrom,
-    fs, mem, ops,
+    fs, mem,
+    num::NonZeroUsize,
+    ops,
     path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
@@ -78,7 +80,7 @@ pub struct LocalSwarmBuilder {
     versions: Arc<HashMap<Version, LocalVersion>>,
     initial_version: Option<Version>,
     template: NodeConfig,
-    number_of_validators: usize,
+    number_of_validators: NonZeroUsize,
     dir: Option<PathBuf>,
 }
 
@@ -88,7 +90,7 @@ impl LocalSwarmBuilder {
             versions,
             initial_version: None,
             template: NodeConfig::default_for_validator(),
-            number_of_validators: 1,
+            number_of_validators: NonZeroUsize::new(1).unwrap(),
             dir: None,
         }
     }
@@ -103,7 +105,7 @@ impl LocalSwarmBuilder {
         self
     }
 
-    pub fn number_of_validators(mut self, number_of_validators: usize) -> Self {
+    pub fn number_of_validators(mut self, number_of_validators: NonZeroUsize) -> Self {
         self.number_of_validators = number_of_validators;
         self
     }
