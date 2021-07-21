@@ -520,7 +520,12 @@ impl<'env> FunctionTranslator<'env> {
             };
             emitln!(writer, "// function instantiation");
             for (ty_var, ty_inst) in instantiation {
-                emitln!(writer, "#{} := {}", ty_var, ty_inst.display(&display_ctxt));
+                emitln!(
+                    writer,
+                    "// #{} := {};",
+                    ty_var,
+                    ty_inst.display(&display_ctxt)
+                );
             }
             emitln!(writer, "");
         }
@@ -718,6 +723,7 @@ impl<'env> FunctionTranslator<'env> {
         // Translate the bytecode instruction.
         match bytecode {
             SaveMem(_, label, mem) => {
+                let mem = &mem.to_owned().instantiate(self.type_inst);
                 let snapshot = boogie_resource_memory_name(env, mem, &Some(*label));
                 let current = boogie_resource_memory_name(env, mem, &None);
                 emitln!(writer, "{} := {};", snapshot, current);
