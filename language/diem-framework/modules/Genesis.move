@@ -37,9 +37,33 @@ module DiemFramework::Genesis {
         chain_id: u8,
         initial_diem_version: u64,
     ) {
-        let dr_account = &dr_account;
-        let tc_account = &tc_account;
+        initialize_internal(
+            &dr_account,
+            &tc_account,
+            dr_auth_key,
+            tc_auth_key,
+            initial_script_allow_list,
+            is_open_module,
+            instruction_schedule,
+            native_schedule,
+            chain_id,
+            initial_diem_version,
+        )
+    }
 
+    /// Initializes the Diem Framework. Internal so it can be used by both genesis code, and for testing purposes
+    fun initialize_internal(
+        dr_account: &signer,
+        tc_account: &signer,
+        dr_auth_key: vector<u8>,
+        tc_auth_key: vector<u8>,
+        initial_script_allow_list: vector<vector<u8>>,
+        is_open_module: bool,
+        instruction_schedule: vector<u8>,
+        native_schedule: vector<u8>,
+        chain_id: u8,
+        initial_diem_version: u64,
+    ) {
         DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 
         ChainId::initialize(dr_account, chain_id);
@@ -195,4 +219,19 @@ module DiemFramework::Genesis {
         requires DiemTimestamp::is_genesis();
     }
 
+    #[test_only]
+    public fun setup(dr_account: &signer, tc_account: &signer) {
+        initialize_internal(
+            dr_account,
+            tc_account,
+            x"0000000000000000000000000000000000000000000000000000000000000000",
+            x"0000000000000000000000000000000000000000000000000000000000000000",
+            Vector::empty(), // not needed for unit tests
+            false, // not needed for unit tests
+            x"", // instruction_schedule not needed for unit tests
+            x"", // native schedule not needed for unit tests
+            4u8, // TESTING chain ID
+            0,
+        )
+    }
 }

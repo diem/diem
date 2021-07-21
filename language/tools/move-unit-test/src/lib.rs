@@ -11,6 +11,7 @@ use move_lang::{
     unit_test::{self, TestPlan},
     Compiler, Flags, PASS_CFGIR,
 };
+use move_vm_runtime::native_functions::NativeFunctionTable;
 use std::{
     io::{Result, Write},
     marker::Send,
@@ -140,6 +141,7 @@ impl UnitTestingConfig {
     pub fn run_and_report_unit_tests<W: Write + Send>(
         &self,
         test_plan: TestPlan,
+        native_function_table: Option<NativeFunctionTable>,
         writer: W,
     ) -> Result<(W, bool)> {
         let shared_writer = Mutex::new(writer);
@@ -166,6 +168,7 @@ impl UnitTestingConfig {
             self.verbose,
             self.report_storage_on_error,
             test_plan,
+            native_function_table,
         )
         .unwrap();
 

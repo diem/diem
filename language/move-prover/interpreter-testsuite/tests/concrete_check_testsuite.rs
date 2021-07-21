@@ -27,7 +27,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
     let test_plan = config.build_test_plan().unwrap();
     let mut buffer = vec![];
-    config.run_and_report_unit_tests(test_plan, &mut buffer)?;
+    config.run_and_report_unit_tests(test_plan, None, &mut buffer)?;
     let output = String::from_utf8(buffer)?;
 
     let baseline_path = path.with_extension(EXP_EXT);

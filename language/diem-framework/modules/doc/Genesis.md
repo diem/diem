@@ -11,6 +11,7 @@ when executing from a fresh state.
 
 
 -  [Function `initialize`](#0x1_Genesis_initialize)
+-  [Function `initialize_internal`](#0x1_Genesis_initialize_internal)
 -  [Function `create_initialize_owners_operators`](#0x1_Genesis_create_initialize_owners_operators)
 
 
@@ -65,9 +66,76 @@ Initializes the Diem framework.
     chain_id: u8,
     initial_diem_version: u64,
 ) {
-    <b>let</b> dr_account = &dr_account;
-    <b>let</b> tc_account = &tc_account;
+    <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(
+        &dr_account,
+        &tc_account,
+        dr_auth_key,
+        tc_auth_key,
+        initial_script_allow_list,
+        is_open_module,
+        instruction_schedule,
+        native_schedule,
+        chain_id,
+        initial_diem_version,
+    )
+}
+</code></pre>
 
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+For verification of genesis, the goal is to prove that all the invariants which
+become active after the end of this function hold. This cannot be achieved with
+modular verification as we do in regular continuous testing. Rather, this module must
+be verified **together** with the module(s) which provides the invariant.
+
+> TODO: currently verifying this module together with modules providing invariants
+> (see above) times out. This can likely be solved by making more of the initialize
+> functions called by this function opaque, and prove the according invariants locally to
+> each module.
+
+Assume that this is called in genesis state (no timestamp).
+
+
+<pre><code><b>requires</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>();
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Genesis_initialize_internal"></a>
+
+## Function `initialize_internal`
+
+Initializes the Diem Framework. Internal so it can be used by both genesis code, and for testing purposes
+
+
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(dr_account: &signer, tc_account: &signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(
+    dr_account: &signer,
+    tc_account: &signer,
+    dr_auth_key: vector&lt;u8&gt;,
+    tc_auth_key: vector&lt;u8&gt;,
+    initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
+    is_open_module: bool,
+    instruction_schedule: vector&lt;u8&gt;,
+    native_schedule: vector&lt;u8&gt;,
+    chain_id: u8,
+    initial_diem_version: u64,
+) {
     <a href="DiemAccount.md#0x1_DiemAccount_initialize">DiemAccount::initialize</a>(dr_account, x"00000000000000000000000000000000");
 
     <a href="ChainId.md#0x1_ChainId_initialize">ChainId::initialize</a>(dr_account, chain_id);
@@ -118,29 +186,6 @@ Initializes the Diem framework.
     // See also discussion at function specification.
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">DiemTimestamp::set_time_has_started</a>(dr_account);
 }
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-For verification of genesis, the goal is to prove that all the invariants which
-become active after the end of this function hold. This cannot be achieved with
-modular verification as we do in regular continuous testing. Rather, this module must
-be verified **together** with the module(s) which provides the invariant.
-
-> TODO: currently verifying this module together with modules providing invariants
-> (see above) times out. This can likely be solved by making more of the initialize
-> functions called by this function opaque, and prove the according invariants locally to
-> each module.
-
-Assume that this is called in genesis state (no timestamp).
-
-
-<pre><code><b>requires</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>();
 </code></pre>
 
 

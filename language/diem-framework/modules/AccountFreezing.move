@@ -233,5 +233,4 @@ module DiemFramework::AccountFreezing {
             exists<FreezingBit>(addr) && !global<FreezingBit>(addr).is_frozen
         }
     }
-
 }

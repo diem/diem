@@ -2,28 +2,8 @@
 //! account: vasp, 0, 0, address
 //! account: alice, 0, 0, address
 
-//! new-transaction
-//! sender: bob
-script {
-use DiemFramework::AccountFreezing;
-// not frozen
-fun main() {
-    assert(!AccountFreezing::account_is_frozen(@{{bob}}), 0);
-}
-}
-// check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: diemroot
-script {
-use DiemFramework::AccountFreezing;
-// A special association privilege is needed for freezing an account
-fun main(account: signer) {
-    let account = &account;
-    AccountFreezing::freeze_account(account, @{{bob}});
-}
-}
-// check: "Keep(ABORTED { code: 258,"
+// Keep these tests until adding unit tests for the prologue and Diem Account around freezing
+// We need to keep some of them to test for events as well
 
 //! new-transaction
 //! sender: blessed
@@ -33,15 +13,9 @@ use DiemFramework::AccountFreezing;
 fun main(account: signer) {
     let account = &account;
     AccountFreezing::freeze_account(account, @{{bob}});
-    assert(AccountFreezing::account_is_frozen(@{{bob}}), 1);
-    AccountFreezing::unfreeze_account(account, @{{bob}});
-    assert(!AccountFreezing::account_is_frozen(@{{bob}}), 2);
-    AccountFreezing::freeze_account(account, @{{bob}});
 }
 }
 
-// check: FreezeAccountEvent
-// check: UnfreezeAccountEvent
 // check: FreezeAccountEvent
 // check: "Keep(EXECUTED)"
 
@@ -62,6 +36,7 @@ fun main(account: signer) {
 }
 }
 // check: UnfreezeAccountEvent
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -69,17 +44,6 @@ script {
 fun main() { }
 }
 // check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: blessed
-script {
-use DiemFramework::AccountFreezing::{Self};
-fun main(account: signer) {
-    let account = &account;
-    AccountFreezing::freeze_account(account, @{{diemroot}});
-}
-}
-// check: "Keep(ABORTED { code: 775,"
 
 // TODO: this can go away once //! account works
 // create a parent VASPx
@@ -138,71 +102,6 @@ fun main(account: signer) {
 
 // check: FreezeAccountEvent
 // check: UnfreezeAccountEvent
-// check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: diemroot
-script {
-    use DiemFramework::AccountFreezing;
-    fun main(account: signer) {
-        let account = &account;
-        AccountFreezing::freeze_account(account, @{{vasp}});
-    }
-}
-// check: "Keep(ABORTED { code: 258,"
-
-//! new-transaction
-//! sender: diemroot
-script {
-    use DiemFramework::AccountFreezing;
-    fun main(account: signer) {
-        let account = &account;
-        AccountFreezing::unfreeze_account(account, @{{vasp}});
-    }
-}
-// check: "Keep(ABORTED { code: 258,"
-
-//! new-transaction
-//! sender: blessed
-script {
-    use DiemFramework::AccountFreezing;
-    fun main(account: signer) {
-        let account = &account;
-        AccountFreezing::freeze_account(account, @{{diemroot}});
-    }
-}
-// check: "Keep(ABORTED { code: 775,"
-
-//! new-transaction
-//! sender: blessed
-script {
-    use DiemFramework::AccountFreezing;
-    fun main(account: signer) {
-        let account = &account;
-        AccountFreezing::freeze_account(account, @{{blessed}});
-    }
-}
-// check: "Keep(ABORTED { code: 1031,"
-
-//! new-transaction
-//! sender: diemroot
-script {
-    use DiemFramework::AccountFreezing;
-    fun main(account: signer) {
-        let account = &account;
-        AccountFreezing::initialize(account);
-    }
-}
-// check: "Keep(ABORTED { code: 1,"
-
-//! new-transaction
-//! sender: diemroot
-script {
-    use DiemFramework::AccountFreezing;
-    fun main() {
-        assert(!AccountFreezing::account_is_frozen(@{{alice}}), 0);
-    }
-}
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
@@ -306,36 +205,3 @@ script {
     }
 }
 // check: "Keep(ABORTED { code: 1281,"
-
-//! new-transaction
-//! sender: alice
-script {
-use DiemFramework::AccountFreezing;
-fun main(account: signer) {
-    let account = &account;
-    AccountFreezing::create(account);
-}
-}
-// check: "Keep(ABORTED { code: 518,"
-
-//! new-transaction
-//! sender: blessed
-script {
-use DiemFramework::AccountFreezing;
-fun main(account: signer) {
-    let account = &account;
-    AccountFreezing::freeze_account(account, @0x0);
-}
-}
-// check: "Keep(ABORTED { code: 517,"
-
-//! new-transaction
-//! sender: blessed
-script {
-use DiemFramework::AccountFreezing;
-fun main(account: signer) {
-    let account = &account;
-    AccountFreezing::unfreeze_account(account, @0x0);
-}
-}
-// check: "Keep(ABORTED { code: 517,"
