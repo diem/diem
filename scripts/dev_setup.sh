@@ -455,6 +455,7 @@ function install_z3 {
     cd "$TMPFILE" || exit
     curl -LOs "https://github.com/Z3Prover/z3/releases/download/z3-$Z3_VERSION/$Z3_PKG.zip"
     unzip -q "$Z3_PKG.zip"
+    mkdir -p "$HOME/bin"
     cp "$Z3_PKG/bin/z3" "$HOME/bin"
     chmod +x "$HOME/bin/z3"
   )
