@@ -12,7 +12,7 @@ module ScriptProvider {
     }
 
 
-    struct Info<T> has key {}
+    struct Info<phantom T> has key {}
 
     public fun register<T: store>(account: &signer) {
         assert(Signer::address_of(account) == @0x1, 1);
