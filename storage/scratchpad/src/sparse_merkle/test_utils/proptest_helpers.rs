@@ -13,17 +13,22 @@ use proptest::{
     prelude::*,
     sample::Index,
 };
-use std::{borrow::Borrow, sync::Arc};
+use std::{borrow::Borrow, collections::VecDeque, sync::Arc};
 
 type TxnOutput = Vec<(HashValue, AccountStateBlob)>;
 type BlockOutput = Vec<TxnOutput>;
 
-pub fn arb_smt_correctness_case() -> impl Strategy<Value = Vec<(BlockOutput, bool)>> {
+#[derive(Debug)]
+pub enum Action {
+    Commit,
+    Execute(BlockOutput),
+}
+
+pub fn arb_smt_correctness_case() -> impl Strategy<Value = Vec<Action>> {
     (
-        hash_set(any::<HashValue>(), 1..100), // keys
+        hash_set(any::<HashValue>(), 1..10), // keys
         vec(
-            // blocks
-            (
+            prop_oneof![
                 vec(
                     // txns
                     vec(
@@ -33,83 +38,103 @@ pub fn arb_smt_correctness_case() -> impl Strategy<Value = Vec<(BlockOutput, boo
                     ),
                     1..10,
                 ),
-                any::<bool>(), // commit
-            ),
-            1..10,
+                Just(vec![]),
+            ],
+            1..100,
         ),
     )
-        .prop_map(|(keys, blocks)| {
+        .prop_map(|(keys, commit_or_execute)| {
             let keys: Vec<_> = keys.into_iter().collect();
-            blocks
+            commit_or_execute
                 .into_iter()
-                .map(|(txns, commit)| {
-                    (
-                        txns.into_iter()
-                            .map(|updates| {
-                                updates
-                                    .into_iter()
-                                    .map(|(k_idx, v)| (*k_idx.get(&keys), v.to_vec().into()))
-                                    .collect()
-                            })
-                            .collect::<Vec<_>>(),
-                        commit,
-                    )
+                .map(|txns| {
+                    if txns.is_empty() {
+                        Action::Commit
+                    } else {
+                        Action::Execute(
+                            txns.into_iter()
+                                .map(|updates| {
+                                    updates
+                                        .into_iter()
+                                        .map(|(k_idx, v)| (*k_idx.get(&keys), v.to_vec().into()))
+                                        .collect()
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                    }
                 })
                 .collect::<Vec<_>>()
         })
 }
 
-pub fn test_smt_correctness_impl(input: Vec<(BlockOutput, bool)>) {
-    let mut persisted_smt = NaiveSmt::new::<AccountStateBlob>(&[]);
-    let mut naive_smt = persisted_smt.clone();
+pub fn test_smt_correctness_impl(input: Vec<Action>) {
+    let mut naive_q = VecDeque::new();
+    naive_q.push_back(NaiveSmt::new::<AccountStateBlob>(&[]));
+    let mut serial_q = VecDeque::new();
+    serial_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
+    let mut batches_q = VecDeque::new();
+    batches_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
+    let mut updater_q = VecDeque::new();
+    updater_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
 
-    let mut serial_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
-    let mut batches_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
-    let mut updater_smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
+    for action in input {
+        match action {
+            Action::Commit => {
+                if naive_q.len() > 1 {
+                    naive_q.pop_front();
+                    serial_q.pop_front();
+                    batches_q.pop_front();
+                    updater_q.pop_front();
+                }
+            }
+            Action::Execute(block) => {
+                let updates = block
+                    .iter()
+                    .map(|txn_updates| txn_updates.iter().map(|(k, v)| (*k, v)).collect())
+                    .collect::<Vec<_>>();
+                let updates_flat_batch = updates.iter().flatten().cloned().collect::<Vec<_>>();
 
-    for (block, commit) in input {
-        let updates = block
-            .iter()
-            .map(|txn_updates| txn_updates.iter().map(|(k, v)| (*k, v)).collect())
-            .collect::<Vec<_>>();
-        let updates_flat_batch = updates.iter().flatten().cloned().collect::<Vec<_>>();
+                let committed = naive_q.front_mut().unwrap();
+                let proofs = updates_flat_batch
+                    .iter()
+                    .map(|(k, _)| (*k, committed.get_proof(k)))
+                    .collect();
+                let proof_reader = ProofReader::new(proofs);
 
-        let proofs = updates_flat_batch
-            .iter()
-            .map(|(k, _)| (*k, persisted_smt.get_proof(k)))
-            .collect();
-        let proof_reader = ProofReader::new(proofs);
-        naive_smt = naive_smt.update(&updates_flat_batch);
+                let mut naive_smt = naive_q.back().unwrap().clone().update(&updates_flat_batch);
 
-        let upd_serial_smt = serial_smt
-            .serial_update(updates.clone(), &proof_reader)
-            .unwrap()
-            .1;
-        serial_smt.assert_no_external_strong_ref();
-        serial_smt = upd_serial_smt;
+                let serial_smt = serial_q
+                    .back()
+                    .unwrap()
+                    .serial_update(updates.clone(), &proof_reader)
+                    .unwrap()
+                    .1;
+                serial_q.back().unwrap().assert_no_external_strong_ref();
 
-        let upd_batches_smt = batches_smt
-            .batches_update(updates, &proof_reader)
-            .unwrap()
-            .1;
-        batches_smt.assert_no_external_strong_ref();
-        batches_smt = upd_batches_smt;
+                let batches_smt = batches_q
+                    .back()
+                    .unwrap()
+                    .batches_update(updates, &proof_reader)
+                    .unwrap()
+                    .1;
+                batches_q.back().unwrap().assert_no_external_strong_ref();
 
-        let upd_updater_smt = updater_smt
-            .batch_update(updates_flat_batch, &proof_reader)
-            .unwrap();
-        updater_smt.assert_no_external_strong_ref();
-        updater_smt = upd_updater_smt;
+                let updater_smt = updater_q
+                    .back()
+                    .unwrap()
+                    .batch_update(updates_flat_batch, &proof_reader)
+                    .unwrap();
+                updater_q.back().unwrap().assert_no_external_strong_ref();
 
-        assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
-        assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
-        assert_eq!(updater_smt.root_hash(), naive_smt.get_root_hash());
+                assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
+                assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
+                assert_eq!(updater_smt.root_hash(), naive_smt.get_root_hash());
 
-        if commit {
-            persisted_smt = naive_smt.clone();
-            serial_smt.prune();
-            batches_smt.prune();
-            updater_smt.prune();
+                naive_q.push_back(naive_smt);
+                serial_q.push_back(serial_smt);
+                batches_q.push_back(batches_smt);
+                updater_q.push_back(updater_smt);
+            }
         }
     }
 }
@@ -120,7 +145,7 @@ trait AssertNoExternalStrongRef {
 
 impl<V> AssertNoExternalStrongRef for SparseMerkleTree<V> {
     fn assert_no_external_strong_ref(&self) {
-        assert_subtree_sole_strong_ref(&self.inner.root.load());
+        assert_subtree_sole_strong_ref(&self.inner.root);
     }
 }
 
