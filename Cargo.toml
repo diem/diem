@@ -101,6 +101,7 @@ members = [
     "language/move-prover/lab",
     "language/move-prover/test-utils",
     "language/move-stdlib",
+    "language/move-symbol-pool",
     "language/move-vm/integration-tests",
     "language/move-vm/runtime",
     "language/move-vm/test-utils",
