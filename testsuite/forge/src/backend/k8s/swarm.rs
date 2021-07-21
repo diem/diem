@@ -5,7 +5,7 @@ use crate::{
     backend::k8s::node::K8sNode, query_sequence_numbers, ChainInfo, FullNode, Node, Result, Swarm,
     Validator,
 };
-use anyhow::format_err;
+use anyhow::{bail, format_err};
 use diem_logger::*;
 use diem_sdk::{
     crypto::ed25519::Ed25519PrivateKey,
@@ -14,18 +14,27 @@ use diem_sdk::{
         AccountKey, LocalAccount, PeerId,
     },
 };
+use k8s_openapi::api::batch::v1::Job;
 use k8s_openapi::api::core::v1::Service;
 use kube::{
     api::{Api, ListParams},
     client::Client as K8sClient,
     Config,
 };
-use std::{collections::HashMap, convert::TryFrom, process::Command};
+use serde_json::Value;
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    process::{Command, Stdio},
+    str,
+};
 use tokio::{runtime::Runtime, time::Duration};
 
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
-const KUBECTL_BIN: &str = "/root/bin/kubectl";
+const KUBECTL_BIN: &str = "kubectl";
+const HELM_BIN: &str = "helm";
 const JSON_RPC_PORT: u32 = 80;
+const DEFL_NUM_VALIDATORS: u32 = 4; // 30 for forge-*nets
 const VALIDATOR_LB: &str = "validator-fullnode-lb";
 
 pub struct K8sSwarm {
@@ -142,6 +151,13 @@ impl K8sSwarm {
     #[allow(dead_code)]
     fn get_kube_client(&self) -> K8sClient {
         self.kube_client.clone()
+    }
+}
+
+impl Drop for K8sSwarm {
+    // When the Process struct goes out of scope we need to wipe the chain state
+    fn drop(&mut self) {
+        clean_k8s_cluster_internal();
     }
 }
 
@@ -279,4 +295,104 @@ fn load_root_key(root_key_bytes: &[u8]) -> Ed25519PrivateKey {
 
 fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
     Ed25519PrivateKey::try_from(tc_key_bytes).unwrap()
+}
+
+fn clean_k8s_cluster_internal() {
+    clean_k8s_cluster("testnet-internal".to_string())
+        .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
+        .unwrap()
+}
+
+pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
+    let rt = Runtime::new().unwrap();
+
+    // get the previous chain era
+    let raw_helm_values = Command::new(HELM_BIN)
+        // .stdout(Stdio::inherit())
+        .arg("get")
+        .arg("values")
+        .arg("diem")
+        .arg("--output")
+        .arg("json")
+        .output()
+        .unwrap();
+
+    // parse genesis
+    let helm_values = String::from_utf8(raw_helm_values.stdout).unwrap();
+    let v: Value = serde_json::from_str(&helm_values).unwrap();
+    let era = &v["genesis"]["era"];
+    let num_validators = &v["genesis"]["numValidators"];
+    let new_era;
+    if era == 1 {
+        new_era = 2;
+    } else {
+        new_era = 1;
+    }
+
+    println!("genesis.era: {} --> {}", era, new_era);
+    println!(
+        "genesis.numValidators: {} --> {}",
+        num_validators, DEFL_NUM_VALIDATORS
+    );
+
+    // upgrade testnet
+    let testnet_upgrade_args = [
+        "upgrade",
+        "diem",
+        &format!("{}/testnet", helm_repo),
+        "--reuse-values",
+        "--set",
+        &format!("genesis.era={}", new_era),
+        "--set",
+        &format!("genesis.numValidators={}", DEFL_NUM_VALIDATORS),
+    ];
+    println!("{:?}", testnet_upgrade_args);
+    let testnet_upgrade_output = Command::new(HELM_BIN)
+        .stdout(Stdio::inherit())
+        .args(&testnet_upgrade_args)
+        .output()
+        .expect("failed to helm upgrade diem");
+    assert!(testnet_upgrade_output.status.success());
+
+    // upgrade validators
+    for i in 0..DEFL_NUM_VALIDATORS {
+        let validator_upgrade_args = [
+            "upgrade",
+            &format!("val{}", i),
+            &format!("{}/diem-validator", helm_repo),
+            "--reuse-values",
+            "--set",
+            &format!("chain.era={}", new_era),
+        ];
+        println!("{:?}", validator_upgrade_args);
+        let validator_upgrade_output = Command::new(HELM_BIN)
+            .stdout(Stdio::inherit())
+            .args(&validator_upgrade_args)
+            .output()
+            .expect("failed to helm upgrade diem");
+        assert!(validator_upgrade_output.status.success());
+    }
+
+    let kube_client = rt.block_on(K8sClient::try_default()).unwrap();
+
+    rt.block_on(async {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
+            let jobs: Api<Job> = Api::namespaced(kube_client.clone(), "default");
+            Box::pin(async move {
+                let job_name = format!("diem-testnet-genesis-e{}", new_era);
+                println!("Running get job: {}", &job_name);
+                let genesis_job = jobs.get_status(&job_name).await.unwrap();
+                println!("Status: {:?}", genesis_job.status);
+                let status = genesis_job.status.unwrap();
+                match status.succeeded {
+                    Some(1) => {
+                        println!("Genesis job completed");
+                        return Ok(());
+                    }
+                    _ => bail!("Genesis job not completed"),
+                }
+            })
+        })
+        .await
+    })
 }
