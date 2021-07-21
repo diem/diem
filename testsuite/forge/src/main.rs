@@ -33,12 +33,28 @@ struct Args {
     )]
     duration: u64,
 
+    // operator options
+    #[structopt(long, help = "If set, wipes the state of the test backend and exits")]
+    clean_up: bool,
+    #[structopt(
+        long,
+        help = "Override the helm repo used for k8s tests",
+        default_value = "testnet-internal"
+    )]
+    helm_repo: String,
+    #[structopt(long, default_value = "30")]
+    num_validators: usize,
+
     #[structopt(flatten)]
     options: Options,
 }
 
 fn main() -> Result<()> {
     let args = Args::from_args();
+
+    if args.clean_up {
+        return clean_k8s_cluster(args.helm_repo, args.num_validators);
+    }
 
     if args.local_swarm {
         forge_main(
