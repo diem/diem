@@ -13,7 +13,7 @@ module 0x42::Test {
         }
     }
 
-    struct EventHandle<T: copy + drop + store> has copy, drop, store {
+    struct EventHandle<phantom T: copy + drop + store> has copy, drop, store {
         // Total number of events emitted to this event stream.
         counter: u64,
         // A globally unique ID for this event stream.

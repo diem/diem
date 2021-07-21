@@ -1,6 +1,6 @@
 address 0x42 {
 module M {
-    struct S<T: drop> has drop {}
+    struct S<T: drop> has drop { f: T }
     struct R {}
     fun id<T>(x: T): T { x }
 
@@ -39,10 +39,10 @@ module M {
         id<&(&u64)>(abort 0);
         id<S<(u64, u64)>>(abort 0);
 
-        S<S<R>> {};
-        S<S<&u64>> {};
-        S<&(&u64)> {};
-        S<S<(u64, u64)>> {};
+        S<S<R>> { f: abort 0 };
+        S<S<&u64>> { f: abort 0 };
+        S<&(&u64)> { f: abort 0 };
+        S<S<(u64, u64)>> { f: abort 0 };
     }
 }
 }

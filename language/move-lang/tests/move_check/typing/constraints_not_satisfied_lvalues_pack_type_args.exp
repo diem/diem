@@ -1,8 +1,8 @@
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:8:15
   │
-2 │     struct CupC<T: copy> {}
-  │                    ---- 'copy' constraint declared here
+2 │     struct CupC<phantom T: copy> {}
+  │                            ---- 'copy' constraint declared here
 3 │     struct R {}
   │            - To satisfy the constraint, the 'copy' ability would need to be added here
   ·
@@ -15,8 +15,8 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:9:11
   │
-2 │     struct CupC<T: copy> {}
-  │                    ---- 'copy' constraint declared here
+2 │     struct CupC<phantom T: copy> {}
+  │                            ---- 'copy' constraint declared here
 3 │     struct R {}
   │            - To satisfy the constraint, the 'copy' ability would need to be added here
   ·

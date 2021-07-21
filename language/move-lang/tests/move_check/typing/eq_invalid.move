@@ -3,9 +3,9 @@ module 0x8675309::M {
     struct R has key {
         f: u64
     }
-    struct G0<T> has drop {}
+    struct G0<T> has drop { f: T }
     struct G1<T: key> {}
-
+    struct G2<phantom T> has drop {}
 
 
     fun t0(r: &R, r_mut: &mut R, s: S,
@@ -23,9 +23,9 @@ module 0x8675309::M {
     }
 
     fun t3() {
-        G0<R>{} == G0<R>{};
+        G0<R>{ f: R { f: 1 } } == G0<R>{ f: R { f: 1 } };
         // can be dropped, but cannot infer type
-        G0{} == G0{};
+        G2{} == G2{};
         G1{} == G1{};
     }
 

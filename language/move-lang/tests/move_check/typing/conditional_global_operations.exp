@@ -1,8 +1,8 @@
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_global_operations.move:15:9
    │
-15 │         move_to(s, Box<R> {});
-   │         ^^^^^^^^^^^^^^^^^^^^^
+15 │         move_to(s, Box<R> { f: R {} });
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │         │          │   │
    │         │          │   The type '0x42::M::Box<0x42::M::R>' can have the ability 'key' but the type argument '0x42::M::R' does not have the required ability 'store'
    │         │          The type '0x42::M::Box<0x42::M::R>' does not have the ability 'key'
@@ -29,14 +29,14 @@ error[E05001]: ability constraint not satisfied
    │         Invalid call of 'borrow_global_mut'
 
 error[E05001]: ability constraint not satisfied
-   ┌─ tests/move_check/typing/conditional_global_operations.move:18:19
+   ┌─ tests/move_check/typing/conditional_global_operations.move:18:33
    │
-18 │         Pair {} = move_from<Pair<S, R>>(a1);
-   │                   ^^^^^^^^^^^^^^^^^^^^^^^^^
-   │                   │         │       │
-   │                   │         │       The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' can have the ability 'key' but the type argument '0x42::M::R' does not have the required ability 'store'
-   │                   │         The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' does not have the ability 'key'
-   │                   Invalid call of 'move_from'
+18 │         Pair { f1: _, f2: _ } = move_from<Pair<S, R>>(a1);
+   │                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │                                 │         │       │
+   │                                 │         │       The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' can have the ability 'key' but the type argument '0x42::M::R' does not have the required ability 'store'
+   │                                 │         The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' does not have the ability 'key'
+   │                                 Invalid call of 'move_from'
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_global_operations.move:19:9

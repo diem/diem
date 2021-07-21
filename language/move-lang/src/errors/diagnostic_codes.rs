@@ -127,8 +127,8 @@ codes!(
         InvalidFriendDeclaration:
             { msg: "invalid 'friend' declaration", severity: NonblockingError },
         InvalidAcquiresItem: { msg: "invalid 'acquires' item", severity: NonblockingError },
-        InvalidPhantomUse:
-            { msg: "invalid phantom type parameter usage", severity: NonblockingError },
+        InvalidPhantomUse: { msg: "invalid phantom type parameter usage", severity: NonblockingError },
+        InvalidNonPhantomUse: { msg: "invalid non-phantom type parameter usage", severity: Warning },
     ],
     // errors name resolution, mostly expansion/translate and naming/translate
     NameResolution: [
@@ -202,6 +202,7 @@ codes!(
         Assignment: { msg: "unused assignment", severity: Warning },
         TrailingSemi: { msg: "unnecessary trailing semicolon", severity: Warning },
         DeadCode: { msg: "dead or unreachable code", severity: Warning },
+        StructTypeParam: { msg: "unused struct type parameter", severity: Warning }
     ],
     Attributes: [
         Duplicate: { msg: "invalid duplicate attribute", severity: NonblockingError },

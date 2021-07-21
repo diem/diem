@@ -117,7 +117,7 @@ error[E04010]: cannot infer type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:27:9
    │
- 7 │     struct G1<T: key> {}
+ 7 │     struct G1<phantom T: key> {}
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 27 │         G1{} != G1{};
@@ -135,7 +135,7 @@ error[E04010]: cannot infer type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:27:17
    │
- 7 │     struct G1<T: key> {}
+ 7 │     struct G1<phantom T: key> {}
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 27 │         G1{} != G1{};
@@ -153,7 +153,7 @@ error[E04010]: cannot infer type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:28:9
    │
- 8 │     struct G2<T> {}
+ 8 │     struct G2<phantom T> {}
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 28 │         G2{} != G2{};
@@ -171,7 +171,7 @@ error[E04010]: cannot infer type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/neq_invalid.move:28:17
    │
- 8 │     struct G2<T> {}
+ 8 │     struct G2<phantom T> {}
    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
 28 │         G2{} != G2{};

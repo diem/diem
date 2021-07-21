@@ -31,7 +31,7 @@ error[E02010]: invalid name
 error[E02010]: invalid name
   ┌─ tests/move_check/expansion/restricted_struct_names.move:7:12
   │
-7 │     struct vector<T> {}
+7 │     struct vector<T> { f: T }
   │            ^^^^^^ Invalid struct name 'vector'. Struct names must start with 'A'..'Z'
 
 error[E02010]: invalid name

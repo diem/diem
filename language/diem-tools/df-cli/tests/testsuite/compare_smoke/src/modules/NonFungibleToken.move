@@ -20,7 +20,7 @@ module NonFungibleToken {
         token: Option<Token>
     }
 
-    struct TokenLock<Token> has key {
+    struct TokenLock<phantom Token> has key {
     }
 
     fun lock<Token: store>(account: &signer) {

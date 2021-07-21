@@ -1,7 +1,7 @@
 address 0x42 {
 
 module M {
-    struct Box<T> {}
+    struct Box<T> { f: T }
 
     public fun t0<T>() {
         t1<T>();

@@ -2,8 +2,8 @@ address 0x42 {
 module M {
     struct S has copy, drop, store, key {}
     struct R has key, store {}
-    struct Box<T> has copy, drop, store, key {}
-    struct Pair<T1, T2> has copy, drop, store, key {}
+    struct Box<T> has copy, drop, store, key { f: T }
+    struct Pair<T1, T2> has copy, drop, store, key { f1: T1, f2: T2 }
 
     fun c<T: copy>() {}
     fun d<T: drop>() {}
@@ -12,12 +12,12 @@ module M {
     fun sk<T: store + key>() {}
     fun cds<T: copy + drop + store>() {}
 
-    struct Sc<T: copy> {}
-    struct Sd<T: drop> {}
-    struct Ss<T: store> {}
-    struct Sk<T: key> {}
-    struct Ssk<T: store + key> {}
-    struct Scds<T: copy + drop + store> {}
+    struct Sc<phantom T: copy> {}
+    struct Sd<phantom T: drop> {}
+    struct Ss<phantom T: store> {}
+    struct Sk<phantom T: key> {}
+    struct Ssk<phantom T: store + key> {}
+    struct Scds<phantom T: copy + drop + store> {}
 
     // tests that a variety of constraint instantiations are all valid
     fun t1<

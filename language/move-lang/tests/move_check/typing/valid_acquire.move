@@ -1,7 +1,7 @@
 module 0x8675309::M {
-    struct R1 has key {}
+    struct R1 has key, drop {}
     struct R2 has key {}
-    struct R3<T> has key {}
+    struct R3<T> has key { f: T }
 
     fun foo1(a: address) acquires R1 {
         borrow_global<R1>(a);
@@ -39,8 +39,8 @@ module 0x8675309::M {
     }
 
     fun t5(a: address) acquires R3 {
-        R3{} = move_from<R3<u64>>(a);
-        R3{} = move_from<R3<R1>>(a);
+        R3{ f: _ } = move_from<R3<u64>>(a);
+        R3{ f: _ } = move_from<R3<R1>>(a);
         borrow_global_mut<R3<bool>>(a);
         borrow_global_mut<R3<R2>>(a);
     }
@@ -48,8 +48,8 @@ module 0x8675309::M {
     fun t6(account: &signer, a: address) {
         exists<R3<u64>>(a);
         exists<R3<R1>>(a);
-        move_to<R3<bool>>(account, R3{});
-        move_to<R3<R2>>(account, R3{});
+        move_to<R3<bool>>(account, R3{ f: true });
+        move_to<R3<R2>>(account, R3{ f: R2{} });
     }
 
 }

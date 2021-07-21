@@ -1,7 +1,7 @@
 address 0x2 {
 module M {
     struct S {}
-    struct R<T> {}
+    struct R<T> { f: T }
 
     fun t1(): (R<u64>, S) {
         abort 0

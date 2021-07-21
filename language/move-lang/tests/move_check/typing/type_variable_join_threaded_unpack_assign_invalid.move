@@ -1,10 +1,10 @@
 address 0x2 {
 
 module Container {
-    struct T<V> has drop {}
+    struct T<V> has drop { f: V }
 
     public fun new<V>(): T<V> {
-        T {}
+        abort 0
     }
 
     public fun get<V: drop>(self: &T<V>): V {

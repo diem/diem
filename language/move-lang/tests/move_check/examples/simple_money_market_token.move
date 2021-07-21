@@ -57,15 +57,15 @@ module OneToOneMarket {
         coin: Token::Coin<AssetType>,
     }
 
-    struct DepositRecord<InputAsset: copy + drop, OutputAsset: copy + drop> has key {
+    struct DepositRecord<phantom InputAsset: copy + drop, phantom OutputAsset: copy + drop> has key {
         record: u64,
     }
 
-    struct BorrowRecord<InputAsset: copy + drop, OutputAsset: copy + drop> has key {
+    struct BorrowRecord<phantom InputAsset: copy + drop, phantom OutputAsset: copy + drop> has key {
         record: u64,
     }
 
-    struct Price<InputAsset: copy + drop, OutputAsset: copy + drop> has key {
+    struct Price<phantom InputAsset: copy + drop, phantom OutputAsset: copy + drop> has key {
         price: u64,
     }
 

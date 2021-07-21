@@ -1,7 +1,7 @@
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/ignore_inferred_resource.move:4:9
   │
-2 │     struct S<T> {}
+2 │     struct S<phantom T> {}
   │            - To satisfy the constraint, the 'drop' ability would need to be added here
 3 │     fun no() {
 4 │         S{};
