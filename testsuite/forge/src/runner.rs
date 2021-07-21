@@ -85,6 +85,12 @@ pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F, options: &Opti
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InitialVersion {
+    Oldest,
+    Newest,
+}
+
 pub struct ForgeConfig<'cfg> {
     public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
     admin_tests: &'cfg [&'cfg dyn AdminTest],
@@ -92,6 +98,9 @@ pub struct ForgeConfig<'cfg> {
 
     /// The initial number of validators to spawn when the test harness creates a swarm
     initial_validator_count: NonZeroUsize,
+
+    /// The initial version to use when the test harness creates a swarm
+    initial_version: InitialVersion,
 }
 
 impl<'cfg> ForgeConfig<'cfg> {
@@ -122,6 +131,11 @@ impl<'cfg> ForgeConfig<'cfg> {
         self
     }
 
+    pub fn with_initial_version(mut self, initial_version: InitialVersion) -> Self {
+        self.initial_version = initial_version;
+        self
+    }
+
     pub fn number_of_tests(&self) -> usize {
         self.public_usage_tests.len() + self.admin_tests.len() + self.network_tests.len()
     }
@@ -142,6 +156,7 @@ impl<'cfg> Default for ForgeConfig<'cfg> {
             admin_tests: &[],
             network_tests: &[],
             initial_validator_count: NonZeroUsize::new(1).unwrap(),
+            initial_version: InitialVersion::Newest,
         }
     }
 }
@@ -177,6 +192,15 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         Ok(())
     }
 
+    pub fn initial_version(&self) -> Version {
+        let versions = self.factory.versions();
+        match self.tests.initial_version {
+            InitialVersion::Oldest => versions.min(),
+            InitialVersion::Newest => versions.max(),
+        }
+        .expect("There has to be at least 1 version")
+    }
+
     pub fn run(&self) -> Result<()> {
         let test_count = self.filter_tests(self.tests.all_tests()).count();
         let filtered_out = test_count.saturating_sub(self.tests.all_tests().count());
@@ -185,10 +209,11 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         summary.write_starting_msg()?;
 
         if test_count > 0 {
+            let initial_version = self.initial_version();
             let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
             let mut swarm = self
                 .factory
-                .launch_swarm(self.tests.initial_validator_count.get());
+                .launch_swarm(self.tests.initial_validator_count, &initial_version)?;
 
             // Run PublicUsageTests
             for test in self.filter_tests(self.tests.public_usage_tests.iter()) {

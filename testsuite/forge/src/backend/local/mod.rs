@@ -4,6 +4,7 @@
 use crate::{Factory, Result, Swarm, Version};
 use std::{
     collections::HashMap,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -107,13 +108,17 @@ impl LocalFactory {
 }
 
 impl Factory for LocalFactory {
-    fn launch_swarm(&self, node_num: usize) -> Box<dyn Swarm> {
-        let mut swarm = LocalSwarm::builder(self.versions.clone())
-            .number_of_validators(node_num)
-            .build()
-            .unwrap();
-        swarm.launch().unwrap();
+    fn versions<'a>(&'a self) -> Box<dyn Iterator<Item = Version> + 'a> {
+        Box::new(self.versions.keys().cloned())
+    }
 
-        Box::new(swarm)
+    fn launch_swarm(&self, node_num: NonZeroUsize, version: &Version) -> Result<Box<dyn Swarm>> {
+        let mut swarm = LocalSwarm::builder(self.versions.clone())
+            .number_of_validators(node_num.get())
+            .initial_version(version.clone())
+            .build()?;
+        swarm.launch()?;
+
+        Ok(Box::new(swarm))
     }
 }

@@ -76,6 +76,7 @@ struct ValidatorNetworkAddressEncryptionKey {
 
 pub struct LocalSwarmBuilder {
     versions: Arc<HashMap<Version, LocalVersion>>,
+    initial_version: Option<Version>,
     template: NodeConfig,
     number_of_validators: usize,
     dir: Option<PathBuf>,
@@ -85,10 +86,16 @@ impl LocalSwarmBuilder {
     pub fn new(versions: Arc<HashMap<Version, LocalVersion>>) -> Self {
         Self {
             versions,
+            initial_version: None,
             template: NodeConfig::default_for_validator(),
             number_of_validators: 1,
             dir: None,
         }
+    }
+
+    pub fn initial_version(mut self, initial_version: Version) -> Self {
+        self.initial_version = Some(initial_version);
+        self
     }
 
     pub fn template(mut self, template: NodeConfig) -> Self {
@@ -125,13 +132,18 @@ impl LocalSwarmBuilder {
         .template(self.template)
         .build()?;
 
-        // Get the latest version to start the nodes with
-        let version = self
-            .versions
-            .iter()
-            .max_by(|v1, v2| v1.0.cmp(&v2.0))
-            .unwrap()
-            .1;
+        // Get the initial version to start the nodes with, either the one provided or fallback to
+        // using the the latest version
+        let versions = self.versions;
+        let initial_version = self.initial_version.unwrap_or_else(|| {
+            versions
+                .iter()
+                .max_by(|v1, v2| v1.0.cmp(&v2.0))
+                .unwrap()
+                .0
+                .clone()
+        });
+        let version = versions.get(&initial_version).unwrap();
 
         let validators = validators
             .into_iter()
@@ -169,7 +181,7 @@ impl LocalSwarmBuilder {
         );
 
         Ok(LocalSwarm {
-            versions: self.versions,
+            versions,
             validators,
             full_nodes: HashMap::new(),
             dir,
