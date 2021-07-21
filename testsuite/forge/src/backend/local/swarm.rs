@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ChainInfo, FullNode, HealthCheckError, LocalNode, LocalVersion, Node, NodeExt, Swarm,
+    ChainInfo, FullNode, HealthCheckError, LocalNode, LocalVersion, Node, Swarm, SwarmExt,
     Validator, Version,
 };
 use anyhow::{anyhow, Result};
@@ -12,13 +12,13 @@ use diem_sdk::{
     crypto::ed25519::Ed25519PrivateKey,
     types::{chain_id::ChainId, AccountKey, LocalAccount, PeerId},
 };
-use itertools::Itertools;
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fs, mem, ops,
     path::{Path, PathBuf},
     sync::Arc,
+    time::{Duration, Instant},
 };
 use tempfile::TempDir;
 
@@ -207,9 +207,10 @@ impl LocalSwarm {
         }
 
         // Wait for all of them to startup
+        let deadline = Instant::now() + Duration::from_secs(60);
         self.wait_for_startup()?;
-        self.wait_for_connectivity()?;
-        self.liveness_check()?;
+        self.wait_for_connectivity(deadline)?;
+        self.liveness_check(deadline)?;
 
         Ok(())
     }
@@ -248,52 +249,6 @@ impl LocalSwarm {
         }
 
         Err(anyhow!("Launching Swarm timed out"))
-    }
-
-    fn wait_for_connectivity(&self) -> Result<()> {
-        let expected_peers = self.validators.len().saturating_sub(1);
-
-        let num_attempts = 60;
-        for i in 0..num_attempts {
-            println!("Wait for connectivity attempt: {}", i);
-
-            if self
-                .validators
-                .values()
-                .map(|node| Validator::check_connectivity(node, expected_peers))
-                .collect::<Result<Vec<_>>>()?
-                .into_iter()
-                .all(|b| b)
-            {
-                return Ok(());
-            }
-
-            ::std::thread::sleep(::std::time::Duration::from_millis(1000));
-        }
-
-        Err(anyhow!("Waiting for connectivity timed out"))
-    }
-
-    fn liveness_check(&self) -> Result<()> {
-        let num_attempts = 60;
-        for i in 0..num_attempts {
-            println!("Wait for liveness check attempt: {}", i);
-
-            if self
-                .validators
-                .values()
-                .map(|node| node.liveness_check(10))
-                .collect_vec()
-                .into_iter()
-                .all(|b| matches!(b, Ok(..)))
-            {
-                return Ok(());
-            }
-
-            ::std::thread::sleep(::std::time::Duration::from_millis(1000));
-        }
-
-        Err(anyhow!("Liveness check timed out"))
     }
 }
 
