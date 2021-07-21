@@ -8,7 +8,7 @@ module TestonlyModule {
 }
 
 module Module {
-    struct B<T> has key { t: u64 }
+    struct B<phantom T> has key { t: u64 }
     struct A has key {t: u64}
 
     fun a(a: u64): bool {
