@@ -4,7 +4,7 @@
 use crate::{
     cfgir::ast as G,
     diag,
-    errors::diagnostic_codes::{Attributes, DiagnosticCode},
+    diagnostics::codes::{Attributes, DiagnosticCode},
     expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
     shared::{
         known_attributes, unique_map::UniqueMap, AddressBytes, CompilationEnv, Identifier, Name,

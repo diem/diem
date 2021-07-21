@@ -25,7 +25,7 @@ use move_ir_types::location::sp;
 use move_lang::{
     self,
     compiled_unit::{self, CompiledUnit},
-    errors::Errors,
+    diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
     shared::{unique_map::UniqueMap, AddressBytes},
@@ -77,13 +77,13 @@ pub fn run_model_builder_with_compilation_flags(
         .set_flags(flags)
         .run::<PASS_PARSER>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
-        Err(errors) => {
+        Err(diags) => {
             // Add source files so that the env knows how to translate locations of parse errors
             for fname in files.keys().sorted() {
                 let fsrc = &files[fname];
                 env.add_source(fname, fsrc, /* is_dep */ false);
             }
-            add_move_lang_errors(&mut env, errors);
+            add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
         }
         Ok(res) => res,
@@ -119,8 +119,8 @@ pub fn run_model_builder_with_compilation_flags(
         }
     };
     let (compiler, expansion_ast) = match compiler.at_parser(parsed_prog).run::<PASS_EXPANSION>() {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
+        Err(diags) => {
+            add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
         }
         Ok(compiler) => compiler.into_ast(),
@@ -185,16 +185,16 @@ pub fn run_model_builder_with_compilation_flags(
         .at_expansion(expansion_ast.clone())
         .run::<PASS_COMPILATION>()
     {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
+        Err(diags) => {
+            add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
         }
         Ok(compiler) => compiler.into_compiled_units(),
     };
     // Check for bytecode verifier errors (there should not be any)
-    let (verified_units, errors) = compiled_unit::verify_units(units);
-    if !errors.is_empty() {
-        add_move_lang_errors(&mut env, Errors::from(errors));
+    let (verified_units, diags) = compiled_unit::verify_units(units);
+    if !diags.is_empty() {
+        add_move_lang_diagnostics(&mut env, diags);
         return Ok(env);
     }
 
@@ -276,13 +276,13 @@ pub fn run_bytecode_model_builder<'a>(
     Ok(env)
 }
 
-fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
+fn add_move_lang_diagnostics(env: &mut GlobalEnv, diags: Diagnostics) {
     let mk_label = |env: &mut GlobalEnv, err: (move_ir_types::location::Loc, String)| {
         let loc = env.to_loc(&err.0);
         Label::new(loc.file_id(), loc.span(), err.1)
     };
     #[allow(deprecated)]
-    for mut labels in errors.into_vec() {
+    for mut labels in diags.into_loc_string_vec() {
         let primary = labels.remove(0);
         let diag = Diagnostic::new_error("", mk_label(env, primary))
             .with_secondary_labels(labels.into_iter().map(|e| mk_label(env, e)));

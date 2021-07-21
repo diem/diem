@@ -10,7 +10,7 @@ pub(crate) mod merge_spec_modules;
 pub(crate) mod sources_shadow_deps;
 
 use crate::{
-    errors::{new::Diagnostics, FilesSourceText},
+    diagnostics::{Diagnostics, FilesSourceText},
     parser,
     parser::syntax::parse_file_string,
     shared::CompilationEnv,

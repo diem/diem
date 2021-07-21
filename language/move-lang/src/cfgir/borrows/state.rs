@@ -8,9 +8,9 @@
 use crate::{
     cfgir::absint::*,
     diag,
-    errors::{
-        diagnostic_codes::{DiagnosticCode, ReferenceSafety},
-        new::Diagnostics,
+    diagnostics::{
+        codes::{DiagnosticCode, ReferenceSafety},
+        Diagnostics,
     },
     hlir::{
         ast::{TypeName_, *},

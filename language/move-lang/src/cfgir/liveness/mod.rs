@@ -9,7 +9,7 @@ use super::{
     locals,
 };
 use crate::{
-    errors::new::Diagnostics,
+    diagnostics::Diagnostics,
     hlir::ast::{self as H, *},
     parser::ast::Var,
     shared::{unique_map::UniqueMap, CompilationEnv},

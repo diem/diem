@@ -7,7 +7,7 @@ use crate::{
         remove_no_ops,
     },
     diag,
-    errors::new::Diagnostics,
+    diagnostics::Diagnostics,
     hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_, UnitCase},
     shared::ast_debug::*,
 };
@@ -171,8 +171,8 @@ impl<'a> CFG for BlockCFG<'a> {
     }
 }
 
-const DEAD_ERR_CMD: &str = "Unreachable code. This statement (and any following statements) will \
-                            not be executed.";
+const DEAD_ERR_CMD: &str =
+    "Unreachable code. This statement (and any following statements) will not be executed.";
 
 const DEAD_ERR_EXP: &str = "Invalid use of a divergent expression. The code following the \
                             evaluation of this expression will be dead and should be removed.";

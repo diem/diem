@@ -1232,7 +1232,7 @@ fn exp_impl(
             HE::Spec(u, used_locals)
         }
         TE::UnresolvedError => {
-            assert!(context.env.has_errors());
+            assert!(context.env.has_diags());
             HE::UnresolvedError
         }
 

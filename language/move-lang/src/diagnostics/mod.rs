@@ -1,12 +1,22 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::errors::diagnostic_codes::{DiagnosticCode, DiagnosticInfo, Severity};
-use codespan_reporting_new::{
+pub mod codes;
+
+use crate::{
+    command_line::COLOR_MODE_ENV_VAR,
+    diagnostics::codes::{DiagnosticCode, DiagnosticInfo, Severity},
+};
+use codespan_reporting::{
     self as csr,
     files::SimpleFiles,
-    term::{emit, termcolor::WriteColor, Config},
+    term::{
+        emit,
+        termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
+        Config,
+    },
 };
+use move_command_line_common::env::read_env_var;
 use move_ir_types::location::*;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -25,22 +35,56 @@ type FileMapping = HashMap<&'static str, FileId>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Diagnostic {
-    pub(crate) info: DiagnosticInfo,
-    pub(crate) primary_label: (Loc, String),
-    pub(crate) secondary_labels: Vec<(Loc, String)>,
+    info: DiagnosticInfo,
+    primary_label: (Loc, String),
+    secondary_labels: Vec<(Loc, String)>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Default)]
 pub struct Diagnostics {
-    pub(crate) diagnostics: Vec<Diagnostic>,
-    pub(crate) severity_count: BTreeMap<Severity, usize>,
+    diagnostics: Vec<Diagnostic>,
+    severity_count: BTreeMap<Severity, usize>,
 }
 
 //**************************************************************************************************
 // Reporting
 //**************************************************************************************************
 
-pub(crate) fn output_diagnostics<W: WriteColor>(
+pub fn report_diagnostics(files: &FilesSourceText, diags: Diagnostics) -> ! {
+    let color_choice = match read_env_var(COLOR_MODE_ENV_VAR).as_str() {
+        "NONE" => ColorChoice::Never,
+        "ANSI" => ColorChoice::AlwaysAnsi,
+        "ALWAYS" => ColorChoice::Always,
+        _ => ColorChoice::Auto,
+    };
+    let mut writer = StandardStream::stderr(color_choice);
+    output_diagnostics(&mut writer, files, diags);
+    std::process::exit(1)
+}
+
+pub fn unwrap_or_report_diagnostics<T>(files: &FilesSourceText, res: Result<T, Diagnostics>) -> T {
+    match res {
+        Ok(t) => t,
+        Err(diags) => {
+            assert!(!diags.is_empty());
+            report_diagnostics(&files, diags)
+        }
+    }
+}
+
+pub fn report_diagnostics_to_buffer(files: &FilesSourceText, diags: Diagnostics) -> Vec<u8> {
+    let mut writer = Buffer::no_color();
+    output_diagnostics(&mut writer, files, diags);
+    writer.into_inner()
+}
+
+pub fn report_diagnostics_to_color_buffer(files: &FilesSourceText, diags: Diagnostics) -> Vec<u8> {
+    let mut writer = Buffer::ansi();
+    output_diagnostics(&mut writer, files, diags);
+    writer.into_inner()
+}
+
+fn output_diagnostics<W: WriteColor>(
     writer: &mut W,
     sources: &FilesSourceText,
     diags: Diagnostics,
@@ -98,7 +142,7 @@ fn render_diagnostic(
         primary_label,
         secondary_labels,
     } = diag;
-    let mut diag = csr::diagnostic::Diagnostic::new(info.severity.into_codespan_severity());
+    let mut diag = csr::diagnostic::Diagnostic::new(info.severity().into_codespan_severity());
     let (code, message) = info.render();
     diag = diag.with_code(code);
     diag = diag.with_message(message);
@@ -142,7 +186,7 @@ impl Diagnostics {
     }
 
     pub fn add(&mut self, diag: Diagnostic) {
-        *self.severity_count.entry(diag.info.severity).or_insert(0) += 1;
+        *self.severity_count.entry(diag.info.severity()).or_insert(0) += 1;
         self.diagnostics.push(diag)
     }
 
@@ -160,10 +204,26 @@ impl Diagnostics {
     pub fn into_vec(self) -> Vec<Diagnostic> {
         self.diagnostics
     }
+
+    #[deprecated]
+    pub fn into_loc_string_vec(self) -> Vec<Vec<(Loc, String)>> {
+        let mut v = vec![];
+        for diag in self.into_vec() {
+            let Diagnostic {
+                info: _,
+                primary_label,
+                secondary_labels,
+            } = diag;
+            let mut inner_v = vec![primary_label];
+            inner_v.extend(secondary_labels);
+            v.push(inner_v)
+        }
+        v
+    }
 }
 
 impl Diagnostic {
-    pub(crate) fn new(
+    pub fn new(
         code: impl DiagnosticCode,
         (loc, label): (Loc, impl ToString),
         secondary_labels: impl IntoIterator<Item = (Loc, impl ToString)>,
@@ -179,7 +239,7 @@ impl Diagnostic {
     }
 
     #[allow(unused)]
-    pub(crate) fn add_secondary_labels(
+    pub fn add_secondary_labels(
         &mut self,
         additional_labels: impl IntoIterator<Item = (Loc, impl ToString)>,
     ) {
@@ -190,11 +250,11 @@ impl Diagnostic {
         )
     }
 
-    pub(crate) fn add_secondary_label(&mut self, (loc, msg): (Loc, impl ToString)) {
+    pub fn add_secondary_label(&mut self, (loc, msg): (Loc, impl ToString)) {
         self.secondary_labels.push((loc, msg.to_string()))
     }
 
-    pub(crate) fn secondary_labels_len(&self) -> usize {
+    pub fn secondary_labels_len(&self) -> usize {
         self.secondary_labels.len()
     }
 }
@@ -203,8 +263,8 @@ impl Diagnostic {
 macro_rules! diag {
     ($code: expr, $primary: expr $(,)?) => {{
         #[allow(unused)]
-        use crate::errors::diagnostic_codes::*;
-        crate::errors::new::Diagnostic::new(
+        use crate::diagnostics::codes::*;
+        crate::diagnostics::Diagnostic::new(
             $code,
             $primary,
             std::iter::empty::<(move_ir_types::location::Loc, String)>(),
@@ -212,8 +272,8 @@ macro_rules! diag {
     }};
     ($code: expr, $primary: expr, $($secondary: expr),+ $(,)?) => {{
         #[allow(unused)]
-        use crate::errors::diagnostic_codes::*;
-        crate::errors::new::Diagnostic::new($code, $primary, vec![$($secondary, )*])
+        use crate::diagnostics::codes::*;
+        crate::diagnostics::Diagnostic::new($code, $primary, vec![$($secondary, )*])
     }};
 }
 
@@ -232,7 +292,7 @@ impl From<Vec<Diagnostic>> for Diagnostics {
     fn from(diagnostics: Vec<Diagnostic>) -> Self {
         let mut severity_count = BTreeMap::new();
         for diag in &diagnostics {
-            *severity_count.entry(diag.info.severity).or_insert(0) += 1;
+            *severity_count.entry(diag.info.severity()).or_insert(0) += 1;
         }
         Self {
             diagnostics,

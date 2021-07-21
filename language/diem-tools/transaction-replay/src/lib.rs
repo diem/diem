@@ -406,13 +406,14 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
 fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
     let cur_path = file_path.to_owned();
     let targets = &vec![cur_path];
-    let (files, units_or_errors) = Compiler::new(targets, &diem_framework::diem_stdlib_files())
+    let (files, units_or_diags) = Compiler::new(targets, &diem_framework::diem_stdlib_files())
         .set_flags(Flags::empty().set_sources_shadow_deps(false))
         .build()?;
-    let unit = match units_or_errors {
-        Err(errors) => {
-            let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);
-            bail!(String::from_utf8(error_buffer).unwrap());
+    let unit = match units_or_diags {
+        Err(diags) => {
+            let diag_buffer =
+                move_lang::diagnostics::report_diagnostics_to_color_buffer(&files, diags);
+            bail!(String::from_utf8(diag_buffer).unwrap());
         }
         Ok(mut units) => {
             let len = units.len();

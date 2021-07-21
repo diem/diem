@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::new::Diagnostic,
+    diagnostics::Diagnostic,
     parser::ast::{
         Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName, QuantKind,
         SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,

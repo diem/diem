@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::new::Diagnostic,
+    diagnostics::Diagnostic,
     expansion::ast::ModuleIdent,
     naming::ast::{self as N, TypeName_},
     parser::ast::StructName,

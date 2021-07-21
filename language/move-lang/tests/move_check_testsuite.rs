@@ -6,7 +6,7 @@ use move_command_line_common::{
     testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
 };
 use move_lang::{
-    errors::*, shared::Flags, unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR,
+    diagnostics::*, shared::Flags, unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR,
     PASS_PARSER,
 };
 use move_lang_test_utils::*;
@@ -54,28 +54,28 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
     let (files, comments_and_compiler_res) = Compiler::new(&targets, &deps)
         .set_flags(flags)
         .run::<PASS_PARSER>()?;
-    let errors = match move_check_for_errors(comments_and_compiler_res) {
-        Err(errors) | Ok(errors) => errors,
+    let diags = match move_check_for_errors(comments_and_compiler_res) {
+        Err(diags) | Ok(diags) => diags,
     };
 
-    let has_errors = !errors.is_empty();
-    let error_buffer = if has_errors {
-        move_lang::errors::report_errors_to_buffer(files, errors)
+    let has_diags = !diags.is_empty();
+    let diag_buffer = if has_diags {
+        move_lang::diagnostics::report_diagnostics_to_buffer(&files, diags)
     } else {
         vec![]
     };
 
-    let save_errors = read_bool_env_var(KEEP_TMP);
+    let save_diags = read_bool_env_var(KEEP_TMP);
     let update_baseline = read_env_update_baseline();
 
-    let rendered_errors = std::str::from_utf8(&error_buffer)?;
-    if save_errors {
-        fs::write(out_path, &error_buffer)?;
+    let rendered_diags = std::str::from_utf8(&diag_buffer)?;
+    if save_diags {
+        fs::write(out_path, &diag_buffer)?;
     }
 
     if update_baseline {
-        if has_errors {
-            fs::write(exp_path, rendered_errors)?;
+        if has_diags {
+            fs::write(exp_path, rendered_diags)?;
         } else if exp_path.is_file() {
             fs::remove_file(exp_path)?;
         }
@@ -83,25 +83,28 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
     }
 
     let exp_exists = exp_path.is_file();
-    match (has_errors, exp_exists) {
+    match (has_diags, exp_exists) {
         (false, false) => Ok(()),
         (true, false) => {
-            let msg = format!("Expected success. Unexpected errors:\n{}", rendered_errors);
+            let msg = format!(
+                "Expected success. Unexpected diagnostics:\n{}",
+                rendered_diags
+            );
             anyhow::bail!(msg)
         }
         (false, true) => {
             let msg = format!(
-                "Unexpected success. Expected errors:\n{}",
+                "Unexpected success. Expected diagnostics:\n{}",
                 fs::read_to_string(exp_path)?
             );
             anyhow::bail!(msg)
         }
         (true, true) => {
-            let expected_errors = fs::read_to_string(exp_path)?;
-            if rendered_errors != expected_errors {
+            let expected_diags = fs::read_to_string(exp_path)?;
+            if rendered_diags != expected_diags {
                 let msg = format!(
-                    "Expected errors differ from actual errors:\n{}",
-                    format_diff(expected_errors, rendered_errors),
+                    "Expected diagnostics differ from actual diagnostics:\n{}",
+                    format_diff(expected_diags, rendered_diags),
                 );
                 anyhow::bail!(msg)
             } else {
@@ -112,8 +115,8 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
 }
 
 fn move_check_for_errors(
-    comments_and_compiler_res: Result<(CommentMap, SteppedCompiler<'_, PASS_PARSER>), Errors>,
-) -> Result<Errors, Errors> {
+    comments_and_compiler_res: Result<(CommentMap, SteppedCompiler<'_, PASS_PARSER>), Diagnostics>,
+) -> Result<Diagnostics, Diagnostics> {
     let (_, compiler) = comments_and_compiler_res?;
     let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
     let compilation_env = compiler.compilation_env();
@@ -121,11 +124,9 @@ fn move_check_for_errors(
         unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
     }
 
-    compilation_env.check_errors()?;
+    compilation_env.check_diags()?;
     let units = compiler.at_cfgir(cfgir).build()?;
-    Ok(Errors::from(
-        move_lang::compiled_unit::verify_units(units).1,
-    ))
+    Ok(move_lang::compiled_unit::verify_units(units).1)
 }
 
 datatest_stable::harness!(move_check_testsuite, MOVE_CHECK_DIR, r".*\.move$");

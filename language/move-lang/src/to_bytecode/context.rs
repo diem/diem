@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::new::Diagnostic,
+    diagnostics::Diagnostic,
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},

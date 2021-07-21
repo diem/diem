@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{compiled_unit::CompiledUnit, errors::FilesSourceText, shared::AddressBytes};
+use crate::{compiled_unit::CompiledUnit, diagnostics::FilesSourceText, shared::AddressBytes};
 use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::file_format::CompiledModule;
 use move_core_types::{

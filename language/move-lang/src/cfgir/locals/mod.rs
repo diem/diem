@@ -6,7 +6,7 @@ pub mod state;
 use super::absint::*;
 use crate::{
     diag,
-    errors::new::{Diagnostic, Diagnostics},
+    diagnostics::{Diagnostic, Diagnostics},
     expansion::ast::{AbilitySet, ModuleIdent},
     hlir::{
         ast::*,
@@ -220,9 +220,9 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             DisplayVar::Orig(s) => s,
                         };
                         let msg = format!(
-                            "The variable {} a value due to this assignment. The value does not have \
-                             the '{}' ability and must be used before you assign to this variable \
-                             again",
+                            "The variable {} a value due to this assignment. The value does not \
+                             have the '{}' ability and must be used before you assign to this \
+                             variable again",
                             verb,
                             Ability_::Drop,
                         );

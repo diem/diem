@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{diag, errors::new::Diagnostic, parser::syntax::make_loc};
+use crate::{diag, diagnostics::Diagnostic, parser::syntax::make_loc};
 use move_ir_types::location::*;
 
 pub fn decode(loc: Loc, s: &str) -> Result<Vec<u8>, Diagnostic> {

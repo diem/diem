@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::{diagnostic_codes::NameResolution, new::Diagnostic},
+    diagnostics::{codes::NameResolution, Diagnostic},
     expansion::ast::{AbilitySet, ModuleIdent},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,

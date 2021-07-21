@@ -6,7 +6,7 @@ use crate::{
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
     compiled_unit::CompiledUnit,
-    errors::{self, *},
+    diagnostics::*,
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
     shared::{CompilationEnv, Flags},
@@ -140,7 +140,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self,
     ) -> anyhow::Result<(
         FilesSourceText,
-        Result<(CommentMap, SteppedCompiler<'b, TARGET>), Errors>,
+        Result<(CommentMap, SteppedCompiler<'b, TARGET>), Diagnostics>,
     )> {
         let Self {
             targets,
@@ -159,29 +159,28 @@ impl<'a, 'b> Compiler<'a, 'b> {
         let compilation_env = CompilationEnv::new(flags);
         let (source_text, pprog_and_comments_res) =
             parse_program(&compilation_env, targets, &deps)?;
-        let res: Result<_, Errors> =
-            pprog_and_comments_res
-                .map_err(Errors::from)
-                .and_then(|(pprog, comments)| {
-                    SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
-                        .run::<TARGET>()
-                        .map(|compiler| (comments, compiler))
-                });
+        let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
+            SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
+                .run::<TARGET>()
+                .map(|compiler| (comments, compiler))
+        });
         Ok((source_text, res))
     }
 
-    pub fn check(self) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
+    pub fn check(self) -> anyhow::Result<(FilesSourceText, Result<(), Diagnostics>)> {
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((files, res.map(|_| ())))
     }
 
     pub fn check_and_report(self) -> anyhow::Result<FilesSourceText> {
         let (files, res) = self.check()?;
-        unwrap_or_report_errors!(files, res);
+        unwrap_or_report_diagnostics(&files, res);
         Ok(files)
     }
 
-    pub fn build(self) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
+    pub fn build(
+        self,
+    ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Diagnostics>)> {
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((
             files,
@@ -191,13 +190,13 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
         let (files, units_res) = self.build()?;
-        let units = unwrap_or_report_errors!(files, units_res);
+        let units = unwrap_or_report_diagnostics(&files, units_res);
         Ok((files, units))
     }
 }
 
 impl<'a, const P: Pass> SteppedCompiler<'a, P> {
-    fn run_impl<const TARGET: Pass>(self) -> Result<SteppedCompiler<'a, TARGET>, Errors> {
+    fn run_impl<const TARGET: Pass>(self) -> Result<SteppedCompiler<'a, TARGET>, Diagnostics> {
         assert!(P > EMPTY_COMPILER);
         assert!(self.program.is_some());
         assert!(self.program.as_ref().unwrap().equivalent_pass() == P);
@@ -270,7 +269,7 @@ macro_rules! ast_stepped_compilers {
 
                 pub fn run<const TARGET: Pass>(
                     self
-                ) -> Result<SteppedCompiler<'a, TARGET>, Errors> {
+                ) -> Result<SteppedCompiler<'a, TARGET>, Diagnostics> {
                     self.run_impl()
                 }
 
@@ -292,19 +291,19 @@ macro_rules! ast_stepped_compilers {
                     (next, ast)
                 }
 
-                pub fn check(self) -> Result<(), Errors> {
+                pub fn check(self) -> Result<(), Diagnostics> {
                     self.run::<PASS_COMPILATION>()?;
                     Ok(())
                 }
 
-                pub fn build(self) -> Result<Vec<CompiledUnit>, Errors> {
+                pub fn build(self) -> Result<Vec<CompiledUnit>, Diagnostics> {
                     let units = self.run::<PASS_COMPILATION>()?.into_compiled_units();
                     Ok(units)
                 }
 
                 pub fn check_and_report(self, files: FilesSourceText) -> FilesSourceText {
                     let errors_result = self.check();
-                    unwrap_or_report_errors!(files, errors_result);
+                    unwrap_or_report_diagnostics(&files, errors_result);
                     files
                 }
 
@@ -313,7 +312,7 @@ macro_rules! ast_stepped_compilers {
                     files: FilesSourceText,
                 ) -> (FilesSourceText, Vec<CompiledUnit>) {
                     let units_result = self.build();
-                    let units = unwrap_or_report_errors!(files, units_result);
+                    let units = unwrap_or_report_diagnostics(&files, units_result);
                     (files, units)
                 }
             }
@@ -356,7 +355,7 @@ pub fn construct_pre_compiled_lib(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     flags: Flags,
-) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Errors)>> {
+) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
     let (files, pprog_and_comments_res) = Compiler::new(&[], deps)
         .set_interface_files_dir_opt(interface_files_dir_opt)
         .set_flags(flags)
@@ -384,14 +383,14 @@ pub fn construct_pre_compiled_lib(
             parser = Some(prog.clone())
         }
         PassResult::Expansion(eprog) => {
-            if env.has_errors() {
+            if env.has_diags() {
                 return;
             }
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
         }
         PassResult::Naming(nprog) => {
-            if env.has_errors() {
+            if env.has_diags() {
                 return;
             }
             assert!(naming.is_none());
@@ -402,7 +401,7 @@ pub fn construct_pre_compiled_lib(
             typing = Some(tprog.clone())
         }
         PassResult::HLIR(hprog) => {
-            if env.has_errors() {
+            if env.has_diags() {
                 return;
             }
             assert!(hlir.is_none());
@@ -464,7 +463,7 @@ macro_rules! file_path {
 pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<CompiledUnit>) {
     let (_, ice_errors) = compiled_unit::verify_units(compiled_units);
     if !ice_errors.is_empty() {
-        errors::report_errors(files, Errors::from(ice_errors))
+        report_diagnostics(&files, ice_errors)
     }
 }
 
@@ -525,7 +524,7 @@ pub fn output_compiled_units(
     }
 
     if !ice_errors.is_empty() {
-        errors::report_errors(files, Errors::from(ice_errors))
+        report_diagnostics(&files, ice_errors)
     }
     Ok(())
 }
@@ -656,7 +655,7 @@ fn run(
     cur: PassResult,
     until: Pass,
     mut result_check: impl FnMut(&PassResult, &CompilationEnv),
-) -> Result<PassResult, Errors> {
+) -> Result<PassResult, Diagnostics> {
     assert!(
         until <= PASS_COMPILATION,
         "Invalid pass for run_to. Target is greater than maximum pass"
@@ -692,7 +691,7 @@ fn run(
         }
         PassResult::Naming(nprog) => {
             let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
-            compilation_env.check_errors()?;
+            compilation_env.check_diags()?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -713,7 +712,7 @@ fn run(
         }
         PassResult::HLIR(hprog) => {
             let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
-            compilation_env.check_errors()?;
+            compilation_env.check_diags()?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -725,7 +724,7 @@ fn run(
         PassResult::CFGIR(cprog) => {
             let compiled_units =
                 to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
-            compilation_env.check_errors()?;
+            compilation_env.check_diags()?;
             assert!(until == PASS_COMPILATION);
             run(
                 compilation_env,

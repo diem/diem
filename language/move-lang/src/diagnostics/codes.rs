@@ -14,14 +14,14 @@ pub enum Severity {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
-pub(crate) struct DiagnosticInfo {
-    pub(crate) severity: Severity,
+pub struct DiagnosticInfo {
+    severity: Severity,
     category: Category,
     code: u8,
     message: &'static str,
 }
 
-pub(crate) trait DiagnosticCode: Copy {
+pub trait DiagnosticCode: Copy {
     const CATEGORY: Category;
 
     fn severity(self) -> Severity;
@@ -210,6 +210,9 @@ codes!(
         InvalidUsage: { msg: "invalid usage of known attribute", severity: NonblockingError },
         InvalidTest: { msg: "unable to generate test", severity: NonblockingError },
     ],
+    Tests: [
+        TestFailed: { msg: "test failure", severity: BlockingError },
+    ],
     Bug: [
         BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
         BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
@@ -238,14 +241,18 @@ impl DiagnosticInfo {
         let string_code = format!("{}{:02}{:03}", sev_prefix, cat_prefix, code);
         (string_code, message)
     }
+
+    pub fn severity(&self) -> Severity {
+        self.severity
+    }
 }
 
 impl Severity {
     pub const MIN: Self = Self::Warning;
     pub const MAX: Self = Self::Bug;
 
-    pub fn into_codespan_severity(self) -> codespan_reporting_new::diagnostic::Severity {
-        use codespan_reporting_new::diagnostic::Severity as CSRSeverity;
+    pub fn into_codespan_severity(self) -> codespan_reporting::diagnostic::Severity {
+        use codespan_reporting::diagnostic::Severity as CSRSeverity;
         match self {
             Severity::Bug => CSRSeverity::Bug,
             Severity::BlockingError | Severity::NonblockingError => CSRSeverity::Error,
