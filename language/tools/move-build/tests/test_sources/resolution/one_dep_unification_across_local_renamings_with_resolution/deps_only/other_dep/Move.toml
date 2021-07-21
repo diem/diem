@@ -1,0 +1,6 @@
+[package]
+name = "OtherDep"
+version = "0.0.0"
+
+[addresses]
+B = "0x2"

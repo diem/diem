@@ -1,0 +1,6 @@
+[package]
+name = "B"
+version = "0.0.0"
+
+[dependencies]
+C = { local = "../C", addr_subst = { "BA" = "A" } }

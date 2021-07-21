@@ -1,0 +1,78 @@
+ResolutionGraph {
+    build_options: BuildConfig {
+        dev_mode: true,
+        generate_transaction_builders: false,
+        generate_abis: false,
+    },
+    root_package: SourceManifest {
+        package: PackageInfo {
+            name: Identifier(
+                "test",
+            ),
+            version: (
+                0,
+                0,
+                0,
+            ),
+            authors: [],
+            license: None,
+        },
+        addresses: Some(
+            {
+                Identifier(
+                    "A",
+                ): Some(
+                    00000000000000000000000000000000,
+                ),
+            },
+        ),
+        dev_address_assignments: None,
+        build: None,
+        dependencies: {},
+        dev_dependencies: {},
+    },
+    graph: {
+        14402189752926126668: [],
+    },
+    package_table: {
+        Identifier(
+            "test",
+        ): ResolutionPackage {
+            resolution_graph_index: 14402189752926126668,
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: Identifier(
+                        "test",
+                    ),
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                },
+                addresses: Some(
+                    {
+                        Identifier(
+                            "A",
+                        ): Some(
+                            00000000000000000000000000000000,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                Identifier(
+                    "A",
+                ): 00000000000000000000000000000000,
+            },
+        },
+    },
+}

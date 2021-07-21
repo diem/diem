@@ -1,0 +1,1 @@
+Unable to resolve packages for package 'test': Found unbound dev address assignment 'B = 0x1' in root package 'test'. Dev addresses cannot introduce new named addresses

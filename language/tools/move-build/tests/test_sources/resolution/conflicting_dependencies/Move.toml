@@ -1,0 +1,7 @@
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+OtherDep = { local = "./deps_only/other_dep" }
+OtherDep = { local = "./deps_only/different_dep" }
