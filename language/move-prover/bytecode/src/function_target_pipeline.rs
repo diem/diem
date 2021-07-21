@@ -56,6 +56,10 @@ impl FunctionVariant {
     pub fn is_verified(&self) -> bool {
         matches!(self, FunctionVariant::Verification(..))
     }
+
+    pub fn is_primary_verified(&self) -> bool {
+        matches!(self, FunctionVariant::Verification(""))
+    }
 }
 
 impl std::fmt::Display for FunctionVariant {
