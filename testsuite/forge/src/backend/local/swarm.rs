@@ -171,6 +171,7 @@ impl LocalSwarmBuilder {
         Ok(LocalSwarm {
             versions: self.versions,
             validators,
+            full_nodes: HashMap::new(),
             dir,
             validator_network_address_encryption_key,
             root_account,
@@ -185,6 +186,7 @@ impl LocalSwarmBuilder {
 pub struct LocalSwarm {
     versions: Arc<HashMap<Version, LocalVersion>>,
     validators: HashMap<PeerId, LocalNode>,
+    full_nodes: HashMap<PeerId, LocalNode>,
     dir: SwarmDirectory,
     validator_network_address_encryption_key: ValidatorNetworkAddressEncryptionKey,
     root_account: LocalAccount,
@@ -336,19 +338,23 @@ impl Swarm for LocalSwarm {
     }
 
     fn full_nodes<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
-        todo!()
+        Box::new(self.full_nodes.values().map(|v| v as &'a dyn FullNode))
     }
 
     fn full_nodes_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut dyn FullNode> + 'a> {
-        todo!()
+        Box::new(
+            self.full_nodes
+                .values_mut()
+                .map(|v| v as &'a mut dyn FullNode),
+        )
     }
 
-    fn full_node(&self, _id: PeerId) -> Option<&dyn FullNode> {
-        todo!()
+    fn full_node(&self, id: PeerId) -> Option<&dyn FullNode> {
+        self.full_nodes.get(&id).map(|v| v as &dyn FullNode)
     }
 
-    fn full_node_mut(&mut self, _id: PeerId) -> Option<&mut dyn FullNode> {
-        todo!()
+    fn full_node_mut(&mut self, id: PeerId) -> Option<&mut dyn FullNode> {
+        self.full_nodes.get_mut(&id).map(|v| v as &mut dyn FullNode)
     }
 
     fn add_validator(&mut self, _id: PeerId) -> Result<PeerId> {

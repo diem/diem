@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{HealthCheckError, LocalVersion, Node, NodeExt, Validator, Version};
+use crate::{FullNode, HealthCheckError, LocalVersion, Node, NodeExt, Validator, Version};
 use anyhow::{anyhow, Context, Result};
 use diem_config::config::NodeConfig;
 use diem_logger::{debug, warn};
@@ -223,3 +223,4 @@ impl Node for LocalNode {
 }
 
 impl Validator for LocalNode {}
+impl FullNode for LocalNode {}
