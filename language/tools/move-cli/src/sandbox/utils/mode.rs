@@ -12,7 +12,11 @@ use anyhow::{bail, Result};
 use include_dir::{include_dir, Dir};
 use move_binary_format::file_format::CompiledModule;
 use once_cell::sync::Lazy;
-use std::{collections::HashSet, path::Path, str::FromStr};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use super::ModuleIdWithNamedAddress;
 
@@ -90,9 +94,14 @@ impl Mode {
     /// NOTE: this is the only way to get a state view in Move CLI, and thus, this function needs
     /// to be run before every command that needs a state view, i.e., `check`, `publish`, `run`,
     /// `view`, and `doctor`.
-    pub fn prepare_state(&self, build_dir: &str, storage_dir: &str) -> Result<OnDiskStateView> {
-        let state = OnDiskStateView::create(build_dir, storage_dir)?;
-        let package_dir = Path::new(build_dir).join(DEFAULT_PACKAGE_DIR);
+    pub fn prepare_state<P: Into<PathBuf>>(
+        &self,
+        build_dir: P,
+        storage_dir: P,
+    ) -> Result<OnDiskStateView> {
+        let build_dir_pb = build_dir.into();
+        let state = OnDiskStateView::create(&build_dir_pb, &storage_dir.into())?;
+        let package_dir = Path::new(&build_dir_pb).join(DEFAULT_PACKAGE_DIR);
         self.prepare(&package_dir, false)?;
 
         // preload the storage with library modules (if such modules do not exist yet)

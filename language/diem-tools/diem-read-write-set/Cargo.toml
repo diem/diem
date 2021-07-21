@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
+
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-types = { path = "../../../types" }
 diem-vm = { path = "../../diem-vm" }

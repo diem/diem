@@ -52,6 +52,18 @@ impl DiemDebugger {
         Ok(Self::new(Box::new(JsonRpcDebuggerInterface::new(url)?)))
     }
 
+    pub fn json_rpc_with_config(
+        url: &str,
+        build_dir: PathBuf,
+        storage_dir: PathBuf,
+    ) -> Result<Self> {
+        JsonRpcDebuggerInterface::new(url).map(|debugger| Self {
+            debugger: Box::new(debugger),
+            build_dir,
+            storage_dir,
+        })
+    }
+
     pub fn db<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
         Ok(Self::new(Box::new(DBDebuggerInterface::open(
             db_root_path,
@@ -184,7 +196,7 @@ impl DiemDebugger {
         Ok(())
     }
 
-    fn save_account_state(
+    pub fn save_account_state(
         &self,
         account: AccountAddress,
         account_state: &AccountState,

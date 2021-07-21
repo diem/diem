@@ -2234,6 +2234,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-prefetched-transaction-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "diem-client",
+ "diem-config",
+ "diem-read-write-set",
+ "diem-state-view",
+ "diem-transaction-replay",
+ "diem-types",
+ "diem-vm",
+ "diemdb",
+ "move-binary-format",
+ "move-bytecode-utils",
+ "move-cli",
+ "move-core-types",
+ "read-write-set",
+ "storage-interface",
+]
+
+[[package]]
 name = "diem-proptest-helpers"
 version = "0.1.0"
 dependencies = [

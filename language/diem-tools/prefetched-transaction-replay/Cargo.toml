@@ -1,0 +1,30 @@
+[package]
+name = "diem-prefetched-transaction-replay"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Replay transactions stored on chain using prefetching"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+
+[dependencies]
+anyhow = "1.0.38"
+bcs = "0.1.2"
+
+diem-read-write-set = { path = "../diem-read-write-set" }
+diem-transaction-replay = { path = "../transaction-replay" }
+diem-vm = { path = "../../diem-vm" }
+move-core-types = { path = "../../move-core/types" }
+read-write-set = { path = "../../tools/read-write-set" }
+move-cli = { path = "../../tools/move-cli" }
+move-bytecode-utils = { path = "../../tools/move-bytecode-utils" }
+move-binary-format = { path = "../../move-binary-format" }
+diem-client = { path = "../../../sdk/client" }
+diemdb = { path = "../../../storage/diemdb" }
+diem-types = { path = "../../../types" }
+diem-config = { path = "../../../config" }
+storage-interface = { path = "../../../storage/storage-interface" }
+diem-state-view = { path = "../../../storage/state-view" }
