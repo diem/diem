@@ -1,7 +1,7 @@
 module 0x42::Test {
 
-  struct Balance<Token> has key {}
-  struct EventHandle<Token> has key {}
+  struct Balance<phantom Token> has key {}
+  struct EventHandle<phantom Token> has key {}
 
   fun type_param_bug<Tok_1: store, Tok_2: store>(addr: address): address {
     addr

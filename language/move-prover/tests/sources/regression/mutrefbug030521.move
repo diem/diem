@@ -1,6 +1,6 @@
 module 0x42::Bug {
 
-    struct Diem<CointType> {
+    struct Diem<phantom CoinType> {
         /// The value of this coin in the base units for `CoinType`
         value: u64
     }
