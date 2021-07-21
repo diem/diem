@@ -89,6 +89,9 @@ pub struct ForgeConfig<'cfg> {
     public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
     admin_tests: &'cfg [&'cfg dyn AdminTest],
     network_tests: &'cfg [&'cfg dyn NetworkTest],
+
+    /// The initial number of validators to spawn when the test harness creates a swarm
+    initial_validator_count: NonZeroUsize,
 }
 
 impl<'cfg> ForgeConfig<'cfg> {
@@ -114,6 +117,11 @@ impl<'cfg> ForgeConfig<'cfg> {
         self
     }
 
+    pub fn with_initial_validator_count(mut self, initial_validator_count: NonZeroUsize) -> Self {
+        self.initial_validator_count = initial_validator_count;
+        self
+    }
+
     pub fn number_of_tests(&self) -> usize {
         self.public_usage_tests.len() + self.admin_tests.len() + self.network_tests.len()
     }
@@ -133,6 +141,7 @@ impl<'cfg> Default for ForgeConfig<'cfg> {
             public_usage_tests: &[],
             admin_tests: &[],
             network_tests: &[],
+            initial_validator_count: NonZeroUsize::new(1).unwrap(),
         }
     }
 }
@@ -177,7 +186,9 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
 
         if test_count > 0 {
             let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
-            let mut swarm = self.factory.launch_swarm(1);
+            let mut swarm = self
+                .factory
+                .launch_swarm(self.tests.initial_validator_count.get());
 
             // Run PublicUsageTests
             for test in self.filter_tests(self.tests.public_usage_tests.iter()) {
