@@ -153,13 +153,19 @@ impl BoogieOptions {
     }
 
     /// Returns command line to call boogie.
-    pub fn get_boogie_command(&self, boogie_file: &str) -> Vec<String> {
+    pub fn get_boogie_command(&self, boogie_file: &str) -> anyhow::Result<Vec<String>> {
         let mut result = if self.use_exp_boogie {
             // This should have a better ux...
             vec![read_env_var("EXP_BOOGIE_EXE")]
         } else {
             vec![self.boogie_exe.clone()]
         };
+
+        // If we don't have a boogie executable, nothing will work
+        if result.iter().all(|path| path.is_empty()) {
+            anyhow::bail!("No boogie executable set.  Please set BOOGIE_EXE");
+        }
+
         let mut add = |sl: &[&str]| result.extend(sl.iter().map(|s| (*s).to_string()));
         add(DEFAULT_BOOGIE_FLAGS);
         if self.use_cvc4 {
@@ -215,7 +221,7 @@ impl BoogieOptions {
             add(&[f.as_str()]);
         }
         add(&[boogie_file]);
-        result
+        Ok(result)
     }
 
     /// Returns name of file where to log boogie output.
