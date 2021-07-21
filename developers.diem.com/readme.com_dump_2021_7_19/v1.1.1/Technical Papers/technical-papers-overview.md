@@ -1,0 +1,16 @@
+---
+title: "Overview"
+slug: "technical-papers-overview"
+hidden: false
+metadata: 
+  title: "Technical papers overview"
+  description: "Explore the different technical papers available."
+createdAt: "2021-02-09T17:14:41.694Z"
+updatedAt: "2021-03-08T14:53:03.036Z"
+---
+Our technical papers take a closer look at some of Diem’s core components. Choose a paper below to view and download:
+[block:html]
+{
+  "html": "<div class=\"cards-wrapper-root cards-wrapper-row-of-4\">\n  <a\n    class=\"card-base-root card-base-has-shadow card-base-has-rounded-corners\"\n    href=\"/main/docs/move-paper\"\n    target=\"_self\"\n    ><div class=\"card-base-children simple-card-root\">\n      <div\n        class=\"simple-card-image\"\n        style='background-image: url(\"https://files.readme.io/df34a25-placeholder.svg\");'\n      ></div>\n      <span class=\"simple-card-title\">Move Paper</span>\n    </div>\n    <div class=\"card-base-overlay\">\n      <p>\n        Learn how this new programming language improves resource safety and\n        access controls for all blockchains\n      </p>\n    </div></a\n  ><a\n    class=\"card-base-root card-base-has-shadow card-base-has-rounded-corners\"\n    href=\"/main/docs/state-machine-replication-paper\"\n    target=\"_self\"\n    ><div class=\"card-base-children simple-card-root\">\n      <div\n        class=\"simple-card-image\"\n        style='background-image: url(\"https://files.readme.io/df34a25-placeholder.svg\");'\n      ></div>\n      <span class=\"simple-card-title\">State Machine Replication</span>\n    </div>\n    <div class=\"card-base-overlay\">\n      <p>\n        Dive into DiemBFT, the fault-tolerant consensus mechanism built to\n        sustain a global payment system\n      </p>\n    </div></a\n  ><a\n    class=\"card-base-root card-base-has-shadow card-base-has-rounded-corners\"\n    href=\"/main/docs/the-diem-blockchain-paper\"\n    target=\"_self\"\n    ><div class=\"card-base-children simple-card-root\">\n      <div\n        class=\"simple-card-image\"\n        style='background-image: url(\"https://files.readme.io/df34a25-placeholder.svg\");'\n      ></div>\n      <span class=\"simple-card-title\">The Diem Blockchain</span>\n    </div>\n    <div class=\"card-base-overlay\">\n      <p>\n        Discover the architecture and implementation of our core platform, the\n        Diem Blockchain\n      </p>\n    </div></a\n  ><a\n    class=\"card-base-root card-base-has-shadow card-base-has-rounded-corners\"\n    href=\"/main/docs/jellyfish-merkle-tree-paper\"\n    target=\"_self\"\n    ><div class=\"card-base-children simple-card-root\">\n      <div\n        class=\"simple-card-image\"\n        style='background-image: url(\"https://files.readme.io/df34a25-placeholder.svg\");'\n      ></div>\n      <span class=\"simple-card-title\">Jellyfish Merkle Tree</span>\n    </div>\n    <div class=\"card-base-overlay\">\n      <p>\n        Learn more about how the Jellyfish Merkle Tree optimizes computation\n        costs and storage footprints for the Diem Blockchain\n      </p>\n    </div></a\n  >\n</div>\n"
+}
+[/block]
