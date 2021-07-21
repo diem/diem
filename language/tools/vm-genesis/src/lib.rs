@@ -351,18 +351,32 @@ fn create_and_initialize_owners_operators(
 /// Publish the standard library.
 fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: Modules) {
     let dep_graph = stdlib.compute_dependency_graph();
-    for module in dep_graph.compute_topological_order().unwrap() {
-        let module_id = module.self_id();
-        if module_id.name().as_str() == GENESIS_MODULE_NAME {
-            // Do not publish the Genesis module
-            continue;
-        }
-        let mut bytes = vec![];
-        module.serialize(&mut bytes).unwrap();
-        session
-            .publish_module(bytes, *module_id.address(), &mut GasStatus::new_unmetered())
-            .unwrap_or_else(|e| panic!("Failure publishing module {:?}, {:?}", module_id, e));
-    }
+    let mut addr_opt: Option<AccountAddress> = None;
+    let modules = dep_graph
+        .compute_topological_order()
+        .unwrap()
+        .map(|m| {
+            let addr = *m.self_id().address();
+            if let Some(a) = addr_opt {
+              assert!(
+                  a == addr,
+                  "All genesis modules must be published under the same address, but found modules under both {} and {}",
+                  a.short_str_lossless(),
+                  addr.short_str_lossless()
+              );
+            } else {
+                addr_opt = Some(addr)
+            }
+            let mut bytes = vec![];
+            m.serialize(&mut bytes).unwrap();
+            bytes
+        })
+        .collect::<Vec<Vec<u8>>>();
+    // TODO: allow genesis modules published under different addresses. supporting this while
+    // maintaining the topological order is challenging.
+    session
+        .publish_module_bundle(modules, addr_opt.unwrap(), &mut GasStatus::new_unmetered())
+        .unwrap_or_else(|e| panic!("Failure publishing modules {:?}", e));
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
