@@ -25,14 +25,15 @@ module Escape {
         move_to<Wrapper<Thing>>(account, Wrapper{ thing });
     }
 
-    // TODO: Both verify, but only the first should. Currently they verify because of a gap
-    // in monomorphization. It needs to specialize functions which depend on global
-    // invariants for the type instantantiations used in there. But we only verify
-    // install for a generic parameter. So we need to generate specialized
-    // install<IndoorThing> and install<OutdoorThing> verification variants.
+    // TODO: Currently both invariants do not verify, which is expected.
+    //
+    // But the first invariant could be verified because an `IndoorThing` can
+    // never escape from the current modul. By escape, we mean, holding an
+    // object of type `IndoorThing`. This is a fact given by the type system.
+    //
+    // In comparision, an `OutdoorThing` can escape because that the
+    // `new_outdoor_thing` function returns an object of the `OutdoorThing` type
     invariant forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
     invariant forall addr: address where exists<Wrapper<OutdoorThing>>(addr): addr == @0x123;
-
 }
-
 }

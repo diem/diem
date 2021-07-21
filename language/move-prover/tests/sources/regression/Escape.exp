@@ -1,0 +1,26 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+
+    ┌── tests/sources/regression/Escape.move:36:5 ───
+    │
+ 36 │     invariant forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/Escape.move:24: install
+    =         account = <redacted>
+    =         thing = <redacted>
+    =     at tests/sources/regression/Escape.move:25: install
+    =     at tests/sources/regression/Escape.move:36
+
+error: global memory invariant does not hold
+
+    ┌── tests/sources/regression/Escape.move:37:5 ───
+    │
+ 37 │     invariant forall addr: address where exists<Wrapper<OutdoorThing>>(addr): addr == @0x123;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/Escape.move:24: install
+    =         account = <redacted>
+    =         thing = <redacted>
+    =     at tests/sources/regression/Escape.move:25: install
+    =     at tests/sources/regression/Escape.move:37
