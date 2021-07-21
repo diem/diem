@@ -763,6 +763,25 @@ impl Default for Substitution {
     }
 }
 
+/// The type unification algorithm implemented in the `Substitution` struct only accepts `Type::Var`
+/// as type variables. `Type::TypeParameter` and `Type::TypeLocal` are treated as concrete types
+/// in the unification process.
+///
+/// However, in some use cases, we might need to designate types other than `Type::Var` as type
+/// variables. For example, to see whether a generic struct `S<T>` can be instantiated as `S<bool>`
+/// where `T` is of type `Type::TypeParameter`, we still perform type unification over `S<T>` and
+/// `S<bool>` but this time, we need to convert the `T` from `Type::TypeParameter` into `Type::Var`
+/// first before re-using the algorithm in `Substitution`.
+///
+/// Similarly, in the monomorphization use case, we need to check whether a property over `S<t>`
+/// can be reduced to `S<u64>` where `t` is a `Type::TypeLocal`. We need a convertion from
+/// `Type::TypeLocal` to `Type::Var` as well.
+///
+/// This is why we need `TypeUnifier`. The `TypeUnifier` wrapper takes care of
+/// 1) converting a `Type::TypeParameter` and `Type::TypeLocal` into type variables `Type::Var`,
+/// 2) invoking the type unification algorithm on the adapted types, and
+/// 3) subsequently mapping the type unification results back to corresponding `Type::TypeParameter`
+///    and `Type::TypeLocals`.
 pub struct TypeUnifier {
     type_vars_map: BTreeMap<u16, (bool, Type)>,
     types_adapted_lhs: Vec<Type>,
