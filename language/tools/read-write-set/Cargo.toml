@@ -19,3 +19,4 @@ move-vm-runtime = { path = "../../move-vm/runtime" }
 move-model = { path = "../../move-model" }
 prover_bytecode = { path = "../../move-prover/bytecode", package="bytecode" }
 resource-viewer = { path = "../resource-viewer" }
+read-write-set-types = { path = "types" }
