@@ -21,6 +21,7 @@ use kube::{
     client::Client as K8sClient,
     Config,
 };
+use rayon::prelude::*;
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -34,7 +35,8 @@ const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 const KUBECTL_BIN: &str = "kubectl";
 const HELM_BIN: &str = "helm";
 const JSON_RPC_PORT: u32 = 80;
-const DEFL_NUM_VALIDATORS: u32 = 4; // 30 for forge-*nets
+const DEFL_NUM_VALIDATORS: usize = 30;
+const DEFL_HELM_REPO_NAME: &str = "testnet-internal";
 const VALIDATOR_LB: &str = "validator-fullnode-lb";
 
 pub struct K8sSwarm {
@@ -155,7 +157,7 @@ impl K8sSwarm {
 }
 
 impl Drop for K8sSwarm {
-    // When the Process struct goes out of scope we need to wipe the chain state
+    // When the K8sSwarm struct goes out of scope we need to wipe the chain state
     fn drop(&mut self) {
         clean_k8s_cluster_internal();
     }
@@ -298,17 +300,19 @@ fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
 }
 
 fn clean_k8s_cluster_internal() {
-    clean_k8s_cluster("testnet-internal".to_string())
+    clean_k8s_cluster(DEFL_HELM_REPO_NAME.to_string(), DEFL_NUM_VALIDATORS)
         .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
         .unwrap()
 }
 
-pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
+pub fn clean_k8s_cluster(
+    helm_repo: String,
+    base_num_validators: usize,
+) -> Result<(), anyhow::Error> {
     let rt = Runtime::new().unwrap();
 
     // get the previous chain era
     let raw_helm_values = Command::new(HELM_BIN)
-        // .stdout(Stdio::inherit())
         .arg("get")
         .arg("values")
         .arg("diem")
@@ -322,17 +326,12 @@ pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
     let v: Value = serde_json::from_str(&helm_values).unwrap();
     let era = &v["genesis"]["era"];
     let num_validators = &v["genesis"]["numValidators"];
-    let new_era;
-    if era == 1 {
-        new_era = 2;
-    } else {
-        new_era = 1;
-    }
+    let new_era = if era == 1 { 2 } else { 1 };
 
     println!("genesis.era: {} --> {}", era, new_era);
     println!(
         "genesis.numValidators: {} --> {}",
-        num_validators, DEFL_NUM_VALIDATORS
+        num_validators, base_num_validators
     );
 
     // upgrade testnet
@@ -344,7 +343,7 @@ pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
         "--set",
         &format!("genesis.era={}", new_era),
         "--set",
-        &format!("genesis.numValidators={}", DEFL_NUM_VALIDATORS),
+        &format!("genesis.numValidators={}", base_num_validators),
     ];
     println!("{:?}", testnet_upgrade_args);
     let testnet_upgrade_output = Command::new(HELM_BIN)
@@ -354,8 +353,8 @@ pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
         .expect("failed to helm upgrade diem");
     assert!(testnet_upgrade_output.status.success());
 
-    // upgrade validators
-    for i in 0..DEFL_NUM_VALIDATORS {
+    // upgrade validators in parallel
+    (0..base_num_validators).into_par_iter().for_each(|i| {
         let validator_upgrade_args = [
             "upgrade",
             &format!("val{}", i),
@@ -371,7 +370,7 @@ pub fn clean_k8s_cluster(helm_repo: String) -> Result<(), anyhow::Error> {
             .output()
             .expect("failed to helm upgrade diem");
         assert!(validator_upgrade_output.status.success());
-    }
+    });
 
     let kube_client = rt.block_on(K8sClient::try_default()).unwrap();
 
