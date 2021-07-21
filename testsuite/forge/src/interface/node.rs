@@ -84,7 +84,16 @@ pub trait Validator: Node {
 }
 
 /// Trait used to represent a running FullNode
-pub trait FullNode: Node {}
+pub trait FullNode: Node {
+    //TODO handle VFNs querying if they are connected to a validator
+    fn check_connectivity(&self) -> Result<bool> {
+        const DIRECTION: Option<&str> = Some("outbound");
+        const EXPECTED_PEERS: usize = 1;
+
+        self.get_connected_peers(NetworkId::Public, DIRECTION)
+            .map(|maybe_n| maybe_n.map(|n| n >= EXPECTED_PEERS as i64).unwrap_or(false))
+    }
+}
 
 impl<T: ?Sized> NodeExt for T where T: Node {}
 
