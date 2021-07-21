@@ -222,6 +222,7 @@ pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
+        type_parameters: Vec<(Name, AbilitySet)>,
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
@@ -952,11 +953,13 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition {
                 kind,
+                type_parameters,
                 properties: _,
                 exp,
                 additional_exps,
             } => {
                 kind.ast_debug(w);
+                type_parameters.ast_debug(w);
                 exp.ast_debug(w);
                 w.list(additional_exps, ",", |w, e| {
                     e.ast_debug(w);

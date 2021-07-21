@@ -1141,10 +1141,12 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
     let em = match pm {
         PM::Condition {
             kind,
+            type_parameters: pty_params,
             properties: pproperties,
             exp,
             additional_exps,
         } => {
+            let type_parameters = fun_type_parameters(context, pty_params);
             let properties = pproperties
                 .into_iter()
                 .map(|p| pragma_property(context, p))
@@ -1156,6 +1158,7 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 .collect();
             EM::Condition {
                 kind,
+                type_parameters,
                 properties,
                 exp,
                 additional_exps,

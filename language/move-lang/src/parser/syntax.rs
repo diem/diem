@@ -2345,11 +2345,12 @@ fn parse_spec_block_member(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagno
 
 // Parse a specification condition:
 //    SpecCondition =
-//        ("assert" | "assume" | "decreases" | "ensures" | "requires" )
-//        <ConditionProperties> <Exp> ";"
-//      | "aborts_if" <ConditionProperties> <Exp> ["with" <Exp>] ";"
-//      | "aborts_with" <ConditionProperties> Comma <Exp> ";"
-//      | "emits" <ConditionProperties> <Exp> "to" <Exp> [If <Exp>] ";"
+//        ("assert" | "assume" | "ensures" | "requires" | "axiom" )
+//        <OptionalTypeParameters> <ConditionProperties> <Exp> ";"
+//      | "aborts_if" <OptionalTypeParameters> <ConditionProperties> <Exp> ["with" <Exp>] ";"
+//      | "aborts_with" <OptionalTypeParameters> <ConditionProperties> <Exp> [Comma <Exp>]* ";"
+//      | "decreases" <OptionalTypeParameters> <ConditionProperties> <Exp> ";"
+//      | "emits" <OptionalTypeParameters> <ConditionProperties> <Exp> "to" <Exp> [If <Exp>] ";"
 fn parse_condition(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
     let start_loc = tokens.start_loc();
     let kind = match tokens.content() {
@@ -2367,6 +2368,7 @@ fn parse_condition(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         _ => unreachable!(),
     };
     tokens.advance()?;
+    let type_parameters = parse_optional_type_parameters(tokens)?;
     let properties = parse_condition_properties(tokens)?;
     let exp = if kind == SpecConditionKind::AbortsWith || kind == SpecConditionKind::Modifies {
         // Use a dummy expression as a placeholder for this field.
@@ -2411,6 +2413,7 @@ fn parse_condition(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         end_loc,
         SpecBlockMember_::Condition {
             kind,
+            type_parameters,
             properties,
             exp,
             additional_exps,
@@ -2436,10 +2439,11 @@ fn parse_condition_properties(tokens: &mut Lexer) -> Result<Vec<PragmaProperty>,
 }
 
 // Parse an invariant:
-//     Invariant = "invariant" [ "update" ] <ConditionProperties> <Exp> ";"
+//     Invariant = "invariant" <OptionalTypeParameters> [ "update" ] <ConditionProperties> <Exp> ";"
 fn parse_invariant(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Invariant)?;
+    let type_parameters = parse_optional_type_parameters(tokens)?;
     let kind = match tokens.peek() {
         Tok::IdentifierValue if tokens.content() == "update" => {
             tokens.advance()?;
@@ -2456,6 +2460,7 @@ fn parse_invariant(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         tokens.previous_end_loc(),
         SpecBlockMember_::Condition {
             kind,
+            type_parameters,
             properties,
             exp,
             additional_exps: vec![],

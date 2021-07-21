@@ -22,10 +22,37 @@ error: undeclared `M::result_1`
     │             ^^^^^^^^
     │
 
+error: type parameters are not allowed here
+
+    ┌── tests/sources/conditions_err.move:12:5 ───
+    │
+ 12 │     aborts_with<T: drop> 42;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = type parameters are only allowed on the following cases: `assert`, `assume`, `axiom, `aborts_if`, `succeeds_if`, `ensures`, `requires`, and `invariant`.
+
+error: type parameters are not allowed here
+
+    ┌── tests/sources/conditions_err.move:13:5 ───
+    │
+ 13 │     modifies<T: key> global<T>(0x1);
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = type parameters are only allowed on the following cases: `assert`, `assume`, `axiom, `aborts_if`, `succeeds_if`, `ensures`, `requires`, and `invariant`.
+
 error: expected `bool` but found `u64` in name expression
 
-    ┌── tests/sources/conditions_err.move:17:28 ───
+    ┌── tests/sources/conditions_err.move:20:28 ───
     │
- 17 │     emits _msg to _guid if x;
+ 20 │     emits _msg to _guid if x;
     │                            ^
     │
+
+error: type parameters are not allowed here
+
+    ┌── tests/sources/conditions_err.move:22:5 ───
+    │
+ 22 │     emits<T: drop> _msg to _guid;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = type parameters are only allowed on the following cases: `assert`, `assume`, `axiom, `aborts_if`, `succeeds_if`, `ensures`, `requires`, and `invariant`.
