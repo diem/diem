@@ -5,7 +5,7 @@ use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use channel::Sender;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use diem_crypto::HashValue;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
@@ -40,17 +40,7 @@ impl StateComputer for OrderingStateComputer {
         // This will break the e2e smoke test (for now because
         // no one is actually handling the next phase) if the
         // decoupled execution feature is turned on.
-        Ok(StateComputeResult::new(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            vec![],
-            0,
-            vec![],
-            0,
-            None,
-            vec![],
-            vec![],
-            vec![],
-        ))
+        Ok(StateComputeResult::new_dummy())
     }
 
     /// Send ordered blocks to the real execution phase through the channel.

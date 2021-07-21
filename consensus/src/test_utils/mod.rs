@@ -23,7 +23,9 @@ mod mock_txn_manager;
 use crate::util::mock_time_service::SimulatedTimeService;
 use consensus_types::{block::block_test_utils::gen_test_certificate, common::Payload};
 use diem_types::block_info::BlockInfo;
-pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
+pub use mock_state_computer::{
+    EmptyStateComputer, MockStateComputer, RandomComputeResultStateComputer,
+};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
 

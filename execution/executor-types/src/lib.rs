@@ -9,7 +9,9 @@ pub use error::Error;
 use anyhow::Result;
 use diem_crypto::{
     ed25519::Ed25519Signature,
-    hash::{TransactionAccumulatorHasher, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{
+        TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
+    },
     HashValue,
 };
 use diem_types::{
@@ -152,6 +154,32 @@ impl StateComputeResult {
             reconfig_events,
             signature: None,
         }
+    }
+
+    /// generate a new dummy state compute result with a given root hash.
+    /// this function is used in RandomComputeResultStateComputer to assert that the compute
+    /// function is really called.
+    pub fn new_dummy_with_root_hash(root_hash: HashValue) -> Self {
+        Self {
+            root_hash,
+            frozen_subtree_roots: vec![],
+            num_leaves: 0,
+            parent_frozen_subtree_roots: vec![],
+            parent_num_leaves: 0,
+            epoch_state: None,
+            compute_status: vec![],
+            transaction_info_hashes: vec![],
+            reconfig_events: vec![],
+            signature: None,
+        }
+    }
+
+    /// generate a new dummy state compute result with ACCUMULATOR_PLACEHOLDER_HASH as the root hash.
+    /// this function is used in ordering_state_computer as a dummy state compute result,
+    /// where the real compute result is generated after ordering_state_computer.commit pushes
+    /// the blocks and the finality proof to the execution phase.
+    pub fn new_dummy() -> Self {
+        StateComputeResult::new_dummy_with_root_hash(*ACCUMULATOR_PLACEHOLDER_HASH)
     }
 }
 

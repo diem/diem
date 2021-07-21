@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload, executed_block::ExecutedBlock};
-use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use diem_crypto::HashValue;
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
@@ -47,17 +47,7 @@ impl StateComputer for MockStateComputer {
         self.block_cache
             .lock()
             .insert(block.id(), block.payload().unwrap_or(&vec![]).clone());
-        let result = StateComputeResult::new(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            vec![],
-            0,
-            vec![],
-            0,
-            None,
-            vec![],
-            vec![],
-            vec![],
-        );
+        let result = StateComputeResult::new_dummy();
         Ok(result)
     }
 
@@ -111,16 +101,47 @@ impl StateComputer for EmptyStateComputer {
         _block: &Block,
         _parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
-        Ok(StateComputeResult::new(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            vec![],
-            0,
-            vec![],
-            0,
-            None,
-            vec![],
-            vec![],
-            vec![],
+        Ok(StateComputeResult::new_dummy())
+    }
+
+    async fn commit(
+        &self,
+        _blocks: &[Arc<ExecutedBlock>],
+        _commit: LedgerInfoWithSignatures,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
+        Ok(())
+    }
+}
+
+pub struct RandomComputeResultStateComputer {
+    random_compute_result_root_hash: HashValue,
+}
+
+impl RandomComputeResultStateComputer {
+    pub fn new() -> Self {
+        Self {
+            random_compute_result_root_hash: HashValue::random(),
+        }
+    }
+
+    pub fn get_root_hash(&self) -> HashValue {
+        self.random_compute_result_root_hash
+    }
+}
+
+#[async_trait::async_trait]
+impl StateComputer for RandomComputeResultStateComputer {
+    fn compute(
+        &self,
+        _block: &Block,
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult, Error> {
+        Ok(StateComputeResult::new_dummy_with_root_hash(
+            self.random_compute_result_root_hash,
         ))
     }
 
