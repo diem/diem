@@ -1,0 +1,25 @@
+task 0 lines 1-5:
+Successfully published module 00000000000000000000000000000042::N
+
+task 1 lines 7-11:
+Successfully executed script
+
+task 2 lines 13-15:
+[No Resource Exists]
+
+task 3 lines 17-33:
+Successfully published module 00000000000000000000000000000042::N
+
+task 4 lines 35-41:
+Successfully executed script
+
+task 5 lines 43-45:
+key 0x42::N::R<U64> {
+    v: 0
+}
+
+task 6 lines 47-53:
+Successfully executed script
+
+task 7 lines 55-57:
+[No Resource Exists]
