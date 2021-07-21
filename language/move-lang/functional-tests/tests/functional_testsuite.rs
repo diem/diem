@@ -9,7 +9,7 @@ use functional_tests::{
 };
 use move_command_line_common::env::read_bool_env_var;
 use move_lang::{
-    self, compiled_unit::CompiledUnit, errors, Compiler as MoveCompiler, Flags,
+    self, compiled_unit::CompiledUnit, diagnostics, Compiler as MoveCompiler, Flags,
     FullyCompiledProgram, PASS_COMPILATION,
 };
 use once_cell::sync::Lazy;
@@ -38,14 +38,14 @@ impl<'a> MoveSourceCompiler<'a> {
         &self,
         targets: &[String],
     ) -> anyhow::Result<(
-        errors::FilesSourceText,
-        Result<Vec<CompiledUnit>, errors::Errors>,
+        diagnostics::FilesSourceText,
+        Result<Vec<CompiledUnit>, diagnostics::Diagnostics>,
     )> {
         let (files, comments_and_compiler_res) = MoveCompiler::new(targets, &self.deps)
             .set_pre_compiled_lib(&self.pre_compiled_deps)
             .run::<PASS_COMPILATION>()?;
         match comments_and_compiler_res {
-            Err(errors) => Ok((files, Err(errors))),
+            Err(diags) => Ok((files, Err(diags))),
             Ok((_comments, move_compiler)) => Ok((files, Ok(move_compiler.into_compiled_units()))),
         }
     }
@@ -75,9 +75,9 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         let cur_path = cur_file.path().to_str().unwrap().to_owned();
 
         let targets = &vec![cur_path.clone()];
-        let (mut files, units_or_errors) = self.move_compile_with_stdlib(targets)?;
-        let unit = match units_or_errors {
-            Err(errors) => {
+        let (mut files, units_or_diags) = self.move_compile_with_stdlib(targets)?;
+        let unit = match units_or_diags {
+            Err(diags) => {
                 for (file_name, text) in &self.pre_compiled_deps.files {
                     // TODO This is bad. Rethink this when errors are redone
                     if !files.contains_key(file_name) {
@@ -85,13 +85,13 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
                     }
                 }
 
-                let error_buffer = if read_bool_env_var(move_command_line_common::testing::PRETTY) {
-                    move_lang::errors::report_errors_to_color_buffer(files, errors)
+                let diags_buffer = if read_bool_env_var(move_command_line_common::testing::PRETTY) {
+                    diagnostics::report_diagnostics_to_color_buffer(&files, diags)
                 } else {
-                    move_lang::errors::report_errors_to_buffer(files, errors)
+                    diagnostics::report_diagnostics_to_buffer(&files, diags)
                 };
                 return Err(
-                    MoveSourceCompilerError(String::from_utf8(error_buffer).unwrap()).into(),
+                    MoveSourceCompilerError(String::from_utf8(diags_buffer).unwrap()).into(),
                 );
             }
             Ok(mut units) => {
@@ -128,9 +128,9 @@ static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     .unwrap();
     match program_res {
         Ok(stdlib) => stdlib,
-        Err((files, errors)) => {
+        Err((files, diags)) => {
             eprintln!("!!!Standard library failed to compile!!!");
-            errors::report_errors(files, errors)
+            diagnostics::report_diagnostics(&files, diags)
         }
     }
 });

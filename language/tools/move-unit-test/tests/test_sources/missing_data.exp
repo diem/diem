@@ -6,16 +6,13 @@ Test failures:
 Failures in 0x1::MissingData:
 
 ┌── missing_data ──────
-│ ITE: An unknown error was reported. Location: error: 
-│ 
-│    ┌── tests/test_sources/missing_data.move:6:9 ───
-│    │
-│  6 │         borrow_global<Missing>(@0x0);
-│    │         ^^^^^^^^^^^^^
-│    ·
-│  5 │     fun missing_data() acquires Missing {
-│    │         ------------ In this function in 0x1::MissingData
-│    │
+│ ITE: An unknown error was reported. Location: error[E11001]: test failure
+│   ┌─ tests/test_sources/missing_data.move:6:9
+│   │
+│ 5 │     fun missing_data() acquires Missing {
+│   │         ------------ In this function in 0x1::MissingData
+│ 6 │         borrow_global<Missing>(@0x0);
+│   │         ^^^^^^^^^^^^^
 │ 
 │ 
 │ VMError (if there is one): VMError {

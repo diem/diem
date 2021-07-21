@@ -8,16 +8,14 @@ Test failures:
 Failures in 0x1::M:
 
 ┌── test_doesnt_exist ──────
-│ error: 
-│ 
-│     ┌── tests/test_sources/native_signer_creation.move:47:9 ───
-│     │
-│  47 │         abort 0
-│     │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│     ·
-│  36 │     fun test_doesnt_exist() {
-│     │         ----------------- In this function in 0x1::M
-│     │
+│ error[E11001]: test failure
+│    ┌─ tests/test_sources/native_signer_creation.move:47:9
+│    │
+│ 36 │     fun test_doesnt_exist() {
+│    │         ----------------- In this function in 0x1::M
+│    ·
+│ 47 │         abort 0
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 └──────────────────

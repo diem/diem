@@ -7,16 +7,13 @@ Test failures:
 Failures in 0x1::B:
 
 ┌── failing_test ──────
-│ error: 
-│ 
-│    ┌── tests/test_sources/cross_module_aborts.move:5:9 ───
-│    │
-│  5 │         abort 0
-│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│    ·
-│  4 │     public fun this_aborts() {
-│    │                ----------- In this function in 0x1::M
-│    │
+│ error[E11001]: test failure
+│   ┌─ tests/test_sources/cross_module_aborts.move:5:9
+│   │
+│ 4 │     public fun this_aborts() {
+│   │                ----------- In this function in 0x1::M
+│ 5 │         abort 0
+│   │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 └──────────────────

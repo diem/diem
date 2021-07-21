@@ -16,16 +16,13 @@ Failures in 0x1::M:
 
 
 ┌── single_signer_fail ──────
-│ error: 
-│ 
-│    ┌── tests/test_sources/signer_args.move:9:9 ───
-│    │
-│  9 │         abort 0
-│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│    ·
-│  8 │     fun single_signer_fail(_a: signer) {
-│    │         ------------------ In this function in 0x1::M
-│    │
+│ error[E11001]: test failure
+│   ┌─ tests/test_sources/signer_args.move:9:9
+│   │
+│ 8 │     fun single_signer_fail(_a: signer) {
+│   │         ------------------ In this function in 0x1::M
+│ 9 │         abort 0
+│   │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 └──────────────────

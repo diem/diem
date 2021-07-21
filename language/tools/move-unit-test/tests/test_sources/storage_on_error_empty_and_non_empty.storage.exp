@@ -10,16 +10,13 @@ Test failures:
 Failures in 0x1::A:
 
 ┌── x ──────
-│ error: 
-│ 
-│    ┌── tests/test_sources/storage_on_error_empty_and_non_empty.move:6:9 ───
-│    │
-│  6 │         abort 0
-│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│    ·
-│  5 │     fun x() {
-│    │         - In this function in 0x1::A
-│    │
+│ error[E11001]: test failure
+│   ┌─ tests/test_sources/storage_on_error_empty_and_non_empty.move:6:9
+│   │
+│ 5 │     fun x() {
+│   │         - In this function in 0x1::A
+│ 6 │         abort 0
+│   │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 │ ────── Storage state at point of failure ──────
@@ -28,16 +25,14 @@ Failures in 0x1::A:
 
 
 ┌── y ──────
-│ error: 
-│ 
-│     ┌── tests/test_sources/storage_on_error_empty_and_non_empty.move:12:9 ───
-│     │
-│  12 │         abort 0
-│     │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│     ·
-│  10 │     fun y(a: signer) {
-│     │         - In this function in 0x1::A
-│     │
+│ error[E11001]: test failure
+│    ┌─ tests/test_sources/storage_on_error_empty_and_non_empty.move:12:9
+│    │
+│ 10 │     fun y(a: signer) {
+│    │         - In this function in 0x1::A
+│ 11 │         move_to(&a, A {});
+│ 12 │         abort 0
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 │ ────── Storage state at point of failure ──────

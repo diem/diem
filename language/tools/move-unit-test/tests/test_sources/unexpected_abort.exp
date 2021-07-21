@@ -10,48 +10,39 @@ Test failures:
 Failures in 0x1::M:
 
 ┌── unexpected_abort ──────
-│ error: 
-│ 
-│    ┌── tests/test_sources/unexpected_abort.move:5:9 ───
-│    │
-│  5 │         abort 0
-│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│    ·
-│  4 │     public fun unexpected_abort() {
-│    │                ---------------- In this function in 0x1::M
-│    │
+│ error[E11001]: test failure
+│   ┌─ tests/test_sources/unexpected_abort.move:5:9
+│   │
+│ 4 │     public fun unexpected_abort() {
+│   │                ---------------- In this function in 0x1::M
+│ 5 │         abort 0
+│   │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
 └──────────────────
 
 
 ┌── unexpected_abort_in_other_function ──────
-│ error: 
-│ 
-│     ┌── tests/test_sources/unexpected_abort.move:28:9 ───
-│     │
-│  28 │         abort 1
-│     │         ^^^^^^^ Test was not expected to abort but it aborted with 1 here
-│     ·
-│  27 │     fun abort_in_other_function() {
-│     │         ----------------------- In this function in 0x1::M
-│     │
+│ error[E11001]: test failure
+│    ┌─ tests/test_sources/unexpected_abort.move:28:9
+│    │
+│ 27 │     fun abort_in_other_function() {
+│    │         ----------------------- In this function in 0x1::M
+│ 28 │         abort 1
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 1 here
 │ 
 │ 
 └──────────────────
 
 
 ┌── wrong_abort_code ──────
-│ error: 
-│ 
-│     ┌── tests/test_sources/unexpected_abort.move:11:9 ───
-│     │
-│  11 │         abort 0
-│     │         ^^^^^^^ Test did not abort with expected code. Expected test to abort with 1 but instead it aborted with 0 here
-│     ·
-│  10 │     public fun wrong_abort_code() {
-│     │                ---------------- In this function in 0x1::M
-│     │
+│ error[E11001]: test failure
+│    ┌─ tests/test_sources/unexpected_abort.move:11:9
+│    │
+│ 10 │     public fun wrong_abort_code() {
+│    │                ---------------- In this function in 0x1::M
+│ 11 │         abort 0
+│    │         ^^^^^^^ Test did not abort with expected code. Expected test to abort with 1 but instead it aborted with 0 here
 │ 
 │ 
 └──────────────────
