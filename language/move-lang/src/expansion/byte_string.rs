@@ -3,16 +3,16 @@
 
 use crate::{diag, errors::new::Diagnostics, parser::syntax::make_loc};
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 
-#[derive(Default)]
 struct Context {
-    filename: &'static str,
+    filename: Symbol,
     start_offset: usize,
     diags: Diagnostics,
 }
 
 impl Context {
-    fn new(filename: &'static str, start_offset: usize) -> Self {
+    fn new(filename: Symbol, start_offset: usize) -> Self {
         Self {
             filename,
             start_offset,

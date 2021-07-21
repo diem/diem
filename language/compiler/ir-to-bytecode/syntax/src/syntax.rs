@@ -11,6 +11,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
 };
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
+use move_symbol_pool::Symbol;
 
 // FIXME: The following simplified version of ParseError copied from
 // lalrpop-util should be replaced.
@@ -41,9 +42,9 @@ where
     }
 }
 
-fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
+fn make_loc(file: &str, start: usize, end: usize) -> Loc {
     Loc::new(
-        file,
+        Symbol::from(file),
         Span::new(ByteIndex(start as u32), ByteIndex(end as u32)),
     )
 }
@@ -57,7 +58,7 @@ fn current_token_loc(tokens: &Lexer) -> Loc {
     )
 }
 
-fn spanned<T>(file: &'static str, start: usize, end: usize, value: T) -> Spanned<T> {
+fn spanned<T>(file: &str, start: usize, end: usize, value: T) -> Spanned<T> {
     Spanned {
         loc: make_loc(file, start, end),
         value,
@@ -2099,7 +2100,7 @@ fn parse_script_or_module(
 }
 
 pub fn parse_cmd_string(file: &str, input: &str) -> Result<Cmd_, ParseError<Loc, anyhow::Error>> {
-    let mut tokens = Lexer::new(leak_str(file), input);
+    let mut tokens = Lexer::new(file, input);
     tokens.advance()?;
     parse_cmd_(&mut tokens)
 }
@@ -2108,7 +2109,7 @@ pub fn parse_module_string(
     file: &str,
     input: &str,
 ) -> Result<ModuleDefinition, ParseError<Loc, anyhow::Error>> {
-    let mut tokens = Lexer::new(leak_str(file), input);
+    let mut tokens = Lexer::new(file, input);
     tokens.advance()?;
     parse_module(&mut tokens)
 }
@@ -2117,7 +2118,7 @@ pub fn parse_script_string(
     file: &str,
     input: &str,
 ) -> Result<Script, ParseError<Loc, anyhow::Error>> {
-    let mut tokens = Lexer::new(leak_str(file), input);
+    let mut tokens = Lexer::new(file, input);
     tokens.advance()?;
     parse_script(&mut tokens)
 }
@@ -2126,12 +2127,7 @@ pub fn parse_script_or_module_string(
     file: &str,
     input: &str,
 ) -> Result<ScriptOrModule, ParseError<Loc, anyhow::Error>> {
-    let mut tokens = Lexer::new(leak_str(file), input);
+    let mut tokens = Lexer::new(file, input);
     tokens.advance()?;
     parse_script_or_module(&mut tokens)
-}
-
-// TODO replace with some sort of intern table
-fn leak_str(s: &str) -> &'static str {
-    Box::leak(Box::new(s.to_owned()))
 }

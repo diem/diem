@@ -122,7 +122,7 @@ fn handle_error<T>(e: syntax::ParseError<Loc, anyhow::Error>, code_str: &str) ->
     let msg = match &e {
         ParseError::InvalidToken { location } => {
             let mut files = Files::new();
-            let id = files.add(location.file(), code_str.to_string());
+            let id = files.add(location.file().as_str(), code_str.to_string());
             let lbl = Label::new(id, location.span(), "Invalid Token");
             let error = Diagnostic::new_error("Parser Error", lbl);
             let writer = &mut StandardStream::stderr(ColorChoice::Auto);

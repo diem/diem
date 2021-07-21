@@ -24,6 +24,7 @@ once_cell = "1.7.2"
 move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
+move-symbol-pool = { path = "../move-symbol-pool" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }

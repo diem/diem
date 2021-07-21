@@ -2,28 +2,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::Span;
+use move_symbol_pool::Symbol;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    sync::Mutex,
 };
 
 //**************************************************************************************************
 // Loc
 //**************************************************************************************************
 
+pub static FILENAME_CACHE: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(vec![]));
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct Loc {
-    file: &'static str,
+    file: Symbol,
     span: Span,
 }
 impl Loc {
-    pub fn new(file: &'static str, span: Span) -> Loc {
+    pub fn new(file: Symbol, span: Span) -> Loc {
         Loc { file, span }
     }
 
-    pub fn file(self) -> &'static str {
+    pub fn file(&self) -> Symbol {
         self.file
     }
 
@@ -34,7 +39,7 @@ impl Loc {
 
 impl PartialOrd for Loc {
     fn partial_cmp(&self, other: &Loc) -> Option<Ordering> {
-        let file_ord = self.file.partial_cmp(other.file)?;
+        let file_ord = self.file().partial_cmp(&other.file())?;
         if file_ord != Ordering::Equal {
             return Some(file_ord);
         }
@@ -50,7 +55,7 @@ impl PartialOrd for Loc {
 
 impl Ord for Loc {
     fn cmp(&self, other: &Loc) -> Ordering {
-        self.file.cmp(other.file).then_with(|| {
+        self.file().cmp(&other.file()).then_with(|| {
             self.span
                 .start()
                 .cmp(&other.span.start())
@@ -63,6 +68,8 @@ impl Ord for Loc {
 // Spanned
 //**************************************************************************************************
 
+static NO_LOC_FILE: Lazy<Symbol> = Lazy::new(|| Symbol::from(""));
+
 #[derive(Copy, Clone)]
 pub struct Spanned<T> {
     pub loc: Loc,
@@ -74,11 +81,10 @@ impl<T> Spanned<T> {
         Spanned { loc, value }
     }
 
-    const NO_LOC_FILE: &'static str = "";
     pub fn unsafe_no_loc(value: T) -> Spanned<T> {
         Spanned {
             value,
-            loc: Loc::new(Self::NO_LOC_FILE, Span::default()),
+            loc: Loc::new(*NO_LOC_FILE, Span::default()),
         }
     }
 }

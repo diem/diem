@@ -18,6 +18,7 @@ use crate::{
 use anyhow::anyhow;
 use comments::*;
 use move_command_line_common::files::find_move_filenames;
+use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeSet, HashMap},
     fs::File,
@@ -34,12 +35,12 @@ pub(crate) fn parse_program(
 )> {
     let targets = find_move_filenames(targets, true)?
         .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
+        .map(|s| Symbol::from(s.as_str()))
+        .collect::<Vec<Symbol>>();
     let mut deps = find_move_filenames(deps, true)?
         .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
+        .map(|s| Symbol::from(s.as_str()))
+        .collect::<Vec<Symbol>>();
     ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
@@ -75,14 +76,15 @@ pub(crate) fn parse_program(
 
 fn ensure_targets_deps_dont_intersect(
     compilation_env: &CompilationEnv,
-    targets: &[&'static str],
-    deps: &mut Vec<&'static str>,
+    targets: &[Symbol],
+    deps: &mut Vec<Symbol>,
 ) -> anyhow::Result<()> {
     /// Canonicalize a file path.
-    fn canonicalize(path: &str) -> String {
-        match std::fs::canonicalize(path) {
+    fn canonicalize(path: &Symbol) -> String {
+        let p = path.as_str();
+        match std::fs::canonicalize(p) {
             Ok(s) => s.to_string_lossy().to_string(),
-            Err(_) => path.to_owned(),
+            Err(_) => p.to_owned(),
         }
     }
     let target_set = targets
@@ -112,22 +114,17 @@ fn ensure_targets_deps_dont_intersect(
     ))
 }
 
-// TODO replace with some sort of intern table
-fn leak_str(s: &str) -> &'static str {
-    Box::leak(Box::new(s.to_owned()))
-}
-
 fn parse_file(
     files: &mut FilesSourceText,
-    fname: &'static str,
+    fname: Symbol,
 ) -> anyhow::Result<(
     Vec<parser::ast::Definition>,
     MatchedFileCommentMap,
     Diagnostics,
 )> {
     let mut diags = Diagnostics::new();
-    let mut f = File::open(fname)
-        .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
+    let mut f = File::open(fname.as_str())
+        .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname.as_str())))?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
     let (no_comments_buffer, comment_map) = match strip_comments_and_verify(fname, &source_buffer) {

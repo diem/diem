@@ -13,6 +13,7 @@ use codespan_reporting::{
 };
 use move_command_line_common::env::read_env_var;
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::{
     collections::{HashMap, HashSet},
     iter::FromIterator,
@@ -33,9 +34,9 @@ pub struct Errors {
     new_fmt: new::Diagnostics,
 }
 pub type Error = Vec<(Loc, String)>;
-pub type HashableError = Vec<(&'static str, usize, usize, String)>;
+pub type HashableError = Vec<(String, usize, usize, String)>;
 
-type FileMapping = HashMap<&'static str, FileId>;
+type FileMapping = HashMap<Symbol, FileId>;
 
 //**************************************************************************************************
 // Reporting
@@ -75,7 +76,7 @@ fn output_errors<W: WriteColor>(writer: &mut W, sources: FilesSourceText, errors
         let mut files = Files::new();
         let mut file_mapping = HashMap::new();
         for (fname, source) in sources {
-            let id = files.add(fname, source);
+            let id = files.add(fname.as_str(), source);
             file_mapping.insert(fname, id);
         }
         render_errors(writer, &files, &file_mapping, old_fmt);
@@ -87,7 +88,7 @@ fn hashable_error(error: &[(Loc, String)]) -> HashableError {
         .iter()
         .map(|(loc, e)| {
             (
-                loc.file(),
+                loc.file().to_string(),
                 loc.span().start().to_usize(),
                 loc.span().end().to_usize(),
                 e.clone(),
@@ -120,8 +121,7 @@ fn render_errors<W: WriteColor>(
 }
 
 fn convert_loc(files: &Files<String>, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
-    let fname = loc.file();
-    let id = *file_mapping.get(fname).unwrap();
+    let id = *file_mapping.get(&loc.file()).unwrap();
     let offset = files.source_span(id).start().to_usize();
     let begin_index = (loc.span().start().to_usize() + offset) as u32;
     let end_index = (loc.span().end().to_usize() + offset) as u32;
