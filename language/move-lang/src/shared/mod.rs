@@ -3,10 +3,7 @@
 
 use crate::{
     command_line as cli,
-    errors::{
-        new::{Diagnostic, Diagnostics},
-        Errors,
-    },
+    diagnostics::{Diagnostic, Diagnostics},
 };
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
@@ -234,7 +231,7 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationEnv {
     flags: Flags,
-    errors: Errors,
+    diags: Diagnostics,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
@@ -243,38 +240,29 @@ impl CompilationEnv {
     pub fn new(flags: Flags) -> Self {
         Self {
             flags,
-            errors: Errors::new(),
+            diags: Diagnostics::new(),
         }
     }
 
-    pub fn add_error_deprecated(&mut self, e: Vec<(Loc, impl Into<String>)>) {
-        self.errors
-            .add_deprecated(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
-    }
-
     pub fn add_diag(&mut self, diag: Diagnostic) {
-        self.errors.add(diag)
+        self.diags.add(diag)
     }
 
     pub fn add_diags(&mut self, diags: Diagnostics) {
-        self.errors.extend(diags)
+        self.diags.extend(diags)
     }
 
-    pub fn add_errors_deprecated(&mut self, es: Errors) {
-        self.errors.extend_deprecated(es)
+    pub fn has_diags(&self) -> bool {
+        !self.diags.is_empty()
     }
 
-    pub fn has_errors(&self) -> bool {
-        !self.errors.is_empty()
+    pub fn count_diags(&self) -> usize {
+        self.diags.len()
     }
 
-    pub fn count_errors(&self) -> usize {
-        self.errors.len()
-    }
-
-    pub fn check_errors(&mut self) -> Result<(), Errors> {
-        if self.has_errors() {
-            Err(std::mem::take(&mut self.errors))
+    pub fn check_diags(&mut self) -> Result<(), Diagnostics> {
+        if self.has_diags() {
+            Err(std::mem::take(&mut self.diags))
         } else {
             Ok(())
         }

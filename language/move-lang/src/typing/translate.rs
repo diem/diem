@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     diag,
-    errors::diagnostic_codes::*,
+    diagnostics::codes::*,
     expansion::ast::{Fields, ModuleIdent, Value_},
     naming::ast::{self as N, TParam, TParamID, Type, TypeName_, Type_},
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
@@ -328,7 +328,7 @@ mod check_valid_constant {
     use super::subtype_no_report;
     use crate::{
         diag,
-        errors::diagnostic_codes::DiagnosticCode,
+        diagnostics::codes::DiagnosticCode,
         naming::ast::{Type, Type_},
         shared::*,
         typing::{
@@ -1438,7 +1438,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (sp(eloc, Type_::Unit), TE::Spec(u, used_local_types))
         }
         NE::UnresolvedError => {
-            assert!(context.env.has_errors());
+            assert!(context.env.has_diags());
             (context.error_type(eloc), TE::UnresolvedError)
         }
 

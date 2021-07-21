@@ -3,26 +3,13 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_export]
-macro_rules! unwrap_or_report_errors {
-    ($files:ident, $res:ident) => {{
-        match $res {
-            Ok(t) => t,
-            Err(errors) => {
-                assert!(!errors.is_empty());
-                $crate::errors::report_errors($files, errors)
-            }
-        }
-    }};
-}
-
 #[macro_use(sp)]
 extern crate move_ir_types;
 
 pub mod cfgir;
 pub mod command_line;
 pub mod compiled_unit;
-pub mod errors;
+pub mod diagnostics;
 pub mod expansion;
 pub mod hlir;
 pub mod interface_generator;

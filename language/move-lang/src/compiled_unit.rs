@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::new::Diagnostics,
+    diagnostics::Diagnostics,
     expansion::ast::{ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{FunctionName, ModuleName, Var},

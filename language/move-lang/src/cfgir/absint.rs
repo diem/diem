@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::cfg::CFG;
-use crate::{errors::new::Diagnostics, hlir::ast::*};
+use crate::{diagnostics::Diagnostics, hlir::ast::*};
 use std::collections::BTreeMap;
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex

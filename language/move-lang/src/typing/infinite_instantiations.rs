@@ -3,7 +3,7 @@
 
 use super::core::{self, Subst, TParamSubst};
 use crate::{
-    errors::{diagnostic_codes::TypeSafety, new::Diagnostic},
+    diagnostics::{codes::TypeSafety, Diagnostic},
     expansion::ast::ModuleIdent,
     naming::ast::{self as N, TParam, Type, Type_},
     parser::ast::FunctionName,

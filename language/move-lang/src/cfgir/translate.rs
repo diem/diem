@@ -289,7 +289,7 @@ fn constant_(
     assert!(infinite_loop_starts.is_empty(), "{}", ICE_MSG);
     assert!(errors.is_empty(), "{}", ICE_MSG);
 
-    let num_previous_errors = context.env.count_errors();
+    let num_previous_errors = context.env.count_diags();
     let fake_signature = H::FunctionSignature {
         type_parameters: vec![],
         parameters: vec![],
@@ -307,7 +307,7 @@ fn constant_(
         &fake_infinite_loop_starts,
     );
     assert!(
-        num_previous_errors == context.env.count_errors(),
+        num_previous_errors == context.env.count_diags(),
         "{}",
         ICE_MSG
     );
@@ -437,7 +437,7 @@ fn function_body(
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            if !context.env.has_errors() {
+            if !context.env.has_diags() {
                 cfgir::optimize(signature, &locals, &mut cfg);
             }
 

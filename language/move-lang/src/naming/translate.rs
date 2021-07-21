@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::diagnostic_codes::*,
+    diagnostics::codes::*,
     expansion::{
         ast::{self as E, AbilitySet, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
@@ -249,7 +249,7 @@ impl<'env> Context<'env> {
         match ma_ {
             EA::Name(n) => match self.resolve_unscoped_type(&n) {
                 None => {
-                    assert!(self.env.has_errors());
+                    assert!(self.env.has_diags());
                     None
                 }
                 Some(rt) => {
@@ -263,7 +263,7 @@ impl<'env> Context<'env> {
             },
             EA::ModuleAccess(m, n) => match self.resolve_module_type(nloc, &m, &n) {
                 None => {
-                    assert!(self.env.has_errors());
+                    assert!(self.env.has_diags());
                     None
                 }
                 Some((_, _, _, arity)) => {
@@ -296,7 +296,7 @@ impl<'env> Context<'env> {
             },
             EA::ModuleAccess(m, n) => match self.resolve_module_constant(loc, &m, n) {
                 None => {
-                    assert!(self.env.has_errors());
+                    assert!(self.env.has_diags());
                     None
                 }
                 Some(cname) => Some((Some(m), cname)),
@@ -471,7 +471,7 @@ fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Opti
     } else if context.resolve_module(&mident) {
         Some(friend)
     } else {
-        assert!(context.env.has_errors());
+        assert!(context.env.has_diags());
         None
     }
 }
@@ -739,12 +739,12 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
         }
         ET::Ref(mut_, inner) => NT::Ref(mut_, Box::new(type_(context, *inner))),
         ET::UnresolvedError => {
-            assert!(context.env.has_errors());
+            assert!(context.env.has_diags());
             NT::UnresolvedError
         }
         ET::Apply(sp!(_, EN::Name(n)), tys) => match context.resolve_unscoped_type(&n) {
             None => {
-                assert!(context.env.has_errors());
+                assert!(context.env.has_diags());
                 NT::UnresolvedError
             }
             Some(RT::BuiltinType) => {
@@ -770,7 +770,7 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
         ET::Apply(sp!(nloc, EN::ModuleAccess(m, n)), tys) => {
             match context.resolve_module_type(nloc, &m, &n) {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NT::UnresolvedError
                 }
                 Some((_, _, _, arity)) => {
@@ -840,7 +840,7 @@ fn sequence_item(context: &mut Context, sp!(loc, ns_): E::SequenceItem) -> N::Se
             let tys = ty_opt.map(|t| type_(context, t));
             match bind_opt {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NS::Seq(sp(loc, N::Exp_::UnresolvedError))
                 }
                 Some(bind) => NS::Declare(bind, tys),
@@ -851,7 +851,7 @@ fn sequence_item(context: &mut Context, sp!(loc, ns_): E::SequenceItem) -> N::Se
             let e = exp_(context, e);
             match bind_opt {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NS::Seq(sp(loc, N::Exp_::UnresolvedError))
                 }
                 Some(bind) => NS::Bind(bind, e),
@@ -903,7 +903,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             let ne = exp(context, *e);
             match na_opt {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NE::UnresolvedError
                 }
                 Some(na) => NE::Assign(na, ne),
@@ -914,7 +914,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             let ner = exp(context, *er);
             match ndot_opt {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NE::UnresolvedError
                 }
                 Some(ndot) => NE::FieldMutate(ndot, ner),
@@ -938,7 +938,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Pack(tn, etys_opt, efields) => {
             match context.resolve_struct_name(eloc, "construction", tn, etys_opt) {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NE::UnresolvedError
                 }
                 Some((m, sn, tys_opt)) => NE::Pack(
@@ -957,7 +957,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Borrow(mut_, inner) => match *inner {
             sp!(_, EE::ExpDotted(edot)) => match dotted(context, *edot) {
                 None => {
-                    assert!(context.env.has_errors());
+                    assert!(context.env.has_diags());
                     NE::UnresolvedError
                 }
                 Some(d) => NE::Borrow(mut_, d),
@@ -970,7 +970,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
 
         EE::ExpDotted(edot) => match dotted(context, *edot) {
             None => {
-                assert!(context.env.has_errors());
+                assert!(context.env.has_diags());
                 NE::UnresolvedError
             }
             Some(d) => NE::DerefBorrow(d),
@@ -987,7 +987,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 EA::Name(n) if N::BuiltinFunction_::all_names().contains(&n.value.as_str()) => {
                     match resolve_builtin_function(context, eloc, &n, ty_args) {
                         None => {
-                            assert!(context.env.has_errors());
+                            assert!(context.env.has_diags());
                             NE::UnresolvedError
                         }
                         Some(f) => NE::Builtin(sp(mloc, f), nes),
@@ -1003,7 +1003,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 }
                 EA::ModuleAccess(m, n) => match context.resolve_module_function(mloc, &m, &n) {
                     None => {
-                        assert!(context.env.has_errors());
+                        assert!(context.env.has_diags());
                         NE::UnresolvedError
                     }
                     Some(_) => NE::ModuleCall(m, FunctionName(n), ty_args, nes),
@@ -1016,7 +1016,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             NE::Spec(u, used_locals)
         }
         EE::UnresolvedError => {
-            assert!(context.env.has_errors());
+            assert!(context.env.has_diags());
             NE::UnresolvedError
         }
         // `Name` matches name variants only allowed in specs (we handle the allowed ones above)
@@ -1030,7 +1030,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
 fn access_constant(context: &mut Context, ma: E::ModuleAccess) -> N::Exp_ {
     match context.resolve_constant(ma) {
         None => {
-            assert!(context.env.has_errors());
+            assert!(context.env.has_diags());
             N::Exp_::UnresolvedError
         }
         Some((m, c)) => N::Exp_::Constant(m, c),

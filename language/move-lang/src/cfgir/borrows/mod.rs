@@ -5,7 +5,7 @@ mod state;
 
 use super::absint::*;
 use crate::{
-    errors::new::Diagnostics,
+    diagnostics::Diagnostics,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
@@ -86,7 +86,7 @@ pub fn verify(
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {
     let mut initial_state =
-        BorrowState::initial(locals, acquires.clone(), compilation_env.has_errors());
+        BorrowState::initial(locals, acquires.clone(), compilation_env.has_diags());
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);

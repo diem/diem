@@ -3,7 +3,7 @@
 
 use crate::{
     diag,
-    errors::new::Diagnostics,
+    diagnostics::Diagnostics,
     parser::ast as P,
     shared::{known_attributes, CompilationEnv},
 };
