@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["AbilitySafety",""],["Attributes",""],["Bug",""],["BytecodeGeneration",""],["Category",""],["Declarations",""],["MoveSafety",""],["NameResolution",""],["ReferenceSafety",""],["Severity",""],["Syntax",""],["TypeSafety",""],["Uncategorized",""],["UnusedItem",""]]});
