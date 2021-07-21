@@ -3,7 +3,7 @@ module 0x8675309::M {
     struct R {
         f: u64
     }
-    struct G<T> has drop {}
+    struct G<T> has drop { f: T }
 
     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
         (0 == 1: bool);
@@ -25,7 +25,7 @@ module 0x8675309::M {
         (r_mut == r_mut: bool);
         (r == r_mut: bool);
         (r_mut == r: bool);
-        (G {} == G<u64> {}: bool);
-        (G<u64> {} == G {}: bool);
+        (G { f: 1 } == G<u64> { f: 1 }: bool);
+        (G<u64> { f: 1 } == G { f: 1 }: bool);
     }
 }

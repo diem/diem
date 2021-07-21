@@ -2,7 +2,7 @@
 // One error for each loop.
 
 module 0x8675309::M {
-    struct S<T> { b: bool }
+    struct S<T> { f: T }
 
     fun f<T>() {
         f<S<T>>()

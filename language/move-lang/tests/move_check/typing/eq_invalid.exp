@@ -105,33 +105,33 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/eq_invalid.move:26:9
    │
-26 │         G0<R>{} == G0<R>{};
-   │         ^^^^^^^
+26 │         G0<R>{ f: R { f: 1 } } == G0<R>{ f: R { f: 1 } };
+   │         ^^^^^^^^^^^^^^^^^^^^^^
    │         │  │
    │         │  The type '0x8675309::M::G0<0x8675309::M::R>' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
    │         '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
    │         The type '0x8675309::M::G0<0x8675309::M::R>' does not have the ability 'drop'
 
 error[E05001]: ability constraint not satisfied
-   ┌─ tests/move_check/typing/eq_invalid.move:26:20
+   ┌─ tests/move_check/typing/eq_invalid.move:26:35
    │
-26 │         G0<R>{} == G0<R>{};
-   │                    ^^^^^^^
-   │                    │  │
-   │                    │  The type '0x8675309::M::G0<0x8675309::M::R>' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
-   │                    '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
-   │                    The type '0x8675309::M::G0<0x8675309::M::R>' does not have the ability 'drop'
+26 │         G0<R>{ f: R { f: 1 } } == G0<R>{ f: R { f: 1 } };
+   │                                   ^^^^^^^^^^^^^^^^^^^^^^
+   │                                   │  │
+   │                                   │  The type '0x8675309::M::G0<0x8675309::M::R>' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
+   │                                   '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
+   │                                   The type '0x8675309::M::G0<0x8675309::M::R>' does not have the ability 'drop'
 
 error[E04010]: cannot infer type
    ┌─ tests/move_check/typing/eq_invalid.move:28:9
    │
-28 │         G0{} == G0{};
+28 │         G2{} == G2{};
    │         ^^^^ Could not infer this type. Try adding an annotation
 
 error[E04010]: cannot infer type
    ┌─ tests/move_check/typing/eq_invalid.move:28:17
    │
-28 │         G0{} == G0{};
+28 │         G2{} == G2{};
    │                 ^^^^ Could not infer this type. Try adding an annotation
 
 error[E05001]: ability constraint not satisfied

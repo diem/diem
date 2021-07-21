@@ -9,7 +9,7 @@ error[E02001]: duplicate declaration, item, or annotation
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/expansion/duplicate_abilities.move:5:26
   │
-5 │     struct Bar<T: drop + drop> {}
+5 │     struct Bar<T: drop + drop> { f: T }
   │                   ----   ^^^^ Duplicate 'drop' ability constraint
   │                   │       
   │                   Ability previously given here

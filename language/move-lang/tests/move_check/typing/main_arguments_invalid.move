@@ -2,7 +2,7 @@ address 0x42 {
 module M {
     struct R {}
     struct S {}
-    struct Cup<T> {}
+    struct Cup<T> { f1: T }
 
     public fun eat(r: R) {
         R{} = r

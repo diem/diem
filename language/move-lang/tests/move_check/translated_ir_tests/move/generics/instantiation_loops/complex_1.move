@@ -1,5 +1,5 @@
 module 0x8675309::M {
-    struct S<T> { b: bool }
+    struct S<T> { f: T }
 
     fun a<T>() {
         b<S<T>, u64>()

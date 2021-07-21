@@ -1,6 +1,6 @@
 module 0x8675309::M {
     struct R {}
-    struct Cup<T> has copy, drop {}
+    struct Cup<T> has copy, drop { f: T }
 
     fun t0(x8: u8, x64: u64, x128: u128) {
         (false as u8);

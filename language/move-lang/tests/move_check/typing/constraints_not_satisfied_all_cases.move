@@ -1,6 +1,6 @@
 module 0x8675309::M {
-    struct CupR<T: key> {}
-    struct CupC<T: copy> {}
+    struct CupR<T: key> { f: T }
+    struct CupC<T: copy> { f: T }
     struct R has key {}
     struct C has copy {}
 
