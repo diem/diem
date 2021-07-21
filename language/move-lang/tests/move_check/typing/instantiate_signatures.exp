@@ -1,7 +1,7 @@
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:11:13
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
@@ -51,7 +51,7 @@ error[E04004]: expected a single non-reference type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:18:14
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
@@ -92,7 +92,7 @@ error[E04004]: expected a single non-reference type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:23:9
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
@@ -133,7 +133,7 @@ error[E04004]: expected a single non-reference type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:32:17
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
@@ -184,7 +184,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:37:12
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
@@ -234,11 +234,11 @@ error[E04004]: expected a single non-reference type
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:42:9
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
    ·
-42 │         S<S<R>> {};
-   │         ^^^^^^^^^^
+42 │         S<S<R>> { f: abort 0 };
+   │         ^^^^^^^^^^^^^^^^^^^^^^
    │         │ │ │
    │         │ │ The type '0x42::M::S<0x42::M::R>' can have the ability 'drop' but the type argument '0x42::M::R' does not have the required ability 'drop'
    │         │ The type '0x42::M::S<0x42::M::R>' does not have the ability 'drop'
@@ -247,8 +247,8 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:42:9
    │
-42 │         S<S<R>> {};
-   │         ^^^^^^^^^^
+42 │         S<S<R>> { f: abort 0 };
+   │         ^^^^^^^^^^^^^^^^^^^^^^
    │         │ │
    │         │ The type '0x42::M::S<0x42::M::S<0x42::M::R>>' can have the ability 'drop' but the type argument '0x42::M::S<0x42::M::R>' does not have the required ability 'drop'
    │         Cannot ignore values without the 'drop' ability. The value must be used
@@ -257,12 +257,12 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/instantiate_signatures.move:42:11
    │
- 3 │     struct S<T: drop> has drop {}
+ 3 │     struct S<T: drop> has drop { f: T }
    │                 ---- 'drop' constraint declared here
  4 │     struct R {}
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
    ·
-42 │         S<S<R>> {};
+42 │         S<S<R>> { f: abort 0 };
    │           ^^^^
    │           │ │
    │           │ The type '0x42::M::R' does not have the ability 'drop'
@@ -271,7 +271,7 @@ error[E05001]: ability constraint not satisfied
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/instantiate_signatures.move:43:11
    │
-43 │         S<S<&u64>> {};
+43 │         S<S<&u64>> { f: abort 0 };
    │           ^^^^^^^
    │           │ │
    │           │ Expected a single non-reference type, but found: '&u64'
@@ -280,8 +280,8 @@ error[E04004]: expected a single non-reference type
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/instantiate_signatures.move:44:9
    │
-44 │         S<&(&u64)> {};
-   │         ^^^^^^^^^^^^^
+44 │         S<&(&u64)> { f: abort 0 };
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
    │         │ │
    │         │ Expected a single non-reference type, but found: '&&u64'
    │         Invalid type argument
@@ -289,7 +289,7 @@ error[E04004]: expected a single non-reference type
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/instantiate_signatures.move:44:11
    │
-44 │         S<&(&u64)> {};
+44 │         S<&(&u64)> { f: abort 0 };
    │           ^^^^^^^
    │           ││
    │           │Expected a single non-reference type, but found: '&u64'
@@ -298,7 +298,7 @@ error[E04004]: expected a single non-reference type
 error[E04004]: expected a single non-reference type
    ┌─ tests/move_check/typing/instantiate_signatures.move:45:11
    │
-45 │         S<S<(u64, u64)>> {};
+45 │         S<S<(u64, u64)>> { f: abort 0 };
    │           ^^^^^^^^^^^^^
    │           │ │
    │           │ Expected a single non-reference type, but found: '(u64, u64)'

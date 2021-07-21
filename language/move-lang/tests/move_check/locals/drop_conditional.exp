@@ -1,8 +1,8 @@
 error[E06001]: unused value without 'drop'
    ┌─ tests/move_check/locals/drop_conditional.move:14:11
    │
-11 │         let x = Cup<R> {};
-   │             -   ---------
+11 │         let x = Cup<R> { f: R{} };
+   │             -   -----------------
    │             │   │   │
    │             │   │   The type '0x42::M::Cup<0x42::M::R>' can have the ability 'drop' but the type argument '0x42::M::R' does not have the required ability 'drop'
    │             │   The type '0x42::M::Cup<0x42::M::R>' does not have the ability 'drop'
@@ -14,8 +14,8 @@ error[E06001]: unused value without 'drop'
 error[E06001]: unused value without 'drop'
    ┌─ tests/move_check/locals/drop_conditional.move:14:11
    │
-13 │         let x = Pair<S, R> {};
-   │             -   -------------
+13 │         let x = Pair<S, R> { f1: S{}, f2: R{} };
+   │             -   -------------------------------
    │             │   │       │
    │             │   │       The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' can have the ability 'drop' but the type argument '0x42::M::R' does not have the required ability 'drop'
    │             │   The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' does not have the ability 'drop'

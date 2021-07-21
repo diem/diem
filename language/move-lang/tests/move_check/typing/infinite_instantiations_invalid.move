@@ -1,7 +1,7 @@
 address 0x42 {
 
 module X {
-    struct Box<T> {}
+    struct Box<T> { f: T }
 
     public fun t<T>() {
         t<Box<T>>()
@@ -26,7 +26,7 @@ module X {
 }
 
 module Y {
-    struct Box<T> {}
+    struct Box<T> { f: T }
 
     public fun x<T>() {
         y<Box<T>>()
@@ -53,7 +53,7 @@ module Y {
 }
 
 module Z {
-    struct Box<T> {}
+    struct Box<T> { f: T }
 
     public fun tl<TL>() {
         tr<TL>()

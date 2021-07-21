@@ -1,7 +1,7 @@
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:29
   │
-3 │     struct CupC<T: copy> {}
+3 │     struct CupC<T: copy> { f: T }
   │                    ---- 'copy' constraint declared here
   ·
 7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
@@ -14,7 +14,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:41
   │
-2 │     struct CupR<T: key> {}
+2 │     struct CupR<T: key> { f: T }
   │                    --- 'key' constraint declared here
   ·
 7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
@@ -27,7 +27,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:9:31
   │
-3 │     struct CupC<T: copy> {}
+3 │     struct CupC<T: copy> { f: T }
   │                    ---- 'copy' constraint declared here
   ·
 9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
@@ -40,7 +40,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:11:44
    │
- 2 │     struct CupR<T: key> {}
+ 2 │     struct CupR<T: key> { f: T }
    │                    --- 'key' constraint declared here
    ·
 11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
@@ -53,7 +53,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:13:14
    │
- 3 │     struct CupC<T: copy> {}
+ 3 │     struct CupC<T: copy> { f: T }
    │                    ---- 'copy' constraint declared here
  4 │     struct R has key {}
    │            - To satisfy the constraint, the 'copy' ability would need to be added here
@@ -67,7 +67,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:15:26
    │
- 2 │     struct CupR<T: key> {}
+ 2 │     struct CupR<T: key> { f: T }
    │                    --- 'key' constraint declared here
    ·
  5 │     struct C has copy {}

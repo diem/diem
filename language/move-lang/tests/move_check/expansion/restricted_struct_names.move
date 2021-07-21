@@ -4,7 +4,7 @@ module 0x8675309::M {
     struct u8 {}
     struct u64 {}
     struct u128 {}
-    struct vector<T> {}
+    struct vector<T> { f: T }
 
     struct move_to {}
     struct move_from {}

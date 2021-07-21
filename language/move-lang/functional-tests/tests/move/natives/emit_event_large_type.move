@@ -12,7 +12,7 @@ module {{default}}::M {
     struct Box127<T> has copy, drop, store { x: Box63<Box63<T>> }
     struct Box255<T> has copy, drop, store { x: Box127<Box127<T>> }
 
-    struct MyEvent<T: copy + drop + store> has key {
+    struct MyEvent<phantom T: copy + drop + store> has key {
         e: EventHandle<T>
     }
 

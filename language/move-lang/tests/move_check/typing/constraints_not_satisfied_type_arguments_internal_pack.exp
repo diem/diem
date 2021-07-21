@@ -1,8 +1,8 @@
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:8:9
   │
-8 │         Box<CupD<R>>{};
-  │         ^^^^^^^^^^^^^^
+8 │         Box<CupD<R>>{ f: abort 0 };
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
   │         │   │
   │         │   The type '0x8675309::M::Box<0x8675309::M::CupD<0x8675309::M::R>>' can have the ability 'drop' but the type argument '0x8675309::M::CupD<0x8675309::M::R>' does not have the required ability 'drop'
   │         Cannot ignore values without the 'drop' ability. The value must be used
@@ -11,12 +11,12 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:8:13
   │
-2 │     struct CupD<T: drop> has drop {}
+2 │     struct CupD<T: drop> has drop { f: T }
   │                    ---- 'drop' constraint declared here
 3 │     struct R {}
   │            - To satisfy the constraint, the 'drop' ability would need to be added here
   ·
-8 │         Box<CupD<R>>{};
+8 │         Box<CupD<R>>{ f: abort 0 };
   │             ^^^^^^^
   │             │    │
   │             │    The type '0x8675309::M::R' does not have the ability 'drop'
@@ -25,8 +25,8 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:9:9
   │
-9 │         Box<R>{};
-  │         ^^^^^^^^
+9 │         Box<R>{ f: R{} };
+  │         ^^^^^^^^^^^^^^^^
   │         │   │
   │         │   The type '0x8675309::M::Box<0x8675309::M::R>' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
   │         Cannot ignore values without the 'drop' ability. The value must be used

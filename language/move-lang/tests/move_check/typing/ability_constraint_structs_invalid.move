@@ -2,17 +2,17 @@ address 0x42 {
 module M {
     struct NoC has drop, store, key {}
     struct NoK has copy, drop, store {}
-    struct Cup<T> {}
-    struct Box<T> has copy, drop, store, key {}
-    struct Pair<T1, T2> has copy, drop, store, key {}
+    struct Cup<T> { f: T }
+    struct Box<T> has copy, drop, store, key { f: T }
+    struct Pair<T1, T2> has copy, drop, store, key { f1: T1, f2: T2 }
 
     fun c<T: copy>() {}
     fun k<T: key>() {}
     fun cds<T: copy + drop + store>() {}
 
-    struct Sc<T: copy> {}
-    struct Sk<T: key> {}
-    struct Scds<T: copy + drop + store> {}
+    struct Sc<phantom T: copy> {}
+    struct Sk<phantom T: key> {}
+    struct Scds<phantom T: copy + drop + store> {}
 
     // tests that a variety of constraint instantiations are all invalid
     fun t() {

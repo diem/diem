@@ -1,8 +1,8 @@
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/exp_list_resource_drop.move:7:9
   │
-7 │         (0, S{}, R<u64> {});
-  │         ^^^^^^^^^^^^^^^^^^^
+7 │         (0, S{ }, R<u64> { f: 1 });
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
   │         │   │
   │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
   │         Cannot ignore values without the 'drop' ability. The value must be used
@@ -11,8 +11,8 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/exp_list_resource_drop.move:8:9
   │
-8 │         (0, S{}, Box<R<u64>> {});
-  │         ^^^^^^^^^^^^^^^^^^^^^^^^
+8 │         (0, S{ }, Box<R<u64>> { f: R { f: 1 } });
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   │         │   │
   │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
   │         Cannot ignore values without the 'drop' ability. The value must be used
@@ -21,16 +21,16 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/exp_list_resource_drop.move:9:9
   │
-9 │         (0, S{}, Box {});
-  │         ^^^^^^^^^^^^^^^^
+9 │         (0, S{ }, Box { f: abort 0 });
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   │         │   │
   │         │   The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
   │         Cannot ignore values without the 'drop' ability. The value must be used
   │         The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' does not have the ability 'drop'
 
 error[E04010]: cannot infer type
-  ┌─ tests/move_check/typing/exp_list_resource_drop.move:9:18
+  ┌─ tests/move_check/typing/exp_list_resource_drop.move:9:19
   │
-9 │         (0, S{}, Box {});
-  │                  ^^^^^^ Could not infer this type. Try adding an annotation
+9 │         (0, S{ }, Box { f: abort 0 });
+  │                   ^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
 

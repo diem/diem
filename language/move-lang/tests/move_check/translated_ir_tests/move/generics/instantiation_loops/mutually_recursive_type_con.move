@@ -2,7 +2,7 @@
 //           f<T>, g<S<T>>, f<S<T>>, g<S<S<T>>>, ...
 
 module 0x8675309::M {
-    struct S<T> { b: bool }
+    struct S<T> { f: T }
 
     fun f<T>() {
         g<S<T>>()
