@@ -536,6 +536,25 @@ impl Substitution {
         t.replace(None, Some(self), None)
     }
 
+    /// Return either a shallow or deep substitution of the type variable.
+    ///
+    /// If deep substitution is requested, follow down the substitution chain until either
+    /// - `Some(ty)` when the final type is not a type variable or
+    /// - `None` when the final type variable does not have a substitution
+    pub fn get_substitution(&self, var: u16, shallow: bool) -> Option<Type> {
+        match self.subs.get(&var) {
+            None => None,
+            Some(Type::Var(next_var)) => {
+                if shallow {
+                    Some(Type::Var(*next_var))
+                } else {
+                    self.get_substitution(*next_var, false)
+                }
+            }
+            Some(subst_ty) => Some(subst_ty.clone()),
+        }
+    }
+
     /// Unify two types, returning the unified type.
     ///
     /// This currently implements the following notion of type compatibility:
@@ -741,6 +760,206 @@ impl Substitution {
 impl Default for Substitution {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// The type unification algorithm implemented in the `Substitution` struct only accepts `Type::Var`
+/// as type variables. `Type::TypeParameter` and `Type::TypeLocal` are treated as concrete types
+/// in the unification process.
+///
+/// However, in some use cases, we might need to designate types other than `Type::Var` as type
+/// variables. For example, to see whether a generic struct `S<T>` can be instantiated as `S<bool>`
+/// where `T` is of type `Type::TypeParameter`, we still perform type unification over `S<T>` and
+/// `S<bool>` but this time, we need to convert the `T` from `Type::TypeParameter` into `Type::Var`
+/// first before re-using the algorithm in `Substitution`.
+///
+/// Similarly, in the monomorphization use case, we need to check whether a property over `S<t>`
+/// can be reduced to `S<u64>` where `t` is a `Type::TypeLocal`. We need a conversion from
+/// `Type::TypeLocal` to `Type::Var` as well.
+///
+/// TODO: we might remove `Type::TypeLocal` when
+/// 1) we have generic invariant (i.e., `invariant<T>`) as a replacement of universal quantification
+///    over type and
+/// 2) we cannot find much practical value for existential quantification over type (one dummy
+///    example is: `exists t: type: global<Config<T>>(0x1) == global<Config<T>>(0x2)`)
+///
+/// This is why we need `TypeUnificationAdapter`. The adapter takes care of
+/// 1) converting a `Type::TypeParameter` and `Type::TypeLocal` into type variables `Type::Var`,
+/// 2) invoking the type unification algorithm on the adapted types, and
+/// 3) subsequently mapping the type unification results back to corresponding `Type::TypeParameter`
+///    and `Type::TypeLocals`.
+pub struct TypeUnificationAdapter {
+    type_vars_map: BTreeMap<u16, (bool, Type)>,
+    types_adapted_lhs: Vec<Type>,
+    types_adapted_rhs: Vec<Type>,
+}
+
+impl TypeUnificationAdapter {
+    /// Initialize the context for the type unifier.
+    ///
+    /// - If `treat_type_param_as_var` is set, all `Type::TypeParameter` in the types are converted
+    ///   to `Type::Var` before unification.
+    /// - If `treat_type_local_as_var` is set, all `Type::TypeLocal` in the types are converted
+    ///   to `Type::Var` before unification.
+    ///
+    /// It is OK if the `lhs_types` or `rhs_types` already contains some `Type::Var`. These type
+    /// variables will participate in the type unification, together with new type variables created
+    /// for `TypeParameter` and `TypeLocal`.
+    fn new<'a, I>(
+        lhs_types: I,
+        rhs_types: I,
+        treat_type_param_as_var: bool,
+        treat_type_local_as_var: bool,
+    ) -> Self
+    where
+        I: Iterator<Item = &'a Type> + Clone,
+    {
+        // find the starting index for new type vars
+        let mut count = 0;
+        for ty in lhs_types.clone().chain(rhs_types.clone()) {
+            ty.visit(&mut |t| {
+                if let Type::Var(idx) = t {
+                    if idx >= &count {
+                        count = *idx + 1;
+                    }
+                }
+            });
+        }
+
+        // assign indices for type vars
+        let mut type_param_vars = BTreeMap::new();
+        let mut type_local_vars = BTreeMap::new();
+        let mut type_vars_map = BTreeMap::new();
+        for (ty, is_lhs) in lhs_types
+            .clone()
+            .map(|t| (t, true))
+            .chain(rhs_types.clone().map(|t| (t, false)))
+        {
+            ty.visit(&mut |t| {
+                let var_created = match t {
+                    Type::TypeParameter(param_idx) if treat_type_param_as_var => {
+                        type_param_vars.entry(*param_idx).or_insert(count) == &count
+                    }
+                    Type::TypeLocal(local_sym) if treat_type_local_as_var => {
+                        type_local_vars.entry(*local_sym).or_insert(count) == &count
+                    }
+                    _ => false,
+                };
+                if var_created {
+                    type_vars_map.insert(count, (is_lhs, t.clone()));
+                    count += 1;
+                }
+            });
+        }
+
+        // prepare for substitutions
+        let type_param_subst = match type_param_vars.keys().max() {
+            None => vec![],
+            Some(max_param_idx) => (0..=*max_param_idx)
+                .map(|i| match type_param_vars.get(&i) {
+                    None => Type::TypeParameter(i),
+                    Some(var_idx) => Type::Var(*var_idx),
+                })
+                .collect(),
+        };
+        let type_local_subst: BTreeMap<_, _> = type_local_vars
+            .into_iter()
+            .map(|(sym, var_idx)| (sym, Type::Var(var_idx)))
+            .collect();
+
+        // do the final replacement
+        let param_subst_opt = if treat_type_param_as_var {
+            Some(type_param_subst.as_slice())
+        } else {
+            None
+        };
+        let local_subst_opt = if treat_type_local_as_var {
+            Some(&type_local_subst)
+        } else {
+            None
+        };
+        let types_adapted_lhs = lhs_types
+            .map(|t| t.replace(param_subst_opt, None, local_subst_opt))
+            .collect();
+        let types_adapted_rhs = rhs_types
+            .map(|t| t.replace(param_subst_opt, None, local_subst_opt))
+            .collect();
+
+        // done with the initialization
+        Self {
+            type_vars_map,
+            types_adapted_lhs,
+            types_adapted_rhs,
+        }
+    }
+
+    /// Create a TypeUnifier with the goal of unifying one pair of types
+    pub fn new_one(
+        lhs_type: &Type,
+        rhs_type: &Type,
+        treat_type_param_as_var: bool,
+        treat_type_local_as_var: bool,
+    ) -> Self {
+        Self::new(
+            std::iter::once(lhs_type),
+            std::iter::once(rhs_type),
+            treat_type_param_as_var,
+            treat_type_local_as_var,
+        )
+    }
+
+    /// Create a TypeUnifier with the goal of unifying two type tuples
+    pub fn new_vec(
+        lhs_types: &[Type],
+        rhs_types: &[Type],
+        treat_type_param_as_var: bool,
+        treat_type_local_as_var: bool,
+    ) -> Self {
+        Self::new(
+            lhs_types.iter(),
+            rhs_types.iter(),
+            treat_type_param_as_var,
+            treat_type_local_as_var,
+        )
+    }
+
+    /// Consume the TypeUnifier and produce the unification result.
+    pub fn unify(
+        self,
+        variance: Variance,
+        shallow_subst: bool,
+    ) -> Option<(BTreeMap<Type, Type>, BTreeMap<Type, Type>)> {
+        let mut subst = Substitution::new();
+        match subst.unify_vec(
+            variance,
+            &self.types_adapted_lhs,
+            &self.types_adapted_rhs,
+            "",
+        ) {
+            Ok(_) => {
+                let mut subst_lhs = BTreeMap::new();
+                let mut subst_rhs = BTreeMap::new();
+                for (var_idx, (is_lhs, ty)) in &self.type_vars_map {
+                    let subst_ty = match subst.get_substitution(*var_idx, shallow_subst) {
+                        None => continue,
+                        Some(Type::Var(subst_var_idx)) => {
+                            match self.type_vars_map.get(&subst_var_idx) {
+                                None => Type::Var(subst_var_idx),
+                                Some((_, subst_ty)) => subst_ty.clone(),
+                            }
+                        }
+                        Some(subst_ty) => subst_ty.clone(),
+                    };
+                    if *is_lhs {
+                        subst_lhs.insert(ty.clone(), subst_ty);
+                    } else {
+                        subst_rhs.insert(ty.clone(), subst_ty);
+                    }
+                }
+                Some((subst_lhs, subst_rhs))
+            }
+            Err(_) => None,
+        }
     }
 }
 
