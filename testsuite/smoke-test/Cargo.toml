@@ -67,3 +67,7 @@ diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 [[test]]
 name = "forge"
 harness = false
+
+[[test]]
+name = "forge-compatibility"
+harness = false

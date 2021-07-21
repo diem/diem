@@ -3,7 +3,7 @@
 
 use crate::{
     backend::k8s::node::K8sNode, query_sequence_numbers, ChainInfo, FullNode, Node, Result, Swarm,
-    Validator,
+    Validator, Version,
 };
 use anyhow::format_err;
 use diem_logger::*;
@@ -161,7 +161,7 @@ impl Swarm for K8sSwarm {
         })
     }
 
-    fn validators<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a> {
+    fn validators<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Validator> + 'a> {
         Box::new(self.validators.values().map(|v| v as &'a dyn Validator))
     }
 
@@ -183,7 +183,11 @@ impl Swarm for K8sSwarm {
             .map(|v| v as &mut dyn Validator)
     }
 
-    fn full_nodes<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
+    fn upgrade_validator(&mut self, _id: PeerId, _version: &Version) -> Result<()> {
+        todo!()
+    }
+
+    fn full_nodes<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn FullNode> + 'a> {
         Box::new(self.fullnodes.values().map(|v| v as &'a dyn FullNode))
     }
 
@@ -216,6 +220,10 @@ impl Swarm for K8sSwarm {
     }
 
     fn remove_full_node(&mut self, _id: PeerId) -> Result<()> {
+        todo!()
+    }
+
+    fn versions<'a>(&'a self) -> Box<dyn Iterator<Item = Version> + 'a> {
         todo!()
     }
 

@@ -1,85 +1,124 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Factory, Result, Swarm};
-use anyhow::{bail, Context};
-use std::{env, path::PathBuf, process::Command};
+use crate::{Factory, Result, Swarm, Version};
+use std::{
+    collections::HashMap,
+    num::NonZeroUsize,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
+mod cargo;
 mod node;
 mod swarm;
 pub use node::LocalNode;
-pub use swarm::{LocalSwarm, LocalSwarmBuilder};
+pub use swarm::{LocalSwarm, LocalSwarmBuilder, SwarmDirectory};
+
+#[derive(Clone, Debug)]
+pub struct LocalVersion {
+    revision: String,
+    bin: PathBuf,
+    version: Version,
+}
+
+impl LocalVersion {
+    fn bin(&self) -> &Path {
+        &self.bin
+    }
+
+    fn version(&self) -> Version {
+        self.version.clone()
+    }
+}
 
 pub struct LocalFactory {
-    diem_node_bin: String,
+    versions: Arc<HashMap<Version, LocalVersion>>,
 }
 
 impl LocalFactory {
-    pub fn new(diem_node_bin: &str) -> Self {
+    pub fn new(versions: HashMap<Version, LocalVersion>) -> Self {
         Self {
-            diem_node_bin: diem_node_bin.into(),
+            versions: Arc::new(versions),
         }
     }
 
     pub fn from_workspace() -> Result<Self> {
-        Ok(Self::new(get_diem_node()?.to_str().unwrap()))
-    }
-}
-
-fn get_diem_node() -> Result<PathBuf> {
-    let output = Command::new("cargo")
-        .current_dir(workspace_root()?)
-        .args(&["build", "--bin=diem-node"])
-        .output()
-        .context("Failed to build diem-node")?;
-
-    if output.status.success() {
-        let bin_path = build_dir()?.join(format!("{}{}", "diem-node", env::consts::EXE_SUFFIX));
-        if !bin_path.exists() {
-            bail!(
-                "Can't find binary diem-node in expected path {:?}",
-                bin_path
-            );
-        }
-
-        Ok(bin_path)
-    } else {
-        bail!("Faild to build diem-node");
-    }
-}
-
-// Path to top level workspace
-fn workspace_root() -> Result<PathBuf> {
-    let mut path = build_dir()?;
-    while !path.ends_with("target") {
-        path.pop();
-    }
-    path.pop();
-    Ok(path)
-}
-
-// Path to the directory where build artifacts live.
-fn build_dir() -> Result<PathBuf> {
-    env::current_exe()
-        .ok()
-        .map(|mut path| {
-            path.pop();
-            if path.ends_with("deps") {
-                path.pop();
+        let mut versions = HashMap::new();
+        let new_version = cargo::get_diem_node_binary_from_worktree().map(|(revision, bin)| {
+            let version = Version::new(usize::max_value(), revision.clone());
+            LocalVersion {
+                revision,
+                bin,
+                version,
             }
-            path
-        })
-        .context("Can't find the build directory. Cannot continue running tests")
+        })?;
+
+        versions.insert(new_version.version.clone(), new_version);
+        Ok(Self::new(versions))
+    }
+
+    pub fn from_revision(revision: &str) -> Result<Self> {
+        let mut versions = HashMap::new();
+        let new_version =
+            cargo::get_diem_node_binary_at_revision(revision).map(|(revision, bin)| {
+                let version = Version::new(usize::max_value(), revision.clone());
+                LocalVersion {
+                    revision,
+                    bin,
+                    version,
+                }
+            })?;
+
+        versions.insert(new_version.version.clone(), new_version);
+        Ok(Self::new(versions))
+    }
+
+    pub fn with_revision_and_workspace(revision: &str) -> Result<Self> {
+        let workspace = cargo::get_diem_node_binary_from_worktree().map(|(revision, bin)| {
+            let version = Version::new(usize::max_value(), revision.clone());
+            LocalVersion {
+                revision,
+                bin,
+                version,
+            }
+        })?;
+        let revision =
+            cargo::get_diem_node_binary_at_revision(revision).map(|(revision, bin)| {
+                let version = Version::new(usize::min_value(), revision.clone());
+                LocalVersion {
+                    revision,
+                    bin,
+                    version,
+                }
+            })?;
+
+        let mut versions = HashMap::new();
+        versions.insert(workspace.version(), workspace);
+        versions.insert(revision.version(), revision);
+        Ok(Self::new(versions))
+    }
+
+    /// Create a LocalFactory with a diem-node version built at the tip of upstream/main and the
+    /// current workspace, suitable for compatibility testing.
+    pub fn with_upstream_and_workspace() -> Result<Self> {
+        let upstream_main = cargo::git_get_upstream_remote().map(|r| format!("{}/main", r))?;
+        Self::with_revision_and_workspace(&upstream_main)
+    }
 }
 
 impl Factory for LocalFactory {
-    fn launch_swarm(&self, node_num: usize) -> Box<dyn Swarm> {
-        let mut swarm = LocalSwarm::builder(&self.diem_node_bin)
-            .number_of_validators(node_num)
-            .build()
-            .unwrap();
-        swarm.launch().unwrap();
+    fn versions<'a>(&'a self) -> Box<dyn Iterator<Item = Version> + 'a> {
+        Box::new(self.versions.keys().cloned())
+    }
 
-        Box::new(swarm)
+    fn launch_swarm(&self, node_num: NonZeroUsize, version: &Version) -> Result<Box<dyn Swarm>> {
+        let mut swarm = LocalSwarm::builder(self.versions.clone())
+            .number_of_validators(node_num)
+            .initial_version(version.clone())
+            .build()?;
+        swarm.launch()?;
+
+        Ok(Box::new(swarm))
     }
 }

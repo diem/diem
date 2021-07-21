@@ -34,6 +34,7 @@ use std::{
     convert::TryFrom,
     fs::File,
     io::Write,
+    num::NonZeroUsize,
     path::{Path, PathBuf},
 };
 
@@ -157,7 +158,7 @@ pub struct ValidatorBuilder {
     config_directory: PathBuf,
     /// Bytecodes of Move genesis modules
     move_modules: Vec<Vec<u8>>,
-    num_validators: usize,
+    num_validators: NonZeroUsize,
     randomize_first_validator_ports: bool,
     template: NodeConfig,
 }
@@ -167,7 +168,7 @@ impl ValidatorBuilder {
         Self {
             config_directory: config_directory.as_ref().into(),
             move_modules,
-            num_validators: 1,
+            num_validators: NonZeroUsize::new(1).unwrap(),
             randomize_first_validator_ports: true,
             template: NodeConfig::default_for_validator(),
         }
@@ -178,7 +179,7 @@ impl ValidatorBuilder {
         self
     }
 
-    pub fn num_validators(mut self, num_validators: usize) -> Self {
+    pub fn num_validators(mut self, num_validators: NonZeroUsize) -> Self {
         self.num_validators = num_validators;
         self
     }
@@ -199,7 +200,7 @@ impl ValidatorBuilder {
         let root_keys = RootKeys::generate(&mut rng);
 
         // Generate and initialize Validator configs
-        let mut validators = (0..self.num_validators)
+        let mut validators = (0..self.num_validators.get())
             .map(|i| {
                 self.initialize_validator_config(
                     i,

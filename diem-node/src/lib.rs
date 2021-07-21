@@ -111,7 +111,6 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
         &config_path,
         diem_framework_releases::current_module_blobs().to_vec(),
     )
-    .num_validators(1)
     .template(template)
     .randomize_first_validator_ports(random_ports);
     let test_config =

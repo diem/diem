@@ -24,6 +24,7 @@ use std::{
     env,
     fs::File,
     io::{self, Read},
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     process::{Child, Command},
     str::FromStr,
@@ -528,7 +529,7 @@ impl DiemSwarm {
             &config_path,
             diem_framework_releases::current_module_blobs().to_vec(),
         )
-        .num_validators(num_nodes)
+        .num_validators(NonZeroUsize::new(num_nodes).unwrap())
         .template(node_config);
         let config = SwarmConfig::build(&builder, config_path)?;
 

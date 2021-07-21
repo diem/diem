@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Factory, Swarm};
-use anyhow::{format_err, Error};
-use std::{env, fs::File, io::Read, path::PathBuf};
+use crate::{Factory, Result, Swarm, Version};
+use anyhow::format_err;
+use std::{env, fs::File, io::Read, num::NonZeroUsize, path::PathBuf};
 use tokio::runtime::Runtime;
 
 mod node;
@@ -20,7 +20,7 @@ pub struct K8sFactory {
 }
 
 impl K8sFactory {
-    pub fn new() -> std::result::Result<K8sFactory, Error> {
+    pub fn new() -> Result<K8sFactory> {
         let vault_addr = env::var("VAULT_ADDR")
             .map_err(|_| format_err!("Expected environment variable VAULT_ADDR"))?;
         let vault_cacert = env::var("VAULT_CACERT")
@@ -64,11 +64,16 @@ impl K8sFactory {
 }
 
 impl Factory for K8sFactory {
-    fn launch_swarm(&self, _node_num: usize) -> Box<dyn Swarm> {
+    fn versions<'a>(&'a self) -> Box<dyn Iterator<Item = Version> + 'a> {
+        Box::new(std::iter::once(Version::new(
+            0,
+            "mock-version (k8s does not currently support node versions)".into(),
+        )))
+    }
+
+    fn launch_swarm(&self, _node_num: NonZeroUsize, _version: &Version) -> Result<Box<dyn Swarm>> {
         let rt = Runtime::new().unwrap();
-        let swarm = rt
-            .block_on(K8sSwarm::new(&self.root_key, &self.treasury_compliance_key))
-            .unwrap();
-        Box::new(swarm)
+        let swarm = rt.block_on(K8sSwarm::new(&self.root_key, &self.treasury_compliance_key))?;
+        Ok(Box::new(swarm))
     }
 }

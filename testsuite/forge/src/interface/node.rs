@@ -1,11 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::Result;
+use crate::{Result, Version};
 use debug_interface::NodeDebugClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
-use diem_sdk::{client::Client as JsonRpcClient, types::PeerId};
-use std::collections::HashMap;
+use diem_sdk::{
+    client::{BlockingClient, Client as JsonRpcClient},
+    types::PeerId,
+};
+use std::{
+    collections::HashMap,
+    thread,
+    time::{Duration, Instant},
+};
 use url::Url;
 
 #[derive(Debug)]
@@ -30,6 +37,9 @@ pub trait Node {
 
     /// Return the human readable name of this Node
     fn name(&self) -> &str;
+
+    /// Return the version this node is running
+    fn version(&self) -> Version;
 
     /// Return the URL for the JSON-RPC endpoint of this Node
     fn json_rpc_endpoint(&self) -> Url;
@@ -74,14 +84,28 @@ pub trait Validator: Node {
 }
 
 /// Trait used to represent a running FullNode
-pub trait FullNode: Node {}
+pub trait FullNode: Node {
+    //TODO handle VFNs querying if they are connected to a validator
+    fn check_connectivity(&self) -> Result<bool> {
+        const DIRECTION: Option<&str> = Some("outbound");
+        const EXPECTED_PEERS: usize = 1;
+
+        self.get_connected_peers(NetworkId::Public, DIRECTION)
+            .map(|maybe_n| maybe_n.map(|n| n >= EXPECTED_PEERS as i64).unwrap_or(false))
+    }
+}
 
 impl<T: ?Sized> NodeExt for T where T: Node {}
 
 pub trait NodeExt: Node {
     /// Return JSON-RPC client of this Node
-    fn json_rpc_client(&self) -> JsonRpcClient {
+    fn async_json_rpc_client(&self) -> JsonRpcClient {
         JsonRpcClient::new(self.json_rpc_endpoint().to_string())
+    }
+
+    /// Return JSON-RPC client of this Node
+    fn json_rpc_client(&self) -> BlockingClient {
+        BlockingClient::new(self.json_rpc_endpoint())
     }
 
     /// Return a NodeDebugClient for this Node
@@ -157,5 +181,29 @@ pub trait NodeExt: Node {
         }
 
         Ok(())
+    }
+
+    fn wait_until_healthy(&mut self, deadline: Instant) -> Result<()> {
+        while Instant::now() < deadline {
+            match self.health_check() {
+                Ok(()) => return Ok(()),
+                Err(HealthCheckError::NotRunning) => {
+                    return Err(anyhow::anyhow!(
+                        "Node {}:{} not running",
+                        self.name(),
+                        self.peer_id()
+                    ))
+                }
+                Err(_) => {} // For other errors we'll retry
+            }
+
+            thread::sleep(Duration::from_millis(500));
+        }
+
+        Err(anyhow::anyhow!(
+            "Timed out waiting for Node {}:{} to be healthy",
+            self.name(),
+            self.peer_id()
+        ))
     }
 }

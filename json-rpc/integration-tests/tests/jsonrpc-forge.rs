@@ -5,8 +5,8 @@ use forge::{forge_main, ForgeConfig, LocalFactory, Options, Result};
 use jsonrpc_integration_tests::*;
 
 fn main() -> Result<()> {
-    let tests = ForgeConfig {
-        public_usage_tests: &[
+    let tests = ForgeConfig::default()
+        .with_public_usage_tests(&[
             &CurrencyInfo,
             &BlockMetadata,
             &OldMetadata,
@@ -33,8 +33,8 @@ fn main() -> Result<()> {
             &MultiAgentPaymentOverDualAttestationLimit,
             &GetAccumulatorConsistencyProof,
             &NoUnknownEvents,
-        ],
-        admin_tests: &[
+        ])
+        .with_admin_tests(&[
             &PreburnAndBurnEvents,
             &CancleBurnEvent,
             &UpdateExchangeRateEvent,
@@ -44,9 +44,7 @@ fn main() -> Result<()> {
             &MultiAgentRotateAuthenticationKeyAdminScriptFunction,
             &UpgradeEventAndNewEpoch,
             &UpgradeDiemVersion,
-        ],
-        network_tests: &[],
-    };
+        ]);
 
     let options = Options::from_args();
     forge_main(tests, LocalFactory::from_workspace()?, &options)
