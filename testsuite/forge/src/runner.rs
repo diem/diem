@@ -81,7 +81,10 @@ pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F, options: &Opti
 
     match forge.run() {
         Ok(()) => Ok(()),
-        Err(_) => process::exit(101), // Exit with a non-zero exit code if tests failed
+        Err(e) => {
+            eprintln!("Failed to run tests:\n{}", e);
+            process::exit(101); // Exit with a non-zero exit code if tests failed
+        }
     }
 }
 
