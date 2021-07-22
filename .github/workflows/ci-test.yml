@@ -698,7 +698,7 @@ jobs:
       - name: split tests
         run: |
           cd /opt/git/diem/
-          cargo x test --package smoke-test -- --list | \
+          echo "compatibility::simple-validator-upgrade" | \
             grep "::" | sed 's/: .*$//' > e2e_tests
           echo -e "Found $(wc -l e2e_tests) tests."
           # Splits the e2e test via round robin in to ${runners} number of files with single digit extensions.
@@ -717,7 +717,7 @@ jobs:
             retry=0
             status=1
             while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
-              cargo x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
+              RUST_LIB_BACKTRACE=1 cargo x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
               status=$?
               retry=$((retry + 1))
               if [[ $status != 0 ]] ; then

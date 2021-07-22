@@ -41,11 +41,11 @@ pub enum ConsensusMsg {
     BlockRetrievalResponse(Box<BlockRetrievalResponse>),
     /// Request to get a EpochChangeProof from current_epoch to target_epoch
     EpochRetrievalRequest(Box<EpochRetrievalRequest>),
+    /// This struct describes basic synchronization metadata.
+    SyncInfo(Box<SyncInfo>),
     /// ProposalMsg contains the required information for the proposer election protocol to make
     /// its choice (typically depends on round and proposer info).
     ProposalMsg(Box<ProposalMsg>),
-    /// This struct describes basic synchronization metadata.
-    SyncInfo(Box<SyncInfo>),
     /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
     /// epoch changes from the first LedgerInfo's epoch.
     EpochChangeProof(Box<EpochChangeProof>),
@@ -87,8 +87,8 @@ pub struct ConsensusNetworkSender {
 pub const RPC: &[ProtocolId] = &[ProtocolId::ConsensusRpc];
 /// Supported protocols in preferred order (from highest priority to lowest).
 pub const DIRECT_SEND: &[ProtocolId] = &[
-    ProtocolId::ConsensusDirectSendJSON,
     ProtocolId::ConsensusDirectSend,
+    ProtocolId::ConsensusDirectSendJSON,
 ];
 
 /// Configuration for the network endpoints to support consensus.
