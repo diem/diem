@@ -1,0 +1,9 @@
+# Tests that renamed addresses are picked up and can be used at one level deep
+# of dependencies.
+
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+OtherDep = { local = "./deps_only/other_dep", addr_subst = { "A" = "B" } }

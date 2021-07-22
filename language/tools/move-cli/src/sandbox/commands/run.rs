@@ -16,7 +16,9 @@ use move_core_types::{
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
-use move_lang::{self, compiled_unit::CompiledUnit, shared::AddressBytes, Compiler, Flags};
+use move_lang::{
+    self, compiled_unit::AnnotatedCompiledUnit, shared::AddressBytes, Compiler, Flags,
+};
 use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::{anyhow, bail, Result};
@@ -54,18 +56,18 @@ pub fn run(
         let mut script_opt = None;
         for c in compiled_units {
             match c {
-                CompiledUnit::Script { script, .. } => {
+                AnnotatedCompiledUnit::Script(annot_script) => {
                     if script_opt.is_some() {
                         bail!("Error: Found more than one script")
                     }
-                    script_opt = Some(script)
+                    script_opt = Some(annot_script.named_script.script)
                 }
-                CompiledUnit::Module { ident, .. } => {
+                AnnotatedCompiledUnit::Module(annot_module) => {
                     if verbose {
                         println!(
                             "Warning: Found module '{}' in file specified for the script. This \
                              module will not be published.",
-                            ident.into_module_ident()
+                            annot_module.module_ident()
                         )
                     }
                 }

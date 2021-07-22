@@ -99,7 +99,7 @@ pub fn program(
     compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: G::Program,
-) -> Vec<CompiledUnit> {
+) -> Vec<AnnotatedCompiledUnit> {
     let mut units = vec![];
 
     let (orderings, sdecls, fdecls) = extract_decls(compilation_env, pre_compiled_lib, &prog);
@@ -155,7 +155,7 @@ fn module(
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
-) -> Option<CompiledUnit> {
+) -> Option<AnnotatedCompiledUnit> {
     let mut context = Context::new(compilation_env, Some(&ident));
     let structs = mdef
         .structs
@@ -228,12 +228,19 @@ fn module(
         }
     };
     let function_infos = module_function_infos(&module, &source_map, &collected_function_infos);
-    Some(CompiledUnit::Module {
-        ident: CompiledModuleIdent::new(ident_loc, addr_name, addr_bytes, module_name),
+    let module = NamedCompiledModule {
+        address_bytes: addr_bytes,
+        name: module_name.value(),
         module,
         source_map,
+    };
+    Some(AnnotatedCompiledUnit::Module(AnnotatedCompiledModule {
+        loc: ident_loc,
+        address_name: addr_name,
+        module_name_loc: module_name.loc(),
+        named_module: module,
         function_infos,
-    })
+    }))
 }
 
 fn script(
@@ -251,7 +258,7 @@ fn script(
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
-) -> Option<CompiledUnit> {
+) -> Option<AnnotatedCompiledUnit> {
     let loc = name.loc();
     let mut context = Context::new(compilation_env, None);
 
@@ -285,13 +292,16 @@ fn script(
         }
     };
     let function_info = script_function_info(&source_map, info);
-    Some(CompiledUnit::Script {
-        loc,
-        key,
+    let script = NamedCompiledScript {
+        name: key,
         script,
         source_map,
+    };
+    Some(AnnotatedCompiledUnit::Script(AnnotatedCompiledScript {
+        loc,
+        named_script: script,
         function_info,
-    })
+    }))
 }
 
 fn module_function_infos(

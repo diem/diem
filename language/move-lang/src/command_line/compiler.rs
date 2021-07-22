@@ -5,7 +5,7 @@ use crate::{
     cfgir,
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
-    compiled_unit::CompiledUnit,
+    compiled_unit::AnnotatedCompiledUnit,
     diagnostics::{codes::Severity, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
@@ -64,7 +64,7 @@ enum PassResult {
     Typing(typing::ast::Program),
     HLIR(hlir::ast::Program),
     CFGIR(cfgir::ast::Program),
-    Compilation(Vec<CompiledUnit>, /* warnings */ Diagnostics),
+    Compilation(Vec<AnnotatedCompiledUnit>, /* warnings */ Diagnostics),
 }
 
 #[derive(Clone)]
@@ -77,7 +77,7 @@ pub struct FullyCompiledProgram {
     pub typing: typing::ast::Program,
     pub hlir: hlir::ast::Program,
     pub cfgir: cfgir::ast::Program,
-    pub compiled: Vec<CompiledUnit>,
+    pub compiled: Vec<AnnotatedCompiledUnit>,
 }
 
 //**************************************************************************************************
@@ -198,7 +198,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self,
     ) -> anyhow::Result<(
         FilesSourceText,
-        Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics>,
+        Result<(Vec<AnnotatedCompiledUnit>, Diagnostics), Diagnostics>,
     )> {
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((
@@ -207,7 +207,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         ))
     }
 
-    pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
+    pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)> {
         let (files, units_res) = self.build()?;
         let (units, warnings) = unwrap_or_report_diagnostics(&files, units_res);
         report_warnings(&files, warnings);
@@ -316,7 +316,7 @@ macro_rules! ast_stepped_compilers {
                     Ok(())
                 }
 
-                pub fn build(self) -> Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics> {
+                pub fn build(self) -> Result<(Vec<AnnotatedCompiledUnit>, Diagnostics), Diagnostics> {
                     let units = self.run::<PASS_COMPILATION>()?.into_compiled_units();
                     Ok(units)
                 }
@@ -329,7 +329,7 @@ macro_rules! ast_stepped_compilers {
                 pub fn build_and_report(
                     self,
                     files: &FilesSourceText,
-                ) -> Vec<CompiledUnit> {
+                ) -> Vec<AnnotatedCompiledUnit> {
                     let units_result = self.build();
                     let (units, warnings) = unwrap_or_report_diagnostics(&files, units_result);
                     report_warnings(&files, warnings);
@@ -356,7 +356,7 @@ ast_stepped_compilers!(
 );
 
 impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
-    pub fn into_compiled_units(self) -> (Vec<CompiledUnit>, Diagnostics) {
+    pub fn into_compiled_units(self) -> (Vec<AnnotatedCompiledUnit>, Diagnostics) {
         let Self {
             compilation_env: _,
             pre_compiled_lib: _,
@@ -482,7 +482,10 @@ macro_rules! file_path {
 
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
-pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<CompiledUnit>) {
+pub fn sanity_check_compiled_units(
+    files: FilesSourceText,
+    compiled_units: Vec<AnnotatedCompiledUnit>,
+) {
     let (_, ice_errors) = compiled_unit::verify_units(compiled_units);
     if !ice_errors.is_empty() {
         report_diagnostics(&files, ice_errors)
@@ -493,7 +496,7 @@ pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<C
 pub fn output_compiled_units(
     emit_source_maps: bool,
     files: FilesSourceText,
-    compiled_units: Vec<CompiledUnit>,
+    compiled_units: Vec<AnnotatedCompiledUnit>,
     out_dir: &str,
 ) -> anyhow::Result<()> {
     const SCRIPT_SUB_DIR: &str = "scripts";
@@ -520,7 +523,7 @@ pub fn output_compiled_units(
     let (compiled_units, ice_errors) = compiled_unit::verify_units(compiled_units);
     let (modules, scripts): (Vec<_>, Vec<_>) = compiled_units
         .into_iter()
-        .partition(|u| matches!(u, CompiledUnit::Module { .. }));
+        .partition(|u| matches!(u, AnnotatedCompiledUnit::Module(_)));
 
     // modules
     if !modules.is_empty() {
@@ -528,6 +531,7 @@ pub fn output_compiled_units(
     }
     let digit_width = num_digits(modules.len());
     for (idx, unit) in modules.into_iter().enumerate() {
+        let unit = unit.into_compiled_unit();
         let mut path = dir_path!(
             out_dir,
             MODULE_SUB_DIR,
@@ -541,6 +545,7 @@ pub fn output_compiled_units(
         std::fs::create_dir_all(dir_path!(out_dir, SCRIPT_SUB_DIR))?;
     }
     for unit in scripts {
+        let unit = unit.into_compiled_unit();
         let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name().as_str());
         emit_unit!(path, unit);
     }

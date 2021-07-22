@@ -228,7 +228,7 @@ impl TestFailure {
                         let function_source_map = test_plan
                             .module_info
                             .get(module_id)?
-                            .1
+                            .source_map
                             .get_function_source_map(*fdef_idx)
                             .ok()?;
                         let loc = function_source_map.get_code_location(*offset)?;

@@ -8,7 +8,7 @@ use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
 };
-use move_lang::{compiled_unit::CompiledUnit, shared::AddressBytes, Compiler};
+use move_lang::{compiled_unit::AnnotatedCompiledUnit, shared::AddressBytes, Compiler};
 use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
@@ -109,15 +109,15 @@ pub(crate) fn build_stdlib() -> BTreeMap<Symbol, CompiledModule> {
         .unwrap();
     let mut modules = BTreeMap::new();
     for compiled_unit in compiled_units {
-        let name = compiled_unit.name();
         match compiled_unit {
-            CompiledUnit::Module { module, .. } => {
-                verify_module(&module).expect("stdlib module failed to verify");
-                dependencies::verify_module(&module, modules.values())
+            AnnotatedCompiledUnit::Module(annot_unit) => {
+                verify_module(&annot_unit.named_module.module)
+                    .expect("stdlib module failed to verify");
+                dependencies::verify_module(&annot_unit.named_module.module, modules.values())
                     .expect("stdlib module dependency failed to verify");
-                modules.insert(name, module);
+                modules.insert(annot_unit.named_module.name, annot_unit.named_module.module);
             }
-            CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+            AnnotatedCompiledUnit::Script(_) => panic!("Unexpected Script in stdlib"),
         }
     }
     let modules_by_id: BTreeMap<_, _> = modules

@@ -1,9 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::source_package::parsed_manifest::{self as PM, NamedAddress, PackageName};
+use crate::source_package::parsed_manifest as PM;
 use anyhow::{bail, format_err, Context, Result};
 use move_core_types::account_address::AccountAddress;
+use move_symbol_pool::symbol::Symbol;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::PathBuf,
@@ -106,9 +107,9 @@ pub fn parse_package_info(tval: TV) -> Result<PM::PackageInfo> {
             let name = name
                 .as_str()
                 .ok_or_else(|| format_err!("Package name must be a string"))?;
-            let name = PackageName::from(name);
+            let name = PM::PackageName::from(name);
             let version = parse_version(version)?;
-            let license = table.remove("license").map(|x| x.to_string());
+            let license = table.remove("license").map(|x| Symbol::from(x.to_string()));
             let authors = match table.remove("authors") {
                 None => Vec::new(),
                 Some(arr) => {
@@ -118,13 +119,15 @@ pub fn parse_package_info(tval: TV) -> Result<PM::PackageInfo> {
                     unparsed_vec
                         .iter()
                         .map(|tval| {
-                            tval.as_str().map(|x| x.to_string()).ok_or_else(|| {
-                                format_err!(
-                                    "Invalid author '{}' of type {} found. Expected a string.",
-                                    tval.to_string(),
-                                    tval.type_str()
-                                )
-                            })
+                            tval.as_str()
+                                .map(|x| Symbol::from(x.to_string()))
+                                .ok_or_else(|| {
+                                    format_err!(
+                                        "Invalid author '{}' of type {} found. Expected a string.",
+                                        tval.to_string(),
+                                        tval.type_str()
+                                    )
+                                })
                         })
                         .collect::<Result<_>>()?
                 }
@@ -150,7 +153,7 @@ pub fn parse_dependencies(tval: TV) -> Result<PM::Dependencies> {
         TV::Table(table) => {
             let mut deps = BTreeMap::new();
             for (dep_name, dep) in table.into_iter() {
-                let dep_name_ident = PackageName::from(dep_name);
+                let dep_name_ident = PM::PackageName::from(dep_name);
                 let dep = parse_dependency(dep)?;
                 deps.insert(dep_name_ident, dep);
             }
@@ -188,16 +191,16 @@ pub fn parse_addresses(tval: TV) -> Result<PM::AddressDeclarations> {
         TV::Table(table) => {
             let mut addresses = BTreeMap::new();
             for (addr_name, entry) in table.into_iter() {
-                let ident = NamedAddress::from(addr_name);
+                let ident = PM::NamedAddress::from(addr_name);
                 match entry.as_str() {
                     Some(entry_str) => {
                         if entry_str == EMPTY_ADDR_STR {
-                            if addresses.insert(ident.clone(), None).is_some() {
+                            if addresses.insert(ident, None).is_some() {
                                 bail!("Duplicate address name '{}' found.", ident);
                             }
                         } else if addresses
                             .insert(
-                                ident.clone(),
+                                ident,
                                 Some(
                                     AccountAddress::from_hex_literal(entry_str)
                                         .context("Invalid address")?,
@@ -230,7 +233,7 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
         TV::Table(table) => {
             let mut addresses = BTreeMap::new();
             for (addr_name, entry) in table.into_iter() {
-                let ident = NamedAddress::from(addr_name);
+                let ident = PM::NamedAddress::from(addr_name);
                 match entry.as_str() {
                     Some(entry_str) => {
                         if entry_str == EMPTY_ADDR_STR {
@@ -238,7 +241,7 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
                             ident, DEV_ADDRESSES_NAME);
                         } else if addresses
                             .insert(
-                                ident.clone(),
+                                ident,
                                 AccountAddress::from_hex_literal(entry_str)
                                     .context("Invalid address")?,
                             )
@@ -301,13 +304,13 @@ fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
         TV::Table(table) => {
             let mut subst = BTreeMap::new();
             for (addr_name, tval) in table.into_iter() {
-                let addr_ident = NamedAddress::from(addr_name.as_str());
+                let addr_ident = PM::NamedAddress::from(addr_name.as_str());
                 match tval {
                     TV::String(addr_or_name) => {
                         if let Ok(addr) = AccountAddress::from_hex_literal(&addr_or_name) {
                             subst.insert(addr_ident, PM::SubstOrRename::Assign(addr));
                         } else {
-                            let rename_from = NamedAddress::from(addr_or_name.as_str());
+                            let rename_from = PM::NamedAddress::from(addr_or_name.as_str());
                             subst.insert(addr_ident, PM::SubstOrRename::RenameFrom(rename_from));
                         }
                     }

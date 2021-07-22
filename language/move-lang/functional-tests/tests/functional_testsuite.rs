@@ -9,7 +9,7 @@ use functional_tests::{
 };
 use move_command_line_common::env::read_bool_env_var;
 use move_lang::{
-    self, compiled_unit::CompiledUnit, diagnostics, Compiler as MoveCompiler, Flags,
+    self, compiled_unit::AnnotatedCompiledUnit, diagnostics, Compiler as MoveCompiler, Flags,
     FullyCompiledProgram, PASS_COMPILATION,
 };
 use once_cell::sync::Lazy;
@@ -39,7 +39,7 @@ impl<'a> MoveSourceCompiler<'a> {
         targets: &[String],
     ) -> anyhow::Result<(
         diagnostics::FilesSourceText,
-        Result<Vec<CompiledUnit>, diagnostics::Diagnostics>,
+        Result<Vec<AnnotatedCompiledUnit>, diagnostics::Diagnostics>,
     )> {
         let (files, comments_and_compiler_res) = MoveCompiler::new(targets, &self.deps)
             .set_pre_compiled_lib(self.pre_compiled_deps)
@@ -111,12 +111,14 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         };
 
         Ok(match unit {
-            CompiledUnit::Script { script, .. } => ScriptOrModule::Script(None, script),
-            CompiledUnit::Module { module, .. } => {
+            AnnotatedCompiledUnit::Script(annot_script) => {
+                ScriptOrModule::Script(None, annot_script.named_script.script)
+            }
+            AnnotatedCompiledUnit::Module(annot_module) => {
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
                 self.deps.push(cur_path);
-                ScriptOrModule::Module(module)
+                ScriptOrModule::Module(annot_module.named_module.module)
             }
         })
     }

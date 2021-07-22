@@ -1,0 +1,8 @@
+CompiledPackageInfo {
+    package_name: "test",
+    address_alias_instantiation: {},
+    module_resolution_metadata: {},
+    source_digest: Some(
+        "ELIDED_FOR_TEST",
+    ),
+}

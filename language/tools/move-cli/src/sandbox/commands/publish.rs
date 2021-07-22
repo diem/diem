@@ -8,7 +8,9 @@ use crate::{
     },
     NativeFunctionRecord,
 };
-use move_lang::{self, compiled_unit::CompiledUnit, shared::AddressBytes, Compiler, Flags};
+use move_lang::{
+    self, compiled_unit::AnnotatedCompiledUnit, shared::AddressBytes, Compiler, Flags,
+};
 use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::{bail, Result};
@@ -35,7 +37,7 @@ pub fn publish(
 
     let num_modules = compiled_units
         .iter()
-        .filter(|u| matches!(u, CompiledUnit::Module { .. }))
+        .filter(|u| matches!(u, AnnotatedCompiledUnit::Module(_)))
         .count();
     if verbose {
         println!("Found and compiled {} modules", num_modules)
@@ -44,16 +46,22 @@ pub fn publish(
     let mut modules = vec![];
     for c in compiled_units {
         match c {
-            CompiledUnit::Script { loc, .. } => {
+            AnnotatedCompiledUnit::Script(_) => {
                 if verbose {
                     println!(
                         "Warning: Found script in specified files for publishing. But scripts \
                          cannot be published. Script found in: {}",
-                        loc.file()
+                        c.loc().file()
                     )
                 }
             }
-            CompiledUnit::Module { module, ident, .. } => modules.push((ident, module)),
+            AnnotatedCompiledUnit::Module(annot_module) => modules.push((
+                (
+                    annot_module.module_ident(),
+                    annot_module.address_name.map(|n| n.value),
+                ),
+                annot_module.named_module.module,
+            )),
         }
     }
 
@@ -61,9 +69,9 @@ pub fn publish(
     if !ignore_breaking_changes {
         let id_to_ident: BTreeMap<_, _> = modules
             .iter()
-            .map(|(ident, module)| {
+            .map(|((_, addr_name_opt), module)| {
                 let id = module.self_id();
-                (id, ident.address_name.as_ref().map(|n| n.value))
+                (id, *addr_name_opt)
             })
             .collect();
 
@@ -92,7 +100,7 @@ pub fn publish(
             Some(ordering) => {
                 let module_map: BTreeMap<_, _> = modules
                     .into_iter()
-                    .map(|(ident, m)| (ident.module_name.0.value.to_string(), m))
+                    .map(|((ident, _), m)| (ident.value.module.0.value.to_string(), m))
                     .collect();
 
                 let mut sender_opt = None;
@@ -150,9 +158,8 @@ pub fn publish(
         // backward incompatible changes, as as result, if this flag is set, we skip the VM process
         // and force the CLI to override the on-disk state directly
         let mut serialized_modules = vec![];
-        for (ident, module) in modules {
-            let (address_name_opt, id) = ident.into_module_id();
-            let address_name_opt = address_name_opt.map(|n| n.value);
+        for ((_, address_name_opt), module) in modules {
+            let id = module.self_id();
             let mut module_bytes = vec![];
             module.serialize(&mut module_bytes)?;
             serialized_modules.push(((id, address_name_opt), module_bytes));

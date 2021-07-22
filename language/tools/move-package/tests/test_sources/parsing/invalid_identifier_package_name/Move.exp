@@ -1,8 +1,7 @@
 ResolutionGraph {
     build_options: BuildConfig {
         dev_mode: true,
-        generate_transaction_builders: false,
-        generate_abis: false,
+        test_mode: false,
     },
     root_package: SourceManifest {
         package: PackageInfo {
@@ -47,7 +46,7 @@ ResolutionGraph {
             package_path: "ELIDED_FOR_TEST",
             renaming: {},
             resolution_table: {},
-            source_digest: "91jPsx5esx7vez9zSDH+IBrz1qhYx1XVHIcOs/gUcbW7xxzasOOmJGxbQVmO1XfATALlp5Jgq3P3BP4r/reHMA==",
+            source_digest: "ELIDED_FOR_TEST",
         },
     },
 }

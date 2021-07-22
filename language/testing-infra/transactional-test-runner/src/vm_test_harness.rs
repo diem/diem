@@ -22,7 +22,7 @@ use move_core_types::{
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
 use move_lang::{
-    compiled_unit::CompiledUnit,
+    compiled_unit::AnnotatedCompiledUnit,
     shared::{verify_and_create_named_address_mapping, AddressBytes},
     FullyCompiledProgram,
 };
@@ -300,8 +300,10 @@ static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
         Ok((units, _warnings)) => units
             .into_iter()
             .filter_map(|m| match m {
-                CompiledUnit::Module { module, .. } => Some(module),
-                CompiledUnit::Script { .. } => None,
+                AnnotatedCompiledUnit::Module(annot_module) => {
+                    Some(annot_module.named_module.module)
+                }
+                AnnotatedCompiledUnit::Script(_) => None,
             })
             .collect(),
     }

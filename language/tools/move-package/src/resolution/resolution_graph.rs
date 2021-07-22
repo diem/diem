@@ -5,13 +5,16 @@ use crate::{
     source_package::{
         layout::SourcePackageLayout,
         manifest_parser::{parse_move_manifest_string, parse_source_manifest},
-        parsed_manifest::{Dependency, NamedAddress, PackageName, SourceManifest, SubstOrRename},
+        parsed_manifest::{
+            Dependency, FileName, NamedAddress, PackageName, SourceManifest, SubstOrRename,
+        },
     },
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
 use move_command_line_common::files::find_move_filenames;
 use move_core_types::account_address::AccountAddress;
+use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap};
 use std::{
     cell::RefCell,
@@ -139,17 +142,15 @@ impl ResolvingGraph {
                         }
                     })
                     .collect::<BTreeMap<_, _>>();
-                (
-                    name,
-                    ResolvedPackage {
-                        resolution_graph_index,
-                        source_package,
-                        package_path,
-                        renaming,
-                        resolution_table: resolved_table,
-                        source_digest,
-                    },
-                )
+                let resolved_pkg = ResolvedPackage {
+                    resolution_graph_index,
+                    source_package,
+                    package_path,
+                    renaming,
+                    resolution_table: resolved_table,
+                    source_digest,
+                };
+                (name, resolved_pkg)
             })
             .collect::<BTreeMap<_, _>>();
 
@@ -174,9 +175,9 @@ impl ResolvingGraph {
         package_path: PathBuf,
         is_root_package: bool,
     ) -> Result<()> {
-        let package_name = package.package.name.clone();
+        let package_name = package.package.name;
         let package_node_id = match self.package_table.get(&package_name) {
-            None => self.get_or_add_node(package_name.clone())?,
+            None => self.get_or_add_node(package_name)?,
             // Same package and we've already resolved it: OK, return early
             Some(other) if other.source_package == package => return Ok(()),
             // Different packages, with same name: Not OK
@@ -205,7 +206,7 @@ impl ResolvingGraph {
             .into_iter()
             .chain(additional_deps.into_iter())
         {
-            let dep_node_id = self.get_or_add_node(dep_name.clone()).with_context(|| {
+            let dep_node_id = self.get_or_add_node(dep_name).with_context(|| {
                 format!(
                     "Cycle between packages {} and {} found",
                     package_name, dep_name
@@ -214,7 +215,7 @@ impl ResolvingGraph {
             self.graph.add_edge(package_node_id, dep_node_id, ());
 
             let (dep_renaming, dep_resolution_table) = self
-                .process_dependency(dep_name.clone(), dep, package_path.clone())
+                .process_dependency(dep_name, dep, package_path.clone())
                 .with_context(|| {
                     format!(
                         "While resolving dependency '{}' in package '{}'",
@@ -368,13 +369,10 @@ impl ResolvingGraph {
 
                         // Apply the substitution, NB that the refcell for the address's value is kept!
                         if let Some(other_val) = resolution_table.remove(&ident) {
-                            resolution_table.insert(name.clone(), other_val);
+                            resolution_table.insert(name, other_val);
                         }
 
-                        if renaming
-                            .insert(name.clone(), (dep_name_in_pkg.clone(), ident))
-                            .is_some()
-                        {
+                        if renaming.insert(name, (dep_name_in_pkg, ident)).is_some() {
                             bail!("Duplicate renaming of named address '{0}' found for dependency {1}",
                                 name,
                                 dep_name_in_pkg,
@@ -406,14 +404,10 @@ impl ResolvingGraph {
             if algo::is_cyclic_directed(&self.graph) {
                 // get the first cycle. Exists because we found a cycle above.
                 let mut cycle = algo::kosaraju_scc(&self.graph)[0]
-                    .windows(2)
-                    .map(|pair| {
-                        let end = pair[1];
-                        end.as_str().to_string()
-                    })
+                    .iter()
+                    .map(|node| node.as_str().to_string())
                     .collect::<Vec<_>>();
-                // Add offending node as start and end
-                cycle.insert(0, package_name.as_str().to_string());
+                // Add offending node at end to complete the cycle for display
                 cycle.push(package_name.as_str().to_string());
                 bail!("Found cycle between packages: {}", cycle.join(" -> "));
             }
@@ -452,8 +446,9 @@ impl ResolvingPackage {
         dep_renaming: Renaming,
     ) -> Result<()> {
         for (rename_to, rename_from) in dep_renaming.into_iter() {
-            // We cannot rename multiple named addresses to the same name.
-            if renaming.insert(rename_to.clone(), rename_from).is_some() {
+            // We cannot rename multiple named addresses to the same name. In the future we'll want
+            // to support this.
+            if renaming.insert(rename_to, rename_from).is_some() {
                 bail!(
                     "Duplicate renaming of named address '{}' found in dependency '{}'",
                     rename_to,
@@ -479,12 +474,8 @@ impl ResolvingPackage {
             .collect::<BTreeMap<_, _>>();
 
         for (addr_name, addr_value) in dep_resolution_table.into_iter() {
-            let addr_name = if let Some(rename_into) = renames.get(&addr_name) {
-                rename_into.clone()
-            } else {
-                addr_name
-            };
-            if let Some(other) = resolution_table.insert(addr_name.clone(), addr_value.clone()) {
+            let addr_name = renames.get(&addr_name).cloned().unwrap_or(addr_name);
+            if let Some(other) = resolution_table.insert(addr_name, addr_value.clone()) {
                 // They need to be the same refcell so resolve to the same location if there are any
                 // possible reassignments
                 if other.value != addr_value.value {
@@ -519,20 +510,15 @@ impl ResolvingNamedAddress {
     pub fn unify(&self, address_opt: Option<AccountAddress>) -> Result<()> {
         match address_opt {
             None => Ok(()),
-            Some(addr_val) => match self.value.take() {
-                None => {
-                    self.value.replace(Some(addr_val));
+            Some(addr_val) => match &mut *self.value.borrow_mut() {
+                Some(current_value) if current_value != &addr_val =>
+                    bail!("Attempted to assign a different value '0x{}' to an a already-assigned named address '0x{}'",
+                        addr_val.short_str_lossless(), current_value.short_str_lossless()
+                    ),
+                Some(_) => Ok(()),
+                x @ None => {
+                    *x = Some(addr_val);
                     Ok(())
-                }
-                Some(current_value) => {
-                    if current_value != addr_val {
-                        bail!("Attempted to assign a different value '0x{}' to an a already-assigned named address '0x{}'",
-                                addr_val.short_str_lossless(), current_value.short_str_lossless()
-                            )
-                    } else {
-                        self.value.replace(Some(current_value));
-                        Ok(())
-                    }
                 }
             },
         }
@@ -546,7 +532,7 @@ impl ResolvedGraph {
 }
 
 impl ResolvedPackage {
-    pub fn get_sources(&self, config: &BuildConfig) -> Result<Vec<String>> {
+    pub fn get_sources(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
         let mut places_to_look = Vec::new();
         let mut add_path = |layout_path: SourcePackageLayout| {
             let path = self.package_path.join(layout_path.path());
@@ -564,7 +550,10 @@ impl ResolvedPackage {
             add_path(SourcePackageLayout::Tests);
         }
 
-        find_move_filenames(&places_to_look, false)
+        Ok(find_move_filenames(&places_to_look, false)?
+            .into_iter()
+            .map(Symbol::from)
+            .collect())
     }
 
     /// Returns the transitive dependencies of this package in dependency order
@@ -576,7 +565,7 @@ impl ResolvedPackage {
                 .get(package_name)
                 .unwrap()
                 .transitive_dependencies(resolved_graph);
-            package_deps.push(package_name.clone());
+            package_deps.push(*package_name);
             package_deps
         };
 

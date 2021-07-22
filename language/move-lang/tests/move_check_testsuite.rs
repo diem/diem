@@ -6,7 +6,7 @@ use move_command_line_common::{
     testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
 };
 use move_lang::{
-    compiled_unit::CompiledUnit,
+    compiled_unit::AnnotatedCompiledUnit,
     diagnostics::*,
     shared::{AddressBytes, Flags},
     unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR, PASS_PARSER,
@@ -136,7 +136,7 @@ fn move_check_for_errors(
             (CommentMap, SteppedCompiler<'_, PASS_PARSER>),
             Diagnostics,
         >,
-    ) -> Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics> {
+    ) -> Result<(Vec<AnnotatedCompiledUnit>, Diagnostics), Diagnostics> {
         let (_, compiler) = comments_and_compiler_res?;
         let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
         let compilation_env = compiler.compilation_env();

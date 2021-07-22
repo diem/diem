@@ -8,7 +8,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, CORE_CODE_ADDRESS},
 };
-use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
+use move_lang::{compiled_unit::AnnotatedCompiledUnit, Compiler, Flags};
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::BlankStorage;
 use move_vm_types::gas_schedule::GasStatus;
@@ -43,8 +43,10 @@ fn compile_modules() -> Vec<CompiledModule> {
     compiled_units
         .into_iter()
         .map(|unit| match unit {
-            CompiledUnit::Module { module, .. } => module,
-            CompiledUnit::Script { .. } => panic!("Expected a module but received a script"),
+            AnnotatedCompiledUnit::Module(annot_unit) => annot_unit.named_module.module,
+            AnnotatedCompiledUnit::Script(_) => {
+                panic!("Expected a module but received a script")
+            }
         })
         .collect()
 }

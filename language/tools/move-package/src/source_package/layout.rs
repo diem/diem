@@ -18,10 +18,10 @@ impl SourcePackageLayout {
     /// a_move_package
     /// ├── Move.toml      (required)
     /// ├── sources        (required)
-    /// ├── examples       (optional)
+    /// ├── examples       (optional, dev mode)
     /// ├── scripts        (optional)
     /// ├── specifications (optional)
-    /// └── tests          (optional)
+    /// └── tests          (optional, test mode)
     pub fn path(&self) -> &Path {
         Path::new(self.location_str())
     }

@@ -8,7 +8,7 @@ use diem_types::{
     transaction::{Script, WriteSetPayload},
 };
 use handlebars::Handlebars;
-use move_lang::{compiled_unit::CompiledUnit, Compiler, Flags};
+use move_lang::{compiled_unit::AnnotatedCompiledUnit, Compiler, Flags};
 use serde::Serialize;
 use std::{collections::HashMap, io::Write, path::PathBuf};
 use tempfile::NamedTempFile;
@@ -23,13 +23,11 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
             .set_named_address_values(diem_framework::diem_framework_named_addresses())
             .build_and_report()
             .unwrap();
-    let mut script_bytes = vec![];
     assert!(compiled_program.len() == 1);
     match compiled_program.pop().unwrap() {
-        CompiledUnit::Module { .. } => panic!("Unexpected module when compiling script"),
-        CompiledUnit::Script { script, .. } => script.serialize(&mut script_bytes).unwrap(),
-    };
-    script_bytes
+        AnnotatedCompiledUnit::Module(_) => panic!("Unexpected module when compiling script"),
+        x @ AnnotatedCompiledUnit::Script(_) => x.into_compiled_unit().serialize(),
+    }
 }
 
 fn compile_admin_script(input: &str) -> Result<Script> {

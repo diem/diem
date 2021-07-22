@@ -1,9 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{compiled_unit::CompiledUnit, diagnostics::FilesSourceText, shared::AddressBytes};
-use bytecode_source_map::source_map::SourceMap;
-use move_binary_format::file_format::CompiledModule;
+use crate::{
+    compiled_unit::{AnnotatedCompiledUnit, NamedCompiledModule},
+    diagnostics::FilesSourceText,
+    shared::AddressBytes,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     value::MoveValue,
@@ -14,13 +16,12 @@ pub mod filter_test_members;
 pub mod plan_builder;
 
 pub type TestName = String;
-pub type MappedCompiledModule = (CompiledModule, SourceMap);
 
 #[derive(Debug, Clone)]
 pub struct TestPlan {
     pub files: FilesSourceText,
     pub module_tests: BTreeMap<ModuleId, ModuleTestPlan>,
-    pub module_info: BTreeMap<ModuleId, MappedCompiledModule>,
+    pub module_info: BTreeMap<ModuleId, NamedCompiledModule>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +62,7 @@ impl TestPlan {
     pub fn new(
         tests: Vec<ModuleTestPlan>,
         files: FilesSourceText,
-        units: Vec<CompiledUnit>,
+        units: Vec<AnnotatedCompiledUnit>,
     ) -> Self {
         let module_tests: BTreeMap<_, _> = tests
             .into_iter()
@@ -71,11 +72,11 @@ impl TestPlan {
         let module_info = units
             .into_iter()
             .filter_map(|unit| {
-                if let CompiledUnit::Module {
-                    module, source_map, ..
-                } = unit
-                {
-                    Some((module.self_id(), (module, source_map)))
+                if let AnnotatedCompiledUnit::Module(annot_module) = unit {
+                    Some((
+                        annot_module.named_module.module.self_id(),
+                        annot_module.named_module,
+                    ))
                 } else {
                     None
                 }

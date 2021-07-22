@@ -127,7 +127,7 @@ impl TestRunner {
             .keys()
             .map(|filepath| filepath.to_string())
             .collect();
-        let modules = tests.module_info.values().map(|info| &info.0);
+        let modules = tests.module_info.values().map(|info| &info.module);
         let starting_storage_state = setup_test_storage(modules)?;
         let native_function_table = native_function_table.unwrap_or_else(|| {
             move_stdlib::natives::all_natives(AccountAddress::from_hex_literal("0x1").unwrap())

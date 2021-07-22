@@ -7,5 +7,7 @@ use structopt::StructOpt;
 fn main() {
     let current_dir = std::env::current_dir().unwrap();
     let build_config = BuildConfig::from_args();
-    build_config.build(&current_dir).unwrap();
+    build_config
+        .compile_package(&current_dir, &mut std::io::stdout())
+        .unwrap();
 }

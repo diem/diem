@@ -1,0 +1,31 @@
+CompiledPackageInfo {
+    package_name: "test",
+    address_alias_instantiation: {
+        "A": 00000000000000000000000000000003,
+        "CA": 00000000000000000000000000000001,
+        "DA": 00000000000000000000000000000002,
+    },
+    module_resolution_metadata: {
+        ModuleId {
+            address: 00000000000000000000000000000001,
+            name: Identifier(
+                "A",
+            ),
+        }: "CA",
+        ModuleId {
+            address: 00000000000000000000000000000002,
+            name: Identifier(
+                "A",
+            ),
+        }: "DA",
+        ModuleId {
+            address: 00000000000000000000000000000003,
+            name: Identifier(
+                "A",
+            ),
+        }: "A",
+    },
+    source_digest: Some(
+        "ELIDED_FOR_TEST",
+    ),
+}

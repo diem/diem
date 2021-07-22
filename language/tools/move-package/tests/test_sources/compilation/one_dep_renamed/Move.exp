@@ -1,0 +1,23 @@
+CompiledPackageInfo {
+    package_name: "Root",
+    address_alias_instantiation: {
+        "A": 00000000000000000000000000000001,
+    },
+    module_resolution_metadata: {
+        ModuleId {
+            address: 00000000000000000000000000000001,
+            name: Identifier(
+                "M",
+            ),
+        }: "A",
+        ModuleId {
+            address: 00000000000000000000000000000001,
+            name: Identifier(
+                "T",
+            ),
+        }: "A",
+    },
+    source_digest: Some(
+        "ELIDED_FOR_TEST",
+    ),
+}

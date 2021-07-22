@@ -7,6 +7,7 @@ use std::{collections::BTreeMap, path::PathBuf};
 
 pub type NamedAddress = Symbol;
 pub type PackageName = Symbol;
+pub type FileName = Symbol;
 
 pub type AddressDeclarations = BTreeMap<NamedAddress, Option<AccountAddress>>;
 pub type DevAddressDeclarations = BTreeMap<NamedAddress, AccountAddress>;
@@ -28,8 +29,8 @@ pub struct SourceManifest {
 pub struct PackageInfo {
     pub name: PackageName,
     pub version: Version,
-    pub authors: Vec<String>,
-    pub license: Option<String>,
+    pub authors: Vec<Symbol>,
+    pub license: Option<Symbol>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

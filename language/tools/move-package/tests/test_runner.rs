@@ -3,13 +3,16 @@
 
 use move_command_line_common::testing::{format_diff, read_env_update_baseline, EXP_EXT};
 use move_package::{
-    resolution::resolution_graph as RG, source_package::manifest_parser as MP, BuildConfig,
+    compilation::build_plan::BuildPlan, resolution::resolution_graph as RG,
+    source_package::manifest_parser as MP, BuildConfig,
 };
 use std::{
     ffi::OsStr,
     fs,
     path::{Component, Path, PathBuf},
 };
+
+const COMPILE_EXT: &str = "compile";
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     let update_baseline = read_env_update_baseline();
@@ -20,6 +23,7 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
         return Ok(());
     }
     let exp_path = path.with_extension(EXP_EXT);
+    let should_compile = path.with_extension(COMPILE_EXT).is_file();
 
     let exp_exists = exp_path.is_file();
 
@@ -32,18 +36,30 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
                 path.parent().unwrap().to_path_buf(),
                 BuildConfig {
                     dev_mode: true,
-                    generate_transaction_builders: false,
-                    generate_abis: false,
+                    test_mode: false,
                 },
             )
         })
         .and_then(|rg| rg.resolve())
     {
         Ok(mut resolved_package) => {
-            for (_, package) in resolved_package.package_table.iter_mut() {
-                package.package_path = PathBuf::from("ELIDED_FOR_TEST");
+            if should_compile {
+                match BuildPlan::create(resolved_package).and_then(|bp| bp.compile(&mut Vec::new()))
+                {
+                    Ok(mut pkg) => {
+                        pkg.compiled_package_info.source_digest =
+                            Some("ELIDED_FOR_TEST".to_string());
+                        format!("{:#?}\n", pkg.compiled_package_info)
+                    }
+                    Err(error) => format!("{:#}\n", error),
+                }
+            } else {
+                for (_, package) in resolved_package.package_table.iter_mut() {
+                    package.package_path = PathBuf::from("ELIDED_FOR_TEST");
+                    package.source_digest = "ELIDED_FOR_TEST".to_string();
+                }
+                format!("{:#?}\n", resolved_package)
             }
-            format!("{:#?}\n", resolved_package)
         }
         Err(error) => format!("{:#}\n", error),
     };

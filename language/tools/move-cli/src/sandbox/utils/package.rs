@@ -9,7 +9,7 @@ use move_command_line_common::files::{
     extension_equals, find_filenames, path_to_string, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
 };
 use move_lang::{
-    compiled_unit::CompiledUnit,
+    compiled_unit::{AnnotatedCompiledModule, AnnotatedCompiledUnit},
     shared::{AddressBytes, Flags},
     Compiler,
 };
@@ -151,19 +151,22 @@ impl MovePackage {
             // save modules and ignore scripts
             for unit in compiled_units {
                 match unit {
-                    CompiledUnit::Module { ident, module, .. } => {
+                    AnnotatedCompiledUnit::Module(AnnotatedCompiledModule {
+                        named_module: module,
+                        ..
+                    }) => {
                         let mut data = vec![];
-                        module.serialize(&mut data)?;
+                        module.module.serialize(&mut data)?;
                         let file_path = pkg_bin_path
-                            .join(ident.module_name.0.value.as_str())
+                            .join(module.name.as_str())
                             .with_extension(MOVE_COMPILED_EXTENSION);
                         let mut fp = File::create(file_path)?;
                         fp.write_all(&data)?;
                     }
-                    CompiledUnit::Script { loc, .. } => eprintln!(
+                    AnnotatedCompiledUnit::Script(_) => eprintln!(
                         "Warning: Found a script in given dependencies. \
                             The script will be ignored: {}",
-                        loc.file()
+                        unit.loc().file()
                     ),
                 }
             }

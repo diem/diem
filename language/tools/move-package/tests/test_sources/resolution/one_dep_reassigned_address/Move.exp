@@ -1,8 +1,7 @@
 ResolutionGraph {
     build_options: BuildConfig {
         dev_mode: true,
-        generate_transaction_builders: false,
-        generate_abis: false,
+        test_mode: false,
     },
     root_package: SourceManifest {
         package: PackageInfo {
@@ -85,7 +84,7 @@ ResolutionGraph {
             resolution_table: {
                 "B": 00000000000000000000000000000001,
             },
-            source_digest: "TtoI7WiRpV3wToRtefOtalgDAbAqRREfC13KnlJ4ekjW3mt6hgihXXkjK/PWls+tVAeZdS4d0xDge4D7lA86yw==",
+            source_digest: "ELIDED_FOR_TEST",
         },
         "Root": ResolutionPackage {
             resolution_graph_index: "Root",
@@ -136,7 +135,7 @@ ResolutionGraph {
                 "A": 00000000000000000000000000000001,
                 "B": 00000000000000000000000000000002,
             },
-            source_digest: "MYXwTmNxnBpMJRhXb2vGiGcuApl3R+EJGpzNFtsN0svEGrt0yutXOmR8C/XiN9+uH7RpcpMznzkh/z0ZwVgsFw==",
+            source_digest: "ELIDED_FOR_TEST",
         },
     },
 }

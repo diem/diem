@@ -36,7 +36,7 @@ use move_core_types::{
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
-use move_lang::{compiled_unit::CompiledUnit, Compiler};
+use move_lang::{compiled_unit::AnnotatedCompiledUnit, Compiler};
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
@@ -63,8 +63,8 @@ static STORAGE_WITH_MOVE_STDLIB: Lazy<InMemoryStorage> = Lazy::new(|| {
         .build_and_report()
         .unwrap();
     let compiled_modules = compiled_units.into_iter().map(|unit| match unit {
-        CompiledUnit::Module { module, .. } => module,
-        CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+        AnnotatedCompiledUnit::Module(annot_module) => annot_module.named_module.module,
+        AnnotatedCompiledUnit::Script(_) => panic!("Unexpected Script in stdlib"),
     });
     for module in compiled_modules {
         let mut blob = vec![];

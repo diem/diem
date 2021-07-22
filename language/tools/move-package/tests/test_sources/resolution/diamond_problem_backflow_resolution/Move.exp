@@ -1,8 +1,7 @@
 ResolutionGraph {
     build_options: BuildConfig {
         dev_mode: true,
-        generate_transaction_builders: false,
-        generate_abis: false,
+        test_mode: false,
     },
     root_package: SourceManifest {
         package: PackageInfo {
@@ -125,7 +124,7 @@ ResolutionGraph {
             resolution_table: {
                 "AA": 00000000000000000000000000000001,
             },
-            source_digest: "RKDJP427gh7wB53mAr+ShTJaIoc2LtYgpV7ZoRAg/usx7yKnCFmwLfAX0fMcNosm3LScnTlYcWQtjt+s91VOTw==",
+            source_digest: "ELIDED_FOR_TEST",
         },
         "B": ResolutionPackage {
             resolution_graph_index: "B",
@@ -169,7 +168,7 @@ ResolutionGraph {
             resolution_table: {
                 "BA": 00000000000000000000000000000001,
             },
-            source_digest: "4PNTCTeEoW27SZgbB/EhqjVN4Zed7cp86zbkPanspcrAGG6Iz9+h4CLEVVHhwqd031dist8uWgLRINKoBjH6jA==",
+            source_digest: "ELIDED_FOR_TEST",
         },
         "C": ResolutionPackage {
             resolution_graph_index: "C",
@@ -199,7 +198,7 @@ ResolutionGraph {
             resolution_table: {
                 "A": 00000000000000000000000000000001,
             },
-            source_digest: "Qt5NEzA9LrfIZGWS4AGt2jm1v/Aq8ar3wJ3jQ620Z4A/jMVjq4TFemyM923u4bcMx+5MBw1OOi+U5xnIsn4dxQ==",
+            source_digest: "ELIDED_FOR_TEST",
         },
         "Root": ResolutionPackage {
             resolution_graph_index: "Root",
@@ -245,7 +244,7 @@ ResolutionGraph {
                 "AA": 00000000000000000000000000000001,
                 "BA": 00000000000000000000000000000001,
             },
-            source_digest: "6MfPcZBilVZ5lOTRNgdTsXbbqjKOn5JtPpSthSYMHzwg3orpIPnAmnBcxUb8xgdfnHHUnIsMSia2HqxcUfn5AQ==",
+            source_digest: "ELIDED_FOR_TEST",
         },
     },
 }

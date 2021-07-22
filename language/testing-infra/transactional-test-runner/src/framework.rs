@@ -21,7 +21,7 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
 };
 use move_lang::{
-    compiled_unit::CompiledUnit,
+    compiled_unit::AnnotatedCompiledUnit,
     diagnostics::{Diagnostics, FilesSourceText},
     shared::AddressBytes,
     FullyCompiledProgram,
@@ -143,11 +143,11 @@ pub trait MoveTestAdapter<'a> {
                             data_path.to_owned(),
                         )?;
                         match unit {
-                        CompiledUnit::Module { ident, module, .. } =>  {
-                            let (named_addr_opt, _id) = ident.into_module_id();
-                            (named_addr_opt.map(|n| n.value), module, warnings_opt)
+                        AnnotatedCompiledUnit::Module(annot_module) =>  {
+                            let (named_addr_opt, _id) = annot_module.module_id();
+                            (named_addr_opt.map(|n| n.value), annot_module.named_module.module, warnings_opt)
                         }
-                        CompiledUnit::Script { .. } => panic!(
+                        AnnotatedCompiledUnit::Script(_) => panic!(
                             "Expected a module text block, not a script, following 'publish' starting on lines {}-{}",
                             start_line, command_lines_stop
                         ),
@@ -192,8 +192,8 @@ pub trait MoveTestAdapter<'a> {
                             data_path.to_owned(),
                         )?;
                         match unit {
-                        CompiledUnit::Script { script, .. }=> (script, warning_opt),
-                        CompiledUnit::Module { .. } => panic!(
+                        AnnotatedCompiledUnit::Script(annot_script) => (annot_script.named_script.script, warning_opt),
+                        AnnotatedCompiledUnit::Module(_) => panic!(
                             "Expected a script text block, not a module, following 'run' starting on lines {}-{}",
                             start_line, command_lines_stop
                         ),
@@ -269,9 +269,12 @@ impl<'a> CompiledState<'a> {
         };
         if let Some(pcd) = pre_compiled_deps {
             for unit in &pcd.compiled {
-                if let CompiledUnit::Module { ident, module, .. } = unit {
-                    let (named_addr_opt, _id) = (*ident).into_module_id();
-                    state.add(named_addr_opt.map(|n| n.value), module.clone());
+                if let AnnotatedCompiledUnit::Module(annot_module) = unit {
+                    let (named_addr_opt, _id) = annot_module.module_id();
+                    state.add(
+                        named_addr_opt.map(|n| n.value),
+                        annot_module.named_module.module.clone(),
+                    );
                 }
             }
         }
@@ -327,7 +330,7 @@ fn compile_source_unit(
     named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     deps: &[String],
     path: String,
-) -> Result<(CompiledUnit, Option<String>)> {
+) -> Result<(AnnotatedCompiledUnit, Option<String>)> {
     fn rendered_diags(files: &FilesSourceText, diags: Diagnostics) -> Option<String> {
         if diags.is_empty() {
             return None;

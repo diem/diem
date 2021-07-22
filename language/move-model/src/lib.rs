@@ -26,7 +26,7 @@ use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
 use move_lang::{
     self,
-    compiled_unit::{self, CompiledUnit},
+    compiled_unit::{self, AnnotatedCompiledScript, AnnotatedCompiledUnit},
     diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
@@ -459,7 +459,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 fn run_spec_checker(
     env: &mut GlobalEnv,
     named_address_mapping: BTreeMap<MoveStringSymbol, AddressBytes>,
-    units: Vec<CompiledUnit>,
+    units: Vec<AnnotatedCompiledUnit>,
     mut eprog: E::Program,
 ) {
     let mut builder = ModelBuilder::new(env, named_address_mapping);
@@ -469,13 +469,8 @@ fn run_spec_checker(
         .into_iter()
         .flat_map(|unit| {
             Some(match unit {
-                CompiledUnit::Module {
-                    ident,
-                    module,
-                    source_map,
-                    function_infos,
-                } => {
-                    let module_ident = ident.into_module_ident();
+                AnnotatedCompiledUnit::Module(annot_module) => {
+                    let module_ident = annot_module.module_ident();
                     let expanded_module = match eprog.modules.remove(&module_ident) {
                         Some(m) => m,
                         None => {
@@ -489,18 +484,16 @@ fn run_spec_checker(
                     (
                         module_ident,
                         expanded_module,
-                        module,
-                        source_map,
-                        function_infos,
+                        annot_module.named_module.module,
+                        annot_module.named_module.source_map,
+                        annot_module.function_infos,
                     )
                 }
-                CompiledUnit::Script {
+                AnnotatedCompiledUnit::Script(AnnotatedCompiledScript {
                     loc: _loc,
-                    key,
-                    script,
-                    source_map,
+                    named_script: script,
                     function_info,
-                } => {
+                }) => {
                     let move_lang::expansion::ast::Script {
                         attributes,
                         loc,
@@ -510,12 +503,12 @@ fn run_spec_checker(
                         constants,
                         function,
                         specs,
-                    } = match eprog.scripts.remove(&key) {
+                    } = match eprog.scripts.remove(&script.name) {
                         Some(s) => s,
                         None => {
                             warn!(
                                 "[internal] cannot associate bytecode script `{}` with AST",
-                                key
+                                script.name
                             );
                             return None;
                         }
@@ -544,8 +537,14 @@ fn run_spec_checker(
                         functions,
                         specs,
                     };
-                    let module = script_into_module(script);
-                    (ident, expanded_module, module, source_map, function_infos)
+                    let module = script_into_module(script.script);
+                    (
+                        ident,
+                        expanded_module,
+                        module,
+                        script.source_map,
+                        function_infos,
+                    )
                 }
             })
         })
