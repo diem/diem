@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ChainInfo;
-use anyhow::{format_err, Result};
+use anyhow::{anyhow, format_err, Context, Result};
 use diem_logger::*;
 use diem_sdk::{
     client::{views::AmountView, Client as JsonRpcClient, MethodRequest},
+    crypto::hash::CryptoHash,
     move_types::account_address::AccountAddress,
     transaction_builder::{Currency, TransactionFactory},
     types::{
         account_config::XUS_NAME,
-        transaction::{authenticator::AuthenticationKey, SignedTransaction},
+        transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
         LocalAccount,
     },
 };
@@ -23,12 +24,12 @@ use rand::{
 use rand_core::SeedableRng;
 use std::{
     cmp::{max, min},
-    slice,
+    collections::HashSet,
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use tokio::{runtime::Handle, task::JoinHandle, time};
 
@@ -37,8 +38,6 @@ use atomic_histogram::*;
 
 /// Max transactions per account in mempool
 const MAX_TXN_BATCH_SIZE: usize = 100;
-const TXN_EXPIRATION_SECONDS: i64 = 150;
-const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
 
@@ -206,7 +205,7 @@ impl SubmissionWorker {
                 .choose(&mut self.rng)
                 .expect("all_addresses can't be empty");
             let request =
-                gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, self.txn_factory.clone());
+                gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, &self.txn_factory);
             requests.push(request);
         }
         requests
@@ -239,21 +238,21 @@ impl<'t> TxnEmitter<'t> {
         &mut self.rng
     }
 
-    pub fn from_rng<R: ::rand::RngCore + ::rand::CryptoRng>(&self, rng: R) -> ::rand::rngs::StdRng {
-        ::rand::rngs::StdRng::from_rng(rng).unwrap()
+    pub fn from_rng(&mut self) -> ::rand::rngs::StdRng {
+        ::rand::rngs::StdRng::from_rng(self.rng()).unwrap()
     }
 
     pub async fn get_money_source(&mut self, coins_total: u64) -> Result<&mut LocalAccount> {
-        let mut client = self.client.clone();
+        let client = self.client.clone();
         println!("Creating and minting faucet account");
         let faucet_account = &mut self.chain_info.designated_dealer_account;
         let mint_txn = gen_transfer_txn_request(
             faucet_account,
             &faucet_account.address(),
             coins_total,
-            self.txn_factory.clone(),
+            &self.txn_factory,
         );
-        execute_and_wait_transactions(&mut client, faucet_account, vec![mint_txn])
+        execute_and_wait_transactions(&client, &mut faucet_account, vec![mint_txn])
             .await
             .map_err(|e| format_err!("Failed to mint into faucet account: {}", e))?;
         let balance = retrieve_account_balance(&client, faucet_account.address()).await?;
@@ -275,25 +274,25 @@ impl<'t> TxnEmitter<'t> {
         seed_account_num: usize,
     ) -> Result<Vec<LocalAccount>> {
         info!("Creating and minting seeds accounts");
-        let txn_factory = self.txn_factory.clone();
         let mut i = 0;
         let mut seed_accounts = vec![];
         while i < seed_account_num {
-            let mut client = self.pick_mint_client(json_rpc_clients).clone();
+            let client = self.pick_mint_client(json_rpc_clients).clone();
             let batch_size = min(MAX_TXN_BATCH_SIZE, seed_account_num - i);
             let mut batch = gen_random_accounts(batch_size, self.rng());
             let creation_account = &mut self.chain_info.treasury_compliance_account;
+            let txn_factory = &self.txn_factory;
             let create_requests = batch
                 .iter()
                 .map(|account| {
                     create_parent_vasp_request(
                         creation_account,
                         account.authentication_key(),
-                        txn_factory.clone(),
+                        txn_factory,
                     )
                 })
                 .collect();
-            execute_and_wait_transactions(&mut client, creation_account, create_requests).await?;
+            execute_and_wait_transactions(&client, creation_account, create_requests).await?;
             i += batch_size;
             seed_accounts.append(&mut batch);
         }
@@ -330,7 +329,7 @@ impl<'t> TxnEmitter<'t> {
         let seed_accounts = self
             .get_seed_accounts(&req.json_rpc_clients, req.json_rpc_clients.len())
             .await?;
-        let rng = self.from_rng(self.rng.clone());
+        let rng = self.from_rng();
         let faucet_account = self.get_money_source(coins_total).await?;
         let actual_num_seed_accounts = seed_accounts.len();
         let num_new_child_accounts =
@@ -342,7 +341,7 @@ impl<'t> TxnEmitter<'t> {
             coins_per_seed_account as u64,
             100,
             client.clone(),
-            txn_factory.clone(),
+            &txn_factory,
             rng,
         )
         .await
@@ -364,13 +363,13 @@ impl<'t> TxnEmitter<'t> {
                     coins_per_account,
                     20,
                     cur_client,
-                    txn_factory.clone(),
-                    self.from_rng(self.rng.clone()),
+                    &txn_factory,
+                    self.from_rng(),
                 )
             });
         let mut minted_accounts = try_join_all(account_futures)
             .await
-            .map_err(|e| format_err!("Failed to mint accounts {}", e))?
+            .context("Failed to mint accounts")?
             .into_iter()
             .flatten()
             .collect();
@@ -432,7 +431,7 @@ impl<'t> TxnEmitter<'t> {
                     params,
                     stats,
                     txn_factory: self.txn_factory.clone(),
-                    rng: self.from_rng(self.rng.clone()),
+                    rng: self.from_rng(),
                 };
                 let join_handle = tokio_handle.spawn(worker.run().boxed());
                 workers.push(Worker { join_handle });
@@ -492,7 +491,7 @@ async fn retrieve_account_balance(
 }
 
 pub async fn execute_and_wait_transactions(
-    client: &mut JsonRpcClient,
+    client: &JsonRpcClient,
     account: &mut LocalAccount,
     txn: Vec<SignedTransaction>,
 ) -> Result<()> {
@@ -503,78 +502,131 @@ pub async fn execute_and_wait_transactions(
         account.sequence_number(),
         account.address()
     );
-    for request in txn {
-        diem_retrier::retry_async(diem_retrier::fixed_retry_strategy(5_000, 20), || {
-            let request = request.clone();
-            let c = client.clone();
-            let client_name = format!("{:?}", client);
-            Box::pin(async move {
-                let txn_str = format!("{}::{}", request.sender(), request.sequence_number());
-                debug!("Submitting txn {}", txn_str);
-                let resp = c.submit(&request).await;
-                debug!("txn {} status: {:?}", txn_str, resp);
 
-                resp.map_err(|e| format_err!("[{}] Failed to submit request: {:?}", client_name, e))
-            })
-        })
-        .await?;
+    // Batch submit all the txns
+    for txn_batch in txn.chunks(20) {
+        client
+            .batch(
+                txn_batch
+                    .iter()
+                    .map(MethodRequest::submit)
+                    .collect::<Result<_, _>>()?,
+            )
+            .await?
+            .into_iter()
+            .map(|r| r.and_then(|response| response.into_inner().try_into_submit()))
+            .collect::<Result<Vec<()>, _>>()
+            .context("failed to submit transactions")?;
     }
-    let r = wait_for_accounts_sequence(client, slice::from_mut(account))
-        .await
-        .map_err(|_| format_err!("Mint transactions were not committed before expiration"));
+
+    wait_for_signed_transactions(client, &txn).await?;
+
     debug!(
         "[{:?}] Account {} is at sequence number {} now",
         client,
         account.address(),
         account.sequence_number()
     );
-    r
+    Ok(())
+}
+
+async fn wait_for_signed_transactions(
+    client: &JsonRpcClient,
+    txns: &[SignedTransaction],
+) -> Result<()> {
+    let deadline = Instant::now()
+        + txns
+            .iter()
+            .map(SignedTransaction::expiration_timestamp_secs)
+            .max()
+            .map(Duration::from_secs)
+            .ok_or_else(|| anyhow!("Expected at least 1 txn"))?
+            .saturating_sub(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?);
+
+    let mut uncommitted_txns = txns.iter().collect::<HashSet<_>>();
+
+    while Instant::now() < deadline {
+        if uncommitted_txns.is_empty() {
+            return Ok(());
+        }
+
+        let (batch, queried_txns): (Vec<MethodRequest>, Vec<&SignedTransaction>) = uncommitted_txns
+            .iter()
+            .take(20)
+            .map(|txn| {
+                (
+                    MethodRequest::get_account_transaction(
+                        txn.sender(),
+                        txn.sequence_number(),
+                        false,
+                    ),
+                    txn,
+                )
+            })
+            .unzip();
+        let responses = client
+            .batch(batch)
+            .await?
+            .into_iter()
+            .map(|r| {
+                r.and_then(|response| response.into_inner().try_into_get_account_transaction())
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .context("failed to query account transactions")?;
+
+        for (response, txn) in responses.into_iter().zip(queried_txns) {
+            if let Some(txn_view) = response {
+                if !txn_view.vm_status.is_executed() {
+                    return Err(anyhow!("txn failed to execute"));
+                }
+
+                if txn_view.hash != Transaction::UserTransaction(txn.clone()).hash() {
+                    return Err(anyhow!("txn hash mismatch"));
+                }
+
+                uncommitted_txns.remove(txn);
+            }
+        }
+
+        time::sleep(Duration::from_millis(100)).await;
+    }
+
+    Err(anyhow!("timed out waiting for transactions"))
 }
 
 async fn wait_for_accounts_sequence(
     client: &JsonRpcClient,
     accounts: &mut [LocalAccount],
-) -> Result<(), Vec<(AccountAddress, u64)>> {
-    let deadline = Instant::now() + TXN_MAX_WAIT;
+) -> Result<(), Vec<AccountAddress>> {
+    let deadline = Instant::now() + Duration::from_secs(10); //TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address()).collect();
-    loop {
+    let mut uncommitted = addresses.clone().into_iter().collect::<HashSet<_>>();
+
+    while Instant::now() < deadline {
         match query_sequence_numbers(client, &addresses).await {
+            Ok(sequence_numbers) => {
+                for (account, sequence_number) in zip(accounts.iter(), &sequence_numbers) {
+                    if account.sequence_number() == *sequence_number {
+                        uncommitted.remove(&account.address());
+                    }
+                }
+
+                if uncommitted.is_empty() {
+                    return Ok(());
+                }
+            }
             Err(e) => {
                 println!(
                     "Failed to query ledger info on accounts {:?} for instance {:?} : {:?}",
                     addresses, client, e
                 );
-                time::sleep(Duration::from_millis(300)).await;
-            }
-            Ok(sequence_numbers) => {
-                if is_sequence_equal(accounts, &sequence_numbers) {
-                    break;
-                }
-                let mut uncommitted = vec![];
-                if Instant::now() > deadline {
-                    for (account, sequence_number) in zip(accounts, &sequence_numbers) {
-                        if account.sequence_number() != *sequence_number {
-                            warn!("Wait deadline exceeded for account {}, expected sequence {}, got from server: {}", account.address(), account.sequence_number(), sequence_number);
-                            uncommitted.push((account.address(), *sequence_number));
-                            *account.sequence_number_mut() = *sequence_number;
-                        }
-                    }
-                    return Err(uncommitted);
-                }
             }
         }
-        time::sleep(Duration::from_millis(100)).await;
-    }
-    Ok(())
-}
 
-fn is_sequence_equal(accounts: &[LocalAccount], sequence_numbers: &[u64]) -> bool {
-    for (account, sequence_number) in zip(accounts, sequence_numbers) {
-        if *sequence_number != account.sequence_number() {
-            return false;
-        }
+        time::sleep(Duration::from_millis(500)).await;
     }
-    true
+
+    Err(uncommitted.into_iter().collect())
 }
 
 pub async fn query_sequence_numbers(
@@ -614,8 +666,8 @@ async fn create_new_accounts<R>(
     num_new_accounts: usize,
     diem_per_new_account: u64,
     max_num_accounts_per_batch: u64,
-    mut client: JsonRpcClient,
-    txn_factory: TransactionFactory,
+    client: JsonRpcClient,
+    txn_factory: &TransactionFactory,
     mut rng: R,
 ) -> Result<Vec<LocalAccount>>
 where
@@ -641,7 +693,7 @@ where
                 ))
             })
             .collect();
-        execute_and_wait_transactions(&mut client, &mut source_account, requests).await?;
+        execute_and_wait_transactions(&client, &mut source_account, requests).await?;
         i += batch.len();
         accounts.append(&mut batch);
     }
@@ -654,8 +706,8 @@ async fn mint_to_new_accounts<R>(
     accounts: &[LocalAccount],
     diem_per_new_account: u64,
     max_num_accounts_per_batch: u64,
-    mut client: JsonRpcClient,
-    txn_factory: TransactionFactory,
+    client: JsonRpcClient,
+    txn_factory: &TransactionFactory,
     mut rng: R,
 ) -> Result<()>
 where
@@ -678,11 +730,11 @@ where
                     minting_account,
                     &account.address(),
                     diem_per_new_account,
-                    txn_factory.clone(),
+                    txn_factory,
                 )
             })
             .collect();
-        execute_and_wait_transactions(&mut client, minting_account, mint_requests).await?;
+        execute_and_wait_transactions(&client, minting_account, mint_requests).await?;
         i += to_batch.len();
         left = rest;
     }
@@ -692,7 +744,7 @@ where
 pub fn create_parent_vasp_request(
     creation_account: &mut LocalAccount,
     account_auth_key: AuthenticationKey,
-    txn_factory: TransactionFactory,
+    txn_factory: &TransactionFactory,
 ) -> SignedTransaction {
     creation_account.sign_with_transaction_builder(txn_factory.create_parent_vasp_account(
         Currency::XUS,
@@ -716,7 +768,7 @@ pub fn gen_transfer_txn_request(
     sender: &mut LocalAccount,
     receiver: &AccountAddress,
     num_coins: u64,
-    txn_factory: TransactionFactory,
+    txn_factory: &TransactionFactory,
 ) -> SignedTransaction {
     sender.sign_with_transaction_builder(txn_factory.peer_to_peer(
         Currency::XUS,
