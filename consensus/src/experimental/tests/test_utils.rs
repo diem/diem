@@ -108,7 +108,10 @@ pub fn prepare_commit_phase_with_block_store_state_computer(
 
     let (commit_result_tx, commit_result_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
-    let state_computer = Arc::new(OrderingStateComputer::new(commit_result_tx));
+    let state_computer = Arc::new(OrderingStateComputer::new(
+        commit_result_tx,
+        block_store_state_computer.clone(),
+    ));
 
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 

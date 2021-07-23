@@ -307,8 +307,10 @@ impl EpochManager {
             &counters::DECOUPLED_EXECUTION__EXECUTION_PHASE_CHANNEL,
         );
 
-        let state_computer: Arc<dyn StateComputer> =
-            Arc::new(OrderingStateComputer::new(execution_phase_tx));
+        let state_computer: Arc<dyn StateComputer> = Arc::new(OrderingStateComputer::new(
+            execution_phase_tx,
+            self.commit_state_computer.clone(),
+        ));
 
         info!(epoch = epoch, "Create BlockStore");
         let block_store = Arc::new(BlockStore::new(

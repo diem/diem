@@ -27,14 +27,14 @@ fn get_initial_data_and_qc(db: &dyn DbReader) -> (RecoveryData, QuorumCert) {
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
 
-    let ledger_info = startup_info.latest_ledger_info.ledger_info().clone();
+    let ledger_info_with_sigs = startup_info.latest_ledger_info.clone();
 
     let qc = QuorumCert::certificate_for_genesis_from_ledger_info(
-        &ledger_info,
-        Block::make_genesis_block_from_ledger_info(&ledger_info).id(),
+        &ledger_info_with_sigs.ledger_info(),
+        Block::make_genesis_block_from_ledger_info(&ledger_info_with_sigs.ledger_info()).id(),
     );
 
-    let ledger_recovery_data = LedgerRecoveryData::new(ledger_info);
+    let ledger_recovery_data = LedgerRecoveryData::new(ledger_info_with_sigs);
     let frozen_root_hashes = startup_info
         .committed_tree_state
         .ledger_frozen_subtree_hashes
@@ -101,7 +101,7 @@ fn test_executor_restart() {
     );
 
     let block_store = inserter.block_store();
-    let genesis = block_store.root();
+    let genesis = block_store.ordered_root();
     let genesis_block_id = genesis.id();
     let genesis_block = block_store
         .get_block(genesis_block_id)
@@ -143,7 +143,7 @@ fn test_block_store_restart() {
         );
 
         let block_store = inserter.block_store();
-        let genesis = block_store.root();
+        let genesis = block_store.ordered_root();
         let genesis_block_id = genesis.id();
         let genesis_block = block_store
             .get_block(genesis_block_id)
@@ -165,7 +165,7 @@ fn test_block_store_restart() {
             execution_correctness_manager.client(),
         );
         let block_store = inserter.block_store();
-        let genesis = block_store.root();
+        let genesis = block_store.ordered_root();
         let genesis_block_id = genesis.id();
         let genesis_block = block_store
             .get_block(genesis_block_id)

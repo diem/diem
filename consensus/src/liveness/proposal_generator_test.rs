@@ -22,7 +22,7 @@ async fn test_proposal_generation_empty_tree() {
         Arc::new(SimulatedTimeService::new()),
         1,
     );
-    let genesis = block_store.root();
+    let genesis = block_store.ordered_root();
 
     // Generate proposals for an empty tree.
     let proposal_data = proposal_generator.generate_proposal(1).await.unwrap();
@@ -47,7 +47,7 @@ async fn test_proposal_generation_parent() {
         Arc::new(SimulatedTimeService::new()),
         1,
     );
-    let genesis = block_store.root();
+    let genesis = block_store.ordered_root();
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 2);
 
@@ -88,7 +88,7 @@ async fn test_old_proposal_generation() {
         Arc::new(SimulatedTimeService::new()),
         1,
     );
-    let genesis = block_store.root();
+    let genesis = block_store.ordered_root();
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     inserter.insert_qc_for_block(a1.as_ref(), None);
 

@@ -84,7 +84,7 @@ impl StateComputer for ExecutionProxy {
         monitor!(
             "commit_block",
             self.execution_correctness_client
-                .commit_blocks(block_ids, finality_proof)?
+                .commit_blocks(block_ids, finality_proof.clone())?
         );
 
         if let Err(e) = monitor!(
@@ -94,7 +94,7 @@ impl StateComputer for ExecutionProxy {
             error!(error = ?e, "Failed to notify state synchronizer");
         }
 
-        callback(blocks);
+        callback(blocks, finality_proof);
 
         Ok(())
     }

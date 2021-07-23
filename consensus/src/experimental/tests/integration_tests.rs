@@ -24,7 +24,8 @@ use consensus_types::block::block_test_utils::certificate_for_genesis;
 
 use crate::{
     experimental::tests::test_utils::prepare_commit_phase_with_block_store_state_computer,
-    state_replication::empty_state_computer_call_back, test_utils::TreeInserter,
+    state_replication::empty_state_computer_call_back,
+    test_utils::{EmptyStateComputer, TreeInserter},
 };
 use consensus_types::executed_block::ExecutedBlock;
 use executor_types::StateComputeResult;
@@ -37,7 +38,10 @@ fn decoupled_execution_integration() {
     let (execution_phase_tx, execution_phase_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
 
-    let state_computer = Arc::new(OrderingStateComputer::new(execution_phase_tx));
+    let state_computer = Arc::new(OrderingStateComputer::new(
+        execution_phase_tx,
+        Arc::new(EmptyStateComputer {}), // we will not call sync_to in this test
+    ));
 
     // now we need to replace the state computer instance (previously the one directly outputs to commit_result_rx)
     // to the outside one that connects with the execution phase.
@@ -56,7 +60,7 @@ fn decoupled_execution_integration() {
 
     let mut inserter = TreeInserter::new_with_store(signers[0].clone(), block_store_handle.clone());
 
-    let genesis = block_store_handle.root();
+    let genesis = block_store_handle.ordered_root();
     let genesis_block_id = genesis.id();
     let genesis_block = block_store_handle
         .get_block(genesis_block_id)
@@ -116,6 +120,7 @@ fn decoupled_execution_integration() {
                     .into_iter()
                     .map(|b| Arc::new(ExecutedBlock::new(b, StateComputeResult::new_dummy())))
                     .collect::<Vec<Arc<ExecutedBlock>>>(),
+                finality_proof,
             ); // call the callback
         } else {
             panic!("Expecting a commited block")

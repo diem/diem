@@ -10,7 +10,7 @@ use diem_config::config::NodeConfig;
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_types::{
-    block_info::Round, epoch_change::EpochChangeProof, ledger_info::LedgerInfo,
+    block_info::Round, epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures,
     transaction::Version,
 };
 use executor_types::ExecutedTrees;
@@ -51,21 +51,26 @@ pub trait PersistentLivenessStorage: Send + Sync {
 }
 
 #[derive(Clone)]
-pub struct RootInfo(pub Block, pub QuorumCert, pub QuorumCert);
+pub struct RootInfo(
+    pub Block,
+    pub QuorumCert,
+    pub QuorumCert,
+    pub LedgerInfoWithSignatures,
+);
 
 /// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info.
 #[derive(Clone)]
 pub struct LedgerRecoveryData {
-    storage_ledger: LedgerInfo,
+    storage_ledger: LedgerInfoWithSignatures,
 }
 
 impl LedgerRecoveryData {
-    pub fn new(storage_ledger: LedgerInfo) -> Self {
+    pub fn new(storage_ledger: LedgerInfoWithSignatures) -> Self {
         LedgerRecoveryData { storage_ledger }
     }
 
     pub fn commit_round(&self) -> Round {
-        self.storage_ledger.round()
+        self.storage_ledger.ledger_info().round()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block
@@ -84,18 +89,23 @@ impl LedgerRecoveryData {
 
         // We start from the block that storage's latest ledger info, if storage has end-epoch
         // LedgerInfo, we generate the virtual genesis block
-        let root_id = if self.storage_ledger.ends_epoch() {
-            let genesis = Block::make_genesis_block_from_ledger_info(&self.storage_ledger);
+        let (root_id, latest_ledger_info_sig) = if self.storage_ledger.ledger_info().ends_epoch() {
+            let genesis =
+                Block::make_genesis_block_from_ledger_info(self.storage_ledger.ledger_info());
             let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
-                &self.storage_ledger,
+                self.storage_ledger.ledger_info(),
                 genesis.id(),
             );
+            let genesis_ledger_info = genesis_qc.ledger_info().clone();
             let genesis_id = genesis.id();
             blocks.push(genesis);
             quorum_certs.push(genesis_qc);
-            genesis_id
+            (genesis_id, genesis_ledger_info)
         } else {
-            self.storage_ledger.consensus_block_id()
+            (
+                self.storage_ledger.ledger_info().consensus_block_id(),
+                self.storage_ledger.clone(),
+            )
         };
 
         // sort by (epoch, round) to guarantee the topological order of parent <- child
@@ -111,7 +121,7 @@ impl LedgerRecoveryData {
             .find(|qc| qc.certified_block().id() == root_block.id())
             .ok_or_else(|| format_err!("No QC found for root: {}", root_id))?
             .clone();
-        let root_ledger_info = quorum_certs
+        let root_ordered_cert = quorum_certs
             .iter()
             .find(|qc| qc.commit_info().id() == root_block.id())
             .ok_or_else(|| format_err!("No LI found for root: {}", root_id))?
@@ -119,7 +129,12 @@ impl LedgerRecoveryData {
 
         info!("Consensus root block is {}", root_block);
 
-        Ok(RootInfo(root_block, root_quorum_cert, root_ledger_info))
+        Ok(RootInfo(
+            root_block,
+            root_quorum_cert,
+            root_ordered_cert,
+            latest_ledger_info_sig,
+        ))
     }
 }
 
@@ -181,7 +196,10 @@ impl RecoveryData {
                 quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
                     "\nRoot id: {}\nBlocks in db: {}\nQuorum Certs in db: {}\n",
-                    ledger_recovery_data.storage_ledger.consensus_block_id(),
+                    ledger_recovery_data
+                        .storage_ledger
+                        .ledger_info()
+                        .consensus_block_id(),
                     blocks
                         .iter()
                         .map(|b| format!("\n\t{}", b))
@@ -308,7 +326,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
 
-        LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info().clone())
+        LedgerRecoveryData::new(startup_info.latest_ledger_info)
     }
 
     fn start(&self) -> LivenessStorageData {
@@ -347,8 +365,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
-        let ledger_recovery_data =
-            LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info().clone());
+        let ledger_recovery_data = LedgerRecoveryData::new(startup_info.latest_ledger_info.clone());
         let frozen_root_hashes = startup_info
             .committed_tree_state
             .ledger_frozen_subtree_hashes

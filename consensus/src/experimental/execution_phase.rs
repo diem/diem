@@ -56,7 +56,7 @@ impl ExecutionPhase {
                     ExecutedBlock::new(b, state_compute_result)
                 })
                 .collect();
-            // TODO: add error handling.
+            // TODO: add error handling. Err(Error::BlockNotFound(parent_block_id))
 
             // pass the executed blocks into the commit phase
             self.commit_channel_send

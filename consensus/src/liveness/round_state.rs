@@ -224,8 +224,8 @@ impl RoundState {
     /// Notify the RoundState about the potentially new QC, TC, and highest committed round.
     /// Note that some of these values might not be available by the caller.
     pub fn process_certificates(&mut self, sync_info: SyncInfo) -> Option<NewRoundEvent> {
-        if sync_info.highest_commit_round() > self.highest_committed_round {
-            self.highest_committed_round = sync_info.highest_commit_round();
+        if sync_info.highest_ordered_round() > self.highest_committed_round {
+            self.highest_committed_round = sync_info.highest_ordered_round();
         }
         let new_round = sync_info.highest_round() + 1;
         if new_round > self.current_round {

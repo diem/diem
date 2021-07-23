@@ -50,7 +50,7 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             })
             .await;
         // serialize and return proposal
-        bcs::to_bytes(&proposal.unwrap()).unwrap()
+        serde_json::to_vec(&proposal.unwrap()).unwrap()
     })
 }
 
@@ -175,7 +175,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut round_manager = create_node_for_fuzzing();
 
-    let proposal: ProposalMsg = match bcs::from_bytes(data) {
+    let proposal: ProposalMsg = match serde_json::from_slice(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

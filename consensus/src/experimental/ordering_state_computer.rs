@@ -24,11 +24,18 @@ pub struct OrderingStateComputer {
     // the channel to pour vectors of blocks into
     // the real execution phase (will be handled in ExecutionPhase).
     executor_channel: Sender<ExecutionChannelType>,
+    state_computer_for_sync: Arc<dyn StateComputer>,
 }
 
 impl OrderingStateComputer {
-    pub fn new(executor_channel: Sender<ExecutionChannelType>) -> Self {
-        Self { executor_channel }
+    pub fn new(
+        executor_channel: Sender<ExecutionChannelType>,
+        state_computer_for_sync: Arc<dyn StateComputer>,
+    ) -> Self {
+        Self {
+            executor_channel,
+            state_computer_for_sync,
+        }
     }
 }
 
@@ -56,6 +63,8 @@ impl StateComputer for OrderingStateComputer {
         finality_proof: LedgerInfoWithSignatures,
         callback: StateComputerCommitCallBackType,
     ) -> Result<(), ExecutionError> {
+        assert!(!blocks.is_empty());
+
         let ordered_block = blocks.iter().map(|b| b.block().clone()).collect();
 
         self.executor_channel
@@ -69,10 +78,10 @@ impl StateComputer for OrderingStateComputer {
     }
 
     /// Synchronize to a commit that not present locally.
-    async fn sync_to(&self, _target: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
+    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         fail_point!("consensus::sync_to", |_| {
             Err(anyhow::anyhow!("Injected error in sync_to").into())
         });
-        unimplemented!();
+        self.state_computer_for_sync.sync_to(target).await
     }
 }

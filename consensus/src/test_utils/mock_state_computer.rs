@@ -75,9 +75,9 @@ impl StateComputer for MockStateComputer {
         // they may fail during shutdown
         let _ = self.state_sync_client.unbounded_send(txns);
 
-        let _ = self.commit_callback.unbounded_send(commit);
+        let _ = self.commit_callback.unbounded_send(commit.clone());
 
-        call_back(blocks);
+        call_back(blocks, commit);
 
         Ok(())
     }

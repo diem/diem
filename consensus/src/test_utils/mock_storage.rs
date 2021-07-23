@@ -95,7 +95,10 @@ impl MockStorage {
     }
 
     pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(self.storage_ledger.lock().clone())
+        LedgerRecoveryData::new(LedgerInfoWithSignatures::new(
+            self.storage_ledger.lock().clone(),
+            BTreeMap::new(),
+        ))
     }
 
     pub fn try_start(&self) -> Result<RecoveryData> {
@@ -259,7 +262,10 @@ impl PersistentLivenessStorage for EmptyStorage {
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(LedgerInfo::mock_genesis(None))
+        LedgerRecoveryData::new(LedgerInfoWithSignatures::new(
+            LedgerInfo::mock_genesis(None),
+            BTreeMap::new(),
+        ))
     }
 
     fn start(&self) -> LivenessStorageData {

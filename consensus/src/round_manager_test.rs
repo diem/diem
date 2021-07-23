@@ -297,7 +297,7 @@ fn new_round_on_quorum_cert() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
     let node = &mut nodes[0];
-    let genesis = node.block_store.root();
+    let genesis = node.block_store.ordered_root();
     timed_block_on(&mut runtime, async {
         // round 1 should start
         let proposal_msg = node.next_proposal().await;
@@ -630,7 +630,7 @@ fn response_on_block_retrieval() {
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, response.blocks().get(0).unwrap().id());
                 assert_eq!(
-                    node.block_store.root().id(),
+                    node.block_store.ordered_root().id(),
                     response.blocks().get(1).unwrap().id()
                 );
             }
@@ -697,7 +697,7 @@ fn nil_vote_on_timeout() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
     let node = &mut nodes[0];
-    let genesis = node.block_store.root();
+    let genesis = node.block_store.ordered_root();
     timed_block_on(&mut runtime, async {
         node.next_proposal().await;
         // Process the outgoing vote message and verify that it contains a round signature
@@ -717,7 +717,10 @@ fn nil_vote_on_timeout() {
             genesis.timestamp_usecs()
         );
         assert_eq!(vote.vote_data().proposed().round(), 1);
-        assert_eq!(vote.vote_data().parent().id(), node.block_store.root().id());
+        assert_eq!(
+            vote.vote_data().parent().id(),
+            node.block_store.ordered_root().id()
+        );
     });
 }
 

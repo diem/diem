@@ -17,7 +17,7 @@ use std::sync::Arc;
 use crate::{
     experimental::execution_phase::ExecutionChannelType,
     state_replication::empty_state_computer_call_back,
-    test_utils::{consensus_runtime, timed_block_on},
+    test_utils::{consensus_runtime, timed_block_on, EmptyStateComputer},
 };
 use consensus_types::{executed_block::ExecutedBlock, quorum_cert::QuorumCert};
 use diem_crypto::ed25519::Ed25519Signature;
@@ -31,7 +31,10 @@ pub fn prepare_ordering_state_computer(
 ) -> (Arc<OrderingStateComputer>, Receiver<ExecutionChannelType>) {
     let (commit_result_tx, commit_result_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
-    let state_computer = Arc::new(OrderingStateComputer::new(commit_result_tx));
+    let state_computer = Arc::new(OrderingStateComputer::new(
+        commit_result_tx,
+        Arc::new(EmptyStateComputer {}),
+    ));
 
     (state_computer, commit_result_rx)
 }
