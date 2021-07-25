@@ -56,6 +56,27 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/invariants_with_generics.move:45
 
 error: global memory invariant does not hold
+   ┌─ tests/sources/functional/invariants_with_generics.move:51:5
+   │
+51 │ ╭     invariant
+52 │ │         forall t1: type, t2: type:
+53 │ │             (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+54 │ │                 ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
+   │ ╰───────────────────────────────────────────────────────────────────────────────────────────^
+   │
+   =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
+   =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
+   =     at tests/sources/functional/invariants_with_generics.move:10: publish_u64_bool
+   =     at tests/sources/functional/invariants_with_generics.move:11: publish_u64_bool
+   =     at tests/sources/functional/invariants_with_generics.move:34
+   =     at tests/sources/functional/invariants_with_generics.move:39
+   =     at tests/sources/functional/invariants_with_generics.move:45
+   =     at tests/sources/functional/invariants_with_generics.move:51
+
+error: global memory invariant does not hold
    ┌─ tests/sources/functional/invariants_with_generics.move:39:5
    │
 39 │ ╭     invariant
@@ -73,6 +94,27 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/invariants_with_generics.move:16: publish_u64_y
    =     at tests/sources/functional/invariants_with_generics.move:34
    =     at tests/sources/functional/invariants_with_generics.move:39
+
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/invariants_with_generics.move:51:5
+   │
+51 │ ╭     invariant
+52 │ │         forall t1: type, t2: type:
+53 │ │             (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+54 │ │                 ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
+   │ ╰───────────────────────────────────────────────────────────────────────────────────────────^
+   │
+   =     at tests/sources/functional/invariants_with_generics.move:15: publish_u64_y
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
+   =     at tests/sources/functional/invariants_with_generics.move:16: publish_u64_y
+   =     at tests/sources/functional/invariants_with_generics.move:15: publish_u64_y
+   =     at tests/sources/functional/invariants_with_generics.move:16: publish_u64_y
+   =     at tests/sources/functional/invariants_with_generics.move:34
+   =     at tests/sources/functional/invariants_with_generics.move:39
+   =     at tests/sources/functional/invariants_with_generics.move:45
+   =     at tests/sources/functional/invariants_with_generics.move:51
 
 error: global memory invariant does not hold
    ┌─ tests/sources/functional/invariants_with_generics.move:34:5
@@ -132,6 +174,27 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/invariants_with_generics.move:45
 
 error: global memory invariant does not hold
+   ┌─ tests/sources/functional/invariants_with_generics.move:51:5
+   │
+51 │ ╭     invariant
+52 │ │         forall t1: type, t2: type:
+53 │ │             (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+54 │ │                 ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
+   │ ╰───────────────────────────────────────────────────────────────────────────────────────────^
+   │
+   =     at tests/sources/functional/invariants_with_generics.move:20: publish_x_bool
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
+   =     at tests/sources/functional/invariants_with_generics.move:21: publish_x_bool
+   =     at tests/sources/functional/invariants_with_generics.move:20: publish_x_bool
+   =     at tests/sources/functional/invariants_with_generics.move:21: publish_x_bool
+   =     at tests/sources/functional/invariants_with_generics.move:34
+   =     at tests/sources/functional/invariants_with_generics.move:39
+   =     at tests/sources/functional/invariants_with_generics.move:45
+   =     at tests/sources/functional/invariants_with_generics.move:51
+
+error: global memory invariant does not hold
    ┌─ tests/sources/functional/invariants_with_generics.move:34:5
    │
 34 │ ╭     invariant
@@ -166,6 +229,27 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/invariants_with_generics.move:21: publish_x_bool
    =     at tests/sources/functional/invariants_with_generics.move:34
    =     at tests/sources/functional/invariants_with_generics.move:39
+
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/invariants_with_generics.move:51:5
+   │
+51 │ ╭     invariant
+52 │ │         forall t1: type, t2: type:
+53 │ │             (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+54 │ │                 ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
+   │ ╰───────────────────────────────────────────────────────────────────────────────────────────^
+   │
+   =     at tests/sources/functional/invariants_with_generics.move:25: publish_x_y
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
+   =     at tests/sources/functional/invariants_with_generics.move:26: publish_x_y
+   =     at tests/sources/functional/invariants_with_generics.move:25: publish_x_y
+   =     at tests/sources/functional/invariants_with_generics.move:26: publish_x_y
+   =     at tests/sources/functional/invariants_with_generics.move:34
+   =     at tests/sources/functional/invariants_with_generics.move:39
+   =     at tests/sources/functional/invariants_with_generics.move:45
+   =     at tests/sources/functional/invariants_with_generics.move:51
 
 error: global memory invariant does not hold
    ┌─ tests/sources/functional/invariants_with_generics.move:39:5

@@ -48,22 +48,16 @@ module A {
                 ==> global<S::Storage<t, bool>>(@0x24).y;
 
     // I4: <generic, generic>
-    // TODO (mengxu) disabled for now due to an issue with the mono backend
-    // invariant
-    //    forall t1: type, t2: type:
-    //        (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
-    //            ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
+    invariant
+        forall t1: type, t2: type:
+            (exists<S::Storage<t1, t2>>(@0x25) && exists<S::Storage<t1, t2>>(@0x26))
+                ==> global<S::Storage<t1, t2>>(@0x25) == global<S::Storage<t1, t2>>(@0x26);
 
     public fun good(account1: signer, account2: signer) {
         S::publish_x_y<u64, bool>(account1, 1, true);
         S::publish_x_y<u64, bool>(account2, 1, true);
     }
 
-    // TODO (mengxu) all invariants (I1-I4) should be disproved in all functions (F1-F4)
-    // currently,
-    // - I1-I3 are disproved in F1
-    // - I1-I3 are disproved in F2
-    // - I1-I3 are disproved in F3
-    // - I1-I3 are disproved in F4
+    // all invariants (I1-I4) should be disproved in all functions (F1-F4)
 }
 }

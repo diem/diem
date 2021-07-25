@@ -12,6 +12,7 @@ use crate::{
     global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
     inconsistency_check::InconsistencyCheckInstrumenter,
     livevar_analysis::LiveVarAnalysisProcessor,
+    local_mono::LocalMonoProcessor,
     loop_analysis::LoopAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
     mono_analysis::MonoAnalysisProcessor,
@@ -57,6 +58,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         processors.push(MutationTester::new()); // pass which may do nothing
     }
     if options.run_mono {
+        processors.push(LocalMonoProcessor::new());
         processors.push(MonoAnalysisProcessor::new());
     }
     // inconsistency check instrumentation should be the last one in the pipeline
