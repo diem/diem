@@ -174,7 +174,8 @@ pub fn boogie_type(env: &GlobalEnv, ty: &Type) -> String {
     use Type::*;
     match ty {
         Primitive(p) => match p {
-            U8 | U64 | U128 | Num | Address | Signer => "int".to_string(),
+            U8 | U64 | U128 | Num | Address => "int".to_string(),
+            Signer => "$signer".to_string(),
             Bool => "bool".to_string(),
             TypeValue => "$TypeValue".to_string(),
             _ => panic!("unexpected type"),
@@ -210,7 +211,8 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
             U64 => "u64".to_string(),
             U128 => "u128".to_string(),
             Num => "num".to_string(),
-            Address | Signer => "address".to_string(),
+            Address => "address".to_string(),
+            Signer => "signer".to_string(),
             Bool => "bool".to_string(),
             Range => "range".to_string(),
             _ => format!("<<unsupported {:?}>>", ty),

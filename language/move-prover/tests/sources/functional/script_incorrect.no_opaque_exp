@@ -8,10 +8,10 @@ error: abort not covered by any of the `aborts_if` clauses
 14 │ │ }
    │ ╰─^
    │
-   ┌─ tests/sources/functional/script_provider.move:19:9
+   ┌─ tests/sources/functional/script_provider.move:18:9
    │
-19 │         move_to(account, Info<T>{})
-   │         ------- abort happened here with execution failure
+18 │         assert(Signer::address_of(account) == @0x1, 1);
+   │         ---------------------------------------------- abort happened here with code 0x1
    │
    =     at tests/sources/functional/script_incorrect.move:7: main
    =         account = <redacted>
@@ -25,5 +25,5 @@ error: abort not covered by any of the `aborts_if` clauses
    =         result = <redacted>
    =     at ../move-stdlib/modules/Signer.move:14: address_of
    =         <redacted> = <redacted>
-   =     at tests/sources/functional/script_provider.move:19: register
+   =     at tests/sources/functional/script_provider.move:18: register
    =         ABORTED

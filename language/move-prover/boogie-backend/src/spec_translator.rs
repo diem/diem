@@ -968,7 +968,15 @@ impl<'env> SpecTranslator<'env> {
         let memory = &self.get_memory_inst_from_node(node_id);
         let resource_name = boogie_modifies_memory_name(self.env, memory);
         emit!(self.writer, "{}[", resource_name);
+
+        let is_signer = self.env.get_node_type(args[0].node_id()).is_signer();
+        if is_signer {
+            emit!(self.writer, "$1_Signer_spec_address_of(");
+        }
         self.translate_exp(&args[0]);
+        if is_signer {
+            emit!(self.writer, ")");
+        }
         emit!(self.writer, "]");
     }
 

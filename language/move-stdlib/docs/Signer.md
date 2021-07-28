@@ -80,6 +80,22 @@ Specification version of <code><a href="Signer.md#0x1_Signer_address_of">Self::a
 </code></pre>
 
 
+Return true only if <code>a</code> is a transaction signer. This is a spec function only available in spec.
+
+
+<a name="0x1_Signer_is_signer"></a>
+
+
+<pre><code><b>fun</b> <a href="Signer.md#0x1_Signer_is_signer">is_signer</a>(addr: address): bool;
+</code></pre>
+
+
+
+
+<pre><code>axiom <b>forall</b> s:signer: <a href="Signer.md#0x1_Signer_is_signer">is_signer</a>(<a href="Signer.md#0x1_Signer_spec_address_of">spec_address_of</a>(s));
+</code></pre>
+
+
 
 </details>
 
