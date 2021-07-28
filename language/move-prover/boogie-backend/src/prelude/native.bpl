@@ -276,7 +276,7 @@ axiom (forall v1, v2: {{T}} :: {$ToEventRep{{S}}(v1), $ToEventRep{{S}}(v2)}
 // Creates a new event handle. This ensures each time it is called that a unique new abstract event handler is
 // returned.
 // TODO: we should check (and abort with the right code) if no generator exists for the signer.
-procedure {:inline 1} $1_Event_new_event_handle{{S}}(signer: int) returns (res: $1_Event_EventHandle{{S}}) {
+procedure {:inline 1} $1_Event_new_event_handle{{S}}(signer: $signer) returns (res: $1_Event_EventHandle{{S}}) {
     assume $1_Event_EventHandles[res] == false;
     $1_Event_EventHandles := $1_Event_EventHandles[res := true];
 }
