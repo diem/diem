@@ -23,12 +23,16 @@ use crate::network_interface::ConsensusMsg;
 use consensus_types::block::block_test_utils::certificate_for_genesis;
 
 use crate::{
-    experimental::tests::test_utils::prepare_commit_phase_with_block_store_state_computer,
+    experimental::{
+        commit_phase::CommitChannelType, execution_phase::ResetAck,
+        tests::test_utils::prepare_commit_phase_with_block_store_state_computer,
+    },
     state_replication::empty_state_computer_call_back,
     test_utils::{EmptyStateComputer, TreeInserter},
 };
 use consensus_types::executed_block::ExecutedBlock;
 use executor_types::StateComputeResult;
+use futures::channel::oneshot;
 
 #[test]
 fn decoupled_execution_integration() {
@@ -38,9 +42,13 @@ fn decoupled_execution_integration() {
     let (execution_phase_tx, execution_phase_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
 
+    let (execution_phase_reset_tx, execution_phase_reset_rx) =
+        channel::new_test::<oneshot::Sender<ResetAck>>(1);
+
     let state_computer = Arc::new(OrderingStateComputer::new(
         execution_phase_tx,
         Arc::new(EmptyStateComputer {}), // we will not call sync_to in this test
+        execution_phase_reset_tx,
     ));
 
     // now we need to replace the state computer instance (previously the one directly outputs to commit_result_rx)
@@ -48,6 +56,7 @@ fn decoupled_execution_integration() {
     let (
         mut commit_tx,
         mut msg_tx,
+        commit_phase_reset_tx,
         mut commit_result_rx,
         mut self_loop_rx,
         _safety_rules_container,
@@ -81,6 +90,8 @@ fn decoupled_execution_integration() {
         execution_phase_rx,
         Arc::new(random_state_computer),
         commit_tx.clone(),
+        execution_phase_reset_rx,
+        commit_phase_reset_tx,
     );
 
     runtime.spawn(execution_phase.start());
@@ -106,7 +117,9 @@ fn decoupled_execution_integration() {
         };
 
         // it commits the block
-        if let Some((executed_blocks, finality_proof, callback)) = commit_result_rx.next().await {
+        if let Some(ExecutionChannelType(executed_blocks, finality_proof, callback)) =
+            commit_result_rx.next().await
+        {
             assert_eq!(executed_blocks.len(), 3); // a1 a2 a3
             assert_eq!(
                 finality_proof
@@ -136,11 +149,19 @@ fn decoupled_execution_integration() {
         let (blocks_1, li_1) = prepare_executed_blocks_with_ordered_ledger_info(&signers[0]);
         let (blocks_2, li_2) = prepare_executed_blocks_with_ordered_ledger_info(&signers[0]);
         commit_tx
-            .send((blocks_1, li_1, empty_state_computer_call_back()))
+            .send(CommitChannelType(
+                blocks_1,
+                li_1,
+                empty_state_computer_call_back(),
+            ))
             .await
             .ok();
         commit_tx
-            .send((blocks_2, li_2, empty_state_computer_call_back()))
+            .send(CommitChannelType(
+                blocks_2,
+                li_2,
+                empty_state_computer_call_back(),
+            ))
             .await
             .ok();
 

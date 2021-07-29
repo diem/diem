@@ -15,28 +15,35 @@ use executor_types::StateComputeResult;
 use std::sync::Arc;
 
 use crate::{
-    experimental::execution_phase::ExecutionChannelType,
+    experimental::execution_phase::{ExecutionChannelType, ResetAck},
     state_replication::empty_state_computer_call_back,
     test_utils::{consensus_runtime, timed_block_on, EmptyStateComputer},
 };
 use consensus_types::{executed_block::ExecutedBlock, quorum_cert::QuorumCert};
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_types::{account_address::AccountAddress, validator_signer::ValidatorSigner};
-use futures::StreamExt;
+use futures::{channel::oneshot, StreamExt};
 use rand::Rng;
 use std::collections::BTreeMap;
 
 pub fn prepare_ordering_state_computer(
     channel_size: usize,
-) -> (Arc<OrderingStateComputer>, Receiver<ExecutionChannelType>) {
+) -> (
+    Arc<OrderingStateComputer>,
+    Receiver<ExecutionChannelType>,
+    Receiver<oneshot::Sender<ResetAck>>,
+) {
     let (commit_result_tx, commit_result_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
+    let (execution_phase_reset_tx, execution_phase_reset_rx) =
+        channel::new_test::<oneshot::Sender<ResetAck>>(1);
     let state_computer = Arc::new(OrderingStateComputer::new(
         commit_result_tx,
         Arc::new(EmptyStateComputer {}),
+        execution_phase_reset_tx,
     ));
 
-    (state_computer, commit_result_rx)
+    (state_computer, commit_result_rx, execution_phase_reset_rx)
 }
 
 pub fn random_empty_block(signer: &ValidatorSigner, qc: QuorumCert) -> Block {
@@ -50,7 +57,7 @@ fn test_ordering_state_computer() {
     let channel_size = 30;
     let mut runtime = consensus_runtime();
 
-    let (state_computer, mut commit_result_rx) = prepare_ordering_state_computer(channel_size);
+    let (state_computer, mut commit_result_rx, _) = prepare_ordering_state_computer(channel_size);
 
     let (signers, _) = random_validator_verifier(num_nodes, None, false);
     let signer = &signers[0];
@@ -88,7 +95,8 @@ fn test_ordering_state_computer() {
             .await
             .ok();
 
-        let (ordered_block, finality_proof, _) = commit_result_rx.next().await.unwrap();
+        let ExecutionChannelType(ordered_block, finality_proof, _) =
+            commit_result_rx.next().await.unwrap();
         assert_eq!(ordered_block.len(), 1);
         assert_eq!(ordered_block[0], block);
         assert_eq!(finality_proof, li_sig);

@@ -24,7 +24,7 @@ use diem_types::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use executor_types::Error as ExecutionError;
-use futures::{select, SinkExt, StreamExt};
+use futures::{select, FutureExt, SinkExt, StreamExt};
 use safety_rules::TSafetyRules;
 use std::{
     collections::BTreeMap,
@@ -32,7 +32,12 @@ use std::{
 };
 use tokio::time;
 
-use crate::state_replication::StateComputerCommitCallBackType;
+use crate::{
+    experimental::execution_phase::{reset_ack_new, ResetAck},
+    state_replication::StateComputerCommitCallBackType,
+};
+use diem_logger::error;
+use futures::channel::oneshot;
 
 /*
 Commit phase takes in the executed blocks from the execution
@@ -47,11 +52,23 @@ having to collect the signatures.
 
 const COMMIT_PHASE_TIMEOUT_SEC: u64 = 1; // retry timeout in seconds
 
-pub type CommitChannelType = (
-    Vec<ExecutedBlock>,
-    LedgerInfoWithSignatures,
-    StateComputerCommitCallBackType,
+pub struct CommitChannelType(
+    pub Vec<ExecutedBlock>,
+    pub LedgerInfoWithSignatures,
+    pub StateComputerCommitCallBackType,
 );
+
+impl std::fmt::Debug for CommitChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::fmt::Display for CommitChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "CommitChannelType({:?}, {})", self.0, self.1)
+    }
+}
 
 //#[derive(Clone)]
 pub struct PendingBlocks {
@@ -126,6 +143,7 @@ pub struct CommitPhase {
     network_sender: NetworkSender,
     timeout_event_tx: Sender<CommitVote>,
     timeout_event_rx: Receiver<CommitVote>,
+    reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
 }
 
 /// Wrapper for ExecutionProxy.commit
@@ -185,6 +203,7 @@ impl CommitPhase {
         author: Author,
         back_pressure: Arc<AtomicU64>,
         network_sender: NetworkSender,
+        reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
     ) -> Self {
         let (timeout_event_tx, timeout_event_rx) = channel::new::<CommitVote>(
             2,
@@ -202,6 +221,7 @@ impl CommitPhase {
             network_sender,
             timeout_event_tx,
             timeout_event_rx,
+            reset_event_rx,
         }
     }
 
@@ -343,6 +363,27 @@ impl CommitPhase {
         self.back_pressure.load(Ordering::SeqCst)
     }
 
+    pub async fn process_reset_event(
+        &mut self,
+        reset_event_callback: oneshot::Sender<ResetAck>,
+    ) -> anyhow::Result<()> {
+        // reset the commit phase
+
+        // exhaust the commit channel
+        // we do not have to exhaust the commit message channel because inconsistent messages will be ignored
+        while self.commit_channel_recv.next().now_or_never().is_some() {}
+
+        // reset local block
+        self.blocks = None;
+
+        // activate the callback
+        reset_event_callback
+            .send(reset_ack_new())
+            .map_err(|_| Error::ResetDropped)?;
+
+        Ok(())
+    }
+
     pub async fn start(mut self) {
         loop {
             while self.blocks.is_some() {
@@ -376,6 +417,13 @@ impl CommitPhase {
                             }
                         }
                     }
+                    // callback event might come when self.blocks is not empty
+                    reset_event_callback = self.reset_event_rx.select_next_some() => {
+                        self.process_reset_event(reset_event_callback).await.map_err(|e| ExecutionError::InternalError {
+                            error: e.to_string(),
+                        })
+                        .unwrap();
+                    }
                     complete => break,
                 }
                 report_err!(
@@ -385,17 +433,23 @@ impl CommitPhase {
                 );
             }
 
-            if let Some((blocks, ordered_ledger_info, callback)) =
-                self.commit_channel_recv.next().await
-            {
-                report_err!(
-                    // receive new blocks from execution phase
-                    self.process_executed_blocks(blocks, ordered_ledger_info, callback)
-                        .await,
-                    "Error in processing received blocks"
-                );
-            } else {
-                break;
+            select! {
+                CommitChannelType(blocks, ordered_ledger_info, callback) = self.commit_channel_recv.select_next_some() => {
+                    report_err!(
+                        // receive new blocks from execution phase
+                        self.process_executed_blocks(blocks, ordered_ledger_info, callback)
+                            .await,
+                        "Error in processing received blocks"
+                    );
+                }
+                // callback event might come when self.blocks is none
+                reset_event_callback = self.reset_event_rx.select_next_some() => {
+                    self.process_reset_event(reset_event_callback).await.map_err(|e| ExecutionError::InternalError {
+                        error: e.to_string(),
+                    })
+                    .unwrap();
+                }
+                complete => break,
             }
         }
     }

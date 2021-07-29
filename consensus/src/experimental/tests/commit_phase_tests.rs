@@ -44,18 +44,25 @@ use crate::{
     state_replication::empty_state_computer_call_back,
 };
 
-use crate::experimental::tests::test_utils::{
-    prepare_commit_phase_with_block_store_state_computer,
-    prepare_executed_blocks_with_executed_ledger_info,
-    prepare_executed_blocks_with_ordered_ledger_info,
+use crate::experimental::{
+    execution_phase::ResetAck,
+    tests::test_utils::{
+        prepare_commit_phase_with_block_store_state_computer,
+        prepare_executed_blocks_with_executed_ledger_info,
+        prepare_executed_blocks_with_ordered_ledger_info,
+    },
 };
+use futures::channel::oneshot;
 use tokio::runtime::Runtime;
+
+const TEST_CHANNEL_SIZE: usize = 30;
 
 pub fn prepare_commit_phase(
     runtime: &Runtime,
 ) -> (
     Sender<CommitChannelType>,
     Sender<VerifiedEvent>,
+    Sender<oneshot::Sender<ResetAck>>,
     Receiver<ExecutionChannelType>,
     Receiver<Event<ConsensusMsg>>,
     Arc<Mutex<MetricsSafetyRules>>,
@@ -65,7 +72,11 @@ pub fn prepare_commit_phase(
     CommitPhase,
     Arc<BlockStore>,
 ) {
-    prepare_commit_phase_with_block_store_state_computer(runtime, Arc::new(EmptyStateComputer), 30)
+    prepare_commit_phase_with_block_store_state_computer(
+        runtime,
+        Arc::new(EmptyStateComputer),
+        TEST_CHANNEL_SIZE,
+    )
 }
 
 fn generate_random_commit_vote(signer: &ValidatorSigner) -> CommitVote {
@@ -98,6 +109,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             mut msg_tx,
+            _commit_phase_reset_tx,
             mut commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -115,7 +127,11 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             commit_tx
-                .send((vecblocks, li_sig, empty_state_computer_call_back()))
+                .send(CommitChannelType(
+                    vecblocks,
+                    li_sig,
+                    empty_state_computer_call_back(),
+                ))
                 .await
                 .ok();
 
@@ -147,6 +163,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             mut msg_tx,
+            _commit_phase_reset_tx,
             mut commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -164,7 +181,11 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             commit_tx
-                .send((vecblocks, li_sig, empty_state_computer_call_back()))
+                .send(CommitChannelType(
+                    vecblocks,
+                    li_sig,
+                    empty_state_computer_call_back(),
+                ))
                 .await
                 .ok();
 
@@ -199,6 +220,58 @@ mod commit_phase_e2e_tests {
         });
     }
 
+    /// reset test
+    #[test]
+    fn test_reset() {
+        let mut runtime = consensus_runtime();
+        let (
+            mut commit_tx,
+            _msg_tx,
+            mut commit_phase_reset_tx,
+            _commit_result_rx,
+            _self_loop_rx,
+            _safety_rules_container,
+            signers,
+            _state_computer,
+            _validator,
+            commit_phase,
+            _block_store,
+        ) = prepare_commit_phase(&runtime);
+
+        let (vecblocks, li_sig) = prepare_executed_blocks_with_ordered_ledger_info(&signers[0]);
+
+        runtime.spawn(commit_phase.start());
+
+        timed_block_on(&mut runtime, async move {
+            // fill in the commit channel with (TEST_CHANNEL_SIZE + 1) good commit blocks
+            for _ in 0..=TEST_CHANNEL_SIZE {
+                commit_tx
+                    .send(CommitChannelType(
+                        vecblocks.clone(),
+                        li_sig.clone(),
+                        empty_state_computer_call_back(),
+                    ))
+                    .await
+                    .ok();
+            }
+
+            // reset
+            let (tx, rx) = oneshot::channel::<ResetAck>();
+            commit_phase_reset_tx.send(tx).await.ok();
+            rx.await.ok();
+
+            // now commit_tx should be exhausted. We can send more without blocking.
+            commit_tx
+                .send(CommitChannelType(
+                    vecblocks.clone(),
+                    li_sig.clone(),
+                    empty_state_computer_call_back(),
+                ))
+                .await
+                .ok();
+        });
+    }
+
     /// commit message retry test
     #[test]
     fn test_retry() {
@@ -206,6 +279,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             _commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -223,7 +297,11 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             commit_tx
-                .send((vecblocks, li_sig, empty_state_computer_call_back()))
+                .send(CommitChannelType(
+                    vecblocks,
+                    li_sig,
+                    empty_state_computer_call_back(),
+                ))
                 .await
                 .ok();
 
@@ -254,6 +332,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             mut commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -275,7 +354,7 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // bad blocks
             commit_tx
-                .send((
+                .send(CommitChannelType(
                     vec![ExecutedBlock::new(block.clone(), compute_result)],
                     LedgerInfoWithSignatures::new(
                         LedgerInfo::new(
@@ -305,6 +384,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             mut msg_tx,
+            _commit_phase_reset_tx,
             mut commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -322,7 +402,11 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             commit_tx
-                .send((vecblocks, li_sig, empty_state_computer_call_back()))
+                .send(CommitChannelType(
+                    vecblocks,
+                    li_sig,
+                    empty_state_computer_call_back(),
+                ))
                 .await
                 .ok();
 
@@ -352,6 +436,7 @@ mod commit_phase_e2e_tests {
         let (
             mut commit_tx,
             mut msg_tx,
+            _commit_phase_reset_tx,
             mut commit_result_rx,
             mut self_loop_rx,
             _safety_rules_container,
@@ -369,7 +454,11 @@ mod commit_phase_e2e_tests {
         timed_block_on(&mut runtime, async move {
             // send good commit arguments
             commit_tx
-                .send((vecblocks, li_sig, empty_state_computer_call_back()))
+                .send(CommitChannelType(
+                    vecblocks,
+                    li_sig,
+                    empty_state_computer_call_back(),
+                ))
                 .await
                 .ok();
 
@@ -408,6 +497,7 @@ mod commit_phase_function_tests {
         let (
             _commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             _commit_result_rx,
             _self_loop_rx,
             _safety_rules_container,
@@ -444,6 +534,7 @@ mod commit_phase_function_tests {
         let (
             _commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             _commit_result_rx,
             _self_loop_rx,
             _safety_rules_container,
@@ -477,11 +568,74 @@ mod commit_phase_function_tests {
     }
 
     #[test]
+    fn test_commit_phase_process_reset() {
+        let mut runtime = consensus_runtime();
+        let (
+            mut commit_tx,
+            _msg_tx,
+            _commit_phase_reset_tx,
+            _commit_result_rx,
+            _self_loop_rx,
+            _safety_rules_container,
+            signers,
+            _state_computer,
+            _validator,
+            mut commit_phase,
+            _block_store,
+        ) = prepare_commit_phase(&runtime);
+
+        timed_block_on(&mut runtime, async move {
+            let signer = &signers[0];
+
+            let (vecblocks, li_sig) = prepare_executed_blocks_with_executed_ledger_info(signer);
+
+            assert!(commit_phase.blocks().is_none());
+
+            // fill in the commit channel with TEST_CHANNEL_SIZE good commit blocks
+            for _ in 0..TEST_CHANNEL_SIZE {
+                commit_tx
+                    .send(CommitChannelType(
+                        vecblocks.clone(),
+                        li_sig.clone(),
+                        empty_state_computer_call_back(),
+                    ))
+                    .await
+                    .ok();
+            }
+
+            // set the blocks to be some good blocks
+            commit_phase.set_blocks(Some(PendingBlocks::new(
+                vecblocks.clone(),
+                li_sig.clone(),
+                empty_state_computer_call_back(),
+            )));
+
+            // reset
+            let (tx, rx) = oneshot::channel::<ResetAck>();
+            commit_phase.process_reset_event(tx).await.ok();
+            rx.await.ok();
+
+            // the block should be dropped
+            assert!(commit_phase.blocks().is_none());
+            // .. and we should be able to send blocks to commit_tx
+            commit_tx
+                .send(CommitChannelType(
+                    vecblocks.clone(),
+                    li_sig.clone(),
+                    empty_state_computer_call_back(),
+                ))
+                .await
+                .ok();
+        });
+    }
+
+    #[test]
     fn test_commit_phase_check_commit() {
         let mut runtime = consensus_runtime();
         let (
             _commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             _commit_result_rx,
             _self_loop_rx,
             _safety_rules_container,
@@ -541,6 +695,7 @@ mod commit_phase_function_tests {
         let (
             _commit_tx,
             _msg_tx,
+            _commit_phase_reset_tx,
             _commit_result_rx,
             _self_loop_rx,
             _safety_rules_container,

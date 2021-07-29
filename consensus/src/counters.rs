@@ -316,3 +316,23 @@ pub static DECOUPLED_EXECUTION__COMMIT_MESSAGE_TIMEOUT_CHANNEL: Lazy<IntGauge> =
     )
     .unwrap()
 });
+
+/// Counter for the decoupling execution channel of commit phase reset events
+/// from execution phase to commit phase when a reset event occurs at the execution phase
+pub static DECOUPLED_EXECUTION__COMMIT_PHASE_RESET_CHANNEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "decoupled_execution__commit_phase_reset_channel",
+        "Number of pending commit phase reset events"
+    )
+    .unwrap()
+});
+
+/// Counter for the decoupling execution channel of execution phase reset events
+/// from outside (block_store) to execution phase when a reset event occurs
+pub static DECOUPLED_EXECUTION__EXECUTION_PHASE_RESET_CHANNEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "decoupled_execution__execution_phase_reset_channel",
+        "Number of pending execution phase reset events"
+    )
+    .unwrap()
+});

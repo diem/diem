@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::experimental;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -15,6 +16,12 @@ pub struct DbError {
 pub struct StateSyncError {
     #[from]
     inner: anyhow::Error,
+}
+
+impl From<experimental::errors::Error> for StateSyncError {
+    fn from(e: experimental::errors::Error) -> Self {
+        StateSyncError { inner: e.into() }
+    }
 }
 
 impl From<executor_types::Error> for StateSyncError {

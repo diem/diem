@@ -12,4 +12,6 @@ pub enum Error {
     InconsistentBlockInfo(BlockInfo, BlockInfo),
     #[error("Verification Error")]
     VerificationError,
+    #[error("Reset host dropped")]
+    ResetDropped,
 }

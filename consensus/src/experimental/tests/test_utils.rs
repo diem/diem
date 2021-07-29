@@ -5,7 +5,7 @@ use crate::{
     block_storage::BlockStore,
     experimental::{
         commit_phase::{CommitChannelType, CommitPhase},
-        execution_phase::ExecutionChannelType,
+        execution_phase::{ExecutionChannelType, ResetAck},
         ordering_state_computer::OrderingStateComputer,
     },
     metrics_safety_rules::MetricsSafetyRules,
@@ -38,6 +38,7 @@ use diem_types::{
     waypoint::Waypoint,
 };
 use executor_types::StateComputeResult;
+use futures::channel::oneshot;
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NewNetworkSender},
@@ -56,6 +57,7 @@ pub fn prepare_commit_phase_with_block_store_state_computer(
 ) -> (
     Sender<CommitChannelType>,
     Sender<VerifiedEvent>,
+    Sender<oneshot::Sender<ResetAck>>,
     Receiver<ExecutionChannelType>,
     Receiver<Event<ConsensusMsg>>,
     Arc<Mutex<MetricsSafetyRules>>,
@@ -108,9 +110,15 @@ pub fn prepare_commit_phase_with_block_store_state_computer(
 
     let (commit_result_tx, commit_result_rx) =
         channel::new_test::<ExecutionChannelType>(channel_size);
+
+    // Note: we assume no OrderingStateComputer::sync_to will be called during the test
+    // OrderingStateComputer::sync_to might block the inner state computer
+    let (execution_phase_reset_tx, _) = channel::new_test::<oneshot::Sender<ResetAck>>(1);
+
     let state_computer = Arc::new(OrderingStateComputer::new(
         commit_result_tx,
         block_store_state_computer.clone(),
+        execution_phase_reset_tx,
     ));
 
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
@@ -133,6 +141,9 @@ pub fn prepare_commit_phase_with_block_store_state_computer(
 
     let (msg_tx, msg_rx) = channel::new_test::<VerifiedEvent>(channel_size);
 
+    let (commit_phase_reset_tx, commit_phase_reset_rx) =
+        channel::new_test::<oneshot::Sender<ResetAck>>(1);
+
     let commit_phase = CommitPhase::new(
         commit_rx,
         state_computer.clone(),
@@ -142,13 +153,15 @@ pub fn prepare_commit_phase_with_block_store_state_computer(
         author,
         back_pressure,
         network,
+        commit_phase_reset_rx,
     );
 
     (
-        commit_tx,        // channel to pass executed blocks into the commit phase
-        msg_tx,           // channel to pass commit messages into the commit phase
-        commit_result_rx, // channel to receive commit result from the commit phase
-        self_loop_rx,     // channel to receive message from the commit phase itself
+        commit_tx,             // channel to pass executed blocks into the commit phase
+        msg_tx,                // channel to pass commit messages into the commit phase
+        commit_phase_reset_tx, // channel to send reset events
+        commit_result_rx,      // channel to receive commit result from the commit phase
+        self_loop_rx,          // channel to receive message from the commit phase itself
         safety_rules_container,
         signers,
         state_computer,

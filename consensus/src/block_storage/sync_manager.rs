@@ -10,6 +10,7 @@ use crate::{
     state_replication::StateComputer,
 };
 use anyhow::{bail, format_err};
+
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus, MAX_BLOCKS_PER_REQUEST},
@@ -23,6 +24,7 @@ use diem_types::{
     account_address::AccountAddress, epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
 };
+
 use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{clone::Clone, cmp::min, sync::Arc, time::Duration};
