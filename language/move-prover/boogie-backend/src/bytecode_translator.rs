@@ -548,16 +548,18 @@ impl<'env> FunctionTranslator<'env> {
             );
         }
         // Generate declarations for modifies condition.
+        let mut mem_inst_seen = BTreeSet::new();
         for qid in fun_target.get_modify_ids() {
-            emitln!(
-                writer,
-                "var {}: {}",
-                boogie_modifies_memory_name(
-                    fun_target.global_env(),
-                    &qid.instantiate(self.type_inst)
-                ),
-                "[int]bool;"
-            );
+            let memory = qid.instantiate(self.type_inst);
+            if !mem_inst_seen.contains(&memory) {
+                emitln!(
+                    writer,
+                    "var {}: {}",
+                    boogie_modifies_memory_name(fun_target.global_env(), &memory),
+                    "[int]bool;"
+                );
+                mem_inst_seen.insert(memory);
+            }
         }
 
         // Declare temporaries for debug tracing and other purposes.
