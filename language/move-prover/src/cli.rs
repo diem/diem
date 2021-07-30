@@ -22,7 +22,7 @@ use bytecode::options::{AutoTraceLevel, ProverOptions};
 use codespan_reporting::diagnostic::Severity;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
-use move_model::model::VerificationScope;
+use move_model::{model::VerificationScope, options::ModelBuilderOptions};
 
 /// Atomic used to prevent re-initialization of logging.
 static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
@@ -61,6 +61,8 @@ pub struct Options {
     /// Whether to use the old polymorphic boogie backend.
     pub boogie_poly: bool,
     /// BEGIN OF STRUCTURED OPTIONS
+    /// Options for the model builder.
+    pub model_builder: ModelBuilderOptions,
     /// Options for the documentation generator.
     pub docgen: DocgenOptions,
     /// Options for the prover.
@@ -86,6 +88,7 @@ impl Default for Options {
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
             move_deps: vec![],
+            model_builder: ModelBuilderOptions::default(),
             prover: ProverOptions::default(),
             backend: BoogieOptions::default(),
             docgen: DocgenOptions::default(),
@@ -243,6 +246,11 @@ impl Options {
                     .validator(is_number)
                     .help("sets a timeout (in seconds) for each \
                              individual verification condition (default 40)")
+            )
+            .arg(
+                Arg::with_name("ignore-pragma-opaque-when-possible")
+                    .long("ignore-pragma-opaque-when-possible")
+                    .help("Ignore the \"opaque\" pragma on function specs when possible"),
             )
             .arg(
                 Arg::with_name("docgen")
@@ -526,6 +534,9 @@ impl Options {
         if matches.is_present("bench-repeat") {
             options.backend.bench_repeat =
                 matches.value_of("bench-repeat").unwrap().parse::<usize>()?;
+        }
+        if matches.is_present("ignore-pragma-opaque-when-possible") {
+            options.model_builder.ignore_pragma_opaque_when_possible = true;
         }
         if matches.is_present("docgen") {
             options.run_docgen = true;

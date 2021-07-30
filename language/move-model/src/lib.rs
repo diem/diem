@@ -39,6 +39,7 @@ use crate::{
     ast::{ModuleName, Spec},
     builder::model_builder::ModelBuilder,
     model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
+    options::ModelBuilderOptions,
 };
 
 pub mod ast;
@@ -48,6 +49,7 @@ pub mod exp_generator;
 pub mod exp_rewriter;
 pub mod model;
 pub mod native;
+pub mod options;
 pub mod pragmas;
 pub mod spec_translator;
 pub mod symbol;
@@ -56,23 +58,40 @@ pub mod ty;
 // =================================================================================================
 // Entry Point
 
-/// Build the move model with default compilation flags.
+/// Build the move model with default compilation flags and default options
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder(
     move_sources: &[String],
     deps_dir: &[String],
 ) -> anyhow::Result<GlobalEnv> {
-    run_model_builder_with_compilation_flags(move_sources, deps_dir, Flags::empty())
+    run_model_builder_with_options(move_sources, deps_dir, ModelBuilderOptions::default())
 }
 
-/// Build the move model with supplied compilation flags.
+/// Build the move model with default compilation flags and custom options
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder_with_compilation_flags(
+pub fn run_model_builder_with_options(
     move_sources: &[String],
     deps_dir: &[String],
+    options: ModelBuilderOptions,
+) -> anyhow::Result<GlobalEnv> {
+    run_model_builder_with_options_and_compilation_flags(
+        move_sources,
+        deps_dir,
+        options,
+        Flags::empty(),
+    )
+}
+
+/// Build the move model with custom compilation flags and custom options
+/// This collects transitive dependencies for move sources from the provided directory list.
+pub fn run_model_builder_with_options_and_compilation_flags(
+    move_sources: &[String],
+    deps_dir: &[String],
+    options: ModelBuilderOptions,
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
+    env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps_dir)

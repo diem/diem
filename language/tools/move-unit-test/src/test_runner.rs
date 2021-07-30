@@ -26,7 +26,10 @@ use move_lang::{
     shared::Flags,
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
 };
-use move_model::{model::GlobalEnv, run_model_builder_with_compilation_flags};
+use move_model::{
+    model::GlobalEnv, options::ModelBuilderOptions,
+    run_model_builder_with_options_and_compilation_flags,
+};
 use move_vm_runtime::{move_vm::MoveVM, native_functions::NativeFunctionTable};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
@@ -294,9 +297,13 @@ impl SharedTestingConfig {
         };
 
         let stackless_model = if self.check_stackless_vm {
-            let model =
-                run_model_builder_with_compilation_flags(&self.source_files, &[], Flags::testing())
-                    .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
+            let model = run_model_builder_with_options_and_compilation_flags(
+                &self.source_files,
+                &[],
+                ModelBuilderOptions::default(),
+                Flags::testing(),
+            )
+            .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
             Some(model)
         } else {
             None

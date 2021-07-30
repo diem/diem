@@ -21,7 +21,10 @@ use std::{
 
 use crate::{
     exp_rewriter::ExpRewriterFunctions,
-    model::{EnvDisplay, FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},
+    model::{
+        EnvDisplay, FunId, FunctionVisibility, GlobalEnv, GlobalId, QualifiedInstId, SchemaId,
+        TypeParameter,
+    },
     ty::TypeDisplayContext,
 };
 use internment::LocalIntern;
@@ -88,26 +91,8 @@ impl ConditionKind {
         )
     }
 
-    /// Returns true if this condition is allowed on a public function declaration.
-    pub fn allowed_on_public_fun_decl(&self) -> bool {
-        use ConditionKind::*;
-        matches!(
-            self,
-            Requires
-                | AbortsIf
-                | AbortsWith
-                | SucceedsIf
-                | Emits
-                | Ensures
-                | Invariant
-                | Modifies
-                | LetPost(..)
-                | LetPre(..)
-        )
-    }
-
-    /// Returns true if this condition is allowed on a private function declaration.
-    pub fn allowed_on_private_fun_decl(&self) -> bool {
+    /// Returns true if this condition is allowed on a function declaration.
+    pub fn allowed_on_fun_decl(&self, _visibility: FunctionVisibility) -> bool {
         use ConditionKind::*;
         matches!(
             self,

@@ -19,7 +19,7 @@ use docgen::Docgen;
 use errmapgen::ErrmapGen;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
-use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder};
+use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder_with_options};
 use std::{fs, path::PathBuf, time::Instant};
 
 pub mod cli;
@@ -39,7 +39,11 @@ pub fn run_move_prover<W: WriteColor>(
     let now = Instant::now();
 
     // Run the model builder.
-    let env = run_model_builder(&options.move_sources, &options.move_deps)?;
+    let env = run_model_builder_with_options(
+        &options.move_sources,
+        &options.move_deps,
+        options.model_builder.clone(),
+    )?;
     let build_duration = now.elapsed();
     check_errors(
         &env,

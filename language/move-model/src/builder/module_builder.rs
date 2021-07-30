@@ -36,13 +36,15 @@ use crate::{
     },
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{
-        AbilityConstraint, FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc,
-        NamedConstantData, NamedConstantId, NodeId, QualifiedInstId, SchemaId, SpecFunId,
-        SpecVarId, StructData, StructId, TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
+        AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, Loc, ModuleId,
+        MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedInstId, SchemaId,
+        SpecFunId, SpecVarId, StructData, StructId, TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
     },
+    options::ModelBuilderOptions,
     pragmas::{
-        is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_DEACTIVATED_PROP,
-        CONDITION_INJECTED_PROP,
+        is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_ABSTRACT_PROP,
+        CONDITION_CONCRETE_PROP, CONDITION_DEACTIVATED_PROP, CONDITION_INJECTED_PROP,
+        OPAQUE_PRAGMA,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -323,14 +325,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
-        let is_public = matches!(def.visibility, PA::Visibility::Public(..));
+        let visibility = match def.visibility {
+            PA::Visibility::Public(_) => FunctionVisibility::Public,
+            PA::Visibility::Script(_) => FunctionVisibility::Script,
+            PA::Visibility::Friend(_) => FunctionVisibility::Friend,
+            PA::Visibility::Internal => FunctionVisibility::Private,
+        };
         let loc = et.to_loc(&def.loc);
         et.parent.parent.define_fun(
             loc.clone(),
             qsym.clone(),
             et.parent.module_id,
             fun_id,
-            is_public,
+            visibility,
             type_params.clone(),
             params.clone(),
             result_type.clone(),
@@ -919,6 +926,49 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             self.def_ana_spec_block_member(context, member)
         }
 
+        // tweak the opaque pragma.
+        //
+        // If the `ignore_pragma_opaque_when_possible` option is set, the opaque pragma will be
+        // removed from the function spec property bag when
+        // - "pragma" is in the property bag, and
+        // - the function does not have unknown callers (i.e., the function can be either `friend`
+        //   or `private` visibility), and
+        // - there are no properties marked as "[concrete]" or "[abstract]" in the function spec.
+        if let SpecBlockContext::Function(fun_name) = context {
+            let env = &self.parent.env;
+            let ignore_pragma_opaque_when_possible = env
+                .get_extension::<ModelBuilderOptions>()
+                .map_or(false, |options| options.ignore_pragma_opaque_when_possible);
+            if ignore_pragma_opaque_when_possible {
+                let spec = self.fun_specs.get_mut(&fun_name.symbol).unwrap();
+                let has_pragma_opaque = env
+                    .is_property_true(&spec.properties, OPAQUE_PRAGMA)
+                    .unwrap_or(false);
+                if has_pragma_opaque {
+                    let fun_entry = self.parent.fun_table.get(fun_name).unwrap();
+                    let has_unknown_caller = matches!(
+                        fun_entry.visibility,
+                        FunctionVisibility::Public | FunctionVisibility::Script
+                    );
+                    if !has_unknown_caller {
+                        let has_opaque_prop = spec.any(|cond| {
+                            env.is_property_true(&cond.properties, CONDITION_CONCRETE_PROP)
+                                .unwrap_or(false)
+                                || env
+                                    .is_property_true(&cond.properties, CONDITION_ABSTRACT_PROP)
+                                    .unwrap_or(false)
+                        });
+                        if !has_opaque_prop {
+                            let opaque_symbol = env.symbol_pool().make(OPAQUE_PRAGMA);
+                            self.update_spec(context, move |spec| {
+                                spec.properties.remove(&opaque_symbol);
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
         // clear the let bindings stored in the build.
         self.spec_block_lets.clear();
     }
@@ -1314,11 +1364,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             Struct(_) => cond.kind.allowed_on_struct(),
             Function(name) => {
                 let entry = self.parent.fun_table.get(name).expect("function defined");
-                if entry.is_public {
-                    cond.kind.allowed_on_public_fun_decl()
-                } else {
-                    cond.kind.allowed_on_private_fun_decl()
-                }
+                cond.kind.allowed_on_fun_decl(entry.visibility)
             }
             FunctionCode(_, _) => cond.kind.allowed_on_fun_impl(),
             Schema(_) => true,
@@ -2414,7 +2460,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // Not a function from this module
                 continue;
             }
-            let is_public = entry.is_public;
+            let is_public = matches!(entry.visibility, FunctionVisibility::Public);
             let type_arg_count = entry.type_params.len();
             let is_excluded = exclusion_patterns.iter().any(|p| {
                 self.apply_pattern_matches(fun_name.symbol, is_public, type_arg_count, true, p)

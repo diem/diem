@@ -128,7 +128,7 @@ pub const CONDITION_ISOLATED_PROP: &str = "isolated";
 /// Abstract property which can be used together with an opaque specification. An abstract
 /// property is not verified against the implementation, but will be used for the
 /// function's behavior in the application context. This allows to "override" the specification
-/// with a more abstract version. In general we would need to prover the abstraction is
+/// with a more abstract version. In general we would need to prove the abstraction is
 /// subsumed by the implementation, but this is currently not done.
 pub const CONDITION_ABSTRACT_PROP: &str = "abstract";
 
