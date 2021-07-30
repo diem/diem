@@ -17,6 +17,7 @@ use crate::{
 use cfgir::ast::LoopInfo;
 use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeMap, BTreeSet},
     mem,
@@ -208,8 +209,8 @@ fn module(
 
 fn scripts(
     context: &mut Context,
-    hscripts: BTreeMap<String, H::Script>,
-) -> BTreeMap<String, G::Script> {
+    hscripts: BTreeMap<Symbol, H::Script>,
+) -> BTreeMap<Symbol, G::Script> {
     hscripts
         .into_iter()
         .map(|(n, s)| (n, script(context, s)))
@@ -225,7 +226,7 @@ fn script(context: &mut Context, hscript: H::Script) -> G::Script {
         function: hfunction,
     } = hscript;
     let constants = hconstants.map(|name, c| constant(context, name, c));
-    let function = function(context, function_name.clone(), hfunction);
+    let function = function(context, function_name, hfunction);
     G::Script {
         attributes,
         loc,

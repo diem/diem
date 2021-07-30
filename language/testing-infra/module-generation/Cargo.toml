@@ -18,6 +18,7 @@ move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
+move-symbol-pool = { path = "../../move-symbol-pool" }
 
 [features]
 default = []

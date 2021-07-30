@@ -38,13 +38,13 @@ use std::{
 
 macro_rules! record_src_loc {
     (local: $context:expr, $var:expr) => {{
-        let source_name = ($var.value.clone().into_inner(), $var.loc);
+        let source_name = ($var.value.0.as_str().to_owned(), $var.loc);
         $context
             .source_map
             .add_local_mapping($context.current_function_definition_index(), source_name)?;
     }};
     (parameter: $context:expr, $var:expr) => {{
-        let source_name = ($var.value.clone().into_inner(), $var.loc);
+        let source_name = ($var.value.0.as_str().to_owned(), $var.loc);
         $context
             .source_map
             .add_parameter_mapping($context.current_function_definition_index(), source_name)?;
@@ -56,7 +56,7 @@ macro_rules! record_src_loc {
     }};
     (function_type_formals: $context:expr, $var:expr) => {
         for (ty_var, _) in $var.iter() {
-            let source_name = (ty_var.value.clone().into_inner(), ty_var.loc);
+            let source_name = (ty_var.value.0.as_str().to_owned(), ty_var.loc);
             $context.source_map.add_function_type_parameter_mapping(
                 $context.current_function_definition_index(),
                 source_name,
@@ -72,7 +72,7 @@ macro_rules! record_src_loc {
     }};
     (struct_type_formals: $context:expr, $var:expr) => {
         for (_, ty_var, _) in $var.iter() {
-            let source_name = (ty_var.value.clone().into_inner(), ty_var.loc);
+            let source_name = (ty_var.value.0.as_str().to_owned(), ty_var.loc);
             $context.source_map.add_struct_type_parameter_mapping(
                 $context.current_struct_definition_index(),
                 source_name,
@@ -503,7 +503,7 @@ pub fn compile_module<'a>(
     let friend_decls = compile_friends(&mut context, Some(address), module.friends)?;
 
     // Compile imports
-    let self_name = ModuleName::new(ModuleName::self_name().into());
+    let self_name = ModuleName::module_self();
     let self_module_handle_idx = context.declare_import(current_module, self_name.clone())?;
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, Some(address), module.imports.clone())?;
@@ -886,7 +886,7 @@ fn compile_fields(
         StructDefinitionFields::Move { fields } => {
             let mut decl_fields = vec![];
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
-                let name = context.identifier_index(f.value.as_inner())?;
+                let name = context.identifier_index(f.value.0)?;
                 record_src_loc!(field: context, sd_idx, f);
                 let sig_token = compile_type(context, type_parameters, &ty)?;
                 context.declare_field(sh_idx, sd_idx, f.value, sig_token.clone(), decl_order);
@@ -1400,7 +1400,7 @@ fn compile_expression(
             let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
 
-            let self_name = ModuleName::new(ModuleName::self_name().into());
+            let self_name = ModuleName::module_self();
             let ident = QualifiedStructIdent {
                 module: self_name,
                 name: name.clone(),
@@ -1650,7 +1650,7 @@ fn compile_call(
                     function_frame.pop()?;
                     function_frame.push()?;
 
-                    let self_name = ModuleName::new(ModuleName::self_name().into());
+                    let self_name = ModuleName::module_self();
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,
@@ -1680,7 +1680,7 @@ fn compile_call(
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
-                    let self_name = ModuleName::new(ModuleName::self_name().into());
+                    let self_name = ModuleName::module_self();
                     let ident = QualifiedStructIdent {
                         module: self_name,
                         name,

@@ -624,7 +624,7 @@ pub fn make_struct_type(
     n: &StructName,
     ty_args_opt: Option<Vec<Type>>,
 ) -> (Type, Vec<Type>) {
-    let tn = sp(loc, TypeName_::ModuleType(m.clone(), n.clone()));
+    let tn = sp(loc, TypeName_::ModuleType(*m, *n));
     let sdef = context.struct_definition(m, n);
     match ty_args_opt {
         None => {
@@ -825,7 +825,7 @@ pub fn make_function_type(
         .signature
         .parameters
         .iter()
-        .map(|(n, t)| (n.clone(), subst_tparams(tparam_subst, t.clone())))
+        .map(|(n, t)| (*n, subst_tparams(tparam_subst, t.clone())))
         .collect();
     let return_ty = subst_tparams(tparam_subst, finfo.signature.return_type.clone());
     let acquires = if in_current_module {

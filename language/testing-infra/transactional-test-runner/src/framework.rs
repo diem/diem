@@ -26,6 +26,7 @@ use move_lang::{
     shared::AddressBytes,
     FullyCompiledProgram,
 };
+use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeMap, VecDeque},
     fmt::Debug,
@@ -42,8 +43,8 @@ pub struct ProcessedModule {
 
 pub struct CompiledState<'a> {
     pre_compiled_deps: Option<&'a FullyCompiledProgram>,
-    compiled_module_named_address_mapping: BTreeMap<ModuleId, String>,
-    named_address_mapping: BTreeMap<String, AddressBytes>,
+    compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     modules: BTreeMap<ModuleId, ProcessedModule>,
 }
 
@@ -271,9 +272,13 @@ pub trait MoveTestAdapter<'a> {
 
 impl<'a> CompiledState<'a> {
     pub fn new(
-        named_address_mapping: BTreeMap<String, AddressBytes>,
+        named_address_mapping: BTreeMap<impl Into<Symbol>, AddressBytes>,
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     ) -> Self {
+        let named_address_mapping = named_address_mapping
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
         let mut state = Self {
             pre_compiled_deps,
             modules: BTreeMap::new(),
@@ -283,7 +288,7 @@ impl<'a> CompiledState<'a> {
         if let Some(pcd) = pre_compiled_deps {
             for unit in &pcd.compiled {
                 if let CompiledUnit::Module { ident, module, .. } = unit {
-                    let (named_addr_opt, _id) = ident.clone().into_module_id();
+                    let (named_addr_opt, _id) = (*ident).into_module_id();
                     state.add(named_addr_opt.map(|n| n.value), module.clone());
                 }
             }
@@ -320,7 +325,7 @@ impl<'a> CompiledState<'a> {
             .map(|pmod| &pmod.interface_file.as_ref().unwrap().0)
     }
 
-    pub fn add(&mut self, named_addr_opt: Option<String>, module: CompiledModule) {
+    pub fn add(&mut self, named_addr_opt: Option<Symbol>, module: CompiledModule) {
         let id = module.self_id();
         if let Some(named_addr) = named_addr_opt {
             self.compiled_module_named_address_mapping
@@ -337,7 +342,7 @@ impl<'a> CompiledState<'a> {
 
 fn compile_source_unit(
     pre_compiled_deps: Option<&FullyCompiledProgram>,
-    named_address_mapping: BTreeMap<String, AddressBytes>,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     deps: &[String],
     path: String,
 ) -> Result<(CompiledUnit, Option<String>)> {

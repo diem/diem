@@ -195,14 +195,14 @@ impl AliasMap {
         let mut current_scope = AliasSet::new();
         for (alias, (ident, is_implicit)) in new_modules {
             if !is_implicit {
-                current_scope.modules.add(alias.clone()).unwrap();
+                current_scope.modules.add(alias).unwrap();
             }
             self.modules.remove(&alias);
             self.modules.add(alias, (Some(next_depth), ident)).unwrap();
         }
         for (alias, (ident_member, is_implicit)) in new_members {
             if !is_implicit {
-                current_scope.members.add(alias.clone()).unwrap();
+                current_scope.members.add(alias).unwrap();
             }
             self.members.remove(&alias);
             self.members

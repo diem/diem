@@ -9,6 +9,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 //**************************************************************************************************
@@ -20,12 +21,12 @@ pub fn verify(
     compilation_env: &mut CompilationEnv,
     modules: &UniqueMap<ModuleIdent, E::ModuleDefinition>,
 ) {
-    let mut decl_locs: BTreeMap<(AddressBytes, String), CompiledModuleIdent> = BTreeMap::new();
+    let mut decl_locs: BTreeMap<(AddressBytes, Symbol), CompiledModuleIdent> = BTreeMap::new();
     for (sp!(loc, ModuleIdent_ { address, module }), _mdef) in modules.key_cloned_iter() {
         let sp!(nloc, n_) = module.0;
         let addr_name = match &address {
             Address::Anonymous(_) => None,
-            Address::Named(n) => Some(n.clone()),
+            Address::Named(n) => Some(*n),
         };
         let addr_bytes = match &address {
             Address::Anonymous(sp!(_, addr_bytes)) => *addr_bytes,
@@ -36,10 +37,10 @@ pub fn verify(
                 Some(addr_bytes) => *addr_bytes,
             },
         };
-        let mident_ = (addr_bytes, n_.clone());
+        let mident_ = (addr_bytes, n_);
         let compiled_mident =
             CompiledModuleIdent::new(loc, addr_name, addr_bytes, ModuleName(sp(nloc, n_)));
-        if let Some(prev) = decl_locs.insert(mident_.clone(), compiled_mident) {
+        if let Some(prev) = decl_locs.insert(mident_, compiled_mident) {
             let prev = &prev;
             let cur = &decl_locs[&mident_];
             let (orig, duplicate) =

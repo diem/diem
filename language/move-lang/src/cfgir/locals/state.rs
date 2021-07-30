@@ -43,11 +43,11 @@ impl LocalStates {
         };
         for (var, _) in local_types.key_cloned_iter() {
             let local_state = LocalState::Unavailable(var.loc());
-            states.set_state(var.clone(), local_state)
+            states.set_state(var, local_state)
         }
         for (var, _) in function_arguments {
             let local_state = LocalState::Available(var.loc());
-            states.set_state(var.clone(), local_state)
+            states.set_state(*var, local_state)
         }
         states
     }

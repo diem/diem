@@ -23,6 +23,7 @@ use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::file_format as F;
 use move_core_types::account_address::AccountAddress as MoveAddress;
 use move_ir_types::{ast as IR, location::*};
+use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
@@ -68,7 +69,7 @@ fn extract_decls(
     let sdecls = all_modules()
         .flat_map(|(m, mdef)| {
             mdef.structs.key_cloned_iter().map(move |(s, sdef)| {
-                let key = (m.clone(), s);
+                let key = (m, s);
                 let abilities = abilities(&sdef.abilities);
                 let type_parameters = struct_type_parameters(sdef.type_parameters.clone());
                 (key, (abilities, type_parameters))
@@ -79,7 +80,7 @@ fn extract_decls(
     let fdecls = all_modules()
         .flat_map(|(m, mdef)| {
             mdef.functions.key_cloned_iter().map(move |(f, fdef)| {
-                let key = (m.clone(), f);
+                let key = (m, f);
                 let seen = seen_structs(&fdef.signature);
                 let gsig = fdef.signature.clone();
                 (key, (seen, gsig))
@@ -172,7 +173,7 @@ fn module(
         .functions
         .into_iter()
         .map(|(f, fdef)| {
-            let (res, info) = function(&mut context, Some(&ident), f.clone(), fdef);
+            let (res, info) = function(&mut context, Some(&ident), f, fdef);
             collected_function_infos.add(f, info).unwrap();
             res
         })
@@ -186,9 +187,9 @@ fn module(
 
     let addr_name = match &ident.value.address {
         Address::Anonymous(_) => None,
-        Address::Named(n) => Some(n.clone()),
+        Address::Named(n) => Some(*n),
     };
-    let addr_bytes = context.resolve_address(ident.value.address.clone());
+    let addr_bytes = context.resolve_address(ident.value.address);
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
         struct_declarations,
@@ -203,7 +204,7 @@ fn module(
         }
     ) = ident;
     let ir_module = IR::ModuleDefinition {
-        name: IR::ModuleName::new(module_name.0.value.clone()),
+        name: IR::ModuleName(module_name.0.value),
         friends,
         imports,
         explicit_dependency_declarations,
@@ -236,7 +237,7 @@ fn module(
 
 fn script(
     compilation_env: &mut CompilationEnv,
-    key: String,
+    key: Symbol,
     constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
     fdef: G::Function,
@@ -314,16 +315,18 @@ fn function_info_map(
     let module = compile_module;
     let handle_idx = module.function_defs[idx.0 as usize].function;
     let name_idx = module.function_handles[handle_idx.0 as usize].name;
-    let name = module.identifiers[name_idx.0 as usize]
-        .clone()
-        .into_string();
+    let name = module.identifiers[name_idx.0 as usize].as_str().into();
 
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    let local_map = function_source_map.make_local_name_to_index_map();
+    let local_map = function_source_map
+        .make_local_name_to_index_map()
+        .into_iter()
+        .map(|(n, v)| (Symbol::from(n.as_str()), v))
+        .collect();
     let (params, specs) = collected_function_infos.get_(&name).unwrap();
     let parameters = params
         .iter()
-        .map(|(v, ty)| var_info(&local_map, v.clone(), ty.clone()))
+        .map(|(v, ty)| var_info(&local_map, *v, ty.clone()))
         .collect();
     let spec_info = specs
         .iter()
@@ -353,7 +356,11 @@ fn script_function_info(
 ) -> FunctionInfo {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    let local_map = function_source_map.make_local_name_to_index_map();
+    let local_map = function_source_map
+        .make_local_name_to_index_map()
+        .into_iter()
+        .map(|(n, v)| (Symbol::from(n.as_str()), v))
+        .collect();
     let parameters = params
         .into_iter()
         .map(|(v, ty)| var_info(&local_map, v, ty))
@@ -377,23 +384,23 @@ fn script_function_info(
 }
 
 fn used_local_info(
-    local_map: &BTreeMap<&String, F::LocalIndex>,
+    local_map: &BTreeMap<Symbol, F::LocalIndex>,
     used_local_types: &BTreeMap<Var, H::SingleType>,
 ) -> UniqueMap<Var, VarInfo> {
     UniqueMap::maybe_from_iter(used_local_types.iter().map(|(v, ty)| {
-        let (v, info) = var_info(local_map, v.clone(), ty.clone());
-        let v_orig_ = match display_var(&v.0.value) {
+        let (v, info) = var_info(local_map, *v, ty.clone());
+        let v_orig_ = match display_var(v.0.value) {
             DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
             DisplayVar::Orig(s) => s,
         };
-        let v_orig = Var(sp(v.0.loc, v_orig_));
+        let v_orig = Var(sp(v.0.loc, v_orig_.into()));
         (v_orig, info)
     }))
     .unwrap()
 }
 
 fn var_info(
-    local_map: &BTreeMap<&String, F::LocalIndex>,
+    local_map: &BTreeMap<Symbol, F::LocalIndex>,
     v: Var,
     type_: H::SingleType,
 ) -> (Var, VarInfo) {
@@ -446,7 +453,7 @@ fn struct_fields(
         HF::Defined(field_vec) if field_vec.is_empty() => {
             // empty fields are not allowed in the bytecode, add a dummy field
             let fake_field = vec![(
-                Field(sp(loc, "dummy_field".to_string())),
+                Field(sp(loc, "dummy_field".into())),
                 H::BaseType_::bool(loc),
             )];
             struct_fields(context, loc, HF::Defined(fake_field))
@@ -602,7 +609,7 @@ fn seen_structs_base_type(
         }
         B::Apply(_, sp!(_, tn_), tys) => {
             if let TN::ModuleType(m, s) = tn_ {
-                seen.insert((m.clone(), s.clone()));
+                seen.insert((*m, *s));
             }
             tys.iter().for_each(|st| seen_structs_base_type(seen, st))
         }
@@ -652,15 +659,15 @@ fn function_body(
 //**************************************************************************************************
 
 fn type_var(sp!(loc, n): Name) -> IR::TypeVar {
-    sp(loc, IR::TypeVar_::new(n))
+    sp(loc, IR::TypeVar_(n))
 }
 
 fn var(v: Var) -> IR::Var {
-    sp(v.0.loc, IR::Var_::new(v.0.value))
+    sp(v.0.loc, IR::Var_(v.0.value))
 }
 
 fn field(f: Field) -> IR::Field {
-    sp(f.0.loc, IR::Field_::new(f.0.value))
+    sp(f.0.loc, IR::Field_(f.0.value))
 }
 
 fn struct_definition_name(
@@ -794,7 +801,7 @@ fn types(context: &mut Context, sp!(_, t_): H::Type) -> Vec<IR::Type> {
 //**************************************************************************************************
 
 fn label(lbl: H::Label) -> IR::BlockLabel {
-    IR::BlockLabel(format!("{}", lbl))
+    IR::BlockLabel(format!("{}", lbl).into())
 }
 
 fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): H::Command) {

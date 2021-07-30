@@ -148,7 +148,7 @@ impl<'input> Lexer<'input> {
         self.token
     }
 
-    pub fn content(&self) -> &str {
+    pub fn content(&self) -> &'input str {
         &self.text[self.cur_start..self.cur_end]
     }
 

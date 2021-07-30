@@ -66,11 +66,13 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
         .chain(prog.source_definitions.iter())
         .any(|def| match def {
             P::Definition::Module(mdef) => {
-                mdef.name.0.value == UNIT_TEST_MODULE_NAME
+                mdef.name.0.value.as_str() == UNIT_TEST_MODULE_NAME
                     && mdef.address.is_some()
                     && match &mdef.address.as_ref().unwrap().value {
                         // TODO: remove once named addresses have landed in the stdlib
-                        P::LeadingNameAccess_::Name(name) => name.value == STDLIB_ADDRESS_NAME,
+                        P::LeadingNameAccess_::Name(name) => {
+                            name.value.as_str() == STDLIB_ADDRESS_NAME
+                        }
                         P::LeadingNameAccess_::AnonymousAddress(_) => false,
                     }
             }
@@ -228,15 +230,15 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
 
     let leading_name_access = sp(
         mloc,
-        P::LeadingNameAccess_::Name(sp(mloc, STDLIB_ADDRESS_NAME.to_owned())),
+        P::LeadingNameAccess_::Name(sp(mloc, STDLIB_ADDRESS_NAME.into())),
     );
 
-    let mod_name = sp(mloc, UNIT_TEST_MODULE_NAME.to_string());
+    let mod_name = sp(mloc, UNIT_TEST_MODULE_NAME.into());
     let mod_addr_name = sp(mloc, (leading_name_access, mod_name));
-    let fn_name = sp(mloc, "create_signers_for_testing".to_string());
+    let fn_name = sp(mloc, "create_signers_for_testing".into());
     let args_ = vec![sp(
         mloc,
-        P::Exp_::Value(sp(mloc, P::Value_::Num("0".to_string()))),
+        P::Exp_::Value(sp(mloc, P::Value_::Num("0".into()))),
     )];
     let nop_call = P::Exp_::Call(
         sp(mloc, P::NameAccessChain_::Three(mod_addr_name, fn_name)),
@@ -251,7 +253,7 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
         visibility: P::Visibility::Internal,
         acquires: vec![],
         signature,
-        name: P::FunctionName(sp(mloc, "unit_test_poison".to_string())),
+        name: P::FunctionName(sp(mloc, "unit_test_poison".into())),
         body: sp(
             mloc,
             P::FunctionBody_::Defined((

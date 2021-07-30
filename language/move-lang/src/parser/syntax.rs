@@ -262,7 +262,7 @@ fn parse_identifier(tokens: &mut Lexer) -> Result<Name, Diagnostic> {
         return Err(unexpected_token_error(tokens, "an identifier"));
     }
     let start_loc = tokens.start_loc();
-    let id = tokens.content().to_string();
+    let id = tokens.content().into();
     tokens.advance()?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, id))
@@ -555,7 +555,7 @@ fn parse_exp_field(tokens: &mut Lexer) -> Result<(Field, Exp), Diagnostic> {
     } else {
         sp(
             f.loc(),
-            Exp_::Name(sp(f.loc(), NameAccessChain_::One(f.0.clone())), None),
+            Exp_::Name(sp(f.loc(), NameAccessChain_::One(f.0)), None),
         )
     };
     Ok((f, arg))
@@ -571,7 +571,7 @@ fn parse_bind_field(tokens: &mut Lexer) -> Result<(Field, Bind), Diagnostic> {
     let arg = if match_token(tokens, Tok::Colon)? {
         parse_bind(tokens)?
     } else {
-        let v = Var(f.0.clone());
+        let v = Var(f.0);
         sp(v.loc(), Bind_::Var(v))
     };
     Ok((f, arg))
@@ -659,7 +659,7 @@ fn parse_byte_string(tokens: &mut Lexer) -> Result<Value_, Diagnostic> {
         return Err(unexpected_token_error(tokens, "a byte string value"));
     }
     let s = tokens.content();
-    let text = s[2..s.len() - 1].to_owned();
+    let text = Symbol::from(&s[2..s.len() - 1]);
     let value_ = if s.starts_with("x\"") {
         Value_::HexString(text)
     } else {
@@ -699,12 +699,12 @@ fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Diagnostic> {
             if let Ok(Tok::ColonColon) = tokens.lookahead() {
                 return Ok(None);
             }
-            let num = tokens.content().to_owned();
+            let num = tokens.content().into();
             tokens.advance()?;
             Value_::Num(num)
         }
         Tok::NumTypedValue => {
-            let num = tokens.content().to_owned();
+            let num = tokens.content().into();
             tokens.advance()?;
             Value_::Num(num)
         }
@@ -1388,7 +1388,7 @@ fn parse_quant_binding(tokens: &mut Lexer) -> Result<Spanned<(Bind, Exp)>, Diagn
         // Built `domain<ty>()` expression.
         tokens.advance()?;
         let ty = parse_type(tokens)?;
-        make_builtin_call(ty.loc, "$spec_domain", Some(vec![ty]), vec![])
+        make_builtin_call(ty.loc, Symbol::from("$spec_domain"), Some(vec![ty]), vec![])
     } else {
         // This is a quantifier over a value, like a vector or a range.
         consume_identifier(tokens, "in")?;
@@ -1403,8 +1403,8 @@ fn parse_quant_binding(tokens: &mut Lexer) -> Result<Spanned<(Bind, Exp)>, Diagn
     ))
 }
 
-fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
-    let maccess = sp(loc, NameAccessChain_::One(sp(loc, name.to_string())));
+fn make_builtin_call(loc: Loc, name: Symbol, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
+    let maccess = sp(loc, NameAccessChain_::One(sp(loc, name)));
     sp(loc, Exp_::Call(maccess, type_args, sp(loc, args)))
 }
 
@@ -1867,7 +1867,7 @@ fn parse_address_block(
         return Err(diag!(Syntax::UnexpectedToken, (loc, msg)));
     }
     let addr_name = parse_identifier(tokens)?;
-    if addr_name.value != "address" {
+    if addr_name.value.as_str() != "address" {
         let msg = format!("{}. Got '{}'", UNEXPECTED_TOKEN, addr_name.value);
         return Err(diag!(Syntax::UnexpectedToken, (addr_name.loc, msg)));
     }
@@ -2756,7 +2756,7 @@ fn parse_spec_property(tokens: &mut Lexer) -> Result<PragmaProperty, Diagnostic>
     let name = match consume_optional_token_with_loc(tokens, Tok::Friend)? {
         // special treatment for `pragma friend = ...` as friend is a keyword
         // TODO: this might violate the assumption that a keyword can never be a name.
-        Some(loc) => Name::new(loc, "friend".to_owned()),
+        Some(loc) => Name::new(loc, Symbol::from("friend")),
         None => parse_identifier(tokens)?,
     };
     let value = if tokens.peek() == Tok::Equal {

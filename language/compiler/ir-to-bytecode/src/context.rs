@@ -123,32 +123,38 @@ impl<'a> CompiledDependencyView<'a> {
         let address = *self
             .address_identifiers
             .get(module_handle.address.0 as usize)?;
-        let module = ModuleName::new(
+        let module = ModuleName(
             self.identifiers
                 .get(module_handle.name.0 as usize)?
-                .to_string(),
+                .as_str()
+                .into(),
         );
-        assert!(module.as_inner() != ModuleName::self_name());
+        assert!(module != ModuleName::module_self());
         let ident = QualifiedModuleIdent {
             address,
             name: module,
         };
-        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.to_string());
+        let name = StructName(
+            self.identifiers
+                .get(handle.name.0 as usize)?
+                .as_str()
+                .into(),
+        );
         Some((ident, name))
     }
 
     fn struct_handle(&self, module: &ModuleName, name: &StructName) -> Option<&'a StructHandle> {
         self.structs
             .get(&(
-                ident_str(module.as_inner()).ok()?,
-                ident_str(name.as_inner()).ok()?,
+                ident_str(module.0.as_str()).ok()?,
+                ident_str(name.0.as_str()).ok()?,
             ))
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
 
     fn function_signature(&self, name: &FunctionName) -> Option<FunctionSignature> {
         self.functions
-            .get(ident_str(name.as_inner()).ok()?)
+            .get(ident_str(name.0.as_str()).ok()?)
             .and_then(|idx| {
                 let fh = self.function_pool.get(*idx as usize)?;
                 Some(FunctionSignature {
@@ -317,7 +323,7 @@ impl<'a> Context<'a> {
     pub fn add_compiled_dependency(&mut self, compiled_dep: &'a CompiledModule) -> Result<()> {
         let ident = QualifiedModuleIdent {
             address: *compiled_dep.address(),
-            name: ModuleName::new(compiled_dep.name().to_string()),
+            name: ModuleName(compiled_dep.name().as_str().into()),
         };
         match self.dependencies.get(&ident) {
             None => self
@@ -487,8 +493,8 @@ impl<'a> Context<'a> {
     }
 
     /// Get the identifier pool index, adds it if missing.
-    pub fn identifier_index(&mut self, s: &str) -> Result<IdentifierIndex> {
-        let ident = ident_str(s)?;
+    pub fn identifier_index(&mut self, s: impl AsRef<str>) -> Result<IdentifierIndex> {
+        let ident = ident_str(s.as_ref())?;
         let m = &mut self.identifiers;
         let idx: Result<TableIndex> = get_or_add_item_macro!(m, ident, ident.to_owned());
         Ok(IdentifierIndex(idx?))
@@ -563,7 +569,7 @@ impl<'a> Context<'a> {
     /// Add a friend. This creates a module handle for the friended module.
     pub fn declare_friend(&mut self, id: QualifiedModuleIdent) -> Result<ModuleHandle> {
         let address = self.address_index(id.address)?;
-        let name = self.identifier_index(id.name.as_inner())?;
+        let name = self.identifier_index(id.name.0)?;
         Ok(ModuleHandle { address, name })
     }
 
@@ -576,7 +582,7 @@ impl<'a> Context<'a> {
         // We don't care about duplicate aliases, if they exist
         self.aliases.insert(id.clone(), alias.clone());
         let address = self.address_index(id.address)?;
-        let name = self.identifier_index(id.name.as_inner())?;
+        let name = self.identifier_index(id.name.0)?;
         self.modules
             .insert(alias.clone(), (id, ModuleHandle { address, name }));
         Ok(ModuleHandleIndex(get_or_add_item_ref(
@@ -603,7 +609,7 @@ impl<'a> Context<'a> {
         type_parameters: Vec<StructTypeParameter>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
-        let name = self.identifier_index(sname.name.as_inner())?;
+        let name = self.identifier_index(sname.name.0)?;
         self.structs.insert(
             sname.clone(),
             StructHandle {
@@ -646,7 +652,7 @@ impl<'a> Context<'a> {
     ) -> Result<()> {
         let m_f = (mname.clone(), fname.clone());
         let module = self.module_handle_index(&mname)?;
-        let name = self.identifier_index(fname.as_inner())?;
+        let name = self.identifier_index(fname.0)?;
 
         self.function_signatures
             .insert(m_f.clone(), signature.clone());
@@ -723,7 +729,7 @@ impl<'a> Context<'a> {
         &mut self,
         s: &QualifiedStructIdent,
     ) -> Result<(AbilitySet, Vec<StructTypeParameter>)> {
-        if s.module.as_inner() == ModuleName::self_name() {
+        if s.module == ModuleName::module_self() {
             bail!("Unbound struct {}", s)
         }
         let mident = self.module_ident(&s.module)?.clone();
@@ -833,7 +839,7 @@ impl<'a> Context<'a> {
         m: &ModuleName,
         f: &FunctionName,
     ) -> Result<FunctionSignature> {
-        if m.as_inner() == ModuleName::self_name() {
+        if m == &ModuleName::module_self() {
             bail!("Unbound function {}.{}", m, f)
         }
         let mident = self.module_ident(m)?.clone();

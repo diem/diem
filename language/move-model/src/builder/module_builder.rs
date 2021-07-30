@@ -274,7 +274,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     ) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let name = qsym.symbol;
-        let const_name = ConstantName::new(self.symbol_pool().string(name).to_string());
+        let const_name = ConstantName(self.symbol_pool().string(name).to_string().into());
         let const_idx = source_map
             .constant_map
             .get(&const_name)
@@ -2582,7 +2582,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .iter()
                 .map(|p| match &p.value {
                     PA::SpecApplyFragment_::Wildcard => ".*".to_string(),
-                    PA::SpecApplyFragment_::NamePart(n) => n.value.clone(),
+                    PA::SpecApplyFragment_::NamePart(n) => n.value.to_string(),
                 })
                 .join("")
         ))

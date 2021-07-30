@@ -16,6 +16,7 @@ use move_core_types::{
     language_storage::ModuleId,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 //**************************************************************************************************
@@ -41,7 +42,7 @@ pub struct FunctionInfo {
     pub parameters: Vec<(Var, VarInfo)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct CompiledModuleIdent {
     pub loc: Loc,
     pub address_name: Option<Name>,
@@ -59,7 +60,7 @@ pub enum CompiledUnit {
     },
     Script {
         loc: Loc,
-        key: String,
+        key: Symbol,
         script: F::CompiledScript,
         source_map: SourceMap<Loc>,
         function_info: FunctionInfo,
@@ -106,17 +107,17 @@ impl CompiledModuleIdent {
         } = self;
         let id = ModuleId::new(
             AccountAddress::new(address_bytes.into_bytes()),
-            MoveCoreIdentifier::new(module_name.0.value).unwrap(),
+            MoveCoreIdentifier::new(module_name.0.value.to_string()).unwrap(),
         );
         (address_name, id)
     }
 }
 
 impl CompiledUnit {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> Symbol {
         match self {
-            CompiledUnit::Module { ident, .. } => ident.module_name.0.value.to_owned(),
-            CompiledUnit::Script { key, .. } => key.to_owned(),
+            CompiledUnit::Module { ident, .. } => ident.module_name.0.value,
+            CompiledUnit::Script { key, .. } => *key,
         }
     }
 

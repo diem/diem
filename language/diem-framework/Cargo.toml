@@ -23,6 +23,7 @@ diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 move-binary-format = { path = "../move-binary-format" }
 transaction-builder-generator = { path = "../transaction-builder/generator" }
 move-stdlib = { path = "../move-stdlib" }
+move-symbol-pool = { path = "../move-symbol-pool" }
 move-core-types = { path = "../move-core/types" }
 move-vm-types = { path = "../move-vm/types" }
 move-vm-runtime = { path = "../move-vm/runtime" }

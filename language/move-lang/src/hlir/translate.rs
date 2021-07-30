@@ -12,6 +12,8 @@ use crate::{
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use once_cell::sync::Lazy;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
@@ -20,17 +22,18 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const NEW_NAME_DELIM: &str = "#";
 
-fn new_name(context: &mut Context, n: &str) -> String {
-    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next())
+fn new_name(context: &mut Context, n: Symbol) -> Symbol {
+    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next()).into()
 }
 
 const TEMP_PREFIX: &str = "%";
+static TEMP_PREFIX_SYMBOL: Lazy<Symbol> = Lazy::new(|| TEMP_PREFIX.into());
 
-fn new_temp_name(context: &mut Context) -> String {
-    new_name(context, TEMP_PREFIX)
+fn new_temp_name(context: &mut Context) -> Symbol {
+    new_name(context, *TEMP_PREFIX_SYMBOL)
 }
 
-pub fn is_temp_name(s: &str) -> bool {
+pub fn is_temp_name(s: Symbol) -> bool {
     s.starts_with(TEMP_PREFIX)
 }
 
@@ -39,12 +42,12 @@ pub enum DisplayVar {
     Tmp,
 }
 
-pub fn display_var(s: &str) -> DisplayVar {
+pub fn display_var(s: Symbol) -> DisplayVar {
     if is_temp_name(s) {
         DisplayVar::Tmp
     } else {
-        let mut orig = s.to_owned();
-        orig.truncate(orig.find('#').unwrap_or(s.len()));
+        let mut orig = s.as_str().to_string();
+        orig.truncate(orig.find('#').unwrap_or_else(|| s.len()));
         DisplayVar::Orig(orig)
     }
 }
@@ -90,29 +93,27 @@ impl<'env> Context<'env> {
 
     pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
         let new_var = Var(sp(loc, new_temp_name(self)));
-        self.function_locals.add(new_var.clone(), t).unwrap();
-        self.local_scope
-            .add(new_var.clone(), new_var.clone())
-            .unwrap();
-        self.used_locals.insert(new_var.clone());
+        self.function_locals.add(new_var, t).unwrap();
+        self.local_scope.add(new_var, new_var).unwrap();
+        self.used_locals.insert(new_var);
         new_var
     }
 
     pub fn bind_local(&mut self, v: Var, t: H::SingleType) {
         let new_var = if !self.function_locals.contains_key(&v) {
-            v.clone()
+            v
         } else {
             Var(sp(v.loc(), new_name(self, v.value())))
         };
-        self.function_locals.add(new_var.clone(), t).unwrap();
+        self.function_locals.add(new_var, t).unwrap();
         self.local_scope.remove(&v);
         assert!(!self.local_scope.contains_key(&new_var));
         self.local_scope.add(v, new_var).unwrap();
     }
 
     pub fn remapped_local(&mut self, v: Var) -> Var {
-        let remapped = self.local_scope.get(&v).unwrap().clone();
-        self.used_locals.insert(remapped.clone());
+        let remapped = *self.local_scope.get(&v).unwrap();
+        self.used_locals.insert(remapped);
         remapped
     }
 
@@ -125,7 +126,7 @@ impl<'env> Context<'env> {
                 H::StructFields::Defined(m) => m,
             };
             for (idx, (field, _)) in field_map.iter().enumerate() {
-                fields.add(field.clone(), idx).unwrap();
+                fields.add(*field, idx).unwrap();
             }
             self.structs.add(sname, fields).unwrap();
         }
@@ -213,8 +214,8 @@ fn module(
 
 fn scripts(
     context: &mut Context,
-    tscripts: BTreeMap<String, T::Script>,
-) -> BTreeMap<String, H::Script> {
+    tscripts: BTreeMap<Symbol, T::Script>,
+) -> BTreeMap<Symbol, H::Script> {
     tscripts
         .into_iter()
         .map(|(n, s)| (n, script(context, s)))
@@ -230,7 +231,7 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
         function: tfunction,
     } = tscript;
     let constants = tconstants.map(|name, c| constant(context, name, c));
-    let function = function(context, function_name.clone(), tfunction);
+    let function = function(context, function_name, tfunction);
     H::Script {
         attributes,
 
@@ -269,7 +270,7 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
         .into_iter()
         .map(|(v, tty)| {
             let ty = single_type(context, tty);
-            context.bind_local(v.clone(), ty.clone());
+            context.bind_local(v, ty.clone());
             (v, ty)
         })
         .collect();
@@ -629,7 +630,7 @@ fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
         L::Ignore => (),
         L::Var(v, ty) => {
             let st = single_type(context, *ty.clone());
-            context.bind_local(v.clone(), st)
+            context.bind_local(*v, st)
         }
         L::Unpack(_, _, _, fields) | L::BorrowUnpack(_, _, _, _, fields) => fields
             .iter()
@@ -694,7 +695,7 @@ fn assign(
             let copy_tmp = || {
                 let copy_tmp_ = E::Copy {
                     from_user: false,
-                    var: tmp.clone(),
+                    var: tmp,
                 };
                 H::exp(H::Type_::single(rvalue_ty.clone()), sp(loc, copy_tmp_))
             };
@@ -930,8 +931,8 @@ fn exp_<'env>(
                 let bind_list = sp(
                     loc,
                     vec![
-                        bvar(vcond.clone(), Box::new(tbool.clone())),
-                        bvar(vcode.clone(), Box::new(tu64.clone())),
+                        bvar(vcond, Box::new(tbool.clone())),
+                        bvar(vcode, Box::new(tu64.clone())),
                     ],
                 );
                 let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
@@ -1396,7 +1397,7 @@ fn bind_exp_impl_(
     }
     let lvalues = tmps
         .iter()
-        .map(|(v, st)| sp(v.loc(), H::LValue_::Var(v.clone(), Box::new(st.clone()))))
+        .map(|(v, st)| sp(v.loc(), H::LValue_::Var(*v, Box::new(st.clone()))))
         .collect();
     let asgn = sp(loc, C::Assign(lvalues, Box::new(e)));
     result.push_back(sp(loc, S::Command(asgn)));

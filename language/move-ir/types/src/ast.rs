@@ -10,6 +10,7 @@ use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     value::MoveValue,
 };
+use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -68,7 +69,7 @@ pub struct Script {
 
 /// Newtype for a name of a module
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct ModuleName(String);
+pub struct ModuleName(pub Symbol);
 
 /// Newtype of the address + the module name
 /// `addr.m`
@@ -143,14 +144,14 @@ pub struct ImportDefinition {
 
 /// Newtype for a variable/local
 #[derive(Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Var_(String);
+pub struct Var_(pub Symbol);
 
 /// The type of a variable with a location
 pub type Var = Spanned<Var_>;
 
 /// New type that represents a type variable. Used to declare type formals & reference them.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
-pub struct TypeVar_(String);
+pub struct TypeVar_(pub Symbol);
 
 /// The type of a type variable with a location.
 pub type TypeVar = Spanned<TypeVar_>;
@@ -217,7 +218,7 @@ pub struct QualifiedStructIdent {
 
 /// The field newtype
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct Field_(String);
+pub struct Field_(pub Symbol);
 
 /// A field coupled with source location information
 pub type Field = Spanned<Field_>;
@@ -227,7 +228,7 @@ pub type Fields<T> = Vec<(Field, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct StructName(String);
+pub struct StructName(pub Symbol);
 
 /// A struct type parameter with its constraints and whether it's declared as phantom.
 pub type StructTypeParameter = (bool, TypeVar, BTreeSet<Ability>);
@@ -275,7 +276,7 @@ pub enum StructDefinitionFields {
 
 /// Newtype for the name of a constant
 #[derive(Debug, Serialize, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
-pub struct ConstantName(String);
+pub struct ConstantName(pub Symbol);
 
 /// A constant declaration in a module or script
 #[derive(Clone, Debug, PartialEq)]
@@ -294,7 +295,7 @@ pub struct Constant {
 
 /// Newtype for the name of a function
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
-pub struct FunctionName(String);
+pub struct FunctionName(pub Symbol);
 
 /// The signature of a function
 #[derive(PartialEq, Debug, Clone)]
@@ -635,10 +636,10 @@ pub type BytecodeBlocks = Vec<(BlockLabel, BytecodeBlock)>;
 pub type BytecodeBlock = Vec<Bytecode>;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct BlockLabel(pub String);
+pub struct BlockLabel(pub Symbol);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct NopLabel(pub String);
+pub struct NopLabel(pub Symbol);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Bytecode_ {
@@ -708,7 +709,7 @@ fn get_external_deps(imports: &[ImportDefinition]) -> Vec<ModuleId> {
     let mut deps = HashSet::new();
     for dep in imports.iter() {
         if let ModuleIdent::Qualified(id) = &dep.ident {
-            let identifier = Identifier::new(id.name.0.clone()).unwrap();
+            let identifier = Identifier::new(id.name.0.as_str().to_owned()).unwrap();
             deps.insert(ModuleId::new(id.address, identifier));
         }
     }
@@ -753,33 +754,17 @@ impl Script {
     }
 }
 
-static SELF_MODULE_NAME: Lazy<String> = Lazy::new(|| "Self".to_owned());
+static SELF_MODULE_NAME: Lazy<Symbol> = Lazy::new(|| Symbol::from("Self"));
 
 impl ModuleName {
-    /// Create a new `ModuleName` from a string
-    pub fn new(name: String) -> Self {
-        assert!(!name.is_empty());
-        ModuleName(name)
-    }
-
     /// Name for the current module handle
     pub fn self_name() -> &'static str {
-        &*SELF_MODULE_NAME
+        SELF_MODULE_NAME.as_str()
     }
 
     /// Create a new `ModuleName` from `self_name`.
     pub fn module_self() -> Self {
-        ModuleName::new(ModuleName::self_name().into())
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the module
-    pub fn as_inner(&self) -> &str {
-        &self.0
+        ModuleName(*SELF_MODULE_NAME)
     }
 }
 
@@ -815,7 +800,7 @@ impl ModuleDefinition {
     /// and procedures
     /// Does not verify the correctness of any internal properties of its elements
     pub fn new(
-        name: impl ToString,
+        name: Symbol,
         friends: Vec<ModuleIdent>,
         imports: Vec<ImportDefinition>,
         explicit_dependency_declarations: Vec<ModuleDependency>,
@@ -825,7 +810,7 @@ impl ModuleDefinition {
         synthetics: Vec<SyntheticDefinition>,
     ) -> Result<Self> {
         Ok(ModuleDefinition {
-            name: ModuleName::new(name.to_string()),
+            name: ModuleName(name),
             friends,
             imports,
             explicit_dependency_declarations,
@@ -905,40 +890,6 @@ impl ImportDefinition {
     }
 }
 
-impl Field_ {
-    /// Create a new `Field_` from a string
-    pub fn new(name: String) -> Self {
-        Field_(name)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the struct
-    pub fn as_inner(&self) -> &str {
-        &self.0
-    }
-}
-
-impl StructName {
-    /// Create a new `StructName` from a string
-    pub fn new(name: String) -> Self {
-        StructName(name)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the struct
-    pub fn as_inner(&self) -> &str {
-        &self.0
-    }
-}
-
 impl StructDefinition_ {
     /// Creates a new StructDefinition from the abilities, the string representation of the name,
     /// and the user specified fields, a map from their names to their types
@@ -946,14 +897,14 @@ impl StructDefinition_ {
     /// fields do not have reference types
     pub fn move_declared(
         abilities: BTreeSet<Ability>,
-        name: impl ToString,
+        name: Symbol,
         type_formals: Vec<StructTypeParameter>,
         fields: Fields<Type>,
         invariants: Vec<Invariant>,
     ) -> Result<Self> {
         Ok(StructDefinition_ {
             abilities,
-            name: StructName::new(name.to_string()),
+            name: StructName(name),
             type_formals,
             fields: StructDefinitionFields::Move { fields },
             invariants,
@@ -964,50 +915,16 @@ impl StructDefinition_ {
     /// and the user specified fields, a map from their names to their types
     pub fn native(
         abilities: BTreeSet<Ability>,
-        name: impl ToString,
+        name: Symbol,
         type_formals: Vec<StructTypeParameter>,
     ) -> Result<Self> {
         Ok(StructDefinition_ {
             abilities,
-            name: StructName::new(name.to_string()),
+            name: StructName(name),
             type_formals,
             fields: StructDefinitionFields::Native,
             invariants: vec![],
         })
-    }
-}
-
-impl ConstantName {
-    /// Create a new `ConstantName` from a string
-    pub fn new(name: String) -> Self {
-        ConstantName(name)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the function
-    pub fn as_inner(&self) -> &str {
-        &self.0
-    }
-}
-
-impl FunctionName {
-    /// Create a new `FunctionName` from a string
-    pub fn new(name: String) -> Self {
-        FunctionName(name)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the function
-    pub fn as_inner(&self) -> &str {
-        &self.0
     }
 }
 
@@ -1046,40 +963,6 @@ impl Function_ {
             specifications,
             body,
         }
-    }
-}
-
-impl Var_ {
-    /// Creates a new `Var` from a string.
-    pub fn new(s: String) -> Self {
-        Var_(s)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the var
-    pub fn name(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TypeVar_ {
-    /// Creates a new `TypeVar` from an String.
-    pub fn new(s: String) -> Self {
-        TypeVar_(s)
-    }
-
-    /// Converts self into a string.
-    pub fn into_inner(self) -> String {
-        self.0
-    }
-
-    /// Accessor for the name of the var.
-    pub fn name(&self) -> &str {
-        &self.0
     }
 }
 

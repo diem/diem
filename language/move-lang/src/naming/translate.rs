@@ -14,6 +14,7 @@ use crate::{
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 //**************************************************************************************************
@@ -41,11 +42,11 @@ impl ResolvedType {
 struct Context<'env> {
     env: &'env mut CompilationEnv,
     current_module: Option<ModuleIdent>,
-    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, AbilitySet, usize)>>,
-    unscoped_types: BTreeMap<String, ResolvedType>,
-    scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
-    unscoped_constants: BTreeMap<String, Loc>,
-    scoped_constants: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
+    scoped_types: BTreeMap<ModuleIdent, BTreeMap<Symbol, (Loc, ModuleIdent, AbilitySet, usize)>>,
+    unscoped_types: BTreeMap<Symbol, ResolvedType>,
+    scoped_functions: BTreeMap<ModuleIdent, BTreeMap<Symbol, Loc>>,
+    unscoped_constants: BTreeMap<Symbol, Loc>,
+    scoped_constants: BTreeMap<ModuleIdent, BTreeMap<Symbol, Loc>>,
 }
 
 impl<'env> Context<'env> {
@@ -74,8 +75,8 @@ impl<'env> Context<'env> {
                     .map(|(s, sdef)| {
                         let abilities = sdef.abilities.clone();
                         let arity = sdef.type_parameters.len();
-                        let sname = s.value().to_string();
-                        (sname, (s.loc(), mident.clone(), abilities, arity))
+                        let sname = s.value();
+                        (sname, (s.loc(), mident, abilities, arity))
                     })
                     .collect();
                 (mident, mems)
@@ -86,7 +87,7 @@ impl<'env> Context<'env> {
                 let mems = mdef
                     .functions
                     .iter()
-                    .map(|(nloc, n, _)| (n.clone(), nloc))
+                    .map(|(nloc, n, _)| (*n, nloc))
                     .collect();
                 (mident, mems)
             })
@@ -96,14 +97,14 @@ impl<'env> Context<'env> {
                 let mems = mdef
                     .constants
                     .iter()
-                    .map(|(nloc, n, _)| (n.clone(), nloc))
+                    .map(|(nloc, n, _)| (*n, nloc))
                     .collect();
                 (mident, mems)
             })
             .collect();
         let unscoped_types = N::BuiltinTypeName_::all_names()
             .iter()
-            .map(|s| (s.to_string(), RT::BuiltinType))
+            .map(|s| (*s, RT::BuiltinType))
             .collect();
         Self {
             env: compilation_env,
@@ -157,7 +158,7 @@ impl<'env> Context<'env> {
                 None
             }
             Some((decl_loc, _, abilities, arity)) => {
-                Some((*decl_loc, StructName(n.clone()), abilities.clone(), *arity))
+                Some((*decl_loc, StructName(*n), abilities.clone(), *arity))
             }
         }
     }
@@ -188,7 +189,7 @@ impl<'env> Context<'env> {
                     .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
                 None
             }
-            Some(_) => Some(FunctionName(n.clone())),
+            Some(_) => Some(FunctionName(*n)),
         }
     }
 
@@ -301,21 +302,21 @@ impl<'env> Context<'env> {
         }
     }
 
-    fn bind_type(&mut self, s: String, rt: ResolvedType) {
+    fn bind_type(&mut self, s: Symbol, rt: ResolvedType) {
         self.unscoped_types.insert(s, rt);
     }
 
-    fn bind_constant(&mut self, s: String, loc: Loc) {
+    fn bind_constant(&mut self, s: Symbol, loc: Loc) {
         self.unscoped_constants.insert(s, loc);
     }
 
-    fn save_unscoped(&self) -> (BTreeMap<String, ResolvedType>, BTreeMap<String, Loc>) {
+    fn save_unscoped(&self) -> (BTreeMap<Symbol, ResolvedType>, BTreeMap<Symbol, Loc>) {
         (self.unscoped_types.clone(), self.unscoped_constants.clone())
     }
 
     fn restore_unscoped(
         &mut self,
-        (types, constants): (BTreeMap<String, ResolvedType>, BTreeMap<String, Loc>),
+        (types, constants): (BTreeMap<Symbol, ResolvedType>, BTreeMap<Symbol, Loc>),
     ) {
         self.unscoped_types = types;
         self.unscoped_constants = constants;
@@ -395,8 +396,8 @@ fn module(
 
 fn scripts(
     context: &mut Context,
-    escripts: BTreeMap<String, E::Script>,
-) -> BTreeMap<String, N::Script> {
+    escripts: BTreeMap<Symbol, E::Script>,
+) -> BTreeMap<Symbol, N::Script> {
     escripts
         .into_iter()
         .map(|(n, s)| (n, script(context, s)))
@@ -416,7 +417,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
     } = escript;
     let outer_unscoped = context.save_unscoped();
     for (loc, s, _) in &econstants {
-        context.bind_constant(s.clone(), loc)
+        context.bind_constant(*s, loc)
     }
     let inner_unscoped = context.save_unscoped();
     let constants = econstants.map(|name, c| {
@@ -424,7 +425,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
         constant(context, name, c)
     });
     context.restore_unscoped(inner_unscoped);
-    let function = function(context, function_name.clone(), efunction);
+    let function = function(context, function_name, efunction);
     context.restore_unscoped(outer_unscoped);
     N::Script {
         attributes,
@@ -693,17 +694,14 @@ fn type_parameter(
     abilities: AbilitySet,
 ) -> N::TParam {
     let id = N::TParamID::next();
-    let user_specified_name = name.clone();
+    let user_specified_name = name;
     let tp = N::TParam {
         id,
         user_specified_name,
         abilities,
     };
     let loc = name.loc;
-    context.bind_type(
-        name.value.to_string(),
-        ResolvedType::TParam(loc, tp.clone()),
-    );
+    context.bind_type(name.value, ResolvedType::TParam(loc, tp.clone()));
     if let Err((name, old_loc)) = unique_tparams.add(name, ()) {
         let msg = format!("Duplicate type parameter declared with name '{}'", name);
         context.env.add_diag(diag!(
@@ -975,7 +973,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             let ty_args = tys_opt.map(|tys| types(context, tys));
             let nes = call_args(context, rhs);
             match ma_ {
-                EA::Name(n) if N::BuiltinFunction_::all_names().contains(&n.value.as_str()) => {
+                EA::Name(n) if N::BuiltinFunction_::all_names().contains(&n.value) => {
                     match resolve_builtin_function(context, eloc, &n, ty_args) {
                         None => {
                             assert!(context.env.has_diags());

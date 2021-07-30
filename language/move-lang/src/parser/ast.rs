@@ -8,29 +8,29 @@ use std::{fmt, hash::Hash};
 
 macro_rules! new_name {
     ($n:ident) => {
-        #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone)]
+        #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
         pub struct $n(pub Name);
 
         impl TName for $n {
-            type Key = String;
+            type Key = Symbol;
             type Loc = Loc;
 
-            fn drop_loc(self) -> (Loc, String) {
+            fn drop_loc(self) -> (Loc, Symbol) {
                 (self.0.loc, self.0.value)
             }
 
-            fn add_loc(loc: Loc, key: String) -> Self {
+            fn add_loc(loc: Loc, key: Symbol) -> Self {
                 $n(sp(loc, key))
             }
 
-            fn borrow(&self) -> (&Loc, &String) {
+            fn borrow(&self) -> (&Loc, &Symbol) {
                 (&self.0.loc, &self.0.value)
             }
         }
 
         impl Identifier for $n {
-            fn value(&self) -> &str {
-                &self.0.value
+            fn value(&self) -> Symbol {
+                self.0.value
             }
             fn loc(&self) -> Loc {
                 self.0.loc
@@ -130,7 +130,7 @@ impl Attribute_ {
 
 new_name!(ModuleName);
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Specifies a name at the beginning of an access chain. Could be
 /// - A module name
 /// - A named address
@@ -141,7 +141,7 @@ pub enum LeadingNameAccess_ {
 }
 pub type LeadingNameAccess = Spanned<LeadingNameAccess_>;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleIdent_ {
     pub address: LeadingNameAccess,
     pub module: ModuleName,
@@ -457,13 +457,13 @@ pub enum Value_ {
     // @<num>
     Address(LeadingNameAccess),
     // <num>(u8|u64|u128)?
-    Num(String),
+    Num(Symbol),
     // false
     Bool(bool),
     // x"[0..9A..F]+"
-    HexString(String),
+    HexString(Symbol),
     // b"(<ascii> | \n | \r | \t | \\ | \0 | \" | \x[0..9A..F][0..9A..F])+"
-    ByteString(String),
+    ByteString(Symbol),
 }
 pub type Value = Spanned<Value_>;
 
@@ -712,7 +712,7 @@ impl ModuleName {
 
 impl Var {
     pub fn is_underscore(&self) -> bool {
-        self.0.value == "_"
+        self.0.value.as_str() == "_"
     }
 
     pub fn starts_with_underscore(&self) -> bool {

@@ -33,6 +33,7 @@ use move_lang::{
     shared::{parse_named_address, unique_map::UniqueMap, AddressBytes},
     Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
 };
+use move_symbol_pool::Symbol as MoveStringSymbol;
 use num::{BigUint, Num};
 
 use crate::{
@@ -197,7 +198,11 @@ pub fn run_model_builder_with_options_and_compilation_flags(
 
     let addresses = named_address_mapping
         .into_iter()
-        .filter_map(|(n, val)| visited_addresses.contains(n.as_str()).then(|| (n, val)))
+        .filter_map(|(n, val)| {
+            visited_addresses
+                .contains(n.as_str())
+                .then(|| (n.into(), val))
+        })
         .collect();
 
     // Step 3: selective compilation.
@@ -269,7 +274,7 @@ fn collect_related_modules_recursive<'a>(
         visited_addresses.insert(&n.value);
     }
     collect_used_addresses(&mdef.used_addresses, visited_addresses);
-    visited_modules.insert(mident.clone());
+    visited_modules.insert(*mident);
     for (_, next_mident, _) in &mdef.immediate_neighbors {
         collect_related_modules_recursive(next_mident, modules, visited_addresses, visited_modules);
     }
@@ -453,7 +458,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 #[allow(deprecated)]
 fn run_spec_checker(
     env: &mut GlobalEnv,
-    named_address_mapping: BTreeMap<String, AddressBytes>,
+    named_address_mapping: BTreeMap<MoveStringSymbol, AddressBytes>,
     units: Vec<CompiledUnit>,
     mut eprog: E::Program,
 ) {
@@ -519,12 +524,10 @@ fn run_spec_checker(
                     let address = Address::Anonymous(sp(loc, AddressBytes::DEFAULT_ERROR_BYTES));
                     let ident = sp(
                         loc,
-                        ModuleIdent_::new(address, ParserModuleName(function_name.0.clone())),
+                        ModuleIdent_::new(address, ParserModuleName(function_name.0)),
                     );
                     let mut function_infos = UniqueMap::new();
-                    function_infos
-                        .add(function_name.clone(), function_info)
-                        .unwrap();
+                    function_infos.add(function_name, function_info).unwrap();
                     // Construct a pseudo module definition.
                     let mut functions = UniqueMap::new();
                     functions.add(function_name, function).unwrap();

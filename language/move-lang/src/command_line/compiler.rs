@@ -16,6 +16,7 @@ use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
 use move_core_types::language_storage::ModuleId as CompiledModuleId;
+use move_symbol_pool::Symbol;
 use std::{
     collections::BTreeMap,
     fs,
@@ -35,7 +36,7 @@ pub struct Compiler<'a, 'b> {
     interface_files_dir_opt: Option<String>,
     pre_compiled_lib: Option<&'b FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
-    named_address_mapping: BTreeMap<String, AddressBytes>,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     flags: Flags,
 }
 
@@ -140,10 +141,13 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn set_named_address_values(
         mut self,
-        named_address_mapping: BTreeMap<String, AddressBytes>,
+        named_address_mapping: BTreeMap<impl Into<Symbol>, AddressBytes>,
     ) -> Self {
         assert!(self.named_address_mapping.is_empty());
-        self.named_address_mapping = named_address_mapping;
+        self.named_address_mapping = named_address_mapping
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
         self
     }
 
@@ -537,7 +541,7 @@ pub fn output_compiled_units(
         std::fs::create_dir_all(dir_path!(out_dir, SCRIPT_SUB_DIR))?;
     }
     for unit in scripts {
-        let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name());
+        let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name().as_str());
         emit_unit!(path, unit);
     }
 

@@ -8,6 +8,7 @@ use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_ERROR_DESC_EXTENSION,
 };
 use move_core_types::language_storage::ModuleId;
+use move_symbol_pool::Symbol;
 use std::{
     collections::BTreeMap,
     fs::{create_dir_all, remove_dir_all, File},
@@ -49,7 +50,7 @@ fn extract_old_apis(modules_path: impl AsRef<Path>) -> Option<BTreeMap<ModuleId,
     Some(old_module_apis)
 }
 
-fn build_modules(output_path: impl AsRef<Path>) -> BTreeMap<String, CompiledModule> {
+fn build_modules(output_path: impl AsRef<Path>) -> BTreeMap<Symbol, CompiledModule> {
     let output_path = output_path.as_ref();
     recreate_dir(output_path);
 
@@ -58,7 +59,7 @@ fn build_modules(output_path: impl AsRef<Path>) -> BTreeMap<String, CompiledModu
     for (name, module) in &compiled_modules {
         let mut bytes = Vec::new();
         module.serialize(&mut bytes).unwrap();
-        let mut module_path = Path::join(output_path, name);
+        let mut module_path = Path::join(output_path, name.as_str());
         module_path.set_extension(MOVE_COMPILED_EXTENSION);
         save_binary(&module_path, &bytes);
     }

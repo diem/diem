@@ -10,6 +10,7 @@ use crate::{
 };
 use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
 use move_ir_types::location::Loc;
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 struct Context<'env> {
@@ -24,8 +25,7 @@ impl<'env> Context<'env> {
     }
 
     fn resolve_address(&mut self, addr: &Address) -> AddressBytes {
-        addr.clone()
-            .into_addr_bytes(self.env.named_address_mapping())
+        (*addr).into_addr_bytes(self.env.named_address_mapping())
     }
 }
 
@@ -86,7 +86,7 @@ fn build_test_info(
         function
             .attributes
             .iter()
-            .filter(|attr| attr.value.attribute_name().value == attr_name)
+            .filter(|attr| attr.value.attribute_name().value.as_str() == attr_name)
             .collect::<Vec<_>>()
     };
 
@@ -163,7 +163,7 @@ fn build_test_info(
     let mut arguments = Vec::new();
 
     for (var, _) in &function.signature.parameters {
-        match test_annotation_params.get(var.value()) {
+        match test_annotation_params.get(&var.value()) {
             Some(value) => arguments.push(value.clone()),
             None => {
                 let missing_param_msg = "Missing test parameter assignment in test. Expected a \
@@ -198,13 +198,13 @@ fn build_test_info(
 fn parse_test_attribute(
     context: &mut Context,
     sp!(aloc, test_attribute): &E::Attribute,
-) -> BTreeMap<String, MoveValue> {
+) -> BTreeMap<Symbol, MoveValue> {
     use E::Attribute_ as EA;
 
     match test_attribute {
         EA::Name(nm) => {
             assert!(
-                nm.value == known_attributes::TestingAttributes::TEST,
+                nm.value.as_str() == known_attributes::TestingAttributes::TEST,
                 "ICE: We should only be parsing a raw test attribute"
             );
             BTreeMap::new()
@@ -224,12 +224,12 @@ fn parse_test_attribute(
             };
 
             let mut args = BTreeMap::new();
-            args.insert(nm.value.to_string(), value);
+            args.insert(nm.value, value);
             args
         }
         EA::Parameterized(nm, attributes) => {
             assert!(
-                nm.value == known_attributes::TestingAttributes::TEST,
+                nm.value.as_str() == known_attributes::TestingAttributes::TEST,
                 "ICE: We should only be parsing a raw test attribute"
             );
             attributes
@@ -248,7 +248,7 @@ fn parse_failure_attribute(
     match expected_attr {
         EA::Name(nm) => {
             assert!(
-                nm.value == known_attributes::TestingAttributes::EXPECTED_FAILURE,
+                nm.value.as_str() == known_attributes::TestingAttributes::EXPECTED_FAILURE,
                 "ICE: We should only be parsing a raw expected failure attribute"
             );
             Some(ExpectedFailure::Expected)
@@ -279,12 +279,12 @@ fn parse_failure_attribute(
                 return None;
             }
             assert!(
-                nm == known_attributes::TestingAttributes::EXPECTED_FAILURE,
+                nm.as_str() == known_attributes::TestingAttributes::EXPECTED_FAILURE,
                 "ICE: expected failure attribute must have the right name"
             );
             match attrs.last().unwrap() {
                 sp!(assign_loc, EA::Assigned(sp!(_, nm), value))
-                    if nm == known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME =>
+                    if nm.as_str() == known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME =>
                 {
                     match &**value {
                         sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))

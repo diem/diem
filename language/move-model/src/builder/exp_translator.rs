@@ -856,7 +856,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     ) -> ExpData {
         // First check for builtin functions.
         if let EA::ModuleAccess_::Name(n) = &maccess.value {
-            if n.value == "update_field" {
+            if n.value.as_str() == "update_field" {
                 return self.translate_update_field(expected_type, loc, generics, args);
             }
         }

@@ -30,7 +30,7 @@ macro_rules! push {
 /// publically visible contents of the CompiledModule, represented in source language syntax
 /// Additionally, it returns the module id (address+name) of the module that was deserialized
 pub fn write_file_to_string(
-    named_address_mapping: &BTreeMap<ModuleId, String>,
+    named_address_mapping: &BTreeMap<ModuleId, impl AsRef<str>>,
     compiled_module_file_input_path: &str,
 ) -> Result<(ModuleId, String)> {
     let file_contents = fs::read(compiled_module_file_input_path)?;
@@ -45,7 +45,7 @@ pub fn write_file_to_string(
 }
 
 pub fn write_module_to_string(
-    named_address_mapping: &BTreeMap<ModuleId, String>,
+    named_address_mapping: &BTreeMap<ModuleId, impl AsRef<str>>,
     module: &CompiledModule,
 ) -> Result<(ModuleId, String)> {
     let mut out = String::new();
@@ -155,15 +155,18 @@ impl<'a> Context<'a> {
 const DISCLAIMER: &str =
     "// NOTE: Functions are 'native' for simplicity. They may or may not be native in actuality.";
 
-fn write_module_id(named_address_mapping: &BTreeMap<ModuleId, String>, id: &ModuleId) -> String {
-    format!(
-        "{}::{}",
-        named_address_mapping
-            .get(id)
-            .cloned()
-            .unwrap_or_else(|| format!("{}", AddressBytes::new(id.address().to_u8()))),
-        id.name(),
-    )
+fn write_module_id(
+    named_address_mapping: &BTreeMap<ModuleId, impl AsRef<str>>,
+    id: &ModuleId,
+) -> String {
+    match named_address_mapping.get(id) {
+        None => format!(
+            "{}::{}",
+            format!("{}", AddressBytes::new(id.address().to_u8())),
+            id.name()
+        ),
+        Some(n) => format!("{}::{}", n.as_ref(), id.name()),
+    }
 }
 
 fn write_friend_decl(ctx: &mut Context, fdecl: &ModuleHandle) -> String {

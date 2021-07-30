@@ -48,6 +48,12 @@ allowed = [
     "clippy::format-push-string",
     "clippy::unwrap-or-else-default",
     "clippy::large-enum-variant",
+    "clippy::unnecessary-lazy-evaluations",
+    "clippy::format-in-format-args",
+    "clippy::ptr-arg",
+    "clippy::unnecessary-lazy-evaluations",
+    "clippy::format-in-format-args",
+    "clippy::ptr-arg",
 ]
 warn = [
     "clippy::wildcard_dependencies",

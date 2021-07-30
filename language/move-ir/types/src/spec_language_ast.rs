@@ -5,7 +5,8 @@ use crate::{
     ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
     location::*,
 };
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::account_address::AccountAddress;
+use move_symbol_pool::Symbol;
 
 /// AST for the Move Prover specification language.
 
@@ -20,7 +21,7 @@ pub enum FieldOrIndex {
 #[derive(PartialEq, Debug, Clone)]
 pub enum StorageLocation {
     /// A formal of the current procedure
-    Formal(String),
+    Formal(Symbol),
     /// A resource of type `type_` stored in global storage at `address`
     GlobalResource {
         type_: QualifiedStructIdent,
@@ -65,7 +66,7 @@ pub enum SpecExp {
     /// Value of expression evaluated in the state before function enter.
     Old(Box<SpecExp>),
     /// Call to a helper function.
-    Call(String, Vec<SpecExp>),
+    Call(Symbol, Vec<SpecExp>),
 }
 
 /// A specification directive to be verified
@@ -88,10 +89,10 @@ pub type Condition = Spanned<Condition_>;
 #[derive(PartialEq, Debug, Clone)]
 pub struct Invariant_ {
     /// A free string (for now) which specifies the function of this invariant.
-    pub modifier: String,
+    pub modifier: Option<Symbol>,
 
     /// An optional synthetic variable to which the below expression is assigned to.
-    pub target: Option<String>,
+    pub target: Option<Symbol>,
 
     /// A specification expression.
     pub exp: SpecExp,
@@ -103,7 +104,7 @@ pub type Invariant = Spanned<Invariant_>;
 /// A synthetic variable definition.
 #[derive(PartialEq, Debug, Clone)]
 pub struct SyntheticDefinition_ {
-    pub name: Identifier,
+    pub name: Symbol,
     pub type_: Type,
 }
 

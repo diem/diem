@@ -13,6 +13,7 @@ use move_lang::{
     shared::{AddressBytes, Flags},
     Compiler,
 };
+use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use std::{
     collections::{BTreeMap, HashSet},
@@ -154,7 +155,7 @@ impl MovePackage {
                         let mut data = vec![];
                         module.serialize(&mut data)?;
                         let file_path = pkg_bin_path
-                            .join(ident.module_name.0.value)
+                            .join(ident.module_name.0.value.as_str())
                             .with_extension(MOVE_COMPILED_EXTENSION);
                         let mut fp = File::create(file_path)?;
                         fp.write_all(&data)?;
@@ -191,6 +192,10 @@ impl MovePackage {
         out_path: &Path,
     ) -> Result<Vec<(ModuleIdWithNamedAddress, CompiledModule)>> {
         let mut modules = vec![];
+        let named_address = self
+            .named_address_hack
+            .as_ref()
+            .map(|n| Symbol::from(n.as_str()));
         for dep in self.deps.iter() {
             modules.extend(dep.compiled_modules(out_path)?);
         }
@@ -199,7 +204,7 @@ impl MovePackage {
         })? {
             let module = CompiledModule::deserialize(&fs::read(Path::new(&entry)).unwrap())
                 .map_err(|e| anyhow!("Failure deserializing module {}: {:?}", entry, e))?;
-            modules.push(((module.self_id(), self.named_address_hack.clone()), module));
+            modules.push(((module.self_id(), named_address), module));
         }
         Ok(modules)
     }

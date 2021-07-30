@@ -54,7 +54,7 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
 };
-use move_symbol_pool::Symbol as StringSymbol;
+use move_symbol_pool::Symbol as MoveStringSymbol;
 
 use crate::{
     ast::{
@@ -514,7 +514,7 @@ impl GlobalEnv {
             )
         };
         let unknown_loc = fake_loc("<unknown>");
-        let unknown_move_ir_loc = MoveIrLoc::new(StringSymbol::from("<unknown>"), 0, 0);
+        let unknown_move_ir_loc = MoveIrLoc::new(MoveStringSymbol::from("<unknown>"), 0, 0);
         let internal_loc = fake_loc("<internal>");
         GlobalEnv {
             source_files,
@@ -742,7 +742,7 @@ impl GlobalEnv {
     }
 
     /// Returns the file id for a file name, if defined.
-    pub fn get_file_id(&self, fname: StringSymbol) -> Option<FileId> {
+    pub fn get_file_id(&self, fname: MoveStringSymbol) -> Option<FileId> {
         self.file_name_map.get(fname.as_str()).cloned()
     }
 

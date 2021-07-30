@@ -5,12 +5,13 @@ use super::core::{self, Subst, TParamSubst};
 use crate::{
     diagnostics::{codes::TypeSafety, Diagnostic},
     expansion::ast::ModuleIdent,
-    naming::ast::{self as N, TParam, Type, Type_},
+    naming::ast::{self as N, TParam, TParamID, Type, Type_},
     parser::ast::FunctionName,
     shared::{unique_map::UniqueMap, CompilationEnv},
     typing::ast as T,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use petgraph::{
     algo::{astar as petgraph_astar, tarjan_scc as petgraph_scc},
     graphmap::DiGraphMap,
@@ -58,7 +59,7 @@ impl<'a> Context<'a> {
             .zip(targs)
             .for_each(|(tparam, targ)| {
                 let info = EdgeInfo {
-                    name: fname.clone(),
+                    name: *fname,
                     type_argument: targ.clone(),
                     loc,
                     edge: Edge::Identity,
@@ -335,15 +336,21 @@ fn cycle_error(
             let ftparam = cycle_nodes[0];
             let prev_tparam = cycle_nodes[prev(0)];
             let init_state = &context.tparam_type_arguments[prev_tparam][ftparam];
-            let qualified_ = format!("{}::{}", &init_state.name, &ftparam.user_specified_name);
-            let qualified = sp(ftparam.user_specified_name.loc, qualified_);
-            let qualified_tp = TParam {
-                user_specified_name: qualified,
-                ..ftparam.clone()
+            let ftparam_ty = {
+                let qualified_ = Symbol::from(format!(
+                    "{}::{}",
+                    &init_state.name, &ftparam.user_specified_name
+                ));
+                let qualified = sp(ftparam.user_specified_name.loc, qualified_);
+                let qualified_tp = TParam {
+                    user_specified_name: qualified,
+                    ..ftparam.clone()
+                };
+                sp(init_state.loc, Type_::Param(qualified_tp))
             };
-            let ftparam_ty = sp(init_state.loc, Type_::Param(qualified_tp));
-            let init_call = make_call_string(context, init_state, ftparam, &ftparam_ty);
-            let subst = make_subst(context, init_state, ftparam, ftparam_ty);
+            let init_call = make_call_string(context, init_state, ftparam.id, &ftparam_ty);
+            let loc = ftparam.user_specified_name.loc;
+            let subst = make_subst(context, loc, init_state, ftparam.id, ftparam_ty);
             (subst, init_call)
         };
 
@@ -354,8 +361,9 @@ fn cycle_error(
                 let tparam = cycle_nodes[next(i)];
                 let cur = &context.tparam_type_arguments[targ_tparam][tparam];
                 let targ = core::subst_tparams(&subst, cur.type_argument.clone());
-                let res = make_call_string(context, cur, tparam, &targ);
-                subst = make_subst(context, cur, tparam, targ);
+                let res = make_call_string(context, cur, tparam.id, &targ);
+                let loc = tparam.user_specified_name.loc;
+                subst = make_subst(context, loc, cur, tparam.id, targ);
                 res
             })
             .collect::<Vec<_>>();
@@ -382,17 +390,19 @@ fn cycle_error(
 
 fn make_subst(
     context: &Context,
+    loc: Loc,
     state: &EdgeInfo,
-    tparam: &TParam,
+    tparam: TParamID,
     tparam_ty: Type,
 ) -> TParamSubst {
+    let mut tparam_ty = Some(tparam_ty);
     context.tparams[&context.current_module][&state.name]
         .iter()
         .map(|tp| {
-            let ty = if tp == tparam {
-                tparam_ty.clone()
+            let ty = if tp.id == tparam {
+                tparam_ty.take().unwrap()
             } else {
-                sp(tparam_ty.loc, Type_::Anything)
+                sp(loc, Type_::Anything)
             };
             (tp.id, ty)
         })
@@ -402,13 +412,13 @@ fn make_subst(
 fn make_call_string(
     context: &Context,
     cur: &EdgeInfo,
-    tparam: &TParam,
+    tparam: TParamID,
     targ: &Type,
 ) -> (Loc, String) {
     let targs = context.tparams[&context.current_module][&cur.name]
         .iter()
         .map(|tp| {
-            if tp == tparam {
+            if tp.id == tparam {
                 core::error_format_nested(targ, &Subst::empty())
             } else {
                 "_".to_owned()

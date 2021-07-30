@@ -31,6 +31,7 @@ move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-lang = { path = "../../move-lang" }
 move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
+move-symbol-pool = { path = "../../move-symbol-pool" }
 move-vm-types = { path = "../../move-vm/types" }
 move-vm-runtime = { path = "../../move-vm/runtime" }
 read-write-set = { path = "../read-write-set" }

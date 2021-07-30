@@ -7,6 +7,7 @@ use ir_to_bytecode::compiler::compile_module;
 use move_binary_format::file_format::CompiledModule;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::{ast::*, location::*};
+use move_symbol_pool::Symbol;
 use rand::{rngs::StdRng, Rng};
 use std::{
     collections::{BTreeSet, VecDeque},
@@ -34,10 +35,10 @@ pub fn generate_modules(
     assert!(number > 0, "We cannot generate zero modules");
 
     let table_size = options.min_table_size;
-    let (callee_names, callees): (Set<String>, Vec<ModuleDefinition>) = (0..(number - 1))
+    let (callee_names, callees): (Set<Symbol>, Vec<ModuleDefinition>) = (0..(number - 1))
         .map(|_| {
             let module = ModuleGenerator::create(rng, options.clone(), &Set::new());
-            let module_name = module.name.as_inner().to_string();
+            let module_name = module.name.0;
             (module_name, module)
         })
         .unzip();
@@ -171,7 +172,7 @@ impl<'a> ModuleGenerator<'a> {
             let num_ty_params = self.index(self.options.max_ty_params);
             let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop]);
             init!(num_ty_params, {
-                let name = Spanned::unsafe_no_loc(TypeVar_::new(self.identifier()));
+                let name = Spanned::unsafe_no_loc(TypeVar_(self.identifier().into()));
                 (name, abilities.clone())
             })
         }
@@ -186,7 +187,7 @@ impl<'a> ModuleGenerator<'a> {
             let num_ty_params = self.index(self.options.max_ty_params);
             let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop]);
             init!(num_ty_params, {
-                let name = Spanned::unsafe_no_loc(TypeVar_::new(self.identifier()));
+                let name = Spanned::unsafe_no_loc(TypeVar_(self.identifier().into()));
                 (is_phantom, name, abilities.clone())
             })
         }
@@ -198,7 +199,7 @@ impl<'a> ModuleGenerator<'a> {
         let ty_params = self.fun_type_parameters();
         let number_of_args = self.index(self.options.max_function_call_size);
         let mut formals: Vec<(Var, Type)> = init!(number_of_args, {
-            let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
+            let param_name = Spanned::unsafe_no_loc(Var_(self.identifier().into()));
             let ty = self.typ(&ty_params);
             (param_name, ty)
         });
@@ -207,7 +208,7 @@ impl<'a> ModuleGenerator<'a> {
             let mut ty_formals = ty_params
                 .iter()
                 .map(|(ty_var_, _)| {
-                    let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
+                    let param_name = Spanned::unsafe_no_loc(Var_(self.identifier().into()));
                     let ty = Type::TypeParameter(ty_var_.value.clone());
                     (param_name, ty)
                 })
@@ -225,7 +226,7 @@ impl<'a> ModuleGenerator<'a> {
             .gen_range(self.options.min_fields..self.options.max_fields);
         let fields: Fields<Type> = init!(num_fields, {
             (
-                Spanned::unsafe_no_loc(Field_::new(self.identifier())),
+                Spanned::unsafe_no_loc(Field_(self.identifier().into())),
                 self.base_type(&ty_params.iter().map(|(_, tv, _)| tv).collect::<Vec<_>>()),
             )
         });
@@ -238,7 +239,7 @@ impl<'a> ModuleGenerator<'a> {
         let num_locals = self.index(self.options.max_locals);
         let locals = init!(num_locals, {
             (
-                Spanned::unsafe_no_loc(Var_::new(self.identifier())),
+                Spanned::unsafe_no_loc(Var_(self.identifier().into())),
                 self.typ(&signature.type_formals),
             )
         });
@@ -256,14 +257,14 @@ impl<'a> ModuleGenerator<'a> {
                 },
             },
         };
-        let fun_name = FunctionName::new(self.identifier());
+        let fun_name = FunctionName(self.identifier().into());
         self.current_module
             .functions
             .push((fun_name, Spanned::unsafe_no_loc(fun)));
     }
 
     fn struct_def(&mut self, abilities: BTreeSet<Ability>) {
-        let name = StructName::new(self.identifier());
+        let name = StructName(self.identifier().into());
         let type_parameters = self.struct_type_parameters();
         let fields = self.struct_fields(&type_parameters);
         let strct = StructDefinition_ {
@@ -278,11 +279,11 @@ impl<'a> ModuleGenerator<'a> {
             .push(Spanned::unsafe_no_loc(strct))
     }
 
-    fn imports(callees: &Set<String>) -> Vec<ImportDefinition> {
+    fn imports(callees: &Set<Symbol>) -> Vec<ImportDefinition> {
         callees
             .iter()
             .map(|ident| {
-                let module_name = ModuleName::new(ident.clone());
+                let module_name = ModuleName(*ident);
                 let qualified_mod_ident =
                     QualifiedModuleIdent::new(module_name, AccountAddress::ZERO);
                 let module_ident = ModuleIdent::Qualified(qualified_mod_ident);
@@ -322,7 +323,7 @@ impl<'a> ModuleGenerator<'a> {
     pub fn create(
         gen: &'a mut StdRng,
         options: ModuleGeneratorOptions,
-        callable_modules: &Set<String>,
+        callable_modules: &Set<Symbol>,
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
         let module_name = {
@@ -330,7 +331,7 @@ impl<'a> ModuleGenerator<'a> {
             random_string(gen, len)
         };
         let current_module = ModuleDefinition {
-            name: ModuleName::new(module_name),
+            name: ModuleName(module_name.into()),
             friends: Vec::new(),
             imports: Self::imports(callable_modules),
             explicit_dependency_declarations: Vec::new(),

@@ -28,6 +28,7 @@ use move_lang::{
     FullyCompiledProgram,
 };
 use move_stdlib::move_stdlib_named_addresses;
+use move_symbol_pool::Symbol;
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
@@ -104,12 +105,12 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             .unwrap();
         let mut addr_to_name_mapping = BTreeMap::new();
         for (name, addr) in move_stdlib_named_addresses() {
-            let prev = addr_to_name_mapping.insert(addr, name);
+            let prev = addr_to_name_mapping.insert(addr, Symbol::from(name));
             assert!(prev.is_none());
         }
         for module in &*MOVE_STDLIB_COMPILED {
             let bytes = AddressBytes::new(module.address().to_u8());
-            let named_addr = addr_to_name_mapping.get(&bytes).unwrap().clone();
+            let named_addr = *addr_to_name_mapping.get(&bytes).unwrap();
             adapter.compiled_state.add(Some(named_addr), module.clone());
         }
         adapter

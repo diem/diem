@@ -6,6 +6,7 @@ use crate::{
     diagnostics::{codes::Severity, Diagnostic, Diagnostics},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
     collections::BTreeMap,
@@ -223,26 +224,26 @@ pub trait TName: Eq + Ord + Clone {
 }
 
 pub trait Identifier {
-    fn value(&self) -> &str;
+    fn value(&self) -> Symbol;
     fn loc(&self) -> Loc;
 }
 
 // TODO maybe we should intern these strings somehow
-pub type Name = Spanned<String>;
+pub type Name = Spanned<Symbol>;
 
 impl TName for Name {
-    type Key = String;
+    type Key = Symbol;
     type Loc = Loc;
 
-    fn drop_loc(self) -> (Loc, String) {
+    fn drop_loc(self) -> (Loc, Symbol) {
         (self.loc, self.value)
     }
 
-    fn add_loc(loc: Loc, key: String) -> Self {
+    fn add_loc(loc: Loc, key: Symbol) -> Self {
         sp(loc, key)
     }
 
-    fn borrow(&self) -> (&Loc, &String) {
+    fn borrow(&self) -> (&Loc, &Symbol) {
         (&self.loc, &self.value)
     }
 }
@@ -289,13 +290,13 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
-    named_address_mapping: BTreeMap<String, AddressBytes>,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
 
 impl CompilationEnv {
-    pub fn new(flags: Flags, named_address_mapping: BTreeMap<String, AddressBytes>) -> Self {
+    pub fn new(flags: Flags, named_address_mapping: BTreeMap<Symbol, AddressBytes>) -> Self {
         Self {
             flags,
             diags: Diagnostics::new(),
@@ -343,7 +344,7 @@ impl CompilationEnv {
         &self.flags
     }
 
-    pub fn named_address_mapping(&self) -> &BTreeMap<String, AddressBytes> {
+    pub fn named_address_mapping(&self) -> &BTreeMap<Symbol, AddressBytes> {
         &self.named_address_mapping
     }
 }
