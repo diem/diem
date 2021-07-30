@@ -24,7 +24,7 @@ use diem_types::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use executor_types::Error as ExecutionError;
-use futures::{select, FutureExt, SinkExt, StreamExt};
+use futures::{FutureExt, SinkExt, StreamExt};
 use safety_rules::TSafetyRules;
 use std::{
     collections::BTreeMap,
@@ -37,7 +37,7 @@ use crate::{
     state_replication::StateComputerCommitCallBackType,
 };
 use diem_logger::error;
-use futures::channel::oneshot;
+use futures::{channel::oneshot, prelude::stream::FusedStream};
 
 /*
 Commit phase takes in the executed blocks from the execution
@@ -386,11 +386,10 @@ impl CommitPhase {
 
     pub async fn start(mut self) {
         loop {
-            while self.blocks.is_some() {
-                // if we are still collecting the signatures
-                select! {
-                    // process messages dispatched from epoch_manager
-                    msg = self.commit_msg_rx.select_next_some() => {
+            // if we are still collecting the signatures
+            tokio::select! {
+                // process messages dispatched from epoch_manager
+                msg = self.commit_msg_rx.select_next_some(), if self.blocks.is_some() => {
                         match msg {
                             VerifiedEvent::CommitVote(cv) => {
                                 monitor!(
@@ -408,48 +407,36 @@ impl CommitPhase {
                                 unreachable!("Unexpected messages: something wrong with message dispatching.")
                             }
                         };
+                        report_err!(
+                            // check if the blocks are ready to commit
+                            self.check_commit().await,
+                            "Error in checking whether self.block is ready to commit."
+                        );
+                }
+                retry_cv = self.timeout_event_rx.select_next_some(), if self.blocks.is_some() && !self.commit_msg_rx.is_terminated()  => {
+                    let pending_blocks = self.blocks.as_ref().unwrap();
+                    if pending_blocks.block_info() == retry_cv.commit_info() {
+                        // retry broadcasting the message if the blocks are still pending
+                        tokio::spawn(broadcast_commit_vote_with_retry(self.network_sender.clone(), retry_cv, self.timeout_event_tx.clone()));
                     }
-                    retry_cv = self.timeout_event_rx.select_next_some() => {
-                        if let Some(ref pending_blocks) = self.blocks {
-                            if pending_blocks.block_info() == retry_cv.commit_info() {
-                                // retry broadcasting the message if the blocks are still pending
-                                tokio::spawn(broadcast_commit_vote_with_retry(self.network_sender.clone(), retry_cv, self.timeout_event_tx.clone()));
-                            }
-                        }
-                    }
-                    // callback event might come when self.blocks is not empty
-                    reset_event_callback = self.reset_event_rx.select_next_some() => {
+                }
+                // callback event might come when self.blocks is not empty
+                reset_event_callback = self.reset_event_rx.select_next_some() => {
                         self.process_reset_event(reset_event_callback).await.map_err(|e| ExecutionError::InternalError {
                             error: e.to_string(),
                         })
                         .unwrap();
-                    }
-                    complete => break,
                 }
-                report_err!(
-                    // check if the blocks are ready to commit
-                    self.check_commit().await,
-                    "Error in checking whether self.block is ready to commit."
-                );
-            }
-
-            select! {
-                CommitChannelType(blocks, ordered_ledger_info, callback) = self.commit_channel_recv.select_next_some() => {
-                    report_err!(
-                        // receive new blocks from execution phase
-                        self.process_executed_blocks(blocks, ordered_ledger_info, callback)
-                            .await,
-                        "Error in processing received blocks"
-                    );
+                CommitChannelType(blocks, ordered_ledger_info, callback) = self.commit_channel_recv.select_next_some(),
+                    if self.blocks.is_none() => {
+                        report_err!(
+                            // receive new blocks from execution phase
+                            self.process_executed_blocks(blocks, ordered_ledger_info, callback)
+                                .await,
+                            "Error in processing received blocks"
+                        );
                 }
-                // callback event might come when self.blocks is none
-                reset_event_callback = self.reset_event_rx.select_next_some() => {
-                    self.process_reset_event(reset_event_callback).await.map_err(|e| ExecutionError::InternalError {
-                        error: e.to_string(),
-                    })
-                    .unwrap();
-                }
-                complete => break,
+                else => break,
             }
         }
     }
