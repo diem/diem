@@ -1,3 +1,4 @@
+// separate_baseline: no_opaque
 module 0x42::TestOpaque {
 
     spec module {

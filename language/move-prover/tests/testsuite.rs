@@ -74,8 +74,8 @@ enum InclusionMode {
 fn get_features() -> &'static [Feature] {
     static TESTED_FEATURES: OnceCell<Vec<Feature>> = OnceCell::new();
     TESTED_FEATURES.get_or_init(|| {
-        // Tests the default configuration.
         vec![
+            // Tests the default configuration.
             Feature {
                 name: "default",
                 flags: &[],
@@ -84,6 +84,17 @@ fn get_features() -> &'static [Feature] {
                 only_if_requested: false,
                 separate_baseline: false,
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("default")),
+                enabling_condition: |_, _| true,
+            },
+            // Tests with pragma opaque ignored
+            Feature {
+                name: "no_opaque",
+                flags: &["--ignore-pragma-opaque-when-possible"],
+                inclusion_mode: InclusionMode::Implicit,
+                enable_in_ci: true,
+                only_if_requested: false,
+                separate_baseline: false,
+                runner: |p| test_runner_for_feature(p, get_feature_by_name("no_opaque")),
                 enabling_condition: |_, _| true,
             },
             // Tests with cvc4 as a backend for boogie.
