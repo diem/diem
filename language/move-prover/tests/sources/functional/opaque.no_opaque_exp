@@ -1,0 +1,25 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+   ┌─ tests/sources/functional/opaque.move:22:9
+   │
+22 │         ensures result == 2;
+   │         ^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/opaque.move:18: opaque_caller
+   =     at tests/sources/functional/opaque.move:10: opaque_incorrect
+   =         result = <redacted>
+   =     at tests/sources/functional/opaque.move:11: opaque_incorrect
+   =         result = <redacted>
+   =     at tests/sources/functional/opaque.move:19: opaque_caller
+   =     at tests/sources/functional/opaque.move:22
+
+error: post-condition does not hold
+   ┌─ tests/sources/functional/opaque.move:14:9
+   │
+14 │         ensures result == 2;
+   │         ^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/opaque.move:10: opaque_incorrect
+   =         result = <redacted>
+   =     at tests/sources/functional/opaque.move:11: opaque_incorrect
+   =     at tests/sources/functional/opaque.move:14

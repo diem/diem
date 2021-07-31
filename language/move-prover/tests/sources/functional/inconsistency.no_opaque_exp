@@ -1,0 +1,30 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+   ┌─ tests/sources/functional/inconsistency.move:44:9
+   │
+44 │         ensures false;
+   │         ^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/inconsistency.move:41: call_inconsistent_opaque
+   =     at tests/sources/functional/inconsistency.move:31: inconsistent_opaque
+   =     at tests/sources/functional/inconsistency.move:42: call_inconsistent_opaque
+   =     at tests/sources/functional/inconsistency.move:44
+
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
+   ┌─ tests/sources/functional/inconsistency.move:49:5
+   │
+49 │ ╭     fun always_abort() {
+50 │ │         abort 0
+51 │ │     }
+   │ ╰─────^
+
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
+   ┌─ tests/sources/functional/inconsistency.move:17:5
+   │
+17 │ ╭     fun assume_false(x: u64): u64 {
+18 │ │         spec {
+19 │ │             assume false;
+20 │ │         };
+21 │ │         dec(x)
+22 │ │     }
+   │ ╰─────^
