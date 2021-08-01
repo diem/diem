@@ -6,7 +6,7 @@ use crate::{
     diagnostics::Diagnostic,
     parser::ast::{
         Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName, QuantKind,
-        SpecApplyPattern, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
+        SpecApplyPattern, StructName, UnaryOp, Var, Visibility,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
@@ -222,7 +222,6 @@ pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
-        type_parameters: Vec<(Name, AbilitySet)>,
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
@@ -259,7 +258,24 @@ pub enum SpecBlockMember_ {
 }
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Clone, Debug)]
+pub enum SpecConditionKind {
+    Assert,
+    Assume,
+    Decreases,
+    AbortsIf,
+    AbortsWith,
+    SucceedsIf,
+    Modifies,
+    Emits,
+    Ensures,
+    Requires,
+    Invariant(Vec<(Name, AbilitySet)>),
+    InvariantUpdate(Vec<(Name, AbilitySet)>),
+    Axiom(Vec<(Name, AbilitySet)>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct PragmaProperty_ {
     pub name: Name,
     pub value: Option<PragmaValue>,
@@ -948,18 +964,49 @@ impl AstDebug for SpecBlockTarget_ {
     }
 }
 
+impl AstDebug for SpecConditionKind {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use SpecConditionKind::*;
+        match self {
+            Assert => w.write("assert "),
+            Assume => w.write("assume "),
+            Decreases => w.write("decreases "),
+            AbortsIf => w.write("aborts_if "),
+            AbortsWith => w.write("aborts_with "),
+            SucceedsIf => w.write("succeeds_if "),
+            Modifies => w.write("modifies "),
+            Emits => w.write("emits "),
+            Ensures => w.write("ensures "),
+            Requires => w.write("requires "),
+            Invariant(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
+            InvariantUpdate(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" update ")
+            }
+            Axiom(ty_params) => {
+                w.write("axiom");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
+        }
+    }
+}
+
 impl AstDebug for SpecBlockMember_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             SpecBlockMember_::Condition {
                 kind,
-                type_parameters,
                 properties: _,
                 exp,
                 additional_exps,
             } => {
                 kind.ast_debug(w);
-                type_parameters.ast_debug(w);
                 exp.ast_debug(w);
                 w.list(additional_exps, ",", |w, e| {
                     e.ast_debug(w);

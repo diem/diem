@@ -18,7 +18,7 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{Condition, ConditionKind, Exp, ExpData, LocalVarDecl, MemoryLabel, QuantKind},
+    ast::{Condition, Exp, ExpData, LocalVarDecl, MemoryLabel, QuantKind},
     exp_generator::ExpGenerator,
     model::{
         FunId, GlobalEnv, ModuleId, NodeId, QualifiedId, QualifiedInstId, SpecFunId, SpecVarId,
@@ -152,7 +152,7 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
         let mut new_axioms = vec![];
         let mut axioms_rewritten = false;
         for module_env in env.get_modules() {
-            for axiom in module_env.get_spec().filter_kind(ConditionKind::Axiom) {
+            for axiom in module_env.get_spec().filter_kind_axiom() {
                 let mut rewriter = TypeQuantRewriter {
                     generator: EnvGenerator {
                         env,
@@ -263,7 +263,7 @@ impl MonoAnalysisProcessor {
         } else {
             // Analyze axioms found in modules.
             for module_env in env.get_modules() {
-                for axiom in module_env.get_spec().filter_kind(ConditionKind::Axiom) {
+                for axiom in module_env.get_spec().filter_kind_axiom() {
                     analyzer.analyze_exp(&axiom.exp)
                 }
             }

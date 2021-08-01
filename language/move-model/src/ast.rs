@@ -68,7 +68,6 @@ pub enum ConditionKind {
     LetPre(Symbol),
     Assert,
     Assume,
-    Axiom,
     Decreases,
     AbortsIf,
     AbortsWith,
@@ -77,8 +76,9 @@ pub enum ConditionKind {
     Emits,
     Ensures,
     Requires,
-    Invariant,
-    InvariantUpdate,
+    Axiom(Vec<Type>),
+    Invariant(Vec<Type>),
+    InvariantUpdate(Vec<Type>),
 }
 
 impl ConditionKind {
@@ -87,7 +87,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Assert | Assume | Emits | Ensures | InvariantUpdate | LetPost(..)
+            Assert | Assume | Emits | Ensures | InvariantUpdate(..) | LetPost(..)
         )
     }
 
@@ -102,7 +102,6 @@ impl ConditionKind {
                 | SucceedsIf
                 | Emits
                 | Ensures
-                | Invariant
                 | Modifies
                 | LetPost(..)
                 | LetPre(..)
@@ -118,25 +117,42 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a struct.
     pub fn allowed_on_struct(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant)
+        matches!(self, Invariant(..))
     }
 
     /// Returns true if this condition is allowed on a module.
     pub fn allowed_on_module(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant | InvariantUpdate | Axiom)
+        matches!(self, Invariant(..) | InvariantUpdate(..) | Axiom(..))
     }
 }
 
 impl std::fmt::Display for ConditionKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fn display_ty_locals(f: &mut Formatter<'_>, ty_locals: &[Type]) -> std::fmt::Result {
+            if !ty_locals.is_empty() {
+                write!(f, "<")?;
+                for (i, ty) in ty_locals.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{:?}", ty)?;
+                }
+                write!(f, ">")?;
+            }
+            Ok(())
+        }
+
         use ConditionKind::*;
         match self {
             LetPost(sym) => write!(f, "let({:?})", sym),
             LetPre(sym) => write!(f, "let old({:?})", sym),
             Assert => write!(f, "assert"),
             Assume => write!(f, "assume"),
-            Axiom => write!(f, "axiom"),
+            Axiom(ty_locals) => {
+                write!(f, "axiom")?;
+                display_ty_locals(f, ty_locals)
+            }
             Decreases => write!(f, "decreases"),
             AbortsIf => write!(f, "aborts_if"),
             AbortsWith => write!(f, "aborts_with"),
@@ -145,8 +161,15 @@ impl std::fmt::Display for ConditionKind {
             Emits => write!(f, "emits"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
-            Invariant => write!(f, "invariant"),
-            InvariantUpdate => write!(f, "invariant update"),
+            Invariant(ty_locals) => {
+                write!(f, "invariant")?;
+                display_ty_locals(f, ty_locals)
+            }
+            InvariantUpdate(ty_locals) => {
+                write!(f, "invariant")?;
+                display_ty_locals(f, ty_locals)?;
+                write!(f, " update")
+            }
         }
     }
 }
@@ -235,6 +258,14 @@ impl Spec {
 
     pub fn filter_kind(&self, kind: ConditionKind) -> impl Iterator<Item = &Condition> {
         self.filter(move |c| c.kind == kind)
+    }
+
+    pub fn filter_kind_invariant(&self) -> impl Iterator<Item = &Condition> {
+        self.filter(move |c| matches!(c.kind, ConditionKind::Invariant(..)))
+    }
+
+    pub fn filter_kind_axiom(&self) -> impl Iterator<Item = &Condition> {
+        self.filter(move |c| matches!(c.kind, ConditionKind::Axiom(..)))
     }
 
     pub fn any<P>(&self, pred: P) -> bool

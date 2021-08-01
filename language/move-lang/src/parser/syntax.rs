@@ -2408,7 +2408,6 @@ fn parse_condition(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         end_loc,
         SpecBlockMember_::Condition {
             kind,
-            type_parameters: vec![],
             properties,
             exp,
             additional_exps,
@@ -2447,8 +2446,7 @@ fn parse_axiom(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         start_loc,
         tokens.previous_end_loc(),
         SpecBlockMember_::Condition {
-            kind: SpecConditionKind::Axiom,
-            type_parameters,
+            kind: SpecConditionKind::Axiom(type_parameters),
             properties,
             exp,
             additional_exps: vec![],
@@ -2465,9 +2463,9 @@ fn parse_invariant(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
     let kind = match tokens.peek() {
         Tok::IdentifierValue if tokens.content() == "update" => {
             tokens.advance()?;
-            SpecConditionKind::InvariantUpdate
+            SpecConditionKind::InvariantUpdate(type_parameters)
         }
-        _ => SpecConditionKind::Invariant,
+        _ => SpecConditionKind::Invariant(type_parameters),
     };
     let properties = parse_condition_properties(tokens)?;
     let exp = parse_exp(tokens)?;
@@ -2478,7 +2476,6 @@ fn parse_invariant(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
         tokens.previous_end_loc(),
         SpecBlockMember_::Condition {
             kind,
-            type_parameters,
             properties,
             exp,
             additional_exps: vec![],
