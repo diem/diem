@@ -1125,21 +1125,62 @@ fn spec_target(context: &mut Context, sp!(loc, pt): P::SpecBlockTarget) -> E::Sp
     sp(loc, et)
 }
 
+fn spec_condition_kind(
+    context: &mut Context,
+    kind: P::SpecConditionKind,
+) -> (E::SpecConditionKind, Option<OldAliasMap>) {
+    match kind {
+        P::SpecConditionKind::Assert => (E::SpecConditionKind::Assert, None),
+        P::SpecConditionKind::Assume => (E::SpecConditionKind::Assume, None),
+        P::SpecConditionKind::Decreases => (E::SpecConditionKind::Decreases, None),
+        P::SpecConditionKind::AbortsIf => (E::SpecConditionKind::AbortsIf, None),
+        P::SpecConditionKind::AbortsWith => (E::SpecConditionKind::AbortsWith, None),
+        P::SpecConditionKind::SucceedsIf => (E::SpecConditionKind::SucceedsIf, None),
+        P::SpecConditionKind::Modifies => (E::SpecConditionKind::Modifies, None),
+        P::SpecConditionKind::Emits => (E::SpecConditionKind::Emits, None),
+        P::SpecConditionKind::Ensures => (E::SpecConditionKind::Ensures, None),
+        P::SpecConditionKind::Requires => (E::SpecConditionKind::Requires, None),
+        P::SpecConditionKind::Invariant(pty_params) => {
+            let ety_params = type_parameters(context, pty_params);
+            let old_aliases = context
+                .aliases
+                .shadow_for_type_parameters(ety_params.iter().map(|(name, _)| name));
+            (
+                E::SpecConditionKind::Invariant(ety_params),
+                Some(old_aliases),
+            )
+        }
+        P::SpecConditionKind::InvariantUpdate(pty_params) => {
+            let ety_params = type_parameters(context, pty_params);
+            let old_aliases = context
+                .aliases
+                .shadow_for_type_parameters(ety_params.iter().map(|(name, _)| name));
+            (
+                E::SpecConditionKind::InvariantUpdate(ety_params),
+                Some(old_aliases),
+            )
+        }
+        P::SpecConditionKind::Axiom(pty_params) => {
+            let ety_params = type_parameters(context, pty_params);
+            let old_aliases = context
+                .aliases
+                .shadow_for_type_parameters(ety_params.iter().map(|(name, _)| name));
+            (E::SpecConditionKind::Axiom(ety_params), Some(old_aliases))
+        }
+    }
+}
+
 fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {
     use E::SpecBlockMember_ as EM;
     use P::SpecBlockMember_ as PM;
     let em = match pm {
         PM::Condition {
-            kind,
-            type_parameters: pty_params,
+            kind: pkind,
             properties: pproperties,
             exp,
             additional_exps,
         } => {
-            let type_parameters = type_parameters(context, pty_params);
-            let old_aliases = context
-                .aliases
-                .shadow_for_type_parameters(type_parameters.iter().map(|(name, _)| name));
+            let (kind, old_aliases_opt) = spec_condition_kind(context, pkind);
             let properties = pproperties
                 .into_iter()
                 .map(|p| pragma_property(context, p))
@@ -1149,10 +1190,12 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 .into_iter()
                 .map(|e| exp_(context, e))
                 .collect();
-            context.set_to_outer_scope(old_aliases);
+            match old_aliases_opt {
+                None => (),
+                Some(old_aliases) => context.set_to_outer_scope(old_aliases),
+            }
             EM::Condition {
                 kind,
-                type_parameters,
                 properties,
                 exp,
                 additional_exps,

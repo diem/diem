@@ -315,7 +315,7 @@ impl<'a> Instrumenter<'a> {
             .iter()
             .filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
-                    inv.kind == ConditionKind::Invariant  // excludes "update invariants"
+                    matches!(inv.kind, ConditionKind::Invariant(..)) // excludes "update invariants"
                         && module_env.is_transitive_dependency(inv.declaring_module)
                         && !module_env.env.is_property_true(
                             &inv.properties,
@@ -573,7 +573,7 @@ impl<'a> Instrumenter<'a> {
         let mut update_invs: BTreeSet<GlobalId> = BTreeSet::new();
         for inv_id in invariants {
             let inv = global_env.get_global_invariant(*inv_id).unwrap();
-            if inv.kind == ConditionKind::InvariantUpdate {
+            if matches!(inv.kind, ConditionKind::InvariantUpdate(..)) {
                 update_invs.insert(*inv_id);
             } else {
                 global_invs.insert(*inv_id);
@@ -634,7 +634,7 @@ impl<'a> Instrumenter<'a> {
                     && matches!(prop_kind, PropKind::Assume)
                     && matches!(
                         global_env.get_global_invariant(*mid).unwrap().kind,
-                        ConditionKind::InvariantUpdate
+                        ConditionKind::InvariantUpdate(..)
                     )
                 {
                     panic!("Not allowed to assume update invariant");

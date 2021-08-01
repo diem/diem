@@ -168,7 +168,7 @@ pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool
     }
     use crate::ast::ConditionKind::*;
     match kind {
-        Invariant | InvariantUpdate => {
+        Invariant(..) | InvariantUpdate(..) => {
             matches!(prop, CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP)
         }
         SucceedsIf | AbortsIf => matches!(

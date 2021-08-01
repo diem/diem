@@ -332,7 +332,6 @@ pub type SpecApplyFragment = Spanned<SpecApplyFragment_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
-        type_parameters: Vec<(Name, Vec<Ability>)>,
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
@@ -383,9 +382,9 @@ pub enum SpecConditionKind {
     Emits,
     Ensures,
     Requires,
-    Invariant,
-    InvariantUpdate,
-    Axiom,
+    Invariant(Vec<(Name, Vec<Ability>)>),
+    InvariantUpdate(Vec<(Name, Vec<Ability>)>),
+    Axiom(Vec<(Name, Vec<Ability>)>),
 }
 
 //**************************************************************************************************
@@ -1237,9 +1236,21 @@ impl AstDebug for SpecConditionKind {
             Emits => w.write("emits "),
             Ensures => w.write("ensures "),
             Requires => w.write("requires "),
-            Invariant => w.write("invariant "),
-            InvariantUpdate => w.write("invariant update "),
-            Axiom => w.write("axiom "),
+            Invariant(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
+            InvariantUpdate(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" update ")
+            }
+            Axiom(ty_params) => {
+                w.write("axiom");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
         }
     }
 }
@@ -1249,13 +1260,11 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition {
                 kind,
-                type_parameters,
                 properties: _,
                 exp,
                 additional_exps,
             } => {
                 kind.ast_debug(w);
-                type_parameters.ast_debug(w);
                 exp.ast_debug(w);
                 w.list(additional_exps, ",", |w, e| {
                     e.ast_debug(w);
