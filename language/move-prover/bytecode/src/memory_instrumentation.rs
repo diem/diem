@@ -98,7 +98,7 @@ impl<'a> Instrumenter<'a> {
 
     /// Determines whether the struct needs a pack ref.
     fn is_pack_ref_struct(&self, struct_env: &StructEnv<'_>) -> bool {
-        struct_env.get_spec().any(|c| matches!(c.kind, ConditionKind::Invariant(..)))
+        struct_env.get_spec().any_kind(ConditionKind::StructInvariant)
         // If any of the fields has it, it inherits to the struct.
         ||  struct_env
             .get_fields()

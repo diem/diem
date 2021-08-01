@@ -370,8 +370,8 @@ pub enum SpecBlockMember_ {
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 
 // Specification condition kind.
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum SpecConditionKind {
+#[derive(PartialEq, Clone, Debug)]
+pub enum SpecConditionKind_ {
     Assert,
     Assume,
     Decreases,
@@ -386,6 +386,7 @@ pub enum SpecConditionKind {
     InvariantUpdate(Vec<(Name, Vec<Ability>)>),
     Axiom(Vec<(Name, Vec<Ability>)>),
 }
+pub type SpecConditionKind = Spanned<SpecConditionKind_>;
 
 //**************************************************************************************************
 // Types
@@ -1222,9 +1223,9 @@ impl AstDebug for SpecBlockTarget_ {
     }
 }
 
-impl AstDebug for SpecConditionKind {
+impl AstDebug for SpecConditionKind_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use SpecConditionKind::*;
+        use SpecConditionKind_::*;
         match self {
             Assert => w.write("assert "),
             Assume => w.write("assume "),

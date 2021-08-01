@@ -259,7 +259,8 @@ pub enum SpecBlockMember_ {
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 
 #[derive(PartialEq, Clone, Debug)]
-pub enum SpecConditionKind {
+#[allow(clippy::derive_partial_eq_without_eq)]
+pub enum SpecConditionKind_ {
     Assert,
     Assume,
     Decreases,
@@ -274,8 +275,10 @@ pub enum SpecConditionKind {
     InvariantUpdate(Vec<(Name, AbilitySet)>),
     Axiom(Vec<(Name, AbilitySet)>),
 }
+pub type SpecConditionKind = Spanned<SpecConditionKind_>;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub struct PragmaProperty_ {
     pub name: Name,
     pub value: Option<PragmaValue>,
@@ -964,9 +967,9 @@ impl AstDebug for SpecBlockTarget_ {
     }
 }
 
-impl AstDebug for SpecConditionKind {
+impl AstDebug for SpecConditionKind_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use SpecConditionKind::*;
+        use SpecConditionKind_::*;
         match self {
             Assert => w.write("assert "),
             Assume => w.write("assume "),

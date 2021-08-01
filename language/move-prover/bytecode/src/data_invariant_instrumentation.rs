@@ -20,7 +20,7 @@ use crate::{
 
 use move_model::{
     ast,
-    ast::{Exp, ExpData, QuantKind, TempIndex},
+    ast::{ConditionKind, Exp, ExpData, QuantKind, TempIndex},
     exp_generator::ExpGenerator,
     model::{FunctionEnv, Loc, NodeId, StructEnv},
     ty::Type,
@@ -206,7 +206,10 @@ impl<'a> Instrumenter<'a> {
 
         // First generate a conjunction for all invariants on this struct.
         let mut result = vec![];
-        for cond in struct_env.get_spec().filter_kind_invariant() {
+        for cond in struct_env
+            .get_spec()
+            .filter_kind(ConditionKind::StructInvariant)
+        {
             // Rewrite the invariant expression, inserting `value` for the struct target.
             // By convention, selection from the target is represented as a `Select` operation with
             // an empty argument list. It is guaranteed that this uniquely identifies the
