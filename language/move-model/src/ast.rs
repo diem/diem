@@ -76,9 +76,13 @@ pub enum ConditionKind {
     Emits,
     Ensures,
     Requires,
+    StructInvariant,
+    FunctionInvariant,
+    LoopInvariant,
+    GlobalInvariant(Vec<Type>),
+    GlobalInvariantUpdate(Vec<Type>),
+    SchemaInvariant(Vec<Type>),
     Axiom(Vec<Type>),
-    Invariant(Vec<Type>),
-    InvariantUpdate(Vec<Type>),
 }
 
 impl ConditionKind {
@@ -87,7 +91,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Assert | Assume | Emits | Ensures | InvariantUpdate(..) | LetPost(..)
+            Assert | Assume | Emits | Ensures | GlobalInvariantUpdate(..) | LetPost(..)
         )
     }
 
@@ -103,6 +107,7 @@ impl ConditionKind {
                 | Emits
                 | Ensures
                 | Modifies
+                | FunctionInvariant
                 | LetPost(..)
                 | LetPre(..)
         )
@@ -111,19 +116,25 @@ impl ConditionKind {
     /// Returns true if this condition is allowed in a function body.
     pub fn allowed_on_fun_impl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Assert | Assume | Decreases | LetPost(..) | LetPre(..))
+        matches!(
+            self,
+            Assert | Assume | Decreases | LoopInvariant | LetPost(..) | LetPre(..)
+        )
     }
 
     /// Returns true if this condition is allowed on a struct.
     pub fn allowed_on_struct(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant(..))
+        matches!(self, StructInvariant)
     }
 
     /// Returns true if this condition is allowed on a module.
     pub fn allowed_on_module(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant(..) | InvariantUpdate(..) | Axiom(..))
+        matches!(
+            self,
+            GlobalInvariant(..) | GlobalInvariantUpdate(..) | Axiom(..)
+        )
     }
 }
 
@@ -149,10 +160,6 @@ impl std::fmt::Display for ConditionKind {
             LetPre(sym) => write!(f, "let old({:?})", sym),
             Assert => write!(f, "assert"),
             Assume => write!(f, "assume"),
-            Axiom(ty_locals) => {
-                write!(f, "axiom")?;
-                display_ty_locals(f, ty_locals)
-            }
             Decreases => write!(f, "decreases"),
             AbortsIf => write!(f, "aborts_if"),
             AbortsWith => write!(f, "aborts_with"),
@@ -161,14 +168,23 @@ impl std::fmt::Display for ConditionKind {
             Emits => write!(f, "emits"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
-            Invariant(ty_locals) => {
+            StructInvariant | FunctionInvariant | LoopInvariant => write!(f, "invariant"),
+            GlobalInvariant(ty_locals) => {
                 write!(f, "invariant")?;
                 display_ty_locals(f, ty_locals)
             }
-            InvariantUpdate(ty_locals) => {
+            GlobalInvariantUpdate(ty_locals) => {
                 write!(f, "invariant")?;
                 display_ty_locals(f, ty_locals)?;
                 write!(f, " update")
+            }
+            SchemaInvariant(ty_locals) => {
+                write!(f, "invariant")?;
+                display_ty_locals(f, ty_locals)
+            }
+            Axiom(ty_locals) => {
+                write!(f, "axiom")?;
+                display_ty_locals(f, ty_locals)
             }
         }
     }
@@ -258,10 +274,6 @@ impl Spec {
 
     pub fn filter_kind(&self, kind: ConditionKind) -> impl Iterator<Item = &Condition> {
         self.filter(move |c| c.kind == kind)
-    }
-
-    pub fn filter_kind_invariant(&self) -> impl Iterator<Item = &Condition> {
-        self.filter(move |c| matches!(c.kind, ConditionKind::Invariant(..)))
     }
 
     pub fn filter_kind_axiom(&self) -> impl Iterator<Item = &Condition> {

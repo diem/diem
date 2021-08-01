@@ -657,22 +657,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 qsym.clone(),
                                 &fun_spec_info[spec_id],
                             );
-                            let kind = self.convert_condition_kind(kind);
-                            let properties = self.translate_properties(properties, &|prop| {
-                                if !is_property_valid_for_condition(&kind, prop) {
-                                    Some(loc.clone())
-                                } else {
-                                    None
-                                }
-                            });
-                            self.def_ana_condition(
-                                loc,
-                                &context,
-                                kind,
-                                properties,
-                                exp,
-                                additional_exps,
-                            );
+                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                let properties = self.translate_properties(properties, &|prop| {
+                                    if !is_property_valid_for_condition(&kind, prop) {
+                                        Some(loc.clone())
+                                    } else {
+                                        None
+                                    }
+                                });
+                                self.def_ana_condition(
+                                    loc,
+                                    &context,
+                                    kind,
+                                    properties,
+                                    exp,
+                                    additional_exps,
+                                );
+                            }
                         }
                         _ => {
                             self.parent.error(loc, "item not allowed");
@@ -943,15 +944,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 exp,
                 additional_exps,
             } => {
-                let kind = self.convert_condition_kind(kind);
-                let properties = self.translate_properties(properties, &|prop| {
-                    if !is_property_valid_for_condition(&kind, prop) {
-                        Some(loc.clone())
-                    } else {
-                        None
-                    }
-                });
-                self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
+                if let Some(kind) = self.convert_condition_kind(kind, context) {
+                    let properties = self.translate_properties(properties, &|prop| {
+                        if !is_property_valid_for_condition(&kind, prop) {
+                            Some(loc.clone())
+                        } else {
+                            None
+                        }
+                    });
+                    self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
+                }
             }
             Function {
                 signature, body, ..
@@ -1497,9 +1499,54 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 _ => {}
             }
 
+            // If this is a schema invariant, convert the kind based on its application context
+            if let ConditionKind::SchemaInvariant(tys) = &cond.kind {
+                let new_kind = match context {
+                    SpecBlockContext::Module => ConditionKind::GlobalInvariant(tys.clone()),
+                    SpecBlockContext::Struct(..) => {
+                        if !tys.is_empty() {
+                            self.parent.error(
+                                &cond.loc,
+                                "Type locals are not allowed in struct invariants \
+                                    included from a schema",
+                            );
+                            return;
+                        }
+                        ConditionKind::StructInvariant
+                    }
+                    SpecBlockContext::Function(..) => {
+                        if !tys.is_empty() {
+                            self.parent.error(
+                                &cond.loc,
+                                "Type locals are not allowed in function invariants \
+                                    included from a schema",
+                            );
+                            return;
+                        }
+                        ConditionKind::FunctionInvariant
+                    }
+                    SpecBlockContext::FunctionCode(..) => {
+                        if !tys.is_empty() {
+                            self.parent.error(
+                                &cond.loc,
+                                "Type locals are not allowed in loop invariants \
+                                    included from a schema",
+                            );
+                            return;
+                        }
+                        ConditionKind::LoopInvariant
+                    }
+                    SpecBlockContext::Schema(..) => {
+                        // this is the initial pass that put the condition into the schema context
+                        cond.kind.clone()
+                    }
+                };
+                cond.kind = new_kind;
+            }
+
             // Expand invariants on functions in requires/ensures
             let derived_conds = if matches!(context, SpecBlockContext::Function(..))
-                && matches!(cond.kind, Invariant(..))
+                && matches!(cond.kind, FunctionInvariant)
             {
                 let mut ensures = cond.clone();
                 ensures.kind = ConditionKind::Ensures;
@@ -1619,29 +1666,33 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Convert a condition kind from AST into the ConditionKind known by the move model.
-    fn convert_condition_kind(&mut self, kind: &EA::SpecConditionKind) -> ConditionKind {
+    fn convert_condition_kind(
+        &mut self,
+        kind: &EA::SpecConditionKind,
+        context: &SpecBlockContext,
+    ) -> Option<ConditionKind> {
         // Defines a type local with duplication check
         fn define_type_local(
             builder: &mut ModuleBuilder,
             ty_locals_defined: &mut BTreeSet<Symbol>,
             name: &Name,
-        ) -> Type {
+        ) -> Option<Type> {
             let symbol = builder.symbol_pool().make(&name.value);
-            if ty_locals_defined.contains(&symbol) {
+            if !ty_locals_defined.insert(symbol) {
                 builder.parent.env.error(
                     &builder.parent.to_loc(&name.loc),
                     &format!("duplicate declaration of `{}`", &name.value),
                 );
-                Type::Error
+                None
             } else {
-                Type::TypeLocal(symbol)
+                Some(Type::TypeLocal(symbol))
             }
         }
 
         fn define_type_locals(
             builder: &mut ModuleBuilder,
             locals: &[(Name, EA::AbilitySet)],
-        ) -> Vec<Type> {
+        ) -> Option<Vec<Type>> {
             let mut ty_locals_defined = BTreeSet::new();
             locals
                 .iter()
@@ -1650,8 +1701,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         use ConditionKind::*;
-        use EA::SpecConditionKind as PK;
-        match kind {
+        use EA::SpecConditionKind_ as PK;
+        let converted = match &kind.value {
             PK::Assert => Assert,
             PK::Assume => Assume,
             PK::Decreases => Decreases,
@@ -1662,10 +1713,57 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             PK::AbortsIf => AbortsIf,
             PK::AbortsWith => AbortsWith,
             PK::SucceedsIf => SucceedsIf,
-            PK::Axiom(ty_locals) => Axiom(define_type_locals(self, ty_locals)),
-            PK::Invariant(ty_locals) => Invariant(define_type_locals(self, ty_locals)),
-            PK::InvariantUpdate(ty_locals) => InvariantUpdate(define_type_locals(self, ty_locals)),
-        }
+            PK::Invariant(ty_locals) => {
+                let tys = define_type_locals(self, ty_locals)?;
+                match context {
+                    SpecBlockContext::Module => GlobalInvariant(tys),
+                    SpecBlockContext::Struct(..) => {
+                        if !tys.is_empty() {
+                            self.parent.env.error(
+                                &self.parent.to_loc(&kind.loc),
+                                "Type locals are not allowed in struct invariants",
+                            );
+                            return None;
+                        }
+                        StructInvariant
+                    }
+                    SpecBlockContext::Function(..) => {
+                        if !tys.is_empty() {
+                            self.parent.env.error(
+                                &self.parent.to_loc(&kind.loc),
+                                "Type locals are not allowed in function invariants",
+                            );
+                            return None;
+                        }
+                        FunctionInvariant
+                    }
+                    SpecBlockContext::FunctionCode(..) => {
+                        if !tys.is_empty() {
+                            self.parent.env.error(
+                                &self.parent.to_loc(&kind.loc),
+                                "Type locals are not allowed in loop invariants",
+                            );
+                            return None;
+                        }
+                        LoopInvariant
+                    }
+                    SpecBlockContext::Schema(..) => SchemaInvariant(tys),
+                }
+            }
+            PK::InvariantUpdate(ty_locals) => {
+                let tys = define_type_locals(self, ty_locals)?;
+                if !matches!(context, SpecBlockContext::Module) {
+                    self.parent.env.error(
+                        &self.parent.to_loc(&kind.loc),
+                        "Update invariants are only allowed in module specs",
+                    );
+                    return None;
+                }
+                GlobalInvariantUpdate(tys)
+            }
+            PK::Axiom(ty_locals) => Axiom(define_type_locals(self, ty_locals)?),
+        };
+        Some(converted)
     }
 }
 
@@ -1857,22 +1955,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     additional_exps,
                 } => {
                     let context = SpecBlockContext::Schema(name.clone());
-                    let kind = self.convert_condition_kind(kind);
-                    let properties = self.translate_properties(properties, &|prop| {
-                        if !is_property_valid_for_condition(&kind, prop) {
-                            Some(member_loc.clone())
-                        } else {
-                            None
-                        }
-                    });
-                    self.def_ana_condition(
-                        &member_loc,
-                        &context,
-                        kind,
-                        properties,
-                        exp,
-                        additional_exps,
-                    );
+                    if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                        let properties = self.translate_properties(properties, &|prop| {
+                            if !is_property_valid_for_condition(&kind, prop) {
+                                Some(member_loc.clone())
+                            } else {
+                                None
+                            }
+                        });
+                        self.def_ana_condition(
+                            &member_loc,
+                            &context,
+                            kind,
+                            properties,
+                            exp,
+                            additional_exps,
+                        );
+                    }
                 }
                 _ => {
                     self.parent.error(&member_loc, "item not allowed in schema");
@@ -2345,11 +2444,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
             SpecBlockContext::Struct(..) => {
-                let et = self.exp_translator_for_context(
-                    loc,
-                    context,
-                    &ConditionKind::Invariant(vec![]),
-                );
+                let et =
+                    self.exp_translator_for_context(loc, context, &ConditionKind::StructInvariant);
                 (et.extract_var_map(), et.get_type_params_with_name())
             }
             SpecBlockContext::Module => (BTreeMap::new(), vec![]),
@@ -2524,7 +2620,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         };
         for struct_spec in self.struct_specs.values() {
             for cond in &struct_spec.conditions {
-                if matches!(cond.kind, ConditionKind::Invariant(..))
+                if matches!(cond.kind, ConditionKind::StructInvariant)
                     && !cond.exp.uses_memory(&check_uses_memory)
                 {
                     self.parent.error(
@@ -2650,7 +2746,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         for cond in self.module_spec.conditions.iter().cloned().collect_vec() {
             if matches!(
                 cond.kind,
-                ConditionKind::Invariant(..) | ConditionKind::InvariantUpdate(..)
+                ConditionKind::GlobalInvariant(..) | ConditionKind::GlobalInvariantUpdate(..)
             ) {
                 let (spec_var_usage, mem_usage) = self.compute_state_usage_for_exp(None, &cond.exp);
                 let id = self.parent.env.new_global_id();

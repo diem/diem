@@ -143,7 +143,7 @@ impl<'a> Instrumenter<'a> {
             &[],
             invariants.iter().filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
-                    if matches!(inv.kind, ConditionKind::Invariant(..)) {
+                    if matches!(inv.kind, ConditionKind::GlobalInvariant(..)) {
                         if module_env.is_transitive_dependency(inv.declaring_module)
                             && !module_env
                                 .env
