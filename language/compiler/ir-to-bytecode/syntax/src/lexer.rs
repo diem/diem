@@ -164,8 +164,25 @@ impl<'input> Lexer<'input> {
         self.prev_end
     }
 
+    fn trim_whitespace_and_comments(&self) -> &'input str {
+        let mut text = &self.text[self.cur_end..];
+        loop {
+            // Trim the only whitespace characters we recognize: newline, tab, and space.
+            text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | ' '));
+            // Trim the only comments we recognize: '// ... \n'.
+            if text.starts_with("//") {
+                text = text.trim_start_matches(|c: char| c != '\n');
+                // Continue the loop on the following line, which may contain leading
+                // whitespace or comments of its own.
+                continue;
+            }
+            break;
+        }
+        text
+    }
+
     pub fn lookahead(&self) -> Result<Tok, ParseError<Loc, anyhow::Error>> {
-        let text = self.text[self.cur_end..].trim_start();
+        let text = self.trim_whitespace_and_comments();
         let offset = self.text.len() - text.len();
         let (tok, _) = self.find_token(text, offset)?;
         Ok(tok)
@@ -173,7 +190,7 @@ impl<'input> Lexer<'input> {
 
     pub fn advance(&mut self) -> Result<(), ParseError<Loc, anyhow::Error>> {
         self.prev_end = self.cur_end;
-        let text = self.text[self.cur_end..].trim_start();
+        let text = self.trim_whitespace_and_comments();
         self.cur_start = self.text.len() - text.len();
         let (token, len) = self.find_token(text, self.cur_start)?;
         self.cur_end = self.cur_start + len;
