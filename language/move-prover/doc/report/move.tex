@@ -2,40 +2,40 @@
 
 Move was developed for the Diem blockchain \cite{DIEM}, but its design is not
 specific to blockchains.  A Move execution consists of a sequence of updates
-evolving a \emph{global state}.  Updates are executed in a \emph{transactional}
-style: the next state they compute will only be committed if their computation
-has finished successfully and the result can be merged back into the global
-state. Semantically, a Move execution can therefore be interpreted as a labelled
-transition system (i.e. interleaved execution steps). Any state evolving system
-which is adequately modeled by this semantics, not just blockchains, can be
-programmed in Move (for example, transactions on a concurrent data base, or
-training steps in an iterative ML algorithm).
+evolving a \emph{global persistent memory state}, which we just call the
+\emph{(global) memory}.  Updates are executed in a \emph{transactional} style:
+the next memory state they compute will only be committed if their computation
+has finished successfully and the result can be merged back without conflict
+into the current memory state. Semantically, a Move execution can therefore be
+interpreted as a labelled transition system (i.e. interleaved execution
+steps). Any state evolving system which is adequately modeled by this semantics,
+not just blockchains, can be programmed in Move (for example, transactions on a
+concurrent data base, or training steps in an iterative ML algorithm).
 
-The Move language allows to define global state in terms of so-called
-\emph{resources}.  Resources are data structures which are stored in
-\emph{persistent} global memory indexed by \emph{account addresses}. For
-example, the Move expression |exists<Balance>(account)| determines whether the
-resource |Balance| exists at address |account|. As resource types can be generic
-(for example, |Balance<Currency>|), an index for a resource is a tuple of types
-and the account address: semantically, for each resource type $R$ there is a
-partial memory function
-$\smem_R \in \sseq{\stype} \scross \saddr \sinto \swbot{R}$, with
-$\sseq{\stype}$ a sequence of types use to instantiate $R\sgen{\sseq{\stype}}$,
-and $\saddr$ the domain of addresses. Notice that account addresses are not just
-arbitrary values but have a specific role in Move's programming methodology
-related to access control via the builtin type of \emph{signers}, as will be
-discussed later.
+The Move language allows to define memory in terms of so-called
+\emph{resources}.  Resources are data structures which are stored in memory
+indexed by \emph{account addresses}. For example, the Move expression
+|exists<Balance>(account)| determines whether the resource |Balance| exists at
+address |account|. As resource types can be generic (for example,
+|Balance<Currency>|), an index for a resource is a tuple of types and the
+account address: semantically, for each resource type $R$ there is a partial
+memory function $\smem_R \in \sseq{\stype} \scross \saddr \sinto \swbot{R}$,
+with $\sseq{\stype}$ a sequence of types use to instantiate
+$R\sgen{\sseq{\stype}}$, and $\saddr$ the domain of addresses. Notice that
+account addresses are not just arbitrary values but have a specific role in
+Move's programming methodology related to access control via the builtin type of
+\emph{signers}, as will be discussed later.
 
 A Move application consists of a set of \emph{transaction scripts}. Each of
 those script defines a Move function with input parameters but no output
-parameters.  This function updates the global state $\smem$. The execution of
-this function can fail via a well-defined abort mechanism, in which case
-$\smem$ stays unmodified. An environment emits a sequence of calls to such
-scripts, thereby evolving $\smem$. To understand this execution as an LTS,
-consider the set of states to be $\smem$, the labels the names of transaction
-scripts combined with a set of concrete parameters, and the transition relation
-defined by the transaction scripts. Abortion of the transaction function creates
-a label with the script name, the parameters, and information about the abort reason,
+parameters.  This function updates the memory $\smem$. The execution of this
+function can fail via a well-defined abort mechanism, in which case $\smem$
+stays unmodified. An environment emits a sequence of calls to such scripts,
+thereby evolving $\smem$. To understand this execution as an LTS, consider the
+set of states to be $\smem$, the labels the names of transaction scripts
+combined with a set of concrete parameters, and the transition relation defined
+by the transaction scripts. Abortion of the transaction function creates a label
+with the script name, the parameters, and information about the abort reason,
 which cycles on the current state.
 
 A transaction script is written in Move as an imperative function which can read
@@ -58,7 +58,7 @@ the traditionally hard problems caused by aliasing of mutable references.
 
 \SubSection{Programming in Move}
 
-In Move, one defines transactions via top-level so-called \emph{script
+In Move, one defines transactions via so-called \emph{script
   functions} which take a set of parameters.  Those functions can call other
 functions. Script and regular functions are encapsulated in \emph{modules}. Move
 modules are also the place where resource types and other structured data is
@@ -133,10 +133,10 @@ module Account {
   functions if any account resources are already borrowed, implementing memory
   safety for Move~\cite{BORROW_CHECKER}.
 \item The |assert| statement causes a Move transaction to abort execution if the
-  condition is not met, with the specified error code. No effects on the global
-  state occur on abort. Abortion can also happen implicitly; for example, the
-  expression |borrow_global_mut<T>(addr)| will abort if no resource |T| exists at
-  |addr|.
+  condition is not met, with the specified error code. No effects on the memory
+  occur on abort. Abortion can also happen implicitly; for example, the
+  expression |borrow_global_mut<T>(addr)| will abort if no resource |T| exists
+  at |addr|.
 \item The script |Account::transfer| is a top-level entry point into this Move
   program, calling |Account::withdraw| and |Account::deposit|. The call to the
   builtin function |move| at line~\ref{line:CoinMove} illustrates how the linear

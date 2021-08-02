@@ -1,49 +1,61 @@
 \Section{Introduction}
 
-Move \cite{MOVE_LANG} is a new high-level programming language for writing smart
-contracts.  Move and it's underlying engine, the Move Virtual Machine, have been
-designed with \emph{formal verification} in mind. Specification related language
-support is integrated into the Move language, and the \emph{Move prover} tool
-has been developed, allowing to verify specifications against the implementation.
+In this paper, we describe methodology and design of \emph{formal verification}
+for the \emph{Move} language.  Move \cite{MOVE_LANG} is a new high-level
+programming language for writing smart contracts, which has been been designed
+from the ground up with formal verification in mind. Specification related
+language support is integrated into Move, and the \emph{Move Prover}
+\cite{MOVE_PROVER} (abbreviated \MVP) has been developed, enabling practical
+formal verification integrated into the regular development process.
 
-In this paper, we describe for the first time the methodology and theory behind
-\emph{practical formal verification} in Move.  Since the earlier publication
-about the Move prover tool in \cite{MOVE_PROVER}, many changes have been made to
-the Move specification language and the prover implementation. Those changes
-went hand-in-hand with the evolution of the \emph{Diem
-  framework}~\cite{DIEM_FRAMEWORK}, which is a Move library for smart contracts
-running on the Diem blockchain~\cite{DIEM}. The framework provides functionality
-for managing accounts and their interaction, including multiple currencies,
-account roles, and rules for transactions.  It consists of approximately 12,000
-lines of Move program code and specifications.  The framework is exhaustively
-specified, and \emph{verification runs fully automated alongside with unit and
-  integration tests}, being integrated into the regular development process of
-Diem.
+Since the earlier tools paper in \cite{MOVE_PROVER}, many changes have been made
+to the Move specification language and \MVP. Those changes went hand-in-hand
+with the evolution of the \emph{Diem framework}~\cite{DIEM_FRAMEWORK}, which is
+a Move library for smart contracts running on the Diem
+blockchain~\cite{DIEM}. The framework provides functionality for managing
+accounts and their interaction, including multiple currencies, account roles,
+and rules for transactions.  It consists of approximately 12,000 lines of Move
+program code and specifications.  The framework is exhaustively specified, and
+\emph{verification runs fully automated alongside with unit and integration
+  tests}, and as such can be seen as one of the larger recent success stories of
+formal methods in industry.
 
-The cornerstones for the success of this project are seen in the following
-aspects.  First, the Move language was designed with verification in mind,
-making it amenable for mechanized proof. Specifically its memory safety
-properties and borrow semantics contribute to this. Second, the fully sandboxed
-execution model of Move reduces the problem of outcalls to unspecified,
-open-ended code which many verification approaches face. Third, the state of the
-art in SMT tools like Z3~\cite{Z3} give rise to powerful practical
-applications. Last but not least, the co-development of the Diem framework with
-the specification language and prover provided a valuable feedback loop for
-continuous improvement.
+In this report, we aim to describe both the Move specification language as well
+as the implementation design of \MVP. The specification language comes with a
+number of novel features, among them a powerful concept of invariants which
+leverages Move's borrow semantics. The implementation is described by means of
+transforming high-level Move code with specifications into lower-level Move code
+which only contains simple assume and assert statements. This tranformation
+utilizes a number of novel ideas, among them the elimination of references from
+the original Move program and the injection of invariants into the code. The
+lower-level Move code is translated via Boogie~\cite{BOOGIE} to an SMT solver
+like Z3~\cite{Z3}, and the counter-examples resulting from SMT runs are mapped
+back in full fidelity to the source level of Move.
 
-While those results look promising, constituting one of the larger recent
-applications of formal verification in industry, the technology is not yet fully
-ready for mainstream usage. A major classical obstacle of SMT-based verification
-remains: as we are dealing with undecidable problems, heuristics in the solver
-can fail, leading to occasional verification timeouts, which require support of
-specialized engineers to solve. Also, specifications are arguably harder to
-write than code, and require significant effort. Moreover, diagnosis produced by
-the prover on verification failures, while already better than one would expect,
-need to be further improved.  We describe the obstacles for mainstream
-usability, and our ideas how they might be overcome in the conclusion of this
-paper.
+While performed in the context of Move and the Diem blockchain project, we
+believe this work has wider implications. The Move language uses a model of
+references and borrow semantics very similar to the safe subset of Rust
+\cite{RUST}, for which the same ideas could be applied as described here.  The
+Move language can be also used for other domains than blockchains: the major
+aspects of Move are that it has persistent global memory which can be directly
+accessed from the language and that it supports deterministic, transactional
+semantics to update this memory -- properties which are relevant for other
+domains as well. Nevertheless, one major factor for the success of this work are
+specific to one aspect of the blockchain context: Move code is fully sandboxed,
+and we do not need to deal with a myriad of unspecified, unsafe external code.
 
-\Paragraph{Acknowledgement} Many more people have contributed to the Move Prover: Sam Blackshear, Mathieu Baudet, Todd Nowacki, Bob Wilson, Tim Zaikan, \ldots (list interns and other Move team members)
+While our results look promising for the application of formal methods in the
+domain, there are a number of open problems as well.  A major classical obstacle
+of SMT-based verification remains: as we are dealing with undecidable problems,
+heuristics in the solver can fail, leading to occasional false positives and
+verification timeouts, which require support of specialized engineers to
+solve. Also, specifications are arguably harder to write than code, and require
+significant effort.  We describe the obstacles for mainstream usability, and our
+ideas how they might be overcome in the conclusion of this report.
+
+\Paragraph{Acknowledgement} Many more people have contributed to the Move
+Prover: Sam Blackshear, Mathieu Baudet, Todd Nowacki, Bob Wilson, Tim Zaikan,
+\ldots (list interns and other Move team members)
 
 
 
