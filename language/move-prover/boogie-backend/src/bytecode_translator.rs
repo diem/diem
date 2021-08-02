@@ -429,7 +429,7 @@ impl<'env> FunctionTranslator<'env> {
                     VerificationFlavor::Instantiated(_) => {
                         format!("$verify_{}", flavor)
                     }
-                    VerificationFlavor::Inconsistency => {
+                    VerificationFlavor::Inconsistency(_) => {
                         attribs.push(format!(
                             "{{:msg_if_verifies \"inconsistency_detected{}\"}} ",
                             self.loc_str(&fun_target.get_loc())

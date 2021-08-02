@@ -10,6 +10,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetProcessor},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
     global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
+    inconsistency_check::InconsistencyCheckInstrumenter,
     livevar_analysis::LiveVarAnalysisProcessor,
     loop_analysis::LoopAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
@@ -57,6 +58,10 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
     }
     if options.run_mono {
         processors.push(MonoAnalysisProcessor::new());
+    }
+    // inconsistency check instrumentation should be the last one in the pipeline
+    if options.check_inconsistency {
+        processors.push(InconsistencyCheckInstrumenter::new());
     }
 
     let mut res = FunctionTargetPipeline::default();

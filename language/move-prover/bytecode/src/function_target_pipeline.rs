@@ -25,7 +25,7 @@ pub struct FunctionTargetsHolder {
 pub enum VerificationFlavor {
     Regular,
     Instantiated(usize),
-    Inconsistency,
+    Inconsistency(Box<VerificationFlavor>),
 }
 
 impl std::fmt::Display for VerificationFlavor {
@@ -35,7 +35,7 @@ impl std::fmt::Display for VerificationFlavor {
             VerificationFlavor::Instantiated(index) => {
                 write!(f, "instantiated_{}", index)
             }
-            VerificationFlavor::Inconsistency => write!(f, "inconsistency"),
+            VerificationFlavor::Inconsistency(flavor) => write!(f, "inconsistency_{}", flavor),
         }
     }
 }
