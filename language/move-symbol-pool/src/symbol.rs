@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{pool::Entry, SYMBOL_POOL};
-use serde::{Deserialize, Serialize};
+use serde::{de::Deserialize, ser::Serialize};
 use std::{cmp::Ordering, fmt, num::NonZeroU64};
 
 /// Represents a string that has been cached.
@@ -37,7 +37,7 @@ use std::{cmp::Ordering, fmt, num::NonZeroU64};
 ///
 /// [`as_str()`]: crate::Symbol::as_str
 /// [`Display`]: std::fmt::Display
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Symbol(NonZeroU64);
 
 impl Symbol {
@@ -87,6 +87,24 @@ impl Ord for Symbol {
 impl PartialOrd for Symbol {
     fn partial_cmp(&self, other: &Symbol) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Serialize for Symbol {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_str().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Symbol {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Symbol::from(String::deserialize(deserializer)?))
     }
 }
 

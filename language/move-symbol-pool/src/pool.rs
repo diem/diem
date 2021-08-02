@@ -54,7 +54,7 @@ pub(crate) struct Entry {
 }
 
 /// A contiguous array of buckets.
-pub(crate) struct Pool(Box<[Bucket; NB_BUCKETS]>);
+pub(crate) struct Pool(pub(crate) Box<[Bucket; NB_BUCKETS]>);
 
 impl Pool {
     /// Allocates a contiguous array of buckets on the heap. As strings are
