@@ -45,8 +45,6 @@ const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
 const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
 const EMITS_NOT_COVERED: &str = "emitted event not covered by any of the `emits` clauses";
-// This message is for the boogie wrapper, and not shown to the users.
-const EXPECTED_TO_FAIL: &str = "expected to fail";
 
 fn modify_check_fails_message(
     env: &GlobalEnv,
@@ -135,19 +133,6 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
                 verification_data.variant.clone(),
                 verification_data,
             );
-
-            if options.check_inconsistency {
-                // Create another clone for the inconsistency check
-                let mut new_data = data.fork(FunctionVariant::Verification(
-                    VerificationFlavor::Inconsistency,
-                ));
-                new_data = Instrumenter::run(&*options, targets, fun_env, new_data);
-                targets.insert_target_data(
-                    &fun_env.get_qualified_id(),
-                    new_data.variant.clone(),
-                    new_data,
-                );
-            }
         }
 
         // Instrument baseline variant only if it is inlined.
@@ -963,16 +948,6 @@ impl<'a> Instrumenter<'a> {
                 self.emit_traces(spec, &[], &cond);
                 self.builder.set_loc_and_vc_info(loc, EMITS_NOT_COVERED);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond));
-            }
-
-            if matches!(
-                self.builder.data.variant,
-                FunctionVariant::Verification(VerificationFlavor::Inconsistency)
-            ) {
-                let loc = self.builder.fun_env.get_spec_loc();
-                self.builder.set_loc_and_vc_info(loc, EXPECTED_TO_FAIL);
-                let exp = self.builder.mk_bool_const(false);
-                self.builder.emit_with(|id| Prop(id, Assert, exp));
             }
         }
 
