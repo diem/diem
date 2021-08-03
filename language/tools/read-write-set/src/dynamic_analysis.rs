@@ -18,7 +18,7 @@ use prover_bytecode::{
 };
 use read_write_set_types::Access;
 use resource_viewer::{AnnotatedMoveValue, MoveValueAnnotator};
-use std::{fmt::Debug, ops::Deref};
+use std::ops::Deref;
 
 /// A read/write set state with no unbound formals or type variables
 #[derive(Debug)]
@@ -171,8 +171,8 @@ impl ConcretizedFormals {
 
     /// Concretize the secondary in `offsets` -> `access` using `annotator` and add the results to
     /// `acc`.
-    fn concretize_offsets<S: MoveResolver>(
-        annotator: &MoveValueAnnotator<S>,
+    fn concretize_offsets<T: MoveResolver>(
+        annotator: &MoveValueAnnotator<T>,
         access_path: AccessPath,
         mut next_value: AnnotatedMoveValue,
         next_offset_index: usize,
@@ -251,8 +251,8 @@ impl ConcretizedFormals {
     }
 
     /// Concretize the secondary indexes in `access_path` and add the result to `acc`. For example
-    fn concretize_secondary_indexes_<S: MoveResolver>(
-        annotator: &MoveValueAnnotator<S>,
+    fn concretize_secondary_indexes_<T: MoveResolver>(
+        annotator: &MoveValueAnnotator<T>,
         access_path: &AccessPath,
         access: &Access,
         env: &GlobalEnv,

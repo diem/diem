@@ -4,7 +4,7 @@
 use crate::stream_rpc::transport::websocket::get_websocket_routes;
 use diem_config::config::StreamConfig;
 use std::sync::Arc;
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 use warp::{filters::BoxedFilter, Filter, Reply};
 
 /// Gets all routes for all streaming endpoints
@@ -13,7 +13,7 @@ use warp::{filters::BoxedFilter, Filter, Reply};
 pub fn get_stream_routes(
     config: &StreamConfig,
     content_length_limit: u64,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn MoveDbReader>,
 ) -> BoxedFilter<(impl Reply,)> {
     let wss_routes = get_websocket_routes(config, content_length_limit, diem_db.clone(), None).0;
 

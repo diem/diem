@@ -30,6 +30,7 @@ fn main() -> Result<()> {
             &GetTreasuryComplianceAccount,
             &GetEventsWithProofs,
             &GetEventByVersionWithProofTest,
+            &GetResourcesTest,
             &MultiAgentPaymentOverDualAttestationLimit,
             &GetAccumulatorConsistencyProof,
             &NoUnknownEvents,

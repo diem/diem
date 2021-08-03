@@ -25,6 +25,7 @@ use diem_types::{
     },
 };
 use itertools::Itertools;
+use move_core_types::resolver::{ModuleResolver, ResourceResolver};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -463,6 +464,11 @@ pub trait DbWriter: Send + Sync {
         first_version: Version,
         ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
     ) -> Result<()>;
+}
+
+pub trait MoveDbReader:
+    DbReader + ResourceResolver<Error = anyhow::Error> + ModuleResolver<Error = anyhow::Error>
+{
 }
 
 #[derive(Clone)]

@@ -27,7 +27,7 @@ use std::{
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
     http::header,
@@ -105,7 +105,7 @@ pub fn bootstrap(
     content_len_limit: usize,
     tls_cert_path: &Option<String>,
     tls_key_path: &Option<String>,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn MoveDbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
@@ -212,7 +212,7 @@ pub fn bootstrap(
 pub fn bootstrap_from_config(
     config: &NodeConfig,
     chain_id: ChainId,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn MoveDbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     bootstrap(
@@ -232,7 +232,7 @@ pub fn bootstrap_from_config(
 
 async fn health_check(
     params: HealthCheckParams,
-    db: Arc<dyn DbReader>,
+    db: Arc<dyn MoveDbReader>,
     now: SystemTime,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
     if let Some(duration) = params.duration_secs {

@@ -22,13 +22,13 @@ use move_core_types::{
 };
 use std::rc::Rc;
 
-pub(crate) struct Resolver<'a, S> {
-    pub state: &'a S,
+pub(crate) struct Resolver<'a, T> {
+    pub state: &'a T,
     cache: ModuleCache,
 }
 
-impl<'a, S: MoveResolver> Resolver<'a, S> {
-    pub fn new(state: &'a S) -> Self {
+impl<'a, T: MoveResolver> Resolver<'a, T> {
+    pub fn new(state: &'a T) -> Self {
         Resolver {
             state,
             cache: ModuleCache::new(),

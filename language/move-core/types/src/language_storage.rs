@@ -157,3 +157,9 @@ impl Display for ResourceKey {
         write!(f, "0x{}/{}", self.address.short_str_lossless(), self.type_)
     }
 }
+
+impl From<StructTag> for TypeTag {
+    fn from(t: StructTag) -> TypeTag {
+        TypeTag::Struct(t)
+    }
+}

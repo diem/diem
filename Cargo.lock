@@ -2038,6 +2038,7 @@ dependencies = [
  "rand 0.8.3",
  "regex",
  "reqwest",
+ "resource-viewer",
  "serde",
  "serde_json",
  "storage-interface",
@@ -6638,7 +6639,6 @@ dependencies = [
  "move-vm-types",
  "once_cell",
  "serde",
- "serde_json",
 ]
 
 [[package]]

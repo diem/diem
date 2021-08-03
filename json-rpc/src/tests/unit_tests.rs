@@ -595,6 +595,22 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_resources: malformed_addr",
+            json!({"jsonrpc": "2.0", "method": "get_resources", "params": ["0", version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params for method 'get_resources'",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version,
+            }),
+        ),
+        (
             "get_account_transaction: invalid account",
             json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["invalid", 1, false], "id": 1}),
             json!({
@@ -1193,7 +1209,6 @@ fn test_limit_batch_size() {
     }
 
     let ret = client.batch(batch).unwrap_err();
-
     let error = ret.json_rpc_error().unwrap();
     let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: batch size = 21, exceed limit 20\", data: None }";
     assert_eq!(format!("{:?}", error), expected)

@@ -10,7 +10,7 @@ use warp::{filters::BoxedFilter, ws::Message, Filter, Rejection, Reply};
 
 use diem_config::config::StreamConfig;
 use diem_logger::debug;
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 
 use crate::stream_rpc::{
     connection::{ConnectionContext, ConnectionManager},
@@ -24,7 +24,7 @@ use crate::stream_rpc::{
 pub fn get_websocket_routes(
     config: &StreamConfig,
     content_length_limit: u64,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn MoveDbReader>,
     connection_manager: Option<ConnectionManager>,
 ) -> (BoxedFilter<(impl Reply,)>, ConnectionManager) {
     let sub_config = Arc::new(SubscriptionConfig {

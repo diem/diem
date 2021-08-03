@@ -248,10 +248,8 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         Ok(self
             .remote
             .get_module(module_id)
-            .map_err(|e| {
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("Unexpected storage error: {:?}", e))
-                    .finish(Location::Undefined)
+            .map_err(|_| {
+                PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined)
             })?
             .is_some())
     }

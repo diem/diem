@@ -34,6 +34,8 @@ diem-proptest-helpers = { path = "../../crates/diem-proptest-helpers", optional 
 diem-temppath = { path = "../../crates/diem-temppath", optional = true }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
+move-core-types = {path = "../../language/move-core/types"}
+
 num-variants = { path = "../../crates/num-variants" }
 schemadb = { path = "../schemadb" }
 storage-interface = { path = "../storage-interface" }
@@ -47,7 +49,6 @@ diem-jellyfish-merkle = { path = "../jellyfish-merkle", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../../crates/diem-proptest-helpers" }
 diem-temppath = { path = "../../crates/diem-temppath" }
 diem-types = { path = "../../types", features = ["fuzzing"] }
-move-core-types = {path = "../../language/move-core/types"}
 
 [features]
 default = []

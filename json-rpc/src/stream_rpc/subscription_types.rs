@@ -43,7 +43,7 @@ use diem_json_rpc_types::{
 use diem_logger::debug;
 use serde::Serialize;
 use std::{iter::Map, sync::Arc, time::Duration};
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 use tokio::task::JoinHandle;
 use tokio_retry::strategy::ExponentialBackoff;
 
@@ -72,7 +72,7 @@ pub fn create_backoff(poll_interval_ms: u64, max_poll_interval_ms: u64) -> Jitte
 
 #[derive(Clone)]
 pub struct SubscriptionHelper {
-    pub db: Arc<dyn DbReader>,
+    pub db: Arc<dyn MoveDbReader>,
     pub client: ClientConnection,
     pub jsonrpc_id: Id,
     pub method: StreamMethod,
@@ -81,7 +81,7 @@ pub struct SubscriptionHelper {
 
 impl SubscriptionHelper {
     pub fn new(
-        db: Arc<dyn DbReader>,
+        db: Arc<dyn MoveDbReader>,
         client: ClientConnection,
         jsonrpc_id: Id,
         method: StreamMethod,

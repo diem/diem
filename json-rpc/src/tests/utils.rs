@@ -45,8 +45,9 @@ use futures::channel::{
     oneshot,
 };
 use move_core_types::{
-    language_storage::TypeTag,
+    language_storage::{ModuleId, StructTag, TypeTag},
     move_resource::MoveResource,
+    resolver::{ModuleResolver, ResourceResolver},
     value::{MoveStructLayout, MoveTypeLayout},
 };
 use move_vm_types::values::{Struct, Value};
@@ -57,7 +58,7 @@ use std::{
     net::SocketAddr,
     sync::Arc,
 };
-use storage_interface::{DbReader, Order, StartupInfo, TreeState};
+use storage_interface::{DbReader, MoveDbReader, Order, StartupInfo, TreeState};
 use tokio::runtime::Runtime;
 
 /// Creates JSON RPC server for a Validator node
@@ -65,7 +66,7 @@ use tokio::runtime::Runtime;
 #[allow(unused)]
 pub fn test_bootstrap(
     address: SocketAddr,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn MoveDbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     let mut stream_config: StreamConfig = StreamConfig {
@@ -382,6 +383,44 @@ impl DbReader for MockDiemDB {
         Ok(HashValue::zero())
     }
 }
+
+impl ModuleResolver for MockDiemDB {
+    type Error = anyhow::Error;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
+        let (account_state_with_proof, _) = self.get_account_state_with_proof_by_version(
+            *module_id.address(),
+            self.get_latest_version()?,
+        )?;
+        if let Some(account_state_blob) = account_state_with_proof {
+            let account_state = AccountState::try_from(&account_state_blob)?;
+            Ok(account_state.get(&module_id.access_vector()).cloned())
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl ResourceResolver for MockDiemDB {
+    type Error = anyhow::Error;
+
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &StructTag,
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
+        let (account_state_with_proof, _) =
+            self.get_account_state_with_proof_by_version(*address, self.get_latest_version()?)?;
+        if let Some(account_state_blob) = account_state_with_proof {
+            let account_state = AccountState::try_from(&account_state_blob)?;
+            Ok(account_state.get(&tag.access_vector()).cloned())
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl MoveDbReader for MockDiemDB {}
 
 // returns MockDiemDB for unit-testing
 #[allow(unused)]

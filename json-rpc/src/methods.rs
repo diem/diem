@@ -19,8 +19,8 @@ use diem_json_rpc_types::request::{
     GetAccountTransactionsParams, GetAccountTransactionsWithProofsParams,
     GetAccumulatorConsistencyProofParams, GetCurrenciesParams, GetEventByVersionWithProof,
     GetEventsParams, GetEventsWithProofsParams, GetMetadataParams, GetNetworkStatusParams,
-    GetStateProofParams, GetTransactionsParams, GetTransactionsWithProofsParams, MethodRequest,
-    SubmitParams,
+    GetResourcesParams, GetStateProofParams, GetTransactionsParams,
+    GetTransactionsWithProofsParams, MethodRequest, SubmitParams,
 };
 use diem_mempool::{MempoolClientSender, SubmissionStatus};
 use diem_types::{
@@ -29,13 +29,14 @@ use diem_types::{
 };
 use fail::fail_point;
 use futures::{channel::oneshot, SinkExt};
+use resource_viewer::AnnotatedMoveStruct;
 use serde_json::Value;
-use std::{borrow::Borrow, sync::Arc};
-use storage_interface::DbReader;
+use std::{borrow::Borrow, collections::BTreeMap, sync::Arc};
+use storage_interface::MoveDbReader;
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
-    db: Arc<dyn DbReader>,
+    db: Arc<dyn MoveDbReader>,
     mempool_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
@@ -45,7 +46,7 @@ pub(crate) struct JsonRpcService {
 
 impl JsonRpcService {
     pub fn new(
-        db: Arc<dyn DbReader>,
+        db: Arc<dyn MoveDbReader>,
         mempool_sender: MempoolClientSender,
         role: RoleType,
         chain_id: ChainId,
@@ -167,6 +168,9 @@ impl<'a> Handler<'a> {
             }
             MethodRequest::GetNetworkStatus(params) => {
                 serde_json::to_value(self.get_network_status(params).await?)?
+            }
+            MethodRequest::GetResources(params) => {
+                serde_json::to_value(self.get_resources(params).await?)?
             }
             MethodRequest::GetStateProof(params) => {
                 serde_json::to_value(self.get_state_proof(params).await?)?
@@ -386,6 +390,20 @@ impl<'a> Handler<'a> {
         _params: GetNetworkStatusParams,
     ) -> Result<u64, JsonRpcError> {
         data::get_network_status(self.service.role.as_str())
+    }
+
+    /// Returns all resources in the account specified by `params`
+    async fn get_resources(
+        &self,
+        params: GetResourcesParams,
+    ) -> Result<BTreeMap<String, AnnotatedMoveStruct>, JsonRpcError> {
+        let version = self.version_param(params.version, "version")?;
+        data::get_resources(
+            self.service.db.borrow(),
+            self.version(),
+            params.account,
+            version,
+        )
     }
 
     /// Returns proof of new state relative to version known to client

@@ -48,6 +48,7 @@ executor-types = { path = "../execution/executor-types" , optional = true}
 move-core-types = { path = "../language/move-core/types" }
 move-vm-types = { path = "../language/move-vm/types", optional = true }
 network = { path = "../network" }
+resource-viewer = { path = "../language/tools/resource-viewer" }
 diem-scratchpad = { path = "../storage/diem-scratchpad", optional = true }
 storage-interface = { path = "../storage/storage-interface" }
 thiserror = "1.0.37"

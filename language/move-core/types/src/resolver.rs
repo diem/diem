@@ -55,3 +55,22 @@ impl<E: Debug, T: ModuleResolver<Error = E> + ResourceResolver<Error = E> + ?Siz
 {
     type Err = E;
 }
+
+impl<T: ResourceResolver + ?Sized> ResourceResolver for &T {
+    type Error = T::Error;
+
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &StructTag,
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
+        (**self).get_resource(address, tag)
+    }
+}
+
+impl<T: ModuleResolver + ?Sized> ModuleResolver for &T {
+    type Error = T::Error;
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
+        (**self).get_module(module_id)
+    }
+}
