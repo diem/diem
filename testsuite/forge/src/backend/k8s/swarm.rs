@@ -151,7 +151,7 @@ impl K8sSwarm {
 impl Drop for K8sSwarm {
     // When the K8sSwarm struct goes out of scope we need to wipe the chain state
     fn drop(&mut self) {
-        clean_k8s_cluster(self.helm_repo.clone(), self.validators.len())
+        clean_k8s_cluster(self.helm_repo.clone(), self.validators.len(), true)
             .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
             .unwrap();
     }
@@ -323,7 +323,7 @@ fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
     Ed25519PrivateKey::try_from(tc_key_bytes).unwrap()
 }
 
-async fn wait_genesis_job(kube_client: &K8sClient, era: usize) -> Result<(), anyhow::Error> {
+async fn wait_genesis_job(kube_client: &K8sClient, era: usize) -> Result<()> {
     diem_retrier::retry_async(k8s_retry_strategy(), || {
         let jobs: Api<Job> = Api::namespaced(kube_client.clone(), "default");
         Box::pin(async move {
@@ -344,25 +344,75 @@ async fn wait_genesis_job(kube_client: &K8sClient, era: usize) -> Result<(), any
     .await
 }
 
+fn remove_validator(validator_name: &str) -> Result<()> {
+    let validator_uninstall_args = ["uninstall", "--keep-history", validator_name];
+    println!("{:?}", validator_uninstall_args);
+    let validator_uninstall_output = Command::new(HELM_BIN)
+        .stdout(Stdio::inherit())
+        .args(&validator_uninstall_args)
+        .output()
+        .expect("failed to helm uninstall valNN");
+
+    let uninstalled_re = Regex::new(r"already deleted").unwrap();
+    let uninstall_stderr = String::from_utf8(validator_uninstall_output.stderr).unwrap();
+    let already_uninstalled = uninstalled_re.is_match(&uninstall_stderr);
+    assert!(
+        validator_uninstall_output.status.success() || already_uninstalled,
+        "{}",
+        uninstall_stderr
+    );
+    Ok(())
+}
+
+fn upgrade_validator(validator_name: &str, helm_repo: &str, options: &[&str]) -> Result<()> {
+    let validator_upgrade_base_args = [
+        "upgrade",
+        validator_name,
+        &format!("{}/diem-validator", helm_repo),
+    ];
+    let validator_upgrade_args = [&validator_upgrade_base_args, options].concat();
+    println!("{:?}", validator_upgrade_args);
+    let validator_upgrade_output = Command::new(HELM_BIN)
+        .stdout(Stdio::inherit())
+        .args(&validator_upgrade_args)
+        .output()
+        .expect("failed to helm upgrade valNN");
+    if validator_upgrade_output.status.success() {
+        return Ok(());
+    }
+    bail!(format!(
+        "Upgrade not completed: {}",
+        String::from_utf8(validator_upgrade_output.stderr).unwrap()
+    ));
+}
+
+fn get_helm_status(helm_release_name: &str) -> Result<Value> {
+    let status_args = ["status", helm_release_name, "-o", "json"];
+    println!("{:?}", status_args);
+    let raw_helm_values = Command::new(HELM_BIN)
+        .args(&status_args)
+        .output()
+        .unwrap_or_else(|_| panic!("failed to helm status {}", helm_release_name));
+
+    let helm_values = String::from_utf8(raw_helm_values.stdout).unwrap();
+    serde_json::from_str(&helm_values)
+        .map_err(|e| format_err!("failed to deserialize helm values: {}", e))
+}
+
+fn get_helm_values(helm_release_name: &str) -> Result<Value> {
+    let mut v: Value = get_helm_status(helm_release_name)
+        .map_err(|e| format_err!("failed to helm get values diem: {}", e))?;
+    Ok(v["config"].take())
+}
+
 pub fn clean_k8s_cluster(
     helm_repo: String,
     base_num_validators: usize,
-) -> Result<(), anyhow::Error> {
+    require_validator_healthcheck: bool,
+) -> Result<()> {
     assert!(base_num_validators <= MAX_NUM_VALIDATORS);
 
-    // get the previous chain era
-    let raw_helm_values = Command::new(HELM_BIN)
-        .arg("get")
-        .arg("values")
-        .arg("diem")
-        .arg("--output")
-        .arg("json")
-        .output()
-        .unwrap();
-
-    // parse genesis
-    let helm_values = String::from_utf8(raw_helm_values.stdout).unwrap();
-    let v: Value = serde_json::from_str(&helm_values).unwrap();
+    let v: Value = get_helm_values("diem")?;
     let chain_era = v["genesis"]["era"].as_i64().expect("not a i64") as usize;
     let curr_num_validators = v["genesis"]["numValidators"].as_i64().expect("not a i64") as usize;
 
@@ -377,41 +427,14 @@ pub fn clean_k8s_cluster(
 
     // scale down. helm uninstall validators while keeping history for later
     (0..MAX_NUM_VALIDATORS).into_par_iter().for_each(|i| {
-        let validator_uninstall_args = ["uninstall", "--keep-history", &format!("val{}", i)];
-        println!("{:?}", validator_uninstall_args);
-        let validator_uninstall_output = Command::new(HELM_BIN)
-            .stdout(Stdio::inherit())
-            .args(&validator_uninstall_args)
-            .output()
-            .expect("failed to helm uninstall valNN");
-
-        let uninstalled_re = Regex::new(r"already deleted").unwrap();
-        let uninstall_stderr = String::from_utf8(validator_uninstall_output.stderr).unwrap();
-        let already_uninstalled = uninstalled_re.is_match(&uninstall_stderr);
-        assert!(
-            validator_uninstall_output.status.success() || already_uninstalled,
-            "{}",
-            uninstall_stderr
-        );
+        remove_validator(&format!("val{}", i)).unwrap();
     });
 
     let tmp_dir = TempDir::new().expect("Could not create temp dir");
 
     // prepare for scale up. get the helm values to upgrade later
     (0..base_num_validators).into_par_iter().for_each(|i| {
-        let validator_status_args = ["status", &format!("val{}", i), "-o", "json"];
-        println!("{:?}", validator_status_args);
-        let validator_status_output = Command::new(HELM_BIN)
-            .args(&validator_status_args)
-            .output()
-            .expect("failed to helm status valNN");
-        assert!(
-            validator_status_output.status.success(),
-            "{}",
-            String::from_utf8(validator_status_output.stderr).unwrap()
-        );
-        let helm_status = String::from_utf8(validator_status_output.stdout).unwrap();
-        let v: Value = serde_json::from_str(&helm_status).unwrap();
+        let v: Value = get_helm_status(&format!("val{}", i)).unwrap();
         let version = v["version"].as_i64().expect("not a i64") as usize;
         let config = &v["config"];
 
@@ -450,16 +473,12 @@ pub fn clean_k8s_cluster(
 
     // upgrade validators in parallel
     (0..base_num_validators).into_par_iter().for_each(|i| {
-        let rt_thread = Runtime::new().unwrap();
         let file_path = tmp_dir
             .path()
             .join(format!("val{}_status.json", i))
             .display()
             .to_string();
-        let validator_upgrade_args = [
-            "upgrade",
-            &format!("val{}", i),
-            &format!("{}/diem-validator", helm_repo),
+        let validator_upgrade_options = [
             "-f",
             &file_path,
             "--install",
@@ -468,28 +487,7 @@ pub fn clean_k8s_cluster(
             "--set",
             &format!("chain.era={}", new_era),
         ];
-        rt_thread
-            .block_on(async {
-                diem_retrier::retry_async(k8s_retry_strategy(), || {
-                    Box::pin(async move {
-                        println!("{:?}", validator_upgrade_args);
-                        let validator_upgrade_output = Command::new(HELM_BIN)
-                            .stdout(Stdio::inherit())
-                            .args(&validator_upgrade_args)
-                            .output()
-                            .expect("failed to helm upgrade valNN");
-                        if validator_upgrade_output.status.success() {
-                            return Ok(());
-                        }
-                        bail!(format!(
-                            "Upgrade not completed: {}",
-                            String::from_utf8(validator_upgrade_output.stderr).unwrap()
-                        ));
-                    })
-                })
-                .await
-            })
-            .expect("Block on helm upgrade failed");
+        upgrade_validator(&format!("val{}", i), &helm_repo, &validator_upgrade_options).unwrap();
     });
 
     // upgrade testnet
@@ -543,35 +541,38 @@ pub fn clean_k8s_cluster(
     });
 
     // healthcheck on each of the validators
-    let unhealthy_validators = validators
-        .iter_mut()
-        .filter_map(|(_, val)| {
-            let val_name = val.name.clone();
-            println!("Attempting health check: {}", val_name);
-            // perform healthcheck with retry, returning unhealthy
-            let check = diem_retrier::retry(k8s_retry_strategy(), || match val.health_check() {
-                Ok(_) => {
-                    println!("Validator {} healthy", val_name);
-                    Ok(())
+    if require_validator_healthcheck {
+        let unhealthy_validators = validators
+            .iter_mut()
+            .filter_map(|(_, val)| {
+                let val_name = val.name.clone();
+                println!("Attempting health check: {}", val_name);
+                // perform healthcheck with retry, returning unhealthy
+                let check =
+                    diem_retrier::retry(k8s_retry_strategy(), || match val.health_check() {
+                        Ok(_) => {
+                            println!("Validator {} healthy", val_name);
+                            Ok(())
+                        }
+                        Err(ref x) => {
+                            println!("Validator {} unhealthy: {}", val_name, x);
+                            Err(())
+                        }
+                    });
+                if check.is_err() {
+                    return Some(val);
                 }
-                Err(ref x) => {
-                    println!("Validator {} unhealthy: {}", val_name, x);
-                    Err(())
-                }
-            });
-            if check.is_err() {
-                return Some(val);
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-    if !unhealthy_validators.is_empty() {
-        bail!(
-            "Unhealthy validators after cleanup: {:?}",
-            unhealthy_validators
-        );
-    } else {
-        println!("All validators healthy after cleanup!");
+                None
+            })
+            .collect::<Vec<_>>();
+        if !unhealthy_validators.is_empty() {
+            bail!(
+                "Unhealthy validators after cleanup: {:?}",
+                unhealthy_validators
+            );
+        } else {
+            println!("All validators healthy after cleanup!");
+        }
     }
     Ok(())
 }
