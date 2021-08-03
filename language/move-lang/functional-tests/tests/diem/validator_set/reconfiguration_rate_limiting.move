@@ -54,7 +54,7 @@ script {
     }
 }
 
-// check: "Keep(ABORTED { code: 6,"
+// check: "Keep(ABORTED { code: 1544,"
 
 //! block-prologue
 //! proposer: bob
@@ -75,7 +75,7 @@ script {
     }
 }
 
-// check: "Keep(ABORTED { code: 6,"
+// check: "Keep(ABORTED { code: 1544,"
 
 //! block-prologue
 //! proposer: bob
@@ -214,7 +214,7 @@ script {
     }
 }
 
-// check: "Keep(ABORTED { code: 6,"
+// check: "Keep(ABORTED { code: 1544,"
 
 //! block-prologue
 //! proposer: bob

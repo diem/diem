@@ -326,6 +326,7 @@ module ValidatorAdministrationScripts {
         use DiemFramework::DiemAccount;
         use DiemFramework::DiemConfig;
         use DiemFramework::DiemSystem;
+        use DiemFramework::DiemTimestamp;
         use Std::Errors;
         use Std::Signer;
 
@@ -360,7 +361,12 @@ module ValidatorAdministrationScripts {
                         fullnode_network_addresses,
                    });
         include is_validator_info_updated ==> DiemConfig::ReconfigureAbortsIf;
-
+        let validator_index = DiemSystem::spec_index_of_validator(DiemSystem::spec_get_validators(), validator_account);
+        let last_config_time = DiemSystem::spec_get_validators()[validator_index].last_config_update_time;
+        aborts_if is_validator_info_updated && last_config_time > DiemSystem::MAX_U64 - DiemSystem::FIVE_MINUTES
+            with Errors::LIMIT_EXCEEDED;
+        aborts_if is_validator_info_updated && DiemTimestamp::spec_now_microseconds() <= last_config_time + DiemSystem::FIVE_MINUTES
+            with Errors::LIMIT_EXCEEDED;
 
         /// This reports a possible INVALID_STATE abort, which comes from an assert in DiemConfig::reconfigure_
         /// that config.last_reconfiguration_time is not in the future. This is a system error that a user

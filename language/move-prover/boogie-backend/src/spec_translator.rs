@@ -743,7 +743,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::ContainsVec => {
                 self.translate_primitive_inst_call(node_id, "$ContainsVec", args)
             }
-            Operation::RangeVec => self.translate_primitive_call("$RangeVec", args),
+            Operation::RangeVec => self.translate_primitive_inst_call(node_id, "$RangeVec", args),
             Operation::InRangeVec => self.translate_primitive_call("InRangeVec", args),
             Operation::InRangeRange => self.translate_primitive_call("$InRange", args),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),

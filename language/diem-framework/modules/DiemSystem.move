@@ -74,12 +74,17 @@ module DiemFramework::DiemSystem {
     const ECONFIG_UPDATE_RATE_LIMITED: u64 = 6;
     /// Validator set already at maximum allowed size
     const EMAX_VALIDATORS: u64 = 7;
+    /// Validator config update time overflows
+    const ECONFIG_UPDATE_TIME_OVERFLOWS: u64 = 8;
 
     /// Number of microseconds in 5 minutes
     const FIVE_MINUTES: u64 = 300000000;
 
     /// The maximum number of allowed validators in the validator set
     const MAX_VALIDATORS: u64 = 256;
+
+    /// The largest possible u64 value
+    const MAX_U64: u64 = 18446744073709551615;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -290,17 +295,20 @@ module DiemFramework::DiemSystem {
         let is_validator_info_updated = update_ith_validator_info_(&mut diem_system_config.validators, to_update_index);
         if (is_validator_info_updated) {
             let validator_info = Vector::borrow_mut(&mut diem_system_config.validators, to_update_index);
-            assert(DiemTimestamp::now_microseconds() >
-                   validator_info.last_config_update_time + FIVE_MINUTES,
-                   ECONFIG_UPDATE_RATE_LIMITED);
+            assert(
+                validator_info.last_config_update_time <= MAX_U64 - FIVE_MINUTES,
+                Errors::limit_exceeded(ECONFIG_UPDATE_TIME_OVERFLOWS)
+            );
+            assert(
+                DiemTimestamp::now_microseconds() > validator_info.last_config_update_time + FIVE_MINUTES,
+                Errors::limit_exceeded(ECONFIG_UPDATE_RATE_LIMITED)
+            );
             validator_info.last_config_update_time = DiemTimestamp::now_microseconds();
             set_diem_system_config(diem_system_config);
         }
     }
     spec update_config_and_reconfigure {
         pragma opaque;
-        // TODO(timeout): this started timing out after recent refactoring. Investigate.
-        pragma verify = false;
         modifies global<DiemConfig::Configuration>(@DiemRoot);
         modifies global<DiemConfig::DiemConfig<DiemSystem>>(@DiemRoot);
         include ValidatorConfig::AbortsIfGetOperator{addr: validator_addr};
@@ -318,6 +326,13 @@ module DiemFramework::DiemSystem {
                 v_info.addr == validator_addr
                 && v_info.config != ValidatorConfig::spec_get_config(validator_addr));
         include is_validator_info_updated ==> DiemConfig::ReconfigureAbortsIf;
+        let validator_index =
+            spec_index_of_validator(spec_get_validators(), validator_addr);
+        let last_config_time = spec_get_validators()[validator_index].last_config_update_time;
+        aborts_if is_validator_info_updated && last_config_time > MAX_U64 - FIVE_MINUTES
+            with Errors::LIMIT_EXCEEDED;
+        aborts_if is_validator_info_updated && DiemTimestamp::spec_now_microseconds() <= last_config_time + FIVE_MINUTES
+                with Errors::LIMIT_EXCEEDED;
         include UpdateConfigAndReconfigureEmits;
     }
     spec schema UpdateConfigAndReconfigureAbortsIf {
@@ -475,7 +490,7 @@ module DiemFramework::DiemSystem {
                 Option::is_some(result)
                 && {
                         let at = Option::borrow(result);
-                        0 <= at && at < size && validators[at].addr == addr
+                        at == spec_index_of_validator(validators, addr)
                     };
     }
 
@@ -596,6 +611,10 @@ module DiemFramework::DiemSystem {
     /// resource.
     spec fun spec_get_validators(): vector<ValidatorInfo> {
         DiemConfig::get<DiemSystem>().validators
+    }
+
+    spec fun spec_index_of_validator(validators: vector<ValidatorInfo>, addr: address): u64 {
+        choose min i in range(validators) where validators[i].addr == addr
     }
 
     spec module {

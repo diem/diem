@@ -3485,6 +3485,12 @@ on-chain with the updated <code><a href="../../../../../releases/artifacts/curre
                 fullnode_network_addresses,
            });
 <b>include</b> is_validator_info_updated ==&gt; <a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">DiemConfig::ReconfigureAbortsIf</a>;
+<b>let</b> validator_index = <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_index_of_validator">DiemSystem::spec_index_of_validator</a>(<a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>(), validator_account);
+<b>let</b> last_config_time = <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>()[validator_index].last_config_update_time;
+<b>aborts_if</b> is_validator_info_updated && last_config_time &gt; <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_MAX_U64">DiemSystem::MAX_U64</a> - <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_FIVE_MINUTES">DiemSystem::FIVE_MINUTES</a>
+    <b>with</b> <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>aborts_if</b> is_validator_info_updated && <a href="../../../../../releases/artifacts/current/docs/modules/DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() &lt;= last_config_time + <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_FIVE_MINUTES">DiemSystem::FIVE_MINUTES</a>
+    <b>with</b> <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 </code></pre>
 
 
