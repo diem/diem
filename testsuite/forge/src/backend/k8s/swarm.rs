@@ -151,9 +151,15 @@ impl K8sSwarm {
 impl Drop for K8sSwarm {
     // When the K8sSwarm struct goes out of scope we need to wipe the chain state
     fn drop(&mut self) {
-        clean_k8s_cluster(self.helm_repo.clone(), self.validators.len(), true)
-            .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
-            .unwrap();
+        clean_k8s_cluster(
+            self.helm_repo.clone(),
+            self.validators.len(),
+            DEFAULT_VALIDATOR_IMAGE_TAG.to_string(),
+            DEFAULT_TESTNET_IMAGE_TAG.to_string(),
+            true,
+        )
+        .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
+        .unwrap();
     }
 }
 
@@ -405,6 +411,30 @@ fn get_helm_values(helm_release_name: &str) -> Result<Value> {
     Ok(v["config"].take())
 }
 
+pub fn set_validator_image_tag(
+    validator_name: &str,
+    helm_repo: &str,
+    image_tag: &str,
+) -> Result<()> {
+    let validator_upgrade_options = [
+        "--reuse-values",
+        "--history-max",
+        "2",
+        "--set",
+        &format!("imageTag={}", image_tag),
+    ];
+    upgrade_validator(validator_name, helm_repo, &validator_upgrade_options)
+}
+
+// sometimes helm will try to interpret era as a number in scientific notation
+fn era_to_string(era_value: &Value) -> Result<String> {
+    match era_value {
+        Value::Number(num) => Ok(format!("{}", num)),
+        Value::String(s) => Ok(s.to_string()),
+        _ => bail!("Era is not a number {}", era_value),
+    }
+}
+
 pub fn clean_k8s_cluster(
     helm_repo: String,
     base_num_validators: usize,
@@ -438,8 +468,13 @@ pub fn clean_k8s_cluster(
         let version = v["version"].as_i64().expect("not a i64") as usize;
         let config = &v["config"];
 
-        let era = v["config"]["chain"]["era"].as_i64().expect("not a i64") as usize;
-        assert!(new_era != era, "Era is the same as past release");
+        let era: &str = &era_to_string(&v["config"]["chain"]["era"]).unwrap();
+        assert!(
+            !new_era.eq(era),
+            "New era {} is the same as past release era {}",
+            new_era,
+            era
+        );
 
         // store the helm values for later use
         let file_path = tmp_dir.path().join(format!("val{}_status.json", i));

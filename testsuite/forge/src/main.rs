@@ -64,6 +64,12 @@ fn main() -> Result<()> {
             args.num_validators,
             args.require_validator_healthcheck,
         );
+    } else if args.upgrade_validator {
+        return set_validator_image_tag(
+            &args.validator.unwrap(),
+            &args.helm_repo,
+            &args.validator_image_tag,
+        );
     }
 
     if args.local_swarm {
