@@ -9,13 +9,16 @@ use crate::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::accumulator::mock::MockTransactionAccumulator,
     transaction::Version,
-    trusted_state::{TrustedState, TrustedStateChange},
+    trusted_state::{TrustedState, TrustedStateChange, TrustedStateHasher},
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorConsensusInfo, ValidatorVerifier},
     waypoint::Waypoint,
 };
 use bcs::test_helpers::assert_canonical_encode_decode;
-use diem_crypto::{ed25519::Ed25519Signature, hash::HashValue};
+use diem_crypto::{
+    ed25519::Ed25519Signature,
+    hash::{CryptoHash, CryptoHasher, HashValue},
+};
 use proptest::{
     collection::{size_range, vec, SizeRange},
     prelude::*,
@@ -236,6 +239,14 @@ proptest! {
     #[test]
     fn test_trusted_state_roundtrip_canonical_serialization(trusted_state in any::<TrustedState>()) {
         assert_canonical_encode_decode(trusted_state);
+    }
+
+    #[test]
+    fn test_trusted_state_hasher(trusted_state in any::<TrustedState>()) {
+        let bytes = bcs::to_bytes(&trusted_state).unwrap();
+        let hash1 = TrustedStateHasher::hash_all(&bytes);
+        let hash2 = trusted_state.hash();
+        assert_eq!(hash1, hash2);
     }
 
     #[test]
