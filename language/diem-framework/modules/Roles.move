@@ -55,7 +55,7 @@ module DiemFramework::Roles {
     // Role Granting
 
     /// Publishes diem root role. Granted only in genesis.
-    public fun grant_diem_root_role(
+    public(friend) fun grant_diem_root_role(
         dr_account: &signer,
     ) {
         DiemTimestamp::assert_genesis();
@@ -72,7 +72,7 @@ module DiemFramework::Roles {
     }
 
     /// Publishes treasury compliance role. Granted only in genesis.
-    public fun grant_treasury_compliance_role(
+    public(friend) fun grant_treasury_compliance_role(
         treasury_compliance_account: &signer,
         dr_account: &signer,
     ) acquires RoleId {
@@ -91,7 +91,7 @@ module DiemFramework::Roles {
 
     /// Publishes a DesignatedDealer `RoleId` under `new_account`.
     /// The `creating_account` must be treasury compliance.
-    public fun new_designated_dealer_role(
+    public(friend) fun new_designated_dealer_role(
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
@@ -105,7 +105,7 @@ module DiemFramework::Roles {
 
     /// Publish a Validator `RoleId` under `new_account`.
     /// The `creating_account` must be diem root.
-    public fun new_validator_role(
+    public(friend) fun new_validator_role(
         creating_account: &signer,
         new_account: &signer
     ) acquires RoleId {
@@ -119,7 +119,7 @@ module DiemFramework::Roles {
 
     /// Publish a ValidatorOperator `RoleId` under `new_account`.
     /// The `creating_account` must be DiemRoot
-    public fun new_validator_operator_role(
+    public(friend) fun new_validator_operator_role(
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
@@ -133,7 +133,7 @@ module DiemFramework::Roles {
 
     /// Publish a ParentVASP `RoleId` under `new_account`.
     /// The `creating_account` must be TreasuryCompliance
-    public fun new_parent_vasp_role(
+    public(friend) fun new_parent_vasp_role(
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
@@ -147,7 +147,7 @@ module DiemFramework::Roles {
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
     /// The `creating_account` must be a ParentVASP
-    public fun new_child_vasp_role(
+    public(friend) fun new_child_vasp_role(
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {

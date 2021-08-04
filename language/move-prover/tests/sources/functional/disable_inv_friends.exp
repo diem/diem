@@ -1,0 +1,16 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/disable_inv_friends.move:25:10
+   │
+25 │          invariant [global, suspendable] forall addr: address: exists<M3::R3>(addr) <==> exists<M2::R2>(addr);
+   │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/disable_inv_friends.move:85: f5_incorrect
+   =     at tests/sources/functional/disable_inv_friends.move:91
+   =     at tests/sources/functional/disable_inv_friends.move:92
+   =     at tests/sources/functional/disable_inv_friends.move:85: f5_incorrect
+   =         s = <redacted>
+   =     at tests/sources/functional/disable_inv_friends.move:86: f5_incorrect
+   =     at tests/sources/functional/disable_inv_friends.move:85: f5_incorrect
+   =     at tests/sources/functional/disable_inv_friends.move:86: f5_incorrect
+   =     at tests/sources/functional/disable_inv_friends.move:25
