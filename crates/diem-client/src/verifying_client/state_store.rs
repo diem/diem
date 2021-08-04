@@ -115,7 +115,7 @@ pub struct WriteThroughCache<S> {
 ///////////////////////
 
 impl<S: StateStore> WriteThroughCache<S> {
-    fn new(state_store: S) -> Result<Self> {
+    pub fn new(state_store: S) -> Result<Self> {
         // Read the latest state from the underlying store to initialize the cache.
         let latest_state = state_store.latest_state()?;
 

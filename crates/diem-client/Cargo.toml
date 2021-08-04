@@ -37,5 +37,9 @@ tokio-tungstenite = { version = "0.14", optional = true }
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false, optional = true }
 ipnet = { version = "2.3", optional = true }
 
+# Needed to fsync a directory on Windows apparently...
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3.9"
+
 [dev-dependencies]
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
