@@ -8,7 +8,7 @@
 pub mod nibble_path;
 
 use diem_crypto::HashValue;
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -38,7 +38,7 @@ impl fmt::LowerHex for Nibble {
     }
 }
 
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for Nibble {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
