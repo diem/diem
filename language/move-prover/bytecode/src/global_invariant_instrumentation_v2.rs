@@ -112,7 +112,7 @@ impl Analyzer {
         analyzer
     }
 
-    /// Collect global invariants that are raed and written by this function
+    /// Collect global invariants that are read and written by this function
     fn collect_related_global_invariants(&mut self, target: &FunctionTarget) {
         let env = target.global_env();
 
@@ -125,14 +125,14 @@ impl Analyzer {
 
         // filter non-applicable global invariants
         for invariant_id in invariants_for_used_memory {
-            self.check_gloabl_invariant_applicability(
+            self.check_global_invariant_applicability(
                 target,
                 env.get_global_invariant(invariant_id).unwrap(),
             );
         }
     }
 
-    fn check_gloabl_invariant_applicability(
+    fn check_global_invariant_applicability(
         &mut self,
         target: &FunctionTarget,
         invariant: &GlobalInvariant,
@@ -189,6 +189,7 @@ struct Instrumenter<'a> {
     options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
     function_inst: Vec<Type>,
+    // Invariants that unify with the state used in a function instantiation
     related_invariants: BTreeSet<GlobalId>,
     saved_from_before_instr_or_call: Option<(TranslatedSpec, BTreeSet<GlobalId>)>,
 }
@@ -309,8 +310,11 @@ impl<'a> Instrumenter<'a> {
         //   code should therefore not depend, apart from the update itself, or
         // - are "update" invariants.
 
+        // Adds back target invariants that are modified (directly or indirectly) in the function.
+
         let env = self.builder.global_env();
         let module_env = &self.builder.fun_env.module_env;
+
         related_invariants
             .iter()
             .filter_map(|id| {
@@ -340,6 +344,16 @@ impl<'a> Instrumenter<'a> {
         use Operation::*;
         let target_invariants = &inv_ana_data.target_invariants;
         let disabled_inv_fun_set = &inv_ana_data.disabled_inv_fun_set;
+        let always_check_invs: BTreeSet<GlobalId>;
+        if let Some(disabled_invs) = &inv_ana_data.disabled_invs_for_fun.get(&fun_id) {
+            always_check_invs = entrypoint_invariants
+                .difference(disabled_invs)
+                .cloned()
+                .collect();
+        } else {
+            always_check_invs = entrypoint_invariants.clone();
+        }
+
         match &bc {
             Call(_, _, WriteBack(GlobalRoot(mem), ..), ..) => {
                 self.emit_invariants_for_bytecode(
@@ -347,7 +361,7 @@ impl<'a> Instrumenter<'a> {
                     &fun_id,
                     inv_ana_data,
                     mem,
-                    entrypoint_invariants,
+                    &always_check_invs,
                 );
             }
             Call(_, _, MoveTo(mid, sid, inst), ..) | Call(_, _, MoveFrom(mid, sid, inst), ..) => {
@@ -357,7 +371,7 @@ impl<'a> Instrumenter<'a> {
                     &fun_id,
                     inv_ana_data,
                     &mem,
-                    entrypoint_invariants,
+                    &always_check_invs,
                 );
             }
             // Emit assumes before procedure calls.  This also deals with saves for update invariants.
@@ -376,13 +390,26 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit(bc.clone());
                 self.assert_invariants_for_opaque_end(module_id.qualified(*id), inv_ana_data)
             }
+            // An inline call needs to be treated similarly (but there is just one instruction.
+            Call(_, _, Function(module_id, id, _), _, _) => {
+                self.assume_invariants_for_opaque_begin(
+                    module_id.qualified(*id),
+                    entrypoint_invariants,
+                    inv_ana_data,
+                );
+                // Then emit the call instruction.
+                self.builder.emit(bc.clone());
+                self.assert_invariants_for_opaque_end(module_id.qualified(*id), inv_ana_data)
+            }
             // When invariants are disabled in the body of this function but not in its
             // callers, assert them just before a return instruction (the caller will be
             // assuming they hold).
             Ret(_, _) => {
-                let (global_target_invs, _update_target_invs) =
-                    self.separate_update_invariants(target_invariants);
                 if disabled_inv_fun_set.contains(&fun_id) {
+                    // TODO: It is only necessary to assert invariants that were disabled here.
+                    // Asserting more won't hurt, but generates unnecessary work for the prover.
+                    let (global_target_invs, _update_target_invs) =
+                        self.separate_update_invariants(target_invariants);
                     let xlated_spec = SpecTranslator::translate_invariants_by_id(
                         self.options.auto_trace_level.invariants(),
                         &mut self.builder,
@@ -423,24 +450,21 @@ impl<'a> Instrumenter<'a> {
         // matching OpaqueCallEnd instruction). So, we assume the
         // invariant here, before the OpaqueCallBegin, so that we have
         // a hope of proving it later.
-        // Remove invariants that were already assumed at the beginning
-        // of this function to avoid redundant assumption.
-        // This also emits state saves for update invariants (for "old"
-        // state values).
         let fun_id = self.builder.fun_env.get_qualified_id();
         if !disabled_inv_fun_set.contains(&fun_id)
             && !non_inv_fun_set.contains(&fun_id)
             && non_inv_fun_set.contains(&called_fun_id)
         {
-            // remove invariants that were already assumed at function entry
-            let invs_to_assume = target_invariants
-                .difference(entrypoint_invariants)
-                .cloned()
-                .collect();
+            // Do not assume update invs
+            // This prevents ASSERTING the updates because emit_assumes_and_saves
+            // stores translated invariants for assertion in assume_invariants_for_opaque_end,
+            // and we don't want updates to be asserted there.
+            // TODO: This should all be refactored to eliminate hacks like the previous
+            // sentence.
+            let (global_invs, _update_invs) = self.separate_update_invariants(target_invariants);
             // assume the invariants that are modified by the called function
-            // TODO: Check whether we can use inv_ana_data.invs_modified_by_fun here.
             let modified_invs =
-                self.get_invs_modified_by_fun(&invs_to_assume, called_fun_id, funs_that_modify_inv);
+                self.get_invs_modified_by_fun(&global_invs, called_fun_id, funs_that_modify_inv);
             self.emit_assumes_and_saves_before_bytecode(modified_invs, entrypoint_invariants);
         }
     }
@@ -454,7 +478,6 @@ impl<'a> Instrumenter<'a> {
     ) {
         let disabled_inv_fun_set = &inv_ana_data.disabled_inv_fun_set;
         let non_inv_fun_set = &inv_ana_data.non_inv_fun_set;
-
         // Add invariant assertions after function call when invariant holds in the
         // body of the current function, but the called function does not assert
         // invariants.
@@ -469,7 +492,9 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    /// emit assumes before, and asserts after, a bytecode
+    /// Emit invariant-related assumptions and assertions around a bytecode.
+    /// Before instruction, emit assumptions of global invariants, if necessary,
+    /// and emit saves of old state for update invariants.
     fn emit_invariants_for_bytecode(
         &mut self,
         bc: &Bytecode,
@@ -482,28 +507,32 @@ impl<'a> Instrumenter<'a> {
         // the operation for each invariant that the operation could modify. Such an operation
         // includes write-backs to a GlobalRoot or MoveTo/MoveFrom a location in the global storage.
         let target_invariants = &inv_ana_data.target_invariants;
-        let disabled_inv_fun_set = &inv_ana_data.disabled_inv_fun_set;
-        let non_inv_fun_set = &inv_ana_data.non_inv_fun_set;
-        if !disabled_inv_fun_set.contains(fun_id) && !non_inv_fun_set.contains(fun_id) {
-            let env = self.builder.global_env();
 
-            // consider only the invariants that are modified by instruction
-            let modified_invariants = env
-                .get_global_invariants_for_memory(mem)
-                .intersection(target_invariants)
-                .copied()
+        let env = self.builder.global_env();
+        // consider only the invariants that are modified by instruction
+        // TODO (IMPORTANT): target_invariants and disabled_invs were not computed with unification,
+        // so it may be that some invariants are not going to be emitted that should be.
+        let mut modified_invariants: BTreeSet<GlobalId> = env
+            .get_global_invariants_for_memory(mem)
+            .intersection(target_invariants)
+            .copied()
+            .collect();
+
+        if let Some(disabled_invs) = &inv_ana_data.disabled_invs_for_fun.get(fun_id) {
+            modified_invariants = modified_invariants
+                .difference(disabled_invs)
+                .cloned()
                 .collect();
-            self.emit_assumes_and_saves_before_bytecode(modified_invariants, entrypoint_invariants);
-            // put out the modifying instruction byte code.
-            self.builder.emit(bc.clone());
-            self.emit_asserts_after_bytecode();
-        } else {
-            self.builder.emit(bc.clone());
         }
+        self.emit_assumes_and_saves_before_bytecode(modified_invariants, entrypoint_invariants);
+        // put out the modifying instruction byte code.
+        self.builder.emit(bc.clone());
+        self.emit_asserts_after_bytecode();
     }
 
     // emit assumptions for invariants that were not assumed on entry and saves for types that are embedded
     // in "old" in update invariants.
+    // When processing assumes before an opaque instruction, modified_invs contains no update invariants.
     fn emit_assumes_and_saves_before_bytecode(
         &mut self,
         modified_invs: BTreeSet<GlobalId>,
@@ -512,22 +541,17 @@ impl<'a> Instrumenter<'a> {
         // translate all the invariants. Some were already translated at the entrypoint, but
         // that's ok because entrypoint invariants are global invariants that don't have "old",
         // so redundant state tags are not going to be a problem.
-        // TODO: Several changes need to be made in this code: (1) don't check update
-        // invariants across opaque calls, (2) separate global & update invariants earlier,
-        // (3) eliminate redundant refactoring.  However, these are tricky and require significant
-        // refactorings, so not doing it now.
         let mut xlated_invs = SpecTranslator::translate_invariants_by_id(
             self.options.auto_trace_level.invariants(),
             &mut self.builder,
             &self.function_inst,
             &modified_invs,
         );
-        // separate out the update invariants, which need to be handled differently from global invs.
-        // Specifically, update invariants are not assumed, but need consistent save tags.
-        let (global_assumes, _update_invs) = self.separate_update_invariants(&modified_invs);
+
+        let (global_invs, _update_invs) = self.separate_update_invariants(&modified_invs);
 
         // remove entrypoint invariants so we don't assume them again here.
-        let modified_assumes: BTreeSet<GlobalId> = global_assumes
+        let modified_assumes: BTreeSet<GlobalId> = global_invs
             .difference(entrypoint_invariants)
             .cloned()
             .collect();
@@ -645,7 +669,7 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    /// Emit an assert for one invariant, give location and expression for the property
+    /// Emit an assert or assume for one invariant, give location and expression for the property
     fn emit_invariant(&mut self, loc: &Loc, cond: &Exp, prop_kind: PropKind) {
         self.builder.set_next_debug_comment(format!(
             "global invariant {}",
