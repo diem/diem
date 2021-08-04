@@ -15,8 +15,8 @@ diem-sdk = { path = "../../sdk" }
 forge = { path = "../forge" }
 rand = "0.8.3"
 tokio = { version = "1.8.1", features = ["full"] }
-diem-logger = { path = "../../common/logger" }
-diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-logger = { path = "../../crates/diem-logger" }
+diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 
 [[test]]
 name = "forge-compatibility"

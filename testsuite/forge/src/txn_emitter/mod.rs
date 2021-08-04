@@ -252,7 +252,7 @@ impl<'t> TxnEmitter<'t> {
             coins_total,
             &self.txn_factory,
         );
-        execute_and_wait_transactions(&client, &mut faucet_account, vec![mint_txn])
+        execute_and_wait_transactions(&client, faucet_account, vec![mint_txn])
             .await
             .map_err(|e| format_err!("Failed to mint into faucet account: {}", e))?;
         let balance = retrieve_account_balance(&client, faucet_account.address()).await?;
