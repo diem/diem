@@ -413,8 +413,8 @@ fn get_helm_values(helm_release_name: &str) -> Result<Value> {
 
 pub fn set_validator_image_tag(
     validator_name: &str,
-    helm_repo: &str,
     image_tag: &str,
+    helm_repo: &str,
 ) -> Result<()> {
     let validator_upgrade_options = [
         "--reuse-values",
