@@ -34,12 +34,10 @@ struct Args {
     )]
     duration: u64,
 
-    #[structopt(flatten)]
-    options: Options,
-
-    #[structopt(subcommand)]
-    ops_cmd: Option<OperatorCommand>,
-
+    // operator "clean-up" options
+    // XXX: this should really be a subcommand if possible
+    #[structopt(long, help = "If set, wipes the state of the test backend and exits")]
+    clean_up: bool,
     #[structopt(
         long,
         help = "Override the helm repo used for k8s tests",
@@ -67,33 +65,49 @@ struct CleanUp {
     num_validators: usize,
     #[structopt(
         long,
+        help = "Override the image tag used for validators",
+        default_value = "devnet"
+    )]
+    validator_image_tag: String,
+    #[structopt(
+        long,
+        help = "Override the image tag used for testnet-specific components",
+        default_value = "devnet"
+    )]
+    testnet_image_tag: String,
+    #[structopt(
+        long,
         help = "If set, performs validator healthcheck and assumes k8s DNS access"
     )]
     require_validator_healthcheck: bool,
+
+    // operator "upgrade-validator" options
+    #[structopt(long, help = "If set, upgrades a validator to validator_image_tag")]
+    upgrade_validator: bool,
+    #[structopt(long, help = "Validator to upgrade")]
+    validator: Option<String>,
+
+    #[structopt(flatten)]
+    options: Options,
 }
 
 fn main() -> Result<()> {
     let args = Args::from_args();
 
-    if let Some(ops_cmd) = args.ops_cmd {
-        match ops_cmd {
-            OperatorCommand::SetValidator(set_validator) => {
-                return set_validator_image_tag(
-                    &set_validator.validator_name,
-                    &set_validator.image_tag,
-                    &args.helm_repo,
-                )
-            }
-            OperatorCommand::CleanUp(cleanup) => {
-                return clean_k8s_cluster(
-                    args.helm_repo,
-                    cleanup.num_validators,
-                    cleanup.validator_image_tag,
-                    cleanup.testnet_image_tag,
-                    cleanup.require_validator_healthcheck,
-                )
-            }
-        }
+    if args.clean_up {
+        return clean_k8s_cluster(
+            args.helm_repo,
+            args.num_validators,
+            args.validator_image_tag,
+            args.testnet_image_tag,
+            args.require_validator_healthcheck,
+        );
+    } else if args.upgrade_validator {
+        return set_validator_image_tag(
+            &args.validator.unwrap(),
+            &args.helm_repo,
+            &args.validator_image_tag,
+        )
     }
 
     if args.local_swarm {

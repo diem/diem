@@ -23,7 +23,7 @@ use kube::{
 use rand::Rng;
 use rayon::prelude::*;
 use regex::Regex;
-use serde_json::Value;
+use serde_json::{Value};
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -41,6 +41,8 @@ const HELM_BIN: &str = "helm";
 const JSON_RPC_PORT: u32 = 80;
 const VALIDATOR_LB: &str = "validator-fullnode-lb";
 const MAX_NUM_VALIDATORS: usize = 30;
+const DEFAULT_VALIDATOR_IMAGE_TAG: &str = "devnet";
+const DEFAULT_TESTNET_IMAGE_TAG: &str = "devnet";
 
 pub struct K8sSwarm {
     validators: HashMap<PeerId, K8sNode>,
@@ -151,15 +153,9 @@ impl K8sSwarm {
 impl Drop for K8sSwarm {
     // When the K8sSwarm struct goes out of scope we need to wipe the chain state
     fn drop(&mut self) {
-        clean_k8s_cluster(
-            self.helm_repo.clone(),
-            self.validators.len(),
-            DEFAULT_VALIDATOR_IMAGE_TAG.to_string(),
-            DEFAULT_TESTNET_IMAGE_TAG.to_string(),
-            true,
-        )
-        .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
-        .unwrap();
+        clean_k8s_cluster(self.helm_repo.clone(), self.validators.len(), DEFAULT_VALIDATOR_IMAGE_TAG.to_string(), DEFAULT_TESTNET_IMAGE_TAG.to_string(), true)
+            .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
+            .unwrap();
     }
 }
 
@@ -329,7 +325,7 @@ fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
     Ed25519PrivateKey::try_from(tc_key_bytes).unwrap()
 }
 
-async fn wait_genesis_job(kube_client: &K8sClient, era: usize) -> Result<()> {
+async fn wait_genesis_job(kube_client: &K8sClient, era: &str) -> Result<()> {
     diem_retrier::retry_async(k8s_retry_strategy(), || {
         let jobs: Api<Job> = Api::namespaced(kube_client.clone(), "default");
         Box::pin(async move {
@@ -411,11 +407,8 @@ fn get_helm_values(helm_release_name: &str) -> Result<Value> {
     Ok(v["config"].take())
 }
 
-pub fn set_validator_image_tag(
-    validator_name: &str,
-    image_tag: &str,
-    helm_repo: &str,
-) -> Result<()> {
+
+pub fn set_validator_image_tag(validator_name: &str, helm_repo: &str, image_tag: &str) -> Result<()> {
     let validator_upgrade_options = [
         "--reuse-values",
         "--history-max",
@@ -423,7 +416,7 @@ pub fn set_validator_image_tag(
         "--set",
         &format!("imageTag={}", image_tag),
     ];
-    upgrade_validator(validator_name, helm_repo, &validator_upgrade_options)
+    upgrade_validator(validator_name, &helm_repo, &validator_upgrade_options)
 }
 
 // sometimes helm will try to interpret era as a number in scientific notation
@@ -431,24 +424,27 @@ fn era_to_string(era_value: &Value) -> Result<String> {
     match era_value {
         Value::Number(num) => Ok(format!("{}", num)),
         Value::String(s) => Ok(s.to_string()),
-        _ => bail!("Era is not a number {}", era_value),
+        _ => bail!("Era is not a number {}", era_value)
     }
 }
 
 pub fn clean_k8s_cluster(
     helm_repo: String,
     base_num_validators: usize,
+    base_validator_image_tag: String,
+    base_testnet_image_tag: String,
     require_validator_healthcheck: bool,
 ) -> Result<()> {
     assert!(base_num_validators <= MAX_NUM_VALIDATORS);
 
     let v: Value = get_helm_values("diem")?;
-    let chain_era = v["genesis"]["era"].as_i64().expect("not a i64") as usize;
+    println!("{}", v["genesis"]["era"]);
+    let chain_era: &str = &era_to_string(&v["genesis"]["era"]).unwrap();
     let curr_num_validators = v["genesis"]["numValidators"].as_i64().expect("not a i64") as usize;
 
     // get the new era
     let mut rng = rand::thread_rng();
-    let new_era = rng.gen::<u32>() as usize;
+    let new_era: &str = &format!("fg{}", rng.gen::<u32>());
     println!("genesis.era: {} --> {}", chain_era, new_era);
     println!(
         "genesis.numValidators: {} --> {}",
@@ -469,12 +465,7 @@ pub fn clean_k8s_cluster(
         let config = &v["config"];
 
         let era: &str = &era_to_string(&v["config"]["chain"]["era"]).unwrap();
-        assert!(
-            !new_era.eq(era),
-            "New era {} is the same as past release era {}",
-            new_era,
-            era
-        );
+        assert!(!new_era.eq(era), "New era {} is the same as past release era {}", new_era, era);
 
         // store the helm values for later use
         let file_path = tmp_dir.path().join(format!("val{}_status.json", i));
@@ -521,6 +512,8 @@ pub fn clean_k8s_cluster(
             "2",
             "--set",
             &format!("chain.era={}", new_era),
+            "--set",
+            &format!("imageTag={}", &base_validator_image_tag),
         ];
         upgrade_validator(&format!("val{}", i), &helm_repo, &validator_upgrade_options).unwrap();
     });
@@ -537,6 +530,8 @@ pub fn clean_k8s_cluster(
         &format!("genesis.era={}", new_era),
         "--set",
         &format!("genesis.numValidators={}", base_num_validators),
+        "--set",
+        &format!("imageTag={}", &base_testnet_image_tag),
     ];
     println!("{:?}", testnet_upgrade_args);
     let testnet_upgrade_output = Command::new(HELM_BIN)
