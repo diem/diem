@@ -10,4 +10,7 @@ pub use blocking::BlockingVerifyingClient;
 pub mod state_store;
 pub use state_store::{InMemoryStateStore, StateStore};
 
+pub mod file_state_store;
+pub use file_state_store::FileStateStore;
+
 mod methods;

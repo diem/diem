@@ -3,8 +3,8 @@
 
 use diem_sdk::{
     client::{
-        BlockingClient, Client, InMemoryStateStore, MethodRequest, MethodResponse, Response,
-        Result, VerifyingClient,
+        verifying_client::{InMemoryStateStore, VerifyingClient},
+        BlockingClient, Client, MethodRequest, MethodResponse, Response, Result,
     },
     transaction_builder::Currency,
     types::{

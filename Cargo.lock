@@ -1638,6 +1638,7 @@ dependencies = [
  "tokio-tungstenite 0.14.0",
  "tracing",
  "ureq",
+ "winapi 0.3.9",
 ]
 
 [[package]]
