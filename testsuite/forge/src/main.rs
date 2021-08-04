@@ -75,8 +75,8 @@ struct CleanUp {
 fn main() -> Result<()> {
     let args = Args::from_args();
 
-    match args.ops_cmd {
-        Some(ops_cmd) => match ops_cmd {
+    if let Some(ops_cmd) = args.ops_cmd {
+        match ops_cmd {
             OperatorCommand::SetValidator(set_validator) => {
                 return set_validator_image_tag(
                     &set_validator.validator_name,
@@ -93,8 +93,7 @@ fn main() -> Result<()> {
                     cleanup.require_validator_healthcheck,
                 )
             }
-        },
-        None => println!("Will run Forge tests..."),
+        }
     }
 
     if args.local_swarm {
