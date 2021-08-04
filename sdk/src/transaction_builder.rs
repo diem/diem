@@ -95,7 +95,7 @@ impl TransactionFactory {
             gas_currency: Currency::XUS,
             transaction_expiration_time: 100,
             chain_id,
-            diem_version: 0,
+            diem_version: 2,
         }
     }
 
