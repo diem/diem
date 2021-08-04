@@ -5,13 +5,15 @@ use crate::{
     error::{Error, Result},
     verifying_client::state_store::{StateStore, WriteThroughCache},
 };
-use diem_types::{transaction::Version, trusted_state::TrustedState};
+use diem_crypto::hash::{CryptoHasher, HashValue};
+use diem_types::{
+    transaction::Version,
+    trusted_state::{TrustedState, TrustedStateHasher},
+};
 use std::{
     cmp::max_by_key,
     fs::{self, File},
-    io,
-};
-use std::{
+    io::{self, Read, Seek, SeekFrom, Write},
     path::Path,
     sync::{Arc, Mutex},
 };
@@ -84,8 +86,8 @@ impl StateStore for FileStateStore {
 
 impl ACIDStateFiles {
     fn new(dir: &Path) -> Result<Self> {
-        let state_file0 = StateFile::new(&dir.join("trusted_state.0"))?;
-        let state_file1 = StateFile::new(&dir.join("trusted_state.1"))?;
+        let state_file0 = StateFile::open(&dir.join("trusted_state.0"))?;
+        let state_file1 = StateFile::open(&dir.join("trusted_state.1"))?;
         let state_files = [state_file0, state_file1];
 
         // make sure any newly created files are synced
@@ -111,10 +113,10 @@ impl StateStore for ACIDStateFiles {
 
         let newest_version = state_files
             .iter_mut()
-            .min_by_key(|f| f.version)
+            .max_by_key(|f| f.version)
             .unwrap()
             .version;
-        let oldest_state_file = state_files.iter_mut().max_by_key(|f| f.version).unwrap();
+        let oldest_state_file = state_files.iter_mut().min_by_key(|f| f.version).unwrap();
 
         // the new state is actually newer; write it to the oldest state file.
         if Some(new_state.version()) > newest_version {
@@ -129,36 +131,99 @@ impl StateStore for ACIDStateFiles {
 // StateFile //
 ///////////////
 
-fn read_state(_file: &mut File) -> io::Result<Option<TrustedState>> {
-    todo!()
+// A dumb format for dumping a TrustedState to a File.
+//
+// serialized format: <bcs-serialized state blob> || <sha3-checksum(bcs-serialized state blob)>
+//
+// basic requirements:
+// 1. fs writes are unreliable and not atomic:
+//    ==> we validate the serialized bytes are uncorrupted with a sha3 checksum.
+// 2. upgrade format:
+//    ==> add a new TrustedState enum variant to modify.
+
+fn decode_and_validate_checksum(mut buf: Vec<u8>) -> Result<(Vec<u8>, HashValue)> {
+    let offset = buf
+        .len()
+        .checked_sub(HashValue::LENGTH)
+        .ok_or_else(|| Error::decode("state file: empty or too small"))?;
+    let file_hash = HashValue::from_slice(&buf[offset..]).expect("cannot fail");
+
+    buf.truncate(offset);
+    let computed_hash = TrustedStateHasher::hash_all(&buf);
+
+    if file_hash != computed_hash {
+        Err(Error::decode(format!(
+            "state file: corrupt: file checksum ({:x}) != computed checksum ({:x})",
+            file_hash, computed_hash
+        )))
+    } else {
+        Ok((buf, file_hash))
+    }
 }
 
-fn write_state(_file: &mut File, _new_state: &TrustedState) -> io::Result<()> {
-    todo!()
+fn decode_state(buf: Vec<u8>) -> Result<TrustedState> {
+    let (buf, _) = decode_and_validate_checksum(buf)?;
+    let state = bcs::from_bytes(&buf).map_err(Error::decode)?;
+    Ok(state)
+}
+
+fn encode_state(state: &TrustedState) -> Result<Vec<u8>> {
+    let mut buf = bcs::to_bytes(state).map_err(Error::encode)?;
+    let hash = TrustedStateHasher::hash_all(&buf);
+    buf.extend_from_slice(hash.as_ref());
+    Ok(buf)
+}
+
+fn read_file(file: &mut File) -> io::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    file.seek(SeekFrom::Start(0))?;
+    file.read_to_end(&mut buf)?;
+    Ok(buf)
+}
+
+// Note: this method can take anywhere from 20ms to 50ms...
+fn write_file(file: &mut File, buf: &[u8]) -> io::Result<()> {
+    file.seek(SeekFrom::Start(0))?;
+    file.write_all(buf)?;
+    file.set_len(buf.len() as u64)?;
+    // call fsync here to flush kernel cache to disk. this way we can (more) safely
+    // assume that the write is actually durable once the write completes and clients
+    // can't observe non-durable state.
+    file.sync_all()?;
+    Ok(())
 }
 
 impl StateFile {
-    fn new(path: &Path) -> Result<Self> {
+    fn open(path: &Path) -> Result<Self> {
         let file = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .open(path)
             .map_err(Error::unknown)?;
-        Ok(Self {
-            version: None,
-            file,
-        })
+        Ok(Self::new(file))
     }
 
+    fn new(file: File) -> Self {
+        Self {
+            version: None,
+            file,
+        }
+    }
+
+    // only returns an error on io::Error, otherwise assumes the file is just corrupt.
     fn read(&mut self) -> Result<Option<TrustedState>> {
-        let maybe_state = read_state(&mut self.file).map_err(Error::unknown)?;
+        let buf = read_file(&mut self.file).map_err(Error::unknown)?;
+        let maybe_state = decode_state(buf)
+            .map_err(|_err| () /* TODO: how to log in client sdk? */)
+            .ok();
         self.version = maybe_state.as_ref().map(|s| s.version());
         Ok(maybe_state)
     }
 
     fn write(&mut self, new_state: &TrustedState) -> Result<()> {
-        write_state(&mut self.file, new_state).map_err(Error::unknown)?;
+        let buf = encode_state(new_state)?;
+        write_file(&mut self.file, &buf).map_err(Error::unknown)?;
         self.version = Some(new_state.version());
         Ok(())
     }

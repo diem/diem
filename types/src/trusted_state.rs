@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_crypto::HashValue;
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -19,7 +20,7 @@ use serde::{Deserialize, Serialize};
 /// `TrustedState` keeps track of light clients' latest, trusted view of the
 /// ledger state. Light clients can use proofs from a state proof to "ratchet"
 /// their view forward to a newer state.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, BCSCryptoHash)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum TrustedState {
     /// The current trusted state is an epoch waypoint, which is a commitment to
