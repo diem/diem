@@ -6,10 +6,7 @@ use crate::{
     error::{Error, Result, WaitForTransactionError},
     request::MethodRequest,
     response::{MethodResponse, Response},
-    verifying_client::{
-        methods::VerifyingBatch,
-        state_store::{Storage, TrustedStateStore},
-    },
+    verifying_client::{methods::VerifyingBatch, state_store::StateStore},
 };
 use diem_crypto::hash::{CryptoHash, HashValue};
 use diem_json_rpc_types::views::{
@@ -22,11 +19,7 @@ use diem_types::{
     trusted_state::TrustedState,
     waypoint::Waypoint,
 };
-use std::{
-    fmt::Debug,
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{fmt::Debug, time::Duration};
 
 // TODO(philiphayes): figure out retry strategy
 // TODO(philiphayes): real on-disk waypoint persistence
@@ -60,49 +53,53 @@ use std::{
 /// same ledger version if they want to avoid an inconsistent ledger view.
 ///
 /// [Diem JSON-RPC client]: https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct VerifyingClient<S> {
     inner: Client,
-    trusted_state_store: Arc<RwLock<TrustedStateStore<S>>>,
+    state_store: S,
 }
 
-impl<S: Storage> VerifyingClient<S> {
+impl<S: StateStore> VerifyingClient<S> {
     // TODO(philiphayes): construct the client ourselves? we probably want to
     // control the retries out here. For example, during sync, if we get a stale
     // state proof the retry logic should include that and not just fail immediately.
-    pub fn new(inner: Client, storage: S) -> Result<Self> {
-        let trusted_state_store = TrustedStateStore::new(storage)?;
-        Ok(Self {
-            inner,
-            trusted_state_store: Arc::new(RwLock::new(trusted_state_store)),
-        })
+    pub fn new(inner: Client, state_store: S) -> Result<Self> {
+        let maybe_latest_version = state_store.latest_state_version().map_err(Error::unknown)?;
+        let _latest_version = maybe_latest_version
+            .ok_or_else(|| Error::unknown("StateStore does not contain a trusted state!"))?;
+        Ok(Self { inner, state_store })
     }
 
-    pub fn new_with_state(inner: Client, trusted_state: TrustedState, storage: S) -> Self {
-        let trusted_state_store = TrustedStateStore::new_with_state(trusted_state, storage);
-        Self {
-            inner,
-            trusted_state_store: Arc::new(RwLock::new(trusted_state_store)),
-        }
+    pub fn new_with_state(
+        inner: Client,
+        state_store: S,
+        initial_state: &TrustedState,
+    ) -> Result<Self> {
+        let client = Self { inner, state_store };
+        client.ratchet_state(Some(initial_state))?;
+        Ok(client)
     }
 
     /// Get a snapshot of our current trusted ledger [`Version`].
-    pub fn version(&self) -> Version {
-        self.trusted_state_store.read().unwrap().version()
+    pub fn version(&self) -> Result<Version> {
+        let maybe_latest_version = self
+            .state_store
+            .latest_state_version()
+            .map_err(Error::unknown)?;
+        maybe_latest_version.ok_or_else(|| Error::unknown(""))
     }
 
     /// Get a snapshot of our current trusted [`Waypoint`].
-    pub fn waypoint(&self) -> Waypoint {
-        self.trusted_state_store.read().unwrap().waypoint()
+    pub fn waypoint(&self) -> Result<Waypoint> {
+        Ok(self.trusted_state()?.waypoint())
     }
 
     /// Get a snapshot of our current [`TrustedState`].
-    pub fn trusted_state(&self) -> TrustedState {
-        self.trusted_state_store
-            .read()
-            .unwrap()
-            .trusted_state()
-            .clone()
+    pub fn trusted_state(&self) -> Result<TrustedState> {
+        self.state_store
+            .latest_state()
+            .map_err(Error::unknown)?
+            .ok_or_else(|| Error::unknown(""))
     }
 
     pub async fn wait_for_signed_transaction(
@@ -200,12 +197,9 @@ impl<S: Storage> VerifyingClient<S> {
     /// If the client is issuing muiltiple concurrent requests, the potential
     /// new trusted state might not be newer than the current trusted state,
     /// in which case we just don't persist this change.
-    pub fn ratchet(&self, new_state: Option<TrustedState>) -> Result<()> {
+    pub fn ratchet_state(&self, new_state: Option<&TrustedState>) -> Result<()> {
         if let Some(new_state) = new_state {
-            self.trusted_state_store
-                .write()
-                .unwrap()
-                .ratchet(new_state)?;
+            self.state_store.store(new_state).map_err(Error::unknown)?;
         }
         Ok(())
     }
@@ -342,16 +336,15 @@ impl<S: Storage> VerifyingClient<S> {
             .expect("batch guarantees the correct number of responses")
     }
 
-    pub fn actual_batch_size(&self, requests: &[MethodRequest]) -> usize {
-        VerifyingBatch::from_batch(requests.to_vec())
-            .num_requests(self.trusted_state_store.read().unwrap().trusted_state())
+    pub fn actual_batch_size(&self, requests: &[MethodRequest]) -> Result<usize> {
+        Ok(VerifyingBatch::from_batch(requests.to_vec()).num_requests(&self.trusted_state()?))
     }
 
     pub async fn batch(
         &self,
         requests: Vec<MethodRequest>,
     ) -> Result<Vec<Result<Response<MethodResponse>>>> {
-        let request_trusted_state = self.trusted_state();
+        let request_trusted_state = self.trusted_state()?;
 
         // transform each request into verifying sub-request batches
         let batch = VerifyingBatch::from_batch(requests);
@@ -363,21 +356,10 @@ impl<S: Storage> VerifyingClient<S> {
         let (new_state, maybe_responses) =
             batch.verify_responses(&request_trusted_state, responses)?;
         // try to ratchet our trusted state in our state store
-        self.ratchet(new_state)?;
+        self.ratchet_state(new_state.as_ref())?;
 
         let responses = maybe_responses
             .ok_or_else(|| Error::need_sync("too far behind server, need to sync more"))?;
         Ok(responses)
-    }
-}
-
-// Need to implement this manually since `S: Storage` might not be Clone, which
-// prevents the automatic #[derive(Clone)] from working.
-impl<S> Clone for VerifyingClient<S> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            trusted_state_store: self.trusted_state_store.clone(),
-        }
     }
 }

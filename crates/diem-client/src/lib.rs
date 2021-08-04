@@ -21,7 +21,7 @@ cfg_async! {
     // to use it until it stabilizes further
     // TODO(philiphayes): make this pub once verifying_client is stable.
     #[doc(hidden)]
-    pub use verifying_client::{Storage, InMemoryStorage, VerifyingClient};
+    pub use verifying_client::{StateStore, InMemoryStateStore, VerifyingClient};
 }
 
 cfg_faucet! {
