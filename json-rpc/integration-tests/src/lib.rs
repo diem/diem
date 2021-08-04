@@ -554,7 +554,7 @@ impl Test for PeerToPeerWithEvents {
 impl PublicUsageTest for PeerToPeerWithEvents {
     fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
         let env = JsonRpcTestHelper::new(ctx.url().to_owned());
-        let factory = ctx.transaction_factory();
+        let factory = ctx.transaction_factory().with_diem_version(0); // Force use of Scripts not ScriptFunctions
 
         let prev_ledger_version = env.send("get_metadata", json!([])).diem_ledger_version;
 
