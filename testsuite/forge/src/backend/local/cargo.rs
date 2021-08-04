@@ -127,6 +127,23 @@ pub fn git_get_upstream_remote() -> Result<String> {
     }
 }
 
+pub fn git_merge_base<R: AsRef<str>>(rev: R) -> Result<String> {
+    let rev = rev.as_ref();
+    let output = Command::new("git")
+        .arg("merge-base")
+        .arg("HEAD")
+        .arg(rev)
+        .output()
+        .context("Failed to find merge base")?;
+    if output.status.success() {
+        String::from_utf8(output.stdout)
+            .map(|s| s.trim().to_owned())
+            .map_err(Into::into)
+    } else {
+        bail!("Failed to find merge base between: {} and HEAD", rev);
+    }
+}
+
 fn cargo_build_diem_node<D, T>(directory: D, target_directory: T) -> Result<PathBuf>
 where
     D: AsRef<Path>,
