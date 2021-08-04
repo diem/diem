@@ -153,6 +153,10 @@ pub const CONDITION_DEACTIVATED_PROP: &str = "deactivated";
 /// whether the function produces exactly the provided number of error codes.
 pub const CONDITION_CHECK_ABORT_CODES_PROP: &str = "check";
 
+/// A property that can be attached to a global invariant to indicate that it should be
+/// enabled disabled by the disable_invariant_in_body pragma
+pub const CONDITION_SUSPENDABLE_PROP: &str = "suspendable";
+
 /// A function which determines whether a property is valid for a given condition kind.
 pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool {
     if matches!(
@@ -169,7 +173,10 @@ pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool
     use crate::ast::ConditionKind::*;
     match kind {
         GlobalInvariant(..) | GlobalInvariantUpdate(..) => {
-            matches!(prop, CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP)
+            matches!(
+                prop,
+                CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP | CONDITION_SUSPENDABLE_PROP
+            )
         }
         SucceedsIf | AbortsIf => matches!(
             prop,

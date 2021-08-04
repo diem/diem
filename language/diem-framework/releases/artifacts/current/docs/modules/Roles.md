@@ -259,7 +259,7 @@ The signer didn't have the required Validator Operator role
 Publishes diem root role. Granted only in genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(dr_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(dr_account: &signer)
 </code></pre>
 
 
@@ -268,7 +268,7 @@ Publishes diem root role. Granted only in genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(
     dr_account: &signer,
 ) {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
@@ -305,7 +305,7 @@ Publishes diem root role. Granted only in genesis.
 Publishes treasury compliance role. Granted only in genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, dr_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, dr_account: &signer)
 </code></pre>
 
 
@@ -314,7 +314,7 @@ Publishes treasury compliance role. Granted only in genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(
     treasury_compliance_account: &signer,
     dr_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
@@ -353,7 +353,7 @@ Publishes a DesignatedDealer <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a
 The <code>creating_account</code> must be treasury compliance.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(creating_account: &signer, new_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -362,7 +362,7 @@ The <code>creating_account</code> must be treasury compliance.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(
     creating_account: &signer,
     new_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
@@ -396,7 +396,7 @@ Publish a Validator <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> 
 The <code>creating_account</code> must be diem root.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_role">new_validator_role</a>(creating_account: &signer, new_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_role">new_validator_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -405,7 +405,7 @@ The <code>creating_account</code> must be diem root.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_role">new_validator_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_role">new_validator_role</a>(
     creating_account: &signer,
     new_account: &signer
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
@@ -439,7 +439,7 @@ Publish a ValidatorOperator <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a>
 The <code>creating_account</code> must be DiemRoot
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(creating_account: &signer, new_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -448,7 +448,7 @@ The <code>creating_account</code> must be DiemRoot
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(
     creating_account: &signer,
     new_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
@@ -482,7 +482,7 @@ Publish a ParentVASP <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code>
 The <code>creating_account</code> must be TreasuryCompliance
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(creating_account: &signer, new_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -491,7 +491,7 @@ The <code>creating_account</code> must be TreasuryCompliance
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(
     creating_account: &signer,
     new_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
@@ -525,7 +525,7 @@ Publish a ChildVASP <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> 
 The <code>creating_account</code> must be a ParentVASP
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(creating_account: &signer, new_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -534,7 +534,7 @@ The <code>creating_account</code> must be a ParentVASP
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Roles.md#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(
     creating_account: &signer,
     new_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {

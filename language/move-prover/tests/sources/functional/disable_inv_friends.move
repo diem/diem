@@ -1,3 +1,4 @@
+// separate_baseline: no_opaque
 address 0x1 {
 
 module M1 {
@@ -21,7 +22,7 @@ module M1 {
     }
 
     spec module {
-         invariant [global] forall addr: address where exists<M3::R3>(addr): exists<M2::R2>(addr);
+         invariant [global, suspendable] forall addr: address: exists<M3::R3>(addr) <==> exists<M2::R2>(addr);
     }
 
 }
@@ -71,7 +72,6 @@ module M4 {
         M3::f3(s);
         M2::f2(s);
     }
-
     spec f4 {
         pragma opaque;
         modifies global<M2::R2>(Signer::address_of(s));
@@ -82,6 +82,16 @@ module M4 {
         pragma disable_invariants_in_body;
     }
 
-}
+    public fun f5_incorrect(s: &signer) {
+        M3::f3(s);
+        M2::f2(s);
+    }
+    spec f5_incorrect {
+        pragma opaque;
+        modifies global<M2::R2>(Signer::address_of(s));
+        modifies global<M3::R3>(Signer::address_of(s));
+    }
 
+
+}
 }
