@@ -3,8 +3,8 @@
 
 use diem_sdk::{
     client::{
-        BlockingClient, Client, InMemoryStorage, MethodRequest, MethodResponse, Response, Result,
-        VerifyingClient,
+        BlockingClient, Client, InMemoryStateStore, MethodRequest, MethodResponse, Response,
+        Result, VerifyingClient,
     },
     transaction_builder::Currency,
     types::{
@@ -27,7 +27,7 @@ use std::cmp::max;
 use tokio::runtime::Builder;
 
 //TODO expose genesis transaction and genesis waypoint from Forge
-fn verifying_client(json_rpc_endpoint: &str) -> ForgeResult<VerifyingClient<InMemoryStorage>> {
+fn verifying_client(json_rpc_endpoint: &str) -> ForgeResult<VerifyingClient<InMemoryStateStore>> {
     let client = BlockingClient::new(json_rpc_endpoint);
     let epoch_change_proof: EpochChangeProof = bcs::from_bytes(
         client
@@ -45,12 +45,13 @@ fn verifying_client(json_rpc_endpoint: &str) -> ForgeResult<VerifyingClient<InMe
     )?;
 
     let trusted_state = TrustedState::from_epoch_waypoint(waypoint);
-    let storage = InMemoryStorage::new();
-    Ok(VerifyingClient::new_with_state(
+    let state_store = InMemoryStateStore::new();
+    let verifying_client = VerifyingClient::new_with_state(
         Client::new(json_rpc_endpoint),
-        trusted_state,
-        storage,
-    ))
+        state_store,
+        &trusted_state,
+    )?;
+    Ok(verifying_client)
 }
 
 fn fund_new_account(ctx: &mut PublicUsageContext<'_>, amount: u64) -> ForgeResult<LocalAccount> {
@@ -64,7 +65,7 @@ fn fund_new_account(ctx: &mut PublicUsageContext<'_>, amount: u64) -> ForgeResul
 struct Environment {
     pub max_batch_size: usize,
     pub client: Client,
-    pub verifying_client: VerifyingClient<InMemoryStorage>,
+    pub verifying_client: VerifyingClient<InMemoryStateStore>,
 }
 
 impl Environment {
@@ -85,7 +86,7 @@ impl Environment {
             .last_known_state()
             .map(|state| state.version)
             .unwrap_or(0);
-        let version_v = self.verifying_client.version();
+        let version_v = self.verifying_client.version().unwrap();
         max(version_nv, version_v)
     }
 
@@ -312,7 +313,7 @@ fn arb_batch(
     accounts: &[AccountAddress],
     event_handles: &[EventHandle],
     current_state_version: u64,
-    verifying_client: VerifyingClient<InMemoryStorage>,
+    verifying_client: VerifyingClient<InMemoryStateStore>,
 ) -> impl Strategy<Value = Vec<MethodRequest>> {
     vec(
         arb_request(accounts, event_handles, current_state_version),
@@ -321,7 +322,9 @@ fn arb_batch(
     .prop_filter(
         "batch rejected: actual size too large; won't be accepted by the JSON-RPC server",
         move |batch| {
-            let actual_batch_size = verifying_client.actual_batch_size(batch.as_slice());
+            let actual_batch_size = verifying_client
+                .actual_batch_size(batch.as_slice())
+                .unwrap();
             actual_batch_size <= max_batch_size
         },
     )

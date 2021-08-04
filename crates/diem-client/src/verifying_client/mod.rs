@@ -8,6 +8,6 @@ pub mod blocking;
 pub use blocking::BlockingVerifyingClient;
 
 pub mod state_store;
-pub use state_store::{InMemoryStorage, Storage};
+pub use state_store::{InMemoryStateStore, StateStore};
 
 mod methods;
