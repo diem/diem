@@ -60,7 +60,7 @@ impl Node for K8sNode {
     }
 
     fn json_rpc_endpoint(&self) -> Url {
-        Url::from_str(&format!("http://{}:{}/v1", self.dns(), self.port())).expect("Invalid URL.")
+        Url::from_str(&format!("http://{}:{}/v1", self.ip(), self.port())).expect("Invalid URL.")
     }
 
     fn debug_endpoint(&self) -> Url {
