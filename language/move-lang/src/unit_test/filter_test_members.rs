@@ -118,7 +118,6 @@ fn filter_tests_from_definition(
                 addr,
                 attributes,
                 loc,
-                addr_value,
                 modules,
             } = a;
             if !should_remove_node(context.env, &attributes, is_source_def) {
@@ -130,7 +129,6 @@ fn filter_tests_from_definition(
                     attributes,
                     loc,
                     addr,
-                    addr_value,
                     modules,
                 }))
             } else {

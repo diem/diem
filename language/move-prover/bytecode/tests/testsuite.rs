@@ -25,7 +25,7 @@ use bytecode::{
 };
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use move_command_line_common::testing::EXP_EXT;
-use move_model::{model::GlobalEnv, run_model_builder};
+use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 use std::path::Path;
 
@@ -173,7 +173,12 @@ fn get_tested_transformation_pipeline(
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let env: GlobalEnv = run_model_builder(&sources, &[])?;
+    let env: GlobalEnv = run_model_builder_with_options(
+        &sources,
+        &[],
+        ModelBuilderOptions::default(),
+        move_stdlib::move_stdlib_named_addresses(),
+    )?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
         env.report_diag(&mut error_writer, Severity::Error);

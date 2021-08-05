@@ -58,6 +58,7 @@ fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
 static STORAGE_WITH_MOVE_STDLIB: Lazy<InMemoryStorage> = Lazy::new(|| {
     let mut storage = InMemoryStorage::new();
     let (_, compiled_units) = Compiler::new(&move_stdlib::move_stdlib_files(), &[])
+        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
         .build_and_report()
         .unwrap();
     let compiled_modules = compiled_units.into_iter().map(|unit| match unit {

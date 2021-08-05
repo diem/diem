@@ -8,7 +8,7 @@ use crate::{
     },
     NativeFunctionRecord,
 };
-use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
+use move_lang::{self, compiled_unit::CompiledUnit, shared::AddressBytes, Compiler, Flags};
 use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::{bail, Result};
@@ -21,6 +21,7 @@ pub fn publish(
     republish: bool,
     ignore_breaking_changes: bool,
     override_ordering: Option<&[String]>,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
     verbose: bool,
 ) -> Result<()> {
     if verbose {
@@ -29,6 +30,7 @@ pub fn publish(
 
     let (_, compiled_units) = Compiler::new(files, &[state.interface_files_dir()?])
         .set_flags(Flags::empty().set_sources_shadow_deps(republish))
+        .set_named_address_values(named_address_mapping.clone())
         .build_and_report()?;
 
     let num_modules = compiled_units
@@ -141,7 +143,7 @@ pub fn publish(
                     (ident, blob_opt.expect("must be non-deletion"))
                 })
                 .collect();
-            state.save_modules(&modules)?;
+            state.save_modules(&modules, named_address_mapping)?;
         }
     } else {
         // NOTE: the VM enforces the most strict way of module republishing and does not allow
@@ -155,7 +157,7 @@ pub fn publish(
             module.serialize(&mut module_bytes)?;
             serialized_modules.push(((id, address_name_opt), module_bytes));
         }
-        state.save_modules(&serialized_modules)?;
+        state.save_modules(&serialized_modules, named_address_mapping)?;
     }
 
     Ok(())

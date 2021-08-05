@@ -2,7 +2,6 @@
 // to stackless bytecode. Coverage for byte code translation is achieved by many more tests in the prover.
 
 // dep: ../../move-stdlib/modules/Signer.move
-// dep: ../../move-stdlib/modules/addresses.move
 
 module 0x42::SmokeTest {
     use Std::Signer;

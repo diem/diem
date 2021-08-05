@@ -1,13 +1,3 @@
-address DiemFramework = 0x1;
-address Std = 0x1;
-
-address DiemRoot = 0xA550C18;
-address CurrencyInfo = 0xA550C18;
-
-address TreasuryCompliance = 0xB1E55ED;
-
-address VMReserved = 0x0;
-
 /// Module providing well-known addresses and related logic.
 ///
 /// > Note: this module currently defines zero-argument functions like `Self::DIEM_ROOT_ADDRESS()` using capitalization

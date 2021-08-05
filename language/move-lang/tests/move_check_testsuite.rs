@@ -6,16 +6,32 @@ use move_command_line_common::{
     testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
 };
 use move_lang::{
-    compiled_unit::CompiledUnit, diagnostics::*, shared::Flags, unit_test, CommentMap, Compiler,
-    SteppedCompiler, PASS_CFGIR, PASS_PARSER,
+    compiled_unit::CompiledUnit,
+    diagnostics::*,
+    shared::{AddressBytes, Flags},
+    unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR, PASS_PARSER,
 };
 use move_lang_test_utils::*;
-use std::{fs, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
 
 /// Shared flag to keep any temporary results of the test
 const KEEP_TMP: &str = "KEEP";
 
 const TEST_EXT: &str = "unit_test";
+
+fn default_testing_addresses() -> BTreeMap<String, AddressBytes> {
+    let mapping = [
+        ("Std", "0x1"),
+        ("M", "0x1"),
+        ("A", "0x42"),
+        ("B", "0x42"),
+        ("K", "0x19"),
+    ];
+    mapping
+        .iter()
+        .map(|(name, addr)| (name.to_string(), AddressBytes::parse_str(addr).unwrap()))
+        .collect()
+}
 
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     // A test is marked that it should also be compiled in test mode by having a `path.unit_test`
@@ -53,6 +69,7 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
 
     let (files, comments_and_compiler_res) = Compiler::new(&targets, &deps)
         .set_flags(flags)
+        .set_named_address_values(default_testing_addresses())
         .run::<PASS_PARSER>()?;
     let diags = move_check_for_errors(comments_and_compiler_res);
 

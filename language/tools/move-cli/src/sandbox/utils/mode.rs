@@ -11,8 +11,14 @@ use crate::{
 use anyhow::{bail, Result};
 use include_dir::{include_dir, Dir};
 use move_binary_format::file_format::CompiledModule;
+use move_lang::shared::AddressBytes;
+use move_stdlib::move_stdlib_named_addresses;
 use once_cell::sync::Lazy;
-use std::{collections::HashSet, path::Path, str::FromStr};
+use std::{
+    collections::{BTreeMap, HashSet},
+    path::Path,
+    str::FromStr,
+};
 
 use super::ModuleIdWithNamedAddress;
 
@@ -40,11 +46,24 @@ static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| {
             },
         ],
         vec![],
+        move_stdlib_named_addresses(),
         Some("Std".to_owned()),
     )
 });
 
 static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
+    // TODO: This will be removed once we have proper packages.
+    let named_addresses = [
+        ("Std", "0x1"),
+        ("DiemFramework", "0x1"),
+        ("DiemRoot", "0xA550C18"),
+        ("CurrencyInfo", "0xA550C18"),
+        ("TreasuryCompliance", "0xB1E55ED"),
+        ("VMReserved", "0x0"),
+    ]
+    .iter()
+    .map(|(name, addr)| (name.to_string(), AddressBytes::parse_str(addr).unwrap()))
+    .collect();
     MovePackage::new(
         "diem".to_string(),
         vec![SourceFilter {
@@ -53,6 +72,7 @@ static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
             exclusion: HashSet::new(),
         }],
         vec![&PACKAGE_MOVE_STDLIB],
+        named_addresses,
         Some("DiemFramework".to_owned()),
     )
 });
@@ -93,7 +113,7 @@ impl Mode {
     pub fn prepare_state(&self, build_dir: &str, storage_dir: &str) -> Result<OnDiskStateView> {
         let state = OnDiskStateView::create(build_dir, storage_dir)?;
         let package_dir = Path::new(build_dir).join(DEFAULT_PACKAGE_DIR);
-        self.prepare(&package_dir, false)?;
+        let named_address_values = self.prepare(&package_dir, false)?;
 
         // preload the storage with library modules (if such modules do not exist yet)
         let lib_modules = self.compiled_modules(&package_dir)?;
@@ -108,16 +128,22 @@ impl Mode {
             module.serialize(&mut module_bytes)?;
             serialized_modules.push((id, module_bytes));
         }
-        state.save_modules(&serialized_modules)?;
+        state.save_modules(&serialized_modules, named_address_values)?;
 
         Ok(state)
     }
 
-    pub fn prepare(&self, out_path: &Path, source_only: bool) -> Result<()> {
+    pub fn prepare(
+        &self,
+        out_path: &Path,
+        source_only: bool,
+    ) -> Result<BTreeMap<String, AddressBytes>> {
+        let mut named_address_values = BTreeMap::new();
         for pkg in &self.0 {
             pkg.prepare(out_path, source_only)?;
+            named_address_values.extend(pkg.named_addresses().clone());
         }
-        Ok(())
+        Ok(named_address_values)
     }
 
     pub fn source_files(&self, out_path: &Path) -> Result<Vec<String>> {

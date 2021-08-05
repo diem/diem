@@ -11,7 +11,7 @@ use crate::{
     expansion::ast::{AbilitySet, ModuleIdent, Value, Value_},
     hlir::ast::{self as H, Label},
     parser::ast::{ConstantName, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Name},
+    shared::{unique_map::UniqueMap, CompilationEnv},
     FullyCompiledProgram,
 };
 use cfgir::ast::LoopInfo;
@@ -28,7 +28,6 @@ use std::{
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
-    addresses: &'env UniqueMap<Name, AddressBytes>,
     struct_declared_abilities: UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     start: Option<Label>,
     loop_begin: Option<Label>,
@@ -46,7 +45,6 @@ impl<'env> Context<'env> {
     pub fn new(
         env: &'env mut CompilationEnv,
         pre_compiled_lib: Option<&FullyCompiledProgram>,
-        addresses: &'env UniqueMap<Name, AddressBytes>,
         modules: &UniqueMap<ModuleIdent, H::ModuleDefinition>,
     ) -> Self {
         let all_modules = modules
@@ -65,7 +63,6 @@ impl<'env> Context<'env> {
         .unwrap();
         Context {
             env,
-            addresses,
             struct_declared_abilities,
             next_label: None,
             loop_begin: None,
@@ -156,21 +153,16 @@ pub fn program(
     prog: H::Program,
 ) -> G::Program {
     let H::Program {
-        addresses,
         modules: hmodules,
         scripts: hscripts,
     } = prog;
 
-    let mut context = Context::new(compilation_env, pre_compiled_lib, &addresses, &hmodules);
+    let mut context = Context::new(compilation_env, pre_compiled_lib, &hmodules);
 
     let modules = modules(&mut context, hmodules);
     let scripts = scripts(&mut context, hscripts);
 
-    G::Program {
-        addresses,
-        modules,
-        scripts,
-    }
+    G::Program { modules, scripts }
 }
 
 fn modules(
@@ -360,18 +352,15 @@ fn move_value_from_exp(context: &mut Context, e: H::Exp) -> Option<MoveValue> {
     }
 }
 
-fn move_value_from_value(context: &mut Context, sp!(loc, v_): Value) -> Option<MoveValue> {
+fn move_value_from_value(context: &mut Context, sp!(_, v_): Value) -> Option<MoveValue> {
     use MoveValue as MV;
     use Value_ as V;
     Some(match v_ {
         V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
-        V::Address(a) => match a.into_addr_bytes(context.addresses, loc, "address value") {
-            Ok(bytes) => MV::Address(MoveAddress::new(bytes.into_bytes())),
-            Err(diag) => {
-                context.env.add_diag(diag);
-                return None;
-            }
-        },
+        V::Address(a) => MV::Address(MoveAddress::new(
+            a.into_addr_bytes(context.env.named_address_mapping())
+                .into_bytes(),
+        )),
         V::U8(u) => MV::U8(u),
         V::U64(u) => MV::U64(u),
         V::U128(u) => MV::U128(u),

@@ -935,6 +935,9 @@ impl ClientProxy {
             use std::fmt::Write as _;
             let _ = write!(args, " -d {}", dep);
         }
+        for (name, addr) in diem_framework::diem_framework_named_addresses() {
+            args.push_str(&format!(" -a {}=0x{:#X}", name, addr));
+        }
 
         let status = Command::new("cargo")
             .args(args.split(' '))

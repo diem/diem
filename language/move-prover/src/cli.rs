@@ -5,11 +5,15 @@
 
 //! Functionality related to the command line interface of the Move prover.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    collections::BTreeMap,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use anyhow::anyhow;
 use clap::{App, Arg};
 use log::LevelFilter;
+use move_lang::shared::AddressBytes;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simplelog::{
@@ -56,6 +60,8 @@ pub struct Options {
     /// The paths to any dependencies for the Move sources. Those will not be verified but
     /// can be used by `move_sources`.
     pub move_deps: Vec<String>,
+    /// The values assigned to named addresses in the Move code being verified.
+    pub move_named_address_values: Vec<String>,
     /// Whether to run experimental pipeline
     pub experimental_pipeline: bool,
     /// Whether to use the old polymorphic boogie backend.
@@ -88,6 +94,7 @@ impl Default for Options {
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
             move_deps: vec![],
+            move_named_address_values: vec![],
             model_builder: ModelBuilderOptions::default(),
             prover: ProverOptions::default(),
             backend: BoogieOptions::default(),
@@ -343,6 +350,14 @@ impl Options {
                     Move files, containing dependencies which will not be verified")
             )
             .arg(
+                Arg::with_name("named-addresses")
+                .long("named-addresses")
+                .short("a")
+                .multiple(true)
+                .takes_value(true)
+                .help("specifies the value(s) of named addresses used in Move files")
+            )
+            .arg(
                 Arg::with_name("sources")
                     .multiple(true)
                     .value_name("PATH_TO_SOURCE_FILE")
@@ -529,6 +544,9 @@ impl Options {
         if matches.occurrences_of("dependencies") > 0 {
             options.move_deps = get_vec("dependencies");
         }
+        if matches.occurrences_of("named-addresses") > 0 {
+            options.move_named_address_values = get_vec("named-addresses");
+        }
         if matches.is_present("mutation") {
             options.prover.mutation = true;
         }
@@ -713,4 +731,13 @@ impl Options {
     pub fn enable_debug(&mut self) {
         self.verbosity_level = LevelFilter::Debug;
     }
+}
+
+pub fn named_addresses_for_options(
+    named_address_values: &BTreeMap<String, AddressBytes>,
+) -> Vec<String> {
+    named_address_values
+        .iter()
+        .map(|(name, addr)| format!("{}=0x{:#X}", name, addr))
+        .collect()
 }

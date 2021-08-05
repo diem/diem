@@ -28,6 +28,7 @@ use move_core_types::{
     account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
     language_storage::TypeTag, parser, transaction_argument::TransactionArgument,
 };
+use move_lang::shared::{self, AddressBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use sandbox::utils::mode::{Mode, ModeType};
 use std::{fs, path::Path};
@@ -42,6 +43,16 @@ type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunct
     rename_all = "kebab-case"
 )]
 pub struct Move {
+    /// Named address mapping
+    #[structopt(
+        name = "NAMED_ADDRESSES",
+        short = "a",
+        long = "addresses",
+        global = true,
+        parse(try_from_str = shared::parse_named_address)
+    )]
+    named_addresses: Vec<(String, AddressBytes)>,
+
     /// Directory storing Move resources, events, and module bytecodes produced by module publishing
     /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
@@ -284,6 +295,8 @@ fn handle_sandbox_commands(
     mode: &Mode,
     sandbox_command: &SandboxCommand,
 ) -> Result<()> {
+    let additional_named_addresses =
+        shared::verify_and_create_named_address_mapping(move_args.named_addresses.clone())?;
     match sandbox_command {
         SandboxCommand::Link { no_republish } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
@@ -291,6 +304,7 @@ fn handle_sandbox_commands(
                 &[state.interface_files_dir()?],
                 !*no_republish,
                 &[DEFAULT_SOURCE_DIR.to_string()],
+                state.get_named_addresses(additional_named_addresses)?,
                 move_args.verbose,
             )
         }
@@ -308,6 +322,7 @@ fn handle_sandbox_commands(
                 !*no_republish,
                 *ignore_breaking_changes,
                 override_ordering.as_ref().map(|o| o.as_slice()),
+                state.get_named_addresses(additional_named_addresses)?,
                 move_args.verbose,
             )
         }
@@ -330,6 +345,7 @@ fn handle_sandbox_commands(
                 signers,
                 args,
                 type_args.to_vec(),
+                state.get_named_addresses(additional_named_addresses)?,
                 *gas_budget,
                 *dry_run,
                 move_args.verbose,
@@ -384,6 +400,8 @@ pub fn run_cli(
     cmd: &Command,
 ) -> Result<()> {
     let mode = Mode::new(move_args.mode);
+    let additional_named_addresses =
+        shared::verify_and_create_named_address_mapping(move_args.named_addresses.clone())?;
 
     match cmd {
         Command::Compile {
@@ -391,22 +409,22 @@ pub fn run_cli(
             no_source_maps,
             check,
         } => {
-            let mode_interface_dir = mode
-                .prepare_state(&move_args.build_dir, &move_args.storage_dir)?
-                .interface_files_dir()?;
+            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
             if *check {
                 base::commands::check(
-                    &[mode_interface_dir],
+                    &[state.interface_files_dir()?],
                     false,
                     source_files,
+                    state.get_named_addresses(additional_named_addresses)?,
                     move_args.verbose,
                 )
             } else {
                 base::commands::compile(
-                    &[mode_interface_dir],
+                    &[state.interface_files_dir()?],
                     &move_args.build_dir,
                     false,
                     source_files,
+                    state.get_named_addresses(additional_named_addresses)?,
                     !*no_source_maps,
                     move_args.verbose,
                 )

@@ -1,33 +1,33 @@
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:14:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:11:9
    │
-14 │     use B::M;
+11 │     use B::M;
    │         ^^^^ Invalid 'use'. Unbound module: 'B::M'
 
 error[E02011]: invalid 'friend' declaration
-   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:15:5
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:12:5
    │
-15 │     friend B::M;
+12 │     friend B::M;
    │     ^^^^^^^^^^^^
    │     │      │
    │     │      Cannot declare modules out of the current address as a friend
    │     Invalid friend declaration
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:16:22
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:13:22
    │
-16 │     public fun ex(): B::M::S {
+13 │     public fun ex(): B::M::S {
    │                      ^^^^ Unbound module 'B::M'
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:17:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:14:9
    │
-17 │         B::M::C;
+14 │         B::M::C;
    │         ^^^^ Unbound module 'B::M'
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:18:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_each_other.move:15:9
    │
-18 │         B::M::s()
+15 │         B::M::s()
    │         ^^^^ Unbound module 'B::M'
 

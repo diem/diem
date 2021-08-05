@@ -1,8 +1,6 @@
 // Tests compilation is stopped for unassigned addresses
 // Named addresses don't exist at the bytecode level
 
-address A;
-
 address A {
 module Ex {}
 }

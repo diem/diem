@@ -1,5 +1,3 @@
-address Std;
-
 /// Module providing debug functionality.
 module Std::Debug {
     native public fun print<T>(x: &T);

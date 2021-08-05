@@ -75,7 +75,7 @@ fn extract_decls(
             })
         })
         .collect();
-    let context = &mut Context::new(compilation_env, &prog.addresses, None);
+    let context = &mut Context::new(compilation_env, None);
     let fdecls = all_modules()
         .flat_map(|(m, mdef)| {
             mdef.functions.key_cloned_iter().map(move |(f, fdef)| {
@@ -103,7 +103,6 @@ pub fn program(
 
     let (orderings, sdecls, fdecls) = extract_decls(compilation_env, pre_compiled_lib, &prog);
     let G::Program {
-        addresses,
         modules: gmodules,
         scripts: gscripts,
     } = prog;
@@ -114,15 +113,7 @@ pub fn program(
         .collect::<Vec<_>>();
     source_modules.sort_by_key(|(_, mdef)| mdef.dependency_order);
     for (m, mdef) in source_modules {
-        if let Some(unit) = module(
-            compilation_env,
-            &addresses,
-            m,
-            mdef,
-            &orderings,
-            &sdecls,
-            &fdecls,
-        ) {
+        if let Some(unit) = module(compilation_env, m, mdef, &orderings, &sdecls, &fdecls) {
             units.push(unit)
         }
     }
@@ -136,7 +127,6 @@ pub fn program(
         } = s;
         if let Some(unit) = script(
             compilation_env,
-            &addresses,
             key,
             constants,
             function_name,
@@ -153,7 +143,6 @@ pub fn program(
 
 fn module(
     compilation_env: &mut CompilationEnv,
-    addresses: &UniqueMap<Name, AddressBytes>,
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
@@ -166,7 +155,7 @@ fn module(
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
 ) -> Option<CompiledUnit> {
-    let mut context = Context::new(compilation_env, addresses, Some(&ident));
+    let mut context = Context::new(compilation_env, Some(&ident));
     let structs = mdef
         .structs
         .into_iter()
@@ -192,15 +181,14 @@ fn module(
     let friends = mdef
         .friends
         .into_iter()
-        .filter_map(|(mident, _loc)| context.translate_module_ident(mident))
+        .map(|(mident, _loc)| context.translate_module_ident(mident))
         .collect();
 
     let addr_name = match &ident.value.address {
         Address::Anonymous(_) => None,
         Address::Named(n) => Some(n.clone()),
     };
-    let addr_bytes =
-        context.resolve_address(ident.loc, ident.value.address.clone(), "module declaration")?;
+    let addr_bytes = context.resolve_address(ident.value.address.clone());
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
         struct_declarations,
@@ -248,7 +236,6 @@ fn module(
 
 fn script(
     compilation_env: &mut CompilationEnv,
-    addresses: &UniqueMap<Name, AddressBytes>,
     key: String,
     constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
@@ -264,7 +251,7 @@ fn script(
     >,
 ) -> Option<CompiledUnit> {
     let loc = name.loc();
-    let mut context = Context::new(compilation_env, addresses, None);
+    let mut context = Context::new(compilation_env, None);
 
     let constants = constants
         .into_iter()
@@ -916,9 +903,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
                 match v.value {
                     V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
                     V::Address(a) => {
-                        let addr_bytes = context
-                            .resolve_address(loc, a, "address value")
-                            .unwrap_or(AddressBytes::DEFAULT_ERROR_BYTES);
+                        let addr_bytes = context.resolve_address(a);
                         B::LdAddr(MoveAddress::new(addr_bytes.into_bytes()))
                     }
                     V::Bytearray(bytes) => B::LdByteArray(bytes),

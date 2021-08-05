@@ -1,0 +1,9 @@
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/invalid_named_address_declaration.move:3:13
+  │
+3 │ address Addr;
+  │             ^
+  │             │
+  │             Unexpected ';'
+  │             Expected '{'
+

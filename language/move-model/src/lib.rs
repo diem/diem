@@ -9,7 +9,7 @@ use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
@@ -30,7 +30,7 @@ use move_lang::{
     diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
-    shared::{unique_map::UniqueMap, AddressBytes},
+    shared::{parse_named_address, unique_map::UniqueMap, AddressBytes},
     Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
 };
 use num::{BigUint, Num};
@@ -58,27 +58,35 @@ pub mod ty;
 // =================================================================================================
 // Entry Point
 
-/// Build the move model with default compilation flags and default options
+/// Build the move model with default compilation flags and default options and no named addresses.
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder(
     move_sources: &[String],
     deps_dir: &[String],
 ) -> anyhow::Result<GlobalEnv> {
-    run_model_builder_with_options(move_sources, deps_dir, ModelBuilderOptions::default())
+    run_model_builder_with_options(
+        move_sources,
+        deps_dir,
+        ModelBuilderOptions::default(),
+        BTreeMap::new(),
+    )
 }
 
-/// Build the move model with default compilation flags and custom options
+/// Build the move model with default compilation flags and custom options and a set of provided
+/// named addreses.
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder_with_options(
     move_sources: &[String],
     deps_dir: &[String],
     options: ModelBuilderOptions,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
 ) -> anyhow::Result<GlobalEnv> {
     run_model_builder_with_options_and_compilation_flags(
         move_sources,
         deps_dir,
         options,
         Flags::empty(),
+        named_address_mapping,
     )
 }
 
@@ -89,6 +97,7 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     deps_dir: &[String],
     options: ModelBuilderOptions,
     flags: Flags,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
     env.set_extension(options);
@@ -96,6 +105,7 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps_dir)
         .set_flags(flags)
+        .set_named_address_values(named_address_mapping.clone())
         .run::<PASS_PARSER>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
         Err(diags) => {
@@ -185,27 +195,21 @@ pub fn run_model_builder_with_options_and_compilation_flags(
         }
     }
 
+    let addresses = named_address_mapping
+        .into_iter()
+        .filter_map(|(n, val)| visited_addresses.contains(n.as_str()).then(|| (n, val)))
+        .collect();
+
     // Step 3: selective compilation.
     let expansion_ast = {
-        let addresses = expansion_ast
-            .addresses
-            .filter_map(|n, val| visited_addresses.contains(n.value.as_str()).then(|| val));
-        let E::Program {
-            addresses: _,
-            modules,
-            scripts,
-        } = expansion_ast;
+        let E::Program { modules, scripts } = expansion_ast;
         let modules = modules.filter_map(|mident, mut mdef| {
             visited_modules.contains(&mident.value).then(|| {
                 mdef.is_source_module = true;
                 mdef
             })
         });
-        E::Program {
-            addresses,
-            modules,
-            scripts,
-        }
+        E::Program { modules, scripts }
     };
     // Run the compiler fully to the compiled units
     let units = match compiler
@@ -236,7 +240,7 @@ pub fn run_model_builder_with_options_and_compilation_flags(
 
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, verified_units, expansion_ast);
+    run_spec_checker(&mut env, addresses, verified_units, expansion_ast);
     Ok(env)
 }
 
@@ -447,12 +451,12 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: E::Program) {
-    let named_address_mapping = eprog
-        .addresses
-        .iter()
-        .filter_map(|(_, n, addr_bytes_opt)| addr_bytes_opt.map(|ab| (n.clone(), ab.value)))
-        .collect();
+fn run_spec_checker(
+    env: &mut GlobalEnv,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
+    units: Vec<CompiledUnit>,
+    mut eprog: E::Program,
+) {
     let mut builder = ModelBuilder::new(env, named_address_mapping);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
@@ -582,6 +586,15 @@ pub fn big_uint_to_addr(i: &BigUint) -> AccountAddress {
     // TODO: do this in more efficient way (e.g., i.to_le_bytes() and pad out the resulting Vec<u8>
     // to ADDRESS_LENGTH
     AccountAddress::from_hex_literal(&format!("{:#x}", i)).unwrap()
+}
+
+pub fn parse_addresses_from_options(
+    named_addr_strings: Vec<String>,
+) -> anyhow::Result<BTreeMap<String, AddressBytes>> {
+    named_addr_strings
+        .iter()
+        .map(|x| parse_named_address(x))
+        .collect()
 }
 
 // =================================================================================================

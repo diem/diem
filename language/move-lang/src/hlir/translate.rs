@@ -156,18 +156,13 @@ pub fn program(
 ) -> H::Program {
     let mut context = Context::new(compilation_env);
     let T::Program {
-        addresses,
         modules: tmodules,
         scripts: tscripts,
     } = prog;
     let modules = modules(&mut context, tmodules);
     let scripts = scripts(&mut context, tscripts);
 
-    H::Program {
-        addresses,
-        modules,
-        scripts,
-    }
+    H::Program { modules, scripts }
 }
 
 fn modules(

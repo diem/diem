@@ -1,15 +1,3 @@
-error[E03001]: unbound address
-  ┌─ tests/move_check/expansion/unbound_named_address.move:2:8
-  │
-2 │ module A::M { // suggests declaration
-  │        ^ Unbound address 'A'. Try declaring it with 'address A;'
-
-error[E03001]: unbound address
-  ┌─ tests/move_check/expansion/unbound_named_address.move:3:9
-  │
-3 │     use B::M;
-  │         ^ Unbound address 'B'
-
 error[E03002]: unbound module
   ┌─ tests/move_check/expansion/unbound_named_address.move:3:9
   │
@@ -25,17 +13,17 @@ error[E02011]: invalid 'friend' declaration
   │     │      Cannot declare modules out of the current address as a friend
   │     Invalid friend declaration
 
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ tests/move_check/expansion/unbound_named_address.move:5:12
   │
 5 │     friend C::M;
-  │            ^ Unbound address 'C'
+  │            ^ address 'C' is not assigned a value
 
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ tests/move_check/expansion/unbound_named_address.move:6:12
   │
 6 │     friend D::M::foo;
-  │            ^ Unbound address 'D'
+  │            ^ address 'D' is not assigned a value
 
 error[E03006]: unexpected name in this position
   ┌─ tests/move_check/expansion/unbound_named_address.move:6:18
@@ -43,11 +31,11 @@ error[E03006]: unexpected name in this position
 6 │     friend D::M::foo;
   │                  ^^^ Unexpected module member access. Expected a module identifier only
 
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ tests/move_check/expansion/unbound_named_address.move:9:12
   │
 9 │         x: E::M::S,
-  │            ^ Unbound address 'E'
+  │            ^ address 'E' is not assigned a value
 
 error[E03002]: unbound module
   ┌─ tests/move_check/expansion/unbound_named_address.move:9:12
@@ -55,11 +43,11 @@ error[E03002]: unbound module
 9 │         x: E::M::S,
   │            ^^^^ Unbound module 'E::M'
 
-error[E03001]: unbound address
+error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:13:17
    │
 13 │         let x = F::M::S {};
-   │                 ^ Unbound address 'F'
+   │                 ^ address 'F' is not assigned a value
 
 error[E03002]: unbound module
    ┌─ tests/move_check/expansion/unbound_named_address.move:13:17
@@ -67,11 +55,11 @@ error[E03002]: unbound module
 13 │         let x = F::M::S {};
    │                 ^^^^ Unbound module 'F::M'
 
-error[E03001]: unbound address
+error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:14:9
    │
 14 │         G::M::foo();
-   │         ^ Unbound address 'G'
+   │         ^ address 'G' is not assigned a value
 
 error[E03002]: unbound module
    ┌─ tests/move_check/expansion/unbound_named_address.move:14:9
@@ -79,11 +67,11 @@ error[E03002]: unbound module
 14 │         G::M::foo();
    │         ^^^^ Unbound module 'G::M'
 
-error[E03001]: unbound address
+error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:15:17
    │
 15 │         let c = H::M::C;
-   │                 ^ Unbound address 'H'
+   │                 ^ address 'H' is not assigned a value
 
 error[E03002]: unbound module
    ┌─ tests/move_check/expansion/unbound_named_address.move:15:17
@@ -91,9 +79,9 @@ error[E03002]: unbound module
 15 │         let c = H::M::C;
    │                 ^^^^ Unbound module 'H::M'
 
-error[E03001]: unbound address
+error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:16:18
    │
 16 │         let a = @I; // suggests declaration
-   │                  ^ Unbound address 'I'. Try declaring it with 'address I;'
+   │                  ^ address 'I' is not assigned a value. Try assigning it a value when calling the compiler
 

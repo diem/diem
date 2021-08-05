@@ -29,7 +29,6 @@ pub fn program(
 ) -> T::Program {
     let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let N::Program {
-        addresses,
         modules: nmodules,
         scripts: nscripts,
     } = prog;
@@ -39,11 +38,7 @@ pub fn program(
     assert!(context.constraints.is_empty());
     recursive_structs::modules(context.env, &modules);
     infinite_instantiations::modules(context.env, &modules);
-    T::Program {
-        addresses,
-        modules,
-        scripts,
-    }
+    T::Program { modules, scripts }
 }
 
 fn modules(

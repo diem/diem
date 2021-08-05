@@ -9,7 +9,7 @@ use crate::{
     diagnostics::{codes::Severity, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
-    shared::{CompilationEnv, Flags},
+    shared::{AddressBytes, CompilationEnv, Flags},
     to_bytecode, typing, unit_test,
 };
 use move_command_line_common::files::{
@@ -35,6 +35,7 @@ pub struct Compiler<'a, 'b> {
     interface_files_dir_opt: Option<String>,
     pre_compiled_lib: Option<&'b FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
     flags: Flags,
 }
 
@@ -91,6 +92,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             pre_compiled_lib: None,
             compiled_module_named_address_mapping: BTreeMap::new(),
             flags: Flags::empty(),
+            named_address_mapping: BTreeMap::new(),
         }
     }
 
@@ -136,6 +138,15 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
+    pub fn set_named_address_values(
+        mut self,
+        named_address_mapping: BTreeMap<String, AddressBytes>,
+    ) -> Self {
+        assert!(self.named_address_mapping.is_empty());
+        self.named_address_mapping = named_address_mapping;
+        self
+    }
+
     pub fn run<const TARGET: Pass>(
         self,
     ) -> anyhow::Result<(
@@ -148,6 +159,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             interface_files_dir_opt,
             pre_compiled_lib,
             compiled_module_named_address_mapping,
+            named_address_mapping,
             flags,
         } = self;
         let mut deps = deps.to_vec();
@@ -156,7 +168,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             interface_files_dir_opt,
             &compiled_module_named_address_mapping,
         )?;
-        let compilation_env = CompilationEnv::new(flags);
+        let compilation_env = CompilationEnv::new(flags, named_address_mapping);
         let (source_text, pprog_and_comments_res) =
             parse_program(&compilation_env, targets, &deps)?;
         let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
@@ -359,10 +371,12 @@ pub fn construct_pre_compiled_lib(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     flags: Flags,
+    named_address_values: BTreeMap<String, AddressBytes>,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
     let (files, pprog_and_comments_res) = Compiler::new(&[], deps)
         .set_interface_files_dir_opt(interface_files_dir_opt)
         .set_flags(flags)
+        .set_named_address_values(named_address_values)
         .run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {

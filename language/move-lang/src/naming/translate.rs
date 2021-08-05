@@ -333,18 +333,12 @@ pub fn program(
 ) -> N::Program {
     let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let E::Program {
-        addresses,
         modules: emodules,
         scripts: escripts,
     } = prog;
-    let addresses = addresses.filter_map(|_name, mapping| mapping.map(|sp!(_, addr)| addr));
     let modules = modules(&mut context, emodules);
     let scripts = scripts(&mut context, escripts);
-    N::Program {
-        addresses,
-        modules,
-        scripts,
-    }
+    N::Program { modules, scripts }
 }
 
 fn modules(

@@ -7,7 +7,7 @@ use crate::{
         BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
     },
     parser::ast::{ConstantName, FunctionName, StructName, Var, Visibility},
-    shared::{ast_debug::*, unique_map::UniqueMap, AddressBytes, Name},
+    shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
@@ -21,8 +21,6 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    // Map of known named address values. Not all addresses will be present
-    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
 }
@@ -180,14 +178,7 @@ fn remap_labels_cmd(remapping: &BTreeMap<Label, Label>, sp!(_, cmd_): &mut Comma
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program {
-            addresses,
-            modules,
-            scripts,
-        } = self;
-        for (_, addr, bytes) in addresses {
-            w.writeln(&format!("address {} = {};", addr, bytes));
-        }
+        let Program { modules, scripts } = self;
 
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));

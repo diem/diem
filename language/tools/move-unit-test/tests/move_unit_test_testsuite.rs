@@ -81,6 +81,9 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
         report_statistics: false,
         report_storage_on_error: false,
         list: false,
+        named_address_values: move_stdlib::move_stdlib_named_addresses()
+            .into_iter()
+            .collect(),
     };
 
     for ((buffer, _), exp_path) in run_test_with_modifiers(unit_test_config, path)? {

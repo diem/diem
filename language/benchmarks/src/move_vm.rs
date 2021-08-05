@@ -37,6 +37,7 @@ fn compile_modules() -> Vec<CompiledModule> {
     src_files.push(MOVE_BENCH_SRC_PATH.to_str().unwrap().to_owned());
     let (_files, compiled_units) = Compiler::new(&src_files, &[])
         .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
         .build_and_report()
         .expect("Error compiling...");
     compiled_units

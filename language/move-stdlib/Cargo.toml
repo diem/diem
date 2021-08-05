@@ -21,6 +21,7 @@ move-vm-types = { path = "../move-vm/types" }
 move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }
 move-vm-runtime = { path = "../move-vm/runtime" }
+move-lang = { path = "../move-lang" }
 
 log = "0.4.14"
 walkdir = "2.3.1"
