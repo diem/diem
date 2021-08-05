@@ -1,6 +1,5 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-#![allow(dead_code)]
 
 use diem_sdk::{
     client::{BlockingClient, MethodRequest},
@@ -15,6 +14,7 @@ use structopt::StructOpt;
 use tokio::runtime::Runtime;
 
 #[derive(StructOpt, Debug)]
+#[allow(dead_code)]
 struct Args {
     #[structopt(
         long,
@@ -34,10 +34,12 @@ struct Args {
     )]
     duration: u64,
 
-    // operator "clean-up" options
-    // XXX: this should really be a subcommand if possible
-    #[structopt(long, help = "If set, wipes the state of the test backend and exits")]
-    clean_up: bool,
+    #[structopt(flatten)]
+    options: Options,
+
+    #[structopt(subcommand)]
+    ops_cmd: Option<OperatorCommand>,
+
     #[structopt(
         long,
         help = "Override the helm repo used for k8s tests",
@@ -80,34 +82,31 @@ struct CleanUp {
         help = "If set, performs validator healthcheck and assumes k8s DNS access"
     )]
     require_validator_healthcheck: bool,
-
-    // operator "upgrade-validator" options
-    #[structopt(long, help = "If set, upgrades a validator to validator_image_tag")]
-    upgrade_validator: bool,
-    #[structopt(long, help = "Validator to upgrade")]
-    validator: Option<String>,
-
-    #[structopt(flatten)]
-    options: Options,
 }
 
 fn main() -> Result<()> {
     let args = Args::from_args();
 
-    if args.clean_up {
-        return clean_k8s_cluster(
-            args.helm_repo,
-            args.num_validators,
-            args.validator_image_tag,
-            args.testnet_image_tag,
-            args.require_validator_healthcheck,
-        );
-    } else if args.upgrade_validator {
-        return set_validator_image_tag(
-            &args.validator.unwrap(),
-            &args.helm_repo,
-            &args.validator_image_tag,
-        )
+    match args.ops_cmd {
+        Some(ops_cmd) => match ops_cmd {
+            OperatorCommand::SetValidator(set_validator) => {
+                return set_validator_image_tag(
+                    &set_validator.validator_name,
+                    &set_validator.image_tag,
+                    &args.helm_repo,
+                )
+            }
+            OperatorCommand::CleanUp(cleanup) => {
+                return clean_k8s_cluster(
+                    args.helm_repo,
+                    cleanup.num_validators,
+                    cleanup.validator_image_tag,
+                    cleanup.testnet_image_tag,
+                    cleanup.require_validator_healthcheck,
+                )
+            }
+        },
+        None => println!("Will run Forge tests..."),
     }
 
     if args.local_swarm {

@@ -23,7 +23,7 @@ use kube::{
 use rand::Rng;
 use rayon::prelude::*;
 use regex::Regex;
-use serde_json::{Value};
+use serde_json::Value;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -153,9 +153,15 @@ impl K8sSwarm {
 impl Drop for K8sSwarm {
     // When the K8sSwarm struct goes out of scope we need to wipe the chain state
     fn drop(&mut self) {
-        clean_k8s_cluster(self.helm_repo.clone(), self.validators.len(), DEFAULT_VALIDATOR_IMAGE_TAG.to_string(), DEFAULT_TESTNET_IMAGE_TAG.to_string(), true)
-            .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
-            .unwrap();
+        clean_k8s_cluster(
+            self.helm_repo.clone(),
+            self.validators.len(),
+            DEFAULT_VALIDATOR_IMAGE_TAG.to_string(),
+            DEFAULT_TESTNET_IMAGE_TAG.to_string(),
+            true,
+        )
+        .map_err(|err| format_err!("Failed to clean k8s cluster with new genesis: {}", err))
+        .unwrap();
     }
 }
 
@@ -406,9 +412,12 @@ fn get_helm_values(helm_release_name: &str) -> Result<Value> {
         .map_err(|e| format_err!("failed to helm get values diem: {}", e))?;
     Ok(v["config"].take())
 }
-
-
-pub fn set_validator_image_tag(validator_name: &str, helm_repo: &str, image_tag: &str) -> Result<()> {
+#[allow(clippy::needless_borrow)]
+pub fn set_validator_image_tag(
+    validator_name: &str,
+    helm_repo: &str,
+    image_tag: &str,
+) -> Result<()> {
     let validator_upgrade_options = [
         "--reuse-values",
         "--history-max",
@@ -424,7 +433,7 @@ fn era_to_string(era_value: &Value) -> Result<String> {
     match era_value {
         Value::Number(num) => Ok(format!("{}", num)),
         Value::String(s) => Ok(s.to_string()),
-        _ => bail!("Era is not a number {}", era_value)
+        _ => bail!("Era is not a number {}", era_value),
     }
 }
 
@@ -455,6 +464,7 @@ pub fn clean_k8s_cluster(
     (0..MAX_NUM_VALIDATORS).into_par_iter().for_each(|i| {
         remove_validator(&format!("val{}", i)).unwrap();
     });
+    println!("All validators removed");
 
     let tmp_dir = TempDir::new().expect("Could not create temp dir");
 
@@ -465,7 +475,12 @@ pub fn clean_k8s_cluster(
         let config = &v["config"];
 
         let era: &str = &era_to_string(&v["config"]["chain"]["era"]).unwrap();
-        assert!(!new_era.eq(era), "New era {} is the same as past release era {}", new_era, era);
+        assert!(
+            !new_era.eq(era),
+            "New era {} is the same as past release era {}",
+            new_era,
+            era
+        );
 
         // store the helm values for later use
         let file_path = tmp_dir.path().join(format!("val{}_status.json", i));
@@ -496,6 +511,7 @@ pub fn clean_k8s_cluster(
             String::from_utf8(validator_helm_patch_output.stderr).unwrap()
         );
     });
+    println!("All validators prepped for upgrade");
 
     // upgrade validators in parallel
     (0..base_num_validators).into_par_iter().for_each(|i| {
@@ -517,6 +533,7 @@ pub fn clean_k8s_cluster(
         ];
         upgrade_validator(&format!("val{}", i), &helm_repo, &validator_upgrade_options).unwrap();
     });
+    println!("All validators upgraded");
 
     // upgrade testnet
     let testnet_upgrade_args = [
@@ -544,6 +561,7 @@ pub fn clean_k8s_cluster(
         "{}",
         String::from_utf8(testnet_upgrade_output.stderr).unwrap()
     );
+    println!("Testnet upgraded");
 
     let rt = Runtime::new().unwrap();
 
