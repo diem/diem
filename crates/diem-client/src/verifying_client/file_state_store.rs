@@ -259,3 +259,104 @@ fn fsync_dir<P: AsRef<Path>>(dir: P) -> io::Result<()> {
     fd.sync_all()?;
     Ok(())
 }
+
+///////////
+// Tests //
+///////////
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::{collection::vec, prelude::*, sample::Index};
+    use tempfile::{tempdir, tempfile};
+
+    fn max_state(idx: usize, states: &[TrustedState]) -> &TrustedState {
+        states[..=idx].iter().max_by_key(|s| s.version()).unwrap()
+    }
+
+    // simulate a crash during write by truncating the file
+    fn corrupt_file(corrupt_idx: &Index, file: &mut File) {
+        let len = file.metadata().unwrap().len();
+        if len > 0 {
+            // note: Index::index(N) returns x in [0, N)
+            let new_len = corrupt_idx.index(len as usize);
+            file.set_len(new_len as u64).unwrap();
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+
+        #[test]
+        fn state_file_read_corrupt(
+            state in any::<TrustedState>(),
+            corrupt_idx in any::<Index>(),
+        ) {
+            let file = tempfile().unwrap();
+            let mut state_file = StateFile::new(file);
+
+            // write a state
+            state_file.write(&state).unwrap();
+            assert_eq!(state_file.version, Some(state.version()));
+
+            // read that state back
+            let maybe_state = state_file.read().unwrap();
+            assert_eq!(maybe_state, Some(state));
+
+            // simulate a crash during write by truncating the file
+            corrupt_file(&corrupt_idx, &mut state_file.file);
+
+            // read should return None b/c file is corrupt.
+            let maybe_state = state_file.read().unwrap();
+            assert_eq!(maybe_state, None);
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(25))]
+
+        #[test]
+        fn file_state_store(
+            states in vec(any::<TrustedState>(), 1..10),
+            corrupt_idx in any::<Index>(),
+        ) {
+            let dir = tempdir().unwrap();
+            let state_store = FileStateStore::new(dir.path()).unwrap();
+            assert_eq!(None, state_store.latest_state().unwrap());
+
+            // store some states (without any particular order)
+            for (idx, state) in states.iter().enumerate() {
+                state_store.store(state).unwrap();
+
+                // latest_state should be monotonically increasing by version
+                let store_max = state_store.latest_state().unwrap().unwrap();
+                let expected_max = max_state(idx, &states);
+                assert_eq!(expected_max, &store_max);
+            }
+
+            // final highest state
+            let store_max1 = state_store.latest_state().unwrap().unwrap();
+            drop(state_store);
+
+            // restarting should recover the same final state
+            let state_store = FileStateStore::new(dir.path()).unwrap();
+            let store_max2 = state_store.latest_state().unwrap().unwrap();
+            assert_eq!(store_max1, store_max2);
+
+            // "corrupt" the older state file (if it exists) to simulate crashing
+            // while writing
+            {
+                let mut state_files = state_store.0.as_inner().0.lock().unwrap();
+                if let Some(oldest_state_file) = state_files.iter_mut().min_by_key(|f| f.version).as_mut() {
+                    corrupt_file(&corrupt_idx, &mut oldest_state_file.file);
+                }
+            }
+            drop(state_store);
+
+            // restarting after partial write should still recover state
+            let state_store = FileStateStore::new(dir.path()).unwrap();
+            let store_max3 = state_store.latest_state().unwrap().unwrap();
+            assert_eq!(store_max1, store_max3);
+        }
+    }
+}

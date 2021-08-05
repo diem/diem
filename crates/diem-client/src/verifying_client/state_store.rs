@@ -133,6 +133,10 @@ impl<S: StateStore> WriteThroughCache<S> {
             *durable_state_cache = Some(new_state.clone());
         }
     }
+
+    pub fn as_inner(&self) -> &S {
+        &self.state_store
+    }
 }
 
 impl<S: StateStore> StateStore for WriteThroughCache<S> {
