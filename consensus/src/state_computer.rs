@@ -78,7 +78,7 @@ impl StateComputer for ExecutionProxy {
         for block in blocks {
             block_ids.push(block.id());
             txns.extend(block.transactions_to_commit());
-            reconfig_events.extend(block.compute_result().reconfig_events().to_vec());
+            reconfig_events.extend(block.reconfig_event());
         }
 
         monitor!(
