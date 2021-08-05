@@ -8,10 +8,14 @@ use move_binary_format::file_format::CompiledModule;
 use move_command_line_common::files::{
     extension_equals, find_filenames, path_to_string, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
 };
-use move_lang::{compiled_unit::CompiledUnit, shared::Flags, Compiler};
+use move_lang::{
+    compiled_unit::CompiledUnit,
+    shared::{AddressBytes, Flags},
+    Compiler,
+};
 use once_cell::sync::Lazy;
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
@@ -75,6 +79,8 @@ pub struct MovePackage {
     sources: Vec<SourceFilter<'static>>,
     /// Dependencies
     deps: Vec<&'static Lazy<MovePackage>>,
+    /// Named address values to be be used in this package.
+    named_addresses: BTreeMap<String, AddressBytes>,
     /// Hack to support named addresses. Works now since our current packages only have one address
     // TODO properly support named addresses, will require migrating to new/planned build system
     named_address_hack: Option<String>,
@@ -85,12 +91,14 @@ impl MovePackage {
         name: String,
         sources: Vec<SourceFilter<'static>>,
         deps: Vec<&'static Lazy<MovePackage>>,
+        named_addresses: BTreeMap<String, AddressBytes>,
         named_address: Option<String>,
     ) -> Self {
         MovePackage {
             name,
             sources,
             deps,
+            named_addresses,
             named_address_hack: named_address,
         }
     }
@@ -136,6 +144,7 @@ impl MovePackage {
             let (_files, compiled_units) =
                 Compiler::new(&[path_to_string(&pkg_src_path)?], &src_dirs)
                     .set_flags(Flags::empty().set_sources_shadow_deps(false))
+                    .set_named_address_values(self.named_addresses.clone())
                     .build_and_report()?;
 
             // save modules and ignore scripts
@@ -171,6 +180,10 @@ impl MovePackage {
         }
         src_dirs.push(path_to_string(&self.get_source_dir(out_path))?);
         Ok(src_dirs)
+    }
+
+    pub(crate) fn named_addresses(&self) -> &BTreeMap<String, AddressBytes> {
+        &self.named_addresses
     }
 
     pub(crate) fn compiled_modules(

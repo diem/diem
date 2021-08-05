@@ -45,6 +45,7 @@ allowed = [
     "clippy::enum-variant-names",
     "clippy::derive_partial_eq_without_eq",
     "clippy::map-flatten",
+    "clippy::format-push-string",
 ]
 warn = [
     "clippy::wildcard_dependencies",

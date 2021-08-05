@@ -8,6 +8,7 @@ use crate::{
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
+    collections::BTreeMap,
     convert::TryFrom,
     fmt,
     hash::Hash,
@@ -153,6 +154,62 @@ impl fmt::UpperHex for AddressBytes {
     }
 }
 
+pub fn parse_named_address(s: &str) -> anyhow::Result<(String, AddressBytes)> {
+    let before_after = s.split('=').collect::<Vec<_>>();
+
+    if before_after.len() != 2 {
+        anyhow::bail!("Invalid named address assignment. Must be of the form <address_name>=<address>, but found '{}'", s);
+    }
+    let name = before_after[0].parse()?;
+    let addr =
+        AddressBytes::parse_str(before_after[1]).map_err(|err| anyhow::format_err!("{}", err))?;
+
+    Ok((name, addr))
+}
+
+pub fn verify_and_create_named_address_mapping(
+    named_addresses: Vec<(String, AddressBytes)>,
+) -> anyhow::Result<BTreeMap<String, AddressBytes>> {
+    let mut mapping = BTreeMap::new();
+    let mut invalid_mappings = BTreeMap::new();
+    for (name, addr_bytes) in named_addresses {
+        match mapping.insert(name.clone(), addr_bytes) {
+            Some(other_addr) if other_addr != addr_bytes => {
+                invalid_mappings
+                    .entry(name)
+                    .or_insert_with(Vec::new)
+                    .push(other_addr);
+            }
+            None | Some(_) => (),
+        }
+    }
+
+    if !invalid_mappings.is_empty() {
+        let redefinitions = invalid_mappings
+            .into_iter()
+            .map(|(name, addr_bytes)| {
+                format!(
+                    "{} is assigned differing values {} and {}",
+                    name,
+                    addr_bytes
+                        .iter()
+                        .map(|x| format!("{}", x))
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    mapping[&name]
+                )
+            })
+            .collect::<Vec<_>>();
+
+        anyhow::bail!(
+            "Redefinition of named addresses found in arguments to compiler: {}",
+            redefinitions.join(", ")
+        )
+    }
+
+    Ok(mapping)
+}
+
 //**************************************************************************************************
 // Name
 //**************************************************************************************************
@@ -232,15 +289,17 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
 
 impl CompilationEnv {
-    pub fn new(flags: Flags) -> Self {
+    pub fn new(flags: Flags, named_address_mapping: BTreeMap<String, AddressBytes>) -> Self {
         Self {
             flags,
             diags: Diagnostics::new(),
+            named_address_mapping,
         }
     }
 
@@ -282,6 +341,10 @@ impl CompilationEnv {
 
     pub fn flags(&self) -> &Flags {
         &self.flags
+    }
+
+    pub fn named_address_mapping(&self) -> &BTreeMap<String, AddressBytes> {
+        &self.named_address_mapping
     }
 }
 

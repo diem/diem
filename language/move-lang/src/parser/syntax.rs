@@ -1847,8 +1847,7 @@ fn parse_constant_decl(
 
 // Parse an address block:
 //      AddressBlock =
-//          "address" <LeadingNameAccess> (= <AddressBytes>)?
-//              ("{" (<Attributes> <Module>)* "}" | ";")
+//          "address" <LeadingNameAccess> "{" (<Attributes> <Module>)* "}"
 //
 // Note that "address" is not a token.
 fn parse_address_block(
@@ -1877,19 +1876,7 @@ fn parse_address_block(
     let end_loc = tokens.previous_end_loc();
     let loc = make_loc(tokens.file_name(), start_loc, end_loc);
 
-    let addr_value = match tokens.peek() {
-        Tok::Equal => {
-            tokens.advance()?;
-            Some(parse_address_bytes(tokens)?)
-        }
-        _ => None,
-    };
-
     let modules = match tokens.peek() {
-        Tok::Semicolon => {
-            tokens.advance()?;
-            vec![]
-        }
         Tok::LBrace => {
             tokens.advance()?;
             let mut modules = vec![];
@@ -1900,14 +1887,13 @@ fn parse_address_block(
             consume_token(tokens, Tok::RBrace)?;
             modules
         }
-        _ => return Err(unexpected_token_error(tokens, "one of `;` or `{{`")),
+        _ => return Err(unexpected_token_error(tokens, "'{'")),
     };
 
     Ok(AddressDefinition {
         attributes,
         loc,
         addr,
-        addr_value,
         modules,
     })
 }

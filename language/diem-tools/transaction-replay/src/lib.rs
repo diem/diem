@@ -408,6 +408,7 @@ fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
     let targets = &vec![cur_path];
     let (files, units_or_diags) = Compiler::new(targets, &diem_framework::diem_stdlib_files())
         .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .set_named_address_values(diem_framework::diem_framework_named_addresses())
         .build()?;
     let unit = match units_or_diags {
         Err(diags) => {

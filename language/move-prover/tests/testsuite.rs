@@ -25,14 +25,27 @@ const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
 const ENV_TEST_INCONSISTENCY: &str = "MVP_TEST_INCONSISTENCY";
 const ENV_TEST_FEATURE: &str = "MVP_TEST_FEATURE";
 const ENV_TEST_ON_CI: &str = "MVP_TEST_ON_CI";
+// TODO: remove these named addresses once packages are in
 const INCONSISTENCY_TEST_FLAGS: &[&str] = &[
     "--dependency=../move-stdlib/modules",
     "--dependency=../diem-framework/modules",
     "--check-inconsistency",
+    "-a=Std=0x1",
+    "-a=DiemFramework=0x1",
+    "-a=DiemRoot=0xA550C18",
+    "-a=CurrencyInfo=0xA550C18",
+    "-a=TreasuryCompliance=0xB1E55ED",
+    "-a=VMReserved=0x0",
 ];
 const REGULAR_TEST_FLAGS: &[&str] = &[
     "--dependency=../move-stdlib/modules",
     "--dependency=../diem-framework/modules",
+    "-a=Std=0x1",
+    "-a=DiemFramework=0x1",
+    "-a=DiemRoot=0xA550C18",
+    "-a=CurrencyInfo=0xA550C18",
+    "-a=TreasuryCompliance=0xB1E55ED",
+    "-a=VMReserved=0x0",
 ];
 
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);

@@ -4,11 +4,8 @@
 use crate::{
     cfgir::ast as G,
     diag,
-    diagnostics::codes::{Attributes, DiagnosticCode},
     expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
-    shared::{
-        known_attributes, unique_map::UniqueMap, AddressBytes, CompilationEnv, Identifier, Name,
-    },
+    shared::{known_attributes, AddressBytes, CompilationEnv, Identifier},
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase},
 };
 use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
@@ -17,33 +14,18 @@ use std::collections::BTreeMap;
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
-    addresses: &'env UniqueMap<Name, AddressBytes>,
 }
 
 impl<'env> Context<'env> {
-    fn new(
-        compilation_env: &'env mut CompilationEnv,
-        addresses: &'env UniqueMap<Name, AddressBytes>,
-    ) -> Self {
+    fn new(compilation_env: &'env mut CompilationEnv) -> Self {
         Self {
             env: compilation_env,
-            addresses,
         }
     }
 
-    fn resolve_address(
-        &mut self,
-        loc: Loc,
-        addr: &Address,
-        code: impl DiagnosticCode,
-        case: impl FnOnce() -> String,
-    ) -> Option<AddressBytes> {
-        let resolved = addr.clone().into_addr_bytes_opt(self.addresses);
-        if resolved.is_none() {
-            let msg = format!("{}. No value specified for address '{}'", case(), addr);
-            self.env.add_diag(diag!(code, (loc, msg)))
-        }
-        resolved
+    fn resolve_address(&mut self, addr: &Address) -> AddressBytes {
+        addr.clone()
+            .into_addr_bytes(self.env.named_address_mapping())
     }
 }
 
@@ -60,7 +42,7 @@ pub fn construct_test_plan(
     if !compilation_env.flags().is_testing() {
         return None;
     }
-    let mut context = Context::new(compilation_env, &prog.addresses);
+    let mut context = Context::new(compilation_env);
     Some(
         prog.modules
             .key_cloned_iter()
@@ -88,10 +70,8 @@ fn construct_module_test_plan(
     if tests.is_empty() {
         None
     } else {
-        let sp!(loc, ModuleIdent_ { address, module }) = &module_ident;
-        let addr_bytes = context.resolve_address(*loc, address, Attributes::InvalidTest, || {
-            format!("Unable to generate test plan for module {}", module_ident)
-        })?;
+        let sp!(_, ModuleIdent_ { address, module }) = &module_ident;
+        let addr_bytes = context.resolve_address(address);
         Some(ModuleTestPlan::new(&addr_bytes, &module.0.value, tests))
     }
 }
@@ -369,12 +349,8 @@ fn convert_attribute_value_to_move_value(
     use E::{AttributeValue_ as EAV, Value_ as EV};
     match value {
         // Only addresses are allowed
-        EAV::Value(sp!(loc, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(
-            context
-                .resolve_address(*loc, a, Attributes::InvalidTest, || {
-                    "Unable to convert attribute value".to_owned()
-                })?
-                .into_bytes(),
+        EAV::Value(sp!(_, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(
+            context.resolve_address(a).into_bytes(),
         ))),
         _ => None,
     }

@@ -5,7 +5,7 @@
 
 use move_lang::{
     command_line::{self as cli},
-    shared::Flags,
+    shared::{self, verify_and_create_named_address_mapping, AddressBytes, Flags},
 };
 use structopt::*;
 
@@ -36,6 +36,15 @@ pub struct Options {
     )]
     pub out_dir: Option<String>,
 
+    /// Named address mapping
+    #[structopt(
+        name = "NAMED_ADDRESSES",
+        short = "a",
+        long = "addresses",
+        parse(try_from_str = shared::parse_named_address)
+    )]
+    pub named_addresses: Vec<(String, AddressBytes)>,
+
     #[structopt(flatten)]
     pub flags: Flags,
 }
@@ -46,10 +55,12 @@ pub fn main() -> anyhow::Result<()> {
         dependencies,
         out_dir,
         flags,
+        named_addresses,
     } = Options::from_args();
 
     let _files = move_lang::Compiler::new(&source_files, &dependencies)
         .set_interface_files_dir_opt(out_dir)
+        .set_named_address_values(verify_and_create_named_address_mapping(named_addresses)?)
         .set_flags(flags)
         .check_and_report()?;
     Ok(())

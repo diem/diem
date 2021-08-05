@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    diagnostics::Diagnostic,
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Name},
+    shared::{AddressBytes, CompilationEnv},
 };
 use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::{ast as IR, location::Loc};
+use move_ir_types::ast as IR;
 use std::{
     clone::Clone,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -20,7 +19,6 @@ use IR::Ability;
 /// Contains all of the dependencies actually used in the module
 pub struct Context<'a> {
     pub env: &'a mut CompilationEnv,
-    addresses: &'a UniqueMap<Name, AddressBytes>,
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
@@ -28,14 +26,9 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(
-        env: &'a mut CompilationEnv,
-        addresses: &'a UniqueMap<Name, AddressBytes>,
-        current_module: Option<&'a ModuleIdent>,
-    ) -> Self {
+    pub fn new(env: &'a mut CompilationEnv, current_module: Option<&'a ModuleIdent>) -> Self {
         Self {
             env,
-            addresses,
             current_module,
             seen_structs: BTreeSet::new(),
             seen_functions: BTreeSet::new(),
@@ -75,7 +68,6 @@ impl<'a> Context<'a> {
     ) -> (Vec<IR::ImportDefinition>, Vec<IR::ModuleDependency>) {
         let Context {
             env,
-            addresses,
             current_module: _current_module,
             mut seen_structs,
             seen_functions,
@@ -94,13 +86,7 @@ impl<'a> Context<'a> {
         for (module, (structs, functions)) in module_dependencies {
             let dependency_order = dependency_orderings[&module];
             let ir_name = Self::ir_module_alias(&module);
-            let ir_ident = match Self::translate_module_ident_impl(addresses, module) {
-                Ok(ident) => ident,
-                Err(d) => {
-                    env.add_diag(d);
-                    continue;
-                }
-            };
+            let ir_ident = Self::translate_module_ident_impl(env.named_address_mapping(), module);
             imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name.clone())));
             ordered_dependencies.push((
                 dependency_order,
@@ -223,36 +209,24 @@ impl<'a> Context<'a> {
         IR::ModuleName::new(format!("{}::{}", address, module))
     }
 
-    pub fn resolve_address(&mut self, loc: Loc, addr: Address, case: &str) -> Option<AddressBytes> {
-        match addr.into_addr_bytes(self.addresses, loc, case) {
-            Ok(addr) => Some(addr),
-            Err(d) => {
-                self.env.add_diag(d);
-                None
-            }
-        }
+    pub fn resolve_address(&self, addr: Address) -> AddressBytes {
+        addr.into_addr_bytes(self.env.named_address_mapping())
     }
 
-    pub fn translate_module_ident(&mut self, ident: ModuleIdent) -> Option<IR::ModuleIdent> {
-        match Self::translate_module_ident_impl(self.addresses, ident) {
-            Ok(ident) => Some(ident),
-            Err(d) => {
-                self.env.add_diag(d);
-                None
-            }
-        }
+    pub fn translate_module_ident(&self, ident: ModuleIdent) -> IR::ModuleIdent {
+        Self::translate_module_ident_impl(self.env.named_address_mapping(), ident)
     }
 
     fn translate_module_ident_impl(
-        addresses: &UniqueMap<Name, AddressBytes>,
-        sp!(loc, ModuleIdent_ { address, module }): ModuleIdent,
-    ) -> Result<IR::ModuleIdent, Diagnostic> {
-        let address_bytes = address.into_addr_bytes(addresses, loc, "module identifier")?;
+        addresses: &BTreeMap<String, AddressBytes>,
+        sp!(_, ModuleIdent_ { address, module }): ModuleIdent,
+    ) -> IR::ModuleIdent {
+        let address_bytes = address.into_addr_bytes(addresses);
         let name = Self::translate_module_name_(module.0.value);
-        Ok(IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
+        IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
             MoveAddress::new(address_bytes.into_bytes()),
-        )))
+        ))
     }
 
     fn translate_module_name_(s: String) -> IR::ModuleName {

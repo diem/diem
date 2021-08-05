@@ -16,11 +16,12 @@ use move_core_types::{
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
-use move_lang::{self, compiled_unit::CompiledUnit, Compiler, Flags};
+use move_lang::{self, compiled_unit::CompiledUnit, shared::AddressBytes, Compiler, Flags};
 use move_vm_runtime::move_vm::MoveVM;
 
 use anyhow::{anyhow, bail, Result};
-use std::{fs, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
+
 pub fn run(
     natives: impl IntoIterator<Item = NativeFunctionRecord>,
     error_descriptions: &ErrorMapping,
@@ -30,6 +31,7 @@ pub fn run(
     signers: &[String],
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
+    named_address_mapping: BTreeMap<String, AddressBytes>,
     gas_budget: Option<u64>,
     dry_run: bool,
     verbose: bool,
@@ -37,6 +39,7 @@ pub fn run(
     fn compile_script(
         state: &OnDiskStateView,
         script_file: &str,
+        named_address_mapping: BTreeMap<String, AddressBytes>,
         verbose: bool,
     ) -> Result<Option<CompiledScript>> {
         if verbose {
@@ -45,6 +48,7 @@ pub fn run(
         let (_files, compiled_units) =
             Compiler::new(&[script_file.to_string()], &[state.interface_files_dir()?])
                 .set_flags(Flags::empty().set_sources_shadow_deps(false))
+                .set_named_address_values(named_address_mapping)
                 .build_and_report()?;
 
         let mut script_opt = None;
@@ -86,7 +90,7 @@ move run` must be applied to a module inside `storage/`",
         fs::read(path)?
     } else {
         // script source file; compile first and then extract bytecode
-        let script_opt = compile_script(state, script_file, verbose)?;
+        let script_opt = compile_script(state, script_file, named_address_mapping, verbose)?;
         match script_opt {
             Some(script) => {
                 let mut script_bytes = vec![];

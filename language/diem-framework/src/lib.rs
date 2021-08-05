@@ -8,7 +8,7 @@ use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
 };
-use move_lang::{compiled_unit::CompiledUnit, Compiler};
+use move_lang::{compiled_unit::CompiledUnit, shared::AddressBytes, Compiler};
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
 use std::{
@@ -50,6 +50,22 @@ pub fn diem_stdlib_files() -> Vec<String> {
     files
 }
 
+// TODO: This will be declared in the package once those are in
+pub fn diem_framework_named_addresses() -> BTreeMap<String, AddressBytes> {
+    let mapping = [
+        ("Std", "0x1"),
+        ("DiemFramework", "0x1"),
+        ("DiemRoot", "0xA550C18"),
+        ("CurrencyInfo", "0xA550C18"),
+        ("TreasuryCompliance", "0xB1E55ED"),
+        ("VMReserved", "0x0"),
+    ];
+    mapping
+        .iter()
+        .map(|(name, addr)| (name.to_string(), AddressBytes::parse_str(addr).unwrap()))
+        .collect()
+}
+
 pub fn stdlib_bytecode_files() -> Vec<String> {
     let path = path_in_crate(COMPILED_OUTPUT_PATH);
     let names = diem_stdlib_files();
@@ -87,6 +103,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
 
 pub(crate) fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_files, compiled_units) = Compiler::new(&diem_stdlib_files(), &[])
+        .set_named_address_values(diem_framework_named_addresses())
         .build_and_report()
         .unwrap();
     let mut modules = BTreeMap::new();

@@ -1,0 +1,9 @@
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/invalid_named_address_assignment.move:1:14
+  │
+1 │ address Addr = 0x1; // Named address assignments are not allowed
+  │              ^
+  │              │
+  │              Unexpected '='
+  │              Expected '{'
+

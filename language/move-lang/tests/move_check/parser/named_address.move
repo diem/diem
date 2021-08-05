@@ -1,8 +1,5 @@
 // All valid positions of named addresses
-address M = 0x1;
-address M;
 address M {}
-address M = 0x1 {}
 
 module M::Mod {
 

@@ -23,6 +23,9 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         report_statistics: false,
         list: false,
         verbose: read_bool_env_var("VERBOSE"),
+        named_address_values: move_stdlib::move_stdlib_named_addresses()
+            .into_iter()
+            .collect(),
     };
 
     let test_plan = config.build_test_plan().unwrap();

@@ -51,16 +51,6 @@ pub fn write_module_to_string(
     let mut out = String::new();
 
     let id = module.self_id();
-    if let Some(addr_name) = named_address_mapping.get(&id) {
-        push_line!(
-            out,
-            format!(
-                "address {} = {};",
-                addr_name,
-                AddressBytes::new(id.address().to_u8())
-            )
-        );
-    }
     push_line!(
         out,
         format!("module {} {{", write_module_id(named_address_mapping, &id))

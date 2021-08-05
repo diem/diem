@@ -1,1 +1,1 @@
-address Self;
+module Self::A {}

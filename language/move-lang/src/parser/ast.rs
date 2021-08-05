@@ -68,7 +68,6 @@ pub struct AddressDefinition {
     pub attributes: Vec<Attributes>,
     pub loc: Loc,
     pub addr: LeadingNameAccess,
-    pub addr_value: Option<Spanned<AddressBytes>>,
     pub modules: Vec<ModuleDefinition>,
 }
 
@@ -972,14 +971,10 @@ impl AstDebug for AddressDefinition {
             attributes,
             loc: _loc,
             addr,
-            addr_value,
             modules,
         } = self;
         attributes.ast_debug(w);
         w.write(&format!("address {}", addr));
-        if let Some(sp!(_, addr_bytes)) = addr_value {
-            w.write(&format!(" = {}", addr_bytes));
-        }
         w.writeln(" {{");
         for m in modules {
             m.ast_debug(w)

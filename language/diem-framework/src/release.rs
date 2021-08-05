@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{path_in_crate, save_binary};
+use crate::{diem_framework_named_addresses, path_in_crate, save_binary};
 use log::LevelFilter;
 use move_binary_format::{compatibility::Compatibility, normalized::Module, CompiledModule};
 use move_command_line_common::files::{
@@ -118,6 +118,7 @@ fn generate_module_docs(output_path: impl AsRef<Path>, with_diagram: bool) {
         crate::diem_stdlib_files_no_dependencies().as_slice(),
         vec![move_stdlib::move_stdlib_modules_full_path()],
         with_diagram,
+        diem_framework_named_addresses(),
     )
 }
 
@@ -186,6 +187,7 @@ fn generate_script_docs(
             crate::diem_stdlib_modules_full_path(),
         ],
         with_diagram,
+        diem_framework_named_addresses(),
     )
 }
 
@@ -203,6 +205,9 @@ fn generate_script_abis(
             crate::diem_stdlib_modules_full_path(),
         ],
         verbosity_level: LevelFilter::Warn,
+        move_named_address_values: move_prover::cli::named_addresses_for_options(
+            &diem_framework_named_addresses(),
+        ),
         run_abigen: true,
         abigen: abigen::AbigenOptions {
             output_directory: output_path.to_string_lossy().to_string(),
@@ -252,6 +257,9 @@ fn build_error_code_map(output_path: impl AsRef<Path>) {
     let options = move_prover::cli::Options {
         move_sources: crate::diem_stdlib_files(),
         move_deps: vec![],
+        move_named_address_values: move_prover::cli::named_addresses_for_options(
+            &diem_framework_named_addresses(),
+        ),
         verbosity_level: LevelFilter::Warn,
         run_errmapgen: true,
         errmapgen: errmapgen::ErrmapOptions {

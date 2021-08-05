@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use diem_framework::diem_framework_named_addresses;
 use diem_types::account_address::AccountAddress as DiemAddress;
 use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
@@ -43,6 +44,7 @@ impl<'a> MoveSourceCompiler<'a> {
     )> {
         let (files, comments_and_compiler_res) = MoveCompiler::new(targets, &self.deps)
             .set_pre_compiled_lib(self.pre_compiled_deps)
+            .set_named_address_values(diem_framework_named_addresses())
             .run::<PASS_COMPILATION>()?;
         match comments_and_compiler_res {
             Err(diags) => Ok((files, Err(diags))),
@@ -131,6 +133,7 @@ static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
         &diem_framework::diem_stdlib_files(),
         None,
         Flags::empty().set_sources_shadow_deps(false),
+        diem_framework_named_addresses(),
     )
     .unwrap();
     match program_res {

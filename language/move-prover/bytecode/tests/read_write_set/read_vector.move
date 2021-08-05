@@ -1,5 +1,4 @@
 // dep: ../../move-stdlib/modules/Vector.move
-// dep: ../../move-stdlib/modules/addresses.move
 
 module 0x2::ReadVector {
     use Std::Vector;

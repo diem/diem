@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::LevelFilter;
 use move_model::{
     model::{FunctionEnv, GlobalEnv, ModuleEnv, VerificationScope},
-    run_model_builder_with_options,
+    parse_addresses_from_options, run_model_builder_with_options,
 };
 use move_prover::{
     check_errors, cli::Options, create_and_process_bytecode, generate_boogie, verify_boogie,
@@ -127,7 +127,12 @@ fn run_benchmark(
     } else {
         Options::default()
     };
-    let env = run_model_builder_with_options(modules, dep_dirs, options.model_builder.clone())?;
+    let env = run_model_builder_with_options(
+        modules,
+        dep_dirs,
+        options.model_builder.clone(),
+        parse_addresses_from_options(options.move_named_address_values.clone())?,
+    )?;
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
 
     // Do not allow any benchmark to run longer than 60s. If this is exceeded it usually

@@ -20,6 +20,7 @@ bytecode = { path = "bytecode" }
 bytecode-interpreter = { path = "interpreter" }
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
+move-core-types = { path = "../move-core/types" }
 
 # external dependencies
 async-trait = "0.1.42"
