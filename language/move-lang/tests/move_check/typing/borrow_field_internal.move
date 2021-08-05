@@ -13,6 +13,7 @@ module M {
         (&X::s().f: &u64);
         let s = &X::s();
         (&s.f: &u64);
+        abort 0
     }
 }
 

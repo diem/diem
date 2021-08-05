@@ -6,7 +6,7 @@ use crate::{
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
     compiled_unit::CompiledUnit,
-    diagnostics::*,
+    diagnostics::{codes::Severity, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
     shared::{CompilationEnv, Flags},
@@ -62,7 +62,7 @@ enum PassResult {
     Typing(typing::ast::Program),
     HLIR(hlir::ast::Program),
     CFGIR(cfgir::ast::Program),
-    Compilation(Vec<CompiledUnit>),
+    Compilation(Vec<CompiledUnit>, /* warnings */ Diagnostics),
 }
 
 #[derive(Clone)]
@@ -180,7 +180,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn build(
         self,
-    ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Diagnostics>)> {
+    ) -> anyhow::Result<(
+        FilesSourceText,
+        Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics>,
+    )> {
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((
             files,
@@ -190,7 +193,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
         let (files, units_res) = self.build()?;
-        let units = unwrap_or_report_diagnostics(&files, units_res);
+        let (units, warnings) = unwrap_or_report_diagnostics(&files, units_res);
+        report_warnings(&files, warnings);
         Ok((files, units))
     }
 }
@@ -296,24 +300,24 @@ macro_rules! ast_stepped_compilers {
                     Ok(())
                 }
 
-                pub fn build(self) -> Result<Vec<CompiledUnit>, Diagnostics> {
+                pub fn build(self) -> Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics> {
                     let units = self.run::<PASS_COMPILATION>()?.into_compiled_units();
                     Ok(units)
                 }
 
-                pub fn check_and_report(self, files: FilesSourceText) -> FilesSourceText {
+                pub fn check_and_report(self, files: &FilesSourceText)  {
                     let errors_result = self.check();
                     unwrap_or_report_diagnostics(&files, errors_result);
-                    files
                 }
 
                 pub fn build_and_report(
                     self,
-                    files: FilesSourceText,
-                ) -> (FilesSourceText, Vec<CompiledUnit>) {
+                    files: &FilesSourceText,
+                ) -> Vec<CompiledUnit> {
                     let units_result = self.build();
-                    let units = unwrap_or_report_diagnostics(&files, units_result);
-                    (files, units)
+                    let (units, warnings) = unwrap_or_report_diagnostics(&files, units_result);
+                    report_warnings(&files, warnings);
+                    units
                 }
             }
         )*
@@ -336,14 +340,14 @@ ast_stepped_compilers!(
 );
 
 impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
-    pub fn into_compiled_units(self) -> Vec<CompiledUnit> {
+    pub fn into_compiled_units(self) -> (Vec<CompiledUnit>, Diagnostics) {
         let Self {
             compilation_env: _,
             pre_compiled_lib: _,
             program,
         } = self;
         match program {
-            Some(PassResult::Compilation(units)) => units,
+            Some(PassResult::Compilation(units, warnings)) => (units, warnings),
             _ => panic!(),
         }
     }
@@ -411,7 +415,7 @@ pub fn construct_pre_compiled_lib(
             assert!(cfgir.is_none());
             cfgir = Some(cprog.clone());
         }
-        PassResult::Compilation(units) => {
+        PassResult::Compilation(units, _final_diags) => {
             assert!(compiled.is_none());
             compiled = Some(units.clone())
         }
@@ -644,7 +648,7 @@ impl PassResult {
             PassResult::Typing(_) => PASS_TYPING,
             PassResult::HLIR(_) => PASS_HLIR,
             PassResult::CFGIR(_) => PASS_CFGIR,
-            PassResult::Compilation(_) => PASS_COMPILATION,
+            PassResult::Compilation(_, _) => PASS_COMPILATION,
         }
     }
 }
@@ -671,6 +675,7 @@ fn run(
             let prog = parser::merge_spec_modules::program(compilation_env, prog);
             let prog = unit_test::filter_test_members::program(compilation_env, prog);
             let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -681,6 +686,7 @@ fn run(
         }
         PassResult::Expansion(eprog) => {
             let nprog = naming::translate::program(compilation_env, pre_compiled_lib, eprog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -691,7 +697,7 @@ fn run(
         }
         PassResult::Naming(nprog) => {
             let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -702,6 +708,7 @@ fn run(
         }
         PassResult::Typing(tprog) => {
             let hprog = hlir::translate::program(compilation_env, pre_compiled_lib, tprog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -712,7 +719,7 @@ fn run(
         }
         PassResult::HLIR(hprog) => {
             let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -724,16 +731,17 @@ fn run(
         PassResult::CFGIR(cprog) => {
             let compiled_units =
                 to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
+            let warnings = compilation_env.take_final_warning_diags();
             assert!(until == PASS_COMPILATION);
             run(
                 compilation_env,
                 pre_compiled_lib,
-                PassResult::Compilation(compiled_units),
+                PassResult::Compilation(compiled_units, warnings),
                 PASS_COMPILATION,
                 result_check,
             )
         }
-        PassResult::Compilation(_) => unreachable!("ICE Pass::Compilation is >= all passes"),
+        PassResult::Compilation(_, _) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }
 }

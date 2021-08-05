@@ -6,7 +6,7 @@ script {
 // check: INVALID_MAIN_FUNCTION_SIGNATURE
 
 script {
-    fun t1(_s: signer, _s2: signer, u: u64) {
+    fun t1(_s: signer, _s2: signer, _u: u64) {
     }
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE

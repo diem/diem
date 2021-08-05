@@ -22,6 +22,12 @@ error[E05001]: ability constraint not satisfied
   │             │    The type '0x8675309::M::R' does not have the ability 'drop'
   │             'drop' constraint not satisifed
 
+warning[W09005]: dead or unreachable code
+  ┌─ tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:8:26
+  │
+8 │         Box<CupD<R>>{ f: abort 0 };
+  │                          ^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed.
+
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:9:9
   │

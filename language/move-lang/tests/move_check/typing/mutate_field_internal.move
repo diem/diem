@@ -13,6 +13,7 @@ module M {
         X::s().f = 0;
         let s = &mut X::s();
         s.f = 0;
+        abort 0
     }
 }
 

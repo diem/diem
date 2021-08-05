@@ -52,6 +52,19 @@ pub struct Diagnostics {
 //**************************************************************************************************
 
 pub fn report_diagnostics(files: &FilesSourceText, diags: Diagnostics) -> ! {
+    report_diagnostics_impl(files, diags);
+    std::process::exit(1)
+}
+
+pub fn report_warnings(files: &FilesSourceText, warnings: Diagnostics) {
+    if warnings.is_empty() {
+        return;
+    }
+    debug_assert!(warnings.max_severity().unwrap() == Severity::Warning);
+    report_diagnostics_impl(files, warnings)
+}
+
+fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics) {
     let color_choice = match read_env_var(COLOR_MODE_ENV_VAR).as_str() {
         "NONE" => ColorChoice::Never,
         "ANSI" => ColorChoice::AlwaysAnsi,
@@ -168,13 +181,12 @@ impl Diagnostics {
         }
     }
 
-    pub fn max_severity(&self) -> Severity {
+    pub fn max_severity(&self) -> Option<Severity> {
         debug_assert!(self.severity_count.values().all(|count| *count > 0));
         self.severity_count
             .iter()
             .max_by_key(|(sev, _count)| **sev)
             .map(|(sev, _count)| *sev)
-            .unwrap_or(Severity::MIN)
     }
 
     pub fn is_empty(&self) -> bool {

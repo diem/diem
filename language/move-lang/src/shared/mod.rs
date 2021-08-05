@@ -3,7 +3,7 @@
 
 use crate::{
     command_line as cli,
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::{codes::Severity, Diagnostic, Diagnostics},
 };
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
@@ -260,12 +260,24 @@ impl CompilationEnv {
         self.diags.len()
     }
 
-    pub fn check_diags(&mut self) -> Result<(), Diagnostics> {
-        if self.has_diags() {
-            Err(std::mem::take(&mut self.diags))
-        } else {
-            Ok(())
+    pub fn check_diags_at_or_above_severity(
+        &mut self,
+        threshold: Severity,
+    ) -> Result<(), Diagnostics> {
+        match self.diags.max_severity() {
+            Some(max) if max >= threshold => Err(std::mem::take(&mut self.diags)),
+            Some(_) | None => Ok(()),
         }
+    }
+
+    /// Should only be called after compilation is finished
+    pub fn take_final_warning_diags(&mut self) -> Diagnostics {
+        let final_diags = std::mem::take(&mut self.diags);
+        debug_assert!(final_diags
+            .max_severity()
+            .map(|s| s == Severity::Warning)
+            .unwrap_or(true));
+        final_diags
     }
 
     pub fn flags(&self) -> &Flags {

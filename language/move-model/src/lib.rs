@@ -216,7 +216,16 @@ pub fn run_model_builder_with_options_and_compilation_flags(
             add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
         }
-        Ok(compiler) => compiler.into_compiled_units(),
+        Ok(compiler) => {
+            let (units, warnings) = compiler.into_compiled_units();
+            if !warnings.is_empty() {
+                // TODO the remaining diagnostics are just warnings.
+                // It should be feasible to continue here
+                add_move_lang_diagnostics(&mut env, warnings);
+                return Ok(env);
+            }
+            units
+        }
     };
     // Check for bytecode verifier errors (there should not be any)
     let (verified_units, diags) = compiled_unit::verify_units(units);
