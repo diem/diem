@@ -131,8 +131,12 @@ impl<'env> Context<'env> {
         }
     }
 
-    pub fn fields(&self, struct_name: &StructName) -> &UniqueMap<Field, usize> {
-        self.structs.get(struct_name).unwrap()
+    pub fn fields(&self, struct_name: &StructName) -> Option<&UniqueMap<Field, usize>> {
+        let fields = self.structs.get(struct_name);
+        // if fields are none, the struct must be defined in another module,
+        // in that case, there should be errors
+        assert!(fields.is_some() || self.env.has_diags());
+        fields
     }
 
     fn counter_next(&mut self) -> usize {
@@ -720,7 +724,18 @@ fn assign_fields(
     tfields: Fields<(N::Type, T::LValue)>,
 ) -> Vec<(usize, Field, H::BaseType, T::LValue)> {
     let decl_fields = context.fields(s);
-    let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
+    let mut count = 0;
+    let mut decl_field = |f: &Field| -> usize {
+        match decl_fields {
+            Some(m) => *m.get(f).unwrap(),
+            None => {
+                // none can occur with errors in typing
+                let i = count;
+                count += 1;
+                i
+            }
+        }
+    };
     let mut tfields_vec = tfields
         .into_iter()
         .map(|(f, (_idx, (tbt, tfa)))| (decl_field(&f), f, base_type(context, tbt), tfa))
@@ -792,7 +807,7 @@ fn exp_<'env>(
     ) -> H::Exp {
         match (&e.exp.value, expected_type_opt.as_ref()) {
             (H::UnannotatedExp_::Unreachable, _) => e,
-            (_, Some(exty)) if needs_freeze(&e.ty, exty) != Freeze::NotNeeded => {
+            (_, Some(exty)) if needs_freeze(context, &e.ty, exty) != Freeze::NotNeeded => {
                 freeze(context, result, exty, e)
             }
             _ => e,
@@ -1136,7 +1151,18 @@ fn exp_impl(
             let bs = base_types(context, tbs);
 
             let decl_fields = context.fields(&s);
-            let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
+            let mut count = 0;
+            let mut decl_field = |f: &Field| -> usize {
+                match decl_fields {
+                    Some(m) => *m.get(f).unwrap(),
+                    None => {
+                        // none can occur with errors in typing
+                        let i = count;
+                        count += 1;
+                        i
+                    }
+                }
+            };
 
             let mut texp_fields: Vec<(usize, Field, usize, N::Type, T::Exp)> = tfields
                 .into_iter()
@@ -1168,8 +1194,14 @@ fn exp_impl(
                     .map(|(e, (f, bt))| (f, bt, e))
                     .collect()
             } else {
-                let mut fields = (0..decl_fields.len()).map(|_| None).collect::<Vec<_>>();
+                let num_fields = decl_fields.as_ref().map(|m| m.len()).unwrap_or(0);
+                let mut fields = (0..num_fields).map(|_| None).collect::<Vec<_>>();
                 for (decl_idx, f, _exp_idx, bt, tf) in texp_fields {
+                    // Might have too many arguments, there will be an error from typing
+                    if decl_idx > fields.len() {
+                        debug_assert!(context.env.has_diags());
+                        break;
+                    }
                     let bt = base_type(context, bt);
                     let t = H::Type_::base(bt.clone());
                     let ef = exp_(context, result, Some(&t), tf);
@@ -1177,7 +1209,15 @@ fn exp_impl(
                     let move_tmp = bind_exp(context, result, ef);
                     fields[decl_idx] = Some((f, bt, move_tmp))
                 }
-                fields.into_iter().map(|o| o.unwrap()).collect()
+                // Might have too few arguments, there will be an error from typing if so
+                fields
+                    .into_iter()
+                    .filter_map(|o| {
+                        // if o is None, context should have errors
+                        debug_assert!(o.is_some() || context.env.has_diags());
+                        o
+                    })
+                    .collect()
             };
             HE::Pack(s, bs, fields)
         }
@@ -1452,7 +1492,7 @@ enum Freeze {
     Sub(Vec<bool>),
 }
 
-fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze {
+fn needs_freeze(context: &Context, sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze {
     use H::Type_ as T;
     match (actual, expected) {
         (T::Unit, T::Unit) => Freeze::NotNeeded,
@@ -1477,8 +1517,9 @@ fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze 
                 Freeze::NotNeeded
             }
         }
-        (actual, expected) => {
-            unreachable!("ICE type checking failed, {:#?} !~ {:#?}", actual, expected)
+        (_actual, _expected) => {
+            assert!(context.env.has_diags());
+            Freeze::NotNeeded
         }
     }
 }
@@ -1491,7 +1532,7 @@ fn needs_freeze_single(sp!(_, actual): &H::SingleType, sp!(_, expected): &H::Sin
 fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e: H::Exp) -> H::Exp {
     use H::{Type_ as T, UnannotatedExp_ as E};
 
-    match needs_freeze(&e.ty, expected_type) {
+    match needs_freeze(context, &e.ty, expected_type) {
         Freeze::NotNeeded => e,
         Freeze::Point => freeze_point(e),
 

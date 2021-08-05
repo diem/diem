@@ -5,7 +5,7 @@ module M {
     struct Box<T> has copy { f: T }
     struct Pair<T1, T2> has copy { f1: T1, f2: T2}
 
-    fun ignore<T>(x: T) {
+    fun ignore<T>(_x: T) {
         abort 0
     }
 
@@ -33,6 +33,8 @@ module M {
         ignore(*x);
         let x = &Pair<R, S> { f1: R{}, f2: S{} };
         ignore(*x);
+
+        abort 0
     }
 }
 }

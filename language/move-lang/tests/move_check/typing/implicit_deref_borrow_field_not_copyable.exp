@@ -1,8 +1,8 @@
 error[E05002]: type not implicitly copyable
   ┌─ tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:7:10
   │
-4 │     struct B { s: S, r: R }
-  │                   - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
+4 │     struct B has drop { s: S, r: R }
+  │                            - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
   ·
 7 │         (b.s: S);
   │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
@@ -10,8 +10,8 @@ error[E05002]: type not implicitly copyable
 error[E05002]: type not implicitly copyable
   ┌─ tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:8:15
   │
-4 │     struct B { s: S, r: R }
-  │                         - The type '0x8675309::M::R' is not implicitly copyable. Implicit copies are limited to simple primitive values
+4 │     struct B has drop { s: S, r: R }
+  │                                  - The type '0x8675309::M::R' is not implicitly copyable. Implicit copies are limited to simple primitive values
   ·
 8 │         R{} = b.r;
   │               ^^^ Invalid implicit copy of field 'r'. Try adding '*&' to the front of the field access
@@ -19,8 +19,8 @@ error[E05002]: type not implicitly copyable
 error[E05002]: type not implicitly copyable
    ┌─ tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:10:10
    │
- 4 │     struct B { s: S, r: R }
-   │                   - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
+ 4 │     struct B has drop { s: S, r: R }
+   │                            - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
    ·
 10 │         (bref.s: S);
    │          ^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
@@ -28,8 +28,8 @@ error[E05002]: type not implicitly copyable
 error[E05002]: type not implicitly copyable
    ┌─ tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:11:15
    │
- 4 │     struct B { s: S, r: R }
-   │                         - The type '0x8675309::M::R' is not implicitly copyable. Implicit copies are limited to simple primitive values
+ 4 │     struct B has drop { s: S, r: R }
+   │                                  - The type '0x8675309::M::R' is not implicitly copyable. Implicit copies are limited to simple primitive values
    ·
 11 │         R{} = bref.r;
    │               ^^^^^^ Invalid implicit copy of field 'r'. Try adding '*&' to the front of the field access

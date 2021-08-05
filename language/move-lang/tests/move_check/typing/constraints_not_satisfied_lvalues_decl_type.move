@@ -3,7 +3,7 @@ module 0x8675309::M {
     struct R {}
 
     fun foo() {
-        let x: CupC<R>;
+        let _x: CupC<R>;
     }
 
 }

@@ -46,7 +46,14 @@ impl<'a> MoveSourceCompiler<'a> {
             .run::<PASS_COMPILATION>()?;
         match comments_and_compiler_res {
             Err(diags) => Ok((files, Err(diags))),
-            Ok((_comments, move_compiler)) => Ok((files, Ok(move_compiler.into_compiled_units()))),
+            Ok((_comments, move_compiler)) => {
+                let (units, warnings) = move_compiler.into_compiled_units();
+                if !warnings.is_empty() {
+                    Ok((files, Err(warnings)))
+                } else {
+                    Ok((files, Ok(units)))
+                }
+            }
         }
     }
 }

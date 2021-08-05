@@ -6,7 +6,7 @@ module M {
     struct Pair<T1, T2> has key, store { f1: T1, f2: T2 }
     struct K has key {}
 
-    fun ignore<T>(x: T) {
+    fun ignore<T>(_x: T) {
         abort 0
     }
 

@@ -7,8 +7,8 @@ module 0x8675309::M {
         ignore((abort 0: CupC<R>));
     }
 
-    fun ignore<T>(x: T) {
-
+    fun ignore<T>(_x: T) {
+        abort 0
     }
 
 }

@@ -1,71 +1,71 @@
 error[E05001]: ability constraint not satisfied
-  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:29
+  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:30
   │
 3 │     struct CupC<T: copy> { f: T }
   │                    ---- 'copy' constraint declared here
   ·
-7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-  │                       -     ^^^^^^^
-  │                       │     │    │
-  │                       │     │    The type 'T' does not have the ability 'copy'
-  │                       │     'copy' constraint not satisifed
+7 │     fun no_constraint<T>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
+  │                       -      ^^^^^^^
+  │                       │      │    │
+  │                       │      │    The type 'T' does not have the ability 'copy'
+  │                       │      'copy' constraint not satisifed
   │                       To satisfy the constraint, the 'copy' ability would need to be added here
 
 error[E05001]: ability constraint not satisfied
-  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:41
+  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:43
   │
 2 │     struct CupR<T: key> { f: T }
   │                    --- 'key' constraint declared here
   ·
-7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-  │                       -                 ^^^^^^^
-  │                       │                 │    │
-  │                       │                 │    The type 'T' does not have the ability 'key'
-  │                       │                 'key' constraint not satisifed
+7 │     fun no_constraint<T>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
+  │                       -                   ^^^^^^^
+  │                       │                   │    │
+  │                       │                   │    The type 'T' does not have the ability 'key'
+  │                       │                   'key' constraint not satisifed
   │                       To satisfy the constraint, the 'key' ability would need to be added here
 
 error[E05001]: ability constraint not satisfied
-  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:9:31
+  ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:9:32
   │
 3 │     struct CupC<T: copy> { f: T }
   │                    ---- 'copy' constraint declared here
   ·
-9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
-  │                    -          ^^^^^^^
-  │                    │          │    │
-  │                    │          │    The type 'T' does not have the ability 'copy'
-  │                    │          'copy' constraint not satisifed
+9 │     fun t_resource<T: key>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
+  │                    -           ^^^^^^^
+  │                    │           │    │
+  │                    │           │    The type 'T' does not have the ability 'copy'
+  │                    │           'copy' constraint not satisifed
   │                    To satisfy the constraint, the 'copy' ability would need to be added here
 
 error[E05001]: ability constraint not satisfied
-   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:11:44
+   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:11:46
    │
  2 │     struct CupR<T: key> { f: T }
    │                    --- 'key' constraint declared here
    ·
-11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
-   │                    -                       ^^^^^^^
-   │                    │                       │    │
-   │                    │                       │    The type 'T' does not have the ability 'key'
-   │                    │                       'key' constraint not satisifed
+11 │     fun t_copyable<T: copy>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
+   │                    -                         ^^^^^^^
+   │                    │                         │    │
+   │                    │                         │    The type 'T' does not have the ability 'key'
+   │                    │                         'key' constraint not satisifed
    │                    To satisfy the constraint, the 'key' ability would need to be added here
 
 error[E05001]: ability constraint not satisfied
-   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:13:14
+   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:13:15
    │
  3 │     struct CupC<T: copy> { f: T }
    │                    ---- 'copy' constraint declared here
  4 │     struct R has key {}
    │            - To satisfy the constraint, the 'copy' ability would need to be added here
    ·
-13 │     fun r(c: CupC<R>, r: CupR<R>) {}
-   │              ^^^^^^^
-   │              │    │
-   │              │    The type '0x8675309::M::R' does not have the ability 'copy'
-   │              'copy' constraint not satisifed
+13 │     fun r(_c: CupC<R>, _r: CupR<R>) { abort 0 }
+   │               ^^^^^^^
+   │               │    │
+   │               │    The type '0x8675309::M::R' does not have the ability 'copy'
+   │               'copy' constraint not satisifed
 
 error[E05001]: ability constraint not satisfied
-   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:15:26
+   ┌─ tests/move_check/typing/constraints_not_satisfied_all_cases.move:15:28
    │
  2 │     struct CupR<T: key> { f: T }
    │                    --- 'key' constraint declared here
@@ -73,9 +73,9 @@ error[E05001]: ability constraint not satisfied
  5 │     struct C has copy {}
    │            - To satisfy the constraint, the 'key' ability would need to be added here
    ·
-15 │     fun c(c: CupC<C>, r: CupR<C>) {}
-   │                          ^^^^^^^
-   │                          │    │
-   │                          │    The type '0x8675309::M::C' does not have the ability 'key'
-   │                          'key' constraint not satisifed
+15 │     fun c(_c: CupC<C>, _r: CupR<C>) { abort 0 }
+   │                            ^^^^^^^
+   │                            │    │
+   │                            │    The type '0x8675309::M::C' does not have the ability 'key'
+   │                            'key' constraint not satisifed
 

@@ -19,6 +19,19 @@ error[E05001]: ability constraint not satisfied
    │         │   The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
    │         Cannot ignore values without the 'drop' ability. The value must be used
 
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/typing/phantom_param_op_abilities_invalid.move:20:51
+   │  
+20 │       fun f3(_x: HasDrop<NoAbilities, NoAbilities>) {
+   │              --  ---------------------------------
+   │              │   │       │
+   │              │   │       The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' can have the ability 'drop' but the type argument '0x42::M::NoAbilities' does not have the required ability 'drop'
+   │              │   The type '0x42::M::HasDrop<0x42::M::NoAbilities, 0x42::M::NoAbilities>' does not have the ability 'drop'
+   │              The parameter '_x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+   │ ╭───────────────────────────────────────────────────^
+21 │ │     }
+   │ ╰─────^ Invalid return
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/phantom_param_op_abilities_invalid.move:25:10
    │

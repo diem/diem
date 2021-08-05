@@ -12,15 +12,15 @@ module 0x8675309::M {
         abort 0
     }
 
-    fun both<R: key, C: copy>(r: R, c: C) {
+    fun both<R: key, C: copy>(_r: R, _c: C) {
         abort 0
     }
 
-    fun cpy<C: copy>(c: C) {
+    fun cpy<C: copy>(_c: C) {
         abort 0
     }
 
-    fun rsrc<R: key>(r: R) {
+    fun rsrc<R: key>(_r: R) {
         abort 0
     }
 

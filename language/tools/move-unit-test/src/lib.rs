@@ -7,7 +7,8 @@ pub mod test_runner;
 use crate::test_runner::TestRunner;
 use move_core_types::language_storage::ModuleId;
 use move_lang::{
-    self, diagnostics,
+    self,
+    diagnostics::{self, codes::Severity},
     unit_test::{self, TestPlan},
     Compiler, Flags, PASS_CFGIR,
 };
@@ -111,13 +112,15 @@ impl UnitTestingConfig {
         let compilation_env = compiler.compilation_env();
         let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
 
-        if let Err(diags) = compilation_env.check_diags() {
+        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
             diagnostics::report_diagnostics(&files, diags);
         }
 
         let compilation_result = compiler.at_cfgir(cfgir).build();
 
-        let units = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+        let (units, warnings) =
+            diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+        diagnostics::report_warnings(&files, warnings);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
     }
 

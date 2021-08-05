@@ -1,7 +1,7 @@
 module 0x8675309::M {
-    struct R {}
+    struct R has drop {}
     struct S has copy, drop {}
-    struct B { s: S, r: R }
+    struct B has drop { s: S, r: R }
 
     fun t1(b: B, bref: &B) {
         (b.s: S);

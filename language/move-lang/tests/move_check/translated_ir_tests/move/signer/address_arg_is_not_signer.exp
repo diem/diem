@@ -27,9 +27,9 @@ error[E04016]: too few arguments
 error[E04011]: invalid script signature
    ┌─ tests/move_check/translated_ir_tests/move/signer/address_arg_is_not_signer.move:18:9
    │
-18 │     fun t2(s: signer, s2: &signer) {
-   │         ^^                ------- Found: '&signer'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
-   │         │                  
+18 │     fun t2(_s: signer, s2: &signer) {
+   │         ^^                 ------- Found: '&signer'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
+   │         │                   
    │         Invalid parameter for script function 't2'
 
 error[E04016]: too few arguments

@@ -415,7 +415,12 @@ fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
                 move_lang::diagnostics::report_diagnostics_to_color_buffer(&files, diags);
             bail!(String::from_utf8(diag_buffer).unwrap());
         }
-        Ok(mut units) => {
+        Ok((_, warnings)) if !warnings.is_empty() => {
+            let diag_buffer =
+                move_lang::diagnostics::report_diagnostics_to_color_buffer(&files, warnings);
+            bail!(String::from_utf8(diag_buffer).unwrap());
+        }
+        Ok((mut units, _)) => {
             let len = units.len();
             if len != 1 {
                 bail!("Invalid input. Expected 1 compiled unit but got {}", len)
