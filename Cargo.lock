@@ -3340,6 +3340,8 @@ dependencies = [
 name = "forge-cli"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
+ "compatibility-test",
  "diem-sdk",
  "diem-workspace-hack",
  "forge",

@@ -20,6 +20,7 @@ pub struct K8sNode {
     pub(crate) ip: String,
     pub(crate) port: u32,
     pub(crate) runtime: Runtime,
+    pub version: Version,
 }
 
 impl K8sNode {
@@ -56,7 +57,7 @@ impl Node for K8sNode {
     }
 
     fn version(&self) -> Version {
-        todo!()
+        self.version.clone()
     }
 
     fn json_rpc_endpoint(&self) -> Url {
