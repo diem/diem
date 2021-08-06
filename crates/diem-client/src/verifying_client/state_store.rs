@@ -7,10 +7,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-// TODO(philiphayes): how to handle errors in a way that users can implement their
-// own state store backends? do we need to make crate::Error constructors pub?
-// add a new error type?
-
 /// A `StateStore` provides persistent, durable storage for
 /// [`VerifyingClient`](crate::VerifyingClient)s' latest [`TrustedState`].
 ///

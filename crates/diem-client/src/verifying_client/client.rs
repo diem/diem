@@ -22,7 +22,6 @@ use diem_types::{
 use std::{fmt::Debug, time::Duration};
 
 // TODO(philiphayes): figure out retry strategy
-// TODO(philiphayes): real on-disk waypoint persistence
 // TODO(philiphayes): fill out rest of the methods
 // TODO(philiphayes): all clients should validate chain id (allow users to trust-on-first-use or pre-configure)
 // TODO(philiphayes): we could abstract the async client so VerifyingClient takes a dyn Trait?
@@ -64,10 +63,9 @@ impl<S: StateStore> VerifyingClient<S> {
     // control the retries out here. For example, during sync, if we get a stale
     // state proof the retry logic should include that and not just fail immediately.
     pub fn new(inner: Client, state_store: S) -> Result<Self> {
-        let maybe_latest_version = state_store.latest_state_version().map_err(Error::unknown)?;
-        let _latest_version = maybe_latest_version
-            .ok_or_else(|| Error::unknown("StateStore does not contain a trusted state!"))?;
-        Ok(Self { inner, state_store })
+        let this = Self { inner, state_store };
+        this.version()?; // state store must be initialized
+        Ok(this)
     }
 
     pub fn new_with_state(
@@ -82,11 +80,10 @@ impl<S: StateStore> VerifyingClient<S> {
 
     /// Get a snapshot of our current trusted ledger [`Version`].
     pub fn version(&self) -> Result<Version> {
-        let maybe_latest_version = self
-            .state_store
+        self.state_store
             .latest_state_version()
-            .map_err(Error::unknown)?;
-        maybe_latest_version.ok_or_else(|| Error::unknown(""))
+            .map_err(Error::state_store)?
+            .ok_or_else(|| Error::unknown("state store is empty; probably not initialized yet"))
     }
 
     /// Get a snapshot of our current trusted [`Waypoint`].
@@ -98,8 +95,8 @@ impl<S: StateStore> VerifyingClient<S> {
     pub fn trusted_state(&self) -> Result<TrustedState> {
         self.state_store
             .latest_state()
-            .map_err(Error::unknown)?
-            .ok_or_else(|| Error::unknown(""))
+            .map_err(Error::state_store)?
+            .ok_or_else(|| Error::unknown("state store is empty; probably not initialized yet"))
     }
 
     pub async fn wait_for_signed_transaction(
@@ -199,7 +196,9 @@ impl<S: StateStore> VerifyingClient<S> {
     /// in which case we just don't persist this change.
     pub fn ratchet_state(&self, new_state: Option<&TrustedState>) -> Result<()> {
         if let Some(new_state) = new_state {
-            self.state_store.store(new_state).map_err(Error::unknown)?;
+            self.state_store
+                .store(new_state)
+                .map_err(Error::state_store)?;
         }
         Ok(())
     }
