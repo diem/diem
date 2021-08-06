@@ -10,12 +10,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
 diem-sdk = { path = "../../sdk" }
 forge = { path = "../forge" }
 itertools = "0.10.0"
 rand_core = "0.6.2"
 structopt = "0.3.21"
 tokio = { version = "1.8.1", features = ["full"] }
+compatibility-test = { path = "../compatibility-test" }
 
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 

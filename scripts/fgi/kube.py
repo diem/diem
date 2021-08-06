@@ -58,7 +58,7 @@ def create_forge_job(context, user, tag, timeout_secs, forge_envs, forge_args):
     cmd = template["spec"]["template"]["spec"]["containers"][0]["command"][2]
     template["spec"]["template"]["spec"]["containers"][0]["command"][2] = cmd.replace(
         "tail -f /dev/null",
-        f"timeout {timeout_secs} forge {' '.join(forge_args)}".strip(),
+        f"timeout {timeout_secs} forge --image-tag {tag} {' '.join(forge_args)}".strip(),
     )
     # additional environment variables
     for env_var in forge_envs:

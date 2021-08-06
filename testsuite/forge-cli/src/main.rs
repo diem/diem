@@ -1,17 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use compatibility_test::{generate_traffic, SimpleValidatorUpgrade};
 use diem_sdk::{
     client::{BlockingClient, MethodRequest},
     move_types::account_address::AccountAddress,
     transaction_builder::Currency,
 };
 use forge::{forge_main, ForgeConfig, Options, Result, *};
-use itertools::Itertools;
-use rand_core::SeedableRng;
-use std::time::Duration;
+use std::{num::NonZeroUsize, time::Duration};
 use structopt::StructOpt;
-use tokio::runtime::Runtime;
 
 #[derive(StructOpt, Debug)]
 #[allow(dead_code)]
@@ -46,6 +44,18 @@ struct Args {
         default_value = "testnet-internal"
     )]
     helm_repo: String,
+    #[structopt(
+        long,
+        help = "The image tag currently is used for validators",
+        default_value = "devnet"
+    )]
+    image_tag: String,
+    #[structopt(
+        long,
+        help = "Image tag for validator software to do backward compatibility test",
+        default_value = "devnet"
+    )]
+    base_image_tag: String,
 }
 
 #[derive(StructOpt, Debug)]
@@ -57,7 +67,7 @@ enum OperatorCommand {
 #[derive(StructOpt, Debug)]
 struct SetValidator {
     validator_name: String,
-    #[structopt(long, help = "The image tag used for validators")]
+    #[structopt(long, help = "Override the image tag used for upgrade validators")]
     image_tag: String,
 }
 
@@ -118,7 +128,7 @@ fn main() -> Result<()> {
     } else {
         forge_main(
             k8s_test_suite(),
-            K8sFactory::new(args.helm_repo).unwrap(),
+            K8sFactory::new(args.helm_repo, args.image_tag, args.base_image_tag).unwrap(),
             &args.options,
         )
     }
@@ -133,9 +143,10 @@ fn local_test_suite() -> ForgeConfig<'static> {
 
 fn k8s_test_suite() -> ForgeConfig<'static> {
     ForgeConfig::default()
+        .with_initial_validator_count(NonZeroUsize::new(30).unwrap())
         .with_public_usage_tests(&[&FundAccount, &TransferCoins])
         .with_admin_tests(&[&GetMetadata])
-        .with_network_tests(&[&EmitTransaction])
+        .with_network_tests(&[&EmitTransaction, &SimpleValidatorUpgrade])
 }
 
 //TODO Make public test later
@@ -302,18 +313,12 @@ impl Test for EmitTransaction {
 impl NetworkTest for EmitTransaction {
     fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
         let duration = Duration::from_secs(10);
-        let rng = SeedableRng::from_rng(ctx.core().rng()).unwrap();
-        let validator_clients = ctx
+        let all_validators = ctx
             .swarm()
             .validators()
-            .into_iter()
-            .map(|n| n.async_json_rpc_client())
-            .collect_vec();
-        let mut emitter = TxnEmitter::new(ctx.swarm().chain_info(), rng);
-        let rt = Runtime::new().unwrap();
-        let stats = rt
-            .block_on(emitter.emit_txn_for(duration, EmitJobRequest::default(validator_clients)))
-            .unwrap();
+            .map(|v| v.peer_id())
+            .collect::<Vec<_>>();
+        let stats = generate_traffic(ctx, &all_validators, duration).unwrap();
         ctx.report
             .report_txn_stats(self.name().to_string(), stats, duration);
         ctx.report.print_report();
