@@ -1,10 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::{Error, Result},
-    verifying_client::state_store::{StateStore, WriteThroughCache},
-};
+use crate::verifying_client::state_store::{StateStore, WriteThroughCache};
 use diem_crypto::hash::{CryptoHasher, HashValue};
 use diem_types::{
     transaction::Version,
@@ -61,7 +58,7 @@ struct StateFile {
 ////////////////////
 
 impl FileStateStore {
-    pub fn new(dir: &Path) -> Result<Self> {
+    pub fn new(dir: &Path) -> io::Result<Self> {
         let store = ACIDStateFiles::new(dir)?;
         let store_cache = WriteThroughCache::new(store)?;
         Ok(Self(Arc::new(store_cache)))
@@ -69,13 +66,15 @@ impl FileStateStore {
 }
 
 impl StateStore for FileStateStore {
-    fn latest_state(&self) -> Result<Option<TrustedState>> {
+    type Error = io::Error;
+
+    fn latest_state(&self) -> io::Result<Option<TrustedState>> {
         self.0.latest_state()
     }
-    fn latest_state_version(&self) -> Result<Option<u64>> {
+    fn latest_state_version(&self) -> io::Result<Option<u64>> {
         self.0.latest_state_version()
     }
-    fn store(&self, new_state: &TrustedState) -> Result<()> {
+    fn store(&self, new_state: &TrustedState) -> io::Result<()> {
         self.0.store(new_state)
     }
 }
@@ -85,20 +84,22 @@ impl StateStore for FileStateStore {
 ////////////////////
 
 impl ACIDStateFiles {
-    fn new(dir: &Path) -> Result<Self> {
+    fn new(dir: &Path) -> io::Result<Self> {
         let state_file0 = StateFile::open(&dir.join("trusted_state.0"))?;
         let state_file1 = StateFile::open(&dir.join("trusted_state.1"))?;
         let state_files = [state_file0, state_file1];
 
         // make sure any newly created files are synced
-        fsync_dir(dir).map_err(Error::unknown)?;
+        fsync_dir(dir)?;
 
         Ok(Self(Mutex::new(state_files)))
     }
 }
 
 impl StateStore for ACIDStateFiles {
-    fn latest_state(&self) -> Result<Option<TrustedState>> {
+    type Error = io::Error;
+
+    fn latest_state(&self) -> io::Result<Option<TrustedState>> {
         let mut state_files = self.0.lock().unwrap();
 
         let state0 = state_files[0].read()?;
@@ -108,7 +109,7 @@ impl StateStore for ACIDStateFiles {
         }))
     }
 
-    fn store(&self, new_state: &TrustedState) -> Result<()> {
+    fn store(&self, new_state: &TrustedState) -> io::Result<()> {
         let mut state_files = self.0.lock().unwrap();
 
         let newest_version = state_files
@@ -141,18 +142,18 @@ impl StateStore for ACIDStateFiles {
 // 2. upgrade format:
 //    ==> add a new TrustedState enum variant to modify.
 
-fn decode_and_validate_checksum(mut buf: Vec<u8>) -> Result<(Vec<u8>, HashValue)> {
+fn decode_and_validate_checksum(mut buf: Vec<u8>) -> io::Result<(Vec<u8>, HashValue)> {
     let offset = buf
         .len()
         .checked_sub(HashValue::LENGTH)
-        .ok_or_else(|| Error::decode("state file: empty or too small"))?;
+        .ok_or_else(|| invalid_data("state file: empty or too small"))?;
     let file_hash = HashValue::from_slice(&buf[offset..]).expect("cannot fail");
 
     buf.truncate(offset);
     let computed_hash = TrustedStateHasher::hash_all(&buf);
 
     if file_hash != computed_hash {
-        Err(Error::decode(format!(
+        Err(invalid_data(format!(
             "state file: corrupt: file checksum ({:x}) != computed checksum ({:x})",
             file_hash, computed_hash
         )))
@@ -161,14 +162,14 @@ fn decode_and_validate_checksum(mut buf: Vec<u8>) -> Result<(Vec<u8>, HashValue)
     }
 }
 
-fn decode_state(buf: Vec<u8>) -> Result<TrustedState> {
+fn decode_state(buf: Vec<u8>) -> io::Result<TrustedState> {
     let (buf, _) = decode_and_validate_checksum(buf)?;
-    let state = bcs::from_bytes(&buf).map_err(Error::decode)?;
+    let state = bcs::from_bytes(&buf).map_err(invalid_data)?;
     Ok(state)
 }
 
-fn encode_state(state: &TrustedState) -> Result<Vec<u8>> {
-    let mut buf = bcs::to_bytes(state).map_err(Error::encode)?;
+fn encode_state(state: &TrustedState) -> io::Result<Vec<u8>> {
+    let mut buf = bcs::to_bytes(state).map_err(invalid_input)?;
     let hash = TrustedStateHasher::hash_all(&buf);
     buf.extend_from_slice(hash.as_ref());
     Ok(buf)
@@ -194,13 +195,12 @@ fn write_file(file: &mut File, buf: &[u8]) -> io::Result<()> {
 }
 
 impl StateFile {
-    fn open(path: &Path) -> Result<Self> {
+    fn open(path: &Path) -> io::Result<Self> {
         let file = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(path)
-            .map_err(Error::unknown)?;
+            .open(path)?;
         Ok(Self::new(file))
     }
 
@@ -212,8 +212,8 @@ impl StateFile {
     }
 
     // only returns an error on io::Error, otherwise assumes the file is just corrupt.
-    fn read(&mut self) -> Result<Option<TrustedState>> {
-        let buf = read_file(&mut self.file).map_err(Error::unknown)?;
+    fn read(&mut self) -> io::Result<Option<TrustedState>> {
+        let buf = read_file(&mut self.file)?;
         let maybe_state = decode_state(buf)
             .map_err(|_err| () /* TODO: how to log in client sdk? */)
             .ok();
@@ -221,9 +221,9 @@ impl StateFile {
         Ok(maybe_state)
     }
 
-    fn write(&mut self, new_state: &TrustedState) -> Result<()> {
+    fn write(&mut self, new_state: &TrustedState) -> io::Result<()> {
         let buf = encode_state(new_state)?;
-        write_file(&mut self.file, &buf).map_err(Error::unknown)?;
+        write_file(&mut self.file, &buf)?;
         self.version = Some(new_state.version());
         Ok(())
     }
@@ -232,6 +232,16 @@ impl StateFile {
 ///////////
 // Utils //
 ///////////
+
+type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
+
+fn invalid_input(err: impl Into<BoxError>) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, err)
+}
+
+fn invalid_data(err: impl Into<BoxError>) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, err)
+}
 
 /// fsync a directory. In certain file systems, this is required to persistently create a file.
 // Note: shamelessly copied from tantivy-search:

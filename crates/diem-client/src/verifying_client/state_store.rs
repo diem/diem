@@ -1,9 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Result;
 use diem_types::trusted_state::TrustedState;
-use std::sync::{Arc, RwLock};
+use std::{
+    convert::Infallible,
+    sync::{Arc, RwLock},
+};
 
 // TODO(philiphayes): how to handle errors in a way that users can implement their
 // own state store backends? do we need to make crate::Error constructors pub?
@@ -67,16 +69,18 @@ use std::sync::{Arc, RwLock};
 /// SELECT id, version, state_blob FROM trusted_state UNION SELECT 0, ?1, ?2 ORDER BY version DESC LIMIT 1
 /// ```
 pub trait StateStore {
+    type Error: std::error::Error + Send + Sync + 'static;
+
     /// Get the latest durable, committed state. Returns `None` if there is no
     /// state yet in the underlying store.
-    fn latest_state(&self) -> Result<Option<TrustedState>>;
+    fn latest_state(&self) -> Result<Option<TrustedState>, Self::Error>;
 
     /// Get the version of the latest durable, committed state. Returns `None` if
     /// there is no state yet in the underlying store.
     ///
     /// Note: `StateStore` provides a default impl using `Self::latest_state`.
     /// Implementors may want override this method if they can do it more efficiently.
-    fn latest_state_version(&self) -> Result<Option<u64>> {
+    fn latest_state_version(&self) -> Result<Option<u64>, Self::Error> {
         Ok(self.latest_state()?.map(|s| s.version()))
     }
 
@@ -87,7 +91,7 @@ pub trait StateStore {
     ///
     /// When this call returns, clients will assume that `new_state` or some newer
     /// state is durable.
-    fn store(&self, new_state: &TrustedState) -> Result<()>;
+    fn store(&self, new_state: &TrustedState) -> Result<(), Self::Error>;
 }
 
 /// An in-memory `StateStore`. Used for testing.
@@ -115,7 +119,7 @@ pub struct WriteThroughCache<S> {
 ///////////////////////
 
 impl<S: StateStore> WriteThroughCache<S> {
-    pub fn new(state_store: S) -> Result<Self> {
+    pub fn new(state_store: S) -> Result<Self, S::Error> {
         // Read the latest state from the underlying store to initialize the cache.
         let latest_state = state_store.latest_state()?;
 
@@ -140,11 +144,13 @@ impl<S: StateStore> WriteThroughCache<S> {
 }
 
 impl<S: StateStore> StateStore for WriteThroughCache<S> {
-    fn latest_state(&self) -> Result<Option<TrustedState>> {
+    type Error = S::Error;
+
+    fn latest_state(&self) -> Result<Option<TrustedState>, Self::Error> {
         Ok(self.durable_state_cache.read().unwrap().clone())
     }
 
-    fn latest_state_version(&self) -> Result<Option<u64>> {
+    fn latest_state_version(&self) -> Result<Option<u64>, Self::Error> {
         // avoids a clone while holding the lock :)
         Ok(self
             .durable_state_cache
@@ -154,7 +160,7 @@ impl<S: StateStore> StateStore for WriteThroughCache<S> {
             .map(|s| s.version()))
     }
 
-    fn store(&self, new_state: &TrustedState) -> Result<()> {
+    fn store(&self, new_state: &TrustedState) -> Result<(), Self::Error> {
         // we already have a durable state that's newer than this version; we can
         // exit early here since we don't need to do anything.
         if Some(new_state.version()) <= self.latest_state_version()? {
@@ -185,22 +191,26 @@ impl InMemoryStateStore {
 }
 
 impl StateStore for InMemoryStateStore {
-    fn latest_state(&self) -> Result<Option<TrustedState>> {
+    type Error = Infallible;
+
+    fn latest_state(&self) -> Result<Option<TrustedState>, Self::Error> {
         self.0.latest_state()
     }
-    fn latest_state_version(&self) -> Result<Option<u64>> {
+    fn latest_state_version(&self) -> Result<Option<u64>, Self::Error> {
         self.0.latest_state_version()
     }
-    fn store(&self, new_state: &TrustedState) -> Result<()> {
+    fn store(&self, new_state: &TrustedState) -> Result<(), Self::Error> {
         self.0.store(new_state)
     }
 }
 
 impl StateStore for NoopStateStore {
-    fn latest_state(&self) -> Result<Option<TrustedState>> {
+    type Error = Infallible;
+
+    fn latest_state(&self) -> Result<Option<TrustedState>, Self::Error> {
         Ok(None)
     }
-    fn store(&self, _new_state: &TrustedState) -> Result<()> {
+    fn store(&self, _new_state: &TrustedState) -> Result<(), Self::Error> {
         Ok(())
     }
 }
