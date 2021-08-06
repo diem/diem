@@ -14,10 +14,10 @@ bcs = "0.1.2"
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
+move-core-types = { path = "../../move-core/types" }
 diem-resource-viewer = { path = "../diem-resource-viewer"}
 vm-genesis = { path = "../vm-genesis" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-test-utils = { path = "../../move-vm/test-utils" }
 
 structopt = "0.3.21"

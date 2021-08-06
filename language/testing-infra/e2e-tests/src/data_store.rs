@@ -17,8 +17,8 @@ use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    resolver::{ModuleResolver, ResourceResolver},
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -113,16 +113,22 @@ impl StateView for FakeDataStore {
     }
 }
 
-impl MoveStorage for FakeDataStore {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for FakeDataStore {
+    type Error = VMError;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         RemoteStorage::new(self).get_module(module_id)
     }
+}
+
+impl ResourceResolver for FakeDataStore {
+    type Error = VMError;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         RemoteStorage::new(self).get_resource(address, tag)
     }
 }

@@ -12,15 +12,16 @@ use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
+    resolver::MoveResolver,
     transaction_argument::convert_txn_args,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::GasStatus;
 
 pub struct GenesisSession<'r, 'l, S>(Session<'r, 'l, S>);
 
-impl<'r, 'l, S: MoveStorage> GenesisSession<'r, 'l, S> {
+impl<'r, 'l, S: MoveResolver> GenesisSession<'r, 'l, S> {
     pub fn exec_func(
         &mut self,
         module_name: &str,

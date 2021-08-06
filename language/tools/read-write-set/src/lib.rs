@@ -11,9 +11,9 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, ResourceKey, TypeTag},
+    resolver::MoveResolver,
 };
 use move_model::model::{FunctionEnv, GlobalEnv};
-use move_vm_runtime::data_cache::MoveStorage;
 use prover_bytecode::{
     access_path::Offset,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder, FunctionVariant},
@@ -86,7 +86,7 @@ impl ReadWriteSetAnalysis {
         signers: &[AccountAddress],
         actuals: &[Vec<u8>],
         type_actuals: &[TypeTag],
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
     ) -> Result<ConcretizedSecondaryIndexes> {
         let state = self.get_summary_(module, fun)?;
         dynamic_analysis::concretize(
@@ -124,7 +124,7 @@ impl ReadWriteSetAnalysis {
         signers: &[AccountAddress],
         actuals: &[Vec<u8>],
         type_actuals: &[TypeTag],
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
     ) -> Result<Vec<ResourceKey>> {
         self.get_concretized_keys(
             module,
@@ -147,7 +147,7 @@ impl ReadWriteSetAnalysis {
         signers: &[AccountAddress],
         actuals: &[Vec<u8>],
         type_actuals: &[TypeTag],
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
     ) -> Result<Vec<ResourceKey>> {
         self.get_concretized_keys(
             module,
@@ -172,7 +172,7 @@ impl ReadWriteSetAnalysis {
         signers: &[AccountAddress],
         actuals: &[Vec<u8>],
         type_actuals: &[TypeTag],
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
         is_write: bool,
     ) -> Result<Vec<ResourceKey>> {
         if let Some(state) = self.get_summary(module, fun) {

@@ -8,7 +8,8 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Event},
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag, TypeTag},
+    language_storage::{ModuleId, TypeTag},
+    resolver::MoveResolver,
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
@@ -18,34 +19,6 @@ use move_vm_types::{
     values::{GlobalValue, GlobalValueEffect, Value},
 };
 use std::collections::btree_map::BTreeMap;
-
-/// Trait for the Move VM to abstract storage operations.
-///
-/// Storage backends should return
-///   - Ok(Some(..)) if the data exists
-///   - Ok(None)     if the data does not exist
-///   - Err(..)      only when something really wrong happens, for example
-///                    - invariants are broken and observable from the storage side
-///                      (this is not currently possible as ModuleId and StructTag
-///                       are always structurally valid)
-///                    - storage encounters internal errors
-///
-/// Move VM on the other hand, should NOT blindly trust the storage impl and assume
-/// the protocol above is honored. When receiving an error from storage, the Move VM
-/// MUST catch the error and convert it into an invariant violation, no matter what
-/// type the original error has before propagating the error back to the VM caller.
-///
-/// Eventually we should replace (Partial)VMError with a dedicated VMStorageError or
-/// an associated error type so that storage implementations will no longer be able to
-/// return a bogus VMError.
-pub trait MoveStorage {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>>;
-    fn get_resource(
-        &self,
-        address: &AccountAddress,
-        tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>>;
-}
 
 pub struct AccountDataCache {
     data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,
@@ -81,7 +54,7 @@ pub(crate) struct TransactionDataCache<'r, 'l, S> {
     event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
-impl<'r, 'l, S: MoveStorage> TransactionDataCache<'r, 'l, S> {
+impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
     /// Create a `TransactionDataCache` with a `RemoteCache` that provides access to data
     /// not updated in the transaction.
     pub(crate) fn new(remote: &'r S, loader: &'l Loader) -> Self {
@@ -171,7 +144,7 @@ impl<'r, 'l, S: MoveStorage> TransactionDataCache<'r, 'l, S> {
 }
 
 // `DataStore` implementation for the `TransactionDataCache`
-impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
+impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
@@ -214,14 +187,9 @@ impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
                 Ok(None) => GlobalValue::none(),
                 Err(err) => {
                     let msg = format!("Unexpected storage error: {:?}", err);
-                    // REVIEW: better way to get info out of a PartialVMError?
-                    let (_old_status, _old_sub_status, _old_message, indices, offsets) =
-                        err.all_data();
                     return Err(
                         PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(msg)
-                            .at_indices(indices)
-                            .at_code_offsets(offsets),
+                            .with_message(msg),
                     );
                 }
             };
@@ -249,14 +217,10 @@ impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
                 .finish(Location::Undefined)),
             Err(err) => {
                 let msg = format!("Unexpected storage error: {:?}", err);
-                let (_old_status, _old_sub_status, _old_message, location, indices, offsets) =
-                    err.all_data();
                 Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(msg)
-                        .at_indices(indices)
-                        .at_code_offsets(offsets)
-                        .finish(location),
+                        .finish(Location::Undefined),
                 )
             }
         }
@@ -281,7 +245,15 @@ impl<'r, 'l, S: MoveStorage> DataStore for TransactionDataCache<'r, 'l, S> {
                 return Ok(true);
             }
         }
-        Ok(self.remote.get_module(module_id)?.is_some())
+        Ok(self
+            .remote
+            .get_module(module_id)
+            .map_err(|e| {
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("Unexpected storage error: {:?}", e))
+                    .finish(Location::Undefined)
+            })?
+            .is_some())
     }
 
     fn emit_event(

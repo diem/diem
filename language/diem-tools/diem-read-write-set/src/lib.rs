@@ -11,9 +11,9 @@ use move_core_types::{
     ident_str,
     identifier::IdentStr,
     language_storage::{ResourceKey, StructTag},
+    resolver::MoveResolver,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use std::ops::Deref;
 
 pub struct ReadWriteSetAnalysis(read_write_set::ReadWriteSetAnalysis);
@@ -34,7 +34,7 @@ impl ReadWriteSetAnalysis {
     pub fn get_keys_written(
         &self,
         tx: &SignedTransaction,
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
     ) -> Result<Vec<ResourceKey>> {
         self.get_concretized_keys_tx(tx, blockchain_view, true)
     }
@@ -46,7 +46,7 @@ impl ReadWriteSetAnalysis {
     pub fn get_keys_read(
         &self,
         tx: &SignedTransaction,
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
     ) -> Result<Vec<ResourceKey>> {
         self.get_concretized_keys_tx(tx, blockchain_view, false)
     }
@@ -54,7 +54,7 @@ impl ReadWriteSetAnalysis {
     fn get_concretized_keys_tx(
         &self,
         tx: &SignedTransaction,
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
         is_write: bool,
     ) -> Result<Vec<ResourceKey>> {
         match tx.payload() {

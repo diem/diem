@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::compiler::{as_module, as_script, compile_units};
-use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
+use move_binary_format::errors::{Location, PartialVMError, VMError};
 use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
+    resolver::{ModuleResolver, ResourceResolver},
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
-use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -455,17 +456,23 @@ struct BogusStorage {
     bad_status_code: StatusCode,
 }
 
-impl MoveStorage for BogusStorage {
-    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for BogusStorage {
+    type Error = VMError;
+
+    fn get_module(&self, _module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         Err(PartialVMError::new(self.bad_status_code).finish(Location::Undefined))
     }
+}
+
+impl ResourceResolver for BogusStorage {
+    type Error = VMError;
 
     fn get_resource(
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        Err(PartialVMError::new(self.bad_status_code))
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
+        Err(PartialVMError::new(self.bad_status_code).finish(Location::Undefined))
     }
 }
 
