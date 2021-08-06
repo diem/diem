@@ -99,10 +99,10 @@ fn get_features() -> &'static [Feature] {
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("default")),
                 enabling_condition: |_, _| true,
             },
-            // Tests with pragma opaque ignored
+            // Tests with pragma opaque ignored for internal functions
             Feature {
                 name: "no_opaque",
-                flags: &["--ignore-pragma-opaque-when-possible"],
+                flags: &["--ignore-pragma-opaque-internal-only"],
                 inclusion_mode: InclusionMode::Implicit,
                 enable_in_ci: true,
                 only_if_requested: false,

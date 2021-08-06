@@ -1,4 +1,3 @@
-// separate_baseline: no_opaque
 address 0x0 {
 module A {
 
