@@ -10,9 +10,12 @@ use diem_types::{
     write_set::{WriteOp, WriteSet},
 };
 use move_binary_format::CompiledModule;
-use move_vm_runtime::data_cache::MoveStorage;
+use move_core_types::resolver::MoveResolver;
 use move_vm_test_utils::InMemoryStorage;
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
+};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -118,7 +121,7 @@ pub fn main() {
     }
 }
 
-fn print_all(storage: &impl MoveStorage, cs: &ChangeSet) {
+fn print_all(storage: &impl MoveResolver, cs: &ChangeSet) {
     print_write_set_by_type(storage, cs.write_set());
     println!("* Events:");
     print_events(storage, cs.events());
@@ -154,14 +157,14 @@ fn print_events_key(events: &[ContractEvent]) {
     }
 }
 
-fn print_write_set_by_type(storage: &impl MoveStorage, ws: &WriteSet) {
+fn print_write_set_by_type(storage: &impl MoveResolver, ws: &WriteSet) {
     println!("* Modules:");
     print_modules(ws);
     println!("* Resources:");
     print_resources(storage, ws);
 }
 
-fn print_events(storage: &impl MoveStorage, events: &[ContractEvent]) {
+fn print_events(storage: &impl MoveResolver, events: &[ContractEvent]) {
     let annotator = DiemValueAnnotator::new(storage);
 
     for event in events {
@@ -197,7 +200,7 @@ fn print_modules(ws: &WriteSet) {
     }
 }
 
-fn print_resources(storage: &impl MoveStorage, ws: &WriteSet) {
+fn print_resources(storage: &impl MoveResolver, ws: &WriteSet) {
     let mut resources: BTreeMap<AccessPath, Vec<u8>> = BTreeMap::new();
     for (k, v) in ws {
         match v {
@@ -221,7 +224,7 @@ fn print_resources(storage: &impl MoveStorage, ws: &WriteSet) {
     }
 }
 
-fn print_account_states(storage: &impl MoveStorage, ws: &WriteSet) {
+fn print_account_states(storage: &impl MoveResolver, ws: &WriteSet) {
     let mut accounts: BTreeMap<AccountAddress, Vec<(AccessPath, Vec<u8>)>> = BTreeMap::new();
     for (k, v) in ws {
         match v {

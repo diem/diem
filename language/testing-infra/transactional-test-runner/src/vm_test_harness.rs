@@ -19,6 +19,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
+    resolver::ResourceResolver,
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
 use move_lang::{
@@ -27,7 +28,7 @@ use move_lang::{
     FullyCompiledProgram,
 };
 use move_stdlib::move_stdlib_named_addresses;
-use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;

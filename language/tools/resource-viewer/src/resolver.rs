@@ -18,17 +18,17 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
+    resolver::MoveResolver,
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use std::rc::Rc;
 
-pub(crate) struct Resolver<'a> {
-    pub state: &'a dyn MoveStorage,
+pub(crate) struct Resolver<'a, S> {
+    pub state: &'a S,
     cache: ModuleCache,
 }
 
-impl<'a> Resolver<'a> {
-    pub fn new(state: &'a dyn MoveStorage) -> Self {
+impl<'a, S: MoveResolver> Resolver<'a, S> {
+    pub fn new(state: &'a S) -> Self {
         Resolver {
             state,
             cache: ModuleCache::new(),

@@ -18,8 +18,8 @@ use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    resolver::{ModuleResolver, ResourceResolver},
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use std::collections::btree_map::BTreeMap;
 
 /// A local cache for a given a `StateView`. The cache is private to the Diem layer
@@ -107,16 +107,22 @@ impl<'block> StateView for StateViewCache<'block> {
     }
 }
 
-impl<'block> MoveStorage for StateViewCache<'block> {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl<'block> ModuleResolver for StateViewCache<'block> {
+    type Error = VMError;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         RemoteStorage::new(self).get_module(module_id)
     }
+}
+
+impl<'block> ResourceResolver for StateViewCache<'block> {
+    type Error = VMError;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         RemoteStorage::new(self).get_resource(address, tag)
     }
 }
@@ -142,20 +148,26 @@ impl<'a, S: StateView> RemoteStorage<'a, S> {
     }
 }
 
-impl<'a, S: StateView> MoveStorage for RemoteStorage<'a, S> {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl<'a, S: StateView> ModuleResolver for RemoteStorage<'a, S> {
+    type Error = VMError;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         // REVIEW: cache this?
         let ap = AccessPath::from(module_id);
         self.get(&ap).map_err(|e| e.finish(Location::Undefined))
     }
+}
+
+impl<'a, S: StateView> ResourceResolver for RemoteStorage<'a, S> {
+    type Error = VMError;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         let ap = create_access_path(*address, struct_tag.clone());
-        self.get(&ap)
+        self.get(&ap).map_err(|e| e.finish(Location::Undefined))
     }
 }
 

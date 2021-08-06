@@ -2363,7 +2363,6 @@ dependencies = [
  "diem-vm",
  "diem-workspace-hack",
  "move-core-types",
- "move-vm-runtime",
  "read-write-set",
 ]
 
@@ -2376,7 +2375,6 @@ dependencies = [
  "diem-workspace-hack",
  "move-binary-format",
  "move-core-types",
- "move-vm-runtime",
  "resource-viewer",
 ]
 
@@ -3645,7 +3643,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "move-binary-format",
- "move-vm-runtime",
+ "move-core-types",
  "move-vm-test-utils",
  "structopt 0.3.21",
  "vm-genesis",
@@ -6479,7 +6477,6 @@ dependencies = [
  "move-bytecode-utils",
  "move-core-types",
  "move-model",
- "move-vm-runtime",
  "read-write-set-types",
  "resource-viewer",
 ]
@@ -6639,7 +6636,6 @@ dependencies = [
  "hex",
  "move-binary-format",
  "move-core-types",
- "move-vm-runtime",
  "move-vm-types",
  "once_cell",
  "serde",

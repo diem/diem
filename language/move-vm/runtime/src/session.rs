@@ -1,16 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    data_cache::{MoveStorage, TransactionDataCache},
-    runtime::VMRuntime,
-};
+use crate::{data_cache::TransactionDataCache, runtime::VMRuntime};
 use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
+    resolver::MoveResolver,
     value::MoveTypeLayout,
 };
 use move_vm_types::gas_schedule::GasStatus;
@@ -20,7 +18,7 @@ pub struct Session<'r, 'l, S> {
     pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
 }
 
-impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
+impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Execute a Move function with the given arguments. This is mainly designed for an external
     /// environment to invoke system logic written in Move.
     ///

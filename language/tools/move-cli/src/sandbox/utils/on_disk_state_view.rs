@@ -7,7 +7,6 @@ use disassembler::disassembler::Disassembler;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
-    errors::*,
     file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
 };
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
@@ -16,10 +15,9 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
-    vm_status::StatusCode,
+    resolver::{ModuleResolver, ResourceResolver},
 };
 use move_lang::{shared::AddressBytes, MOVE_COMPILED_INTERFACES_DIR};
-use move_vm_runtime::data_cache::MoveStorage;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -498,19 +496,22 @@ impl OnDiskStateView {
     }
 }
 
-impl MoveStorage for OnDiskStateView {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for OnDiskStateView {
+    type Error = anyhow::Error;
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_module_bytes(module_id)
-            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined))
     }
+}
+
+impl ResourceResolver for OnDiskStateView {
+    type Error = anyhow::Error;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_resource_bytes(*address, struct_tag.clone())
-            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 

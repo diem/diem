@@ -15,5 +15,4 @@ diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 diem-types = { path = "../../../types" }
 diem-vm = { path = "../../diem-vm" }
 move-core-types = { path = "../../move-core/types" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 read-write-set = { path = "../../tools/read-write-set" }

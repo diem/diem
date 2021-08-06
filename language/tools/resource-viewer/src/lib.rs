@@ -14,9 +14,9 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    resolver::MoveResolver,
     value::{MoveStruct, MoveValue},
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use std::{
     convert::TryInto,
     fmt::{Display, Formatter},
@@ -65,13 +65,13 @@ impl AnnotatedMoveValue {
     }
 }
 
-pub struct MoveValueAnnotator<'a> {
-    cache: Resolver<'a>,
-    _data_view: &'a dyn MoveStorage,
+pub struct MoveValueAnnotator<'a, S> {
+    cache: Resolver<'a, S>,
+    _data_view: &'a S,
 }
 
-impl<'a> MoveValueAnnotator<'a> {
-    pub fn new(view: &'a dyn MoveStorage) -> Self {
+impl<'a, S: MoveResolver> MoveValueAnnotator<'a, S> {
+    pub fn new(view: &'a S) -> Self {
         Self {
             cache: Resolver::new(view),
             _data_view: view,
@@ -79,11 +79,7 @@ impl<'a> MoveValueAnnotator<'a> {
     }
 
     pub fn get_resource_bytes(&self, addr: &AccountAddress, tag: &StructTag) -> Option<Vec<u8>> {
-        self.cache
-            .state
-            .get_resource(addr, tag)
-            .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())
-            .ok()?
+        self.cache.state.get_resource(addr, tag).ok()?
     }
 
     pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {

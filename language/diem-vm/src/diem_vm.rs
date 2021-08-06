@@ -33,12 +33,10 @@ use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits, InternalGasUnits},
     identifier::IdentStr,
     language_storage::ModuleId,
+    resolver::MoveResolver,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{
-    data_cache::MoveStorage, logging::expect_no_verification_errors, move_vm::MoveVM,
-    session::Session,
-};
+use move_vm_runtime::{logging::expect_no_verification_errors, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::{calculate_intrinsic_gas, GasStatus};
 use std::{convert::TryFrom, sync::Arc};
 
@@ -210,7 +208,7 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into either `SCRIPT_PROLOGUE_NAME` function
     /// or `MULTI_AGENT_SCRIPT_PROLOGUE_NAME` function stored in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_script_prologue<S: MoveStorage>(
+    pub(crate) fn run_script_prologue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         txn_data: &TransactionMetadata,
@@ -276,7 +274,7 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_module_prologue<S: MoveStorage>(
+    pub(crate) fn run_module_prologue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         txn_data: &TransactionMetadata,
@@ -315,7 +313,7 @@ impl DiemVMImpl {
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_success_epilogue<S: MoveStorage>(
+    pub(crate) fn run_success_epilogue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         gas_status: &mut GasStatus,
@@ -356,7 +354,7 @@ impl DiemVMImpl {
 
     /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
     /// stored in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_failure_epilogue<S: MoveStorage>(
+    pub(crate) fn run_failure_epilogue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         gas_status: &mut GasStatus,
@@ -393,7 +391,7 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `WRITESET_MODULE` on chain.
-    pub(crate) fn run_writeset_prologue<S: MoveStorage>(
+    pub(crate) fn run_writeset_prologue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         txn_data: &TransactionMetadata,
@@ -426,7 +424,7 @@ impl DiemVMImpl {
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
     /// in the `WRITESET_MODULE` on chain.
-    pub(crate) fn run_writeset_epilogue<S: MoveStorage>(
+    pub(crate) fn run_writeset_epilogue<S: MoveResolver>(
         &self,
         session: &mut Session<S>,
         txn_data: &TransactionMetadata,
@@ -453,7 +451,7 @@ impl DiemVMImpl {
             })
     }
 
-    pub fn new_session<'r, R: MoveStorage>(&self, r: &'r R) -> Session<'r, '_, R> {
+    pub fn new_session<'r, R: MoveResolver>(&self, r: &'r R) -> Session<'r, '_, R> {
         self.move_vm.new_session(r)
     }
 }
@@ -551,7 +549,7 @@ pub fn convert_changeset_and_events(
     convert_changeset_and_events_cached(&mut (), changeset, events)
 }
 
-pub(crate) fn charge_global_write_gas_usage<R: MoveStorage>(
+pub(crate) fn charge_global_write_gas_usage<R: MoveResolver>(
     gas_status: &mut GasStatus,
     session: &Session<R>,
     sender: &AccountAddress,
@@ -568,7 +566,7 @@ pub(crate) fn charge_global_write_gas_usage<R: MoveStorage>(
         .map_err(|p_err| p_err.finish(Location::Undefined).into_vm_status())
 }
 
-pub(crate) fn get_transaction_output<A: AccessPathCache, S: MoveStorage>(
+pub(crate) fn get_transaction_output<A: AccessPathCache, S: MoveResolver>(
     ap_cache: &mut A,
     session: Session<S>,
     gas_left: GasUnits<GasCarrier>,

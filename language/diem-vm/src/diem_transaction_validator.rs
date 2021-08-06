@@ -20,8 +20,9 @@ use diem_types::{
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     move_resource::MoveStructType,
+    resolver::MoveResolver,
 };
-use move_vm_runtime::{data_cache::MoveStorage, session::Session};
+use move_vm_runtime::session::Session;
 
 use crate::logging::AdapterLogSchema;
 
@@ -118,7 +119,7 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
     GovernanceRole::NonGovernanceRole
 }
 
-pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
+pub(crate) fn validate_signature_checked_transaction<S: MoveResolver>(
     vm: &DiemVMImpl,
     session: &mut Session<S>,
     transaction: &SignatureCheckedTransaction,
@@ -185,7 +186,7 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     Ok((normalized_gas_price, currency_code))
 }
 
-fn get_currency_info<S: MoveStorage>(
+fn get_currency_info<S: MoveResolver>(
     currency_code: &IdentStr,
     remote_cache: &S,
 ) -> Result<CurrencyInfoResource, VMStatus> {
