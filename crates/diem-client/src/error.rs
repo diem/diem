@@ -40,6 +40,7 @@ enum Kind {
     Decode,
     InvalidProof,
     NeedSync,
+    StateStore,
     Unknown,
 }
 
@@ -60,6 +61,7 @@ impl Error {
             | Kind::Batch
             | Kind::Decode
             | Kind::InvalidProof
+            | Kind::StateStore
             | Kind::Unknown => false,
         }
     }
@@ -117,6 +119,10 @@ impl Error {
 
     pub(crate) fn invalid_proof<E: Into<BoxError>>(e: E) -> Self {
         Self::new(Kind::InvalidProof, Some(e))
+    }
+
+    pub(crate) fn state_store<E: Into<BoxError>>(e: E) -> Self {
+        Self::new(Kind::StateStore, Some(e))
     }
 
     pub(crate) fn need_sync<E: Into<BoxError>>(e: E) -> Self {
