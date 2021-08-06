@@ -1,517 +1,533 @@
 Move prover returns: exiting with boogie verification errors
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:281:9
+    ┌─ tests/sources/functional/emits.move:280:9
     │
-281 │         emits DummyEvent{msg: 0} to handle;
+280 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
+    =     at tests/sources/functional/emits.move:278: opaque
+    =     at tests/sources/functional/emits.move:280
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:281:9
+    │
+281 │         emits DummyEvent{msg: 7} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:274: opaque
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:276: opaque
+    =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:278: opaque
+    =     at tests/sources/functional/emits.move:280
     =     at tests/sources/functional/emits.move:281
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:282:9
     │
-282 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+282 │         emits DummyEvent{msg: 77} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
+    =     at tests/sources/functional/emits.move:278: opaque
+    =     at tests/sources/functional/emits.move:280
     =     at tests/sources/functional/emits.move:281
     =     at tests/sources/functional/emits.move:282
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:283:9
     │
-283 │         emits DummyEvent{msg: 77} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:276: opaque
-    =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =     at tests/sources/functional/emits.move:281
-    =     at tests/sources/functional/emits.move:282
-    =     at tests/sources/functional/emits.move:283
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:284:9
-    │
-284 │         emits DummyEvent{msg: 1} to handle;
+283 │         emits DummyEvent{msg: 1} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
+    =     at tests/sources/functional/emits.move:278: opaque
+    =     at tests/sources/functional/emits.move:280
     =     at tests/sources/functional/emits.move:281
     =     at tests/sources/functional/emits.move:282
     =     at tests/sources/functional/emits.move:283
-    =     at tests/sources/functional/emits.move:284
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:280:5
+    ┌─ tests/sources/functional/emits.move:279:5
     │
-280 │ ╭     spec opaque {
-281 │ │         emits DummyEvent{msg: 0} to handle;
-282 │ │         emits DummyEvent{msg: 7} to handle;
-283 │ │         emits DummyEvent{msg: 77} to handle;
-284 │ │         emits DummyEvent{msg: 1} to handle;
-285 │ │     }
+279 │ ╭     spec opaque {
+280 │ │         emits DummyEvent{msg: 0} to handle;
+281 │ │         emits DummyEvent{msg: 7} to handle;
+282 │ │         emits DummyEvent{msg: 77} to handle;
+283 │ │         emits DummyEvent{msg: 1} to handle;
+284 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
+    =     at tests/sources/functional/emits.move:278: opaque
+    =     at tests/sources/functional/emits.move:280
     =     at tests/sources/functional/emits.move:281
     =     at tests/sources/functional/emits.move:282
     =     at tests/sources/functional/emits.move:283
-    =     at tests/sources/functional/emits.move:284
-    =     at tests/sources/functional/emits.move:280
+    =     at tests/sources/functional/emits.move:279
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:270:9
+    │
+270 │         emits DummyEvent{msg: 7} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:263: callee
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:264: callee
+    =     at tests/sources/functional/emits.move:265: callee
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:266: callee
+    =     at tests/sources/functional/emits.move:269
+    =     at tests/sources/functional/emits.move:270
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:271:9
     │
-271 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:264: callee
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:265: callee
-    =     at tests/sources/functional/emits.move:266: callee
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:267: callee
-    =     at tests/sources/functional/emits.move:270
-    =     at tests/sources/functional/emits.move:271
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:272:9
-    │
-272 │         emits DummyEvent{msg: 77} to handle;
+271 │         emits DummyEvent{msg: 77} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:263: callee
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:264: callee
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:265: callee
-    =     at tests/sources/functional/emits.move:266: callee
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:267: callee
+    =     at tests/sources/functional/emits.move:266: callee
+    =     at tests/sources/functional/emits.move:269
     =     at tests/sources/functional/emits.move:270
     =     at tests/sources/functional/emits.move:271
-    =     at tests/sources/functional/emits.move:272
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:268:5
+    ┌─ tests/sources/functional/emits.move:267:5
     │
-268 │ ╭     spec callee {
-269 │ │         pragma opaque;
-270 │ │         aborts_if false;
-271 │ │         emits DummyEvent{msg: 7} to handle;
-272 │ │         emits DummyEvent{msg: 77} to handle;
-273 │ │     }
+267 │ ╭     spec callee {
+268 │ │         pragma opaque;
+269 │ │         aborts_if false;
+270 │ │         emits DummyEvent{msg: 7} to handle;
+271 │ │         emits DummyEvent{msg: 77} to handle;
+272 │ │     }
     │ ╰─────^
     │
+    =     at tests/sources/functional/emits.move:263: callee
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:264: callee
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:265: callee
-    =     at tests/sources/functional/emits.move:266: callee
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:267: callee
+    =     at tests/sources/functional/emits.move:266: callee
+    =     at tests/sources/functional/emits.move:269
     =     at tests/sources/functional/emits.move:270
     =     at tests/sources/functional/emits.move:271
-    =     at tests/sources/functional/emits.move:272
-    =     at tests/sources/functional/emits.move:268
+    =     at tests/sources/functional/emits.move:267
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:332:9
+    │
+332 │         emits DummyEvent{msg: 7} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:325: callee_partial
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:326: callee_partial
+    =     at tests/sources/functional/emits.move:327: callee_partial
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:328: callee_partial
+    =     at tests/sources/functional/emits.move:331
+    =     at tests/sources/functional/emits.move:332
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:333:9
     │
-333 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:326: callee_partial
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:327: callee_partial
-    =     at tests/sources/functional/emits.move:328: callee_partial
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:329: callee_partial
-    =     at tests/sources/functional/emits.move:332
-    =     at tests/sources/functional/emits.move:333
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:334:9
-    │
-334 │         emits DummyEvent{msg: 77} to handle;
+333 │         emits DummyEvent{msg: 77} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:325: callee_partial
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:326: callee_partial
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:327: callee_partial
-    =     at tests/sources/functional/emits.move:328: callee_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:329: callee_partial
+    =     at tests/sources/functional/emits.move:328: callee_partial
+    =     at tests/sources/functional/emits.move:331
     =     at tests/sources/functional/emits.move:332
     =     at tests/sources/functional/emits.move:333
-    =     at tests/sources/functional/emits.move:334
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:103:9
+    ┌─ tests/sources/functional/emits.move:102:9
     │
-103 │         emits DummyEvent{msg: 0} to handle if x > 7;
+102 │         emits DummyEvent{msg: 0} to handle if x > 7;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:97: conditional
+    =     at tests/sources/functional/emits.move:96: conditional
     =         x = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:98: conditional
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:101: conditional
-    =     at tests/sources/functional/emits.move:103
-
-error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:102:5
-    │
-102 │ ╭     spec conditional {
-103 │ │         emits DummyEvent{msg: 0} to handle if x > 7;
-104 │ │     }
-    │ ╰─────^
-    │
     =     at tests/sources/functional/emits.move:97: conditional
-    =         x = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:98: conditional
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:101: conditional
-    =     at tests/sources/functional/emits.move:103
+    =     at tests/sources/functional/emits.move:100: conditional
     =     at tests/sources/functional/emits.move:102
 
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:130:9
+error: emitted event not covered by any of the `emits` clauses
+    ┌─ tests/sources/functional/emits.move:101:5
     │
-130 │         emits DummyEvent{msg: 0} to handle if b;
+101 │ ╭     spec conditional {
+102 │ │         emits DummyEvent{msg: 0} to handle if x > 7;
+103 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/emits.move:96: conditional
+    =         x = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:97: conditional
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:100: conditional
+    =     at tests/sources/functional/emits.move:102
+    =     at tests/sources/functional/emits.move:101
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:129:9
+    │
+129 │         emits DummyEvent{msg: 0} to handle if b;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:124: conditional_bool
+    =     at tests/sources/functional/emits.move:123: conditional_bool
     =         b = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:125: conditional_bool
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:128: conditional_bool
-    =     at tests/sources/functional/emits.move:130
-
-error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:129:5
-    │
-129 │ ╭     spec conditional_bool {
-130 │ │         emits DummyEvent{msg: 0} to handle if b;
-131 │ │     }
-    │ ╰─────^
-    │
     =     at tests/sources/functional/emits.move:124: conditional_bool
-    =         b = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:125: conditional_bool
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:128: conditional_bool
-    =     at tests/sources/functional/emits.move:130
+    =     at tests/sources/functional/emits.move:127: conditional_bool
     =     at tests/sources/functional/emits.move:129
 
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:121:9
-    │
-121 │         emits DummyEvent{msg: 0} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:115: conditional_missing_condition_incorrect
-    =         x = <redacted>
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:116: conditional_missing_condition_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:119: conditional_missing_condition_incorrect
-    =     at tests/sources/functional/emits.move:121
-
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:120:5
+    ┌─ tests/sources/functional/emits.move:128:5
     │
-120 │ ╭     spec conditional_missing_condition_incorrect {
-121 │ │         emits DummyEvent{msg: 0} to handle;
-122 │ │     }
+128 │ ╭     spec conditional_bool {
+129 │ │         emits DummyEvent{msg: 0} to handle if b;
+130 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:115: conditional_missing_condition_incorrect
-    =         x = <redacted>
+    =     at tests/sources/functional/emits.move:123: conditional_bool
+    =         b = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:116: conditional_missing_condition_incorrect
-    =     at tests/sources/functional/emits.move:116: conditional_missing_condition_incorrect
+    =     at tests/sources/functional/emits.move:124: conditional_bool
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:119: conditional_missing_condition_incorrect
-    =     at tests/sources/functional/emits.move:121
-    =     at tests/sources/functional/emits.move:120
+    =     at tests/sources/functional/emits.move:127: conditional_bool
+    =     at tests/sources/functional/emits.move:129
+    =     at tests/sources/functional/emits.move:128
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:145:9
+    ┌─ tests/sources/functional/emits.move:120:9
     │
-145 │         emits DummyEvent{msg: 0} to handle if b0;
+120 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:114: conditional_missing_condition_incorrect
+    =         x = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:115: conditional_missing_condition_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:118: conditional_missing_condition_incorrect
+    =     at tests/sources/functional/emits.move:120
+
+error: emitted event not covered by any of the `emits` clauses
+    ┌─ tests/sources/functional/emits.move:119:5
+    │
+119 │ ╭     spec conditional_missing_condition_incorrect {
+120 │ │         emits DummyEvent{msg: 0} to handle;
+121 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/emits.move:114: conditional_missing_condition_incorrect
+    =         x = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:115: conditional_missing_condition_incorrect
+    =     at tests/sources/functional/emits.move:115: conditional_missing_condition_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:118: conditional_missing_condition_incorrect
+    =     at tests/sources/functional/emits.move:120
+    =     at tests/sources/functional/emits.move:119
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:144:9
+    │
+144 │         emits DummyEvent{msg: 0} to handle if b0;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:132: conditional_multiple
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:134: conditional_multiple
-    =     at tests/sources/functional/emits.move:137: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
+    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:136: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:143: conditional_multiple
+    =     at tests/sources/functional/emits.move:142: conditional_multiple
+    =     at tests/sources/functional/emits.move:144
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:145:9
+    │
+145 │         emits DummyEvent{msg: 1} to handle if b1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:132: conditional_multiple
+    =         b0 = <redacted>
+    =         b1 = <redacted>
+    =         b2 = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:136: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:142: conditional_multiple
+    =     at tests/sources/functional/emits.move:144
     =     at tests/sources/functional/emits.move:145
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:146:9
     │
-146 │         emits DummyEvent{msg: 1} to handle if b1;
+146 │         emits DummyEvent{msg: 2} to handle if b2;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:132: conditional_multiple
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:134: conditional_multiple
-    =     at tests/sources/functional/emits.move:137: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:143: conditional_multiple
-    =     at tests/sources/functional/emits.move:145
-    =     at tests/sources/functional/emits.move:146
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:147:9
-    │
-147 │         emits DummyEvent{msg: 2} to handle if b2;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
     =     at tests/sources/functional/emits.move:133: conditional_multiple
-    =         b0 = <redacted>
-    =         b1 = <redacted>
-    =         b2 = <redacted>
+    =     at tests/sources/functional/emits.move:136: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:134: conditional_multiple
-    =     at tests/sources/functional/emits.move:137: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:143: conditional_multiple
+    =     at tests/sources/functional/emits.move:142: conditional_multiple
+    =     at tests/sources/functional/emits.move:144
     =     at tests/sources/functional/emits.move:145
     =     at tests/sources/functional/emits.move:146
-    =     at tests/sources/functional/emits.move:147
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:144:5
+    ┌─ tests/sources/functional/emits.move:143:5
     │
-144 │ ╭     spec conditional_multiple {
-145 │ │         emits DummyEvent{msg: 0} to handle if b0;
-146 │ │         emits DummyEvent{msg: 1} to handle if b1;
-147 │ │         emits DummyEvent{msg: 2} to handle if b2;
-148 │ │     }
+143 │ ╭     spec conditional_multiple {
+144 │ │         emits DummyEvent{msg: 0} to handle if b0;
+145 │ │         emits DummyEvent{msg: 1} to handle if b1;
+146 │ │         emits DummyEvent{msg: 2} to handle if b2;
+147 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:132: conditional_multiple
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:134: conditional_multiple
-    =     at tests/sources/functional/emits.move:137: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
-    =     at tests/sources/functional/emits.move:140: conditional_multiple
+    =     at tests/sources/functional/emits.move:133: conditional_multiple
+    =     at tests/sources/functional/emits.move:136: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
+    =     at tests/sources/functional/emits.move:139: conditional_multiple
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:143: conditional_multiple
+    =     at tests/sources/functional/emits.move:142: conditional_multiple
+    =     at tests/sources/functional/emits.move:144
     =     at tests/sources/functional/emits.move:145
     =     at tests/sources/functional/emits.move:146
-    =     at tests/sources/functional/emits.move:147
-    =     at tests/sources/functional/emits.move:144
+    =     at tests/sources/functional/emits.move:143
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:157:9
+    │
+157 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:149: conditional_multiple_incorrect
+    =         b = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:151: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:152: conditional_multiple_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:155: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:157
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:158:9
     │
-158 │         emits DummyEvent{msg: 0} to handle;
+158 │         emits DummyEvent{msg: 1} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:149: conditional_multiple_incorrect
     =         b = <redacted>
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
     =     at tests/sources/functional/emits.move:151: conditional_multiple_incorrect
     =     at tests/sources/functional/emits.move:152: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:153: conditional_multiple_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:156: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:155: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:157
     =     at tests/sources/functional/emits.move:158
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:159:9
     │
-159 │         emits DummyEvent{msg: 1} to handle;
+159 │         emits DummyEvent{msg: 2} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:149: conditional_multiple_incorrect
     =         b = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:151: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:152: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:153: conditional_multiple_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:156: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:158
-    =     at tests/sources/functional/emits.move:159
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:160:9
-    │
-160 │         emits DummyEvent{msg: 2} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
     =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
-    =         b = <redacted>
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:151: conditional_multiple_incorrect
     =     at tests/sources/functional/emits.move:152: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:153: conditional_multiple_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:156: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:155: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:157
     =     at tests/sources/functional/emits.move:158
     =     at tests/sources/functional/emits.move:159
-    =     at tests/sources/functional/emits.move:160
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:157:5
+    ┌─ tests/sources/functional/emits.move:156:5
     │
-157 │ ╭     spec conditional_multiple_incorrect {
-158 │ │         emits DummyEvent{msg: 0} to handle;
-159 │ │         emits DummyEvent{msg: 1} to handle;
-160 │ │         emits DummyEvent{msg: 2} to handle;
-161 │ │     }
+156 │ ╭     spec conditional_multiple_incorrect {
+157 │ │         emits DummyEvent{msg: 0} to handle;
+158 │ │         emits DummyEvent{msg: 1} to handle;
+159 │ │         emits DummyEvent{msg: 2} to handle;
+160 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:149: conditional_multiple_incorrect
     =         b = <redacted>
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:150: conditional_multiple_incorrect
     =     at tests/sources/functional/emits.move:151: conditional_multiple_incorrect
     =     at tests/sources/functional/emits.move:152: conditional_multiple_incorrect
-    =     at tests/sources/functional/emits.move:153: conditional_multiple_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:156: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:155: conditional_multiple_incorrect
+    =     at tests/sources/functional/emits.move:157
     =     at tests/sources/functional/emits.move:158
     =     at tests/sources/functional/emits.move:159
-    =     at tests/sources/functional/emits.move:160
-    =     at tests/sources/functional/emits.move:157
+    =     at tests/sources/functional/emits.move:156
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:175:9
+    ┌─ tests/sources/functional/emits.move:174:9
     │
-175 │         emits DummyEvent{msg: 0} to handle if b0;
+174 │         emits DummyEvent{msg: 0} to handle if b0;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:162: conditional_multiple_same
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:164: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:167: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:166: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:173: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:172: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:174
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:175:9
+    │
+175 │         emits DummyEvent{msg: 0} to handle if b1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:162: conditional_multiple_same
+    =         b0 = <redacted>
+    =         b1 = <redacted>
+    =         b2 = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:166: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:172: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:174
     =     at tests/sources/functional/emits.move:175
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:176:9
     │
-176 │         emits DummyEvent{msg: 0} to handle if b1;
+176 │         emits DummyEvent{msg: 0} to handle if b2;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:162: conditional_multiple_same
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:164: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:167: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:173: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:175
-    =     at tests/sources/functional/emits.move:176
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:177:9
-    │
-177 │         emits DummyEvent{msg: 0} to handle if b2;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
     =     at tests/sources/functional/emits.move:163: conditional_multiple_same
-    =         b0 = <redacted>
-    =         b1 = <redacted>
-    =         b2 = <redacted>
+    =     at tests/sources/functional/emits.move:166: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:164: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:167: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:173: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:172: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:174
     =     at tests/sources/functional/emits.move:175
     =     at tests/sources/functional/emits.move:176
-    =     at tests/sources/functional/emits.move:177
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:174:5
+    ┌─ tests/sources/functional/emits.move:173:5
     │
-174 │ ╭     spec conditional_multiple_same {
-175 │ │         emits DummyEvent{msg: 0} to handle if b0;
-176 │ │         emits DummyEvent{msg: 0} to handle if b1;
-177 │ │         emits DummyEvent{msg: 0} to handle if b2;
-178 │ │     }
+173 │ ╭     spec conditional_multiple_same {
+174 │ │         emits DummyEvent{msg: 0} to handle if b0;
+175 │ │         emits DummyEvent{msg: 0} to handle if b1;
+176 │ │         emits DummyEvent{msg: 0} to handle if b2;
+177 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:162: conditional_multiple_same
     =         b0 = <redacted>
     =         b1 = <redacted>
     =         b2 = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:164: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:167: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
-    =     at tests/sources/functional/emits.move:170: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:163: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:166: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:169: conditional_multiple_same
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:173: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:172: conditional_multiple_same
+    =     at tests/sources/functional/emits.move:174
     =     at tests/sources/functional/emits.move:175
     =     at tests/sources/functional/emits.move:176
-    =     at tests/sources/functional/emits.move:177
-    =     at tests/sources/functional/emits.move:174
+    =     at tests/sources/functional/emits.move:173
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:187:9
+    │
+187 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:179: conditional_multiple_same_incorrect
+    =         b = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:181: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:182: conditional_multiple_same_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:185: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:187
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:188:9
@@ -519,14 +535,15 @@ error: function does not emit the expected event
 188 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:179: conditional_multiple_same_incorrect
     =         b = <redacted>
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
     =     at tests/sources/functional/emits.move:181: conditional_multiple_same_incorrect
     =     at tests/sources/functional/emits.move:182: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:183: conditional_multiple_same_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:186: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:185: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:187
     =     at tests/sources/functional/emits.move:188
 
 error: function does not emit the expected event
@@ -535,198 +552,201 @@ error: function does not emit the expected event
 189 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:179: conditional_multiple_same_incorrect
     =         b = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:181: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:182: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:183: conditional_multiple_same_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:186: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:188
-    =     at tests/sources/functional/emits.move:189
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:190:9
-    │
-190 │         emits DummyEvent{msg: 0} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
     =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
-    =         b = <redacted>
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:181: conditional_multiple_same_incorrect
     =     at tests/sources/functional/emits.move:182: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:183: conditional_multiple_same_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:186: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:185: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:187
     =     at tests/sources/functional/emits.move:188
     =     at tests/sources/functional/emits.move:189
-    =     at tests/sources/functional/emits.move:190
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:187:5
+    ┌─ tests/sources/functional/emits.move:186:5
     │
-187 │ ╭     spec conditional_multiple_same_incorrect {
+186 │ ╭     spec conditional_multiple_same_incorrect {
+187 │ │         emits DummyEvent{msg: 0} to handle;
 188 │ │         emits DummyEvent{msg: 0} to handle;
 189 │ │         emits DummyEvent{msg: 0} to handle;
-190 │ │         emits DummyEvent{msg: 0} to handle;
-191 │ │     }
+190 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:179: conditional_multiple_same_incorrect
     =         b = <redacted>
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:180: conditional_multiple_same_incorrect
     =     at tests/sources/functional/emits.move:181: conditional_multiple_same_incorrect
     =     at tests/sources/functional/emits.move:182: conditional_multiple_same_incorrect
-    =     at tests/sources/functional/emits.move:183: conditional_multiple_same_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:186: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:185: conditional_multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:187
     =     at tests/sources/functional/emits.move:188
     =     at tests/sources/functional/emits.move:189
-    =     at tests/sources/functional/emits.move:190
-    =     at tests/sources/functional/emits.move:187
+    =     at tests/sources/functional/emits.move:186
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:112:9
+    ┌─ tests/sources/functional/emits.move:111:9
     │
-112 │         emits DummyEvent{msg: 0} to handle if x > 0;
+111 │         emits DummyEvent{msg: 0} to handle if x > 0;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:106: conditional_wrong_condition_incorrect
+    =     at tests/sources/functional/emits.move:105: conditional_wrong_condition_incorrect
     =         x = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:107: conditional_wrong_condition_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:110: conditional_wrong_condition_incorrect
-    =     at tests/sources/functional/emits.move:112
-
-error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:111:5
-    │
-111 │ ╭     spec conditional_wrong_condition_incorrect {
-112 │ │         emits DummyEvent{msg: 0} to handle if x > 0;
-113 │ │     }
-    │ ╰─────^
-    │
     =     at tests/sources/functional/emits.move:106: conditional_wrong_condition_incorrect
-    =         x = <redacted>
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:107: conditional_wrong_condition_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:110: conditional_wrong_condition_incorrect
-    =     at tests/sources/functional/emits.move:112
+    =     at tests/sources/functional/emits.move:109: conditional_wrong_condition_incorrect
     =     at tests/sources/functional/emits.move:111
 
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:206:9
+error: emitted event not covered by any of the `emits` clauses
+    ┌─ tests/sources/functional/emits.move:110:5
     │
-206 │         emits DummyEvent{msg: 0} to handle;
+110 │ ╭     spec conditional_wrong_condition_incorrect {
+111 │ │         emits DummyEvent{msg: 0} to handle if x > 0;
+112 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/emits.move:105: conditional_wrong_condition_incorrect
+    =         x = <redacted>
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:106: conditional_wrong_condition_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:109: conditional_wrong_condition_incorrect
+    =     at tests/sources/functional/emits.move:111
+    =     at tests/sources/functional/emits.move:110
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:205:9
+    │
+205 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:197: emits_in_schema
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:198: emits_in_schema
     =         handle = <redacted>
     =     at tests/sources/functional/emits.move:199: emits_in_schema
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:200: emits_in_schema
-    =     at tests/sources/functional/emits.move:206
+    =     at tests/sources/functional/emits.move:205
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:201:5
+    ┌─ tests/sources/functional/emits.move:200:5
     │
-201 │ ╭     spec emits_in_schema {
-202 │ │         include EmitsInSchemaEmits;
-203 │ │     }
+200 │ ╭     spec emits_in_schema {
+201 │ │         include EmitsInSchemaEmits;
+202 │ │     }
     │ ╰─────^
     │
+    =     at tests/sources/functional/emits.move:197: emits_in_schema
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:198: emits_in_schema
     =         handle = <redacted>
     =     at tests/sources/functional/emits.move:199: emits_in_schema
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:200: emits_in_schema
-    =     at tests/sources/functional/emits.move:206
-    =     at tests/sources/functional/emits.move:201
+    =     at tests/sources/functional/emits.move:205
+    =     at tests/sources/functional/emits.move:200
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:206:9
+    ┌─ tests/sources/functional/emits.move:205:9
     │
-206 │         emits DummyEvent{msg: 0} to handle;
+205 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:209: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:208: emits_in_schema_condition
     =         handle = <redacted>
     =         x = <redacted>
-    =     at tests/sources/functional/emits.move:210: emits_in_schema_condition
-    =     at tests/sources/functional/emits.move:212: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:209: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:211: emits_in_schema_condition
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:213: emits_in_schema_condition
-    =     at tests/sources/functional/emits.move:206
+    =     at tests/sources/functional/emits.move:212: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:205
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:214:5
+    ┌─ tests/sources/functional/emits.move:213:5
     │
-214 │ ╭     spec emits_in_schema_condition {
-215 │ │         include x > 7 ==> EmitsInSchemaEmits;
-216 │ │     }
+213 │ ╭     spec emits_in_schema_condition {
+214 │ │         include x > 7 ==> EmitsInSchemaEmits;
+215 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:209: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:208: emits_in_schema_condition
     =         handle = <redacted>
     =         x = <redacted>
-    =     at tests/sources/functional/emits.move:210: emits_in_schema_condition
-    =     at tests/sources/functional/emits.move:212: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:209: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:211: emits_in_schema_condition
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:213: emits_in_schema_condition
-    =     at tests/sources/functional/emits.move:206
-    =     at tests/sources/functional/emits.move:214
+    =     at tests/sources/functional/emits.move:212: emits_in_schema_condition
+    =     at tests/sources/functional/emits.move:205
+    =     at tests/sources/functional/emits.move:213
+
+error: function does not emit the expected event
+   ┌─ tests/sources/functional/emits.move:43:9
+   │
+43 │         emits DummyEvent{msg: 0} to handle;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/emits.move:38: multiple
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:39: multiple
+   =     at tests/sources/functional/emits.move:40: multiple
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:41: multiple
+   =     at tests/sources/functional/emits.move:43
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:44:9
    │
-44 │         emits DummyEvent{msg: 0} to handle;
+44 │         emits DummyEvent{msg: 1} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:38: multiple
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:39: multiple
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:40: multiple
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:41: multiple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:42: multiple
+   =     at tests/sources/functional/emits.move:43
    =     at tests/sources/functional/emits.move:44
-
-error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:45:9
-   │
-45 │         emits DummyEvent{msg: 1} to handle;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/emits.move:39: multiple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:40: multiple
-   =     at tests/sources/functional/emits.move:41: multiple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:42: multiple
-   =     at tests/sources/functional/emits.move:44
-   =     at tests/sources/functional/emits.move:45
 
 error: emitted event not covered by any of the `emits` clauses
-   ┌─ tests/sources/functional/emits.move:43:5
+   ┌─ tests/sources/functional/emits.move:42:5
    │
-43 │ ╭     spec multiple {
-44 │ │         emits DummyEvent{msg: 0} to handle;
-45 │ │         emits DummyEvent{msg: 1} to handle;
-46 │ │     }
+42 │ ╭     spec multiple {
+43 │ │         emits DummyEvent{msg: 0} to handle;
+44 │ │         emits DummyEvent{msg: 1} to handle;
+45 │ │     }
    │ ╰─────^
    │
+   =     at tests/sources/functional/emits.move:38: multiple
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:39: multiple
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:40: multiple
-   =     at tests/sources/functional/emits.move:41: multiple
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:42: multiple
-   =     at tests/sources/functional/emits.move:44
-   =     at tests/sources/functional/emits.move:45
+   =     at tests/sources/functional/emits.move:41: multiple
    =     at tests/sources/functional/emits.move:43
+   =     at tests/sources/functional/emits.move:44
+   =     at tests/sources/functional/emits.move:42
+
+error: function does not emit the expected event
+   ┌─ tests/sources/functional/emits.move:83:9
+   │
+83 │         emits DummyEvent{msg: 0} to handle;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/emits.move:74: multiple_different_handle
+   =         handle = <redacted>
+   =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:76: multiple_different_handle
+   =     at tests/sources/functional/emits.move:77: multiple_different_handle
+   =     at tests/sources/functional/emits.move:78: multiple_different_handle
+   =     at tests/sources/functional/emits.move:79: multiple_different_handle
+   =     at tests/sources/functional/emits.move:80: multiple_different_handle
+   =         handle = <redacted>
+   =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:83
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:84:9
@@ -734,59 +754,62 @@ error: function does not emit the expected event
 84 │         emits DummyEvent{msg: 0} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:74: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:75: multiple_different_handle
    =     at tests/sources/functional/emits.move:76: multiple_different_handle
    =     at tests/sources/functional/emits.move:77: multiple_different_handle
    =     at tests/sources/functional/emits.move:78: multiple_different_handle
    =     at tests/sources/functional/emits.move:79: multiple_different_handle
    =     at tests/sources/functional/emits.move:80: multiple_different_handle
-   =     at tests/sources/functional/emits.move:81: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:82: multiple_different_handle
+   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:83
    =     at tests/sources/functional/emits.move:84
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:85:9
    │
-85 │         emits DummyEvent{msg: 0} to handle;
+85 │         emits DummyEvent{msg: 1} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:74: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:75: multiple_different_handle
    =     at tests/sources/functional/emits.move:76: multiple_different_handle
    =     at tests/sources/functional/emits.move:77: multiple_different_handle
    =     at tests/sources/functional/emits.move:78: multiple_different_handle
    =     at tests/sources/functional/emits.move:79: multiple_different_handle
    =     at tests/sources/functional/emits.move:80: multiple_different_handle
-   =     at tests/sources/functional/emits.move:81: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:82: multiple_different_handle
+   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:83
    =     at tests/sources/functional/emits.move:84
    =     at tests/sources/functional/emits.move:85
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:86:9
    │
-86 │         emits DummyEvent{msg: 1} to handle;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+86 │         emits DummyEvent{msg: 0} to handle2;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:74: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:75: multiple_different_handle
    =     at tests/sources/functional/emits.move:76: multiple_different_handle
    =     at tests/sources/functional/emits.move:77: multiple_different_handle
    =     at tests/sources/functional/emits.move:78: multiple_different_handle
    =     at tests/sources/functional/emits.move:79: multiple_different_handle
    =     at tests/sources/functional/emits.move:80: multiple_different_handle
-   =     at tests/sources/functional/emits.move:81: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:82: multiple_different_handle
+   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:83
    =     at tests/sources/functional/emits.move:84
    =     at tests/sources/functional/emits.move:85
    =     at tests/sources/functional/emits.move:86
@@ -797,91 +820,82 @@ error: function does not emit the expected event
 87 │         emits DummyEvent{msg: 0} to handle2;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:74: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:75: multiple_different_handle
    =     at tests/sources/functional/emits.move:76: multiple_different_handle
    =     at tests/sources/functional/emits.move:77: multiple_different_handle
    =     at tests/sources/functional/emits.move:78: multiple_different_handle
    =     at tests/sources/functional/emits.move:79: multiple_different_handle
    =     at tests/sources/functional/emits.move:80: multiple_different_handle
-   =     at tests/sources/functional/emits.move:81: multiple_different_handle
    =         handle = <redacted>
    =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:82: multiple_different_handle
+   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:83
    =     at tests/sources/functional/emits.move:84
    =     at tests/sources/functional/emits.move:85
    =     at tests/sources/functional/emits.move:86
    =     at tests/sources/functional/emits.move:87
 
 error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:88:9
+   ┌─ tests/sources/functional/emits.move:52:9
    │
-88 │         emits DummyEvent{msg: 0} to handle2;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+52 │         emits DummyEvent{msg: 0} to handle;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:75: multiple_different_handle
+   =     at tests/sources/functional/emits.move:47: multiple_incorrect
    =         handle = <redacted>
-   =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:76: multiple_different_handle
-   =     at tests/sources/functional/emits.move:77: multiple_different_handle
-   =     at tests/sources/functional/emits.move:78: multiple_different_handle
-   =     at tests/sources/functional/emits.move:79: multiple_different_handle
-   =     at tests/sources/functional/emits.move:80: multiple_different_handle
-   =     at tests/sources/functional/emits.move:81: multiple_different_handle
+   =     at tests/sources/functional/emits.move:48: multiple_incorrect
+   =     at tests/sources/functional/emits.move:49: multiple_incorrect
    =         handle = <redacted>
-   =         handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:82: multiple_different_handle
-   =     at tests/sources/functional/emits.move:84
-   =     at tests/sources/functional/emits.move:85
-   =     at tests/sources/functional/emits.move:86
-   =     at tests/sources/functional/emits.move:87
-   =     at tests/sources/functional/emits.move:88
+   =     at tests/sources/functional/emits.move:50: multiple_incorrect
+   =     at tests/sources/functional/emits.move:52
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:53:9
    │
-53 │         emits DummyEvent{msg: 0} to handle;
+53 │         emits DummyEvent{msg: 1} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:47: multiple_incorrect
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:48: multiple_incorrect
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:49: multiple_incorrect
-   =     at tests/sources/functional/emits.move:50: multiple_incorrect
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:51: multiple_incorrect
+   =     at tests/sources/functional/emits.move:50: multiple_incorrect
+   =     at tests/sources/functional/emits.move:52
    =     at tests/sources/functional/emits.move:53
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:54:9
    │
-54 │         emits DummyEvent{msg: 1} to handle;
+54 │         emits DummyEvent{msg: 2} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:47: multiple_incorrect
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:48: multiple_incorrect
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:49: multiple_incorrect
-   =     at tests/sources/functional/emits.move:50: multiple_incorrect
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:51: multiple_incorrect
+   =     at tests/sources/functional/emits.move:50: multiple_incorrect
+   =     at tests/sources/functional/emits.move:52
    =     at tests/sources/functional/emits.move:53
    =     at tests/sources/functional/emits.move:54
 
 error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:55:9
+   ┌─ tests/sources/functional/emits.move:62:9
    │
-55 │         emits DummyEvent{msg: 2} to handle;
+62 │         emits DummyEvent{msg: 0} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/emits.move:48: multiple_incorrect
+   =     at tests/sources/functional/emits.move:57: multiple_same
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:49: multiple_incorrect
-   =     at tests/sources/functional/emits.move:50: multiple_incorrect
+   =     at tests/sources/functional/emits.move:58: multiple_same
+   =     at tests/sources/functional/emits.move:59: multiple_same
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:51: multiple_incorrect
-   =     at tests/sources/functional/emits.move:53
-   =     at tests/sources/functional/emits.move:54
-   =     at tests/sources/functional/emits.move:55
+   =     at tests/sources/functional/emits.move:60: multiple_same
+   =     at tests/sources/functional/emits.move:62
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:63:9
@@ -889,47 +903,46 @@ error: function does not emit the expected event
 63 │         emits DummyEvent{msg: 0} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:57: multiple_same
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:58: multiple_same
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:59: multiple_same
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:60: multiple_same
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:61: multiple_same
+   =     at tests/sources/functional/emits.move:62
    =     at tests/sources/functional/emits.move:63
-
-error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:64:9
-   │
-64 │         emits DummyEvent{msg: 0} to handle;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/emits.move:58: multiple_same
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:59: multiple_same
-   =     at tests/sources/functional/emits.move:60: multiple_same
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:61: multiple_same
-   =     at tests/sources/functional/emits.move:63
-   =     at tests/sources/functional/emits.move:64
 
 error: emitted event not covered by any of the `emits` clauses
-   ┌─ tests/sources/functional/emits.move:62:5
+   ┌─ tests/sources/functional/emits.move:61:5
    │
-62 │ ╭     spec multiple_same {
+61 │ ╭     spec multiple_same {
+62 │ │         emits DummyEvent{msg: 0} to handle;
 63 │ │         emits DummyEvent{msg: 0} to handle;
-64 │ │         emits DummyEvent{msg: 0} to handle;
-65 │ │     }
+64 │ │     }
    │ ╰─────^
    │
+   =     at tests/sources/functional/emits.move:57: multiple_same
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:58: multiple_same
-   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:59: multiple_same
-   =     at tests/sources/functional/emits.move:60: multiple_same
    =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:61: multiple_same
-   =     at tests/sources/functional/emits.move:63
-   =     at tests/sources/functional/emits.move:64
+   =     at tests/sources/functional/emits.move:60: multiple_same
    =     at tests/sources/functional/emits.move:62
+   =     at tests/sources/functional/emits.move:63
+   =     at tests/sources/functional/emits.move:61
+
+error: function does not emit the expected event
+   ┌─ tests/sources/functional/emits.move:70:9
+   │
+70 │         emits DummyEvent{msg: 0} to handle;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/emits.move:66: multiple_same_incorrect
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:67: multiple_same_incorrect
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:68: multiple_same_incorrect
+   =     at tests/sources/functional/emits.move:70
 
 error: function does not emit the expected event
    ┌─ tests/sources/functional/emits.move:71:9
@@ -937,256 +950,261 @@ error: function does not emit the expected event
 71 │         emits DummyEvent{msg: 0} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:66: multiple_same_incorrect
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:67: multiple_same_incorrect
    =         handle = <redacted>
    =     at tests/sources/functional/emits.move:68: multiple_same_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:69: multiple_same_incorrect
+   =     at tests/sources/functional/emits.move:70
    =     at tests/sources/functional/emits.move:71
 
 error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:72:9
-   │
-72 │         emits DummyEvent{msg: 0} to handle;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/emits.move:67: multiple_same_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:68: multiple_same_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:69: multiple_same_incorrect
-   =     at tests/sources/functional/emits.move:71
-   =     at tests/sources/functional/emits.move:72
+    ┌─ tests/sources/functional/emits.move:315:9
+    │
+315 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:309: opaque_completeness_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:311: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:312: opaque_completeness_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:315
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:316:9
     │
-316 │         emits DummyEvent{msg: 0} to handle;
+316 │         emits DummyEvent{msg: 7} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:309: opaque_completeness_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:311: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:312: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:314: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:315
     =     at tests/sources/functional/emits.move:316
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:317:9
     │
-317 │         emits DummyEvent{msg: 7} to handle;
+317 │         emits DummyEvent{msg: 1} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:309: opaque_completeness_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:311: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:312: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:314: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:315
     =     at tests/sources/functional/emits.move:316
     =     at tests/sources/functional/emits.move:317
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:318:9
-    │
-318 │         emits DummyEvent{msg: 1} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:311: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:312: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:314: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:316
-    =     at tests/sources/functional/emits.move:317
-    =     at tests/sources/functional/emits.move:318
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:315:5
+    ┌─ tests/sources/functional/emits.move:314:5
     │
-315 │ ╭     spec opaque_completeness_incorrect {
-316 │ │         emits DummyEvent{msg: 0} to handle;
-317 │ │         emits DummyEvent{msg: 7} to handle;
-318 │ │         emits DummyEvent{msg: 1} to handle;
-319 │ │     }
+314 │ ╭     spec opaque_completeness_incorrect {
+315 │ │         emits DummyEvent{msg: 0} to handle;
+316 │ │         emits DummyEvent{msg: 7} to handle;
+317 │ │         emits DummyEvent{msg: 1} to handle;
+318 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:309: opaque_completeness_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:310: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:311: opaque_completeness_incorrect
     =     at tests/sources/functional/emits.move:312: opaque_completeness_incorrect
-    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:314: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:313: opaque_completeness_incorrect
+    =     at tests/sources/functional/emits.move:315
     =     at tests/sources/functional/emits.move:316
     =     at tests/sources/functional/emits.move:317
-    =     at tests/sources/functional/emits.move:318
-    =     at tests/sources/functional/emits.move:315
+    =     at tests/sources/functional/emits.move:314
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:303:9
+    │
+303 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:299: opaque_in_call_chain
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:274: opaque
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:275: opaque
+    =     at tests/sources/functional/emits.move:276: opaque
+    =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:278: opaque
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:303
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:304:9
     │
-304 │         emits DummyEvent{msg: 0} to handle;
+304 │         emits DummyEvent{msg: 7} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:299: opaque_in_call_chain
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
     =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:302: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:303
     =     at tests/sources/functional/emits.move:304
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:305:9
     │
-305 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+305 │         emits DummyEvent{msg: 77} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:299: opaque_in_call_chain
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
     =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:302: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:303
     =     at tests/sources/functional/emits.move:304
     =     at tests/sources/functional/emits.move:305
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:306:9
     │
-306 │         emits DummyEvent{msg: 77} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
-    =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:276: opaque
-    =     at tests/sources/functional/emits.move:277: opaque
-    =     at tests/sources/functional/emits.move:278: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:302: opaque_in_call_chain
-    =     at tests/sources/functional/emits.move:304
-    =     at tests/sources/functional/emits.move:305
-    =     at tests/sources/functional/emits.move:306
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:307:9
-    │
-307 │         emits DummyEvent{msg: 1} to handle;
+306 │         emits DummyEvent{msg: 1} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
+    =     at tests/sources/functional/emits.move:299: opaque_in_call_chain
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
     =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:302: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:303
     =     at tests/sources/functional/emits.move:304
     =     at tests/sources/functional/emits.move:305
     =     at tests/sources/functional/emits.move:306
-    =     at tests/sources/functional/emits.move:307
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:303:5
+    ┌─ tests/sources/functional/emits.move:302:5
     │
-303 │ ╭     spec opaque_in_call_chain {
-304 │ │         emits DummyEvent{msg: 0} to handle;
-305 │ │         emits DummyEvent{msg: 7} to handle;
-306 │ │         emits DummyEvent{msg: 77} to handle;
-307 │ │         emits DummyEvent{msg: 1} to handle;
-308 │ │     }
+302 │ ╭     spec opaque_in_call_chain {
+303 │ │         emits DummyEvent{msg: 0} to handle;
+304 │ │         emits DummyEvent{msg: 7} to handle;
+305 │ │         emits DummyEvent{msg: 77} to handle;
+306 │ │         emits DummyEvent{msg: 1} to handle;
+307 │ │     }
     │ ╰─────^
     │
+    =     at tests/sources/functional/emits.move:299: opaque_in_call_chain
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:300: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:274: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
     =     at tests/sources/functional/emits.move:275: opaque
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:276: opaque
     =     at tests/sources/functional/emits.move:277: opaque
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:278: opaque
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:279: opaque
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:302: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:301: opaque_in_call_chain
+    =     at tests/sources/functional/emits.move:303
     =     at tests/sources/functional/emits.move:304
     =     at tests/sources/functional/emits.move:305
     =     at tests/sources/functional/emits.move:306
-    =     at tests/sources/functional/emits.move:307
-    =     at tests/sources/functional/emits.move:303
+    =     at tests/sources/functional/emits.move:302
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:292:9
+    │
+292 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:286: opaque_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:288: opaque_incorrect
+    =     at tests/sources/functional/emits.move:289: opaque_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:292
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:293:9
     │
-293 │         emits DummyEvent{msg: 0} to handle;
+293 │         emits DummyEvent{msg: 7} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:286: opaque_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:287: opaque_incorrect
     =     at tests/sources/functional/emits.move:288: opaque_incorrect
     =     at tests/sources/functional/emits.move:289: opaque_incorrect
-    =     at tests/sources/functional/emits.move:290: opaque_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:291: opaque_incorrect
+    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:292
     =     at tests/sources/functional/emits.move:293
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:294:9
     │
-294 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+294 │         emits DummyEvent{msg: 77} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:286: opaque_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:287: opaque_incorrect
     =     at tests/sources/functional/emits.move:288: opaque_incorrect
     =     at tests/sources/functional/emits.move:289: opaque_incorrect
-    =     at tests/sources/functional/emits.move:290: opaque_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:291: opaque_incorrect
+    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:292
     =     at tests/sources/functional/emits.move:293
     =     at tests/sources/functional/emits.move:294
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:295:9
     │
-295 │         emits DummyEvent{msg: 77} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+295 │         emits DummyEvent{msg: 1} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:286: opaque_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:287: opaque_incorrect
     =     at tests/sources/functional/emits.move:288: opaque_incorrect
     =     at tests/sources/functional/emits.move:289: opaque_incorrect
-    =     at tests/sources/functional/emits.move:290: opaque_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:291: opaque_incorrect
+    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:292
     =     at tests/sources/functional/emits.move:293
     =     at tests/sources/functional/emits.move:294
     =     at tests/sources/functional/emits.move:295
@@ -1194,345 +1212,327 @@ error: function does not emit the expected event
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:296:9
     │
-296 │         emits DummyEvent{msg: 1} to handle;
+296 │         emits DummyEvent{msg: 2} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:286: opaque_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:287: opaque_incorrect
     =     at tests/sources/functional/emits.move:288: opaque_incorrect
     =     at tests/sources/functional/emits.move:289: opaque_incorrect
-    =     at tests/sources/functional/emits.move:290: opaque_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:291: opaque_incorrect
+    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:292
     =     at tests/sources/functional/emits.move:293
     =     at tests/sources/functional/emits.move:294
     =     at tests/sources/functional/emits.move:295
     =     at tests/sources/functional/emits.move:296
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:297:9
+    ┌─ tests/sources/functional/emits.move:343:9
     │
-297 │         emits DummyEvent{msg: 2} to handle;
+343 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:287: opaque_incorrect
+    =     at tests/sources/functional/emits.move:337: opaque_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:288: opaque_incorrect
-    =     at tests/sources/functional/emits.move:289: opaque_incorrect
-    =     at tests/sources/functional/emits.move:290: opaque_incorrect
+    =     at tests/sources/functional/emits.move:338: opaque_partial
+    =     at tests/sources/functional/emits.move:339: opaque_partial
+    =     at tests/sources/functional/emits.move:340: opaque_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:291: opaque_incorrect
-    =     at tests/sources/functional/emits.move:293
-    =     at tests/sources/functional/emits.move:294
-    =     at tests/sources/functional/emits.move:295
-    =     at tests/sources/functional/emits.move:296
-    =     at tests/sources/functional/emits.move:297
+    =     at tests/sources/functional/emits.move:341: opaque_partial
+    =     at tests/sources/functional/emits.move:343
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:344:9
     │
-344 │         emits DummyEvent{msg: 0} to handle;
+344 │         emits DummyEvent{msg: 7} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:338: opaque_partial
+    =     at tests/sources/functional/emits.move:337: opaque_partial
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:338: opaque_partial
     =     at tests/sources/functional/emits.move:339: opaque_partial
     =     at tests/sources/functional/emits.move:340: opaque_partial
-    =     at tests/sources/functional/emits.move:341: opaque_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:342: opaque_partial
+    =     at tests/sources/functional/emits.move:341: opaque_partial
+    =     at tests/sources/functional/emits.move:343
     =     at tests/sources/functional/emits.move:344
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:345:9
     │
-345 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+345 │         emits DummyEvent{msg: 77} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:338: opaque_partial
+    =     at tests/sources/functional/emits.move:337: opaque_partial
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:338: opaque_partial
     =     at tests/sources/functional/emits.move:339: opaque_partial
     =     at tests/sources/functional/emits.move:340: opaque_partial
-    =     at tests/sources/functional/emits.move:341: opaque_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:342: opaque_partial
+    =     at tests/sources/functional/emits.move:341: opaque_partial
+    =     at tests/sources/functional/emits.move:343
     =     at tests/sources/functional/emits.move:344
     =     at tests/sources/functional/emits.move:345
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:346:9
     │
-346 │         emits DummyEvent{msg: 77} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+346 │         emits DummyEvent{msg: 1} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:338: opaque_partial
+    =     at tests/sources/functional/emits.move:337: opaque_partial
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:338: opaque_partial
     =     at tests/sources/functional/emits.move:339: opaque_partial
     =     at tests/sources/functional/emits.move:340: opaque_partial
-    =     at tests/sources/functional/emits.move:341: opaque_partial
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:342: opaque_partial
+    =     at tests/sources/functional/emits.move:341: opaque_partial
+    =     at tests/sources/functional/emits.move:343
     =     at tests/sources/functional/emits.move:344
     =     at tests/sources/functional/emits.move:345
     =     at tests/sources/functional/emits.move:346
 
 error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:347:9
+    ┌─ tests/sources/functional/emits.move:356:9
     │
-347 │         emits DummyEvent{msg: 1} to handle;
+356 │         emits DummyEvent{msg: 0} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:338: opaque_partial
+    =     at tests/sources/functional/emits.move:350: opaque_partial_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:339: opaque_partial
-    =     at tests/sources/functional/emits.move:340: opaque_partial
-    =     at tests/sources/functional/emits.move:341: opaque_partial
+    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:342: opaque_partial
-    =     at tests/sources/functional/emits.move:344
-    =     at tests/sources/functional/emits.move:345
-    =     at tests/sources/functional/emits.move:346
-    =     at tests/sources/functional/emits.move:347
+    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:356
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:357:9
     │
-357 │         emits DummyEvent{msg: 0} to handle;
+357 │         emits DummyEvent{msg: 7} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:350: opaque_partial_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:355: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:356
     =     at tests/sources/functional/emits.move:357
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:358:9
     │
-358 │         emits DummyEvent{msg: 7} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+358 │         emits DummyEvent{msg: 77} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:350: opaque_partial_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:355: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:356
     =     at tests/sources/functional/emits.move:357
     =     at tests/sources/functional/emits.move:358
 
 error: function does not emit the expected event
     ┌─ tests/sources/functional/emits.move:359:9
     │
-359 │         emits DummyEvent{msg: 77} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:355: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:357
-    =     at tests/sources/functional/emits.move:358
-    =     at tests/sources/functional/emits.move:359
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:360:9
-    │
-360 │         emits DummyEvent{msg: 1} to handle;
+359 │         emits DummyEvent{msg: 1} to handle;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:350: opaque_partial_incorrect
     =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
     =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:355: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:357
-    =     at tests/sources/functional/emits.move:358
-    =     at tests/sources/functional/emits.move:359
-    =     at tests/sources/functional/emits.move:360
-
-error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:356:5
-    │
-356 │ ╭     spec opaque_partial_incorrect {
-357 │ │         emits DummyEvent{msg: 0} to handle;
-358 │ │         emits DummyEvent{msg: 7} to handle;
-359 │ │         emits DummyEvent{msg: 77} to handle;
-360 │ │         emits DummyEvent{msg: 1} to handle;
-361 │ │         // The completeness check of the `emits` spec of this function should fail.
-362 │ │     }
-    │ ╰─────^
-    │
-    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:355: opaque_partial_incorrect
-    =     at tests/sources/functional/emits.move:357
-    =     at tests/sources/functional/emits.move:358
-    =     at tests/sources/functional/emits.move:359
-    =     at tests/sources/functional/emits.move:360
     =     at tests/sources/functional/emits.move:356
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:229:9
-    │
-229 │         emits DummyEvent{msg: 0} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:223: partial
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:224: partial
-    =     at tests/sources/functional/emits.move:225: partial
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:226: partial
-    =     at tests/sources/functional/emits.move:229
-
-error: function does not emit the expected event
-    ┌─ tests/sources/functional/emits.move:237:9
-    │
-237 │         emits DummyEvent{msg: 0} to handle;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/functional/emits.move:232: partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:233: partial_incorrect
-    =     at tests/sources/functional/emits.move:234: partial_incorrect
-    =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:235: partial_incorrect
-    =     at tests/sources/functional/emits.move:237
+    =     at tests/sources/functional/emits.move:357
+    =     at tests/sources/functional/emits.move:358
+    =     at tests/sources/functional/emits.move:359
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:236:5
+    ┌─ tests/sources/functional/emits.move:355:5
     │
-236 │ ╭     spec partial_incorrect {
-237 │ │         emits DummyEvent{msg: 0} to handle;
-238 │ │     }
+355 │ ╭     spec opaque_partial_incorrect {
+356 │ │         emits DummyEvent{msg: 0} to handle;
+357 │ │         emits DummyEvent{msg: 7} to handle;
+358 │ │         emits DummyEvent{msg: 77} to handle;
+359 │ │         emits DummyEvent{msg: 1} to handle;
+360 │ │         // The completeness check of the `emits` spec of this function should fail.
+361 │ │     }
     │ ╰─────^
     │
+    =     at tests/sources/functional/emits.move:350: opaque_partial_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:351: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:352: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:353: opaque_partial_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:354: opaque_partial_incorrect
+    =     at tests/sources/functional/emits.move:356
+    =     at tests/sources/functional/emits.move:357
+    =     at tests/sources/functional/emits.move:358
+    =     at tests/sources/functional/emits.move:359
+    =     at tests/sources/functional/emits.move:355
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:228:9
+    │
+228 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:222: partial
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:223: partial
+    =     at tests/sources/functional/emits.move:224: partial
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:225: partial
+    =     at tests/sources/functional/emits.move:228
+
+error: function does not emit the expected event
+    ┌─ tests/sources/functional/emits.move:236:9
+    │
+236 │         emits DummyEvent{msg: 0} to handle;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/emits.move:231: partial_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:232: partial_incorrect
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:233: partial_incorrect
-    =     at tests/sources/functional/emits.move:234: partial_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:235: partial_incorrect
-    =     at tests/sources/functional/emits.move:237
+    =     at tests/sources/functional/emits.move:234: partial_incorrect
     =     at tests/sources/functional/emits.move:236
 
+error: emitted event not covered by any of the `emits` clauses
+    ┌─ tests/sources/functional/emits.move:235:5
+    │
+235 │ ╭     spec partial_incorrect {
+236 │ │         emits DummyEvent{msg: 0} to handle;
+237 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/emits.move:231: partial_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:232: partial_incorrect
+    =     at tests/sources/functional/emits.move:233: partial_incorrect
+    =         handle = <redacted>
+    =     at tests/sources/functional/emits.move:234: partial_incorrect
+    =     at tests/sources/functional/emits.move:236
+    =     at tests/sources/functional/emits.move:235
+
 error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:17:9
+   ┌─ tests/sources/functional/emits.move:16:9
    │
-17 │         emits DummyEvent{msg: 0} to handle;
+16 │         emits DummyEvent{msg: 0} to handle;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:12: simple
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:13: simple
    =         handle = <redacted>
    =     at tests/sources/functional/emits.move:14: simple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:15: simple
-   =     at tests/sources/functional/emits.move:17
-
-error: emitted event not covered by any of the `emits` clauses
-   ┌─ tests/sources/functional/emits.move:16:5
-   │
-16 │ ╭     spec simple {
-17 │ │         emits DummyEvent{msg: 0} to handle;
-18 │ │     }
-   │ ╰─────^
-   │
-   =     at tests/sources/functional/emits.move:13: simple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:14: simple
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:15: simple
-   =     at tests/sources/functional/emits.move:17
    =     at tests/sources/functional/emits.move:16
 
-error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:31:9
+error: emitted event not covered by any of the `emits` clauses
+   ┌─ tests/sources/functional/emits.move:15:5
    │
-31 │         emits DummyEvent{msg: 0} to _handle2;
+15 │ ╭     spec simple {
+16 │ │         emits DummyEvent{msg: 0} to handle;
+17 │ │     }
+   │ ╰─────^
+   │
+   =     at tests/sources/functional/emits.move:12: simple
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:13: simple
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:14: simple
+   =     at tests/sources/functional/emits.move:16
+   =     at tests/sources/functional/emits.move:15
+
+error: function does not emit the expected event
+   ┌─ tests/sources/functional/emits.move:30:9
+   │
+30 │         emits DummyEvent{msg: 0} to _handle2;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/emits.move:26: simple_wrong_handle_incorrect
+   =         handle = <redacted>
+   =         _handle2 = <redacted>
    =     at tests/sources/functional/emits.move:27: simple_wrong_handle_incorrect
    =         handle = <redacted>
    =         _handle2 = <redacted>
    =     at tests/sources/functional/emits.move:28: simple_wrong_handle_incorrect
-   =         handle = <redacted>
-   =         _handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:29: simple_wrong_handle_incorrect
-   =     at tests/sources/functional/emits.move:31
-
-error: emitted event not covered by any of the `emits` clauses
-   ┌─ tests/sources/functional/emits.move:30:5
-   │
-30 │ ╭     spec simple_wrong_handle_incorrect {
-31 │ │         emits DummyEvent{msg: 0} to _handle2;
-32 │ │     }
-   │ ╰─────^
-   │
-   =     at tests/sources/functional/emits.move:27: simple_wrong_handle_incorrect
-   =         handle = <redacted>
-   =         _handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:28: simple_wrong_handle_incorrect
-   =         handle = <redacted>
-   =         _handle2 = <redacted>
-   =     at tests/sources/functional/emits.move:29: simple_wrong_handle_incorrect
-   =     at tests/sources/functional/emits.move:31
    =     at tests/sources/functional/emits.move:30
 
-error: function does not emit the expected event
-   ┌─ tests/sources/functional/emits.move:24:9
-   │
-24 │         emits DummyEvent{msg: 1} to handle;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/emits.move:20: simple_wrong_msg_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:21: simple_wrong_msg_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:22: simple_wrong_msg_incorrect
-   =     at tests/sources/functional/emits.move:24
-
 error: emitted event not covered by any of the `emits` clauses
-   ┌─ tests/sources/functional/emits.move:23:5
+   ┌─ tests/sources/functional/emits.move:29:5
    │
-23 │ ╭     spec simple_wrong_msg_incorrect {
-24 │ │         emits DummyEvent{msg: 1} to handle;
-25 │ │     }
+29 │ ╭     spec simple_wrong_handle_incorrect {
+30 │ │         emits DummyEvent{msg: 0} to _handle2;
+31 │ │     }
    │ ╰─────^
    │
+   =     at tests/sources/functional/emits.move:26: simple_wrong_handle_incorrect
+   =         handle = <redacted>
+   =         _handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:27: simple_wrong_handle_incorrect
+   =         handle = <redacted>
+   =         _handle2 = <redacted>
+   =     at tests/sources/functional/emits.move:28: simple_wrong_handle_incorrect
+   =     at tests/sources/functional/emits.move:30
+   =     at tests/sources/functional/emits.move:29
+
+error: function does not emit the expected event
+   ┌─ tests/sources/functional/emits.move:23:9
+   │
+23 │         emits DummyEvent{msg: 1} to handle;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/emits.move:19: simple_wrong_msg_incorrect
+   =         handle = <redacted>
    =     at tests/sources/functional/emits.move:20: simple_wrong_msg_incorrect
    =         handle = <redacted>
    =     at tests/sources/functional/emits.move:21: simple_wrong_msg_incorrect
-   =         handle = <redacted>
-   =     at tests/sources/functional/emits.move:22: simple_wrong_msg_incorrect
-   =     at tests/sources/functional/emits.move:24
    =     at tests/sources/functional/emits.move:23
 
 error: emitted event not covered by any of the `emits` clauses
-    ┌─ tests/sources/functional/emits.move:256:5
+   ┌─ tests/sources/functional/emits.move:22:5
+   │
+22 │ ╭     spec simple_wrong_msg_incorrect {
+23 │ │         emits DummyEvent{msg: 1} to handle;
+24 │ │     }
+   │ ╰─────^
+   │
+   =     at tests/sources/functional/emits.move:19: simple_wrong_msg_incorrect
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:20: simple_wrong_msg_incorrect
+   =         handle = <redacted>
+   =     at tests/sources/functional/emits.move:21: simple_wrong_msg_incorrect
+   =     at tests/sources/functional/emits.move:23
+   =     at tests/sources/functional/emits.move:22
+
+error: emitted event not covered by any of the `emits` clauses
+    ┌─ tests/sources/functional/emits.move:255:5
     │
-256 │ ╭     spec strict_incorrect {
-257 │ │         pragma emits_is_strict;
-258 │ │     }
+255 │ ╭     spec strict_incorrect {
+256 │ │         pragma emits_is_strict;
+257 │ │     }
     │ ╰─────^
     │
+    =     at tests/sources/functional/emits.move:251: strict_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:252: strict_incorrect
-    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:253: strict_incorrect
-    =     at tests/sources/functional/emits.move:254: strict_incorrect
     =         handle = <redacted>
-    =     at tests/sources/functional/emits.move:255: strict_incorrect
-    =     at tests/sources/functional/emits.move:256
+    =     at tests/sources/functional/emits.move:254: strict_incorrect
+    =     at tests/sources/functional/emits.move:255

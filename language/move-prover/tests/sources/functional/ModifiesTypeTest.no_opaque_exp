@@ -1,8 +1,0 @@
-Move prover returns: exiting with bytecode transformation errors
-error: caller `B::mutate_S_test1_incorrect` specifies modify targets for `A::S` but callee `A::mutate_at` does not
-   ┌─ tests/sources/functional/ModifiesTypeTest.move:30:5
-   │
-30 │ ╭     public fun mutate_S_test1_incorrect(addr: address) {
-31 │ │         A::mutate_at(addr);
-32 │ │     }
-   │ ╰─────^

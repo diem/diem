@@ -1,6 +1,3 @@
-// separate_baseline: inv-v1
-// No errors with v2 invariants.  Errors with old invariants because they don't support
-// the disable_invariant pragmas.
 address 0x1 {
 
 module M1 {
