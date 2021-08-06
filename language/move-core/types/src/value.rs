@@ -1,17 +1,22 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
+use crate::{account_address::AccountAddress, identifier::Identifier};
 use anyhow::Result as AResult;
 use serde::{
     de::Error as DeError,
-    ser::{SerializeSeq, SerializeTuple},
+    ser::{SerializeMap, SerializeSeq, SerializeTuple},
     Deserialize, Serialize,
 };
 use std::fmt::{self, Debug};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct MoveStruct(Vec<MoveValue>);
+pub enum MoveStruct {
+    /// The representation used by the MoveVM
+    Runtime(Vec<MoveValue>),
+    /// A decorated representation with human-readable field names that can be used by clients
+    WithFields(Vec<(Identifier, MoveValue)>),
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MoveValue {
@@ -25,8 +30,20 @@ pub enum MoveValue {
     Signer(AccountAddress),
 }
 
+/// A layout associated with a named field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MoveStructLayout(Vec<MoveTypeLayout>);
+pub struct MoveFieldLayout {
+    name: Identifier,
+    layout: MoveTypeLayout,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MoveStructLayout {
+    /// The representation used by the MoveVM
+    Runtime(Vec<MoveTypeLayout>),
+    /// A decorated representation with human-readable field names that can be used by clients
+    WithFields(Vec<MoveFieldLayout>),
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MoveTypeLayout {
@@ -72,7 +89,11 @@ where
 
 impl MoveStruct {
     pub fn new(value: Vec<MoveValue>) -> Self {
-        MoveStruct(value)
+        Self::Runtime(value)
+    }
+
+    pub fn with_fields(values: Vec<(Identifier, MoveValue)>) -> Self {
+        Self::WithFields(values)
     }
 
     pub fn simple_deserialize(blob: &[u8], ty: &MoveStructLayout) -> AResult<Self> {
@@ -80,26 +101,55 @@ impl MoveStruct {
     }
 
     pub fn fields(&self) -> &[MoveValue] {
-        &self.0
+        match self {
+            Self::Runtime(vals) => vals,
+            Self::WithFields(_) => {
+                // It's not possible to implement this without changing the return type, and some
+                // panicking is the best move
+                panic!("Getting fields for decorated representation")
+            }
+        }
     }
 
-    pub fn into_inner(self) -> Vec<MoveValue> {
-        self.0
+    pub fn into_fields(self) -> Vec<MoveValue> {
+        match self {
+            Self::Runtime(vals) => vals,
+            Self::WithFields(vals) => vals.into_iter().map(|(_, f)| f).collect(),
+        }
     }
 }
 
 impl MoveStructLayout {
     pub fn new(types: Vec<MoveTypeLayout>) -> Self {
-        MoveStructLayout(types)
+        Self::Runtime(types)
     }
+
+    pub fn with_fields(types: Vec<MoveFieldLayout>) -> Self {
+        Self::WithFields(types)
+    }
+
     pub fn fields(&self) -> &[MoveTypeLayout] {
-        &self.0
+        match self {
+            Self::Runtime(vals) => vals,
+            Self::WithFields(_) => {
+                // It's not possible to implement this without changing the return type, and some
+                // performance-critical VM serialization code uses the Runtime case of this.
+                // panicking is the best move
+                panic!("Getting fields for decorated representation")
+            }
+        }
+    }
+
+    pub fn into_fields(self) -> Vec<MoveTypeLayout> {
+        match self {
+            Self::Runtime(vals) => vals,
+            Self::WithFields(vals) => vals.into_iter().map(|f| f.layout).collect(),
+        }
     }
 }
 
 impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
     type Value = MoveValue;
-
     fn deserialize<D: serde::de::Deserializer<'d>>(
         self,
         deserializer: D,
@@ -144,6 +194,30 @@ impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     }
 }
 
+struct DecoratedStructFieldVisitor<'a>(&'a [MoveFieldLayout]);
+
+impl<'d, 'a> serde::de::Visitor<'d> for DecoratedStructFieldVisitor<'a> {
+    type Value = Vec<(Identifier, MoveValue)>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Struct")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'d>,
+    {
+        let mut vals = Vec::new();
+        for (i, layout) in self.0.iter().enumerate() {
+            match seq.next_element_seed(layout)? {
+                Some(elem) => vals.push(elem),
+                None => return Err(A::Error::invalid_length(i, &self)),
+            }
+        }
+        Ok(vals)
+    }
+}
+
 struct StructFieldVisitor<'a>(&'a [MoveTypeLayout]);
 
 impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
@@ -168,6 +242,17 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
     }
 }
 
+impl<'d> serde::de::DeserializeSeed<'d> for &MoveFieldLayout {
+    type Value = (Identifier, MoveValue);
+
+    fn deserialize<D: serde::de::Deserializer<'d>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        Ok((self.name.clone(), self.layout.deserialize(deserializer)?))
+    }
+}
+
 impl<'d> serde::de::DeserializeSeed<'d> for &MoveStructLayout {
     type Value = MoveStruct;
 
@@ -175,9 +260,18 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveStructLayout {
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
-        let layout = &self.0;
-        let fields = deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
-        Ok(MoveStruct(fields))
+        match self {
+            MoveStructLayout::Runtime(layout) => {
+                let fields =
+                    deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
+                Ok(MoveStruct::Runtime(fields))
+            }
+            MoveStructLayout::WithFields(layout) => {
+                let fields = deserializer
+                    .deserialize_tuple(layout.len(), DecoratedStructFieldVisitor(layout))?;
+                Ok(MoveStruct::WithFields(fields))
+            }
+        }
     }
 }
 
@@ -204,10 +298,21 @@ impl serde::Serialize for MoveValue {
 
 impl serde::Serialize for MoveStruct {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut t = serializer.serialize_tuple(self.0.len())?;
-        for v in self.0.iter() {
-            t.serialize_element(v)?;
+        match self {
+            Self::Runtime(s) => {
+                let mut t = serializer.serialize_tuple(s.len())?;
+                for v in s.iter() {
+                    t.serialize_element(v)?;
+                }
+                t.end()
+            }
+            Self::WithFields(s) => {
+                let mut t = serializer.serialize_map(Some(s.len()))?;
+                for (f, v) in s.iter() {
+                    t.serialize_entry(f, v)?;
+                }
+                t.end()
+            }
         }
-        t.end()
     }
 }
