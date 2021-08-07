@@ -2376,6 +2376,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 exp,
                 additional_exps,
             });
+            match kind {
+                ConditionKind::LetPost(name) | ConditionKind::LetPre(name) => {
+                    // If a let name is introduced by this condition, remove it from argument_map
+                    // as it shadows schema arguments.
+                    argument_map.remove(name);
+                }
+                _ => {}
+            }
         }
 
         // Put schema entry back.
