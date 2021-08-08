@@ -23,6 +23,7 @@ pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_DIR;
 /// Extension for resource and event files, which are in BCS format
 const BCS_EXTENSION: &str = "bcs";
 
+use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use anyhow::Result;
 use move_core_types::{
     account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
@@ -218,6 +219,37 @@ pub enum SandboxCommand {
         #[structopt(long = "no-republish")]
         no_republish: bool,
     },
+    /// Generate struct layout bindings for the modules stored on disk under `storage`
+    // TODO: expand this to generate script bindings, docs, errmaps, etc.?
+    #[structopt(name = "generate")]
+    Generate {
+        #[structopt(subcommand)]
+        cmd: GenerateCommand,
+    },
+}
+
+#[derive(StructOpt)]
+pub enum GenerateCommand {
+    /// Generate struct layout bindings for the modules stored on disk under `storage`
+    #[structopt(name = "struct-layouts")]
+    StructLayouts {
+        /// Path to a module stored on disk.
+        #[structopt(long)]
+        module: String,
+        /// If set, generate bindings for the specified struct and type arguments. If unset,
+        /// generate bindings for all closed struct definitions
+        #[structopt(flatten)]
+        options: StructLayoutOptions,
+    },
+}
+#[derive(StructOpt)]
+pub struct StructLayoutOptions {
+    /// Generate layout bindings for this struct
+    #[structopt(long = "struct")]
+    struct_: Option<String>,
+    /// Generate layout bindings for `struct` bound to these type arguments
+    #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag), requires="struct")]
+    type_args: Option<Vec<TypeTag>>,
 }
 
 #[derive(StructOpt)]
@@ -389,6 +421,23 @@ fn handle_sandbox_commands(
         SandboxCommand::Doctor {} => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
             sandbox::commands::doctor(&state)
+        }
+        SandboxCommand::Generate { cmd } => {
+            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
+            handle_generate_commands(cmd, &state)
+        }
+    }
+}
+
+fn handle_generate_commands(cmd: &GenerateCommand, state: &OnDiskStateView) -> Result<()> {
+    match cmd {
+        GenerateCommand::StructLayouts { module, options } => {
+            sandbox::commands::generate::generate_struct_layouts(
+                module,
+                &options.struct_,
+                &options.type_args,
+                state,
+            )
         }
     }
 }

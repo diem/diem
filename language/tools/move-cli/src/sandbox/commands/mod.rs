@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod doctor;
+pub mod generate;
 pub mod publish;
 pub mod run;
 pub mod test;

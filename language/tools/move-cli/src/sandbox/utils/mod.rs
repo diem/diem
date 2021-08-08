@@ -32,6 +32,7 @@ pub mod on_disk_state_view;
 pub mod package;
 
 pub use mode::*;
+use move_binary_format::layout::GetModule;
 pub use on_disk_state_view::*;
 pub use package::*;
 
@@ -279,7 +280,7 @@ pub(crate) fn explain_publish_error(
         VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
             println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");
 
-            let old_module = state.get_compiled_module(&module_id)?;
+            let old_module = state.get_module_by_id(&module_id)?.unwrap();
             let old_api = normalized::Module::new(&old_module);
             let new_api = normalized::Module::new(module);
             let compat = Compatibility::check(&old_api, &new_api);
@@ -421,7 +422,11 @@ pub(crate) fn explain_execution_error(
             // TODO: map to source code location
             let location_explanation = match location {
                 AbortLocation::Module(id) => {
-                    format!("{}::{}", id, state.resolve_function(&id, function)?)
+                    format!(
+                        "{}::{}",
+                        id,
+                        state.resolve_function(&id, function)?.unwrap()
+                    )
                 }
                 AbortLocation::Script => "script".to_string(),
             };

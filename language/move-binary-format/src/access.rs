@@ -195,6 +195,10 @@ pub trait ModuleAccess: Sync {
             .map(|handle| self.module_id_for_handle(handle))
             .collect()
     }
+
+    fn find_struct_def(&self, idx: StructHandleIndex) -> Option<&StructDefinition> {
+        self.struct_defs().iter().find(|d| d.struct_handle == idx)
+    }
 }
 
 /// Represents accessors for a compiled script.

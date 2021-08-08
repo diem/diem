@@ -37,6 +37,12 @@ pub struct MoveFieldLayout {
     layout: MoveTypeLayout,
 }
 
+impl MoveFieldLayout {
+    pub fn new(name: Identifier, layout: MoveTypeLayout) -> Self {
+        Self { name, layout }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MoveStructLayout {
     /// The representation used by the MoveVM
@@ -295,7 +301,6 @@ impl serde::Serialize for MoveValue {
         }
     }
 }
-
 impl serde::Serialize for MoveStruct {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -314,5 +319,46 @@ impl serde::Serialize for MoveStruct {
                 t.end()
             }
         }
+    }
+}
+
+impl fmt::Display for MoveFieldLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {}", self.name, self.layout)
+    }
+}
+
+impl fmt::Display for MoveTypeLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        use MoveTypeLayout::*;
+        match self {
+            Bool => write!(f, "bool"),
+            U8 => write!(f, "u8"),
+            U64 => write!(f, "u64"),
+            U128 => write!(f, "u128"),
+            Address => write!(f, "address"),
+            Vector(typ) => write!(f, "vector<{}>", typ),
+            Struct(s) => write!(f, "{}", s),
+            Signer => write!(f, "signer"),
+        }
+    }
+}
+
+impl fmt::Display for MoveStructLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{{ ")?;
+        match self {
+            Self::Runtime(layouts) => {
+                for (i, l) in layouts.iter().enumerate() {
+                    write!(f, "{}: {}, ", i, l)?
+                }
+            }
+            Self::WithFields(layouts) => {
+                for layout in layouts {
+                    write!(f, "{}, ", layout)?
+                }
+            }
+        }
+        write!(f, "}}")
     }
 }

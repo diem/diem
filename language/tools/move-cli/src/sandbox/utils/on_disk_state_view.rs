@@ -8,6 +8,7 @@ use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
+    layout::GetModule,
 };
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_core_types::{
@@ -16,6 +17,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
     resolver::{ModuleResolver, ResourceResolver},
+    value::MoveStructLayout,
 };
 use move_lang::{shared::AddressBytes, MOVE_COMPILED_INTERFACES_DIR};
 use move_symbol_pool::Symbol;
@@ -36,6 +38,8 @@ pub const RESOURCES_DIR: &str = "resources";
 pub const MODULES_DIR: &str = "modules";
 /// subdirectory of `DEFAULT_STORAGE_DIR`/<addr> where events are stored
 pub const EVENTS_DIR: &str = "events";
+/// subdirectory of `DEFAULT_BUILD_DIR`/<addr> where generated struct layouts are stored
+pub const STRUCT_LAYOUTS_DIR: &str = "struct_layouts";
 
 pub type ModuleIdWithNamedAddress = (ModuleId, Option<Symbol>);
 
@@ -157,6 +161,10 @@ impl OnDiskStateView {
         &self.build_dir
     }
 
+    pub fn struct_layouts_dir(&self) -> PathBuf {
+        self.build_dir.join(STRUCT_LAYOUTS_DIR)
+    }
+
     fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
         if !p.exists() {
             return false;
@@ -215,6 +223,23 @@ impl OnDiskStateView {
         path.with_extension(MOVE_COMPILED_EXTENSION)
     }
 
+    /// Extract a module ID from a path
+    pub fn get_module_id(&self, p: &Path) -> Option<ModuleId> {
+        if !self.is_module_path(p) {
+            return None;
+        }
+        let name = Identifier::new(p.file_stem().unwrap().to_str().unwrap()).unwrap();
+        match p.parent().map(|parent| parent.parent()).flatten() {
+            Some(parent) => {
+                let addr =
+                    AccountAddress::from_hex_literal(parent.file_stem().unwrap().to_str().unwrap())
+                        .unwrap();
+                Some(ModuleId::new(addr, name))
+            }
+            None => None,
+        }
+    }
+
     /// Read the resource bytes stored on-disk at `addr`/`tag`
     pub fn get_resource_bytes(
         &self,
@@ -234,24 +259,19 @@ impl OnDiskStateView {
         self.get_module_path(module_id).exists()
     }
 
-    /// Deserialize and return the module stored on-disk at `addr`/`module_id`
-    pub fn get_compiled_module(&self, module_id: &ModuleId) -> Result<CompiledModule> {
-        CompiledModule::deserialize(
-            &self
-                .get_module_bytes(module_id)?
-                .ok_or_else(|| anyhow!("Can't find {:?} on disk", module_id))?,
-        )
-        .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", module_id, e))
-    }
-
     /// Return the name of the function at `idx` in `module_id`
-    pub fn resolve_function(&self, module_id: &ModuleId, idx: u16) -> Result<Identifier> {
-        let m = self.get_compiled_module(module_id)?;
-        Ok(m.identifier_at(
-            m.function_handle_at(m.function_def_at(FunctionDefinitionIndex(idx)).function)
-                .name,
-        )
-        .to_owned())
+    pub fn resolve_function(&self, module_id: &ModuleId, idx: u16) -> Result<Option<Identifier>> {
+        if let Some(m) = self.get_module_by_id(module_id)? {
+            Ok(Some(
+                m.identifier_at(
+                    m.function_handle_at(m.function_def_at(FunctionDefinitionIndex(idx)).function)
+                        .name,
+                )
+                .to_owned(),
+            ))
+        } else {
+            Ok(None)
+        }
     }
 
     fn get_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
@@ -400,6 +420,16 @@ impl OnDiskStateView {
         Ok(fs::write(path, &module_bytes)?)
     }
 
+    /// Save the YAML encoding `layout` on disk under `build_dir/layouts/id`.
+    pub fn save_layout_yaml(&self, id: StructTag, layout: &MoveStructLayout) -> Result<()> {
+        let mut layouts_dir = self.struct_layouts_dir();
+        if !layouts_dir.exists() {
+            fs::create_dir_all(layouts_dir.clone())?
+        }
+        layouts_dir.push(StructID(id).to_string());
+        Ok(fs::write(layouts_dir, serde_yaml::to_string(layout)?)?)
+    }
+
     // keep the mv_interfaces generated in the build_dir in-sync with the modules on storage. The
     // mv_interfaces will be used for compilation and the modules will be used for linking.
     fn sync_interface_files(
@@ -514,6 +544,20 @@ impl ResourceResolver for OnDiskStateView {
         struct_tag: &StructTag,
     ) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_resource_bytes(*address, struct_tag.clone())
+    }
+}
+
+impl GetModule for OnDiskStateView {
+    type Error = anyhow::Error;
+
+    fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<CompiledModule>, Self::Error> {
+        if let Some(bytes) = self.get_module_bytes(id)? {
+            let module = CompiledModule::deserialize(&bytes)
+                .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", id, e))?;
+            Ok(Some(module))
+        } else {
+            Ok(None)
+        }
     }
 }
 
