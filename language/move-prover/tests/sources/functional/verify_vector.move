@@ -104,11 +104,11 @@ module 0x42::VerifyVector {
         let back_index = vlen -1;
         while ({
             spec {
-                assert front_index + back_index == vlen - 1;
-                assert forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
-                assert forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
-                assert forall j in front_index..back_index+1: v[j] == old(v)[j];
-                assert len(v) == vlen;
+                invariant front_index + back_index == vlen - 1;
+                invariant forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
+                invariant forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
+                invariant forall j in front_index..back_index+1: v[j] == old(v)[j];
+                invariant len(v) == vlen;
             };
             (front_index < back_index)
         }) {
@@ -137,12 +137,12 @@ module 0x42::VerifyVector {
         Vector::reverse(o);
         while ({
             spec {
-                assert len(v) >= len(old(v));
-                assert len(o) <= len(other);
-                assert len(v) + len(o) == len(old(v)) + len(other);
-                assert forall k in 0..len(old(v)): v[k] == old(v)[k];
-                assert forall k in 0..len(o): o[k] == other[len(other)-1-k];
-                assert forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
+                invariant len(v) >= len(old(v));
+                invariant len(o) <= len(other);
+                invariant len(v) + len(o) == len(old(v)) + len(other);
+                invariant forall k in 0..len(old(v)): v[k] == old(v)[k];
+                invariant forall k in 0..len(o): o[k] == other[len(other)-1-k];
+                invariant forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
             };
             !Vector::is_empty(o)
         }) {
@@ -189,7 +189,7 @@ module 0x42::VerifyVector {
         let len = Vector::length(v);
         while ({
             spec {
-                assert !(exists j in 0..i: v[j]==e);
+                invariant !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
@@ -223,7 +223,7 @@ module 0x42::VerifyVector {
         let len = Vector::length(v);
         while ({
             spec {
-               assert !(exists j in 0..i: v[j]==e);
+               invariant !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
@@ -260,12 +260,12 @@ module 0x42::VerifyVector {
         vlen = vlen - 1;
         while ({
             spec {
-                assert j <= i && i <= vlen;
-                assert vlen + 1 == len(v);
-                assert v[0..j] == old(v)[0..j];
-                assert forall k in j..i: v[k] == old(v)[k+1];
-                assert forall k in i+1..len(v): v[k] == old(v)[k];
-                assert v[i] == old(v)[j];
+                invariant j <= i && i <= vlen;
+                invariant vlen + 1 == len(v);
+                invariant v[0..j] == old(v)[0..j];
+                invariant forall k in j..i: v[k] == old(v)[k+1];
+                invariant forall k in i+1..len(v): v[k] == old(v)[k];
+                invariant v[i] == old(v)[j];
             };
             i < vlen
             }) {

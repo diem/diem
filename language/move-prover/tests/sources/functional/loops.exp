@@ -35,8 +35,8 @@ error: function does not abort under this condition
 error: base case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:210:17
     │
-210 │                 assert x != 0;
-    │                 ^^^^^^^^^^^^^^
+210 │                 invariant x != 0;
+    │                 ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:206: loop_invariant_base_invalid
     =         n = <redacted>
@@ -48,8 +48,8 @@ error: base case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:223:17
     │
-223 │                 assert x == 0;
-    │                 ^^^^^^^^^^^^^^
+223 │                 invariant x == 0;
+    │                 ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:219: loop_invariant_induction_invalid
     =         n = <redacted>
@@ -65,8 +65,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:189:17
     │
-189 │                 assert x != y;
-    │                 ^^^^^^^^^^^^^^
+189 │                 invariant x != y;
+    │                 ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:183: loop_with_two_back_edges_incorrect
     =         x = <redacted>
@@ -82,8 +82,8 @@ error: induction case of the loop invariant does not hold
 error: base case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:145:21
     │
-145 │                     assert x != y;
-    │                     ^^^^^^^^^^^^^^
+145 │                     invariant x != y;
+    │                     ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
     =         x = <redacted>
@@ -96,8 +96,8 @@ error: base case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:145:21
     │
-145 │                     assert x != y;
-    │                     ^^^^^^^^^^^^^^
+145 │                     invariant x != y;
+    │                     ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
     =         x = <redacted>
@@ -114,8 +114,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:119:17
     │
-119 │                 assert x != y;
-    │                 ^^^^^^^^^^^^^^
+119 │                 invariant x != y;
+    │                 ^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:113: nested_loop_outer_invariant_incorrect
     =         x = <redacted>

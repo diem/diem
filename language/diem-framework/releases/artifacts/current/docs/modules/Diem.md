@@ -2004,8 +2004,8 @@ Calls to this function will fail if:
 
     <b>while</b> ({
         <b>spec</b> {
-            <b>assert</b> index &lt;= queue_length;
-            <b>assert</b> <b>forall</b> j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
+            <b>invariant</b> index &lt;= queue_length;
+            <b>invariant</b> <b>forall</b> j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
         };
         (index &lt; queue_length)
     }) {

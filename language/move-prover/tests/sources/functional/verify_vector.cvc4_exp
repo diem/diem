@@ -2,8 +2,8 @@ Move prover returns: exiting with boogie verification errors
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:143:17
     │
-143 │                 assert forall k in 0..len(old(v)): v[k] == old(v)[k];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+143 │                 invariant forall k in 0..len(old(v)): v[k] == old(v)[k];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:135: verify_append
     =         v = <redacted>
@@ -34,8 +34,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:144:17
     │
-144 │                 assert forall k in 0..len(o): o[k] == other[len(other)-1-k];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+144 │                 invariant forall k in 0..len(o): o[k] == other[len(other)-1-k];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:135: verify_append
     =         v = <redacted>
@@ -67,8 +67,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:145:17
     │
-145 │                 assert forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+145 │                 invariant forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:135: verify_append
     =         v = <redacted>
@@ -184,8 +184,8 @@ error: unknown assertion failed
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:226:16
     │
-226 │                assert !(exists j in 0..i: v[j]==e);
-    │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+226 │                invariant !(exists j in 0..i: v[j]==e);
+    │                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:240
     =     at tests/sources/functional/verify_vector.move:221: verify_contains
@@ -205,8 +205,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:192:17
     │
-192 │                 assert !(exists j in 0..i: v[j]==e);
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+192 │                 invariant !(exists j in 0..i: v[j]==e);
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:206
     =     at tests/sources/functional/verify_vector.move:187: verify_index_of
@@ -293,8 +293,8 @@ error: post-condition does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:266:17
     │
-266 │                 assert forall k in j..i: v[k] == old(v)[k+1];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+266 │                 invariant forall k in j..i: v[k] == old(v)[k+1];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:282
     =     at tests/sources/functional/verify_vector.move:254: verify_remove
@@ -331,8 +331,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:267:17
     │
-267 │                 assert forall k in i+1..len(v): v[k] == old(v)[k];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+267 │                 invariant forall k in i+1..len(v): v[k] == old(v)[k];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:282
     =     at tests/sources/functional/verify_vector.move:254: verify_remove
@@ -370,8 +370,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:108:17
     │
-108 │                 assert forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+108 │                 invariant forall i in 0..front_index: v[i] == old(v)[vlen-1-i];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
     =         v = <redacted>
@@ -404,8 +404,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:109:17
     │
-109 │                 assert forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+109 │                 invariant forall i in 0..front_index: v[vlen-1-i] == old(v)[i];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
     =         v = <redacted>
@@ -439,8 +439,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/verify_vector.move:110:17
     │
-110 │                 assert forall j in front_index..back_index+1: v[j] == old(v)[j];
-    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+110 │                 invariant forall j in front_index..back_index+1: v[j] == old(v)[j];
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/verify_vector.move:99: verify_reverse
     =         v = <redacted>

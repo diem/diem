@@ -1070,8 +1070,8 @@ It has a loop, so there are spec blocks in the code to assert loop invariants.
     <b>let</b> i = 0;
     <b>while</b> ({
         <b>spec</b> {
-            <b>assert</b> i &lt;= size;
-            <b>assert</b> <b>forall</b> j in 0..i: validators[j].addr != addr;
+            <b>invariant</b> i &lt;= size;
+            <b>invariant</b> <b>forall</b> j in 0..i: validators[j].addr != addr;
         };
         (i &lt; size)
     })
