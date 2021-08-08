@@ -106,8 +106,8 @@ module DiemFramework::RecoveryAddress {
         let len = Vector::length(caps);
         while ({
             spec {
-                assert i <= len;
-                assert forall j in 0..i: caps[j].account_address != to_recover;
+                invariant i <= len;
+                invariant forall j in 0..i: caps[j].account_address != to_recover;
             };
             (i < len)
         })

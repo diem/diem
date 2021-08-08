@@ -278,8 +278,8 @@ Aborts if <code>recovery_address</code> does not have the <code>KeyRotationCapab
     <b>let</b> len = <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(caps);
     <b>while</b> ({
         <b>spec</b> {
-            <b>assert</b> i &lt;= len;
-            <b>assert</b> <b>forall</b> j in 0..i: caps[j].account_address != to_recover;
+            <b>invariant</b> i &lt;= len;
+            <b>invariant</b> <b>forall</b> j in 0..i: caps[j].account_address != to_recover;
         };
         (i &lt; len)
     })

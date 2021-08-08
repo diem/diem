@@ -4005,8 +4005,8 @@ The prologue for multi-agent user transactions
     <b>let</b> i = 0;
     <b>while</b> ({
         <b>spec</b> {
-            <b>assert</b> <b>forall</b> j in 0..i: <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(secondary_signer_addresses[j]);
-            <b>assert</b> <b>forall</b> j in 0..i: secondary_signer_public_key_hashes[j]
+            <b>invariant</b> <b>forall</b> j in 0..i: <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(secondary_signer_addresses[j]);
+            <b>invariant</b> <b>forall</b> j in 0..i: secondary_signer_public_key_hashes[j]
                 == <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(secondary_signer_addresses[j]).authentication_key;
         };
         (i &lt; num_secondary_signers)

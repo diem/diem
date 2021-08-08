@@ -91,7 +91,13 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Assert | Assume | Emits | Ensures | GlobalInvariantUpdate(..) | LetPost(..)
+            LetPost(..)
+                | Assert
+                | Assume
+                | Emits
+                | Ensures
+                | LoopInvariant
+                | GlobalInvariantUpdate(..)
         )
     }
 

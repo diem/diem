@@ -810,8 +810,8 @@ module DiemFramework::Diem {
 
         while ({
             spec {
-                assert index <= queue_length;
-                assert forall j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
+                invariant index <= queue_length;
+                invariant forall j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
             };
             (index < queue_length)
         }) {

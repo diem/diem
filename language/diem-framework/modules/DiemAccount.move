@@ -1790,8 +1790,8 @@ module DiemFramework::DiemAccount {
         let i = 0;
         while ({
             spec {
-                assert forall j in 0..i: exists_at(secondary_signer_addresses[j]);
-                assert forall j in 0..i: secondary_signer_public_key_hashes[j]
+                invariant forall j in 0..i: exists_at(secondary_signer_addresses[j]);
+                invariant forall j in 0..i: secondary_signer_public_key_hashes[j]
                     == global<DiemAccount>(secondary_signer_addresses[j]).authentication_key;
             };
             (i < num_secondary_signers)

@@ -249,23 +249,30 @@ impl LoopAnalysisProcessor {
             builder.data.code[code_offset] = updated_goto;
         }
 
+        // we have unrolled the loop into a DAG, and there will be no loop invariants left
+        builder.data.loop_invariants.clear();
         builder.data
     }
 
     /// Collect invariants in the given loop header block
     ///
-    /// Loop invariants are defined as the longest sequence of consecutive 'assert'
-    /// statements in the loop header block, immediately after the Label statement.
+    /// Loop invariants are defined as the longest sequence of consecutive 'assert' statements in
+    /// the loop header block, immediately after the `Label` statement, which are also marked in
+    /// the `loop_invariants` field in the `FunctionData`.
     ///
     /// In other words, for the loop header block:
-    /// - the first statement must be a 'label',
-    /// - followed by N 'assert' statements, N >= 0
-    /// - and N + 1 must not be an 'assert' statement.
+    /// - the first statement must be a `label`,
+    /// - followed by N `assert` statements, N >= 0
+    /// - all these N `assert` statements are marked as loop invariants,
+    /// - statement N + 1 is either not an `assert` or is not marked in `loop_invariants`.
     fn collect_loop_invariants(
-        code: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
+        func_target: &FunctionTarget<'_>,
         loop_header: BlockId,
     ) -> BTreeMap<CodeOffset, (AttrId, ast::Exp)> {
+        let code = func_target.get_bytecode();
+        let asserts_as_invariants = &func_target.data.loop_invariants;
+
         let mut invariants = BTreeMap::new();
         for (index, code_offset) in cfg.instr_indexes(loop_header).unwrap().enumerate() {
             let bytecode = &code[code_offset as usize];
@@ -273,7 +280,9 @@ impl LoopAnalysisProcessor {
                 assert!(matches!(bytecode, Bytecode::Label(_, _)));
             } else {
                 match bytecode {
-                    Bytecode::Prop(attr_id, PropKind::Assert, exp) => {
+                    Bytecode::Prop(attr_id, PropKind::Assert, exp)
+                        if asserts_as_invariants.contains(attr_id) =>
+                    {
                         invariants.insert(code_offset, (*attr_id, exp.clone()));
                     }
                     _ => break,
@@ -290,11 +299,11 @@ impl LoopAnalysisProcessor {
     /// - the set of values to be havoc-ed, and
     /// - the set of mutations to he havoc-ed and how they should be havoc-ed.
     fn collect_loop_targets(
-        code: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
         func_target: &FunctionTarget<'_>,
         sub_loops: &[NaturalLoop<BlockId>],
     ) -> (BTreeSet<TempIndex>, BTreeMap<TempIndex, bool>) {
+        let code = func_target.get_bytecode();
         let mut val_targets = BTreeSet::new();
         let mut mut_targets = BTreeMap::new();
         let fat_loop_body: BTreeSet<_> = sub_loops
@@ -397,9 +406,9 @@ impl LoopAnalysisProcessor {
                 },
             };
 
-            let invariants = Self::collect_loop_invariants(code, &cfg, fat_root);
+            let invariants = Self::collect_loop_invariants(&cfg, &func_target, fat_root);
             let (val_targets, mut_targets) =
-                Self::collect_loop_targets(code, &cfg, &func_target, &sub_loops);
+                Self::collect_loop_targets(&cfg, &func_target, &sub_loops);
             let back_edges = Self::collect_loop_back_edges(code, &cfg, label, &sub_loops);
 
             // done with all information collection
@@ -411,6 +420,21 @@ impl LoopAnalysisProcessor {
                     mut_targets,
                     back_edges,
                 },
+            );
+        }
+
+        // check for redundant loop invariant declarations in the spec
+        let all_invariants: BTreeSet<_> = fat_loops
+            .values()
+            .map(|l| l.invariants.values().map(|(attr_id, _)| *attr_id))
+            .flatten()
+            .collect();
+
+        let env = func_target.global_env();
+        for attr_id in data.loop_invariants.difference(&all_invariants) {
+            env.error(
+                &func_target.get_bytecode_loc(*attr_id),
+                "Loop invariants must be declared in the loop header in a consecutive sequence",
             );
         }
 
