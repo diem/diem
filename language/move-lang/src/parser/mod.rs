@@ -121,15 +121,15 @@ fn parse_file(
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
-    let (no_comments_buffer, comment_map) = match strip_comments_and_verify(fname, &source_buffer) {
+    let buffer = match verify_string(fname, &source_buffer) {
         Err(ds) => {
             diags.extend(ds);
             files.insert(fname, source_buffer);
             return Ok((vec![], MatchedFileCommentMap::new(), diags));
         }
-        Ok(result) => result,
+        Ok(()) => &source_buffer,
     };
-    let (defs, comments) = match parse_file_string(fname, &no_comments_buffer, comment_map) {
+    let (defs, comments) = match parse_file_string(fname, buffer) {
         Ok(defs_and_comments) => defs_and_comments,
         Err(ds) => {
             diags.extend(ds);
