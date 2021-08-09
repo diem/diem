@@ -80,6 +80,7 @@ members = [
     "language/diem-transaction-benchmarks",
     "language/diem-vm",
     "language/diem-vm/mvhashmap",
+    "language/diem-vm/parallel-executor",
     "language/e2e-testsuite",
     "language/ir-testsuite",
     "language/move-binary-format",

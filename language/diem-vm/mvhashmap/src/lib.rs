@@ -33,12 +33,14 @@ pub struct MVHashMap<K, V> {
 pub enum Error {
     // A write has been performed on an entry that is not in the possible_writes list.
     UnexpectedWrite,
+    // A query doesn't match any entry in the map.
+    NotInMap,
 }
 
 #[cfg_attr(any(target_arch = "x86_64"), repr(align(128)))]
 pub(crate) struct WriteCell<V>(OnceCell<Option<V>>);
 
-impl<V: Debug> WriteCell<V> {
+impl<V> WriteCell<V> {
     pub fn new() -> WriteCell<V> {
         WriteCell(OnceCell::new())
     }
@@ -48,15 +50,12 @@ impl<V: Debug> WriteCell<V> {
     }
 
     pub fn write(&self, v: V) {
-        self.0
-            .set(Some(v))
-            .expect("WriteCell should be modified exactly once");
+        // Each cell should only be written exactly once.
+        assert!(self.0.set(Some(v)).is_ok())
     }
 
     pub fn skip(&self) {
-        self.0
-            .set(None)
-            .expect("WriteCell should be modified exactly once");
+        assert!(self.0.set(None).is_ok());
     }
 
     pub fn get(&self) -> Option<&Option<V>> {
@@ -64,7 +63,7 @@ impl<V: Debug> WriteCell<V> {
     }
 }
 
-impl<K: Hash + Clone + Eq, V: Debug> MVHashMap<K, V> {
+impl<K: Hash + Clone + Eq, V> MVHashMap<K, V> {
     /// Create the MVHashMap structure from a list of possible writes. Each element in the list
     /// indicates a key that could potentially be modified at its given version.
     ///
@@ -177,6 +176,10 @@ impl<K: Hash + Clone + Eq, V: Debug> MVHashMap<K, V> {
 
         Err(None)
     }
+
+    pub fn view(&self, version: Version) -> MVHashMapView<K, V> {
+        MVHashMapView { map: self, version }
+    }
 }
 
 const PARALLEL_THRESHOLD: usize = 1000;
@@ -184,7 +187,7 @@ const PARALLEL_THRESHOLD: usize = 1000;
 impl<K, V> MVHashMap<K, V>
 where
     K: PartialOrd + Send + Clone + Hash + Eq,
-    V: Send + Debug,
+    V: Send,
 {
     fn split_merge(
         num_cpus: usize,
@@ -220,5 +223,20 @@ where
 
         let (max_dependency_len, data) = Self::split_merge(num_cpus, 0, possible_writes);
         (MVHashMap { data }, max_dependency_len)
+    }
+}
+
+pub struct MVHashMapView<'a, K, V> {
+    map: &'a MVHashMap<K, V>,
+    version: Version,
+}
+
+impl<'a, K: Hash + Clone + Eq, V> MVHashMapView<'a, K, V> {
+    pub fn read(&self, key: &K) -> Result<&V, Option<Version>> {
+        self.map.read(key, self.version)
+    }
+
+    pub fn version(&self) -> Version {
+        self.version
     }
 }

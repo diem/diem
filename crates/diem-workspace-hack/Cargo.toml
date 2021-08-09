@@ -24,6 +24,7 @@ clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default"
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-channel = { version = "0.5.1", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.1", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
+crossbeam-queue = { version = "0.3.1", features = ["alloc", "default", "std"] }
 crossbeam-utils = { version = "0.8.8", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -79,6 +80,7 @@ clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default"
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-channel = { version = "0.5.1", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.1", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
+crossbeam-queue = { version = "0.3.1", features = ["alloc", "default", "std"] }
 crossbeam-utils = { version = "0.8.8", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -137,6 +139,7 @@ clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default"
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-channel = { version = "0.5.1", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.1", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
+crossbeam-queue = { version = "0.3.1", features = ["alloc", "default", "std"] }
 crossbeam-utils = { version = "0.8.8", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -192,6 +195,7 @@ clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default"
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-channel = { version = "0.5.1", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.1", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
+crossbeam-queue = { version = "0.3.1", features = ["alloc", "default", "std"] }
 crossbeam-utils = { version = "0.8.8", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }

@@ -369,7 +369,7 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-20.04-xl
-    timeout-minutes: 60
+    timeout-minutes: 120
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
@@ -530,7 +530,7 @@ jobs:
 
   forge-test:
     runs-on: ubuntu-latest-xl
-    timeout-minutes: 40
+    timeout-minutes: 120
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && needs.prepare.outputs.test-compatibility == 'true' }}
     container:

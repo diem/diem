@@ -2266,6 +2266,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-parallel-executor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "criterion",
+ "crossbeam-queue",
+ "diem-workspace-hack",
+ "mvhashmap",
+ "num_cpus",
+ "once_cell",
+ "proptest",
+ "proptest-derive",
+ "rand 0.8.3",
+ "rayon",
+]
+
+[[package]]
 name = "diem-proptest-helpers"
 version = "0.1.0"
 dependencies = [
@@ -2712,6 +2729,7 @@ dependencies = [
  "codespan-reporting",
  "crossbeam-channel",
  "crossbeam-deque",
+ "crossbeam-queue",
  "crossbeam-utils",
  "either",
  "futures",
