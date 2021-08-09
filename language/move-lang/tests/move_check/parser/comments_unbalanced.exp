@@ -1,9 +1,6 @@
 warning[W01004]: invalid documentation comment
-  ┌─ tests/move_check/parser/comments_unbalanced.move:5:2
+  ┌─ tests/move_check/parser/comments_unbalanced.move:3:5
   │
 3 │     /** This comment must be closed.
-  │     -- Unclosed block comment starts here
-4 │     fun f() { }
-5 │ }
-  │  ^ Unclosed block comment
+  │     ^^^ Unclosed block comment
 

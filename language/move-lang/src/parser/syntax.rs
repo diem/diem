@@ -9,7 +9,7 @@ use crate::{
     diagnostics::{Diagnostic, Diagnostics},
     parser::{ast::*, lexer::*},
     shared::*,
-    FileCommentMap, MatchedFileCommentMap,
+    MatchedFileCommentMap,
 };
 
 // In the informal grammar comments in this file, Comma<T> is shorthand for:
@@ -2844,9 +2844,8 @@ fn parse_file(tokens: &mut Lexer) -> Result<Vec<Definition>, Diagnostic> {
 pub fn parse_file_string(
     file: Symbol,
     input: &str,
-    comment_map: FileCommentMap,
 ) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
-    let mut tokens = Lexer::new(input, file, comment_map);
+    let mut tokens = Lexer::new(input, file);
     match tokens.advance() {
         Err(err) => Err(Diagnostics::from(vec![err])),
         Ok(..) => Ok(()),
