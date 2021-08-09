@@ -13,6 +13,7 @@ use diem_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
+    on_chain_config,
     on_chain_config::{config_address, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
 };
@@ -170,7 +171,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<(), Error> {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
-        let reconfig_events = self
+        let events = self
             .executor
             .execute_and_commit_chunk(
                 txn_list_with_proof,
@@ -181,6 +182,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
             })?;
         timer.stop_and_record();
+        let reconfig_events = extract_reconfig_events(events);
         if let Err(e) = self.publish_on_chain_config_updates(reconfig_events) {
             error!(
                 LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&e),
@@ -311,6 +313,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
             ))
         }
     }
+}
+
+fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
+    let new_epoch_event_key = on_chain_config::new_epoch_event_key();
+    events
+        .into_iter()
+        .filter(|event| *event.key() == new_epoch_event_key)
+        .collect()
 }
 
 #[cfg(test)]

@@ -417,14 +417,6 @@ where
         ))
     }
 
-    fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
-        let new_epoch_event_key = on_chain_config::new_epoch_event_key();
-        events
-            .into_iter()
-            .filter(|event| *event.key() == new_epoch_event_key)
-            .collect()
-    }
-
     fn get_executed_trees_from_lock(
         cache: &RwLockReadGuard<SpeculationCache>,
         block_id: HashValue,
@@ -520,7 +512,7 @@ where
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
-        let mut reconfig_events = vec![];
+        let mut events = vec![];
         let mut seen_retry = false;
         let mut txns_to_retry = vec![];
         let mut txn_infos_to_retry = vec![];
@@ -565,15 +557,13 @@ where
                 txn_data.gas_used(),
                 recorded_status,
             ));
-            reconfig_events.append(&mut Self::extract_reconfig_events(
-                txn_data.events().to_vec(),
-            ));
+            events.append(&mut txn_data.events().to_vec());
         }
 
         Ok((
             output,
             txns_to_commit,
-            reconfig_events,
+            events,
             txns_to_retry,
             txn_infos_to_retry,
         ))
@@ -638,14 +628,14 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // 3. Execute transactions.
         let first_version = read_lock.synced_trees().txn_accumulator().num_leaves();
         drop(read_lock);
-        let (output, txns_to_commit, reconfig_events) =
+        let (output, txns_to_commit, events) =
             self.execute_chunk(first_version, transactions, transaction_infos)?;
 
         // 4. Commit to DB.
         let ledger_info_to_commit =
             Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
-            return Ok(reconfig_events);
+            return Ok(events);
         }
         fail_point!("executor::commit_chunk", |_| {
             Err(anyhow::anyhow!("Injected error in commit_chunk"))
@@ -678,7 +668,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             "sync_finished",
         );
 
-        Ok(reconfig_events)
+        Ok(events)
     }
 }
 
