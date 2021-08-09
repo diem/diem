@@ -648,7 +648,8 @@ impl ExpData {
                 t.visit_pre_post(visitor);
                 e.visit_pre_post(visitor);
             }
-            _ => {}
+            // Explicitly list all enum variants
+            Value(..) | LocalVar(..) | Temporary(..) | SpecVar(..) | Invalid(..) => {}
         }
         visitor(true, self);
     }
