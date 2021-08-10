@@ -46,6 +46,7 @@ allowed = [
     "clippy::derive_partial_eq_without_eq",
     "clippy::map-flatten",
     "clippy::format-push-string",
+    "clippy::unwrap-or-else-default",
 ]
 warn = [
     "clippy::wildcard_dependencies",
