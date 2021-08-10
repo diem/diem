@@ -182,6 +182,7 @@ members = [
 
     "bytecode-interpreter-testsuite",
     "bytecode-verifier-tests",
+    "bytecode-verifier-transactional-tests",
     "cli",
     "cluster-test",
     "compatibility-test",

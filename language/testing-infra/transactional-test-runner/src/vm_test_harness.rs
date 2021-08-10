@@ -9,7 +9,12 @@ use crate::{
     tasks::{InitCommand, KnownCommandFormat, SyntaxChoice, TaskInput},
 };
 use anyhow::*;
-use move_binary_format::{errors::VMResult, file_format::CompiledScript, CompiledModule};
+use move_binary_format::{
+    access::ModuleAccess,
+    errors::{Location, VMError, VMResult},
+    file_format::CompiledScript,
+    CompiledModule,
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -17,7 +22,8 @@ use move_core_types::{
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
 use move_lang::{
-    compiled_unit::CompiledUnit, shared::verify_and_create_named_address_mapping,
+    compiled_unit::CompiledUnit,
+    shared::{verify_and_create_named_address_mapping, AddressBytes},
     FullyCompiledProgram,
 };
 use move_stdlib::move_stdlib_named_addresses;
@@ -95,6 +101,16 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                 Ok(())
             })
             .unwrap();
+        let mut addr_to_name_mapping = BTreeMap::new();
+        for (name, addr) in move_stdlib_named_addresses() {
+            let prev = addr_to_name_mapping.insert(addr, name);
+            assert!(prev.is_none());
+        }
+        for module in &*MOVE_STDLIB_COMPILED {
+            let bytes = AddressBytes::new(module.address().to_u8());
+            let named_addr = addr_to_name_mapping.get(&bytes).unwrap().clone();
+            adapter.compiled_state.add(Some(named_addr), module.clone());
+        }
         adapter
     }
 
@@ -114,9 +130,9 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         })
         .map_err(|e| {
             anyhow!(
-                "Unable to publish module '{}'. Got VMError: {:?}",
+                "Unable to publish module '{}'. Got VMError: {}",
                 module.self_id(),
-                e
+                format_vm_error(&e)
             )
         })
     }
@@ -136,7 +152,12 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         self.perform_session_action(gas_budget, |session, gas_status| {
             session.execute_script(script_bytes, type_args, args, signers, gas_status)
         })
-        .map_err(|e| anyhow!("Script execution failed with VMError: {:?}", e))
+        .map_err(|e| {
+            anyhow!(
+                "Script execution failed with VMError: {}",
+                format_vm_error(&e)
+            )
+        })
     }
 
     fn call_function(
@@ -153,7 +174,12 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         self.perform_session_action(gas_budget, |session, gas_status| {
             session.execute_script_function(module, function, type_args, args, signers, gas_status)
         })
-        .map_err(|e| anyhow!("Function execution failed with VMError: {:?}", e))
+        .map_err(|e| {
+            anyhow!(
+                "Function execution failed with VMError: {}",
+                format_vm_error(&e)
+            )
+        })
     }
 
     fn view_data(
@@ -182,6 +208,29 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
     fn handle_subcommand(&mut self, _: TaskInput<Self::Subcommand>) -> Result<Option<String>> {
         unreachable!()
     }
+}
+
+pub fn format_vm_error(e: &VMError) -> String {
+    let location_string = match e.location() {
+        Location::Undefined => "undefined".to_owned(),
+        Location::Script => "script".to_owned(),
+        Location::Module(id) => format!("0x{}::{}", id.address().short_str_lossless(), id.name()),
+    };
+    format!(
+        "{{
+    major_status: {major_status:?},
+    sub_status: {sub_status:?},
+    location: {location_string},
+    indices: {indices:?},
+    offsets: {offsets:?},
+}}",
+        major_status = e.major_status(),
+        sub_status = e.sub_status(),
+        location_string = location_string,
+        // TODO maybe include source map info?
+        indices = e.indices(),
+        offsets = e.offsets(),
+    )
 }
 
 impl<'a> SimpleVMTestAdapter<'a> {

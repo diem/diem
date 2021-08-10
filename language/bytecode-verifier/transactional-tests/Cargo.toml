@@ -1,0 +1,19 @@
+[package]
+name = "bytecode-verifier-transactional-tests"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
+
+[dev-dependencies]
+datatest-stable = "0.1.1"
+move-command-line-common = { path = "../../move-command-line-common" }
+move-transactional-test-runner = { path = "../../testing-infra/transactional-test-runner" }
+
+[[test]]
+name = "tests"
+harness = false
