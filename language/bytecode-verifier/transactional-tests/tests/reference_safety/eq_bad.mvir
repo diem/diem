@@ -1,3 +1,4 @@
+//# publish --address 0x1
 module Tester {
     eqtest1() {
         let x: u64;
@@ -5,13 +6,13 @@ module Tester {
 
         x = 0;
         r = &mut x;
+        // invalid read of mutable ref, does not currently own its data
         _ = copy(r) == copy(r);
         return;
     }
 }
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
-//! new-transaction
+//# publish --address 0x1
 module Tester2 {
     eqtest2() {
         let x: u64;
@@ -19,13 +20,13 @@ module Tester2 {
 
         x = 0;
         r = &mut x;
+        // invalid read of mutable ref, does not currently own its data
         _ = copy(r) == move(r);
         return;
     }
 }
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
-//! new-transaction
+//# publish --address 0x1
 module Tester3 {
     neqtest1() {
         let x: u64;
@@ -33,13 +34,13 @@ module Tester3 {
 
         x = 0;
         r = &mut x;
+        // invalid read of mutable ref, does not currently own its data
         _ = copy(r) != copy(r);
         return;
     }
 }
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
-//! new-transaction
+//# publish --address 0x1
 module Tester4 {
     neqtest2() {
         let x: u64;
@@ -47,8 +48,8 @@ module Tester4 {
 
         x = 0;
         r = &mut x;
+        // invalid read of mutable ref, does not currently own its data
         _ = copy(r) != move(r);
         return;
     }
 }
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR

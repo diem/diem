@@ -1,3 +1,6 @@
+//# publish --address 0x1
+
+// testing valid usages of == and != over references
 module Tester {
     eqtest1() {
         let x: u64;

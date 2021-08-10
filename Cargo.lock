@@ -704,6 +704,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode-verifier-transactional-tests"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "diem-workspace-hack",
+ "move-command-line-common",
+ "move-transactional-test-runner",
+]
+
+[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

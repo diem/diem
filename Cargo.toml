@@ -62,6 +62,7 @@ members = [
     "language/bytecode-verifier",
     "language/bytecode-verifier/bytecode-verifier-tests",
     "language/bytecode-verifier/invalid-mutations",
+    "language/bytecode-verifier/transactional-tests",
     "language/compiler",
     "language/compiler/bytecode-source-map",
     "language/compiler/ir-to-bytecode",
