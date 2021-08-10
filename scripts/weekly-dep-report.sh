@@ -8,7 +8,7 @@ set -eoxv pipefail
 # expects two parameters: repository name and branch
 repository=$1
 starter_point=${2:-"HEAD"}
-git checkout --quiet "${starter_point}"
+git checkout --quiet --force "${starter_point}"
 
 last_commit=$(git rev-list HEAD -1)
 first_commit_within_last_seven_days=$(git rev-list --reverse --since=7.days.ago HEAD | head -n 1)
@@ -46,7 +46,7 @@ get_total_dups () {
 }
 
 
-git checkout --quiet "${last_commit}"
+git checkout --quiet --force "${last_commit}"
 date=$(git show --no-patch --format=%cd --date='format:%Y-%m-%d')
 short_sha=$(git rev-parse --short HEAD)
 total=$(get_total_deps)
@@ -64,7 +64,7 @@ elif [[ "${first_commit_within_last_seven_days}" == "${first_commit_in_the_repo}
 else
     # case 3: there is at least one commit in the last seven days
     last_commit_from_last_week=$(git rev-list "${first_commit_within_last_seven_days}"^1 -1)
-    git checkout --quiet "${last_commit_from_last_week}"
+    git checkout --quiet --force "${last_commit_from_last_week}"
 fi
 
 prev_date=$(git show --no-patch --format=%cd --date='format:%Y-%m-%d')
@@ -83,9 +83,9 @@ change_dups=$(format_change_in_dependency_output $((dups-prev_dups)))
 
 # resetting HEAD commit
 if [[ "${starter_point}" == "HEAD" ]]; then
-    git checkout --quiet "${last_commit}"
+    git checkout --quiet --force "${last_commit}"
 else
-    git checkout --quiet "${starter_point}"
+    git checkout --quiet --force "${starter_point}"
 fi
 
 echo "Dependency change in $repository:$starter_point at Commit $short_sha ($date) since Commit $prev_short_sha ($prev_date) :"
