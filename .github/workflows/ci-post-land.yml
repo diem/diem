@@ -149,8 +149,9 @@ jobs:
 
   build_ci_base_docker_image:
     needs: prepare
-    runs-on: ubuntu-20.04-xl
+    runs-on: ubuntu-latest-xl
     if: ${{ needs.prepare.outputs.base-image-changes == 'true' || github.event_name == 'create' }}
+    continue-on-error: false
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}_build_environment
