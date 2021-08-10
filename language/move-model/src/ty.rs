@@ -361,22 +361,41 @@ impl Type {
         }
     }
 
-    /// Return true if this type contains free type variables
-    pub fn is_open(&self) -> bool {
+    /// Return true if this type contains generic types (i.e., types that can be instantiated).
+    /// A caller can have finer-grained control on what can be considered as a generic type.
+    pub fn is_generic(
+        &self,
+        treat_type_param_as_open: bool,
+        treat_type_local_as_open: bool,
+    ) -> bool {
         use Type::*;
         match self {
-            TypeParameter(_) | TypeLocal(_) => true,
+            TypeParameter(_) => treat_type_param_as_open,
+            TypeLocal(_) => treat_type_local_as_open,
             Primitive(_) | ResourceDomain(..) => false,
-            Tuple(ts) => ts.iter().any(|t| t.is_open()),
-            Fun(ts, r) => ts.iter().any(|t| t.is_open()) || r.is_open(),
-            Struct(_, _, ts) => ts.iter().any(|t| t.is_open()),
-            Vector(et) => et.is_open(),
-            Reference(_, bt) => bt.is_open(),
-            TypeDomain(bt) => bt.is_open(),
+            Tuple(ts) => ts
+                .iter()
+                .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open)),
+            Fun(ts, r) => {
+                ts.iter()
+                    .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open))
+                    || r.is_generic(treat_type_param_as_open, treat_type_local_as_open)
+            }
+            Struct(_, _, ts) => ts
+                .iter()
+                .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open)),
+            Vector(et) => et.is_generic(treat_type_param_as_open, treat_type_local_as_open),
+            Reference(_, bt) => bt.is_generic(treat_type_param_as_open, treat_type_local_as_open),
+            TypeDomain(bt) => bt.is_generic(treat_type_param_as_open, treat_type_local_as_open),
             Error | Var(_) => {
-                panic!("Invariant violation: is_open should be called after type checking")
+                panic!("Invariant violation: is_generic should be called after type checking")
             }
         }
+    }
+
+    /// Return true if this type contains generic types (i.e., types that can be instantiated).
+    pub fn is_open(&self) -> bool {
+        self.is_generic(true, true)
     }
 
     /// Compute used modules in this type, adding them to the passed set.

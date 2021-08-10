@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! A monomorphization processor for elimination of universal type quantifiers
-//! (`forall t1: type, t2: type, ..., :: P<t1, t2, ...>`) found in the expressions
+//! A monomorphization processor for the elimination of generic types found in
+//! expressions, i.e., rewriting a generic expression with type instantiations.
 //!
 //! This mono processor is a *local monomorphization* processor, it specializes
 //! a generic proposition with types found in the enclosing function only. This
@@ -17,6 +17,7 @@
 //!   quantifiers, i.e., the proposition `P` must be in the form of
 //!   `forall t1: type, t2: type, ... : expr<t1, t2, ...>` and there is no
 //!   operation over `P` (e.g., `!P`, `P ==> Q`, etc. are not allowed).
+//!   This is guaranteed by the generic invariant syntax.
 //!
 //! - the global invariant instrumentation pass places a global invariant
 //!   `I` into all relevant instantiations of a function `F`. For example,
@@ -39,11 +40,11 @@ use crate::{
 };
 
 use move_model::{
-    ast::{Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind},
+    ast::{Exp, ExpData, MemoryLabel, Operation},
     exp_generator::ExpGenerator,
     model::{FunctionEnv, GlobalEnv, NodeId, QualifiedInstId, StructId},
     symbol::Symbol,
-    ty::{PrimitiveType, Type, TypeUnificationAdapter, Variance},
+    ty::{Type, TypeUnificationAdapter, Variance},
 };
 
 use itertools::Itertools;
@@ -78,7 +79,7 @@ impl MonoRewriter {
         let code = std::mem::take(&mut builder.data.code);
         for bc in code {
             if let Bytecode::Prop(id, kind, exp) = bc {
-                let exp = self.rewrite_type_quant(builder, exp);
+                let exp = self.rewrite_generic_types(builder, exp);
                 builder.emit(Bytecode::Prop(id, kind, exp));
             } else {
                 builder.emit(bc);
@@ -110,79 +111,22 @@ impl MonoRewriter {
         }
     }
 
-    fn rewrite_type_quant(&mut self, builder: &mut FunctionDataBuilder, exp: Exp) -> Exp {
+    fn rewrite_generic_types(&mut self, builder: &mut FunctionDataBuilder, exp: Exp) -> Exp {
         let env = builder.global_env();
-
         ExpData::rewrite(exp, &mut |e| {
-            if let ExpData::Quant(node_id, kind, ranges, triggers, condition, body) = e.as_ref() {
-                let mut type_vars = BTreeSet::new();
-                for (var, range) in ranges {
-                    let ty = env.get_node_type(range.node_id());
-                    if let Type::TypeDomain(bt) = ty.skip_reference() {
-                        if matches!(bt.as_ref(), Type::Primitive(PrimitiveType::TypeValue)) {
-                            type_vars.insert(var.name);
-                        }
-                    }
-                }
-                // skip mono if there is no type qualification in this expression.
-                if type_vars.is_empty() {
-                    return Err(e);
-                }
+            if e.is_generic(env) {
+                // collect type generics
+                let prop_insts = self.analyze_instantiation(env, &builder.data.type_args, &e);
 
-                // triggers are not allowed if this is quantification over type
-                if !triggers.is_empty() {
-                    env.error(
-                        &env.get_node_loc(*node_id),
-                        "Cannot have triggers with type value ranges",
-                    );
-                    return Err(e);
-                }
-
-                // skip mono if this is not a universal quantifier
-                match kind {
-                    QuantKind::Forall => (),
-                    QuantKind::Exists => {
-                        // existential type quantifiers cannot be locally eliminated, keep the
-                        // quantifier here and the next stage of mono analysis will eliminate it
-                        // based on information found globally.
-                        //
-                        // TODO (mengxu) need to revisit this when the generic invariant support is
-                        // ready, i.e., invariant<T, ...> will likely ban the use of existential
-                        // type quantifier all together
-                        return Err(e);
-                    }
-                    QuantKind::Choose | QuantKind::ChooseMin => {
-                        env.error(
-                            &env.get_node_loc(*node_id),
-                            "Type quantification cannot be used with a choice operator",
-                        );
-                        return Err(e);
-                    }
-                }
-
-                // eliminate the type quantifiers
-                let prop_insts = self.analyze_instantiation(
-                    env,
-                    &builder.data.type_args,
-                    condition.as_ref(),
-                    body,
-                );
-
+                // expand the expressions with instantiations of type generics
                 let mut expanded = vec![];
                 for inst in &prop_insts {
-                    let new_exp = self.eliminate_universal_type_quantifier(
-                        env,
-                        *node_id,
-                        ranges,
-                        condition.as_ref(),
-                        body,
-                        inst,
-                    );
+                    let new_exp = self.eliminate_generic_types(env, &e, inst);
                     expanded.push(new_exp);
                 }
 
-                // Compose the resulting list of expansions into a conjunction or disjunction.
-                builder.set_loc(env.get_node_loc(*node_id));
+                // compose the resulting list of expansions into a conjunction or disjunction.
+                builder.set_loc(env.get_node_loc(e.node_id()));
                 let combined_exp = builder
                     .mk_join_bool(Operation::And, expanded.into_iter())
                     .unwrap_or_else(|| builder.mk_bool_const(true));
@@ -198,22 +142,19 @@ impl MonoRewriter {
         })
     }
 
-    // collect potential instantiations for this quantified expression
+    // collect potential instantiations for this generic expression
     fn analyze_instantiation(
         &mut self,
         env: &GlobalEnv,
         inst: &BTreeMap<u16, Type>,
-        cond: Option<&Exp>,
-        body: &Exp,
+        exp: &Exp,
     ) -> Vec<BTreeMap<Symbol, Type>> {
         // holds possible instantiations per type local
         let mut prop_insts = BTreeMap::new();
 
-        let exp_mems: BTreeSet<_> = cond
-            .map(|e| e.used_memory(env))
-            .unwrap_or_else(BTreeSet::new)
+        let exp_mems: BTreeSet<_> = exp
+            .used_memory(env)
             .into_iter()
-            .chain(body.used_memory(env))
             .map(|(mem, _)| mem)
             .collect();
 
@@ -273,50 +214,15 @@ impl MonoRewriter {
         all_insts
     }
 
-    // collect potential instantiations for this quantified expression
-    fn eliminate_universal_type_quantifier(
+    // instantiate the generic expression with an instantiation
+    fn eliminate_generic_types(
         &mut self,
         env: &GlobalEnv,
-        node_id: NodeId,
-        ranges: &[(LocalVarDecl, Exp)],
-        cond: Option<&Exp>,
-        body: &Exp,
+        exp: &Exp,
         inst: &BTreeMap<Symbol, Type>,
     ) -> Exp {
-        // Collect remaining range variables
-        let new_ranges: Vec<_> = ranges
-            .iter()
-            .filter_map(|(v, e)| {
-                if inst.contains_key(&v.name) {
-                    None
-                } else {
-                    Some((v.clone(), e.clone()))
-                }
-            })
-            .collect();
-
-        // Create the effective proposition of the eliminated quantifier.
-        let new_prop = if new_ranges.is_empty() {
-            match cond {
-                Some(c) => {
-                    ExpData::Call(node_id, Operation::Implies, vec![c.clone(), body.clone()])
-                        .into_exp()
-                }
-                _ => body.clone(),
-            }
-        } else {
-            ExpData::Quant(
-                node_id,
-                QuantKind::Forall,
-                new_ranges,
-                vec![],
-                cond.cloned(),
-                body.clone(),
-            )
-            .into_exp()
-        };
-
-        // Instantiate the new proposition
+        // Create the effective proposition with type generics eliminated.
+        let new_prop = exp.clone();
         let mut node_rewriter = |id: NodeId| {
             let node_ty = env.get_node_type(id);
             let mut new_node_ty = node_ty.clone();
@@ -350,33 +256,11 @@ impl MonoRewriter {
 
         // Collect memory used by the expanded body. We need to rewrite SaveMem
         // instructions to point to the instantiated memory.
-        inst_prop.visit(&mut |e| match e {
-            ExpData::Call(id, Operation::Global(Some(label)), _)
-            | ExpData::Call(id, Operation::Exists(Some(label)), _) => {
-                let mut node_inst = env.get_node_instantiation(*id);
-                let qid = match node_inst.pop().unwrap() {
-                    Type::Struct(mid, sid, struct_inst) => mid.qualified_inst(sid, struct_inst),
-                    t => panic!("expected `Type::Struct`, found: `{:?}`", t),
-                };
-                self.mem_inst_by_label
-                    .entry(*label)
-                    .or_default()
-                    .insert(qid);
+        for (qid, label_opt) in inst_prop.used_memory(env) {
+            if let Some(label) = label_opt {
+                self.mem_inst_by_label.entry(label).or_default().insert(qid);
             }
-            ExpData::Call(id, Operation::Function(mid, fid, Some(labels)), _) => {
-                let node_inst = env.get_node_instantiation(*id);
-                let module_env = env.get_module(*mid);
-                let fun = module_env.get_spec_fun(*fid);
-                for (i, mem) in fun.used_memory.iter().enumerate() {
-                    let qid = mem.clone().instantiate(&node_inst);
-                    self.mem_inst_by_label
-                        .entry(labels[i])
-                        .or_default()
-                        .insert(qid);
-                }
-            }
-            _ => {}
-        });
+        }
 
         inst_prop
     }
