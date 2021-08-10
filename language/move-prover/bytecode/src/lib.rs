@@ -26,6 +26,7 @@ pub mod graph;
 pub mod inconsistency_check;
 pub mod livevar_analysis;
 pub mod local_mono;
+pub mod local_mono_compat;
 pub mod loop_analysis;
 pub mod memory_instrumentation;
 pub mod mono_analysis;
