@@ -44,6 +44,7 @@ allowed = [
     "clippy::needless-collect",
     "clippy::enum-variant-names",
     "clippy::derive_partial_eq_without_eq",
+    "clippy::map-flatten",
 ]
 warn = [
     "clippy::wildcard_dependencies",

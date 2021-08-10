@@ -256,9 +256,17 @@ impl LoopAnalysisProcessor {
 
     /// Collect invariants in the given loop header block
     ///
-    /// Loop invariants are defined as the longest sequence of consecutive 'assert' statements in
-    /// the loop header block, immediately after the `Label` statement, which are also marked in
-    /// the `loop_invariants` field in the `FunctionData`.
+    /// Loop invariants are defined as
+    /// 1) the longest sequence of consecutive
+    /// 2) `PropKind::Assert` propositions
+    /// 3) in the loop header block, immediately after the `Label` statement,
+    /// 4) which are also marked in the `loop_invariants` field in the `FunctionData`.
+    /// All above conditions must be met to be qualified as a loop invariant.
+    ///
+    /// The reason we piggyback on `PropKind::Assert` instead of introducing a new
+    /// `PropKind::Invariant` is that we don't want to introduce a`PropKind::Invariant` type which
+    /// only exists to be eliminated. The same logic applies for other invariants in the system
+    /// (e.g., data invariants, global invariants, etc).
     ///
     /// In other words, for the loop header block:
     /// - the first statement must be a `label`,
@@ -434,7 +442,8 @@ impl LoopAnalysisProcessor {
         for attr_id in data.loop_invariants.difference(&all_invariants) {
             env.error(
                 &func_target.get_bytecode_loc(*attr_id),
-                "Loop invariants must be declared in the loop header in a consecutive sequence",
+                "Loop invariants must be declared at the beginning of the loop header in a \
+                consecutive sequence",
             );
         }
 

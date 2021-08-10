@@ -19,6 +19,16 @@ error: abort not covered by any of the `aborts_if` clauses
    =     at tests/sources/functional/loops.move:82: iter10_abort_incorrect
    =         ABORTED
 
+error: unknown assertion failed
+    ┌─ tests/sources/functional/loops.move:235:20
+    │
+235 │             spec { assert i <= 11; }; // expect to fail, `i` is havoc-ed
+    │                    ^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/loops.move:233: iter10_assert_instead_of_invariant
+    =         i = <redacted>
+    =     at tests/sources/functional/loops.move:235: iter10_assert_instead_of_invariant
+
 error: function does not abort under this condition
    ┌─ tests/sources/functional/loops.move:58:9
    │
