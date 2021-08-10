@@ -4,7 +4,7 @@ on:
   create:
     branches: [latest, release-*]
   push:
-    branches: [latest, release-*] # gha-test-*
+    branches: [main, release-*] # gha-test-*
 
 defaults:
   run:
@@ -56,14 +56,40 @@ jobs:
 
   update-sccache-ubuntu:
     needs: prepare
-    if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
+    runs-on: macos-11
     environment:
       name: Sccache
-    runs-on: ubuntu-20.04-xl
+    if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.6
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: build all unit test code.
+        run: |
+          $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+      - uses: ./.github/actions/build-teardown
+
+  update-sccache-ubuntu:
+    needs: prepare
+    environment:
+      name: Sccache
+    runs-on: ubuntu-latest-xl
     container:
-      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+    if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
     steps:
       - uses: actions/checkout@v2.4.0
         with:
@@ -90,10 +116,8 @@ jobs:
   # update this report to differentiate branches.
   unit-test-allure-report:
     name: Unit Test Reports
-    runs-on: ubuntu-20.04
-    if: ${{ github.ref == 'refs/heads/latest' }}
-    environment:
-      name: Sccache
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.output.changes-target-branch == 'main' }}
     container:
       image: ghcr.io/diem/diem_build_environment:latest
       volumes:
