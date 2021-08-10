@@ -3,10 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # fast fail.
-set -eo pipefail
-
-echo " Dependency change report "
-echo "--------------------------"
+set -eoxv pipefail
 
 # expects two parameters: repository name and branch
 repository=$1
