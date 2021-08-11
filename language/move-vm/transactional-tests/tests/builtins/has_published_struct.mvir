@@ -1,3 +1,4 @@
+//# publish --address 0x1
 module Token {
     struct T has key { b: bool }
 
@@ -17,11 +18,9 @@ module Token {
     }
 }
 
-//! new-transaction
-
+//# run --signers 0x1
 import 0x1.Signer;
-import {{default}}.Token;
-
+import 0x1.Token;
 main(account: signer) {
     let z: Token.T;
     let sender: address;

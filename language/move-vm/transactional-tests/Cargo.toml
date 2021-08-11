@@ -1,0 +1,18 @@
+[package]
+name = "move-vm-transactional-tests"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+
+[dev-dependencies]
+datatest-stable = "0.1.1"
+move-transactional-test-runner = { path = "../../testing-infra/transactional-test-runner" }
+
+[[test]]
+name = "tests"
+harness = false

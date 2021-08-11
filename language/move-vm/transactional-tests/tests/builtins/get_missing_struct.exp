@@ -1,0 +1,10 @@
+processed 2 tasks
+
+task 1 'run'. lines 29-35:
+Error: Script execution failed with VMError: {
+    major_status: MISSING_DATA,
+    sub_status: None,
+    location: 0x1::Token,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(2), 3)],
+}

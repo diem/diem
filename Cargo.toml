@@ -107,6 +107,7 @@ members = [
     "language/move-vm/integration-tests",
     "language/move-vm/runtime",
     "language/move-vm/test-utils",
+    "language/move-vm/transactional-tests",
     "language/move-vm/types",
     "language/testing-infra/e2e-tests",
     "language/testing-infra/functional-tests",

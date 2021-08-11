@@ -1,3 +1,4 @@
+//# run
 main() {
     let byte_array: vector<u8>;
     byte_array = h"deadbeefdeadbeef";
