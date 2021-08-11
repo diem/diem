@@ -1,0 +1,16 @@
+//# publish --address 0x1
+module M {
+    t1() {
+        let a: u64;
+        let r1: &mut u64;
+        let r2: &mut u64;
+        a = 0;
+        r1 = &mut a;
+        r2 = &mut a;
+        // r1 owns the data, so it can be mutated, then r2 can mutate
+        // this might be relaxed later so either can be written to in either order
+        *move(r1) = 1;
+        *move(r2) = 2;
+        return;
+    }
+}

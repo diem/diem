@@ -1,0 +1,15 @@
+//# publish --address 0x1
+module Tester {
+    t() {
+        let x: u64;
+        let r1: &u64;
+        let r2: &u64;
+
+        x = 0;
+        r1 = &x;
+        r2 = &x;
+        // valid to copy even though x is imm borrowed
+        _ = copy(x) + copy(x);
+        return;
+    }
+}

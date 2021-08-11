@@ -1,0 +1,55 @@
+//# publish --address 0x1
+
+module A {
+    struct Coin has store { u: u64 }
+
+    public new(): Self.Coin {
+        return Coin { u: 1 };
+    }
+
+    public join(c1: Self.Coin, c2: Self.Coin): Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u: u1 } = move(c1);
+        Coin { u: u2 } = move(c2);
+        return Coin { u: move(u1) + move(u2) };
+    }
+
+    public split(c1: Self.Coin, amt: u64): Self.Coin * Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        assert(copy(u1) >= copy(amt), 42)
+        u1 = move(u1) - copy(amt);
+        u2 = copy(amt);
+        return Coin { u: move(u1) }, Coin { u: move(u2) };
+    }
+}
+
+//# publish --address 0x1
+
+module Tester {
+    import 0x1.A;
+
+    struct Pair has key { x: A.Coin, y: A.Coin }
+
+    test_eq(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &Self.Pair;
+
+        p1 = borrow_global<Pair>(move(addr1));
+
+        // invalid call to eq_helper, since Pair is aquried
+
+        // It is lossy in the sense that this could be acceptable if we had 'acquires imm Pair' or
+        // something to indicate the "acquires" are immutable
+        return Self.eq_helper(move(p1), move(addr2));
+    }
+
+    eq_helper(p1: &Self.Pair, addr2: address): bool acquires Pair {
+        let p2: &Self.Pair;
+
+        p2 = borrow_global<Pair>(move(addr2));
+        return move(p1) == move(p2);
+    }
+
+}

@@ -1,0 +1,17 @@
+//# publish --address 0x1
+module A {
+    struct S {value: u64}
+
+    public t(changed: bool, s: &mut Self.S) {
+        // valid to move a reference in one branch and not the other
+        if (move(changed)) {
+            Self.foo(&mut move(s).value);
+        }
+        return;
+    }
+
+    foo(x: &mut u64) {
+        *copy(x) = *copy(x) + 1;
+        return;
+    }
+}

@@ -1,0 +1,21 @@
+//# publish --address 0x1
+module Tester {
+    struct T has copy { f: u64 }
+
+    t() {
+        let x: Self.T;
+        let r1: &u64;
+        let r2: &u64;
+        let f: u64;
+
+        x = T { f: 0 };
+        r1 = &(&x).f;
+        r2 = &(&x).f;
+        // copy is valid here even though immutably borrowed
+        T { f: f } = copy(x);
+        _ = move(r1);
+        _ = move(r2);
+        T { f: f } = move(x);
+        return;
+    }
+}

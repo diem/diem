@@ -1,0 +1,11 @@
+//# publish --address 0x1
+module A {
+    struct T1 has key { b: bool }
+
+    // missing acquires annotation
+    public test(addr: address) {
+        _ = borrow_global<T1>(move(addr));
+        return;
+    }
+
+}

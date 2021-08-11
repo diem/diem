@@ -1,0 +1,16 @@
+//# publish --address 0x1
+module M {
+    struct X { f: Self.Y }
+    struct Y { g: u64, h: u64 }
+
+    t1(ref_x: &mut Self.X): &mut Self.Y * &u64  {
+        let ref_x_f: &mut Self.Y;
+        let ref_x_f_g: &u64;
+
+        ref_x_f = &mut move(ref_x).f;
+        ref_x_f_g = & copy(ref_x_f).g;
+
+        // mutable return value overlaps with other return value
+        return (move(ref_x_f), move(ref_x_f_g));
+    }
+}

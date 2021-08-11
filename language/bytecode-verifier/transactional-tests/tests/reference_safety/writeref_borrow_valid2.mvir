@@ -1,0 +1,35 @@
+//# publish --address 0x1
+module M {
+    struct S { f: u64, g: u64, h: u64 }
+
+    t1(root: &mut Self.S, cond: bool) {
+        let x: &mut u64;
+
+        if (move(cond)) {
+            x = &mut copy(root).f;
+        } else {
+            x = &mut copy(root).g;
+        }
+
+        // can write even though f and g are borrowed
+        *(&mut copy(root).h) = 0;
+
+        return;
+    }
+
+    t2(root: &mut Self.S, cond: bool) {
+        let x: &mut u64;
+
+        if (move(cond)) {
+            x = &mut copy(root).f;
+        } else {
+            x = &mut copy(root).g;
+        }
+
+        // can borrow even though f and g are borrowed
+        _ = &mut copy(root).f;
+        _ = &mut copy(root).g;
+
+        return;
+    }
+}

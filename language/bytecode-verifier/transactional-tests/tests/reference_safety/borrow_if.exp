@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-14:
+Error: Script execution failed with VMError: {
+    major_status: MOVELOC_UNAVAILABLE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 6)],
+}

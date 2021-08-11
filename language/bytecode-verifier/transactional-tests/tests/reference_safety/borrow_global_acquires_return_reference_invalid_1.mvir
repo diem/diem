@@ -1,0 +1,15 @@
+//# publish --address 0x1
+module A {
+    import 0x1.Signer;
+    struct T1 has key {v: u64}
+
+    public test1(account: &signer) acquires T1 {
+        _ = Self.borrow_acquires_t1(move(account));
+        return;
+    }
+
+    borrow_acquires_t1(account: &signer): &mut Self.T1 acquires T1 {
+        // cannot return global resources
+        return borrow_global_mut<T1>(Signer.address_of(move(account)));
+    }
+}

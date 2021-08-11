@@ -1,0 +1,11 @@
+//# publish --address 0x1
+module A {
+    struct T1{v: u64}
+
+    // unnecessary acquire annotation
+    public test() acquires T1 {
+        Self.test();
+        return;
+    }
+
+}

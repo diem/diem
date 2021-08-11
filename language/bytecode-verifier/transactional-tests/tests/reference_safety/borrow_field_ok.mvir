@@ -1,0 +1,35 @@
+//# publish --address 0x1
+module A {
+
+    struct T has drop {v: u64}
+    struct K has drop {f: Self.T}
+
+    public new_T(v: u64) : Self.T {
+        return T{v: move(v)};
+    }
+
+    public new_K(f: Self.T) : Self.K {
+        return K{f: move(f)};
+    }
+
+    public value(this: &Self.K) : u64 {
+        let k: &u64;
+        // valid field borrow
+        k = &(&move(this).f).v;
+        return *move(k);
+    }
+}
+
+//# run
+import 0x1.A;
+
+main() {
+    let x: A.T;
+    let y: A.K;
+    let z: u64;
+    x = A.new_T(2);
+    y = A.new_K(move(x));
+    z = A.value(&y);
+    assert(move(z) == 2, 42);
+    return;
+}

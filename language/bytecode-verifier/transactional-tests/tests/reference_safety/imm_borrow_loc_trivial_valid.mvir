@@ -1,0 +1,25 @@
+//# publish --address 0x1
+module Tester {
+    struct X has key { f: u64 }
+
+    bump_and_give(x_ref: &mut Self.X, other: &u64): &u64 {
+        _ = move(other);
+        *(&mut copy(x_ref).f) = *&mut copy(x_ref).f + 1;
+        return &move(x_ref).f;
+    }
+
+    contrived_example(result: &mut u64) {
+        let x: Self.X;
+        let other: u64;
+        let returned_ref: &u64;
+
+        x = X { f: 0 };
+        other = 100;
+        returned_ref = Self.bump_and_give(&mut x, &other);
+        // mut borrow the local + freeze is valid here
+        assert(*copy(returned_ref) == *&(freeze(&mut x)).f, 42);
+        *move(result) = *move(returned_ref);
+        X { other } = move(x);
+        return;
+    }
+}
