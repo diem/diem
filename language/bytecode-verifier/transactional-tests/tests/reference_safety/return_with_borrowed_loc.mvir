@@ -1,0 +1,26 @@
+//# publish --address 0x1
+module M {
+    struct X has drop { y: Self.Y }
+    struct Y has drop { u: u64 }
+
+    t1() {
+        let x: u64;
+        let y: &u64;
+        x = 0;
+        y = &x;
+        return;
+    }
+
+    t2() {
+        let s: Self.X;
+        let x: &Self.X;
+        let y: &Self.Y;
+        let u: &u64;
+        s = X { y: Y { u: 0 } };
+        x = &s;
+        y = &copy(x).y;
+        u = &copy(y).u;
+        // all references are automatically released, return is safe
+        return;
+    }
+}

@@ -1,0 +1,14 @@
+//# run
+main() {
+    let x: u64;
+    let ref: &u64;
+
+    x = 5;
+    if (true) {
+        ref = &x;
+    }
+
+    // cannot use reference as it was not assigned in all control flow paths
+    assert(*move(ref) == 5, 42);
+    return;
+}

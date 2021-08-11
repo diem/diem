@@ -1,0 +1,79 @@
+//# publish --address 0x1
+module A {
+    struct Coin has store { u: u64 }
+
+    public new(): Self.Coin {
+        return Coin { u: 1 };
+    }
+
+    public join(c1: Self.Coin, c2: Self.Coin): Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u: u1 } = move(c1);
+        Coin { u: u2 } = move(c2);
+        return Coin { u: move(u1) + move(u2) };
+    }
+
+    public split(c1: Self.Coin, amt: u64): Self.Coin * Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        assert(copy(u1) >= copy(amt), 42)
+        u1 = move(u1) - copy(amt);
+        u2 = copy(amt);
+        return Coin { u: move(u1) }, Coin { u: move(u2) };
+    }
+}
+
+//# publish --address 0x1
+module Tester {
+    import 0x1.A;
+
+    struct Pair has key { x: A.Coin, y: A.Coin }
+
+    no1(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &mut Self.Pair;
+        let p2: &mut Self.Pair;
+
+        p1 = borrow_global_mut<Pair>(move(addr1));
+        // Pair still acquired mutably
+        p2 = borrow_global_mut<Pair>(move(addr2));
+        return move(p1) == move(p2);
+    }
+}
+
+//# publish --address 0x1
+module Tester {
+    import 0x1.A;
+
+    struct Pair has key { x: A.Coin, y: A.Coin }
+    no2(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &Self.Pair;
+        let p2: &Self.Pair;
+
+        p1 = freeze(borrow_global_mut<Pair>(move(addr1)));
+        // Pair still acquired mutably
+        p2 = freeze(borrow_global_mut<Pair>(move(addr2)));
+        return move(p1) == move(p2);
+    }
+}
+
+//# publish --address 0x1
+module Tester {
+    import 0x1.A;
+
+    struct Pair has key { x: A.Coin, y: A.Coin }
+    no3(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &mut Self.Pair;
+        let p2: &mut Self.Pair;
+        let c1: &A.Coin;
+        let c2: &A.Coin;
+
+        p1 = borrow_global_mut<Pair>(move(addr1));
+        c1 = &move(p1).x;
+        // Pair still acquired mutably
+        p2 = borrow_global_mut<Pair>(move(addr2));
+        c2 = &move(p2).x;
+        return move(c1) == move(c2);
+    }
+}

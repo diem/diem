@@ -1,0 +1,12 @@
+//# publish --address 0x1
+module A {
+    import 0x1.Signer;
+    struct T1 has key {v: u64}
+
+    // duplicate acquires annotation
+    public test(account: &signer) acquires T1, T1 {
+        _ = borrow_global_mut<T1>(Signer.address_of(move(account)));
+        return;
+    }
+
+}

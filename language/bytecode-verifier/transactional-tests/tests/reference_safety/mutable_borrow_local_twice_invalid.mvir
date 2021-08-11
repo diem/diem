@@ -1,0 +1,16 @@
+//# publish --address 0x1
+module M {
+    t1() {
+        let a: u64;
+        let r1: &mut u64;
+        let r2: &mut u64;
+        a = 0;
+        r1 = &mut a;
+        r2 = &mut a;
+        // cannot write to r2, r1 "owns" the data....
+        // this might be improved upon later
+        *move(r2) = 2;
+        *move(r1) = 1;
+        return;
+    }
+}

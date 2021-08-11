@@ -1,0 +1,13 @@
+//# publish --address 0x1
+module Tester {
+    t() {
+        let x: u64;
+        let r1: &mut u64;
+
+        x = 0;
+        r1 = &mut x;
+        // cannot copy, data is "owned" by r1. Violates ref trans
+        _ = copy(x);
+        return;
+    }
+}

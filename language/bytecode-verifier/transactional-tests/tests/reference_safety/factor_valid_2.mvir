@@ -1,0 +1,66 @@
+//# publish --address 0x1
+module M {
+    struct S { g: u64 }
+
+    t1(root: &mut Self.S, cond: bool) {
+        let x1: u64;
+        let x2: u64;
+        let eps: &u64;
+        let g: &u64;
+        x1 = 0;
+        x2 = 1;
+        if (move(cond)) {
+            eps = Self.bar(copy(root));
+        } else {
+            eps = &x1;
+        }
+        // valid to extend even though imm borrowed in one branch
+        g = &move(root).g;
+        return;
+    }
+
+    t2() {
+        let x1: u64;
+        let x2: u64;
+        let eps: &u64;
+        x1 = 0;
+        x2 = 1;
+        eps = Self.foo(&x1, &x2);
+        // valid to call even though imm borrows overlap
+        Self.baz(&x1, move(eps));
+        return;
+    }
+
+    t3() {
+        let x1: u64;
+        let x2: u64;
+        let eps: &u64;
+        x1 = 0;
+        x2 = 1;
+        eps = Self.foo(&x1, &x2);
+        // valid to call even though imm borrows overlap
+        Self.baz(freeze(&mut x1), move(eps));
+        return;
+    }
+
+    foo(a: &u64, b: &u64): &u64 {
+        let ret: &u64;
+        if (*copy(a) > *copy(b)) {
+            ret = move(a);
+            _ = move(b);
+        } else {
+            ret = move(b);
+            _ = move(a);
+        }
+        // valid even though different references borrowed
+        return move(ret);
+    }
+
+    bar(a: &mut Self.S): &u64 {
+        return &move(a).g;
+    }
+
+    baz(a: &u64, b: &u64) {
+        return;
+    }
+}

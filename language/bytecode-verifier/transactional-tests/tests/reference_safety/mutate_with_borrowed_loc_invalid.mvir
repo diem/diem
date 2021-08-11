@@ -1,0 +1,13 @@
+//# publish --address 0x1
+module M {
+    t1() {
+        let x: u64;
+        let y: &u64;
+        x = 0;
+        y = &x;
+        // cannot write to x, still borrowed
+        x = 0;
+        return;
+    }
+
+}

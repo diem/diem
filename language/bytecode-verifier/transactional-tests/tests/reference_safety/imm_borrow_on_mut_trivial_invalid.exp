@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-28:
+Error: Unable to publish module '00000000000000000000000000000001::Tester'. Got VMError: {
+    major_status: BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
+    sub_status: None,
+    location: 0x1::Tester,
+    indices: [(FunctionDefinition, 1)],
+    offsets: [(FunctionDefinitionIndex(1), 6)],
+}

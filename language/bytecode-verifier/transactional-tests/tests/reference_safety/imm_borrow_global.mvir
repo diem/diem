@@ -1,0 +1,62 @@
+//# publish --address 0x1
+module A {
+    struct Coin has store { u: u64 }
+
+    public new(): Self.Coin {
+        return Coin { u: 1 };
+    }
+
+    public join(c1: Self.Coin, c2: Self.Coin): Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        Coin { u2 } = move(c2);
+        return Coin { u: move(u1) + move(u2) };
+    }
+
+    public split(c1: Self.Coin, amt: u64): Self.Coin * Self.Coin {
+        let u1: u64;
+        let u2: u64;
+        Coin { u1 } = move(c1);
+        assert(copy(u1) >= copy(amt), 42)
+        u1 = move(u1) - copy(amt);
+        u2 = copy(amt);
+        return Coin { u: move(u1) }, Coin { u: move(u2) };
+    }
+}
+
+//# publish --address 0x1
+module Tester {
+    import 0x1.Signer;
+    import 0x1.A;
+
+    struct Pair has key { x: A.Coin, y: A.Coin }
+
+    public test_eq(addr1: address, addr2: address): bool acquires Pair {
+        let p1: &Self.Pair;
+        let p2: &Self.Pair;
+
+        // can immutably borrow/acquire more than once
+        p1 = borrow_global<Pair>(move(addr1));
+        p2 = borrow_global<Pair>(move(addr2));
+        return move(p1) == move(p2);
+    }
+
+    //  valid acquires usage
+    public test(account: &signer) acquires Pair {
+        let sender: address;
+        sender = Signer.address_of(copy(account));
+        move_to<Pair>(move(account), Pair { x: A.new(), y: A.new() });
+        assert(Self.test_eq(copy(sender), copy(sender)), 42);
+        return;
+    }
+
+}
+
+//# run --signers 0x1
+import 0x1.Tester;
+
+main(account: signer) {
+    Tester.test(&account);
+    return;
+}
