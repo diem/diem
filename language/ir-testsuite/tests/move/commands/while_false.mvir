@@ -1,9 +1,0 @@
-main() {
-    let x: u64;
-    x = 0;
-    while (false) {
-      x = 1;
-    }
-    assert(move(x) == 0, 42);
-    return;
-}

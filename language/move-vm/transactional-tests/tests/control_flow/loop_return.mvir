@@ -1,0 +1,8 @@
+//# run
+main() {
+    loop {
+        return;
+        assert(false, 42);
+    }
+    return;
+}

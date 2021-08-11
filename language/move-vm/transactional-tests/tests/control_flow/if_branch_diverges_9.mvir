@@ -1,0 +1,16 @@
+//# run
+main() {
+    let b: bool;
+    b = false;
+    loop {
+        if (copy(b)) {
+            if (copy(b)) {
+                continue;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    return;
+}

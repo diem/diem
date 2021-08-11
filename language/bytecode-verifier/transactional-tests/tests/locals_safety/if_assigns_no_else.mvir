@@ -1,0 +1,10 @@
+//# run
+main() {
+    let x: u64;
+    if (true) {
+        x = 42;
+    }
+    // invalid copy, might not have a value
+    assert(copy(x) == 42, 42);
+    return;
+}

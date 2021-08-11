@@ -1,7 +1,0 @@
-// TODO: should the verifier allow this?
-
-main() {
-    return;
-    assert(false, 42);
-    return;
-}

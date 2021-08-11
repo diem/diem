@@ -1,0 +1,15 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    let b: bool;
+    x = 0;
+    b = true;
+    while (copy(b)) {
+        y = move(x);
+        b = false;
+    }
+    // invalid move
+    assert(move(y) == 0, 42);
+    return;
+}

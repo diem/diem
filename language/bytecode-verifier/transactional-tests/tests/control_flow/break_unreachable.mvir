@@ -1,0 +1,14 @@
+//# run
+// simple breaks for control flow check
+main() {
+    let x: u64;
+    x = 1;
+    while (true) {
+        x = 3;
+        break;
+        x = 5;
+        break;
+    }
+    assert(move(x) == 3, 42);
+    return;
+}

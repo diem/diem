@@ -1,0 +1,12 @@
+//# run
+main() {
+    loop {
+        loop {
+            break;
+            assert(false, 42);
+        }
+        break;
+        assert(false, 42);
+    }
+    return;
+}

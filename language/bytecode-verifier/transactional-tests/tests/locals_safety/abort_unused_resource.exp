@@ -1,0 +1,10 @@
+processed 2 tasks
+
+task 1 'run'. lines 9-17:
+Error: Script execution failed with VMError: {
+    major_status: LOOKUP_FAILED,
+    sub_status: None,
+    location: script,
+    indices: [(FunctionHandle, 0)],
+    offsets: [],
+}

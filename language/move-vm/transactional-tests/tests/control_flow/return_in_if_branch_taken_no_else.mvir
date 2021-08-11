@@ -1,0 +1,19 @@
+//# publish --address 0x1
+module Test {
+    public t(): u64 {
+        if (true) {
+            return 100;
+        }
+        return 0;
+    }
+}
+
+//# run
+import 0x1.Test;
+
+main() {
+    let x: u64;
+    x = Test.t();
+    assert(copy(x) == 100, 42);
+    return;
+}

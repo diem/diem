@@ -1,0 +1,21 @@
+//# publish --address 0x1
+module Test {
+    struct X { b: bool }
+    struct T { i: u64, x: Self.X }
+
+    public new_t(): Self.T {
+        let x: Self.X;
+        x = X { b: true };
+        return T { i: 0, x: move(x) };
+    }
+
+    public destroy_t(t: Self.T): u64 * Self.X * bool {
+        let i: u64;
+        let x: Self.X;
+        let flag: bool;
+        // extra binding, invalid positive stack size
+        T { i, x, b: flag } = move(t);
+        return move(i), move(x), move(flag);
+    }
+
+}

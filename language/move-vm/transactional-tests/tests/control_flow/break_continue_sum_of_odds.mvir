@@ -1,0 +1,21 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    x = 0;
+    y = 0;
+    loop {
+        if (copy(x) < 10) {
+            x = move(x) + 1;
+            if (copy(x) % 2 == 0) {
+                continue;
+            }
+            y = move(y) + copy(x);
+        }
+        else {
+            break;
+        }
+    }
+    assert(move(y) == 25, 42);
+    return;
+}

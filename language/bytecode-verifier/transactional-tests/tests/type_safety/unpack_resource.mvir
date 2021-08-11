@@ -1,0 +1,46 @@
+//# publish --address 0x1
+module Test {
+    struct X { b: bool }
+    struct T { i: u64, x: Self.X, b: bool }
+
+    public new_x(): Self.X {
+        return X { b: true };
+    }
+
+    public new_t(x: Self.X): Self.T {
+        return T { i: 0, x: move(x), b: false };
+    }
+
+    public destroy_x(x: Self.X) {
+        let b: bool;
+        X { b } = move(x);
+        return;
+    }
+
+    // can unpack a resource and return it
+    public destroy_t(t: Self.T): u64 * Self.X * bool {
+        let i: u64;
+        let x: Self.X;
+        let flag: bool;
+        T { i, x, b: flag } = move(t);
+        return move(i), move(x), move(flag);
+    }
+
+}
+
+//# run
+import 0x1.Test;
+
+main() {
+    let x: Test.X;
+    let i: u64;
+    let t: Test.T;
+    let b: bool;
+
+    x = Test.new_x();
+    t = Test.new_t(move(x));
+    i, x, b = Test.destroy_t(move(t));
+    Test.destroy_x(move(x));
+
+    return;
+}

@@ -1,0 +1,5 @@
+//# run
+main() {
+    // negative stack size, abort takes an arg
+    abort;
+}

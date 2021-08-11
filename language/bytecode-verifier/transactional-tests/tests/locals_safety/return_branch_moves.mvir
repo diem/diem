@@ -1,0 +1,15 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+
+    x = 0;
+    if (false) {
+        y = move(x);
+        return;
+    }
+
+    // okay to use x
+    assert(copy(x) == 0, 42);
+    return;
+}

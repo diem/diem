@@ -1,0 +1,10 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    // invalid move
+    y = move(x);
+    return;
+}
+
+// check: MOVELOC_UNAVAILABLE_ERROR

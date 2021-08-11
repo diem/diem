@@ -1,0 +1,37 @@
+processed 4 tasks
+
+task 0 'publish'. lines 1-12:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: RET_TYPE_MISMATCH_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 4)],
+}
+
+task 1 'publish'. lines 14-25:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: RET_TYPE_MISMATCH_ERROR,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 5)],
+}
+
+task 2 'publish'. lines 27-37:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 4)],
+}
+
+task 3 'publish'. lines 39-49:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 5)],
+}

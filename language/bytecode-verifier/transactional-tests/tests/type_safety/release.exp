@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-9:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 0)],
+}

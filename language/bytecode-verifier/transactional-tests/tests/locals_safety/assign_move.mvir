@@ -1,0 +1,12 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+
+    x = 5;
+    // valid move
+    y = move(x);
+    // valid copy
+    assert(copy(y) == 5, 42);
+    return;
+}
