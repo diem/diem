@@ -41,11 +41,7 @@ fn main() {
 
     if args.test {
         println!("Entering test mode, this should never be used in production!");
-        let rng = args
-            .seed
-            .map(StdRng::from_seed)
-            .unwrap_or_else(StdRng::from_entropy);
-        diem_node::load_test_environment(args.config, args.random_ports, rng);
+        diem_node::load_test_environment(args.config, args.random_ports, rand::rngs::OsRng);
     } else {
         let config = NodeConfig::load(args.config.unwrap()).expect("Failed to load node config");
         println!("Using node config {:?}", &config);

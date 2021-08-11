@@ -73,8 +73,11 @@ impl SwarmConfig {
 }
 
 impl BuildSwarm for ValidatorBuilder {
-    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let (root_keys, validators) = self.clone().build(rand::rngs::OsRng)?;
+    fn build_swarm<R>(&self, rng: R) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)>
+    where
+        R: ::rand::RngCore + ::rand::CryptoRng,
+    {
+        let (root_keys, validators) = self.clone().build(rng)?;
 
         Ok((
             validators.into_iter().map(|v| v.config).collect(),
