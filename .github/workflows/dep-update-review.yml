@@ -27,7 +27,7 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           path: diem-base
       - name: install depdive
-        run: cargo install --git https://github.com/diem/whackadep --rev 9dbcadc37a6367e59dc5729224cb2a8f46907360 depdive
+        run: cargo install depdive --version=0.1.0
       - name: Get depdive update report
         id: set-update-report
         run: |
