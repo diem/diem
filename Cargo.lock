@@ -3403,6 +3403,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-cli"
+version = "0.0.0"
+dependencies = [
+ "diem-sdk",
+ "diem-workspace-hack",
+ "forge",
+ "itertools 0.10.0",
+ "rand_core 0.6.2",
+ "structopt 0.3.21",
+ "tokio",
+]
+
+[[package]]
 name = "form_urlencoded"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

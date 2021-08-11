@@ -203,6 +203,7 @@ members = [
     "executor-benchmark",
     "executor-test-helpers",
     "forge",
+    "forge-cli",
     "functional-tests",
     "generate-format",
     "invalid-mutations",

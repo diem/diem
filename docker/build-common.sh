@@ -51,6 +51,7 @@ if [ "$IMAGE_TARGETS" = "test" ] || [ "$IMAGE_TARGETS" = "all"  ]; then
           -p cli \
           -p diem-faucet \
           -p forge \
+          -p forge-cli \
           "$@"
 fi
 

@@ -1,0 +1,24 @@
+[package]
+name = "forge-cli"
+version = "0.0.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Forged in Fire"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+diem-sdk = { path = "../../sdk" }
+forge = { path = "../forge" }
+itertools = "0.10.0"
+rand_core = "0.6.2"
+structopt = "0.3.21"
+tokio = { version = "1.8.1", features = ["full"] }
+
+diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
+
+[[bin]]
+name = "forge"
+path = "src/main.rs"
