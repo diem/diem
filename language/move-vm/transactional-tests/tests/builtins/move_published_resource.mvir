@@ -1,3 +1,4 @@
+//# publish --address 0x1
 module TestMoveFrom {
     import 0x1.Signer;
 
@@ -49,8 +50,7 @@ module TestMoveFrom {
 
 }
 
-//! new-transaction
-
+// run --signers 0x1
 import {{default}}.TestMoveFrom;
 
 main(account: signer) {
