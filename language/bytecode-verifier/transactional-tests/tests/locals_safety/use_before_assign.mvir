@@ -1,0 +1,8 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    // invalid copy
+    y = copy(x);
+    return;
+}

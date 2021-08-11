@@ -1,0 +1,13 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    if (true) {
+        y = 0;
+    } else {
+        x = 42;
+    }
+    // invalid copy
+    assert(copy(y) == 0, 42);
+    return;
+}

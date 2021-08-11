@@ -1,0 +1,12 @@
+//# run
+main() {
+  let x: u64;
+
+  if (true) {
+    return;
+  } else {
+    return;
+  }
+  x = 7;
+  // invalid fall through
+}

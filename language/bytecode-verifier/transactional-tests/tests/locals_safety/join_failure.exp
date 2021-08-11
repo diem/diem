@@ -1,0 +1,46 @@
+processed 5 tasks
+
+task 0 'publish'. lines 1-18:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: MOVELOC_UNAVAILABLE_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}
+
+task 1 'publish'. lines 20-36:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}
+
+task 2 'publish'. lines 38-55:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: STLOC_UNSAFE_TO_DESTROY_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 17)],
+}
+
+task 3 'publish'. lines 57-74:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: COPYLOC_UNAVAILABLE_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}
+
+task 4 'publish'. lines 76-94:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: BORROWLOC_UNAVAILABLE_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}

@@ -1,0 +1,11 @@
+//# run
+main() {
+    let x: u64;
+    x = 0;
+    loop {
+        x = move(x) + 1;
+        break;
+    }
+    assert(move(x) == 1, 42);
+    return;
+}

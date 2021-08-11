@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-4:
+Error: Script execution failed with VMError: {
+    major_status: EMPTY_CODE_UNIT,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [],
+}

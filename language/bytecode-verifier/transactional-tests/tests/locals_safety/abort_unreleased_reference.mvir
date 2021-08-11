@@ -1,0 +1,9 @@
+//# run
+main() {
+    let x: u64;
+    let x_ref: &mut u64;
+    x = 0;
+    x_ref = &mut x;
+    // x_ref does not have to be released
+    abort 0;
+}

@@ -1,0 +1,18 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    let z: u64;
+    x = 0;
+    z = 0;
+    while (copy(x) < 3) {
+        x = move(x) + 1;
+        y = 0;
+        while (copy(y) < 7) {
+            y = move(y) + 1;
+            z = move(z) + 1;
+        }
+    }
+    assert(move(z) == 21, 42);
+    return;
+}

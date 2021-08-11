@@ -1,0 +1,4 @@
+//# run
+main() {
+    // empty functions not allowed
+}

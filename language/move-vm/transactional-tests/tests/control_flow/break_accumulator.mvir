@@ -1,0 +1,13 @@
+//# run
+main() {
+    let x: u64;
+    x = 0;
+    while (true) {
+        if (copy(x) >= 5) {
+            break;
+        }
+        x = move(x) + 1;
+    }
+    assert(move(x) == 5, 42);
+    return;
+}
