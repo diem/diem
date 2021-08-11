@@ -1,3 +1,4 @@
+//# run --signers 0x1
 import 0x1.Signer;
 
 main(account: signer) {
@@ -5,9 +6,7 @@ main(account: signer) {
     let addr: address;
 
     sender = Signer.address_of(&account);
-    addr = 0x0;
-    assert(copy(sender) != copy(addr), 42);
-    // TODO: do we really need to test this?
-
+    addr = 0x1;
+    assert(copy(sender) == copy(addr), 42);
     return;
 }

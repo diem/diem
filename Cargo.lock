@@ -709,7 +709,6 @@ version = "0.1.0"
 dependencies = [
  "datatest-stable",
  "diem-workspace-hack",
- "move-command-line-common",
  "move-transactional-test-runner",
 ]
 
@@ -5215,6 +5214,15 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
+]
+
+[[package]]
+name = "move-vm-transactional-tests"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "diem-workspace-hack",
+ "move-transactional-test-runner",
 ]
 
 [[package]]

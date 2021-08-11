@@ -1,3 +1,4 @@
+//# publish --address 0x1
 module Token {
     struct T has key { b: bool }
 
@@ -16,6 +17,7 @@ module Token {
         let struct1: &mut Self.T;
 
         addr1 = 0x01111111111111110;
+        // shoudl fail with missing data
         struct1 = borrow_global_mut<T>(move(addr1));
         _ = move(struct1);
 
@@ -24,13 +26,10 @@ module Token {
 
 }
 
-//! new-transaction
-
-import {{default}}.Token;
+//# run
+import 0x1.Token;
 
 main() {
     Token.test();
     return;
 }
-
-// check: MISSING_DATA

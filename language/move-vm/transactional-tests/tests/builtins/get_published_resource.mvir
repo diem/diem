@@ -1,3 +1,4 @@
+//# publish --address 0x1
 module Token {
     import 0x1.Signer;
 
@@ -46,10 +47,8 @@ module Token {
     }
 }
 
-//! new-transaction
-
-import {{default}}.Token;
-
+//# run --signers 0x1
+import 0x1.Token;
 main(account: signer) {
     Token.test(&account);
     return;
