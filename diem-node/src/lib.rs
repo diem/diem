@@ -16,7 +16,7 @@ use diem_metrics::metric_server;
 use diem_time_service::TimeService;
 use diem_types::{
     account_config::diem_root_address, account_state::AccountState, chain_id::ChainId,
-    move_resource::MoveStorage,
+    move_resource::MoveStorage, on_chain_config::VMPublishingOption,
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
@@ -92,8 +92,12 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     }
 }
 
-pub fn load_test_environment<R>(config_path: Option<PathBuf>, random_ports: bool, rng: R)
-where
+pub fn load_test_environment<R>(
+    config_path: Option<PathBuf>,
+    random_ports: bool,
+    publishing_option: Option<VMPublishingOption>,
+    rng: R,
+) where
     R: ::rand::RngCore + ::rand::CryptoRng,
 {
     // Either allocate a temppath or reuse the passed in path and make sure the directory exists
@@ -110,12 +114,15 @@ where
     maybe_config.push("validator_node_template.yaml");
     let template = NodeConfig::load_config(maybe_config)
         .unwrap_or_else(|_| NodeConfig::default_for_validator());
-    let builder = diem_genesis_tool::validator_builder::ValidatorBuilder::new(
+    let mut builder = diem_genesis_tool::validator_builder::ValidatorBuilder::new(
         &config_path,
         diem_framework_releases::current_module_blobs().to_vec(),
     )
     .template(template)
     .randomize_first_validator_ports(random_ports);
+    if let Some(publishing_option) = publishing_option {
+        builder = builder.publishing_option(publishing_option);
+    }
     let test_config =
         diem_genesis_tool::swarm_config::SwarmConfig::build_with_rng(&builder, &config_path, rng)
             .unwrap();
