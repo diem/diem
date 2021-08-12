@@ -9,7 +9,7 @@ use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use itertools::Itertools;
 use log::LevelFilter;
 use move_model::{
-    model::{GlobalEnv, ModuleEnv, VerificationScope},
+    model::{FunctionEnv, GlobalEnv, VerificationScope},
     run_model_builder,
 };
 use move_prover::{
@@ -147,6 +147,9 @@ fn apply_mutation(
             add_sub: i,
         });
         mutation_applied = runner.mutate(&env)?;
+        if !mutation_applied {
+            println!("No mutations applied");
+        }
     }
     Ok(())
 }
@@ -156,36 +159,37 @@ impl Runner {
         let mut mutated = false;
         for module in env.get_modules() {
             if module.is_target() {
-                self.mutate_module(module)?;
-                mutated = env
-                    .get_extension::<MutationManager>()
-                    .map(|e| e.mutated)
-                    .unwrap_or(false);
-                if mutated {
-                    break;
+                for fun in module.get_functions() {
+                    mutated = self.mutate_function(fun)?;
+                    if mutated {
+                        break;
+                    }
                 }
             }
         }
         Ok(mutated)
     }
 
-    fn mutate_module(&mut self, module: ModuleEnv<'_>) -> anyhow::Result<()> {
-        print!("running module {} ..", module.get_full_name_str());
-        std::io::stdout().flush()?;
+    fn mutate_function(&mut self, fun: FunctionEnv<'_>) -> anyhow::Result<bool> {
+        // Scope verification to the given function
+        let env = fun.module_env.env;
+        self.options.prover.verify_scope = VerificationScope::Only(fun.get_full_name_str());
+        ProverOptions::set(env, self.options.prover.clone());
+        let (duration, status) = self.run_mutated_function(fun.module_env.env)?;
 
-        // Scope verification to the given module
-        self.options.prover.verify_scope =
-            VerificationScope::OnlyModule(module.get_full_name_str());
-        ProverOptions::set(module.env, self.options.prover.clone());
-
-        // Run (potentially) mutated module
-        let (duration, status) = self.run_mutated_module(module.env)?;
-
-        println!("\x08\x08{:.3}s {}.", duration.as_secs_f64(), status);
-        Ok(())
+        let mutated = env
+            .get_extension::<MutationManager>()
+            .map(|e| e.mutated)
+            .unwrap_or(false);
+        if mutated {
+            print!("mutated function {} ..", fun.get_full_name_str());
+            std::io::stdout().flush()?;
+            println!("\x08\x08{:.3}s {}.", duration.as_secs_f64(), status);
+        }
+        Ok(mutated)
     }
 
-    fn run_mutated_module(&mut self, env: &GlobalEnv) -> anyhow::Result<(Duration, String)> {
+    fn run_mutated_function(&mut self, env: &GlobalEnv) -> anyhow::Result<(Duration, String)> {
         // Create and process bytecode.
         let targets = create_and_process_bytecode(&self.options, env);
 

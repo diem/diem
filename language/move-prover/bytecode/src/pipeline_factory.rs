@@ -54,7 +54,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         },
     ];
     if options.mutation {
-        processors.insert(0, MutationTester::new()); // pass which may do nothing
+        processors.push(MutationTester::new()); // pass which may do nothing
     }
     if options.run_mono {
         processors.push(MonoAnalysisProcessor::new());
