@@ -221,7 +221,7 @@ Return the underlying <code><a href="NetworkIdentity.md#0x1_NetworkIdentity">Net
 <pre><code><b>public</b> <b>fun</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity_get">get</a>(account_addr: address): vector&lt;vector&lt;u8&gt;&gt; <b>acquires</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a> {
     <b>assert</b>(
         <b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr),
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="NetworkIdentity.md#0x1_NetworkIdentity_ENETWORK_ID_DOESNT_EXIST">ENETWORK_ID_DOESNT_EXIST</a>)
+        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="NetworkIdentity.md#0x1_NetworkIdentity_ENETWORK_ID_DOESNT_EXIST">ENETWORK_ID_DOESNT_EXIST</a>)
     );
     *&borrow_global&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identities
 }
@@ -236,7 +236,7 @@ Return the underlying <code><a href="NetworkIdentity.md#0x1_NetworkIdentity">Net
 
 
 
-<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr);
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>ensures</b> result == <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identities;
 </code></pre>
 
@@ -300,14 +300,15 @@ Update and create if not exist <code><a href="NetworkIdentity.md#0x1_NetworkIden
 } <b>else</b> {
     vec()
 };
-<b>let</b> has_change = (<b>exists</b> i in 0..len(to_add): !contains(prior_identities, to_add[i]));
+<b>let</b> has_change = (<b>exists</b> e in to_add: !contains(prior_identities, e));
 <b>let</b> post handle = <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identity_change_events;
 <b>let</b> post msg = <a href="NetworkIdentity.md#0x1_NetworkIdentity_NetworkIdentityChangeNotification">NetworkIdentityChangeNotification</a> {
     identities: <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identities,
     time_rotated_seconds: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>(),
 };
-<b>aborts_if</b> len(to_add) == 0;
-<b>aborts_if</b> len(prior_identities) + len(to_add) &gt; <a href="NetworkIdentity.md#0x1_NetworkIdentity_MAX_ADDR_IDENTITIES">MAX_ADDR_IDENTITIES</a>;
+<b>aborts_if</b> len(to_add) == 0 <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> len(prior_identities) + len(to_add) &gt; MAX_U64;
+<b>aborts_if</b> len(prior_identities) + len(to_add) &gt; <a href="NetworkIdentity.md#0x1_NetworkIdentity_MAX_ADDR_IDENTITIES">MAX_ADDR_IDENTITIES</a> <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> has_change ==&gt; <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity_AddMembersInternalEnsures">AddMembersInternalEnsures</a>&lt;vector&lt;u8&gt;&gt; {
     old_members: prior_identities,
@@ -348,7 +349,7 @@ Remove <code><a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a
     <b>let</b> account_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(
         <b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr),
-        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="NetworkIdentity.md#0x1_NetworkIdentity_ENETWORK_ID_DOESNT_EXIST">ENETWORK_ID_DOESNT_EXIST</a>)
+        <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="NetworkIdentity.md#0x1_NetworkIdentity_ENETWORK_ID_DOESNT_EXIST">ENETWORK_ID_DOESNT_EXIST</a>)
     );
 
     <b>let</b> identity = borrow_global_mut&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr);
@@ -375,15 +376,15 @@ Remove <code><a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a
 
 <pre><code><b>let</b> account_addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>let</b> prior_identities = <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identities;
-<b>let</b> has_change = (<b>exists</b> i in 0..len(to_remove): contains(prior_identities, to_remove[i]));
+<b>let</b> has_change = (<b>exists</b> e in to_remove: contains(prior_identities, e));
 <b>let</b> post handle = <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identity_change_events;
 <b>let</b> post msg = <a href="NetworkIdentity.md#0x1_NetworkIdentity_NetworkIdentityChangeNotification">NetworkIdentityChangeNotification</a> {
     identities: <b>global</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr).identities,
     time_rotated_seconds: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>(),
 };
-<b>aborts_if</b> len(to_remove) == 0;
-<b>aborts_if</b> len(to_remove) &gt; <a href="NetworkIdentity.md#0x1_NetworkIdentity_MAX_ADDR_IDENTITIES">MAX_ADDR_IDENTITIES</a>;
-<b>aborts_if</b> !<b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr);
+<b>aborts_if</b> len(to_remove) == 0 <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> len(to_remove) &gt; <a href="NetworkIdentity.md#0x1_NetworkIdentity_MAX_ADDR_IDENTITIES">MAX_ADDR_IDENTITIES</a> <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>aborts_if</b> !<b>exists</b>&lt;<a href="NetworkIdentity.md#0x1_NetworkIdentity">NetworkIdentity</a>&gt;(account_addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>include</b> has_change ==&gt; <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity_RemoveMembersInternalEnsures">RemoveMembersInternalEnsures</a>&lt;vector&lt;u8&gt;&gt; {
     old_members: prior_identities,
@@ -473,7 +474,7 @@ to be a set and hence can have duplicated elements.
     new_members: members,
 };
 <b>include</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity_UniqueMembers">UniqueMembers</a>&lt;T&gt;;
-<b>ensures</b> result == (<b>exists</b> i in 0..len(to_add): !contains(<b>old</b>(members), to_add[i]));
+<b>ensures</b> result == (<b>exists</b> e in to_add: !contains(<b>old</b>(members), e));
 </code></pre>
 
 
@@ -486,9 +487,9 @@ to be a set and hence can have duplicated elements.
     old_members: vector&lt;T&gt;;
     new_members: vector&lt;T&gt;;
     to_add: vector&lt;T&gt;;
-    <b>ensures</b> <b>forall</b> i in 0..len(to_add): contains(new_members, to_add[i]);
-    <b>ensures</b> <b>forall</b> i in 0..len(old_members): contains(new_members, old_members[i]);
-    <b>ensures</b> <b>forall</b> i in 0..len(new_members): (contains(old_members, new_members[i]) || contains(to_add, new_members[i]));
+    <b>ensures</b> <b>forall</b> e in to_add: contains(new_members, e);
+    <b>ensures</b> <b>forall</b> e in old_members: contains(new_members, e);
+    <b>ensures</b> <b>forall</b> e in new_members: (contains(old_members, e) || contains(to_add, e));
 }
 </code></pre>
 
@@ -531,8 +532,7 @@ to be a set and hence can have duplicated elements.
             // the set can never grow in size
             <b>invariant</b> len(members) &lt;= len(<b>old</b>(members));
             // the current set maintains the uniqueness of the elements
-            <b>invariant</b> <b>forall</b> j in 0..len(members), k in 0..len(members):
-                members[j] == members[k] ==&gt; j == k;
+            <b>invariant</b> <b>forall</b> j in 0..len(members), k in 0..len(members): members[j] == members[k] ==&gt; j == k;
             // all elements in the the current set come from the original set
             <b>invariant</b> <b>forall</b> j in 0..len(members): contains(<b>old</b>(members), members[j]);
             // the current set never contains anything from the `to_remove` vector
@@ -566,7 +566,7 @@ to be a set and hence can have duplicated elements.
 
 
 
-<pre><code><b>pragma</b> timeout = 120;
+<pre><code><b>pragma</b> verify = <b>false</b>;
 <b>pragma</b> opaque;
 <b>ensures</b> [concrete] <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
@@ -575,7 +575,7 @@ to be a set and hence can have duplicated elements.
     new_members: members,
 };
 <b>include</b> <a href="NetworkIdentity.md#0x1_NetworkIdentity_UniqueMembers">UniqueMembers</a>&lt;T&gt;;
-<b>ensures</b> result == (<b>exists</b> i in 0..len(to_remove): contains(<b>old</b>(members), to_remove[i]));
+<b>ensures</b> result == (<b>exists</b> e in to_remove: contains(<b>old</b>(members), e));
 </code></pre>
 
 
@@ -588,9 +588,9 @@ to be a set and hence can have duplicated elements.
     old_members: vector&lt;T&gt;;
     new_members: vector&lt;T&gt;;
     to_remove: vector&lt;T&gt;;
-    <b>ensures</b> <b>forall</b> i in 0..len(to_remove): !contains(new_members, to_remove[i]);
-    <b>ensures</b> <b>forall</b> i in 0..len(new_members): contains(old_members, new_members[i]);
-    <b>ensures</b> <b>forall</b> i in 0..len(old_members): (contains(to_remove, old_members[i]) || contains(new_members, old_members[i]));
+    <b>ensures</b> <b>forall</b> e in to_remove: !contains(new_members, e);
+    <b>ensures</b> <b>forall</b> e in new_members: contains(old_members, e);
+    <b>ensures</b> <b>forall</b> e in old_members: (contains(to_remove, e) || contains(new_members, e));
 }
 </code></pre>
 
