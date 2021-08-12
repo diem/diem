@@ -463,9 +463,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: actions/cache@v2.1.6
         with:
-          key: ${{ needs.prepare.outputs.changes-target-branch }}
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
       - name: split tests
         run: |
           $pre_command && cargo x test --package smoke-test -- --list | \
