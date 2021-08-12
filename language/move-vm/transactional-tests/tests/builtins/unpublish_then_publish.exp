@@ -1,0 +1,11 @@
+processed 5 tasks
+
+task 2 'view'. lines 28-28:
+key 0x1::M::R {
+    x: false
+}
+
+task 4 'view'. lines 38-38:
+key 0x1::M::R {
+    x: false
+}

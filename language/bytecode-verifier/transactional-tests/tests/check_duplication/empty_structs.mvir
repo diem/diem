@@ -1,0 +1,6 @@
+//# publish --address 0x1
+module EmptyStruct {
+  // no empty structs allowed
+  struct Empty { }
+
+}

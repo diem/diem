@@ -1,0 +1,38 @@
+//# publish --address 0x1
+module Test {
+    struct T { b: bool }
+
+    public new(): Self.T {
+        return T { b: true };
+    }
+
+    public test(i: &u64, x: Self.T): u64 * Self.T * bool {
+        return *move(i), move(x), false;
+    }
+
+    public destroy(x: Self.T) {
+        let b: bool;
+        T { b } = move(x);
+        return;
+    }
+}
+
+//# run
+import 0x1.Test;
+main() {
+    let i: u64;
+    let t: Test.T;
+    let a: u64;
+    let x: Test.T;
+    let b: bool;
+
+    i = 0;
+    t = Test.new();
+    // correctly handles multiple function return values
+    a, x, b = Test.test(&i, move(t));
+    assert(move(a) == 0, 42);
+    Test.destroy(move(x));
+    assert(!move(b), 43);
+
+    return;
+}

@@ -1,0 +1,9 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    x = 0;
+    // cannot deref a bool
+    y = *!move(x);
+    return;
+}

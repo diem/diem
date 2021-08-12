@@ -1,0 +1,7 @@
+//# publish --address 0x1
+module M {
+    // duplicate field of the same name
+    struct T{f: u64, f: u64}
+}
+
+// check: DUPLICATE_ELEMENT
