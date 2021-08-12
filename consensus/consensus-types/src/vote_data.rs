@@ -56,7 +56,10 @@ impl VoteData {
             "Proposed happened before parent",
         );
         anyhow::ensure!(
-            self.parent.version() <= self.proposed.version(),
+            // if decoupled execution is turned on, the versions are dummy values (0),
+            // but the genesis block per epoch uses the ground truth version number,
+            // so we bypass the version check here.
+            self.proposed.version() == 0 || self.parent.version() <= self.proposed.version(),
             "Proposed version is less than parent version",
         );
         Ok(())
