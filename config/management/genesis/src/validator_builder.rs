@@ -27,6 +27,7 @@ use diem_types::{
     network_address::encrypted::{
         Key as NetworkAddressEncryptionKey, KeyVersion as NetworkAddressEncryptionKeyVersion,
     },
+    on_chain_config::VMPublishingOption,
     transaction::{authenticator::AuthenticationKey, Transaction},
     waypoint::Waypoint,
 };
@@ -160,6 +161,7 @@ pub struct ValidatorBuilder {
     move_modules: Vec<Vec<u8>>,
     num_validators: NonZeroUsize,
     randomize_first_validator_ports: bool,
+    publishing_option: Option<VMPublishingOption>,
     template: NodeConfig,
 }
 
@@ -170,6 +172,7 @@ impl ValidatorBuilder {
             move_modules,
             num_validators: NonZeroUsize::new(1).unwrap(),
             randomize_first_validator_ports: true,
+            publishing_option: None,
             template: NodeConfig::default_for_validator(),
         }
     }
@@ -181,6 +184,11 @@ impl ValidatorBuilder {
 
     pub fn num_validators(mut self, num_validators: NonZeroUsize) -> Self {
         self.num_validators = num_validators;
+        self
+    }
+
+    pub fn publishing_option(mut self, publishing_option: VMPublishingOption) -> Self {
+        self.publishing_option = Some(publishing_option);
         self
     }
 
@@ -218,6 +226,7 @@ impl ValidatorBuilder {
             &mut genesis_storage,
             &root_keys,
             &validators,
+            self.publishing_option,
             self.move_modules,
         )?;
 
@@ -366,6 +375,7 @@ impl ValidatorBuilder {
         genesis_storage: &mut OnDiskStorage,
         root_keys: &RootKeys,
         validators: &[ValidatorConfig],
+        publishing_option: Option<VMPublishingOption>,
         move_modules: Vec<Vec<u8>>,
     ) -> Result<(Transaction, Waypoint)> {
         let mut genesis_builder = GenesisBuilder::new(genesis_storage);
@@ -416,7 +426,7 @@ impl ValidatorBuilder {
         }
 
         // Create Genesis and Genesis Waypoint
-        let genesis = genesis_builder.build(ChainId::test())?;
+        let genesis = genesis_builder.build(ChainId::test(), publishing_option)?;
         let waypoint = create_genesis_waypoint(&genesis)?;
 
         Ok((genesis, waypoint))
