@@ -8,7 +8,7 @@ use consensus_types::{
 };
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
-use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::{block_info::BlockInfo, ledger_info::LedgerInfoWithSignatures};
 use mirai_annotations::{checked_verify_eq, precondition};
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
@@ -136,6 +136,16 @@ impl BlockTree {
     // This method will only be used in this module.
     fn get_linkable_block_mut(&mut self, block_id: &HashValue) -> Option<&mut LinkableBlock> {
         self.id_to_block.get_mut(block_id)
+    }
+
+    /// fetch all the quorum certs with non-empty commit info
+    pub fn get_all_quorum_certs_with_commit_info(&self) -> Vec<QuorumCert> {
+        return self
+            .id_to_quorum_cert
+            .values()
+            .filter(|qc| qc.commit_info() != &BlockInfo::empty())
+            .map(|qc| (**qc).clone())
+            .collect::<Vec<QuorumCert>>();
     }
 
     // This method will only be used in this module.

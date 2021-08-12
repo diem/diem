@@ -166,15 +166,22 @@ impl BlockStore {
     }
 
     async fn try_commit(&self) {
-        // If we fail to commit B_i via state computer and crash, after restart our highest commit cert
-        // will not match the latest commit B_j(j<i) of state computer.
-        // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
-        // B_i and figure out we only have B_j.
-        // Here we commit up to the highest_commit_cert to maintain highest_commit_cert == state_computer.committed_trees.
-        if self.highest_ordered_cert().commit_info().round() > self.ordered_root().round() {
-            let finality_proof = self.highest_ordered_cert().ledger_info().clone();
-            if let Err(e) = self.commit(finality_proof).await {
-                error!(error = ?e, "Commit error during build/rebuild");
+        // reproduce the same batches (important for the commit phase)
+
+        let mut certs = self.inner.read().get_all_quorum_certs_with_commit_info();
+        certs.sort_unstable_by_key(|qc| qc.commit_info().round());
+
+        for qc in certs {
+            if qc.commit_info().round() > self.commit_root().round() {
+                info!(
+                    "trying to commit to round {} with ledger info {}",
+                    qc.commit_info().round(),
+                    qc.ledger_info()
+                );
+
+                if let Err(e) = self.commit(qc.ledger_info().clone()).await {
+                    error!("Error in try-committing blocks. {}", e.to_string());
+                }
             }
         }
     }
