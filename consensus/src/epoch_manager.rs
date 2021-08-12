@@ -644,8 +644,10 @@ impl EpochManager {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                     VerifiedEvent::VoteMsg(vote) => p.process_vote_msg(*vote).await,
                     VerifiedEvent::SyncInfo(sync_info) => p.sync_up(&sync_info, peer_id).await,
-                    _ => {
-                        unimplemented!()
+                    VerifiedEvent::CommitVote(_) | VerifiedEvent::CommitDecision(_) => {
+                        return Err(anyhow!(
+                            "Ignoring commit vote/decision message during recovery"
+                        )); //ignore
                     }
                 }?;
                 let epoch_state = p.epoch_state().clone();
