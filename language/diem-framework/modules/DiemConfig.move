@@ -118,9 +118,7 @@ module DiemFramework::DiemConfig {
         reconfigure_();
     }
     spec set {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(@DiemRoot);
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include SetAbortsIf<Config>;
@@ -161,9 +159,7 @@ module DiemFramework::DiemConfig {
         reconfigure_();
     }
     spec set_with_capability_and_reconfigure {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(@DiemRoot);
         include AbortsIfNotPublished<Config>;
         include ReconfigureAbortsIf;
@@ -218,9 +214,7 @@ module DiemFramework::DiemConfig {
         ModifyConfigCapability<Config> {}
     }
     spec publish_new_config_and_get_capability {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include AbortsIfPublished<Config>;
@@ -416,11 +410,6 @@ module DiemFramework::DiemConfig {
         invariant
             forall config_address: address, config_type: type where exists<DiemConfig<config_type>>(config_address):
                 config_address == @DiemRoot;
-
-        /// After genesis, no new configurations are added.
-        invariant update
-            DiemTimestamp::is_operating() ==>
-                (forall config_type: type where spec_is_published<config_type>(): old(spec_is_published<config_type>()));
 
         /// Published configurations are persistent.
         invariant update
