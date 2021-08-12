@@ -1,0 +1,31 @@
+//# publish --address 0x1
+module Token {
+    import 0x1.Signer;
+
+    struct T has key { count: u64 }
+
+    public test(account: &signer) acquires T {
+        let t_ref: &mut Self.T;
+        let count_ref: &mut u64;
+        let local: u64;
+        let local_ref: &mut u64;
+        let sender: address;
+        move_to<T>(copy(account), T { count: 0 });
+        sender = Signer.address_of(move(account));
+        t_ref = borrow_global_mut<T>(move(sender));
+        count_ref = &mut move(t_ref).count;
+        local = 0;
+        local_ref = &mut local;
+        // make sure refs are equal even if one is in global storage and one is local
+        assert(move(count_ref) == move(local_ref), 42);
+        return;
+    }
+}
+
+//# run --signers 0x1
+import 0x1.Token;
+
+main(account: signer) {
+    Token.test(&account);
+    return;
+}

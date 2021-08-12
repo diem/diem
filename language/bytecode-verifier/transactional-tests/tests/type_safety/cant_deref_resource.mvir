@@ -1,0 +1,44 @@
+//# publish --address 0x1
+module Token {
+    import 0x1.Signer;
+
+    struct T has key {v: u64}
+
+    public new(v: u64): Self.T {
+        return T{v: move(v)};
+    }
+
+    public value(this: &Self.T): u64 {
+        let vref: &u64;
+        let res: u64;
+        vref = &move(this).v;
+        // T does not have copy
+        res = *move(vref);
+        return move(res);
+    }
+
+    public exists(addr: address): bool {
+        let yes: bool;
+        yes = exists<T>(move(addr));
+        return move(yes);
+    }
+
+    public publish(account: &signer, t: Self.T) {
+        move_to<T>(move(account), move(t));
+        return;
+    }
+
+    public test(account: &signer) acquires T {
+        let addr: address;
+        let t: Self.T;
+        let tref: &mut Self.T;
+        let y: Self.T;
+
+        addr = Signer.address_of(copy(account));
+        t = Self.new(0);
+        Self.publish(copy(account), move(t));
+        tref = borrow_global_mut<T>(move(addr));
+        y = *move(tref);
+        return;
+    }
+}

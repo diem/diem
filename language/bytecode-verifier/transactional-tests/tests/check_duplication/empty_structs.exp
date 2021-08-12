@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-6:
+Error: Unable to publish module '00000000000000000000000000000001::EmptyStruct'. Got VMError: {
+    major_status: ZERO_SIZED_STRUCT,
+    sub_status: None,
+    location: 0x1::EmptyStruct,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}

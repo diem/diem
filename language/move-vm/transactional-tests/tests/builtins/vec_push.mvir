@@ -1,0 +1,51 @@
+//# publish --address 0x1
+module M {
+    import 0x1.Vector;
+
+    struct R has key { v: vector<u64> }
+
+    public publish(s: &signer) {
+        move_to<R>(move(s), R { v: Vector.empty<u64>() });
+        return;
+    }
+
+    public borrow_and_push(addr: address) acquires R {
+        let r: &mut Self.R;
+        r = borrow_global_mut<R>(move(addr));
+        Vector.push_back<u64>(&mut move(r).v, 42);
+        return;
+    }
+
+    public verify_effects(addr: address) acquires R {
+        let r: &Self.R;
+        r = borrow_global<R>(move(addr));
+        assert(Vector.length<u64>(& move(r).v) == 1, 1000);
+        return;
+    }
+}
+
+//# run --signers 0x1
+import 0x1.M;
+
+main(s: signer) {
+    M.publish(&s);
+    return;
+}
+
+//# run --signers 0x1
+import 0x1.M;
+import 0x1.Signer;
+
+main(s: signer) {
+    M.borrow_and_push(Signer.address_of(&s));
+    return;
+}
+
+//# run --signers 0x1
+import 0x1.M;
+import 0x1.Signer;
+
+main(s: signer) {
+    M.verify_effects(Signer.address_of(&s));
+    return;
+}

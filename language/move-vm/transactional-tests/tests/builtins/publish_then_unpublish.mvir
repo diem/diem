@@ -1,0 +1,23 @@
+//# publish --address 0x1
+module M {
+    import 0x1.Signer;
+
+    struct R has key { x: bool }
+
+    public test(s: &signer) acquires R {
+        let x: bool;
+        move_to<R>(copy(s), R { x: false });
+        R { x } = move_from<R>(Signer.address_of(move(s)));
+        return;
+    }
+}
+
+//# run --signers 0x1
+import 0x1.M;
+
+main(s: signer) {
+    M.test(&s);
+    return;
+}
+
+//# view --address 0x1 --resource 0x1::M::R

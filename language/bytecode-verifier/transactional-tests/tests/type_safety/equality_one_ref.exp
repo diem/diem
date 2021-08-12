@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-11:
+Error: Script execution failed with VMError: {
+    major_status: EQUALITY_OP_TYPE_MISMATCH_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 6)],
+}
