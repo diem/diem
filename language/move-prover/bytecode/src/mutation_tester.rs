@@ -63,6 +63,11 @@ impl FunctionTargetProcessor for MutationTester {
             return data;
         }
 
+        if !data.variant.is_verified() {
+            // Only need to instrument if this is a verification variant
+            return data;
+        }
+
         let mut builder = FunctionDataBuilder::new(fun_env, data);
         let code = std::mem::take(&mut builder.data.code);
 
