@@ -6190,7 +6190,7 @@ dependencies = [
  "anyhow",
  "bytecode",
  "chrono",
- "clap",
+ "clap 2.33.3",
  "codespan",
  "codespan-reporting",
  "datatest-stable",
