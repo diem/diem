@@ -6,6 +6,7 @@ use anyhow::{bail, Context};
 use serde::Deserialize;
 use std::{
     env, fs,
+    io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -150,6 +151,7 @@ where
     T: AsRef<Path>,
 {
     let target_directory = target_directory.as_ref();
+    let directory = directory.as_ref();
     let output = Command::new("cargo")
         .current_dir(directory)
         .env("CARGO_TARGET_DIR", target_directory)
@@ -169,7 +171,13 @@ where
 
         Ok(bin_path)
     } else {
-        bail!("Faild to build diem-node");
+        io::stderr().write_all(&output.stderr)?;
+
+        bail!(
+            "Failed to build diem-node: 'cd {} && CARGO_TARGET_DIR={} cargo build --bin=diem-node",
+            directory.display(),
+            target_directory.display(),
+        );
     }
 }
 
