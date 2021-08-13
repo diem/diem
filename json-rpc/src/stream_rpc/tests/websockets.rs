@@ -3,7 +3,7 @@
 
 use crate::{
     stream_rpc::tests::util::{
-        close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks,
+        close_ws, connect_to_ws, get_latest_client, next_message, num_clients, num_tasks, timeout,
         verify_ok, ws_test_setup,
     },
     tests::utils::create_db_and_runtime,
@@ -182,6 +182,8 @@ fn test_websocket_requests() {
         json!({"jsonrpc": "2.0", "id": "client-generated-id-1", "result": {"status": "OK", "transaction_version": mock_db.version}}),
     )];
 
+    let _guard = runtime.enter();
+
     for (name, request, expected) in calls {
         let http_request = http::Request::builder()
             .method(http::method::Method::GET)
@@ -191,22 +193,30 @@ fn test_websocket_requests() {
             .body(())
             .unwrap();
 
-        let ws_stream = runtime.handle().block_on(async move {
-            let (ws_stream, _) = connect_async(http_request)
-                .await
-                .expect("Could not create websocket connection");
-            ws_stream
-        });
+        let ws_stream = runtime.handle().block_on(timeout(
+            500,
+            async move {
+                let (ws_stream, _) = connect_async(http_request)
+                    .await
+                    .expect("Could not create websocket connection");
+                ws_stream
+            },
+            "create ws connection",
+        ));
 
         let (mut tx, mut rx) = ws_stream.split();
         runtime
             .handle()
-            .block_on(tx.send(Message::text(request.to_string())))
+            .block_on(timeout(
+                500,
+                tx.send(Message::text(request.to_string())),
+                "send request",
+            ))
             .unwrap_or_else(|e| panic!("{}: Could not send websocket request. {:?}", &name, e));
 
         let response = runtime
             .handle()
-            .block_on(rx.next())
+            .block_on(timeout(500, rx.next(), "get next message"))
             .unwrap_or_else(|| panic!("{}: Expected 'Some' response", &name))
             .unwrap_or_else(|_| panic!("{}: Expected no error response", &name))
             .to_string();
