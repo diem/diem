@@ -19,7 +19,7 @@ jobs:
       matrix:
         #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
         #to test in canary add in canary here.....
-        target-branch: [latest, release-1.2, release-1.3]
+        target-branch: [latest, release-1.3, release-1.4]
     env:
       AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
@@ -116,7 +116,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        release-branch: [release-1.2, release-1.3]
+        release-branch: [release-1.3, release-1.4]
     steps:
       - uses: actions/checkout@v2.3.4
         with:
@@ -147,7 +147,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-branch: [latest, release-1.2, release-1.3]
+        target-branch: [latest, release-1.3, release-1.4]
     steps:
       - uses: actions/checkout@v2.3.4
         with:
