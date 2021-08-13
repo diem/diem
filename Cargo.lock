@@ -4784,6 +4784,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "structopt 0.3.21",
+ "tempfile",
  "walkdir",
 ]
 

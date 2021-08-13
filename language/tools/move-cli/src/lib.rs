@@ -175,6 +175,10 @@ pub enum SandboxCommand {
         /// a directory path in which all the tests will be executed
         #[structopt(name = "path")]
         path: String,
+        /// Use an ephemeral directory to serve as the testing workspace.
+        /// By default, the directory containing the `args.txt` will be the workspace
+        #[structopt(long = "use-temp-dir")]
+        use_temp_dir: bool,
         /// Show coverage information after tests are done.
         /// By default, coverage will not be tracked nor shown.
         #[structopt(long = "track-cov")]
@@ -333,16 +337,19 @@ fn handle_sandbox_commands(
         }
         SandboxCommand::Test {
             path,
+            use_temp_dir: _,
             track_cov: _,
             create: true,
         } => sandbox::commands::create_test_scaffold(path),
         SandboxCommand::Test {
             path,
+            use_temp_dir,
             track_cov,
             create: false,
         } => sandbox::commands::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
+            *use_temp_dir,
             *track_cov,
         ),
         SandboxCommand::View { file } => {
