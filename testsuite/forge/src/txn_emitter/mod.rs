@@ -566,7 +566,8 @@ async fn wait_for_signed_transactions(
             .unzip();
         let responses = client
             .batch(batch)
-            .await?
+            .await
+            .context("failed to query account transactions")?
             .into_iter()
             .map(|r| {
                 r.and_then(|response| response.into_inner().try_into_get_account_transaction())
