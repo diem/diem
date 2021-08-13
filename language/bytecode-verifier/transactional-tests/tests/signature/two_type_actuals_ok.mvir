@@ -1,0 +1,11 @@
+//# publish --address 0x1
+module M {
+    struct R has key { b: bool}
+    struct S<T1: key, T2: copy + drop> { b: bool }
+
+    foo() {
+        // satisfy constraints
+        let x: Self.S<Self.R, bool>;
+        return;
+    }
+}

@@ -1,9 +1,0 @@
-module M {
-    struct Foo<T> { x: T }
-
-    exists_foo_u64(): bool {
-        return exists<Foo<u64>>(0x0);
-    }
-}
-
-// check: EXISTS_WITHOUT_KEY_ABILITY_OR_BAD_ARGUMENT

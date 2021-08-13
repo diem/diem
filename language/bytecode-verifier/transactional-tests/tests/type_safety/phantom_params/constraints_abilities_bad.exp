@@ -1,0 +1,22 @@
+processed 4 tasks
+
+task 1 'publish'. lines 7-35:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: CONSTRAINT_NOT_SATISFIED,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FieldDefinition, 0), (StructDefinition, 1)],
+    offsets: [],
+}
+
+task 2 'publish'. lines 37-46:
+Error: Unable to publish module '00000000000000000000000000000001::M4'. Got VMError: {
+    major_status: CONSTRAINT_NOT_SATISFIED,
+    sub_status: None,
+    location: 0x1::M4,
+    indices: [(Signature, 0), (FunctionDefinition, 1)],
+    offsets: [],
+}
+
+task 3 'publish'. lines 49-63:
+Error: Dependency not provided for 00000000000000000000000000000001.M3

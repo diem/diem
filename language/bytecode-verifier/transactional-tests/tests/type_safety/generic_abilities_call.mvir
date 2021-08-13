@@ -1,0 +1,14 @@
+//# publish --address 0x1
+module M {
+    id<T>(x: T): T {
+        return move(x);
+    }
+
+    foo<T: key>(x: T)  {
+        let y: T;
+        y = Self.id<T>(move(x));
+        // type does not have copy
+        y = copy(y);
+        return;
+    }
+}

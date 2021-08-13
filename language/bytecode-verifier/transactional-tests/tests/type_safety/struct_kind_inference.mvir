@@ -1,0 +1,57 @@
+//# publish --address 0x1
+// ensure that generic structs instantiated with struct types behave like resources
+module M1 {
+    struct MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifer should reject; didn't move resource;
+    public p(s: Self.S<Self.MyResource>) {
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M2 {
+    struct MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; drops s2 on the floor
+    public p(s1: Self.S<Self.MyResource>, s2: Self.S<Self.MyResource>): Self.S<Self.MyResource> {
+        s1 = move(s2);
+        return move(s1);
+    }
+}
+
+//# publish --address 0x1
+module M3 {
+    struct MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; copies s
+    public p(s: &Self.S<Self.MyResource>): Self.S<Self.MyResource> {
+        return *move(s);
+    }
+}
+
+//# publish --address 0x1
+module M4 {
+    struct MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; drops s1 on the floor
+    public p(s1: &mut Self.S<Self.MyResource>, s2: Self.S<Self.MyResource>) {
+        *move(s1) = move(s2);
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M5 {
+    struct MyResource { b: bool }
+    struct S<T> { t: T }
+
+    // verifier should reject; copies s
+    public p(s: Self.S<Self.MyResource>): Self.S<Self.MyResource> * Self.S<Self.MyResource> {
+        return (copy(s), move(s));
+    }
+}

@@ -1,0 +1,19 @@
+processed 3 tasks
+
+task 1 'run'. lines 18-24:
+Error: Script execution failed with VMError: {
+    major_status: ABORTED,
+    sub_status: Some(0),
+    location: 0x1::M,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 1)],
+}
+
+task 2 'run'. lines 26-32:
+Error: Script execution failed with VMError: {
+    major_status: ABORTED,
+    sub_status: Some(0),
+    location: 0x1::M,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(1), 1)],
+}

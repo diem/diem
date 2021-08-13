@@ -1,0 +1,28 @@
+//# publish --address 0x1
+module Test {
+    public foo(v: u64): u64 * u64 {
+        let one_less: u64;
+        let one_more: u64;
+        one_less = copy(v) - 1;
+        one_more = move(v) + 1;
+        return move(one_less), move(one_more);
+    }
+
+    public bar(): u64 * u64 * u64 {
+        return 500, 8, 256;
+    }
+}
+
+//# run
+import 0x1.Test;
+
+main() {
+    let y: u64;
+    let x0: u64;
+    let x1 : u64;
+    // positive stack
+    x0, x1 = Test.foo(Test.bar());
+    assert(move(x0) == 8, 42);
+    assert(move(x1) == 256, 42);
+    return;
+}

@@ -1,0 +1,66 @@
+//# publish --address 0x1
+module Cup {
+    struct Cup<T> { f: T }
+    public cup<T>(f: T): Self.Cup<T> {
+        return Cup<T> { f: move(f) };
+    }
+}
+
+//# publish --address 0x1
+module M0 {
+    // recursive struct
+    struct Foo { f: Self.Foo }
+}
+
+//# publish --address 0x1
+module M1 {
+    import 0x1.Cup;
+    // recursive struct
+    struct Foo { f: Cup.Cup<Self.Foo> }
+
+    // would blow up the stack
+    public foo(): Self.Foo {
+        return Foo { f: Cup.cup<Self.Foo>(Self.foo()) };
+    }
+
+}
+
+//# publish --address 0x1
+module M2 {
+    import 0x1.Signer;
+
+    struct X { y: vector<Self.Y> }
+    struct Y { x: vector<Self.X> }
+
+    // would blow up the vm
+    public ex(account: &signer): bool {
+        return exists<X>(Signer.address_of(move(account)));
+    }
+
+    // would blow up the vm
+    public borrow(account: &signer) acquires X {
+        _ = borrow_global<X>(Signer.address_of(move(account)));
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M3 {
+    import 0x1.Cup;
+
+    // recursive struct
+    struct Foo { f: Cup.Cup<Self.Foo> }
+
+}
+
+//# publish --address 0x1
+module M3 {
+    import 0x1.Cup;
+
+    // indirect recursive struct
+    struct A { b: Self.B }
+    struct B { c: Self.C }
+    struct C { d: vector<Self.D> }
+    struct D { x: Cup.Cup<Cup.Cup<Cup.Cup<Self.A>>> }
+
+}

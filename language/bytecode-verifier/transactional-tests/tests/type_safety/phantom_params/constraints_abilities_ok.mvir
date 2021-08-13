@@ -1,0 +1,39 @@
+//# publish --address 0x1
+module M {
+    struct NoAbilities { a: bool }
+    struct HasDrop<phantom T1, T2> has drop { a: bool }
+    struct HasCopy<phantom T1, T2> has copy { a: bool }
+    struct HasStore<phantom T1, T2> has store { a: bool }
+    struct HasKey<phantom T1, T2> has key { a: bool }
+    struct HasAbilities<phantom T1, T2> has drop, copy, store, key { a: bool }
+
+    struct S1<T: drop + copy + store + key> { a: bool }
+    struct S2 {
+        a: Self.S1<Self.HasAbilities<Self.NoAbilities, u64>>,
+    }
+
+    struct S3<T1: drop, T2: copy, T3: store, T4: key> { a: bool }
+    struct S4 {
+        a: Self.S3< Self.HasDrop<Self.NoAbilities, u64>,
+                    Self.HasCopy<Self.NoAbilities, u64>,
+                    Self.HasStore<Self.NoAbilities, u64>,
+                    Self.HasKey<Self.NoAbilities, u64>
+                  >
+    }
+
+    f1<T: drop + copy + store + key>() { return; }
+    f2() {
+        Self.f1<Self.HasAbilities<Self.NoAbilities, u64>>();
+        return;
+    }
+
+    f3<T1: drop, T2: copy, T3: store, T4: key>() { return; }
+    f4() {
+        Self.f3< Self.HasDrop<Self.NoAbilities, u64>,
+                 Self.HasCopy<Self.NoAbilities, u64>,
+                 Self.HasStore<Self.NoAbilities, u64>,
+                 Self.HasKey<Self.NoAbilities, u64>
+               >();
+        return;
+    }
+}

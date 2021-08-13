@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-10:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: CONSTRAINT_NOT_SATISFIED,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}

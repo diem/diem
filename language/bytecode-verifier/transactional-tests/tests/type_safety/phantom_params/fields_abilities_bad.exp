@@ -1,0 +1,37 @@
+processed 5 tasks
+
+task 1 'publish'. lines 16-21:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: FIELD_MISSING_TYPE_ABILITY,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 2 'publish'. lines 23-28:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: FIELD_MISSING_TYPE_ABILITY,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 3 'publish'. lines 30-35:
+Error: Unable to publish module '00000000000000000000000000000001::M4'. Got VMError: {
+    major_status: FIELD_MISSING_TYPE_ABILITY,
+    sub_status: None,
+    location: 0x1::M4,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 4 'publish'. lines 37-42:
+Error: Unable to publish module '00000000000000000000000000000001::M5'. Got VMError: {
+    major_status: FIELD_MISSING_TYPE_ABILITY,
+    sub_status: None,
+    location: 0x1::M5,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}

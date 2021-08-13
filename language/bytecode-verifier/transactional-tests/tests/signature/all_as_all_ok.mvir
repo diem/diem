@@ -1,0 +1,9 @@
+//# publish --address 0x1
+module M {
+    struct S<T> { b: bool }
+
+    foo<T>() {
+        let x: Self.S<T>;
+        return;
+    }
+}

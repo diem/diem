@@ -1,0 +1,10 @@
+//# publish --address 0x1
+
+// Good: two instances foo<T> & foo<u64> (if T != u64) for any T.
+
+module M {
+    f<T>() {
+        Self.f<u64>();
+        return;
+    }
+}

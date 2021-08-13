@@ -1,0 +1,9 @@
+//# publish --address 0x1
+module M {
+    foo<T: key>(x: T) {
+        let y: T;
+        // generic does not have copy
+        y = copy(x);
+        return;
+    }
+}

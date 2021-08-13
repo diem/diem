@@ -1,0 +1,42 @@
+//# publish --address 0x1
+
+// Negative version of tests in fields_abilities_ok instantiating the non-phantom
+// parameter with a type without the required abilities.
+
+module M1 {
+    struct NoAbilities { a: bool }
+
+    struct HasDrop<phantom T1, T2> has drop { a: bool }
+    struct HasCopy<phantom T1, T2> has copy { a : bool }
+    struct HasStore<phantom T1, T2> has store { a : bool }
+    struct HasKey<phantom T1, T2> has key { a : bool }
+
+}
+
+//# publish --address 0x1
+module M2 {
+    import 0x1.M1;
+
+    struct S has drop { a: M1.HasDrop<M1.NoAbilities, M1.NoAbilities> }
+}
+
+//# publish --address 0x1
+module M3 {
+    import 0x1.M1;
+
+    struct S has copy { a: M1.HasCopy<M1.NoAbilities, M1.NoAbilities> }
+}
+
+//# publish --address 0x1
+module M4 {
+    import 0x1.M1;
+
+    struct S has store { a: M1.HasStore<M1.NoAbilities, M1.NoAbilities> }
+}
+
+//# publish --address 0x1
+module M5 {
+    import 0x1.M1;
+
+    struct S has key { a: M1.HasStore<M1.NoAbilities, M1.NoAbilities> }
+}

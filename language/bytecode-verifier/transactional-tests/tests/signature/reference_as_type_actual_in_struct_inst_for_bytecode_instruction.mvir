@@ -1,0 +1,115 @@
+//# publish --address 0x1
+module M {
+    import 0x1.Signer;
+
+    struct Some<T> has key { item: T }
+
+    foo(account: &signer) acquires Some {
+        // cannot use refs in generics
+        move_from<Some<&u64>>(Signer.address_of(move(account)));
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    import 0x1.Signer;
+
+    struct Some<T> has key { item: T }
+
+    foo(account: &signer) {
+        let v: Self.Some<u64>;
+        // cannot use refs in generics
+        move_to<Some<&u64>>(copy(account), move(v));
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    import 0x1.Signer;
+
+    struct Some<T> has key { item: T }
+
+    foo(account: &signer) {
+        // cannot use refs in generics
+        exists<Some<&u64>>(Signer.address_of(move(account)));
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    import 0x1.Signer;
+
+    struct Some<T> has key { item: T }
+
+    foo(account: &signer) {
+        // cannot use refs in generics
+        borrow_global<Some<&u64>>(Signer.address_of(move(account)));
+        return;
+    }
+}
+// check: INVALID_SIGNATURE_TOKEN
+
+//! new-transaction
+module M {
+    import 0x1.Signer;
+
+    struct Some<T> has key { item: T }
+
+    foo(account: &signer) {
+        borrow_global_mut<Some<&u64>>(Signer.address_of(move(account)));
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    struct Some<T> { item: T }
+
+    foo() {
+        let x: u64;
+        let y: &u64;
+        let v: Self.Some<u64>;
+
+        y = &x;
+        // cannot use refs in generics
+        v = Some<&u64> { item: move(y) };
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    struct Some<T> { item: T }
+
+    foo() {
+        let x: &u64;
+        let v: Self.Some<u64>;
+
+        // cannot use refs in generics
+        Some<&u64> { item: x } = move(v);
+        return;
+    }
+}
+
+//# publish --address 0x1
+module M {
+    struct S<T> { v: T }
+
+    // cannot use refs in generics
+    foo(s: Self.S<&u64>): u64 {
+        return *(*(&(&s).v));
+    }
+}
+
+//# publish --address 0x1
+module M {
+    struct S<T> { v: T }
+
+    // cannot use refs in generics
+    foo(s: Self.S<&u64>): u64 {
+        return *(*(&mut (&mut s).v));
+    }
+}

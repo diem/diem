@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-9:
+Error: Script execution failed with VMError: {
+    major_status: NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 0)],
+}

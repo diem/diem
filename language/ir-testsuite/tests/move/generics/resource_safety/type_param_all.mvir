@@ -1,9 +1,0 @@
-module M {
-    foo<T>(x: T): T {
-        let y: T;
-        y = copy(x);
-        return move(y);
-    }
-}
-
-// check: COPYLOC_WITHOUT_COPY_ABILITY

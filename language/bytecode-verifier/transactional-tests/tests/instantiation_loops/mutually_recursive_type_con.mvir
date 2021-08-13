@@ -1,0 +1,18 @@
+//# publish --address 0x1
+
+// Not good: infinitely many types/instances.
+//           f<T>, g<S<T>>, f<S<T>>, g<S<S<T>>>, ...
+
+module M {
+    struct S<T> { b: bool }
+
+    f<T>() {
+        Self.g<Self.S<T>>();
+        return;
+    }
+
+    g<T>() {
+        Self.f<T>();
+        return;
+    }
+}

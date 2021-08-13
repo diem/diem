@@ -1,0 +1,10 @@
+//# publish --address 0x1
+
+// This test checks that for each struct definition
+//   1) type parameters have correct kind constraints
+//   2) fields have correct types
+
+module M {
+    struct Foo<T> { x: T }
+    struct Bar<T1, T2, T3: key, T4: copy + drop> { x1: T2, x2: T3, x3: T4, x4: T1 }
+}

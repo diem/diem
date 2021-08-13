@@ -1,0 +1,55 @@
+processed 6 tasks
+
+task 0 'publish'. lines 1-11:
+Error: Unable to publish module '00000000000000000000000000000001::M1'. Got VMError: {
+    major_status: INVALID_PHANTOM_TYPE_PARAM_POSITION,
+    sub_status: None,
+    location: 0x1::M1,
+    indices: [(FieldDefinition, 0), (StructDefinition, 0)],
+    offsets: [],
+}
+
+task 1 'publish'. lines 13-19:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: INVALID_PHANTOM_TYPE_PARAM_POSITION,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FieldDefinition, 0), (StructDefinition, 0)],
+    offsets: [],
+}
+
+task 2 'publish'. lines 21-28:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: INVALID_PHANTOM_TYPE_PARAM_POSITION,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [(FieldDefinition, 0), (StructDefinition, 1)],
+    offsets: [],
+}
+
+task 3 'publish'. lines 30-39:
+Error: Unable to publish module '00000000000000000000000000000001::M4'. Got VMError: {
+    major_status: INVALID_PHANTOM_TYPE_PARAM_POSITION,
+    sub_status: None,
+    location: 0x1::M4,
+    indices: [(FieldDefinition, 0), (StructDefinition, 2)],
+    offsets: [],
+}
+
+task 4 'publish'. lines 41-47:
+Error: Unable to publish module '00000000000000000000000000000001::M5'. Got VMError: {
+    major_status: INVALID_PHANTOM_TYPE_PARAM_POSITION,
+    sub_status: None,
+    location: 0x1::M5,
+    indices: [(FieldDefinition, 0), (StructDefinition, 0)],
+    offsets: [],
+}
+
+task 5 'publish'. lines 49-56:
+Error: Unable to publish module '00000000000000000000000000000001::M6'. Got VMError: {
+    major_status: CONSTRAINT_NOT_SATISFIED,
+    sub_status: None,
+    location: 0x1::M6,
+    indices: [(FieldDefinition, 0), (StructDefinition, 1)],
+    offsets: [],
+}

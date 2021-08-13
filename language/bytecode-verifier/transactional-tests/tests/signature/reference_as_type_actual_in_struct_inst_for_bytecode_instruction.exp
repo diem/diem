@@ -1,0 +1,73 @@
+processed 8 tasks
+
+task 0 'publish'. lines 1-12:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 1 'publish'. lines 14-26:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 2), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 2 'publish'. lines 28-39:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 3 'publish'. lines 41-65:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 4 'publish'. lines 67-81:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 5 'publish'. lines 83-95:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(Signature, 1), (FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 6 'publish'. lines 97-105:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [],
+    offsets: [],
+}
+
+task 7 'publish'. lines 107-115:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: INVALID_SIGNATURE_TOKEN,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [],
+    offsets: [],
+}

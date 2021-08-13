@@ -1,0 +1,28 @@
+processed 3 tasks
+
+task 0 'publish'. lines 1-44:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: LOOP_IN_INSTANTIATION_GRAPH,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [],
+    offsets: [],
+}
+
+task 1 'publish'. lines 46-61:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: LOOP_IN_INSTANTIATION_GRAPH,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [],
+    offsets: [],
+}
+
+task 2 'publish'. lines 63-106:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: LOOP_IN_INSTANTIATION_GRAPH,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [],
+    offsets: [],
+}

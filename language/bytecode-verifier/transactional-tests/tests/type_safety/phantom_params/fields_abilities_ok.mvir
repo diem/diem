@@ -1,0 +1,18 @@
+//# publish --address 0x1
+
+// This module checks that phantom arguments are not considered by checking against
+// the abilities required for the fields of a struct.
+
+module M {
+    struct NoAbilities { a: bool }
+
+    struct HasDrop<phantom T1, T2> has drop { a: bool }
+    struct HasCopy<phantom T1, T2> has copy { a : bool }
+    struct HasStore<phantom T1, T2> has store { a : bool }
+    struct HasKey<phantom T1, T2> has key { a : bool }
+
+    struct S1 has drop { a: Self.HasDrop<Self.NoAbilities, u64> }
+    struct S2 has copy { a: Self.HasCopy<Self.NoAbilities, u64> }
+    struct S3 has store { a: Self.HasStore<Self.NoAbilities, u64> }
+    struct S4 has key { a: Self.HasStore<Self.NoAbilities, u64> }
+}

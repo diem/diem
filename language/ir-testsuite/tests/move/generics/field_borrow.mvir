@@ -1,9 +1,0 @@
-module M {
-    struct X has drop { v: u64 }
-    struct S<T> has drop { f: T }
-    t(s: Self.S<Self.X>): u64 {
-        return *(&(&(&s).f).v);
-    }
-}
-
-// check: Success

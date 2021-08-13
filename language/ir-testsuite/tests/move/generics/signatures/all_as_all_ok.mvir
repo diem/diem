@@ -1,8 +1,0 @@
-module M {
-    struct S<T> { b: bool }
-
-    foo<T>() {
-        let x: Self.S<T>;
-        return;
-    }
-}

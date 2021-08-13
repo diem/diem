@@ -1,0 +1,12 @@
+//# publish --address 0x1
+module M {
+    f<T1, T2>() {
+        Self.g<T2, T1>();
+        return;
+    }
+
+    g<T1, T2>() {
+        Self.f<T1, T2>();
+        return;
+    }
+}

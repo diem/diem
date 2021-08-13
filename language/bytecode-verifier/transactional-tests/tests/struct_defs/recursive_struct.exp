@@ -1,0 +1,46 @@
+processed 6 tasks
+
+task 1 'publish'. lines 9-13:
+Error: Unable to publish module '00000000000000000000000000000001::M0'. Got VMError: {
+    major_status: RECURSIVE_STRUCT_DEFINITION,
+    sub_status: None,
+    location: 0x1::M0,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 2 'publish'. lines 15-26:
+Error: Unable to publish module '00000000000000000000000000000001::M1'. Got VMError: {
+    major_status: RECURSIVE_STRUCT_DEFINITION,
+    sub_status: None,
+    location: 0x1::M1,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 3 'publish'. lines 28-45:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: RECURSIVE_STRUCT_DEFINITION,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(StructDefinition, 1)],
+    offsets: [],
+}
+
+task 4 'publish'. lines 47-54:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: RECURSIVE_STRUCT_DEFINITION,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}
+
+task 5 'publish'. lines 56-66:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: RECURSIVE_STRUCT_DEFINITION,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [(StructDefinition, 3)],
+    offsets: [],
+}

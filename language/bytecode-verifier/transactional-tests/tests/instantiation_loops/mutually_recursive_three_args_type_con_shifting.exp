@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-20:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: LOOP_IN_INSTANTIATION_GRAPH,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [],
+    offsets: [],
+}

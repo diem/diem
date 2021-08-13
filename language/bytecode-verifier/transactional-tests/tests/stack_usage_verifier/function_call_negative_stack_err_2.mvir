@@ -1,0 +1,30 @@
+//# publish --address 0x1
+module A {
+    public push_u64(): u64  {
+        return 42;
+    }
+
+    public push_bool(): bool {
+        return true;
+    }
+
+    public foo(u: u64): u64 {
+        return move(u) * 2;
+    }
+
+    public eat_stack(b: bool, u: u64) {
+        return;
+    }
+}
+
+//# run
+import 0x1.A;
+
+main() {
+    let ans: u64;
+    (A.push_bool(), A.push_u64());
+    ans = (A.foo());
+    // negative stack
+    (A.eat_stack());
+    return;
+}

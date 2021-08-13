@@ -1,0 +1,10 @@
+//# publish --address 0x1
+module M {
+    struct Foo<T1, T2> { x: T1, y: T2 }
+
+    foo<T>(x: T): Self.Foo<u64, T> {
+        let f: Self.Foo<u64, T>;
+        f = Foo<u64, T> { x: 42, y: move(x) };
+        return move(f);
+    }
+}

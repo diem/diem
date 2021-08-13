@@ -1,15 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    context::{CompiledDependency, Context, MaterializedPools, TABLE_MAX_SIZE},
-    errors::*,
-};
+use crate::context::{CompiledDependency, Context, MaterializedPools, TABLE_MAX_SIZE};
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
 use move_binary_format::{
-    check_bounds::BoundsChecker,
-    errors::Location as VMErrorLocation,
     file_format::{
         Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledScript,
         Constant, FieldDefinition, FunctionDefinition, FunctionSignature, ModuleHandle, Signature,
@@ -475,13 +470,7 @@ pub fn compile_script<'a>(
         parameters: parameters_sig_idx,
         code,
     };
-    match BoundsChecker::verify_script(&script) {
-        Ok(()) => Ok((script, source_map)),
-        Err(e) => Err(InternalCompilerError::BoundsCheckErrors(
-            e.finish(VMErrorLocation::Undefined),
-        )
-        .into()),
-    }
+    Ok((script, source_map))
 }
 
 /// Compile a module.
@@ -578,13 +567,7 @@ pub fn compile_module<'a>(
         struct_defs,
         function_defs,
     };
-    match BoundsChecker::verify_module(&module) {
-        Ok(()) => Ok((module, source_map)),
-        Err(e) => Err(InternalCompilerError::BoundsCheckErrors(
-            e.finish(VMErrorLocation::Undefined),
-        )
-        .into()),
-    }
+    Ok((module, source_map))
 }
 
 // Note: DO NOT try to recover from this function as it zeros out the `outer_contexts` dependencies
@@ -659,9 +642,6 @@ fn compile_explicit_dependency_declarations(
             struct_defs: vec![],
             function_defs: vec![],
         };
-        BoundsChecker::verify_module(&compiled_module).map_err(|e| {
-            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined))
-        })?;
         dependencies_acc = compiled_deps;
         dependencies_acc.insert(
             current_module.clone(),
