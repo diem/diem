@@ -212,6 +212,13 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         summary.write_starting_msg()?;
 
         if test_count > 0 {
+            println!(
+                "Starting Swarm with supported versions: {:?}",
+                self.factory
+                    .versions()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+            );
             let initial_version = self.initial_version();
             let mut rng = ::rand::rngs::StdRng::from_seed(OsRng.gen());
             let mut swarm = self.factory.launch_swarm(
