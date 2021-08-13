@@ -23,8 +23,15 @@ fn run_metatest() {
     let path_cli_binary = get_cli_binary_path();
     let path_metatest = get_metatest_path();
 
-    // with coverage
-    assert!(test::run_all(&path_metatest, &path_cli_binary, true).is_ok());
-    // without coverage
-    assert!(test::run_all(&path_metatest, &path_cli_binary, false).is_ok());
+    // local workspace + with coverage
+    assert!(test::run_all(&path_metatest, &path_cli_binary, false, true).is_ok());
+
+    // temp workspace + with coverage
+    assert!(test::run_all(&path_metatest, &path_cli_binary, true, true).is_ok());
+
+    // local workspace + without coverage
+    assert!(test::run_all(&path_metatest, &path_cli_binary, false, false).is_ok());
+
+    // temp workspace + without coverage
+    assert!(test::run_all(&path_metatest, &path_cli_binary, true, false).is_ok());
 }
