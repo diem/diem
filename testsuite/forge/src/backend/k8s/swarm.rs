@@ -257,6 +257,10 @@ impl Swarm for K8sSwarm {
             self.chain_id,
         )
     }
+
+    fn logs_location(&mut self) -> String {
+        todo!()
+    }
 }
 
 fn k8s_retry_strategy() -> impl Iterator<Item = Duration> {

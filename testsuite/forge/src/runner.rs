@@ -245,6 +245,14 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
                 let result = run_test(|| test.run(&mut network_ctx));
                 summary.handle_result(test.name().to_owned(), result)?;
             }
+
+            io::stdout().flush()?;
+            io::stderr().flush()?;
+
+            if !summary.success() {
+                println!();
+                println!("Swarm logs can be found here: {}", swarm.logs_location());
+            }
         }
 
         summary.write_summary()?;

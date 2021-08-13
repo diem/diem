@@ -59,6 +59,8 @@ pub trait Swarm {
 
     /// Construct a ChainInfo from this Swarm
     fn chain_info(&mut self) -> ChainInfo<'_>;
+
+    fn logs_location(&mut self) -> String;
 }
 
 impl<T: ?Sized> SwarmExt for T where T: Swarm {}
