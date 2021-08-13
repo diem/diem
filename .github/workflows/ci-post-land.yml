@@ -89,6 +89,8 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
     if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
     steps:
       - uses: actions/checkout@v2.4.0
