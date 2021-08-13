@@ -6,5 +6,13 @@
     "stdlib_hash": "ab590b216554b9eadca01e86ff630e760d3729c84463b650a51c3bcbe668e985",
     "diem_version": 2,
     "release_name": "release-1.2.0-rc0"
+  },
+  {
+    "chain_id": 1,
+    "version": 51131474,
+    "commit_hash": "70b660ab70264c775f7f0ee5835c4138332803ec",
+    "stdlib_hash": "7513478cd1fc3388969b0dd5371d237579a94b9dccac3d23b87f46f9a76f322a",
+    "diem_version": 3,
+    "release_name": "release-1.4.0-rc0"
   }
 ]
