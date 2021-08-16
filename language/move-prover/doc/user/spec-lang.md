@@ -8,7 +8,7 @@
 
 # Move Specification Language
 
-**version 1.3**
+**version 1.4**
 
 This document describes the *Move specification language*, a subset of the Move language which
 supports specification of the behavior of Move programs. Throughout this document, we abbreviate
@@ -976,8 +976,8 @@ functions in `M2`, namely those which update the M2 memory such that the invaria
 
 ## Assume and Assert Conditions in Code
 
-In spec blocks inside of code, the only allowed conditions are assume and assert. A spec block in
-code can occur anywhere an ordinary Move statement block can occur. Here is an example:
+A spec block might also occur anywhere an ordinary Move statement block can occur.
+Here is an example:
 
 ```
 fun simple1(x: u64, y: u64) {
@@ -990,6 +990,10 @@ fun simple1(x: u64, y: u64) {
     }
 }
 ```
+
+In such inline spec blocks, only a subset of conditions are permitted:
+- `assume` and `assert` statements are allowed in any code locations
+- loop `invariant` statements are allowed only in code locations that represent loop headers.
 
 An assert statement inside a spec block indicates a condition that must hold when control reaches
 that block. If the condition does not hold, an error is reported by the Move Prover. An assume
@@ -1013,7 +1017,7 @@ fun simple2(x: u64, y: u64) {
 
 ### Loop Invariants
 
-An assert statement can also encode a loop invariant if it is placed at a loop head, as in the
+An `invariant` statement encodes a loop invariant and must beplaced at a loop head, as in the
 following example.
 
 ```
@@ -1021,7 +1025,7 @@ fun simple3(n: u64) {
     let x = 0
     loop {
         spec {
-            assert x <= n;
+            invariant x <= n;
         };
         if (x < n) {
             x = x + 1
@@ -1035,9 +1039,13 @@ fun simple3(n: u64) {
 }
 ```
 
-A loop invariant may comprise both assert and assume statements. The assume statements will be
-assumed at each entry into the loop while the assert statements will be checked at each entry into
-the loop.
+A loop invariant is translated into two `assert` statements and one `assume` statement to
+facilitate  the inductive reasoning of properties about the loop.
+In break down, a loop invariant is translated to:
+- An `assert` statement that checks the invariant holds when the loop is first encountered in the
+  execution -- establishing the base case.
+- An `assume` statement that encodes the property that the invariant holds at loop iteration `I`.
+- An `assert` statement that checks whether the invariant continues to hold at loop iteration `I+1`.
 
 ### Referring to Pre State
 
