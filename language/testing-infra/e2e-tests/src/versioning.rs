@@ -3,10 +3,10 @@
 
 #![forbid(unsafe_code)]
 use crate::{account::Account, executor::FakeExecutor, utils};
-use diem_writeset_generator::old_releases::release_1_2_0_writeset;
+use diem_writeset_generator::old_releases::*;
 
 /// The current version numbers that e2e tests should be run against.
-pub const CURRENT_RELEASE_VERSIONS: &[u64] = &[1, 2];
+pub const CURRENT_RELEASE_VERSIONS: &[u64] = &[1, 2, 3];
 
 #[derive(Debug)]
 pub struct VersionedTestEnv {
@@ -28,11 +28,6 @@ impl VersionedTestEnv {
         let tc_sequence_number = 0;
         let dd_sequence_number = 0;
 
-        // only support up to version 2 for now
-        if version_number > 2 {
-            panic!("Unsupported version number {}", version_number)
-        }
-
         if version_number > 1 {
             executor.execute_and_apply(
                 dr_account
@@ -41,7 +36,23 @@ impl VersionedTestEnv {
                     .payload(release_1_2_0_writeset())
                     .sign(),
             );
-            dr_sequence_number = 2;
+            dr_sequence_number += 1;
+        }
+
+        if version_number > 2 {
+            executor.execute_and_apply(
+                dr_account
+                    .transaction()
+                    .sequence_number(2)
+                    .payload(release_1_4_0_writeset())
+                    .sign(),
+            );
+            dr_sequence_number += 1;
+        }
+
+        // only support up to version 3 for now
+        if version_number > 3 {
+            panic!("Unsupported version number {}", version_number)
         }
 
         // Add other future version cases and upgrade paths here.
