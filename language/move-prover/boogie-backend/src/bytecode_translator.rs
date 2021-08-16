@@ -518,15 +518,14 @@ impl<'env> FunctionTranslator<'env> {
                 env,
                 type_param_names: None,
             };
-            emitln!(writer, "// function instantiation");
-            for (ty_var, ty_inst) in instantiation {
-                emitln!(
-                    writer,
-                    "// #{} := {};",
-                    ty_var,
-                    ty_inst.display(&display_ctxt)
-                );
-            }
+            emitln!(
+                writer,
+                "// function instantiation <{}>",
+                instantiation
+                    .iter()
+                    .map(|ty| ty.display(&display_ctxt))
+                    .join(", ")
+            );
             emitln!(writer, "");
         }
 

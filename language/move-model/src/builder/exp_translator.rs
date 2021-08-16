@@ -33,10 +33,6 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub type_params_table: BTreeMap<Symbol, Type>,
     /// Type parameters in sequence they have been added.
     pub type_params: Vec<(Symbol, Type)>,
-    /// A symbol table for type locals.
-    pub type_locals_table: BTreeMap<Symbol, Type>,
-    /// Type locals for this exp translation context in the order they are added
-    pub type_locals: Vec<Type>,
     /// A scoped symbol table for local names. The first element in the list contains the most
     /// inner scope.
     pub local_table: LinkedList<BTreeMap<Symbol, LocalVarEntry>>,
@@ -81,8 +77,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             parent,
             type_params_table: BTreeMap::new(),
             type_params: vec![],
-            type_locals_table: BTreeMap::new(),
-            type_locals: vec![],
             local_table: LinkedList::new(),
             result_type: None,
             old_status: OldExpStatus::NotSupported,
@@ -336,18 +330,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Defines a type parameter.
     pub fn define_type_param(&mut self, loc: &Loc, name: Symbol, ty: Type) {
         if let Type::TypeParameter(..) = &ty {
-            if self.type_locals_table.contains_key(&name) {
-                let param_name = name.display(self.symbol_pool());
-                self.parent.parent.error(
-                    loc,
-                    &format!(
-                        "duplicate declaration of type parameter `{}`, \
-                        previously found in type locals",
-                        param_name
-                    ),
-                );
-                return;
-            }
             if self.type_params_table.insert(name, ty.clone()).is_some() {
                 let param_name = name.display(self.symbol_pool());
                 self.parent.parent.error(
@@ -372,50 +354,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 &format!(
                     "expect type placeholder `{}` to be a `TypeParameter`, found `{}`",
                     param_name,
-                    ty.display(&context)
-                ),
-            );
-        }
-    }
-
-    /// Defines a type local.
-    pub fn define_type_local(&mut self, loc: &Loc, ty: Type) {
-        if let Type::TypeLocal(name) = &ty {
-            let name = *name;
-            if self.type_params_table.contains_key(&name) {
-                let local_name = name.display(self.symbol_pool());
-                self.parent.parent.error(
-                    loc,
-                    &format!(
-                        "duplicate declaration of type local `{}`, \
-                        previously found in type parameters",
-                        local_name
-                    ),
-                );
-                return;
-            }
-            if self.type_locals_table.insert(name, ty.clone()).is_some() {
-                let local_name = name.display(self.symbol_pool());
-                self.parent.parent.error(
-                    loc,
-                    &format!(
-                        "duplicated declaration of type local `{}`, \
-                        previously found in type locals",
-                        local_name
-                    ),
-                );
-                return;
-            }
-            self.type_locals.push(ty);
-        } else {
-            let context = TypeDisplayContext::WithEnv {
-                env: self.parent.parent.env,
-                type_param_names: None,
-            };
-            self.parent.parent.error(
-                loc,
-                &format!(
-                    "expect type generics declared in an invariant to be a `TypeLocal`, found `{}`",
                     ty.display(&context)
                 ),
             );
@@ -687,9 +625,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         "signer" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::Signer));
                         }
-                        "type" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue));
-                        }
                         "vector" => {
                             if args.len() != 1 {
                                 self.error(
@@ -707,23 +642,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     let sym = self.symbol_pool().make(n.value.as_str());
                     if let Some(ty) = self.type_params_table.get(&sym).cloned() {
                         return check_zero_args(self, ty);
-                    }
-                    // Attempt to resolve as a type local
-                    if let Some(ty) = self.type_locals_table.get(&sym).cloned() {
-                        return check_zero_args(self, ty);
-                    }
-
-                    // Attempt to resolve as a type value.
-                    // TODO(mengxu): remove this logic once porting to generic invariant is done
-                    if let Some(entry) = self.lookup_local(sym, false) {
-                        let ty = entry.type_.clone();
-                        self.check_type(
-                            &self.to_loc(&n.loc),
-                            &ty,
-                            &Type::new_prim(PrimitiveType::TypeValue),
-                            "in type",
-                        );
-                        return check_zero_args(self, Type::TypeLocal(sym));
                     }
                 }
                 let loc = self.to_loc(&access.loc);

@@ -296,9 +296,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let struct_id = StructId::new(qsym.symbol);
         let is_resource =
             // TODO migrate to abilities
-            def.abilities.has_ability_(PA::Ability_::Key)|| (
+            def.abilities.has_ability_(PA::Ability_::Key) || (
                 !def.abilities.has_ability_(PA::Ability_::Copy) &&
-                !def.abilities.has_ability_(PA::Ability_::Drop)
+                    !def.abilities.has_ability_(PA::Ability_::Drop)
             );
         let mut et = ExpTranslator::new(self);
         let type_params =
@@ -1252,12 +1252,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             Module => {
                 let mut et = ExpTranslator::new_with_old(self, allows_old);
 
-                // define the type locals
+                // define the type params
                 match kind {
-                    ConditionKind::GlobalInvariant(tys)
-                    | ConditionKind::GlobalInvariantUpdate(tys) => {
-                        for ty in tys {
-                            et.define_type_local(loc, ty.clone());
+                    ConditionKind::GlobalInvariant(ty_params)
+                    | ConditionKind::GlobalInvariantUpdate(ty_params) => {
+                        for (i, name) in ty_params.iter().enumerate() {
+                            et.define_type_param(loc, *name, Type::TypeParameter(i as u16));
                         }
                     }
                     _ => (),
@@ -1278,13 +1278,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let mut et = ExpTranslator::new_with_old(self, allows_old);
                 for (n, ty) in type_params {
                     et.define_type_param(loc, n, ty);
-                }
-
-                // define the type locals
-                if let ConditionKind::SchemaInvariant(tys) = kind {
-                    for ty in tys {
-                        et.define_type_local(loc, ty.clone());
-                    }
                 }
 
                 et.enter_scope();
@@ -1522,42 +1515,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
 
             // If this is a schema invariant, convert the kind based on its application context
-            if let ConditionKind::SchemaInvariant(tys) = &cond.kind {
+            if cond.kind == ConditionKind::SchemaInvariant {
                 let new_kind = match context {
-                    SpecBlockContext::Module => ConditionKind::GlobalInvariant(tys.clone()),
-                    SpecBlockContext::Struct(..) => {
-                        if !tys.is_empty() {
-                            self.parent.error(
-                                &cond.loc,
-                                "Type locals are not allowed in struct invariants \
-                                    included from a schema",
-                            );
-                            return;
-                        }
-                        ConditionKind::StructInvariant
-                    }
-                    SpecBlockContext::Function(..) => {
-                        if !tys.is_empty() {
-                            self.parent.error(
-                                &cond.loc,
-                                "Type locals are not allowed in function invariants \
-                                    included from a schema",
-                            );
-                            return;
-                        }
-                        ConditionKind::FunctionInvariant
-                    }
-                    SpecBlockContext::FunctionCode(..) => {
-                        if !tys.is_empty() {
-                            self.parent.error(
-                                &cond.loc,
-                                "Type locals are not allowed in loop invariants \
-                                    included from a schema",
-                            );
-                            return;
-                        }
-                        ConditionKind::LoopInvariant
-                    }
+                    SpecBlockContext::Module => ConditionKind::GlobalInvariant(vec![]),
+                    SpecBlockContext::Struct(..) => ConditionKind::StructInvariant,
+                    SpecBlockContext::Function(..) => ConditionKind::FunctionInvariant,
+                    SpecBlockContext::FunctionCode(..) => ConditionKind::LoopInvariant,
                     SpecBlockContext::Schema(..) => {
                         // this is the initial pass that put the condition into the schema context
                         cond.kind.clone()
@@ -1659,9 +1622,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
-                       loc,
-                       "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
-                   );
+                        loc,
+                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
+                    );
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
             }
@@ -1694,31 +1657,31 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context: &SpecBlockContext,
     ) -> Option<ConditionKind> {
         // Defines a type local with duplication check
-        fn define_type_local(
+        fn define_type_param(
             builder: &mut ModuleBuilder,
-            ty_locals_defined: &mut BTreeSet<Symbol>,
+            ty_params_defined: &mut BTreeSet<Symbol>,
             name: &Name,
-        ) -> Option<Type> {
+        ) -> Option<Symbol> {
             let symbol = builder.symbol_pool().make(&name.value);
-            if !ty_locals_defined.insert(symbol) {
+            if !ty_params_defined.insert(symbol) {
                 builder.parent.env.error(
                     &builder.parent.to_loc(&name.loc),
                     &format!("duplicate declaration of `{}`", &name.value),
                 );
                 None
             } else {
-                Some(Type::TypeLocal(symbol))
+                Some(symbol)
             }
         }
 
-        fn define_type_locals(
+        fn define_type_params(
             builder: &mut ModuleBuilder,
-            locals: &[(Name, EA::AbilitySet)],
-        ) -> Option<Vec<Type>> {
-            let mut ty_locals_defined = BTreeSet::new();
-            locals
+            type_params: &[(Name, EA::AbilitySet)],
+        ) -> Option<Vec<Symbol>> {
+            let mut ty_params_defined = BTreeSet::new();
+            type_params
                 .iter()
-                .map(|(name, _)| define_type_local(builder, &mut ty_locals_defined, name))
+                .map(|(name, _)| define_type_param(builder, &mut ty_params_defined, name))
                 .collect()
         }
 
@@ -1735,17 +1698,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             PK::AbortsIf => AbortsIf,
             PK::AbortsWith => AbortsWith,
             PK::SucceedsIf => SucceedsIf,
-            PK::Invariant(ty_locals) => {
-                let tys = define_type_locals(self, ty_locals)?;
+            PK::Invariant(ty_params) => {
+                let tys = define_type_params(self, ty_params)?;
                 match context {
                     SpecBlockContext::Module => GlobalInvariant(tys),
                     SpecBlockContext::Struct(..) => {
                         if !tys.is_empty() {
                             self.parent.env.error(
                                 &self.parent.to_loc(&kind.loc),
-                                "Type locals are not allowed in struct invariants",
-                            );
-                            return None;
+                                "type parameters are not allowed in struct invariants",
+                            )
                         }
                         StructInvariant
                     }
@@ -1753,9 +1715,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         if !tys.is_empty() {
                             self.parent.env.error(
                                 &self.parent.to_loc(&kind.loc),
-                                "Type locals are not allowed in function invariants",
-                            );
-                            return None;
+                                "type parameters are not allowed in function invariants",
+                            )
                         }
                         FunctionInvariant
                     }
@@ -1763,27 +1724,33 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         if !tys.is_empty() {
                             self.parent.env.error(
                                 &self.parent.to_loc(&kind.loc),
-                                "Type locals are not allowed in loop invariants",
-                            );
-                            return None;
+                                "type parameters are not allowed in loop invariants",
+                            )
                         }
                         LoopInvariant
                     }
-                    SpecBlockContext::Schema(..) => SchemaInvariant(tys),
+                    SpecBlockContext::Schema(..) => {
+                        if !tys.is_empty() {
+                            self.parent.env.error(
+                                &self.parent.to_loc(&kind.loc),
+                                "type parameters are not allowed in schema invariants",
+                            )
+                        }
+                        SchemaInvariant
+                    }
                 }
             }
-            PK::InvariantUpdate(ty_locals) => {
-                let tys = define_type_locals(self, ty_locals)?;
+            PK::InvariantUpdate(ty_params) => {
+                let tys = define_type_params(self, ty_params)?;
                 if !matches!(context, SpecBlockContext::Module) {
                     self.parent.env.error(
                         &self.parent.to_loc(&kind.loc),
-                        "Update invariants are only allowed in module specs",
-                    );
-                    return None;
+                        "update invariants are only allowed in module specs",
+                    )
                 }
                 GlobalInvariantUpdate(tys)
             }
-            PK::Axiom(ty_locals) => Axiom(define_type_locals(self, ty_locals)?),
+            PK::Axiom(ty_params) => Axiom(define_type_params(self, ty_params)?),
         };
         Some(converted)
     }

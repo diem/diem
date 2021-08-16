@@ -59,8 +59,8 @@ impl<'env> Clone for FunctionTarget<'env> {
 pub struct FunctionData {
     /// The function variant.
     pub variant: FunctionVariant,
-    /// The type instantiation (can be partial instantiation)
-    pub type_args: BTreeMap<u16, Type>,
+    /// The type instantiation.
+    pub type_args: Vec<Type>,
     /// The bytecode.
     pub code: Vec<Bytecode>,
     /// The locals, including parameters.
@@ -419,7 +419,7 @@ impl FunctionData {
         let modify_targets = func_env.get_modify_targets();
         FunctionData {
             variant: FunctionVariant::Baseline,
-            type_args: BTreeMap::new(),
+            type_args: vec![],
             code,
             local_types,
             return_types,
@@ -482,38 +482,24 @@ impl FunctionData {
     pub fn fork_with_instantiation(
         &self,
         env: &GlobalEnv,
-        ty_params: &[TypeParameter],
-        ty_args: &BTreeMap<u16, Type>,
+        inst: &[Type],
         new_variant: FunctionVariant,
     ) -> Self {
-        let inst: Vec<_> = ty_params
-            .iter()
-            .enumerate()
-            .map(|(i, _)| {
-                let idx = i as u16;
-                self.type_args
-                    .get(&idx)
-                    .or_else(|| ty_args.get(&idx))
-                    .cloned()
-                    .unwrap_or(Type::TypeParameter(idx))
-            })
-            .collect();
-
-        // fix inst
-        let mut type_args = self.type_args.clone();
-        for (i, t) in ty_args {
-            if !type_args.contains_key(i) {
-                type_args.insert(*i, t.clone());
-            }
-        }
+        let type_args = if self.type_args.is_empty() {
+            // This is a basic variant wo/ type instantiation, just use the given inst.
+            inst.to_vec()
+        } else {
+            // This is already specialized, specialize it further with inst.
+            Type::instantiate_slice(&self.type_args, inst)
+        };
 
         // fix types
-        let local_types = Type::instantiate_slice(&self.local_types, &inst);
-        let return_types = Type::instantiate_slice(&self.return_types, &inst);
+        let local_types = Type::instantiate_slice(&self.local_types, inst);
+        let return_types = Type::instantiate_slice(&self.return_types, inst);
         let code = self
             .code
             .iter()
-            .map(|bc| bc.instantiate(env, &inst))
+            .map(|bc| bc.instantiate(env, inst))
             .collect();
         let modify_targets = self
             .modify_targets
@@ -523,7 +509,7 @@ impl FunctionData {
                     .iter()
                     .map(|exp| {
                         ExpData::rewrite_node_id(exp.clone(), &mut |id| {
-                            ExpData::instantiate_node(env, id, &inst)
+                            ExpData::instantiate_node(env, id, inst)
                         })
                     })
                     .collect();
@@ -543,17 +529,9 @@ impl FunctionData {
         }
     }
 
-    /// Fork this function data with (potentially partial) instantiations.
-    pub fn get_type_instantiation(&self, fun_env: &FunctionEnv) -> Vec<Type> {
-        (0..fun_env.get_type_parameter_count())
-            .map(|idx| {
-                let param_idx = idx as u16;
-                self.type_args
-                    .get(&param_idx)
-                    .cloned()
-                    .unwrap_or(Type::TypeParameter(param_idx))
-            })
-            .collect()
+    /// Get the instantiation of this function as a vector of types.
+    pub fn get_type_instantiation(&self, _fun_env: &FunctionEnv) -> Vec<Type> {
+        self.type_args.clone()
     }
 }
 

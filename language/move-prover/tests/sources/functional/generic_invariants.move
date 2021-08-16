@@ -36,19 +36,19 @@ module A {
             ==> global<S::Storage<u64, bool>>(@0x22).x == 1;
 
     // I2: <concrete, generic>
-    invariant<y>
-        exists<S::Storage<u64, y>>(@0x23)
-            ==> global<S::Storage<u64, y>>(@0x23).x > 0;
+    invariant<Y>
+        exists<S::Storage<u64, Y>>(@0x23)
+            ==> global<S::Storage<u64, Y>>(@0x23).x > 0;
 
     // I3: <generic, concrete>
-    invariant<x>
-        exists<S::Storage<x, bool>>(@0x24)
-            ==> global<S::Storage<x, bool>>(@0x24).y;
+    invariant<X>
+        exists<S::Storage<X, bool>>(@0x24)
+            ==> global<S::Storage<X, bool>>(@0x24).y;
 
     // I4: <generic, generic>
-    invariant<x, y>
-        (exists<S::Storage<x, y>>(@0x25) && exists<S::Storage<x, y>>(@0x26))
-            ==> global<S::Storage<x, y>>(@0x25) == global<S::Storage<x, y>>(@0x26);
+    invariant<X, Y>
+        (exists<S::Storage<X, Y>>(@0x25) && exists<S::Storage<X, Y>>(@0x26))
+            ==> global<S::Storage<X, Y>>(@0x25) == global<S::Storage<X, Y>>(@0x26);
 
     public fun good(account1: signer, account2: signer) {
         S::publish_x_y<u64, bool>(account1, 1, true);

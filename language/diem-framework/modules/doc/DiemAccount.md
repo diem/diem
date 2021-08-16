@@ -4950,9 +4950,9 @@ After genesis, the <code><a href="DiemAccount.md#0x1_DiemAccount_DiemWriteSetMan
 resource struct <code><a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;CoinType&gt;</code> is persistent
 
 
-<pre><code><b>invariant</b> <b>update</b> <b>forall</b> coin_type: type, addr: address
-    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;coin_type&gt;&gt;(addr)):
-        <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;coin_type&gt;&gt;(addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>update</b> <b>forall</b> addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;CoinType&gt;&gt;(addr)):
+        <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;CoinType&gt;&gt;(addr);
 </code></pre>
 
 
@@ -5061,7 +5061,7 @@ Balances can only be published at addresses where an account exists
 Balance <==> can_hold_balance
 
 
-<pre><code><b>invariant</b> <b>forall</b> token: type: <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;token&gt;&gt;(addr):
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;CoinType&gt;&gt;(addr):
     <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(addr);
 </code></pre>
 

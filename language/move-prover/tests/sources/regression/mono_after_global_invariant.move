@@ -37,9 +37,8 @@ module Test {
     }
 
     spec module {
-        invariant update
-            Base::has_b() ==>
-                (forall t: type where has_r<t>(): old(has_r<t>()));
+        invariant<T> update
+            Base::has_b() ==> (has_r<T>() ==> old(has_r<T>()));
 
         // The above invariant should not verify, here is a counterexample:
         //

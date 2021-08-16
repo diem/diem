@@ -32,7 +32,6 @@ pub enum Type {
     Fun(Vec<Type>, Box<Type>),
     TypeDomain(Box<Type>),
     ResourceDomain(ModuleId, StructId, Option<Vec<Type>>),
-    TypeLocal(Symbol),
 
     // Temporary types used during type checking
     Error,
@@ -54,7 +53,6 @@ pub enum PrimitiveType {
     // Types only appearing in specifications
     Num,
     Range,
-    TypeValue,
     EventStore,
 }
 
@@ -77,7 +75,7 @@ impl PrimitiveType {
         use PrimitiveType::*;
         match self {
             Bool | U8 | U64 | U128 | Address | Signer => false,
-            Num | Range | TypeValue | EventStore => true,
+            Num | Range | EventStore => true,
         }
     }
 
@@ -91,7 +89,7 @@ impl PrimitiveType {
             U128 => MType::U128,
             Address => MType::Address,
             Signer => MType::Signer,
-            Num | Range | TypeValue | EventStore => return None,
+            Num | Range | EventStore => return None,
         })
     }
 }
@@ -147,7 +145,7 @@ impl Type {
         use Type::*;
         match self {
             Primitive(p) => p.is_spec(),
-            Fun(..) | TypeDomain(..) | TypeLocal(..) | ResourceDomain(..) | Error => true,
+            Fun(..) | TypeDomain(..) | ResourceDomain(..) | Error => true,
             Var(..) | TypeParameter(..) => false,
             Tuple(ts) => ts.iter().any(|t| t.is_spec()),
             Struct(_, _, ts) => ts.iter().any(|t| t.is_spec()),
@@ -230,7 +228,7 @@ impl Type {
         if params.is_empty() {
             self.clone()
         } else {
-            self.replace(Some(params), None, None)
+            self.replace(Some(params), None)
         }
     }
 
@@ -252,26 +250,18 @@ impl Type {
         }
     }
 
-    /// Replace the given type local.
-    pub fn replace_type_local(&self, local: Symbol, repl: Type) -> Type {
-        let mut subs = BTreeMap::new();
-        subs.insert(local, repl);
-        self.replace(None, None, Some(&subs))
+    /// Convert a partial assignment for type parameters into an instantiation.
+    pub fn type_param_map_to_inst(arity: usize, map: BTreeMap<u16, Type>) -> Vec<Type> {
+        let mut inst: Vec<_> = (0..arity).map(|i| Type::TypeParameter(i as u16)).collect();
+        for (idx, ty) in map {
+            inst[idx as usize] = ty;
+        }
+        inst
     }
 
-    /// A helper function to do replacement of type parameters and/or type variables.
-    fn replace(
-        &self,
-        params: Option<&[Type]>,
-        subs: Option<&Substitution>,
-        type_local_subs: Option<&BTreeMap<Symbol, Type>>,
-    ) -> Type {
-        let replace_vec = |types: &[Type]| {
-            types
-                .iter()
-                .map(|t| t.replace(params, subs, type_local_subs))
-                .collect()
-        };
+    /// A helper function to do replacement of type parameterss.
+    fn replace(&self, params: Option<&[Type]>, subs: Option<&Substitution>) -> Type {
+        let replace_vec = |types: &[Type]| types.iter().map(|t| t.replace(params, subs)).collect();
         match self {
             Type::TypeParameter(i) => {
                 if let Some(ps) = params {
@@ -287,18 +277,7 @@ impl Type {
                         // refers to type variables.
                         // TODO: a more efficient approach is to maintain that type assignments
                         // are always fully specialized w.r.t. to the substitution.
-                        t.replace(params, subs, type_local_subs)
-                    } else {
-                        self.clone()
-                    }
-                } else {
-                    self.clone()
-                }
-            }
-            Type::TypeLocal(sym) => {
-                if let Some(subs) = type_local_subs {
-                    if let Some(t) = subs.get(sym) {
-                        t.clone()
+                        t.replace(params, subs)
                     } else {
                         self.clone()
                     }
@@ -307,18 +286,15 @@ impl Type {
                 }
             }
             Type::Reference(is_mut, bt) => {
-                Type::Reference(*is_mut, Box::new(bt.replace(params, subs, type_local_subs)))
+                Type::Reference(*is_mut, Box::new(bt.replace(params, subs)))
             }
             Type::Struct(mid, sid, args) => Type::Struct(*mid, *sid, replace_vec(args)),
-            Type::Fun(args, result) => Type::Fun(
-                replace_vec(args),
-                Box::new(result.replace(params, subs, type_local_subs)),
-            ),
-            Type::Tuple(args) => Type::Tuple(replace_vec(args)),
-            Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs, type_local_subs))),
-            Type::TypeDomain(et) => {
-                Type::TypeDomain(Box::new(et.replace(params, subs, type_local_subs)))
+            Type::Fun(args, result) => {
+                Type::Fun(replace_vec(args), Box::new(result.replace(params, subs)))
             }
+            Type::Tuple(args) => Type::Tuple(replace_vec(args)),
+            Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs))),
+            Type::TypeDomain(et) => Type::TypeDomain(Box::new(et.replace(params, subs))),
             Type::ResourceDomain(mid, sid, args_opt) => {
                 Type::ResourceDomain(*mid, *sid, args_opt.as_ref().map(|args| replace_vec(args)))
             }
@@ -357,45 +333,15 @@ impl Type {
             Vector(et) => et.is_incomplete(),
             Reference(_, bt) => bt.is_incomplete(),
             TypeDomain(bt) => bt.is_incomplete(),
-            Error | Primitive(..) | TypeLocal(..) | TypeParameter(_) | ResourceDomain(..) => false,
-        }
-    }
-
-    /// Return true if this type contains generic types (i.e., types that can be instantiated).
-    /// A caller can have finer-grained control on what can be considered as a generic type.
-    pub fn is_generic(
-        &self,
-        treat_type_param_as_open: bool,
-        treat_type_local_as_open: bool,
-    ) -> bool {
-        use Type::*;
-        match self {
-            TypeParameter(_) => treat_type_param_as_open,
-            TypeLocal(_) => treat_type_local_as_open,
-            Primitive(_) | ResourceDomain(..) => false,
-            Tuple(ts) => ts
-                .iter()
-                .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open)),
-            Fun(ts, r) => {
-                ts.iter()
-                    .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open))
-                    || r.is_generic(treat_type_param_as_open, treat_type_local_as_open)
-            }
-            Struct(_, _, ts) => ts
-                .iter()
-                .any(|t| t.is_generic(treat_type_param_as_open, treat_type_local_as_open)),
-            Vector(et) => et.is_generic(treat_type_param_as_open, treat_type_local_as_open),
-            Reference(_, bt) => bt.is_generic(treat_type_param_as_open, treat_type_local_as_open),
-            TypeDomain(bt) => bt.is_generic(treat_type_param_as_open, treat_type_local_as_open),
-            Error | Var(_) => {
-                panic!("Invariant violation: is_generic should be called after type checking")
-            }
+            Error | Primitive(..) | TypeParameter(_) | ResourceDomain(..) => false,
         }
     }
 
     /// Return true if this type contains generic types (i.e., types that can be instantiated).
     pub fn is_open(&self) -> bool {
-        self.is_generic(true, true)
+        let mut has_var = false;
+        self.visit(&mut |t| has_var = has_var || matches!(t, Type::TypeParameter(_)));
+        has_var
     }
 
     /// Compute used modules in this type, adding them to the passed set.
@@ -440,7 +386,7 @@ impl Type {
                                  .expect("Invariant violation: vector type argument contains incomplete, tuple, reference, or spec type"))
                     ),
                     TypeParameter(idx) => MType::TypeParameter(idx as u16),
-                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Var(..) | Reference(..) =>
+                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | Var(..) | Reference(..) =>
                         return None
                 }
             )
@@ -503,7 +449,7 @@ impl Type {
             Vector(et) => et.internal_get_vars(vars),
             Reference(_, bt) => bt.internal_get_vars(vars),
             TypeDomain(bt) => bt.internal_get_vars(vars),
-            Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) | ResourceDomain(..) => {}
+            Error | Primitive(..) | TypeParameter(..) | ResourceDomain(..) => {}
         }
     }
 
@@ -555,7 +501,7 @@ impl Substitution {
 
     /// Specializes the type, substituting all variables bound in this substitution.
     pub fn specialize(&self, t: &Type) -> Type {
-        t.replace(None, Some(self), None)
+        t.replace(None, Some(self))
     }
 
     /// Return either a shallow or deep substitution of the type variable.
@@ -692,11 +638,6 @@ impl Substitution {
                     e2,
                 )?)));
             }
-            (Type::TypeLocal(s1), Type::TypeLocal(s2)) => {
-                if s1 == s2 {
-                    return Ok(Type::TypeLocal(*s1));
-                }
-            }
             _ => {}
         }
         Err(TypeUnificationError::TypeMismatch(
@@ -781,127 +722,93 @@ impl Default for Substitution {
     }
 }
 
-/// The type unification algorithm implemented in the `Substitution` struct only accepts `Type::Var`
-/// as type variables. `Type::TypeParameter` and `Type::TypeLocal` are treated as concrete types
-/// in the unification process.
+/// Helper to unify types which stem from different generic contexts.
+/// Both comparison side may have type parameters (equally named as #0, #1, ...).
+/// The helper converts the type parameter from or both sides into variables
+/// and then performs unification of the terms. The resulting substitution
+/// is converted back to parameter instantiations.
 ///
-/// However, in some use cases, we might need to designate types other than `Type::Var` as type
-/// variables. For example, to see whether a generic struct `S<T>` can be instantiated as `S<bool>`
-/// where `T` is of type `Type::TypeParameter`, we still perform type unification over `S<T>` and
-/// `S<bool>` but this time, we need to convert the `T` from `Type::TypeParameter` into `Type::Var`
-/// first before re-using the algorithm in `Substitution`.
-///
-/// Similarly, in the monomorphization use case, we need to check whether a property over `S<t>`
-/// can be reduced to `S<u64>` where `t` is a `Type::TypeLocal`. We need a conversion from
-/// `Type::TypeLocal` to `Type::Var` as well.
-///
-/// TODO: we might remove `Type::TypeLocal` when
-/// 1) we have generic invariant (i.e., `invariant<T>`) as a replacement of universal quantification
-///    over type and
-/// 2) we cannot find much practical value for existential quantification over type (one dummy
-///    example is: `exists t: type: global<Config<T>>(0x1) == global<Config<T>>(0x2)`)
-///
-/// This is why we need `TypeUnificationAdapter`. The adapter takes care of
-/// 1) converting a `Type::TypeParameter` and `Type::TypeLocal` into type variables `Type::Var`,
-/// 2) invoking the type unification algorithm on the adapted types, and
-/// 3) subsequently mapping the type unification results back to the corresponding
-///    `Type::TypeParameter` and `Type::TypeLocal`.
+/// Example: consider a function f<X> which uses memory M<X, u64>, and invariant
+/// invariant<X> which uses memory M<bool,X>. Using this helper to unify those
+/// both memories will result in instantiations which when applied
+/// create f<bool> and invariant<u64>.
 pub struct TypeUnificationAdapter {
-    type_vars_map: BTreeMap<u16, (bool, Type)>,
+    type_vars_map: BTreeMap<u16, (bool, u16)>,
     types_adapted_lhs: Vec<Type>,
     types_adapted_rhs: Vec<Type>,
 }
 
 impl TypeUnificationAdapter {
-    /// Initialize the context for the type unifier.
-    ///
-    /// - If `treat_type_param_as_var` is set, all `Type::TypeParameter` in the types are converted
-    ///   to `Type::Var` before unification.
-    /// - If `treat_type_local_as_var` is set, all `Type::TypeLocal` in the types are converted
-    ///   to `Type::Var` before unification.
-    ///
-    /// It is OK if the `lhs_types` or `rhs_types` already contains some `Type::Var`. These type
-    /// variables will participate in the type unification, together with new type variables created
-    /// for `TypeParameter` and `TypeLocal`.
+    /// Initialize the context for the type unifier. The boolean parameters on
+    /// which side of the comparison type parameters are turned into type vars; at
+    /// least one must be set.
     fn new<'a, I>(
         lhs_types: I,
         rhs_types: I,
-        treat_type_param_as_var: bool,
-        treat_type_local_as_var: bool,
+        treat_lhs_type_param_as_var: bool,
+        treat_rhs_type_param_as_var: bool,
     ) -> Self
     where
         I: Iterator<Item = &'a Type> + Clone,
     {
-        // find the starting index for new type vars
-        let mut count = 0;
-        for ty in lhs_types.clone().chain(rhs_types.clone()) {
-            ty.visit(&mut |t| {
-                if let Type::Var(idx) = t {
-                    if idx >= &count {
-                        count = *idx + 1;
-                    }
-                }
-            });
+        assert!(
+            treat_rhs_type_param_as_var || treat_lhs_type_param_as_var,
+            "At least one side of the unification must be treated as variable"
+        );
+        // Compute the number of type parameters for each side.
+        let mut lhs_type_param_count = 0;
+        let mut rhs_type_param_count = 0;
+        let count_type_param = |t: &Type, current: &mut u16| {
+            if let Type::TypeParameter(idx) = t {
+                *current = (*current).max(*idx + 1);
+            }
+        };
+        for ty in lhs_types.clone() {
+            ty.visit(&mut |t| count_type_param(t, &mut lhs_type_param_count));
+        }
+        for ty in rhs_types.clone() {
+            ty.visit(&mut |t| count_type_param(t, &mut rhs_type_param_count));
         }
 
-        // assign indices for type vars
-        let mut type_param_vars = BTreeMap::new();
-        let mut type_local_vars = BTreeMap::new();
+        // Check the input types do not contain type variables.
+        debug_assert!(
+            lhs_types.clone().chain(rhs_types.clone()).all(|ty| {
+                let mut b = true;
+                ty.visit(&mut |t| b = b && !matches!(t, Type::Var(_)));
+                b
+            }),
+            "unexpected type variable"
+        );
+
+        // Create a type variable instantiation for each side.
+        let count = 0;
         let mut type_vars_map = BTreeMap::new();
-        for (ty, is_lhs) in lhs_types
-            .clone()
-            .map(|t| (t, true))
-            .chain(rhs_types.clone().map(|t| (t, false)))
-        {
-            ty.visit(&mut |t| {
-                let var_created = match t {
-                    Type::TypeParameter(param_idx) if treat_type_param_as_var => {
-                        type_param_vars.entry(*param_idx).or_insert(count) == &count
-                    }
-                    Type::TypeLocal(local_sym) if treat_type_local_as_var => {
-                        type_local_vars.entry(*local_sym).or_insert(count) == &count
-                    }
-                    _ => false,
-                };
-                if var_created {
-                    type_vars_map.insert(count, (is_lhs, t.clone()));
-                    count += 1;
-                }
-            });
-        }
-
-        // prepare for substitutions
-        let type_param_subst = match type_param_vars.keys().max() {
-            None => vec![],
-            Some(max_param_idx) => (0..=*max_param_idx)
-                .map(|i| match type_param_vars.get(&i) {
-                    None => Type::TypeParameter(i),
-                    Some(var_idx) => Type::Var(*var_idx),
+        let lhs_inst = if treat_lhs_type_param_as_var {
+            (0..lhs_type_param_count)
+                .map(|i| {
+                    let idx = count + i;
+                    type_vars_map.insert(idx, (true, i));
+                    Type::Var(idx)
                 })
-                .collect(),
+                .collect()
+        } else {
+            vec![]
         };
-        let type_local_subst: BTreeMap<_, _> = type_local_vars
-            .into_iter()
-            .map(|(sym, var_idx)| (sym, Type::Var(var_idx)))
-            .collect();
+        let rhs_inst = if treat_rhs_type_param_as_var {
+            (0..rhs_type_param_count)
+                .map(|i| {
+                    let idx = count + lhs_type_param_count + i;
+                    type_vars_map.insert(idx, (false, i));
+                    Type::Var(idx)
+                })
+                .collect()
+        } else {
+            vec![]
+        };
 
-        // do the adaptation
-        let param_subst_opt = if treat_type_param_as_var {
-            Some(type_param_subst.as_slice())
-        } else {
-            None
-        };
-        let local_subst_opt = if treat_type_local_as_var {
-            Some(&type_local_subst)
-        } else {
-            None
-        };
-        let types_adapted_lhs = lhs_types
-            .map(|t| t.replace(param_subst_opt, None, local_subst_opt))
-            .collect();
-        let types_adapted_rhs = rhs_types
-            .map(|t| t.replace(param_subst_opt, None, local_subst_opt))
-            .collect();
+        // Do the adaptation.
+        let types_adapted_lhs = lhs_types.map(|t| t.instantiate(&lhs_inst)).collect();
+        let types_adapted_rhs = rhs_types.map(|t| t.instantiate(&rhs_inst)).collect();
 
         Self {
             type_vars_map,
@@ -914,14 +821,14 @@ impl TypeUnificationAdapter {
     pub fn new_one(
         lhs_type: &Type,
         rhs_type: &Type,
-        treat_type_param_as_var: bool,
-        treat_type_local_as_var: bool,
+        treat_lhs_type_param_as_var: bool,
+        treat_rhs_type_param_as_var: bool,
     ) -> Self {
         Self::new(
             std::iter::once(lhs_type),
             std::iter::once(rhs_type),
-            treat_type_param_as_var,
-            treat_type_local_as_var,
+            treat_lhs_type_param_as_var,
+            treat_rhs_type_param_as_var,
         )
     }
 
@@ -929,25 +836,25 @@ impl TypeUnificationAdapter {
     pub fn new_vec(
         lhs_types: &[Type],
         rhs_types: &[Type],
-        treat_type_param_as_var: bool,
-        treat_type_local_as_var: bool,
+        treat_lhs_type_param_as_var: bool,
+        treat_rhs_type_param_as_var: bool,
     ) -> Self {
         Self::new(
             lhs_types.iter(),
             rhs_types.iter(),
-            treat_type_param_as_var,
-            treat_type_local_as_var,
+            treat_lhs_type_param_as_var,
+            treat_rhs_type_param_as_var,
         )
     }
 
     /// Consume the TypeUnificationAdapter and produce the unification result. If type unification
-    /// is successful, return a pair of maps that correspond to the substitutions performed on the
-    /// LHS and RHS respectively. If the LHS and RHS cannot unify, None is returned.
+    /// is successful, return a pair of instantiations for type parameters on each side which
+    /// unify the LHS and RHS respectively. If the LHS and RHS cannot unify, None is returned.
     pub fn unify(
         self,
         variance: Variance,
         shallow_subst: bool,
-    ) -> Option<(BTreeMap<Type, Type>, BTreeMap<Type, Type>)> {
+    ) -> Option<(BTreeMap<u16, Type>, BTreeMap<u16, Type>)> {
         let mut subst = Substitution::new();
         match subst.unify_vec(
             variance,
@@ -956,26 +863,36 @@ impl TypeUnificationAdapter {
             "",
         ) {
             Ok(_) => {
-                let mut subst_lhs = BTreeMap::new();
-                let mut subst_rhs = BTreeMap::new();
-                for (var_idx, (is_lhs, ty)) in &self.type_vars_map {
+                let mut inst_lhs = BTreeMap::new();
+                let mut inst_rhs = BTreeMap::new();
+                for (var_idx, (is_lhs, param_idx)) in &self.type_vars_map {
                     let subst_ty = match subst.get_substitution(*var_idx, shallow_subst) {
                         None => continue,
                         Some(Type::Var(subst_var_idx)) => {
                             match self.type_vars_map.get(&subst_var_idx) {
-                                None => Type::Var(subst_var_idx),
-                                Some((_, subst_ty)) => subst_ty.clone(),
+                                None => {
+                                    // If the original types do not contain free type
+                                    // variables, this should not happen.
+                                    panic!("unexpected type variable");
+                                }
+                                Some((_, subs_param_idx)) => {
+                                    // There can be either lhs or rhs type parameters left, but
+                                    // not both sides, so it is unambiguous to just return it here.
+                                    Type::TypeParameter(*subs_param_idx)
+                                }
                             }
                         }
                         Some(subst_ty) => subst_ty.clone(),
                     };
-                    if *is_lhs {
-                        subst_lhs.insert(ty.clone(), subst_ty);
+                    let inst = if *is_lhs {
+                        &mut inst_lhs
                     } else {
-                        subst_rhs.insert(ty.clone(), subst_ty);
-                    }
+                        &mut inst_rhs
+                    };
+                    inst.insert(*param_idx, subst_ty);
                 }
-                Some((subst_lhs, subst_rhs))
+
+                Some((inst_lhs, inst_rhs))
             }
             Err(_) => None,
         }
@@ -1075,7 +992,6 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 }
                 f.write_str(">")
             }
-            TypeLocal(s) => write!(f, "{}", s.display(self.context.symbol_pool())),
             Fun(ts, t) => {
                 f.write_str("|")?;
                 comma_list(f, ts)?;
@@ -1157,7 +1073,6 @@ impl fmt::Display for PrimitiveType {
             Signer => f.write_str("signer"),
             Range => f.write_str("range"),
             Num => f.write_str("num"),
-            TypeValue => f.write_str("type"),
             EventStore => f.write_str("estore"),
         }
     }

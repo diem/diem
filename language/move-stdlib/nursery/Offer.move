@@ -101,26 +101,26 @@ module Std::Offer {
 
   /// ## Creation of Offers
 
-  spec schema NoOfferCreated {
-    /// Says no offer is created or any type or address. Later, it is applied to all functions
+  spec schema NoOfferCreated<Offered> {
+    /// Says no offer is created for any address. Later, it is applied to all functions
     /// except `create`
-    ensures forall ty: type, addr: address where !old(exists<Offer<ty>>(addr)) : !exists<Offer<ty>>(addr);
+    ensures forall addr: address where !old(exists<Offer<Offered>>(addr)) : !exists<Offer<Offered>>(addr);
   }
   spec module {
     /// Apply OnlyCreateCanCreateOffer to every function except `create`
-    apply NoOfferCreated to *<Offered>, * except create;
+    apply NoOfferCreated<Offered> to *<Offered>, * except create;
   }
 
   /// ## Removal of Offers
 
-  spec schema NoOfferRemoved {
-    /// Says no offer is removed for any type or address. Applied below to everything except `redeem`
-    ensures forall ty: type, addr: address where old(exists<Offer<ty>>(addr)) :
-              (exists<Offer<ty>>(addr) && global<Offer<ty>>(addr) == old(global<Offer<ty>>(addr)));
+  spec schema NoOfferRemoved<Offered> {
+    /// Says no offer is removed for any address. Applied below to everything except `redeem`
+    ensures forall addr: address where old(exists<Offer<Offered>>(addr)) :
+              (exists<Offer<Offered>>(addr) && global<Offer<Offered>>(addr) == old(global<Offer<Offered>>(addr)));
   }
   spec module {
     /// Only `redeem` can remove an offer from the global store.
-    apply NoOfferRemoved to *<Offered>, * except redeem;
+    apply NoOfferRemoved<Offered> to *<Offered>, * except redeem;
   }
 
   /// # Helper Functions

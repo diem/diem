@@ -1,25 +1,22 @@
-Move prover returns: exiting with bytecode transformation errors
-error: Public or script functions must not be called when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
-   ┌─ tests/sources/functional/disable_inv.move:11:5
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/disable_inv.move:60:9
    │
-11 │ ╭     public fun f1_incorrect(s: &signer) {
-12 │ │         move_to(s, R1 {});
-13 │ │         move_to(s, R2 {});
-14 │ │     }
-   │ ╰─────^
+60 │         invariant [global] forall a: address where exists<R1>(a): exists<R2>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/disable_inv.move:11: f1_incorrect
+   =         s = <redacted>
+   =     at tests/sources/functional/disable_inv.move:12: f1_incorrect
+   =     at tests/sources/functional/disable_inv.move:60
 
-error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
-   ┌─ tests/sources/functional/disable_inv.move:31:5
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/disable_inv.move:60:9
    │
-31 │ ╭     fun f3_incorrect(s: &signer) {
-32 │ │         move_to(s, R1 {});
-33 │ │     }
-   │ ╰─────^
-
-error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
-   ┌─ tests/sources/functional/disable_inv.move:46:5
+60 │         invariant [global] forall a: address where exists<R1>(a): exists<R2>(a);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-46 │ ╭     fun f5_incorrect(s: &signer) {
-47 │ │         move_to(s, R2 {});
-48 │ │     }
-   │ ╰─────^
+   =     at tests/sources/functional/disable_inv.move:31: f3_incorrect
+   =         s = <redacted>
+   =     at tests/sources/functional/disable_inv.move:32: f3_incorrect
+   =     at tests/sources/functional/disable_inv.move:60

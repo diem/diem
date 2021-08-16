@@ -407,18 +407,18 @@ module DiemFramework::DiemConfig {
     /// # Invariants
     spec module {
         /// Configurations are only stored at the diem root address.
-        invariant
-            forall config_address: address, config_type: type where exists<DiemConfig<config_type>>(config_address):
+        invariant<ConfigType>
+            forall config_address: address where exists<DiemConfig<ConfigType>>(config_address):
                 config_address == @DiemRoot;
 
         /// Published configurations are persistent.
-        invariant update
-            (forall config_type: type where old(spec_is_published<config_type>()): spec_is_published<config_type>());
+        invariant<ConfigType> update
+            old(spec_is_published<ConfigType>()) ==> spec_is_published<ConfigType>();
 
         /// If `ModifyConfigCapability<Config>` is published, it is persistent.
-        invariant update forall config_type: type
-            where old(exists<ModifyConfigCapability<config_type>>(@DiemRoot)):
-                exists<ModifyConfigCapability<config_type>>(@DiemRoot);
+        invariant<ConfigType> update
+            old(exists<ModifyConfigCapability<ConfigType>>(@DiemRoot)) ==>
+                exists<ModifyConfigCapability<ConfigType>>(@DiemRoot);
     }
 
     /// # Helper Functions

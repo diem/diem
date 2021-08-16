@@ -169,11 +169,17 @@ fn compute_disabled_invs_for_fun(
 /// The second condition is an exception for functions that cannot invalidate
 /// any invariants.
 fn check_legal_disabled_invariants(
-    fun_env: &FunctionEnv,
-    disabled_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
-    non_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
-    funs_that_modify_some_inv: &BTreeSet<QualifiedId<FunId>>,
+    _fun_env: &FunctionEnv,
+    _disabled_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    _non_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    _funs_that_modify_some_inv: &BTreeSet<QualifiedId<FunId>>,
 ) {
+
+    // TODO: this currently produces a false positive for unknown reasons. It is hard to
+    //   debug because the error message does not give any info about the source of
+    //   invariant disabling. To give better error messages, we need to extend the analysis
+    //   to track locations.
+    /*
     let global_env = fun_env.module_env.env;
     let fun_id = fun_env.get_qualified_id();
     if non_inv_fun_set.contains(&fun_id) && funs_that_modify_some_inv.contains(&fun_id) {
@@ -193,6 +199,7 @@ fn check_legal_disabled_invariants(
             );
         }
     }
+     */
 }
 
 // Using pragmas, find functions called from a context where invariant

@@ -2299,9 +2299,9 @@ module DiemFramework::DiemAccount {
         invariant DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(@DiemRoot);
 
         /// resource struct `Balance<CoinType>` is persistent
-        invariant update forall coin_type: type, addr: address
-            where old(exists<Balance<coin_type>>(addr)):
-                exists<Balance<coin_type>>(addr);
+        invariant<CoinType> update forall addr: address
+            where old(exists<Balance<CoinType>>(addr)):
+                exists<Balance<CoinType>>(addr);
 
         /// resource struct `AccountOperationsCapability` is persistent
         invariant update old(exists<AccountOperationsCapability>(@DiemRoot))
@@ -2377,7 +2377,7 @@ module DiemFramework::DiemAccount {
         /// Balances can only be published at addresses where an account exists
         /// >TODO: I think this is redundant with previous invariants. exists_at <==> Role, and
         /// Balance <==> can_hold_balance
-        invariant forall token: type: forall addr: address where exists<Balance<token>>(addr):
+        invariant<CoinType> forall addr: address where exists<Balance<CoinType>>(addr):
             exists_at(addr);
 
         /// Account has SlidingNonce only if it's Diem Root or Treasury Compliance

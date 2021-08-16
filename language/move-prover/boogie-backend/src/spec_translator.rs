@@ -28,7 +28,6 @@ use crate::{
     options::BoogieOptions,
 };
 use bytecode::mono_analysis::MonoInfo;
-use codespan_reporting::diagnostic::Severity;
 use move_model::{
     ast::{Exp, MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
     model::{QualifiedInstId, SpecVarId},
@@ -1034,7 +1033,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_quant(
         &self,
-        node_id: NodeId,
+        _node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
         triggers: &[Vec<Exp>],
@@ -1053,17 +1052,6 @@ impl<'env> SpecTranslator<'env> {
                     self.translate_exp(range);
                     emit!(self.writer, "; ");
                     range_tmps.insert(var.name, range_tmp);
-                }
-                Type::TypeDomain(bt) => {
-                    if matches!(bt.as_ref(), Type::Primitive(PrimitiveType::TypeValue)) {
-                        self.env.diag(
-                            Severity::Error,
-                            &self.env.get_node_loc(node_id),
-                            "Type quantification not supported by this backend.",
-                        );
-                        emitln!(self.writer, "true");
-                        return;
-                    }
                 }
                 _ => {}
             }

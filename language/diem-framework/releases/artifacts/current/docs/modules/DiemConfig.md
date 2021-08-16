@@ -1043,8 +1043,8 @@ After genesis, the <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Co
 Configurations are only stored at the diem root address.
 
 
-<pre><code><b>invariant</b>
-    <b>forall</b> config_address: address, config_type: type <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;config_type&gt;&gt;(config_address):
+<pre><code><b>invariant</b>&lt;ConfigType&gt;
+    <b>forall</b> config_address: address <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;ConfigType&gt;&gt;(config_address):
         config_address == @DiemRoot;
 </code></pre>
 
@@ -1052,17 +1052,17 @@ Configurations are only stored at the diem root address.
 Published configurations are persistent.
 
 
-<pre><code><b>invariant</b> <b>update</b>
-    (<b>forall</b> config_type: type <b>where</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()): <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;());
+<pre><code><b>invariant</b>&lt;ConfigType&gt; <b>update</b>
+    <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;ConfigType&gt;()) ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">spec_is_published</a>&lt;ConfigType&gt;();
 </code></pre>
 
 
 If <code><a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;</code> is published, it is persistent.
 
 
-<pre><code><b>invariant</b> <b>update</b> <b>forall</b> config_type: type
-    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(@DiemRoot)):
-        <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(@DiemRoot);
+<pre><code><b>invariant</b>&lt;ConfigType&gt; <b>update</b>
+    <b>old</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;ConfigType&gt;&gt;(@DiemRoot)) ==&gt;
+        <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;ConfigType&gt;&gt;(@DiemRoot);
 </code></pre>
 
 

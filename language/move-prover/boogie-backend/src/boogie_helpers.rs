@@ -177,15 +177,15 @@ pub fn boogie_type(env: &GlobalEnv, ty: &Type) -> String {
             U8 | U64 | U128 | Num | Address => "int".to_string(),
             Signer => "$signer".to_string(),
             Bool => "bool".to_string(),
-            TypeValue => "$TypeValue".to_string(),
             _ => panic!("unexpected type"),
         },
         Vector(et) => format!("Vec ({})", boogie_type(env, et)),
         Struct(mid, sid, inst) => boogie_struct_name(&env.get_module(*mid).into_struct(*sid), inst),
         Reference(_, bt) => format!("$Mutation ({})", boogie_type(env, bt)),
         TypeParameter(idx) => boogie_type_param(env, *idx),
-        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
-        | Var(..) => format!("<<unsupported: {:?}>>", ty),
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..) => {
+            format!("<<unsupported: {:?}>>", ty)
+        }
     }
 }
 
@@ -222,8 +222,8 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
             boogie_type_suffix_for_struct(&env.get_module(*mid).into_struct(*sid), inst)
         }
         TypeParameter(idx) => boogie_type_param(env, *idx),
-        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
-        | Var(..) | Reference(..) => format!("<<unsupported {:?}>>", ty),
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..)
+        | Reference(..) => format!("<<unsupported {:?}>>", ty),
     }
 }
 

@@ -18,6 +18,9 @@ use crate::{
     verification_analysis_v2::InvariantAnalysisData,
 };
 
+use itertools::Itertools;
+#[cfg(invariant_trace)]
+use move_model::ty::TypeDisplayContext;
 use move_model::{
     ast::{ConditionKind, Exp, GlobalInvariant},
     exp_generator::ExpGenerator,
@@ -60,14 +63,12 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
 
         // Collect information
         let env = target.global_env();
-        let ty_params = target.get_type_parameters();
 
         // Create variants for possible function instantiations
         let mut func_variants = vec![];
         for (i, (ty_args, mut global_ids)) in func_insts.into_iter().enumerate() {
             let variant_data = data.fork_with_instantiation(
                 env,
-                &ty_params,
                 &ty_args,
                 FunctionVariant::Verification(VerificationFlavor::Instantiated(i)),
             );
@@ -99,7 +100,7 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
 
 struct Analyzer {
     plain: BTreeSet<GlobalId>,
-    func_insts: BTreeMap<BTreeMap<u16, Type>, BTreeSet<GlobalId>>,
+    func_insts: BTreeMap<Vec<Type>, BTreeSet<GlobalId>>,
 }
 
 impl Analyzer {
@@ -144,6 +145,7 @@ impl Analyzer {
         let mut func_insts = BTreeSet::new();
 
         let fun_mems = usage_analysis::get_used_memory_inst(target);
+        let fun_arity = target.get_type_parameters().len();
         for inv_mem in &invariant.mem_usage {
             for fun_mem in fun_mems.iter() {
                 if inv_mem.module_id != fun_mem.module_id || inv_mem.id != fun_mem.id {
@@ -154,18 +156,11 @@ impl Analyzer {
                 let rel = adapter.unify(Variance::Allow, /* shallow_subst */ false);
                 match rel {
                     None => continue,
-                    Some((subst_lhs, _)) => {
-                        let inst: BTreeMap<_, _> = subst_lhs
-                            .into_iter()
-                            .map(|(k, v)| match k {
-                                Type::TypeParameter(param_idx) => (param_idx, v),
-                                _ => panic!("Only TypeParameter is expected in the substitution"),
-                            })
-                            .collect();
-                        if inst.is_empty() {
+                    Some((subs_fun, _)) => {
+                        if subs_fun.is_empty() {
                             is_generic = true;
                         } else {
-                            func_insts.insert(inst);
+                            func_insts.insert(Type::type_param_map_to_inst(fun_arity, subs_fun));
                         }
                     }
                 }
@@ -188,7 +183,8 @@ impl Analyzer {
 struct Instrumenter<'a> {
     options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
-    function_inst: Vec<Type>,
+    _function_inst: Vec<Type>,
+    used_memory: BTreeSet<QualifiedInstId<StructId>>,
     // Invariants that unify with the state used in a function instantiation
     related_invariants: BTreeSet<GlobalId>,
     saved_from_before_instr_or_call: Option<(TranslatedSpec, BTreeSet<GlobalId>)>,
@@ -209,10 +205,36 @@ impl<'a> Instrumenter<'a> {
         let options = ProverOptions::get(global_env);
         let function_inst = data.get_type_instantiation(fun_env);
         let builder = FunctionDataBuilder::new(fun_env, data);
+        let used_memory: BTreeSet<_> = usage_analysis::get_used_memory_inst(&builder.get_target())
+            .iter()
+            .map(|mem| mem.instantiate_ref(&function_inst))
+            .collect();
+
+        #[cfg(invariant_trace)]
+        {
+            let tctx = TypeDisplayContext::WithEnv {
+                env: global_env,
+                type_param_names: None,
+            };
+            println!(
+                "{}<{}>: {}",
+                builder.data.variant,
+                function_inst
+                    .iter()
+                    .map(|t| t.display(&tctx).to_string())
+                    .join(","),
+                used_memory
+                    .iter()
+                    .map(|m| global_env.display(m).to_string())
+                    .join(",")
+            );
+        }
+
         let mut instrumenter = Instrumenter {
             options: options.as_ref(),
             builder,
-            function_inst,
+            _function_inst: function_inst,
+            used_memory,
             related_invariants,
             saved_from_before_instr_or_call: None,
         };
@@ -244,12 +266,7 @@ impl<'a> Instrumenter<'a> {
                     .collect();
             }
         }
-        let xlated_spec = SpecTranslator::translate_invariants_by_id(
-            self.options.auto_trace_level.invariants(),
-            &mut self.builder,
-            &self.function_inst,
-            &entrypoint_invariants,
-        );
+        let xlated_spec = self.translate_invariants(&entrypoint_invariants);
         self.assert_or_assume_translated_invariants(
             &xlated_spec.invariants,
             &entrypoint_invariants,
@@ -274,12 +291,7 @@ impl<'a> Instrumenter<'a> {
                 .difference(&entrypoint_invariants)
                 .cloned()
                 .collect();
-            let xlated_spec = SpecTranslator::translate_invariants_by_id(
-                self.options.auto_trace_level.invariants(),
-                &mut self.builder,
-                &self.function_inst,
-                &return_invariants,
-            );
+            let xlated_spec = self.translate_invariants(&return_invariants);
             self.assert_or_assume_translated_invariants(
                 &xlated_spec.invariants,
                 &return_invariants,
@@ -410,12 +422,7 @@ impl<'a> Instrumenter<'a> {
                     // Asserting more won't hurt, but generates unnecessary work for the prover.
                     let (global_target_invs, _update_target_invs) =
                         self.separate_update_invariants(target_invariants);
-                    let xlated_spec = SpecTranslator::translate_invariants_by_id(
-                        self.options.auto_trace_level.invariants(),
-                        &mut self.builder,
-                        &self.function_inst,
-                        &global_target_invs,
-                    );
+                    let xlated_spec = self.translate_invariants(&global_target_invs);
                     self.assert_or_assume_translated_invariants(
                         &xlated_spec.invariants,
                         &global_target_invs,
@@ -541,12 +548,7 @@ impl<'a> Instrumenter<'a> {
         // translate all the invariants. Some were already translated at the entrypoint, but
         // that's ok because entrypoint invariants are global invariants that don't have "old",
         // so redundant state tags are not going to be a problem.
-        let mut xlated_invs = SpecTranslator::translate_invariants_by_id(
-            self.options.auto_trace_level.invariants(),
-            &mut self.builder,
-            &self.function_inst,
-            &modified_invs,
-        );
+        let mut xlated_invs = self.translate_invariants(&modified_invs);
 
         let (global_invs, _update_invs) = self.separate_update_invariants(&modified_invs);
 
@@ -682,5 +684,106 @@ impl<'a> Instrumenter<'a> {
         }
         self.builder
             .emit_with(|id| Bytecode::Prop(id, prop_kind, cond.clone()));
+    }
+
+    /// Translate the given set of invariants. This will care for instantiating the
+    /// invariants in the function context.
+    fn translate_invariants(&mut self, invs: &BTreeSet<GlobalId>) -> TranslatedSpec {
+        let inst_invs = self.compute_instances_for_invariants(invs);
+        SpecTranslator::translate_invariants_by_id(
+            self.options.auto_trace_level.invariants(),
+            &mut self.builder,
+            inst_invs.into_iter(),
+        )
+    }
+
+    /// Compute the instantiations which need to be verified for each invariant in the input.
+    /// This may filter out certain invariants which do not have a valid instantiation.
+    fn compute_instances_for_invariants(
+        &self,
+        invs: &BTreeSet<GlobalId>,
+    ) -> Vec<(GlobalId, Vec<Type>)> {
+        invs.iter()
+            .map(|id| {
+                let inv = self.builder.global_env().get_global_invariant(*id).unwrap();
+                self.compute_invariant_instances(inv).into_iter()
+            })
+            .flatten()
+            .collect()
+    }
+
+    /// Compute the instantiations for the given invariant, by comparing the memory accessed
+    /// by the invariant with that of the enclosing function.
+    fn compute_invariant_instances(
+        &self,
+        inv: &GlobalInvariant,
+    ) -> BTreeSet<(GlobalId, Vec<Type>)> {
+        // Determine the type arity of this invariant. If it is 0, we shortcut with just
+        // returning a single empty instance.
+        let arity = match &inv.kind {
+            ConditionKind::GlobalInvariant(ps) | ConditionKind::GlobalInvariantUpdate(ps) => {
+                ps.len() as u16
+            }
+            _ => 0,
+        };
+        if arity == 0 {
+            return vec![(inv.id, vec![])].into_iter().collect();
+        }
+
+        // Holds possible instantiations per type parameter
+        let mut per_type_param_insts = BTreeMap::new();
+
+        // Pairwise unify memory used by the invariant against memory in the function.
+        // Notice that the function memory is already instantiated for the function variant
+        // we are instrumenting.
+        for inv_mem in &inv.mem_usage {
+            for fun_mem in &self.used_memory {
+                let adapter = TypeUnificationAdapter::new_vec(
+                    &fun_mem.inst,
+                    &inv_mem.inst,
+                    /* treat_lhs_type_param_as_var */ false,
+                    /* treat_rhs_type_local_as_var */ true,
+                );
+                #[cfg(invariant_trace)]
+                println!(
+                    "{} =?= {} for inv {}",
+                    self.builder.global_env().display(fun_mem),
+                    self.builder.global_env().display(inv_mem),
+                    inv.loc.display(self.builder.global_env())
+                );
+                let rel = adapter.unify(Variance::Allow, /* shallow_subst */ false);
+                match rel {
+                    None => continue,
+                    Some((_, subst_rhs)) => {
+                        #[cfg(invariant_trace)]
+                        println!("unifies {:?}", subst_rhs);
+                        for (k, v) in subst_rhs {
+                            per_type_param_insts
+                                .entry(k)
+                                .or_insert_with(BTreeSet::new)
+                                .insert(v);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check whether all type parameters have at least one instantiation. If not, this
+        // invariant is not applicable (this corresponds to an unbound TypeLocal in the older
+        // translation scheme).
+        // TODO: we should generate a type check error if an invariant has unused, dead
+        //   type parameters because such an invariant can never pass this test.
+        let mut all_insts = BTreeSet::new();
+        if (0..arity).collect::<BTreeSet<_>>() == per_type_param_insts.keys().cloned().collect() {
+            // Compute the cartesian product of all individual type parameter instantiations.
+            for inst in per_type_param_insts
+                .values()
+                .map(|tys| tys.iter().cloned())
+                .multi_cartesian_product()
+            {
+                all_insts.insert((inv.id, inst));
+            }
+        }
+        all_insts
     }
 }

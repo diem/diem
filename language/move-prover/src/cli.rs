@@ -622,19 +622,12 @@ impl Options {
         }
         if matches.is_present("boogie-poly") {
             options.boogie_poly = true;
-            options.prover.run_mono = false;
-        }
-        if matches.is_present("inv-v1") {
-            options.prover.invariants_v2 = false;
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
         }
         if matches.is_present("experimental_pipeline") {
             options.experimental_pipeline = true;
-        }
-        if matches.is_present("weak-edges") {
-            options.prover.weak_edges = true;
         }
         if matches.is_present("timeout") {
             options.backend.vc_timeout = matches.value_of("timeout").unwrap().parse::<usize>()?;

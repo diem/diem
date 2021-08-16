@@ -3793,8 +3793,8 @@ Only TreasuryCompliance can have MintCapability [[H1]][PERMISSION].
 If an account has MintCapability, it is a TreasuryCompliance account.
 
 
-<pre><code><b>invariant</b> <b>forall</b> coin_type: type:
-    <b>forall</b> mint_cap_owner: address <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner):
+<pre><code><b>invariant</b>&lt;CoinType&gt;
+    <b>forall</b> mint_cap_owner: address <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner):
         <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(mint_cap_owner);
 </code></pre>
 
@@ -3810,21 +3810,21 @@ The permission "MintCurrency" is unique per currency [[I1]][PERMISSION].
 At most one address has a mint capability for SCS CoinType
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated]
-    <b>forall</b> coin_type: type <b>where</b> <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;coin_type&gt;():
-        <b>forall</b> mint_cap_owner1: address, mint_cap_owner2: address
-             <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner1)
-                        && <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner2):
-                  mint_cap_owner1 == mint_cap_owner2;
+<pre><code><b>invariant</b>&lt;CoinType&gt; [<b>global</b>, isolated]
+    <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;() ==&gt;
+        (<b>forall</b> mint_cap_owner1: address, mint_cap_owner2: address
+             <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner1)
+                        && <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner2):
+                  mint_cap_owner1 == mint_cap_owner2);
 </code></pre>
 
 
 If an address has a mint capability, it is an SCS currency.
 
 
-<pre><code><b>invariant</b>
-    <b>forall</b> coin_type: type, addr3: address <b>where</b> <a href="Diem.md#0x1_Diem_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3):
-        <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;coin_type&gt;();
+<pre><code><b>invariant</b>&lt;CoinType&gt;
+    <b>forall</b> addr3: address <b>where</b> <a href="Diem.md#0x1_Diem_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(addr3):
+        <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;();
 </code></pre>
 
 
@@ -3952,9 +3952,9 @@ Only TreasuryCompliance can have BurnCapability [[H3]][PERMISSION].
 If an account has BurnCapability, it is a TreasuryCompliance account.
 
 
-<pre><code><b>invariant</b> <b>forall</b> coin_type: type:
+<pre><code><b>invariant</b>&lt;CoinType&gt;
     <b>forall</b> addr1: address:
-        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1) ==&gt;
+        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr1) ==&gt;
             <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr1);
 </code></pre>
 
@@ -4070,9 +4070,9 @@ If an account has PreburnQueue, it is a DesignatedDealer account.
 > NB: during the transition this holds for both <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> and <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a></code> resources.
 
 
-<pre><code><b>invariant</b> <b>forall</b> coin_type: type:
+<pre><code><b>invariant</b>&lt;CoinType&gt;
     <b>forall</b> addr1: address:
-        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;coin_type&gt;&gt;(addr1) || <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(addr1) ==&gt;
+        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(addr1) || <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(addr1) ==&gt;
             <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr1);
 </code></pre>
 
@@ -4086,10 +4086,10 @@ this will be removed once all DD's have been upgraded to
 using the <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a></code>.
 
 
-<pre><code><b>invariant</b> <b>forall</b> coin_type: type, dd_addr: address
-    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(dd_addr):
-        <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(dd_addr).to_burn.value == 0 &&
-        !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;coin_type&gt;&gt;(dd_addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>forall</b> dd_addr: address
+    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(dd_addr):
+        <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(dd_addr).to_burn.value == 0 &&
+        !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
 
 
@@ -4098,18 +4098,18 @@ also be a <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> resource f
 the same address.
 
 
-<pre><code><b>invariant</b> <b>forall</b> coin_type: type, dd_addr: address
-    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;coin_type&gt;&gt;(dd_addr):
-        !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(dd_addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>forall</b> dd_addr: address
+    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(dd_addr):
+        !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
 
 
 A <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> resource can only be published holding a currency type.
 
 
-<pre><code><b>invariant</b> <b>forall</b> addr: address, coin_type: type
-    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(addr):
-    <a href="Diem.md#0x1_Diem_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;();
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>forall</b> addr: address
+    <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(addr):
+    <a href="Diem.md#0x1_Diem_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
 </code></pre>
 
 
@@ -4126,27 +4126,27 @@ Preburn is not transferrable [[J4]][PERMISSION].
 resource struct <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code> is persistent
 
 
-<pre><code><b>invariant</b> <b>update</b> <b>forall</b> coin_type: type, dr_addr: address
-    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;coin_type&gt;&gt;(dr_addr)):
-        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;coin_type&gt;&gt;(dr_addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>update</b> <b>forall</b> dr_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(dr_addr)):
+        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(dr_addr);
 </code></pre>
 
 
 resource struct <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;</code> is persistent
 
 
-<pre><code><b>invariant</b> <b>update</b> <b>forall</b> coin_type: type, tc_addr: address
-    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;coin_type&gt;&gt;(tc_addr)):
-        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;coin_type&gt;&gt;(tc_addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>update</b> <b>forall</b> tc_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(tc_addr)):
+        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(tc_addr);
 </code></pre>
 
 
 resource struct <code><a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> is persistent
 
 
-<pre><code><b>invariant</b> <b>update</b> <b>forall</b> coin_type: type, tc_addr: address
-    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(tc_addr)):
-        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(tc_addr);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <b>update</b> <b>forall</b> tc_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(tc_addr)):
+        <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(tc_addr);
 </code></pre>
 
 

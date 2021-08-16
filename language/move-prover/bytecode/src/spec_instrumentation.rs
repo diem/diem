@@ -25,7 +25,7 @@ use crate::{
     stackless_bytecode::{
         AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
     },
-    usage_analysis, verification_analysis, verification_analysis_v2,
+    usage_analysis, verification_analysis_v2,
 };
 use move_model::{
     ast::{Exp, QuantKind},
@@ -106,21 +106,11 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             return data;
         }
 
-        let is_verified: bool;
-        let is_inlined: bool;
-
         let options = ProverOptions::get(fun_env.module_env.env);
-        if options.invariants_v2 {
-            let verification_info =
-                verification_analysis_v2::get_info(&FunctionTarget::new(fun_env, &data));
-            is_verified = verification_info.verified;
-            is_inlined = verification_info.inlined;
-        } else {
-            let verification_info =
-                verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
-            is_verified = verification_info.verified;
-            is_inlined = verification_info.inlined;
-        };
+        let verification_info =
+            verification_analysis_v2::get_info(&FunctionTarget::new(fun_env, &data));
+        let is_verified = verification_info.verified;
+        let is_inlined = verification_info.inlined;
 
         if is_verified {
             // Create a clone of the function data, moving annotations
@@ -510,26 +500,6 @@ impl<'a> Instrumenter<'a> {
         );
 
         self.builder.set_loc_from_attr(id);
-        let opaque_display = if callee_opaque {
-            // Add a debug comment about the original function call to easier identify
-            // the opaque call in dumped bytecode.
-            let bc = Call(
-                id,
-                dests.clone(),
-                Operation::Function(mid, fid, targs.clone()),
-                srcs.clone(),
-                aa.clone(),
-            );
-            let bc_display = bc
-                .display(&self.builder.get_target(), &Default::default())
-                .to_string();
-            self.builder
-                .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
-            self.builder.emit_with(Nop);
-            Some(bc_display)
-        } else {
-            None
-        };
 
         // Emit `let` assignments.
         self.emit_lets(&callee_spec, targs, false);
@@ -589,18 +559,16 @@ impl<'a> Instrumenter<'a> {
             ));
             self.can_abort = true;
         } else {
-            // Generates OpaqueCallBegin if invariant_v2 flag is set.
-            if self.options.invariants_v2 {
-                self.generate_opaque_call(
-                    dests.clone(),
-                    mid,
-                    fid,
-                    targs,
-                    srcs.clone(),
-                    aa.clone(),
-                    true,
-                );
-            }
+            // Generates OpaqueCallBegin.
+            self.generate_opaque_call(
+                dests.clone(),
+                mid,
+                fid,
+                targs,
+                srcs.clone(),
+                aa.clone(),
+                true,
+            );
 
             // Emit saves for parameters used in old(..) context. Those can be referred
             // to in aborts conditions, and must be initialized before evaluating those.
@@ -728,17 +696,8 @@ impl<'a> Instrumenter<'a> {
                     .emit(Call(id, vec![], Operation::EventStoreDiverge, vec![], None));
             }
 
-            if !self.options.invariants_v2 {
-                // If enabled, mark end of opaque function call.
-                if let Some(bc_display) = opaque_display {
-                    self.builder
-                        .set_next_debug_comment(format!("<< opaque call: {}", bc_display));
-                    self.builder.emit_with(Nop);
-                }
-            } else {
-                // Generate OpaqueCallEnd instruction if invariant_v2.
-                self.generate_opaque_call(dests, mid, fid, targs, srcs, aa, false);
-            }
+            // Generate OpaqueCallEnd instruction if invariant_v2.
+            self.generate_opaque_call(dests, mid, fid, targs, srcs, aa, false);
         }
     }
 

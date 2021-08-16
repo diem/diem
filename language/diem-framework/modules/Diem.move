@@ -1579,8 +1579,8 @@ module DiemFramework::Diem {
 
         /// Only TreasuryCompliance can have MintCapability [[H1]][PERMISSION].
         /// If an account has MintCapability, it is a TreasuryCompliance account.
-        invariant forall coin_type: type:
-            forall mint_cap_owner: address where exists<MintCapability<coin_type>>(mint_cap_owner):
+        invariant<CoinType>
+            forall mint_cap_owner: address where exists<MintCapability<CoinType>>(mint_cap_owner):
                 Roles::spec_has_treasury_compliance_role_addr(mint_cap_owner);
 
         /// MintCapability is not transferrable [[J1]][PERMISSION].
@@ -1588,17 +1588,17 @@ module DiemFramework::Diem {
 
         /// The permission "MintCurrency" is unique per currency [[I1]][PERMISSION].
         /// At most one address has a mint capability for SCS CoinType
-        invariant [global, isolated]
-            forall coin_type: type where is_SCS_currency<coin_type>():
-                forall mint_cap_owner1: address, mint_cap_owner2: address
-                     where exists<MintCapability<coin_type>>(mint_cap_owner1)
-                                && exists<MintCapability<coin_type>>(mint_cap_owner2):
-                          mint_cap_owner1 == mint_cap_owner2;
+        invariant<CoinType> [global, isolated]
+            is_SCS_currency<CoinType>() ==>
+                (forall mint_cap_owner1: address, mint_cap_owner2: address
+                     where exists<MintCapability<CoinType>>(mint_cap_owner1)
+                                && exists<MintCapability<CoinType>>(mint_cap_owner2):
+                          mint_cap_owner1 == mint_cap_owner2);
 
         /// If an address has a mint capability, it is an SCS currency.
-        invariant
-            forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
-                is_SCS_currency<coin_type>();
+        invariant<CoinType>
+            forall addr3: address where spec_has_mint_capability<CoinType>(addr3):
+                is_SCS_currency<CoinType>();
     }
 
     /// ## Minting
@@ -1657,9 +1657,9 @@ module DiemFramework::Diem {
 
         /// Only TreasuryCompliance can have BurnCapability [[H3]][PERMISSION].
         /// If an account has BurnCapability, it is a TreasuryCompliance account.
-        invariant forall coin_type: type:
+        invariant<CoinType>
             forall addr1: address:
-                exists<BurnCapability<coin_type>>(addr1) ==>
+                exists<BurnCapability<CoinType>>(addr1) ==>
                     Roles::spec_has_treasury_compliance_role_addr(addr1);
 
         /// BurnCapability is not transferrable [[J3]][PERMISSION]. BurnCapability can be extracted from an
@@ -1724,9 +1724,9 @@ module DiemFramework::Diem {
         /// Only DesignatedDealer can have PreburnQueue [[H3]][PERMISSION].
         /// If an account has PreburnQueue, it is a DesignatedDealer account.
         /// > NB: during the transition this holds for both `Preburn` and `PreburnQueue` resources.
-        invariant forall coin_type: type:
+        invariant<CoinType>
             forall addr1: address:
-                exists<PreburnQueue<coin_type>>(addr1) || exists<Preburn<coin_type>>(addr1) ==>
+                exists<PreburnQueue<CoinType>>(addr1) || exists<Preburn<CoinType>>(addr1) ==>
                     Roles::spec_has_designated_dealer_role_addr(addr1);
 
         /// If there is a preburn resource published, it must have a value of zero.
@@ -1736,47 +1736,47 @@ module DiemFramework::Diem {
         /// > NB: This invariant is part of the upgrade process, eventually
         ///       this will be removed once all DD's have been upgraded to
         ///       using the `PreburnQueue`.
-        invariant forall coin_type: type, dd_addr: address
-            where exists<Preburn<coin_type>>(dd_addr):
-                global<Preburn<coin_type>>(dd_addr).to_burn.value == 0 &&
-                !exists<PreburnQueue<coin_type>>(dd_addr);
+        invariant<CoinType> forall dd_addr: address
+            where exists<Preburn<CoinType>>(dd_addr):
+                global<Preburn<CoinType>>(dd_addr).to_burn.value == 0 &&
+                !exists<PreburnQueue<CoinType>>(dd_addr);
 
         /// If there is a `PreburnQueue` resource published, then there cannot
         /// also be a `Preburn` resource for that same currency published under
         /// the same address.
-        invariant forall coin_type: type, dd_addr: address
-            where exists<PreburnQueue<coin_type>>(dd_addr):
-                !exists<Preburn<coin_type>>(dd_addr);
+        invariant<CoinType> forall dd_addr: address
+            where exists<PreburnQueue<CoinType>>(dd_addr):
+                !exists<Preburn<CoinType>>(dd_addr);
 
         /// A `Preburn` resource can only be published holding a currency type.
-        invariant forall addr: address, coin_type: type
-            where exists<Preburn<coin_type>>(addr):
-            spec_is_currency<coin_type>();
+        invariant<CoinType> forall addr: address
+            where exists<Preburn<CoinType>>(addr):
+            spec_is_currency<CoinType>();
 
         /// A `PreburnQueue` resource can only be published holding a currency type.
         /// >TODO: This assertion is causing a violation for unknown reasons, probably
         /// a prover bug.
-        // invariant forall addr: address, coin_type: type
-        //     where exists<PreburnQueue<coin_type>>(addr):
-        //     spec_is_currency<coin_type>();
+        // invariant<CoinType> forall addr: address
+        //     where exists<PreburnQueue<CoinType>>(addr):
+        //     spec_is_currency<CoinType>();
 
         /// Preburn is not transferrable [[J4]][PERMISSION].
         apply PreservePreburnQueueExistence<CoinType> to *<CoinType>;
 
         /// resource struct `CurrencyInfo` is persistent
-        invariant update forall coin_type: type, dr_addr: address
-            where old(exists<CurrencyInfo<coin_type>>(dr_addr)):
-                exists<CurrencyInfo<coin_type>>(dr_addr);
+        invariant<CoinType> update forall dr_addr: address
+            where old(exists<CurrencyInfo<CoinType>>(dr_addr)):
+                exists<CurrencyInfo<CoinType>>(dr_addr);
 
         /// resource struct `PreburnQueue<CoinType>` is persistent
-        invariant update forall coin_type: type, tc_addr: address
-            where old(exists<PreburnQueue<coin_type>>(tc_addr)):
-                exists<PreburnQueue<coin_type>>(tc_addr);
+        invariant<CoinType> update forall tc_addr: address
+            where old(exists<PreburnQueue<CoinType>>(tc_addr)):
+                exists<PreburnQueue<CoinType>>(tc_addr);
 
         /// resource struct `MintCapability<CoinType>` is persistent
-        invariant update forall coin_type: type, tc_addr: address
-            where old(exists<MintCapability<coin_type>>(tc_addr)):
-                exists<MintCapability<coin_type>>(tc_addr);
+        invariant<CoinType> update forall tc_addr: address
+            where old(exists<MintCapability<CoinType>>(tc_addr)):
+                exists<MintCapability<CoinType>>(tc_addr);
     }
 
 
