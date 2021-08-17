@@ -91,9 +91,10 @@ jobs:
   unit-test-allure-report:
     name: Unit Test Reports
     runs-on: ubuntu-latest
+    needs: prepare
     if: ${{ needs.prepare.output.changes-target-branch == 'main' }}
     container:
-      image: diem/build_environment:main
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
