@@ -526,7 +526,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 50
     needs: prepare
-    if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'pull_request' }}
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
