@@ -11,6 +11,7 @@ use diem_crypto::{
     hash::CryptoHash,
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::Signature,
+    validatable::Validatable,
     CryptoMaterialError, HashValue, ValidCryptoMaterial, ValidCryptoMaterialStringExt,
 };
 use diem_crypto_derive::{CryptoHasher, DeserializeKey, SerializeKey};
@@ -43,7 +44,7 @@ pub enum AuthenticationError {
 pub enum TransactionAuthenticator {
     /// Single signature
     Ed25519 {
-        public_key: Ed25519PublicKey,
+        public_key: Validatable<Ed25519PublicKey>,
         signature: Ed25519Signature,
     },
     /// K-of-N multisignature
@@ -63,7 +64,7 @@ impl TransactionAuthenticator {
     /// Create a single-signature ed25519 authenticator
     pub fn ed25519(public_key: Ed25519PublicKey, signature: Ed25519Signature) -> Self {
         Self::Ed25519 {
-            public_key,
+            public_key: Validatable::new_valid(public_key),
             signature,
         }
     }
@@ -107,7 +108,7 @@ impl TransactionAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => signature.verify(raw_txn, public_key),
+            } => signature.verify(raw_txn, public_key.validate()?),
             Self::MultiEd25519 {
                 public_key,
                 signature,
@@ -135,7 +136,10 @@ impl TransactionAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => AccountAuthenticator::ed25519(public_key.clone(), signature.clone()),
+            } => AccountAuthenticator::Ed25519 {
+                public_key: public_key.clone(),
+                signature: signature.clone(),
+            },
             Self::MultiEd25519 {
                 public_key,
                 signature,
@@ -255,7 +259,7 @@ impl fmt::Display for Scheme {
 pub enum AccountAuthenticator {
     /// Single signature
     Ed25519 {
-        public_key: Ed25519PublicKey,
+        public_key: Validatable<Ed25519PublicKey>,
         signature: Ed25519Signature,
     },
     /// K-of-N multisignature
@@ -278,7 +282,7 @@ impl AccountAuthenticator {
     /// Create a single-signature ed25519 authenticator
     pub fn ed25519(public_key: Ed25519PublicKey, signature: Ed25519Signature) -> Self {
         Self::Ed25519 {
-            public_key,
+            public_key: Validatable::new_valid(public_key),
             signature,
         }
     }
@@ -300,7 +304,7 @@ impl AccountAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => signature.verify(message, public_key),
+            } => signature.verify(message, public_key.validate()?),
             Self::MultiEd25519 {
                 public_key,
                 signature,
@@ -311,7 +315,7 @@ impl AccountAuthenticator {
     /// Return the raw bytes of `self.public_key`
     pub fn public_key_bytes(&self) -> Vec<u8> {
         match self {
-            Self::Ed25519 { public_key, .. } => public_key.to_bytes().to_vec(),
+            Self::Ed25519 { public_key, .. } => public_key.unvalidated().to_bytes().to_vec(),
             Self::MultiEd25519 { public_key, .. } => public_key.to_bytes().to_vec(),
         }
     }

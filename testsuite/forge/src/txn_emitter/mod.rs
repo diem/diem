@@ -543,6 +543,7 @@ async fn wait_for_signed_transactions(
             .ok_or_else(|| anyhow!("Expected at least 1 txn"))?
             .saturating_sub(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?);
 
+    #[allow(clippy::mutable_key_type)]
     let mut uncommitted_txns = txns.iter().collect::<HashSet<_>>();
 
     while Instant::now() < deadline {
