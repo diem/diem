@@ -341,14 +341,14 @@ jobs:
   rustdoc:
     needs: prepare
     if: ${{ needs.prepare.outputs.changes-target-branch == 'latest' && needs.prepare.outputs.rust-changes == 'true'}}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
-      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v2.3.4
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.6
         with:
@@ -365,8 +365,6 @@ jobs:
           RUSTDOCFLAGS: "-Z unstable-options --enable-index-page"
           CARGO_INCREMENTAL: 0
           RUSTFLAGS: -D warnings
-      - name: copy API specification doc into target/doc/diem_api
-        run : cp api/doc/openapi.yaml target/doc/diem_api/openapi.yaml && cp api/doc/spec.html target/doc/diem_api/spec.html
       - name: Deploy Docs
         uses: peaceiris/actions-gh-pages@v3.8.0
         with:
