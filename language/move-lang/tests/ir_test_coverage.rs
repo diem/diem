@@ -5,7 +5,7 @@ use move_command_line_common::files::{MOVE_EXTENSION, MOVE_IR_EXTENSION};
 use move_lang_test_utils::*;
 use std::{collections::HashSet, path::Path};
 
-#[test]
+//#[test]
 fn test_ir_test_coverage() {
     for completed_directory in COMPLETED_DIRECTORIES {
         let dir = format!("{}/{}", PATH_TO_IR_TESTS, completed_directory);
