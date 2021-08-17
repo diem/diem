@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Factory, Result, Swarm, Version};
+use anyhow::Context;
 use rand::rngs::StdRng;
 use std::{
     collections::HashMap,
@@ -131,7 +132,21 @@ impl Factory for LocalFactory {
             .number_of_validators(node_num)
             .initial_version(version.clone())
             .build(rng)?;
-        swarm.launch()?;
+        swarm
+            .launch()
+            .with_context(|| format!("Swarm logs can be found here: {}", swarm.logs_location()))?;
+
+        // swarm.launch().map_err(|e| {
+        //     swarm.logs_location()
+        //     e
+        // });
+        // match swarm.launch() {
+        //     Ok(()) => {}
+        //     Err(e) => {
+        //         swarm.
+        //         return e;
+        //     }
+        // }
 
         Ok(Box::new(swarm))
     }
