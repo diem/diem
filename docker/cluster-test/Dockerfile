@@ -1,4 +1,4 @@
-FROM debian:buster-20210721@sha256:cc58a29c333ee594f7624d968123429b26916face46169304f07580644dde6b2 AS toolchain
+FROM debian:buster-20210816@sha256:e2fe52e17d649812bddcac07faf16f33542129a59b2c1c59b39a436754b7f146 AS toolchain
 
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
@@ -19,7 +19,7 @@ COPY . /diem
 
 RUN IMAGE_TARGETS="test" ./docker/build-common.sh
 
-FROM debian:buster-20210721@sha256:cc58a29c333ee594f7624d968123429b26916face46169304f07580644dde6b2
+FROM debian:buster-20210816@sha256:e2fe52e17d649812bddcac07faf16f33542129a59b2c1c59b39a436754b7f146
 
 RUN apt-get update && apt-get install -y libssl1.1 openssh-client wget && apt-get clean && rm -r /var/lib/apt/lists/*
 RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
