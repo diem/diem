@@ -6,6 +6,7 @@ use move_lang_test_utils::*;
 use std::{collections::HashSet, path::Path};
 
 //#[test]
+#[allow(dead_code)]
 fn test_ir_test_coverage() {
     for completed_directory in COMPLETED_DIRECTORIES {
         let dir = format!("{}/{}", PATH_TO_IR_TESTS, completed_directory);
