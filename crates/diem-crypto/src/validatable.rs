@@ -133,3 +133,91 @@ where
         self.unvalidated.hash(state);
     }
 }
+
+//
+// Implement for Ed25519
+//
+
+use crate::ed25519::{Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH};
+
+/// An unvalidated `Ed25519PublicKey`
+#[derive(Debug, Clone, Eq)]
+pub struct UnvalidatedEd25519PublicKey([u8; ED25519_PUBLIC_KEY_LENGTH]);
+
+impl UnvalidatedEd25519PublicKey {
+    /// Return key as bytes
+    pub fn to_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_LENGTH] {
+        self.0
+    }
+}
+
+impl Serialize for UnvalidatedEd25519PublicKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if serializer.is_human_readable() {
+            let encoded = ::hex::encode(&self.0);
+            serializer.serialize_str(&encoded)
+        } else {
+            // See comment in deserialize_key.
+            serializer.serialize_newtype_struct(
+                "Ed25519PublicKey",
+                serde_bytes::Bytes::new(self.0.as_ref()),
+            )
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for UnvalidatedEd25519PublicKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        if deserializer.is_human_readable() {
+            let encoded_key = <String>::deserialize(deserializer)?;
+            let bytes_out = ::hex::decode(encoded_key).map_err(D::Error::custom)?;
+            <[u8; ED25519_PUBLIC_KEY_LENGTH]>::try_from(bytes_out.as_ref())
+                .map(UnvalidatedEd25519PublicKey)
+                .map_err(D::Error::custom)
+        } else {
+            // In order to preserve the Serde data model and help analysis tools,
+            // make sure to wrap our value in a container with the same name
+            // as the original type.
+            #[derive(Deserialize)]
+            #[serde(rename = "Ed25519PublicKey")]
+            struct Value<'a>(&'a [u8]);
+
+            let value = Value::deserialize(deserializer)?;
+            <[u8; ED25519_PUBLIC_KEY_LENGTH]>::try_from(value.0)
+                .map(UnvalidatedEd25519PublicKey)
+                .map_err(D::Error::custom)
+        }
+    }
+}
+
+impl Hash for UnvalidatedEd25519PublicKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write(&self.0)
+    }
+}
+
+impl PartialEq for UnvalidatedEd25519PublicKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Validate for Ed25519PublicKey {
+    type Unvalidated = UnvalidatedEd25519PublicKey;
+
+    fn validate(unvalidated: &Self::Unvalidated) -> Result<Self> {
+        Self::try_from(unvalidated.0.as_ref()).map_err(Into::into)
+    }
+
+    fn to_unvalidated(&self) -> Self::Unvalidated {
+        UnvalidatedEd25519PublicKey(self.to_bytes())
+    }
+}
