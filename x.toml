@@ -47,6 +47,7 @@ allowed = [
     "clippy::map-flatten",
     "clippy::format-push-string",
     "clippy::unwrap-or-else-default",
+    "clippy::large-enum-variant",
 ]
 warn = [
     "clippy::wildcard_dependencies",

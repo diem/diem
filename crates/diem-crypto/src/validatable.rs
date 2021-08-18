@@ -221,3 +221,74 @@ impl Validate for Ed25519PublicKey {
         UnvalidatedEd25519PublicKey(self.to_bytes())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+        test_utils::uniform_keypair_strategy,
+        validatable::{UnvalidatedEd25519PublicKey, Validate},
+    };
+    use proptest::prelude::*;
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
+    proptest! {
+        #[test]
+        fn unvalidated_ed25519_public_key_equivalence(
+            keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+        ) {
+            let valid = keypair.public_key;
+            let unvalidated = valid.to_unvalidated();
+
+            prop_assert_eq!(&unvalidated, &UnvalidatedEd25519PublicKey(valid.to_bytes()));
+            prop_assert_eq!(&valid, &Ed25519PublicKey::validate(&unvalidated).unwrap());
+
+            // Ensure Serialize and Deserialize are implemented the same
+
+            // BCS - A non-human-readable format
+            {
+                let serialized_valid = bcs::to_bytes(&valid).unwrap();
+                let serialized_unvalidated = bcs::to_bytes(&unvalidated).unwrap();
+                prop_assert_eq!(&serialized_valid, &serialized_unvalidated);
+
+                let deserialized_valid_from_unvalidated: Ed25519PublicKey = bcs::from_bytes(&serialized_unvalidated).unwrap();
+                let deserialized_unvalidated_from_valid: UnvalidatedEd25519PublicKey = bcs::from_bytes(&serialized_valid).unwrap();
+
+                prop_assert_eq!(&valid, &deserialized_valid_from_unvalidated);
+                prop_assert_eq!(&unvalidated, &deserialized_unvalidated_from_valid);
+            }
+
+            // JSON A human-readable format
+            {
+                let serialized_valid = serde_json::to_string(&valid).unwrap();
+                let serialized_unvalidated = serde_json::to_string(&unvalidated).unwrap();
+                prop_assert_eq!(&serialized_valid, &serialized_unvalidated);
+
+                let deserialized_valid_from_unvalidated: Ed25519PublicKey = serde_json::from_str(&serialized_unvalidated).unwrap();
+                let deserialized_unvalidated_from_valid: UnvalidatedEd25519PublicKey = serde_json::from_str(&serialized_valid).unwrap();
+
+                prop_assert_eq!(&valid, &deserialized_valid_from_unvalidated);
+                prop_assert_eq!(&unvalidated, &deserialized_unvalidated_from_valid);
+            }
+
+
+            // Ensure Hash is implemented the same
+            let valid_hash = {
+                let mut hasher = DefaultHasher::new();
+                valid.hash(&mut hasher);
+                hasher.finish()
+            };
+
+            let unvalidated_hash = {
+                let mut hasher = DefaultHasher::new();
+                unvalidated.hash(&mut hasher);
+                hasher.finish()
+            };
+
+            prop_assert_eq!(valid_hash, unvalidated_hash);
+        }
+    }
+}
