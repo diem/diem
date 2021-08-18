@@ -137,7 +137,7 @@ pub fn check_errors<W: WriteColor>(
     msg: &'static str,
 ) -> anyhow::Result<()> {
     env.report_diag(error_writer, options.prover.report_severity);
-    if env.has_errors() {
+    if env.has_errors() || env.has_warnings() {
         Err(anyhow!(msg))
     } else {
         Ok(())
