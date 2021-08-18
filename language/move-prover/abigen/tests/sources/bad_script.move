@@ -1,5 +1,5 @@
 script {
-    fun bad_script(not_used: u64) {
-        abort 55
+    fun bad_script() {
+        abort true  // type error, abort code must be a u64
     }
 }

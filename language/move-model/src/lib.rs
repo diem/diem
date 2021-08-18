@@ -223,10 +223,10 @@ pub fn run_model_builder_with_options_and_compilation_flags(
         Ok(compiler) => {
             let (units, warnings) = compiler.into_compiled_units();
             if !warnings.is_empty() {
-                // TODO the remaining diagnostics are just warnings.
-                // It should be feasible to continue here
+                // NOTE: these diagnostics are just warnings. it should be feasible to continue the
+                // model building here. But before that, register the warnings to the `GlobalEnv`
+                // first so we get a chance to report these warnings as well.
                 add_move_lang_diagnostics(&mut env, warnings);
-                return Ok(env);
             }
             units
         }
