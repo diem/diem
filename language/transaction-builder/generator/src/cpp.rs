@@ -322,6 +322,13 @@ using namespace diem_types;
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "std::vector<uint8_t>".into(),
+                Vector(type_tag) => {
+                    if type_tag.as_ref() == &U8 {
+                        "std::vector<std::vector<uint8_t>>".into()
+                    } else {
+                        common::type_not_allowed(type_tag)
+                    }
+                }
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -374,6 +381,13 @@ using namespace diem_types;
             Address => None,
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => Some("std::vector<uint8_t>"),
+                Vector(type_tag) => {
+                    if type_tag.as_ref() == &U8 {
+                        Some("std::vector<std::vector<uint8_t>>")
+                    } else {
+                        common::type_not_allowed(type_tag)
+                    }
+                }
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),

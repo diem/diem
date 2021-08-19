@@ -32,6 +32,13 @@ fn quote_type_as_format(type_tag: &TypeTag) -> Format {
         Address => Format::TypeName("AccountAddress".into()),
         Vector(type_tag) => match type_tag.as_ref() {
             U8 => Format::Bytes,
+            Vector(type_tag) => {
+                if type_tag.as_ref() == &U8 {
+                    Format::Seq(Box::new(Format::Bytes))
+                } else {
+                    type_not_allowed(type_tag)
+                }
+            }
             _ => type_not_allowed(type_tag),
         },
         Struct(_) | Signer => type_not_allowed(type_tag),
@@ -84,6 +91,13 @@ pub(crate) fn mangle_type(type_tag: &TypeTag) -> String {
         Address => "address".into(),
         Vector(type_tag) => match type_tag.as_ref() {
             U8 => "u8vector".into(),
+            Vector(type_tag) => {
+                if type_tag.as_ref() == &U8 {
+                    "vectorvectoru8".into()
+                } else {
+                    type_not_allowed(type_tag)
+                }
+            }
             _ => type_not_allowed(type_tag),
         },
         Struct(_) | Signer => type_not_allowed(type_tag),
