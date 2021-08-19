@@ -157,6 +157,10 @@ pub struct StructLayoutOptions {
     /// Generate layout bindings for `struct` bound to these type arguments.
     #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag), requires="struct")]
     type_args: Option<Vec<TypeTag>>,
+    /// If set, generate bindings only for the struct passed in.
+    /// When unset, generates bindings for the struct and all of its transitive dependencies.
+    #[structopt(long = "shallow")]
+    shallow: bool,
 }
 
 impl SandboxCommand {
@@ -280,6 +284,7 @@ fn handle_generate_commands(cmd: &GenerateCommand, state: &OnDiskStateView) -> R
                 module,
                 &options.struct_,
                 &options.type_args,
+                options.shallow,
                 state,
             )
         }

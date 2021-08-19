@@ -4868,6 +4868,7 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "ref-cast",
+ "serde-reflection",
  "serde_json",
  "variant_count",
 ]

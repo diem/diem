@@ -1,15 +1,220 @@
 Command `sandbox publish --mode bare`:
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u64`:
-{ t: u64, b: bool, }
+---
+"00000000000000000000000000000001::M2::C<u64>":
+  STRUCT:
+    - t: U64
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args address`:
-{ t: address, b: bool, }
+---
+"00000000000000000000000000000001::M2::C<AccountAddress>":
+  STRUCT:
+    - t:
+        TYPENAME: AccountAddress
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args vector<u8>`:
-{ t: vector<u8>, b: bool, }
+---
+"00000000000000000000000000000001::M2::C<vector<u8>>":
+  STRUCT:
+    - t: BYTES
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct B --type-args bool`:
-{ a: address, c: { t: bool, b: bool, }, t: bool, }
+---
+"00000000000000000000000000000001::M1::B<bool>":
+  STRUCT:
+    - a:
+        TYPENAME: AccountAddress
+    - c:
+        TYPENAME: "00000000000000000000000000000001::M2::C<bool>"
+    - t: BOOL
+"00000000000000000000000000000001::M2::C<bool>":
+  STRUCT:
+    - t: BOOL
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
+Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct B --type-args bool --shallow`:
+---
+"00000000000000000000000000000001::M1::B<bool>":
+  STRUCT:
+    - a:
+        TYPENAME: AccountAddress
+    - c:
+        TYPENAME: "00000000000000000000000000000001::M2::C<bool>"
+    - t: BOOL
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args 0x1::M1::S<u64>`:
-{ f: u64, v: vector<u8>, b: { a: address, c: { t: { t: u64, }, b: bool, }, t: { t: u64, }, }, }
+---
+"00000000000000000000000000000001::M1::A<00000000000000000000000000000001::M1::S<u64>>":
+  STRUCT:
+    - f: U64
+    - v: BYTES
+    - b:
+        TYPENAME: "00000000000000000000000000000001::M1::B<00000000000000000000000000000001::M1::S<u64>>"
+"00000000000000000000000000000001::M1::B<00000000000000000000000000000001::M1::S<u64>>":
+  STRUCT:
+    - a:
+        TYPENAME: AccountAddress
+    - c:
+        TYPENAME: "00000000000000000000000000000001::M2::C<00000000000000000000000000000001::M1::S<u64>>"
+    - t:
+        TYPENAME: "00000000000000000000000000000001::M1::S<u64>"
+"00000000000000000000000000000001::M1::S<u64>":
+  STRUCT:
+    - t: U64
+"00000000000000000000000000000001::M2::C<00000000000000000000000000000001::M1::S<u64>>":
+  STRUCT:
+    - t:
+        TYPENAME: "00000000000000000000000000000001::M1::S<u64>"
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args vector<0x1::M1::S<u64>>`:
-{ f: u64, v: vector<u8>, b: { a: address, c: { t: vector<{ t: u64, }>, b: bool, }, t: vector<{ t: u64, }>, }, }
+---
+"00000000000000000000000000000001::M1::A<vector<00000000000000000000000000000001::M1::S<u64>>>":
+  STRUCT:
+    - f: U64
+    - v: BYTES
+    - b:
+        TYPENAME: "00000000000000000000000000000001::M1::B<vector<00000000000000000000000000000001::M1::S<u64>>>"
+"00000000000000000000000000000001::M1::B<vector<00000000000000000000000000000001::M1::S<u64>>>":
+  STRUCT:
+    - a:
+        TYPENAME: AccountAddress
+    - c:
+        TYPENAME: "00000000000000000000000000000001::M2::C<vector<00000000000000000000000000000001::M1::S<u64>>>"
+    - t:
+        SEQ:
+          TYPENAME: "00000000000000000000000000000001::M1::S<u64>"
+"00000000000000000000000000000001::M1::S<u64>":
+  STRUCT:
+    - t: U64
+"00000000000000000000000000000001::M2::C<vector<00000000000000000000000000000001::M1::S<u64>>>":
+  STRUCT:
+    - t:
+        SEQ:
+          TYPENAME: "00000000000000000000000000000001::M1::S<u64>"
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
+Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args 0x1::M1::S<u64> --shallow`:
+---
+"00000000000000000000000000000001::M1::A<00000000000000000000000000000001::M1::S<u64>>":
+  STRUCT:
+    - f: U64
+    - v: BYTES
+    - b:
+        TYPENAME: "00000000000000000000000000000001::M1::B<00000000000000000000000000000001::M1::S<u64>>"
+
+Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args vector<0x1::M1::S<u64>> --shallow`:
+---
+"00000000000000000000000000000001::M1::A<vector<00000000000000000000000000000001::M1::S<u64>>>":
+  STRUCT:
+    - f: U64
+    - v: BYTES
+    - b:
+        TYPENAME: "00000000000000000000000000000001::M1::B<vector<00000000000000000000000000000001::M1::S<u64>>>"
+
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args 0x1::M2::C<u64>`:
-{ t: { t: u64, b: bool, }, b: bool, }
+---
+"00000000000000000000000000000001::M2::C<00000000000000000000000000000001::M2::C<u64>>":
+  STRUCT:
+    - t:
+        TYPENAME: "00000000000000000000000000000001::M2::C<u64>"
+    - b: BOOL
+"00000000000000000000000000000001::M2::C<u64>":
+  STRUCT:
+    - t: U64
+    - b: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+
+Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct G`:
+---
+"00000000000000000000000000000001::M1::G<>":
+  STRUCT:
+    - x: U64
+    - s:
+        TYPENAME: "00000000000000000000000000000001::M1::S<bool>"
+"00000000000000000000000000000001::M1::S<bool>":
+  STRUCT:
+    - t: BOOL
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Signer:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+

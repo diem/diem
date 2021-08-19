@@ -5,12 +5,20 @@ sandbox generate struct-layouts --module storage/0x00000000000000000000000000000
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args address
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args vector<u8>
 
-# across modules
+# across modules deep
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct B --type-args bool
+# across modules shallow
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct B --type-args bool --shallow
 
 # with fancy type parameters
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args 0x1::M1::S<u64>
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args vector<0x1::M1::S<u64>>
+# same thing, but shallow
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args 0x1::M1::S<u64> --shallow
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct A --type-args vector<0x1::M1::S<u64>> --shallow
 
 # recursive type definition
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args 0x1::M2::C<u64>
+
+# without --type-args
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct G

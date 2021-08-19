@@ -17,7 +17,6 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
     resolver::{ModuleResolver, ResourceResolver},
-    value::MoveStructLayout,
 };
 use move_ir_types::location::Spanned;
 use move_lang::{shared::NumericalAddress, MOVE_COMPILED_INTERFACES_DIR};
@@ -39,8 +38,9 @@ pub const RESOURCES_DIR: &str = "resources";
 pub const MODULES_DIR: &str = "modules";
 /// subdirectory of `DEFAULT_STORAGE_DIR`/<addr> where events are stored
 pub const EVENTS_DIR: &str = "events";
-/// subdirectory of `DEFAULT_BUILD_DIR`/<addr> where generated struct layouts are stored
-pub const STRUCT_LAYOUTS_DIR: &str = "struct_layouts";
+
+/// file under `DEFAULT_BUILD_DIR` where a registry of generated struct layouts are stored
+pub const STRUCT_LAYOUTS_FILE: &str = "struct_layouts.yaml";
 
 pub type ModuleIdWithNamedAddress = (ModuleId, Option<Symbol>);
 
@@ -162,8 +162,8 @@ impl OnDiskStateView {
         &self.build_dir
     }
 
-    pub fn struct_layouts_dir(&self) -> PathBuf {
-        self.build_dir.join(STRUCT_LAYOUTS_DIR)
+    pub fn struct_layouts_file(&self) -> PathBuf {
+        self.build_dir.join(STRUCT_LAYOUTS_FILE)
     }
 
     fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
@@ -422,13 +422,12 @@ impl OnDiskStateView {
     }
 
     /// Save the YAML encoding `layout` on disk under `build_dir/layouts/id`.
-    pub fn save_layout_yaml(&self, id: StructTag, layout: &MoveStructLayout) -> Result<()> {
-        let mut layouts_dir = self.struct_layouts_dir();
-        if !layouts_dir.exists() {
-            fs::create_dir_all(layouts_dir.clone())?
+    pub fn save_struct_layouts(&self, layouts: &str) -> Result<()> {
+        let layouts_file = self.struct_layouts_file();
+        if !layouts_file.exists() {
+            fs::create_dir_all(layouts_file.parent().unwrap())?
         }
-        layouts_dir.push(StructID(id).to_string());
-        Ok(fs::write(layouts_dir, serde_yaml::to_string(layout)?)?)
+        Ok(fs::write(layouts_file, layouts)?)
     }
 
     // keep the mv_interfaces generated in the build_dir in-sync with the modules on storage. The
@@ -548,7 +547,7 @@ impl ResourceResolver for OnDiskStateView {
     }
 }
 
-impl GetModule for OnDiskStateView {
+impl GetModule for &OnDiskStateView {
     type Error = anyhow::Error;
 
     fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<CompiledModule>, Self::Error> {
