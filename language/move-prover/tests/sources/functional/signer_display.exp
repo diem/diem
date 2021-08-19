@@ -1,0 +1,10 @@
+Move prover returns: exiting with boogie verification errors
+error: unknown assertion failed
+  ┌─ tests/sources/functional/signer_display.move:7:13
+  │
+7 │             assert Signer::spec_address_of(account) == @0x1;
+  │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │
+  =     at tests/sources/functional/signer_display.move:5: f_incorrect
+  =         account = <redacted>
+  =     at tests/sources/functional/signer_display.move:7: f_incorrect
