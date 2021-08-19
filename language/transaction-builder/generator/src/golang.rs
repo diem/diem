@@ -70,7 +70,7 @@ pub fn output(
     emitter.output_script_function_decoder_map(&common::script_function_abis(abis))?;
 
     emitter.output_encoding_helpers(abis)?;
-    emitter.output_decoding_helpers(abis)?;
+    emitter.output_decoding_helpers(&common::transaction_script_abis(abis))?;
 
     Ok(())
 }
@@ -565,8 +565,13 @@ func encode_{}_argument(arg {}) []byte {{
         )
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_helper_types(abis);
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+        let script_abis: Vec<_> = abis
+            .into_iter()
+            .cloned()
+            .map(ScriptABI::TransactionScript)
+            .collect();
+        let required_types = common::get_required_helper_types(&script_abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -697,6 +702,7 @@ func decode_{0}_argument(arg diemtypes.TransactionArgument) (value {1}, err erro
             Address => "diemtypes.AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "[]byte".into(),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => "[][]byte".into(),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -741,6 +747,7 @@ func decode_{0}_argument(arg diemtypes.TransactionArgument) (value {1}, err erro
             Address => None,
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => Some("Bytes"),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => Some("VecBytes"),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),

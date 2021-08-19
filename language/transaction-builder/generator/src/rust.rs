@@ -829,15 +829,11 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
                         "Bytes".into()
                     }
                 }
-                Vector(type_tag) => {
-                    if type_tag.as_ref() == &U8 {
-                        if local_types {
-                            "Vec<Vec<u8>>".into()
-                        } else {
-                            "Vec<Bytes>".into()
-                        }
+                Vector(type_tag) if type_tag.as_ref() == &U8 => {
+                    if local_types {
+                        "Vec<Vec<u8>>".into()
                     } else {
-                        common::type_not_allowed(type_tag)
+                        "Vec<Bytes>".into()
                     }
                 }
                 _ => common::type_not_allowed(type_tag),
@@ -857,11 +853,7 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
             Bool | U8 | U64 | U128 | Address => {}
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => {}
-                Vector(type_tag) => {
-                    if type_tag.as_ref() != &U8 {
-                        common::type_not_allowed(type_tag)
-                    }
-                }
+                Vector(type_tag) if type_tag.as_ref() == &U8 => {}
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),

@@ -56,7 +56,7 @@ pub fn output(
     emitter.output_script_function_decoder_map(common::script_function_abis(abis).as_slice())?;
 
     emitter.output_encoding_helpers(abis)?;
-    emitter.output_decoding_helpers(abis)?;
+    emitter.output_decoding_helpers(&common::transaction_script_abis(abis))?;
 
     Ok(())
 }
@@ -491,8 +491,13 @@ def encode_{}_argument(arg: {}) -> bytes:
         )
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_helper_types(abis);
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+        let script_abis: Vec<_> = abis
+            .into_iter()
+            .cloned()
+            .map(ScriptABI::TransactionScript)
+            .collect();
+        let required_types = common::get_required_helper_types(&script_abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -606,6 +611,7 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "bytes".into(),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => "typing.Sequence[bytes]".into(),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -651,6 +657,7 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
             Address => None,
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => Some("bytes"),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => Some("typing.Sequence[bytes]"),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),

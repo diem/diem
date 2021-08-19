@@ -78,7 +78,7 @@ fn write_helper_file(
     emitter.output_script_function_decoder_map(&common::script_function_abis(abis))?;
 
     emitter.output_encoding_helpers(abis)?;
-    emitter.output_decoding_helpers(abis)?;
+    emitter.output_decoding_helpers(&common::transaction_script_abis(abis))?;
 
     emitter.out.unindent();
     writeln!(emitter.out, "\n}}\n")
@@ -186,6 +186,7 @@ where
 import java.math.BigInteger;
 import java.lang.IllegalArgumentException;
 import java.lang.IndexOutOfBoundsException;
+import java.util.List;
 import com.diem.types.AccountAddress;
 import com.diem.types.Script;
 import com.diem.types.ScriptFunction;
@@ -692,8 +693,13 @@ private static Bytes encode_{}_argument({} arg) {{
         )
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_helper_types(abis);
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+        let script_abis: Vec<_> = abis
+            .into_iter()
+            .cloned()
+            .map(ScriptABI::TransactionScript)
+            .collect();
+        let required_types = common::get_required_helper_types(&script_abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -816,6 +822,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "Bytes".into(),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => "List<Bytes>".into(),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -861,6 +868,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             Address => None,
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => Some("bytes"),
+                Vector(type_tag) if type_tag.as_ref() == &U8 => Some("vec_bytes"),
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
