@@ -153,7 +153,7 @@ use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<COIN>(account);
+    DiemAccount::add_currency_for_test<COIN>(account);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -165,7 +165,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -177,7 +177,7 @@ script {
 use DiemFramework::DiemAccount;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<u64>(account);
+    DiemAccount::add_currency_for_test<u64>(account);
 }
 }
 // check: "Keep(ABORTED { code: 261,"
@@ -190,7 +190,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(ABORTED { code: 3846,"

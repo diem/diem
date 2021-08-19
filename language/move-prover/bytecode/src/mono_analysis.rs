@@ -5,13 +5,14 @@
 //! computes the distinct type instantiations in the model for structs and inlined functions.
 //! It also eliminates type quantification (`forall coin_type: type:: P`).
 
-use crate::{
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{Bytecode, Operation},
-    verification_analysis_v2,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    rc::Rc,
 };
+
 use itertools::Itertools;
+
 use move_model::{
     ast,
     ast::{Condition, ConditionKind, ExpData},
@@ -21,10 +22,12 @@ use move_model::{
     },
     ty::{Type, TypeDisplayContext},
 };
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-    rc::Rc,
+
+use crate::{
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    stackless_bytecode::{Bytecode, Operation},
+    verification_analysis_v2,
 };
 
 /// The environment extension computed by this analysis.

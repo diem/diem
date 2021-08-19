@@ -10,6 +10,7 @@ use crate::{
     options::ProverOptions,
     usage_analysis,
 };
+use itertools::Itertools;
 use log::debug;
 use move_model::{
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, ModuleEnv, QualifiedId, VerificationScope},
@@ -169,37 +170,86 @@ fn compute_disabled_invs_for_fun(
 /// The second condition is an exception for functions that cannot invalidate
 /// any invariants.
 fn check_legal_disabled_invariants(
-    _fun_env: &FunctionEnv,
-    _disabled_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
-    _non_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
-    _funs_that_modify_some_inv: &BTreeSet<QualifiedId<FunId>>,
+    fun_env: &FunctionEnv,
+    disabled_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    non_inv_fun_set: &BTreeSet<QualifiedId<FunId>>,
+    funs_that_modify_some_inv: &BTreeSet<QualifiedId<FunId>>,
 ) {
-
-    // TODO: this currently produces a false positive for unknown reasons. It is hard to
-    //   debug because the error message does not give any info about the source of
-    //   invariant disabling. To give better error messages, we need to extend the analysis
-    //   to track locations.
-    /*
     let global_env = fun_env.module_env.env;
     let fun_id = fun_env.get_qualified_id();
     if non_inv_fun_set.contains(&fun_id) && funs_that_modify_some_inv.contains(&fun_id) {
-        // function is public or script, which means we don't know whether invariants hold
-        // or not at the call site
-        if fun_env.has_unknown_callers() {
+        if disabled_inv_fun_set.contains(&fun_id) {
             global_env.error(
                 &fun_env.get_loc(),
-                "Public or script functions must not be called when invariants are disabled \
-                 in a transitive caller or there is a pragma delegate_invariants_to_caller",
+                "Functions must not have a disable invariant pragma when invariants are \
+                 disabled in a transitive caller or there is a \
+                 pragma delegate_invariants_to_caller",
             );
-        } else if disabled_inv_fun_set.contains(&fun_id) {
-            global_env.error(
-                &fun_env.get_loc(),
-                "Functions must not have a disable invariant pragma when invariants are disabled \
-                 in a transitive caller or there is a pragma delegate_invariants_to_caller",
+        } else if fun_env.has_unknown_callers() {
+            if is_fun_delegating(fun_env) {
+                global_env.error(
+                    &fun_env.get_loc(),
+                    "Public or script functions cannot delegate invariants",
+                )
+            } else {
+                global_env.error_with_notes(
+                    &fun_env.get_loc(),
+                    "Public or script functions cannot be transitively called by \
+                      functions disabling or delegating invariants",
+                    compute_non_inv_cause_chain(fun_env),
+                )
+            }
+        }
+    }
+}
+
+/// Compute the chain of calls which leads to an implicit non-inv function.
+fn compute_non_inv_cause_chain(fun_env: &FunctionEnv<'_>) -> Vec<String> {
+    let global_env = fun_env.module_env.env;
+    let mut worklist: BTreeSet<Vec<QualifiedId<FunId>>> = fun_env
+        .get_calling_functions()
+        .into_iter()
+        .map(|id| vec![id])
+        .collect();
+    let mut done = BTreeSet::new();
+    let mut result = vec![];
+    while let Some(caller_list) = worklist.iter().cloned().next() {
+        worklist.remove(&caller_list);
+        let caller_id = *caller_list.iter().last().unwrap();
+        done.insert(caller_id);
+        let caller_env = global_env.get_function_qid(caller_id);
+        let display_chain = || {
+            vec![fun_env.get_qualified_id()]
+                .into_iter()
+                .chain(caller_list.iter().cloned())
+                .map(|id| global_env.get_function_qid(id).get_full_name_str())
+                .join(" <- ")
+        };
+        if is_fun_disabled(&caller_env) {
+            result.push(format!("disabled by {}", display_chain()));
+        } else if is_fun_delegating(&caller_env) {
+            result.push(format!("delegated by {}", display_chain()));
+        } else {
+            worklist.extend(
+                caller_env
+                    .get_calling_functions()
+                    .into_iter()
+                    .filter_map(|id| {
+                        if done.contains(&id) {
+                            None
+                        } else {
+                            let mut new_caller_list = caller_list.clone();
+                            new_caller_list.push(id);
+                            Some(new_caller_list)
+                        }
+                    }),
             );
         }
     }
-     */
+    if result.is_empty() {
+        result.push("cannot determine disabling reason (bug?)".to_owned())
+    }
+    result
 }
 
 // Using pragmas, find functions called from a context where invariant
@@ -220,12 +270,12 @@ fn compute_disabled_and_non_inv_fun_sets(
     let mut worklist = vec![];
     for module_env in global_env.get_modules() {
         for fun_env in module_env.get_functions() {
-            if fun_env.is_pragma_true(DISABLE_INVARIANTS_IN_BODY_PRAGMA, || false) {
+            if is_fun_disabled(&fun_env) {
                 let fun_id = fun_env.get_qualified_id();
                 disabled_inv_fun_set.insert(fun_id);
                 worklist.push(fun_id);
             }
-            if fun_env.is_pragma_true(DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, || false) {
+            if is_fun_delegating(&fun_env) {
                 let fun_id = fun_env.get_qualified_id();
                 if non_inv_fun_set.insert(fun_id) {
                     // Add to work_list only if fun_id is not in non_inv_fun_set (may have inferred
@@ -248,6 +298,14 @@ fn compute_disabled_and_non_inv_fun_sets(
         }
     }
     (disabled_inv_fun_set, non_inv_fun_set)
+}
+
+fn is_fun_disabled(fun_env: &FunctionEnv<'_>) -> bool {
+    fun_env.is_pragma_true(DISABLE_INVARIANTS_IN_BODY_PRAGMA, || false)
+}
+
+fn is_fun_delegating(fun_env: &FunctionEnv<'_>) -> bool {
+    fun_env.is_pragma_true(DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, || false)
 }
 
 /// Collect all functions that are defined in the target module, or called transitively

@@ -30,6 +30,8 @@ module DiemFramework::DiemAccount {
     use Std::Signer;
     use Std::Vector;
 
+    friend DiemFramework::AccountAdministrationScripts;
+
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
     struct DiemAccount has key {
         /// The current authentication key.
@@ -1375,6 +1377,7 @@ module DiemFramework::DiemAccount {
         ensures Roles::spec_has_designated_dealer_role_addr(new_account_address);
         include AddCurrencyForAccountEnsures<CoinType>{addr: new_account_address};
     }
+
     ///////////////////////////////////////////////////////////////////////////
     // VASP methods
     ///////////////////////////////////////////////////////////////////////////
@@ -1506,7 +1509,7 @@ module DiemFramework::DiemAccount {
     }
 
     /// Add a balance of `Token` type to the sending account
-    public fun add_currency<Token>(account: &signer) {
+    public(friend) fun add_currency<Token>(account: &signer) {
         let addr = Signer::address_of(account);
         // aborts if `Token` is not a currency type in the system
         Diem::assert_is_currency<Token>();
@@ -1543,6 +1546,14 @@ module DiemFramework::DiemAccount {
         ensures exists<Balance<Token>>(addr);
         ensures global<Balance<Token>>(addr)
             == Balance<Token>{ coin: Diem<Token> { value: 0 } };
+    }
+
+    // #[test_only] TODO: uncomment once unit tests are fully migrated
+    public fun add_currency_for_test<Token>(account: &signer) {
+        add_currency<Token>(account)
+    }
+    spec add_currency_for_test {
+        pragma verify = false;
     }
 
     /// # Access Control

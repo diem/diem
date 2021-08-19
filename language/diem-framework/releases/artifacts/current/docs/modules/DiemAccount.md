@@ -49,6 +49,7 @@ before and after every transaction.
 -  [Function `balance_for`](#0x1_DiemAccount_balance_for)
 -  [Function `balance`](#0x1_DiemAccount_balance)
 -  [Function `add_currency`](#0x1_DiemAccount_add_currency)
+-  [Function `add_currency_for_test`](#0x1_DiemAccount_add_currency_for_test)
     -  [Access Control](#@Access_Control_3)
 -  [Function `accepts_currency`](#0x1_DiemAccount_accepts_currency)
 -  [Function `sequence_number_for_account`](#0x1_DiemAccount_sequence_number_for_account)
@@ -3304,7 +3305,7 @@ Return the current balance of the account at <code>addr</code>.
 Add a balance of <code>Token</code> type to the sending account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
 </code></pre>
 
 
@@ -3313,7 +3314,7 @@ Add a balance of <code>Token</code> type to the sending account
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
     <b>let</b> addr = <a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // aborts <b>if</b> `Token` is not a currency type in the system
     <a href="Diem.md#0x1_Diem_assert_is_currency">Diem::assert_is_currency</a>&lt;Token&gt;();
@@ -3404,6 +3405,42 @@ This publishes a <code><a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance<
     <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)
         == <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&gt; { value: 0 } };
 }
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemAccount_add_currency_for_test"></a>
+
+## Function `add_currency_for_test`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency_for_test">add_currency_for_test</a>&lt;Token&gt;(account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency_for_test">add_currency_for_test</a>&lt;Token&gt;(account: &signer) {
+    <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account)
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 

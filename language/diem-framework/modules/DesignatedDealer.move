@@ -100,11 +100,15 @@ module DiemFramework::DesignatedDealer {
     /// Adds the needed resources to the DD account `dd` in order to work with `CoinType`.
     /// Public so that a currency can be added to a DD later on. Will require
     /// multi-signer transactions in order to add a new currency to an existing DD.
-    public fun add_currency<CoinType>(dd: &signer, tc_account: &signer) {
+    public(friend) fun add_currency<CoinType>(dd: &signer, tc_account: &signer) {
         Roles::assert_treasury_compliance(tc_account);
         let dd_addr = Signer::address_of(dd);
         assert(exists_at(dd_addr), Errors::not_published(EDEALER));
         Diem::publish_preburn_queue_to_account<CoinType>(dd, tc_account);
+    }
+    // #[test_only] TODO: uncomment once unit tests are fully migrated
+    public fun add_currency_for_test<CoinType>(dd: &signer, tc_account: &signer) {
+        add_currency<CoinType>(dd, tc_account)
     }
     spec add_currency {
         pragma opaque;

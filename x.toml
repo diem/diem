@@ -54,6 +54,7 @@ allowed = [
     "clippy::unnecessary-lazy-evaluations",
     "clippy::format-in-format-args",
     "clippy::ptr-arg",
+    "clippy::iter-overeager-cloned",
 ]
 warn = [
     "clippy::wildcard_dependencies",

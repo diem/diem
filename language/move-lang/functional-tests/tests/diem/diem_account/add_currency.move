@@ -77,7 +77,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(ABORTED { code: 1031,"
@@ -90,7 +90,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(ABORTED { code: 1031,"
@@ -118,7 +118,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(ABORTED { code: 1031,"
@@ -131,7 +131,7 @@ use DiemFramework::DiemAccount;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<XUS>(account);
+    DiemAccount::add_currency_for_test<XUS>(account);
 }
 }
 // check: "Keep(ABORTED { code: 1031,"

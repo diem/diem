@@ -170,7 +170,7 @@ use DiemFramework::Diem;
 use DiemFramework::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
-    Diem::publish_preburn_queue_to_account<XDX>(account, account);
+    Diem::publish_preburn_queue_to_account_for_test<XDX>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 1539,")
@@ -182,7 +182,7 @@ use DiemFramework::Diem;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    Diem::publish_preburn_queue_to_account<XUS>(account, account);
+    Diem::publish_preburn_queue_to_account_for_test<XUS>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 1539,")

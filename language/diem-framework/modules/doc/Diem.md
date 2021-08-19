@@ -32,6 +32,7 @@ minting and burning of coins.
 -  [Function `create_preburn`](#0x1_Diem_create_preburn)
 -  [Function `publish_preburn_queue`](#0x1_Diem_publish_preburn_queue)
 -  [Function `publish_preburn_queue_to_account`](#0x1_Diem_publish_preburn_queue_to_account)
+-  [Function `publish_preburn_queue_to_account_for_test`](#0x1_Diem_publish_preburn_queue_to_account_for_test)
 -  [Function `upgrade_preburn`](#0x1_Diem_upgrade_preburn)
 -  [Function `add_preburn_to_queue`](#0x1_Diem_add_preburn_to_queue)
 -  [Function `preburn_to`](#0x1_Diem_preburn_to)
@@ -1610,7 +1611,7 @@ time, and the association TC account <code>tc_account</code> (at <code>@Treasury
 this resource for the designated dealer <code>account</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -1619,7 +1620,7 @@ this resource for the designated dealer <code>account</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(
     account: &signer,
     tc_account: &signer
 ) <b>acquires</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a> {
@@ -1664,6 +1665,45 @@ PreburnQueue is published under the DesignatedDealer account.
 <b>aborts_if</b> <a href="Diem.md#0x1_Diem_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;() <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Diem_publish_preburn_queue_to_account_for_test"></a>
+
+## Function `publish_preburn_queue_to_account_for_test`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account_for_test">publish_preburn_queue_to_account_for_test</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account_for_test">publish_preburn_queue_to_account_for_test</a>&lt;CoinType&gt;(
+       account: &signer,
+       tc_account: &signer
+) <b>acquires</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a> {
+    <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(account, tc_account)
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 

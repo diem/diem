@@ -1,0 +1,20 @@
+Move prover returns: exiting with bytecode transformation errors
+error: Public or script functions cannot be transitively called by functions disabling or delegating invariants
+  ┌─ tests/sources/functional/disable_inv_indirect.move:6:5
+  │
+6 │ ╭     public fun f1(s: &signer) {
+7 │ │         move_to(s, R {v: 1});
+8 │ │     }
+  │ ╰─────^
+  │
+  = disabled by M1::f1 <- M1::f2 <- M1::f_disabled
+
+error: Public or script functions cannot be transitively called by functions disabling or delegating invariants
+   ┌─ tests/sources/functional/disable_inv_indirect.move:10:5
+   │
+10 │ ╭     public fun f2(s: &signer) {
+11 │ │         f1(s);
+12 │ │     }
+   │ ╰─────^
+   │
+   = disabled by M1::f2 <- M1::f_disabled

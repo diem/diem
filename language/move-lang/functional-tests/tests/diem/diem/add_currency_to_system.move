@@ -131,7 +131,7 @@ use DiemFramework::DiemAccount;
 use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::add_currency<COIN>(account);
+    DiemAccount::add_currency_for_test<COIN>(account);
 }
 }
 // check: "Keep(EXECUTED)"

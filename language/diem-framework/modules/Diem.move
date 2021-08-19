@@ -13,6 +13,8 @@ module DiemFramework::Diem {
     use Std::Signer;
     use Std::Vector;
 
+    friend DiemFramework::DesignatedDealer;
+
     /// The `Diem` resource defines the Diem coin for each currency in
     /// Diem. Each "coin" is coupled with a type `CoinType` specifying the
     /// currency of the coin, and a `value` field specifying the value
@@ -613,7 +615,7 @@ module DiemFramework::Diem {
     /// used for bootstrapping the designated dealer at account-creation
     /// time, and the association TC account `tc_account` (at `@TreasuryCompliance`) is creating
     /// this resource for the designated dealer `account`.
-    public fun publish_preburn_queue_to_account<CoinType>(
+    public(friend) fun publish_preburn_queue_to_account<CoinType>(
         account: &signer,
         tc_account: &signer
     ) acquires CurrencyInfo {
@@ -641,6 +643,18 @@ module DiemFramework::Diem {
         aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
 
     }
+
+    // #[test_only] TODO: uncomment once unit tests are fully migrated
+    public fun publish_preburn_queue_to_account_for_test<CoinType>(
+           account: &signer,
+           tc_account: &signer
+    ) acquires CurrencyInfo {
+        publish_preburn_queue_to_account<CoinType>(account, tc_account)
+    }
+    spec publish_preburn_queue_to_account_for_test {
+        pragma verify = false;
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////
 

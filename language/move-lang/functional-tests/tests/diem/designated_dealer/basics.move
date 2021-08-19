@@ -38,7 +38,7 @@ use DiemFramework::DesignatedDealer;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DesignatedDealer::add_currency<XUS>(account, account);
+    DesignatedDealer::add_currency_for_test<XUS>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 258,"
@@ -50,7 +50,7 @@ use DiemFramework::DesignatedDealer;
 use DiemFramework::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    DesignatedDealer::add_currency<XUS>(account, account);
+    DesignatedDealer::add_currency_for_test<XUS>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 5,"
