@@ -60,7 +60,7 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Res
     if !script_function_abis.is_empty() {
         emitter.output_script_function_decoder_map(&script_function_abis)?;
     }
-    emitter.output_decoding_helpers(abis)?;
+    emitter.output_decoding_helpers(&tx_script_abis)?;
 
     for abi in &tx_script_abis {
         emitter.output_code_constant(abi)?;
@@ -668,8 +668,13 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         writeln!(self.out, "}});")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_helper_types(abis);
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+        let script_abis: Vec<_> = abis
+            .iter()
+            .cloned()
+            .map(ScriptABI::TransactionScript)
+            .collect();
+        let required_types = common::get_required_helper_types(&script_abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -825,6 +830,17 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
                         "Bytes".into()
                     }
                 }
+                Vector(type_tag) => {
+                    if type_tag.as_ref() == &U8 {
+                        if local_types {
+                            "Vec<Vec<u8>>".into()
+                        } else {
+                            "Vec<Bytes>".into()
+                        }
+                    } else {
+                        common::type_not_allowed(type_tag)
+                    }
+                }
                 _ => common::type_not_allowed(type_tag),
             },
 
@@ -842,6 +858,11 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
             Bool | U8 | U64 | U128 | Address => {}
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => {}
+                Vector(type_tag) => {
+                    if type_tag.as_ref() != &U8 {
+                        common::type_not_allowed(type_tag)
+                    }
+                }
                 _ => common::type_not_allowed(type_tag),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
