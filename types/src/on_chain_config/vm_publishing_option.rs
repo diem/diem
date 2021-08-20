@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::on_chain_config::OnChainConfig;
-use anyhow::{format_err, Result};
 use diem_crypto::HashValue;
 use serde::{Deserialize, Serialize};
 
@@ -51,13 +50,4 @@ impl VMPublishingOption {
 
 impl OnChainConfig for VMPublishingOption {
     const IDENTIFIER: &'static str = "DiemTransactionPublishingOption";
-
-    fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
-        bcs::from_bytes(bytes).map_err(|e| {
-            format_err!(
-                "Failed first round of deserialization for VMPublishingOptionInner: {}",
-                e
-            )
-        })
-    }
 }
