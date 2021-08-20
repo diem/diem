@@ -17,6 +17,7 @@ use move_core_types::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, fmt, sync::Arc};
 
+mod consensus_config;
 mod diem_version;
 mod registered_currencies;
 mod validator_set;
@@ -24,6 +25,7 @@ mod vm_config;
 mod vm_publishing_option;
 
 pub use self::{
+    consensus_config::{ConsensusConfigV1, OnChainConsensusConfig},
     diem_version::{
         DiemVersion, DIEM_MAX_KNOWN_VERSION, DIEM_VERSION_2, DIEM_VERSION_3, DIEM_VERSION_4,
     },
@@ -72,6 +74,7 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     DiemVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,
+    OnChainConsensusConfig::CONFIG_ID,
 ];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -130,9 +133,9 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     const CONFIG_ID: ConfigID = ConfigID(Self::ADDRESS, Self::IDENTIFIER);
 
     // Single-round BCS deserialization from bytes to `Self`
-    // This is the expected deserialization pattern for most Rust representations,
+    // This is the expected deserialization pattern if the Rust representation lives natively in Move.
     // but sometimes `deserialize_into_config` may need an extra customized round of deserialization
-    // (e.g. enums like `VMPublishingOption`)
+    // when the data is represented as opaque vec<u8> in Move.
     // In the override, we can reuse this default logic via this function
     // Note: we cannot directly call the default `deserialize_into_config` implementation
     // in its override - this will just refer to the override implementation itself
