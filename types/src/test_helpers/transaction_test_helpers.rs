@@ -58,16 +58,18 @@ pub fn get_test_signed_transaction(
     sequence_number: u64,
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    script: Option<Script>,
+    payload: Option<TransactionPayload>,
     expiration_timestamp_secs: u64,
     gas_unit_price: u64,
     gas_currency_code: String,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
-    let raw_txn = RawTransaction::new_script(
+    let raw_txn = RawTransaction::new(
         sender,
         sequence_number,
-        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
+        payload.unwrap_or_else(|| {
+            TransactionPayload::Script(Script::new(EMPTY_SCRIPT.to_vec(), vec![], vec![]))
+        }),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         gas_currency_code,
@@ -142,7 +144,7 @@ pub fn get_test_signed_txn(
     sequence_number: u64,
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    script: Option<Script>,
+    payload: Option<TransactionPayload>,
 ) -> SignedTransaction {
     let expiration_time = expiration_time(10);
     get_test_signed_transaction(
@@ -150,7 +152,7 @@ pub fn get_test_signed_txn(
         sequence_number,
         private_key,
         public_key,
-        script,
+        payload,
         expiration_time,
         TEST_GAS_PRICE,
         XUS_NAME.to_owned(),

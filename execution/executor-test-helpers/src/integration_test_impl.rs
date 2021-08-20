@@ -19,7 +19,7 @@ use diem_types::{
     event::EventKey,
     transaction::{
         authenticator::AuthenticationKey, Transaction, TransactionListWithProof,
-        TransactionWithProof, WriteSetPayload,
+        TransactionPayload, TransactionWithProof, WriteSetPayload,
     },
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
@@ -76,13 +76,15 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_parent_vasp_account_script(
-            xus_tag(),
-            0,
-            account1,
-            account1_auth_key.prefix().to_vec(),
-            vec![],
-            false, /* add all currencies */
+        Some(TransactionPayload::Script(
+            encode_create_parent_vasp_account_script(
+                xus_tag(),
+                0,
+                account1,
+                account1_auth_key.prefix().to_vec(),
+                vec![],
+                false, /* add all currencies */
+            ),
         )),
     );
 
@@ -91,13 +93,15 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_parent_vasp_account_script(
-            xus_tag(),
-            0,
-            account2,
-            account2_auth_key.prefix().to_vec(),
-            vec![],
-            false, /* add all currencies */
+        Some(TransactionPayload::Script(
+            encode_create_parent_vasp_account_script(
+                xus_tag(),
+                0,
+                account2,
+                account2_auth_key.prefix().to_vec(),
+                vec![],
+                false, /* add all currencies */
+            ),
         )),
     );
 
@@ -106,13 +110,15 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_parent_vasp_account_script(
-            xus_tag(),
-            0,
-            account3,
-            account3_auth_key.prefix().to_vec(),
-            vec![],
-            false, /* add all currencies */
+        Some(TransactionPayload::Script(
+            encode_create_parent_vasp_account_script(
+                xus_tag(),
+                0,
+                account3,
+                account3_auth_key.prefix().to_vec(),
+                vec![],
+                false, /* add all currencies */
+            ),
         )),
     );
 
@@ -122,12 +128,14 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account1,
-            2_000_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(
+                xus_tag(),
+                account1,
+                2_000_000,
+                vec![],
+                vec![],
+            ),
         )),
     );
 
@@ -137,12 +145,14 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account2,
-            1_200_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(
+                xus_tag(),
+                account2,
+                1_200_000,
+                vec![],
+                vec![],
+            ),
         )),
     );
 
@@ -152,12 +162,14 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account3,
-            1_000_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(
+                xus_tag(),
+                account3,
+                1_000_000,
+                vec![],
+                vec![],
+            ),
         )),
     );
 
@@ -168,12 +180,8 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account2,
-            20_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(xus_tag(), account2, 20_000, vec![], vec![]),
         )),
     );
 
@@ -184,12 +192,8 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 0,
         privkey2,
         pubkey2,
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account3,
-            10_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(xus_tag(), account3, 10_000, vec![], vec![]),
         )),
     );
 
@@ -200,12 +204,8 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            account3,
-            70_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(xus_tag(), account3, 70_000, vec![], vec![]),
         )),
     );
 
@@ -222,12 +222,14 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1.clone(),
-            Some(encode_peer_to_peer_with_metadata_script(
-                xus_tag(),
-                account3,
-                10_000,
-                vec![],
-                vec![],
+            Some(TransactionPayload::Script(
+                encode_peer_to_peer_with_metadata_script(
+                    xus_tag(),
+                    account3,
+                    10_000,
+                    vec![],
+                    vec![],
+                ),
             )),
         ));
     }

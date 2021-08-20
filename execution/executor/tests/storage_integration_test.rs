@@ -10,7 +10,7 @@ use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address, xus_tag},
     account_state::AccountState,
     block_metadata::BlockMetadata,
-    transaction::{Script, Transaction, WriteSetPayload},
+    transaction::{Script, Transaction, TransactionPayload, WriteSetPayload},
     trusted_state::TrustedState,
     validator_signer::ValidatorSigner,
 };
@@ -102,12 +102,14 @@ fn test_reconfiguration() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            validator_account,
-            1_000_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(
+                xus_tag(),
+                validator_account,
+                1_000_000,
+                vec![],
+                vec![],
+            ),
         )),
     );
     // txn2 = a dummy block prologue to bump the timer.
@@ -129,11 +131,13 @@ fn test_reconfiguration() {
         /* sequence_number = */ 0,
         operator_key.clone(),
         operator_key.public_key(),
-        Some(encode_set_validator_config_and_reconfigure_script(
-            validator_account,
-            new_pubkey.to_bytes().to_vec(),
-            Vec::new(),
-            Vec::new(),
+        Some(TransactionPayload::Script(
+            encode_set_validator_config_and_reconfigure_script(
+                validator_account,
+                new_pubkey.to_bytes().to_vec(),
+                Vec::new(),
+                Vec::new(),
+            ),
         )),
     );
 
@@ -250,12 +254,14 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            validator_account,
-            1_000_000,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(
+                xus_tag(),
+                validator_account,
+                1_000_000,
+                vec![],
+                vec![],
+            ),
         )),
     );
 
@@ -269,7 +275,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 0,
         validator_privkey.clone(),
         validator_pubkey.clone(),
-        Some(script1.clone()),
+        Some(TransactionPayload::Script(script1.clone())),
     );
 
     let txn3 = get_test_signed_transaction(
@@ -277,7 +283,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 0,
         validator_privkey.clone(),
         validator_pubkey.clone(),
-        Some(script2.clone()),
+        Some(TransactionPayload::Script(script2.clone())),
     );
 
     // Create a dummy block prologue transaction that will bump the timer.
@@ -306,7 +312,11 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(Script::new(script_body, vec![], vec![])),
+        Some(TransactionPayload::Script(Script::new(
+            script_body,
+            vec![],
+            vec![],
+        ))),
     );
 
     let block1_id = gen_block_id(1);
@@ -358,7 +368,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 0,
         validator_privkey.clone(),
         validator_pubkey.clone(),
-        Some(script1),
+        Some(TransactionPayload::Script(script1)),
     );
 
     let txn3 = get_test_signed_transaction(
@@ -366,7 +376,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 1,
         validator_privkey.clone(),
         validator_pubkey,
-        Some(script2),
+        Some(TransactionPayload::Script(script2)),
     );
 
     let block2_id = gen_block_id(2);

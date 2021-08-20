@@ -14,7 +14,7 @@ use diem_types::{
     block_metadata::BlockMetadata,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Script, Transaction},
+    transaction::{Transaction, TransactionPayload},
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
@@ -102,13 +102,13 @@ pub fn get_test_signed_transaction(
     sequence_number: u64,
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    program: Option<Script>,
+    payload: Option<TransactionPayload>,
 ) -> Transaction {
     Transaction::UserTransaction(get_test_signed_txn(
         sender,
         sequence_number,
         &private_key,
         public_key,
-        program,
+        payload,
     ))
 }

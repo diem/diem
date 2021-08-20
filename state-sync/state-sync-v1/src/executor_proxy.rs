@@ -330,7 +330,8 @@ mod tests {
     use diem_crypto::{ed25519::*, PrivateKey, Uniform};
     use diem_transaction_builder::stdlib::{
         encode_peer_to_peer_with_metadata_script,
-        encode_set_validator_config_and_reconfigure_script, encode_update_diem_version_script,
+        encode_set_validator_config_and_reconfigure_script,
+        encode_update_diem_consensus_config_script_function, encode_update_diem_version_script,
     };
     use diem_types::{
         account_address::AccountAddress,
@@ -339,9 +340,10 @@ mod tests {
         contract_event::ContractEvent,
         ledger_info::LedgerInfoWithSignatures,
         on_chain_config::{
-            DiemVersion, OnChainConfig, OnChainConfigPayload, VMConfig, ValidatorSet,
+            ConsensusConfigV1, DiemVersion, OnChainConfig, OnChainConfigPayload,
+            OnChainConsensusConfig, VMConfig, ValidatorSet,
         },
-        transaction::{Transaction, WriteSetPayload},
+        transaction::{Transaction, TransactionPayload, WriteSetPayload},
     };
     use diem_vm::DiemVM;
     use diemdb::DiemDB;
@@ -627,6 +629,44 @@ mod tests {
         assert_eq!(sync_state.synced_version(), 5); // 5 transactions have synced
     }
 
+    #[test]
+    fn test_pub_sub_consensus_config() {
+        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
+            "",
+            vec![OnChainConsensusConfig::CONFIG_ID],
+            vec![],
+        );
+        let (validators, mut block_executor, mut executor_proxy) =
+            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        // it's initialized to empty vec so can't be deserialized
+        assert!(executor_proxy
+            .on_chain_configs
+            .get::<OnChainConsensusConfig>()
+            .is_err());
+
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
+        let validator_account = validators[0].data.address;
+        let dummy_txn = create_dummy_transaction(1, validator_account);
+        let allowlist_txn = create_new_update_consensus_config_transaction(1);
+
+        // Execute and commit the reconfig block
+        let block = vec![dummy_txn, allowlist_txn];
+        let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
+
+        // Publish the on chain config updates
+        executor_proxy
+            .publish_on_chain_config_updates(reconfig_events)
+            .unwrap();
+
+        // Verify the correct reconfig notification is sent
+        let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        let received_config = payload.get::<OnChainConsensusConfig>().unwrap();
+        assert_eq!(
+            received_config,
+            OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true })
+        );
+    }
+
     /// Executes a genesis transaction, creates the executor proxy and sets the given reconfig
     /// subscription.
     fn bootstrap_genesis_and_set_subscription(
@@ -677,11 +717,13 @@ mod tests {
             sequence_number,
             operator_key,
             operator_public_key,
-            Some(encode_set_validator_config_and_reconfigure_script(
-                validator.data.address,
-                new_consensus_key.to_bytes().to_vec(),
-                Vec::new(),
-                Vec::new(),
+            Some(TransactionPayload::Script(
+                encode_set_validator_config_and_reconfigure_script(
+                    validator.data.address,
+                    new_consensus_key.to_bytes().to_vec(),
+                    Vec::new(),
+                    Vec::new(),
+                ),
             )),
         )
     }
@@ -705,8 +747,27 @@ mod tests {
             sequence_number,
             genesis_key.clone(),
             genesis_key.public_key(),
-            Some(encode_update_diem_version_script(
-                0, 7, // version
+            Some(TransactionPayload::Script(
+                encode_update_diem_version_script(
+                    0, 7, // version
+                ),
+            )),
+        )
+    }
+
+    fn create_new_update_consensus_config_transaction(sequence_number: u64) -> Transaction {
+        let genesis_key = vm_genesis::GENESIS_KEYPAIR.0.clone();
+        get_test_signed_transaction(
+            diem_root_address(),
+            sequence_number,
+            genesis_key.clone(),
+            genesis_key.public_key(),
+            Some(encode_update_diem_consensus_config_script_function(
+                0,
+                bcs::to_bytes(&OnChainConsensusConfig::V1(ConsensusConfigV1 {
+                    two_chain: true,
+                }))
+                .unwrap(),
             )),
         )
     }
@@ -722,12 +783,14 @@ mod tests {
             sequence_number,
             genesis_key.clone(),
             genesis_key.public_key(),
-            Some(encode_peer_to_peer_with_metadata_script(
-                xus_tag(),
-                validator_account,
-                1_000_000,
-                vec![],
-                vec![],
+            Some(TransactionPayload::Script(
+                encode_peer_to_peer_with_metadata_script(
+                    xus_tag(),
+                    validator_account,
+                    1_000_000,
+                    vec![],
+                    vec![],
+                ),
             )),
         )
     }

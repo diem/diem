@@ -23,8 +23,8 @@ use diem_types::{
     on_chain_config::{config_address, ConfigurationResource, OnChainConfig, ValidatorSet},
     proof::SparseMerkleRangeProof,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Transaction, Version, WriteSetPayload,
-        PRE_GENESIS_VERSION,
+        authenticator::AuthenticationKey, ChangeSet, Transaction, TransactionPayload, Version,
+        WriteSetPayload, PRE_GENESIS_VERSION,
     },
     trusted_state::TrustedState,
     validator_signer::ValidatorSigner,
@@ -138,12 +138,8 @@ fn get_mint_transaction(
         /* sequence_number = */ diem_root_seq_num,
         diem_root_key.clone(),
         diem_root_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            *account,
-            amount,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(xus_tag(), *account, amount, vec![], vec![]),
         )),
     )
 }
@@ -160,13 +156,15 @@ fn get_account_transaction(
         /* sequence_number = */ diem_root_seq_num,
         diem_root_key.clone(),
         diem_root_key.public_key(),
-        Some(encode_create_parent_vasp_account_script(
-            xus_tag(),
-            0,
-            *account,
-            account_auth_key.prefix().to_vec(),
-            vec![],
-            false,
+        Some(TransactionPayload::Script(
+            encode_create_parent_vasp_account_script(
+                xus_tag(),
+                0,
+                *account,
+                account_auth_key.prefix().to_vec(),
+                vec![],
+                false,
+            ),
         )),
     )
 }
@@ -183,12 +181,8 @@ fn get_transfer_transaction(
         sender_seq_number,
         sender_key.clone(),
         sender_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            recipient,
-            amount,
-            vec![],
-            vec![],
+        Some(TransactionPayload::Script(
+            encode_peer_to_peer_with_metadata_script(xus_tag(), recipient, amount, vec![], vec![]),
         )),
     )
 }

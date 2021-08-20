@@ -9,7 +9,7 @@ use diem_types::{
     account_config::{xus_tag, XUS_NAME},
     chain_id::ChainId,
     test_helpers::transaction_test_helpers,
-    transaction::{Module, Script, TransactionArgument},
+    transaction::{Module, Script, TransactionArgument, TransactionPayload},
     vm_status::StatusCode,
 };
 use diem_vm::DiemVM;
@@ -84,7 +84,7 @@ fn test_validate_transaction() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status(), None);
@@ -121,14 +121,15 @@ fn test_validate_known_script_too_large_args() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(Script::new(
+        Some(TransactionPayload::Script(Script::new(
             vec![42; MAX_TRANSACTION_SIZE_IN_BYTES as usize],
             vec![],
             vec![],
-        )), /* generate a
-             * program with args
-             * longer than the
-             * max size */
+        ))),
+        /* generate a
+         * program with args
+         * longer than the
+         * max size */
         0,
         0,                   /* max gas price */
         XUS_NAME.to_owned(), /* gas currency code */
@@ -180,7 +181,11 @@ fn test_validate_max_gas_units_below_min() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(Script::new(vec![42; txn_bytes as usize], vec![], vec![])),
+        Some(TransactionPayload::Script(Script::new(
+            vec![42; txn_bytes as usize],
+            vec![],
+            vec![],
+        ))),
         0,
         0,                   /* max gas price */
         XUS_NAME.to_owned(), /* gas currency code */
@@ -230,7 +235,7 @@ fn test_validate_max_gas_price_below_bounds() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
         0,                   /* max gas price */
@@ -255,7 +260,11 @@ fn test_validate_unknown_script() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(Script::new(vec![], vec![], vec![])),
+        Some(TransactionPayload::Script(Script::new(
+            vec![],
+            vec![],
+            vec![],
+        ))),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     println!("{:?}", ret);
@@ -311,7 +320,7 @@ fn test_validate_invalid_auth_key() {
         1,
         &other_private_key,
         other_private_key.public_key(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status().unwrap(), StatusCode::INVALID_AUTH_KEY);
@@ -329,7 +338,7 @@ fn test_validate_account_doesnt_exist() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
         0,
         1,                   /* max gas price */
         XUS_NAME.to_owned(), /* gas currency code */
@@ -353,7 +362,7 @@ fn test_validate_sequence_number_too_new() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status(), None);
@@ -373,7 +382,7 @@ fn test_validate_invalid_arguments() {
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        Some(program),
+        Some(TransactionPayload::Script(program)),
     );
     let _ret = vm_validator.validate_transaction(transaction).unwrap();
     // TODO: Script arguement types are now checked at execution time. Is this an idea behavior?

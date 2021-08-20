@@ -20,8 +20,8 @@ use diem_types::{
     test_helpers::transaction_test_helpers,
     transaction::{
         authenticator::{AccountAuthenticator, AuthenticationKey, MAX_NUM_OF_SIGS},
-        RawTransactionWithData, Script, SignedTransaction, TransactionArgument, TransactionStatus,
-        WriteSetPayload,
+        RawTransactionWithData, Script, SignedTransaction, TransactionArgument, TransactionPayload,
+        TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode},
 };
@@ -426,7 +426,7 @@ fn verify_reserved_sender() {
             0,
             &private_key,
             private_key.public_key(),
-            Some(program),
+            Some(TransactionPayload::Script(program)),
         );
 
         assert_prologue_parity!(

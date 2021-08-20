@@ -31,6 +31,7 @@ use diem_types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         authenticator::AuthenticationKey, SignedTransaction, Transaction, TransactionListWithProof,
+        TransactionPayload,
     },
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
@@ -757,7 +758,7 @@ impl MockStorage {
             0, // sequence number
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),
-            Some(program),
+            Some(TransactionPayload::Script(program)),
         ))
     }
 
