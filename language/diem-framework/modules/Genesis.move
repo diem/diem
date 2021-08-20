@@ -13,6 +13,7 @@ module DiemFramework::Genesis {
     use DiemFramework::DiemAccount;
     use DiemFramework::DiemBlock;
     use DiemFramework::DiemConfig;
+    use DiemFramework::DiemConsensusConfig;
     use DiemFramework::DiemSystem;
     use DiemFramework::DiemTimestamp;
     use DiemFramework::DiemTransactionPublishingOption;
@@ -70,6 +71,9 @@ module DiemFramework::Genesis {
 
         // On-chain config setup
         DiemConfig::initialize(dr_account);
+
+        // Consensus config setup
+        DiemConsensusConfig::initialize(dr_account);
 
         // Currency setup
         Diem::initialize(dr_account);
