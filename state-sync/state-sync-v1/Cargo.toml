@@ -39,6 +39,7 @@ executor = { path = "../../execution/executor" }
 executor-test-helpers = { path = "../../execution/executor-test-helpers", optional = true }
 executor-types = { path = "../../execution/executor-types" }
 memsocket = { path = "../../network/memsocket", optional = true }
+mempool-notifications = { path = "../inter-component/mempool-notifications" }
 netcore = { path = "../../network/netcore" }
 network = { path = "../../network" }
 storage-interface = { path = "../../storage/storage-interface" }

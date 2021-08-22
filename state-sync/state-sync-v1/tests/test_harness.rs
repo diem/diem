@@ -40,6 +40,7 @@ use diem_types::{
 };
 use executor_types::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, StreamExt};
+use mempool_notifications::MempoolNotifier;
 use memsocket::MemoryListener;
 use netcore::transport::ConnectionOrigin;
 use network::{
@@ -295,19 +296,19 @@ impl StateSyncEnvironment {
             peer.signer.clone(),
         )));
 
-        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
+        let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+        peer.mempool = Some(MockSharedMempool::new(Some(mempool_listener)));
+
         let bootstrapper = StateSyncBootstrapper::bootstrap_with_executor_proxy(
             Runtime::new().unwrap(),
             network_handles,
-            mempool_channel,
+            mempool_notifier,
             &config,
             waypoint,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
-
         peer.client = Some(bootstrapper.create_client(config.state_sync.client_commit_timeout_ms));
         peer.bootstrapper = Some(bootstrapper);
-        peer.mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
         peer.storage_proxy = Some(storage_proxy);
     }
 

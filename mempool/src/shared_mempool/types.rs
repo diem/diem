@@ -26,6 +26,7 @@ use futures::{
     future::Future,
     task::{Context, Poll},
 };
+use mempool_notifications::CommittedTransaction;
 use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
@@ -163,29 +164,6 @@ pub enum ConsensusResponse {
     CommitResponse(),
 }
 
-/// Notification from state sync to mempool of commit event.
-/// This notifies mempool to remove committed txns.
-pub struct CommitNotification {
-    pub transactions: Vec<CommittedTransaction>,
-    /// Timestamp of committed block.
-    pub block_timestamp_usecs: u64,
-    pub callback: oneshot::Sender<Result<CommitResponse>>,
-}
-
-impl fmt::Display for CommitNotification {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut txns = "".to_string();
-        for txn in self.transactions.iter() {
-            txns += &format!("{} ", txn);
-        }
-        write!(
-            f,
-            "CommitNotification [block_timestamp_usecs: {}, txns: {}]",
-            self.block_timestamp_usecs, txns
-        )
-    }
-}
-
 #[derive(Debug)]
 pub struct CommitResponse {
     pub success: bool,
@@ -208,18 +186,6 @@ impl CommitResponse {
             success: false,
             error_message: Some(error_message),
         }
-    }
-}
-
-/// Successfully executed and committed txn
-pub struct CommittedTransaction {
-    pub sender: AccountAddress,
-    pub sequence_number: u64,
-}
-
-impl fmt::Display for CommittedTransaction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.sender, self.sequence_number,)
     }
 }
 

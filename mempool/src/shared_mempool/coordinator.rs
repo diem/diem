@@ -10,9 +10,10 @@ use crate::{
     network::{MempoolNetworkEvents, MempoolSyncMsg},
     shared_mempool::{
         tasks,
+        tasks::commit_txns,
         types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
     },
-    CommitNotification, ConsensusRequest, SubmissionStatus,
+    ConsensusRequest, SubmissionStatus,
 };
 use ::network::protocols::network::Event;
 use anyhow::Result;
@@ -30,9 +31,10 @@ use futures::{
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
+use mempool_notifications::{MempoolCommitNotification, MempoolNotificationListener};
 use std::{
     sync::Arc,
-    time::{Duration, SystemTime},
+    time::{Duration, Instant, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
 use tokio_stream::wrappers::IntervalStream;
@@ -48,7 +50,7 @@ pub(crate) async fn coordinator<V>(
         oneshot::Sender<Result<SubmissionStatus>>,
     )>,
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
-    mut state_sync_requests: mpsc::Receiver<CommitNotification>,
+    mut mempool_listener: MempoolNotificationListener,
     mut mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) where
     V: TransactionValidation,
@@ -77,10 +79,10 @@ pub(crate) async fn coordinator<V>(
             },
             msg = consensus_requests.select_next_some() => {
                 tasks::process_consensus_request(&smp.mempool, msg).await;
-            }
-            msg = state_sync_requests.select_next_some() => {
-                handle_state_sync_request(&mut smp, msg);
-            }
+            },
+            msg = mempool_listener.notification_receiver.select_next_some() => {
+                handle_state_sync_request(&mut smp, msg, &mut mempool_listener).await;
+            },
             config_update = mempool_reconfig_events.select_next_some() => {
                 handle_mempool_reconfig_event(&mut smp, &bounded_executor, config_update).await;
             },
@@ -124,13 +126,41 @@ async fn handle_client_event<V>(
         .await;
 }
 
-fn handle_state_sync_request<V>(smp: &mut SharedMempool<V>, msg: CommitNotification)
-where
+async fn handle_state_sync_request<V>(
+    smp: &mut SharedMempool<V>,
+    msg: MempoolCommitNotification,
+    mempool_listener: &mut MempoolNotificationListener,
+) where
     V: TransactionValidation,
 {
-    let _timer =
-        counters::task_spawn_latency_timer(counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL);
-    tokio::spawn(tasks::process_state_sync_request(smp.mempool.clone(), msg));
+    debug!(
+        LogSchema::event_log(LogEntry::StateSyncCommit, LogEvent::Received).state_sync_msg(&msg)
+    );
+
+    // Process and time committed user transactions.
+    let start_time = Instant::now();
+    counters::mempool_service_transactions(
+        counters::COMMIT_STATE_SYNC_LABEL,
+        msg.transactions.len(),
+    );
+    commit_txns(
+        &smp.mempool.clone(),
+        msg.transactions.clone(),
+        msg.block_timestamp_usecs,
+        false,
+    )
+    .await;
+    let counter_result = if mempool_listener.ack_commit_notification(msg).await.is_err() {
+        error!(LogSchema::event_log(
+            LogEntry::StateSyncCommit,
+            LogEvent::CallbackFail
+        ));
+        counters::REQUEST_FAIL_LABEL
+    } else {
+        counters::REQUEST_SUCCESS_LABEL
+    };
+    let latency = start_time.elapsed();
+    counters::mempool_service_latency(counters::COMMIT_STATE_SYNC_LABEL, counter_result, latency);
 }
 
 async fn handle_mempool_reconfig_event<V>(

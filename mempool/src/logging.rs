@@ -1,14 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared_mempool::{
-    peer_manager::BatchId,
-    types::{CommitNotification, ConsensusRequest},
-};
+use crate::shared_mempool::{peer_manager::BatchId, types::ConsensusRequest};
 use anyhow::Error;
 use diem_config::{config::PeerNetworkId, network_id::NetworkId};
 use diem_logger::Schema;
 use diem_types::{account_address::AccountAddress, on_chain_config::OnChainConfigPayload};
+use mempool_notifications::MempoolCommitNotification;
 use serde::Serialize;
 use std::{fmt, time::SystemTime};
 
@@ -85,7 +83,7 @@ pub struct LogSchema<'a> {
     #[schema(display)]
     consensus_msg: Option<&'a ConsensusRequest>,
     #[schema(display)]
-    state_sync_msg: Option<&'a CommitNotification>,
+    state_sync_msg: Option<&'a MempoolCommitNotification>,
     network_level: Option<usize>,
     upstream_network: Option<&'a NetworkId>,
     #[schema(debug)]

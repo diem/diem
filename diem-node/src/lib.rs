@@ -23,6 +23,7 @@ use diemdb::DiemDB;
 use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
+use mempool_notifications::MempoolNotifier;
 use network_builder::builder::NetworkBuilder;
 use state_sync_v1::bootstrapper::StateSyncBootstrapper;
 use std::{
@@ -387,11 +388,10 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // and pass network handles to mempool/state sync
 
     // for state sync to send requests to mempool
-    let (state_sync_to_mempool_sender, state_sync_requests) =
-        channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
+    let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
     let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
         state_sync_network_handles,
-        state_sync_to_mempool_sender,
+        mempool_notifier,
         Arc::clone(&db_rw.reader),
         chunk_executor,
         node_config,
@@ -412,7 +412,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         mempool_network_handles,
         mp_client_events,
         consensus_requests,
-        state_sync_requests,
+        mempool_listener,
         mempool_reconfig_events,
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());

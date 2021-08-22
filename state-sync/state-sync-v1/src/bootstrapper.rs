@@ -10,6 +10,7 @@ use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
 use diem_types::waypoint::Waypoint;
 use executor_types::ChunkExecutor;
 use futures::channel::mpsc;
+use mempool_notifications::MempoolNotificationSender;
 use std::{boxed::Box, collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
@@ -23,9 +24,9 @@ pub struct StateSyncBootstrapper {
 }
 
 impl StateSyncBootstrapper {
-    pub fn bootstrap(
+    pub fn bootstrap<M: MempoolNotificationSender + 'static>(
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
-        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
+        mempool_notifier: M,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
         node_config: &NodeConfig,
@@ -42,17 +43,20 @@ impl StateSyncBootstrapper {
         Self::bootstrap_with_executor_proxy(
             runtime,
             network,
-            state_sync_to_mempool_sender,
+            mempool_notifier,
             node_config,
             waypoint,
             executor_proxy,
         )
     }
 
-    pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
+    pub fn bootstrap_with_executor_proxy<
+        E: ExecutorProxyTrait + 'static,
+        M: MempoolNotificationSender + 'static,
+    >(
         runtime: Runtime,
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
-        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
+        mempool_notifier: M,
         node_config: &NodeConfig,
         waypoint: Waypoint,
         executor_proxy: E,
@@ -68,7 +72,7 @@ impl StateSyncBootstrapper {
 
         let coordinator = StateSyncCoordinator::new(
             coordinator_receiver,
-            state_sync_to_mempool_sender,
+            mempool_notifier,
             network_senders,
             node_config,
             waypoint,

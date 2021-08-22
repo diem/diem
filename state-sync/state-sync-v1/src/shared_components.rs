@@ -95,6 +95,7 @@ pub(crate) mod test_utils {
     use executor::Executor;
     use executor_test_helpers::bootstrap_genesis;
     use futures::channel::mpsc;
+    use mempool_notifications::MempoolNotifier;
     use network::{
         peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
         protocols::network::NewNetworkSender,
@@ -106,11 +107,12 @@ pub(crate) mod test_utils {
     pub(crate) fn create_coordinator_with_config_and_waypoint(
         node_config: NodeConfig,
         waypoint: Waypoint,
-    ) -> StateSyncCoordinator<ExecutorProxy> {
+    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
         create_state_sync_coordinator_for_tests(node_config, waypoint)
     }
 
-    pub(crate) fn create_validator_coordinator() -> StateSyncCoordinator<ExecutorProxy> {
+    pub(crate) fn create_validator_coordinator(
+    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::Validator;
 
@@ -118,7 +120,8 @@ pub(crate) mod test_utils {
     }
 
     #[cfg(test)]
-    pub(crate) fn create_full_node_coordinator() -> StateSyncCoordinator<ExecutorProxy> {
+    pub(crate) fn create_full_node_coordinator(
+    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::FullNode;
 
@@ -128,7 +131,7 @@ pub(crate) mod test_utils {
     fn create_state_sync_coordinator_for_tests(
         node_config: NodeConfig,
         waypoint: Waypoint,
-    ) -> StateSyncCoordinator<ExecutorProxy> {
+    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
         // Generate a genesis change set
         let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -162,12 +165,12 @@ pub(crate) mod test_utils {
 
         // Create channel senders and receivers
         let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();
-        let (mempool_sender, _mempool_receiver) = mpsc::channel(1);
+        let (mempool_notifier, _) = MempoolNotifier::new();
 
         // Return the new state sync coordinator
         StateSyncCoordinator::new(
             coordinator_receiver,
-            mempool_sender,
+            mempool_notifier,
             network_senders,
             &node_config,
             waypoint,

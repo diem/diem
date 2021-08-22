@@ -84,8 +84,7 @@ pub const SUCCESS_LABEL: &str = "success";
 pub const FAIL_LABEL: &str = "fail";
 
 // commit flow fail component label
-pub const TO_MEMPOOL_LABEL: &str = "to_mempool";
-pub const FROM_MEMPOOL_LABEL: &str = "from_mempool";
+pub const MEMPOOL_LABEL: &str = "mempool";
 pub const CONSENSUS_LABEL: &str = "consensus";
 pub const STATE_SYNC_LABEL: &str = "state_sync";
 

@@ -18,7 +18,7 @@ use diem_config::{
     network_id::NodeNetworkId,
 };
 use diem_logger::prelude::*;
-use diem_mempool::{CommitResponse, CommittedTransaction};
+use diem_mempool::CommitResponse;
 use diem_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
@@ -32,13 +32,14 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
+use mempool_notifications::MempoolNotificationSender;
 use network::{protocols::network::Event, transport::ConnectionMetadata};
 use std::{
     cmp,
     collections::HashMap,
     time::{Duration, SystemTime},
 };
-use tokio::time::{interval, timeout};
+use tokio::time::interval;
 use tokio_stream::wrappers::IntervalStream;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,11 +59,11 @@ struct PendingRequestInfo {
 /// higher within the timeout interval).
 /// * Validator: the ChunkRequests are generated on demand for a specific target LedgerInfo to
 /// synchronize to.
-pub(crate) struct StateSyncCoordinator<T> {
+pub(crate) struct StateSyncCoordinator<T, M> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
-    state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
+    mempool_notifier: M,
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
@@ -92,10 +93,10 @@ pub(crate) struct StateSyncCoordinator<T> {
     executor_proxy: T,
 }
 
-impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
+impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T, M> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
-        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
+        mempool_notifier: M,
         network_senders: HashMap<NodeNetworkId, StateSyncSender>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
@@ -125,7 +126,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         Ok(Self {
             client_events,
-            state_sync_to_mempool_sender,
+            mempool_notifier,
             local_state: initial_state,
             config: node_config.state_sync.clone(),
             role,
@@ -535,52 +536,25 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         &mut self,
         committed_transactions: Vec<Transaction>,
     ) -> Result<(), Error> {
-        // Get all user transactions from committed transactions
-        let user_transactions = committed_transactions
-            .iter()
-            .filter_map(|transaction| match transaction {
-                Transaction::UserTransaction(signed_txn) => Some(CommittedTransaction {
-                    sender: signed_txn.sender(),
-                    sequence_number: signed_txn.sequence_number(),
-                }),
-                _ => None,
-            })
-            .collect();
-
-        // Create commit notification of user transactions for mempool
-        let (callback_sender, callback_receiver) = oneshot::channel();
-        let req = diem_mempool::CommitNotification {
-            transactions: user_transactions,
-            block_timestamp_usecs: self
-                .local_state
-                .committed_ledger_info()
-                .ledger_info()
-                .timestamp_usecs(),
-            callback: callback_sender,
-        };
-
         // Notify mempool of committed transactions
-        if let Err(error) = self.state_sync_to_mempool_sender.try_send(req) {
-            counters::COMMIT_FLOW_FAIL
-                .with_label_values(&[counters::TO_MEMPOOL_LABEL])
-                .inc();
-            Err(Error::CallbackSendFailed(format!(
-                "Failed to notify mempool of committed transactions! Error: {:?}",
-                error
-            )))
-        } else if let Err(error) = timeout(
-            Duration::from_millis(self.config.mempool_commit_timeout_ms),
-            callback_receiver,
-        )
-        .await
+        let block_timestamp_usecs = self
+            .local_state
+            .committed_ledger_info()
+            .ledger_info()
+            .timestamp_usecs();
+        if let Err(error) = self
+            .mempool_notifier
+            .notify_new_commit(
+                committed_transactions,
+                block_timestamp_usecs,
+                self.config.mempool_commit_timeout_ms,
+            )
+            .await
         {
             counters::COMMIT_FLOW_FAIL
-                .with_label_values(&[counters::FROM_MEMPOOL_LABEL])
+                .with_label_values(&[counters::MEMPOOL_LABEL])
                 .inc();
-            Err(Error::CallbackSendFailed(format!(
-                "Did not receive ACK for commit notification from mempool! Error: {:?}",
-                error
-            )))
+            Err(error.into())
         } else {
             Ok(())
         }
@@ -1714,6 +1688,7 @@ mod tests {
         PeerId,
     };
     use futures::{channel::oneshot, executor::block_on};
+    use mempool_notifications::MempoolNotifier;
     use netcore::transport::ConnectionOrigin;
     use network::transport::ConnectionMetadata;
     use std::{collections::BTreeMap, time::SystemTime};
@@ -2425,7 +2400,7 @@ mod tests {
     }
 
     fn verify_all_chunk_requests_are_invalid(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         requests: &[StateSyncMessage],
     ) {
@@ -2442,7 +2417,7 @@ mod tests {
     }
 
     fn verify_all_chunk_responses_are_invalid(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         responses: &[StateSyncMessage],
     ) {
@@ -2459,7 +2434,7 @@ mod tests {
     }
 
     fn verify_all_chunk_responses_are_the_wrong_type(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         responses: &[StateSyncMessage],
     ) {
@@ -2476,7 +2451,7 @@ mod tests {
     }
 
     fn process_new_peer_event(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
         peer: &PeerNetworkId,
     ) {
         let connection_metadata = ConnectionMetadata::mock_with_role_and_origin(

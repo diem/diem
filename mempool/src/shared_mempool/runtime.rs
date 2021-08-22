@@ -9,7 +9,7 @@ use crate::{
         peer_manager::PeerManager,
         types::{SharedMempool, SharedMempoolNotification},
     },
-    CommitNotification, ConsensusRequest, SubmissionStatus,
+    ConsensusRequest, SubmissionStatus,
 };
 use anyhow::Result;
 use channel::diem_channel;
@@ -20,6 +20,7 @@ use futures::channel::{
     mpsc::{self, Receiver, UnboundedSender},
     oneshot,
 };
+use mempool_notifications::MempoolNotificationListener;
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
@@ -39,7 +40,7 @@ pub(crate) fn start_shared_mempool<V>(
     mempool_network_handles: Vec<(NodeNetworkId, MempoolNetworkSender, MempoolNetworkEvents)>,
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
-    state_sync_requests: mpsc::Receiver<CommitNotification>,
+    mempool_listener: MempoolNotificationListener,
     mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
@@ -72,7 +73,7 @@ pub(crate) fn start_shared_mempool<V>(
         all_network_events,
         client_events,
         consensus_requests,
-        state_sync_requests,
+        mempool_listener,
         mempool_reconfig_events,
     ));
 
@@ -95,7 +96,7 @@ pub fn bootstrap(
     mempool_network_handles: Vec<(NodeNetworkId, MempoolNetworkSender, MempoolNetworkEvents)>,
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,
-    state_sync_requests: Receiver<CommitNotification>,
+    mempool_listener: MempoolNotificationListener,
     mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = Builder::new_multi_thread()
@@ -112,7 +113,7 @@ pub fn bootstrap(
         mempool_network_handles,
         client_events,
         consensus_requests,
-        state_sync_requests,
+        mempool_listener,
         mempool_reconfig_events,
         db,
         vm_validator,

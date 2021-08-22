@@ -15,6 +15,7 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof, PeerId,
 };
 use futures::executor::block_on;
+use mempool_notifications::MempoolNotifier;
 use once_cell::sync::Lazy;
 use proptest::{
     arbitrary::{any, Arbitrary},
@@ -23,7 +24,7 @@ use proptest::{
     strategy::Strategy,
 };
 
-static STATE_SYNC_COORDINATOR: Lazy<Mutex<StateSyncCoordinator<ExecutorProxy>>> =
+static STATE_SYNC_COORDINATOR: Lazy<Mutex<StateSyncCoordinator<ExecutorProxy, MempoolNotifier>>> =
     Lazy::new(|| Mutex::new(test_utils::create_validator_coordinator()));
 
 proptest! {

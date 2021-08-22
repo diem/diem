@@ -3,6 +3,7 @@
 
 use diem_types::transaction::Version;
 use futures::channel::{mpsc::SendError, oneshot::Canceled};
+use mempool_notifications;
 use network::error::NetworkError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -72,5 +73,11 @@ impl From<SendError> for Error {
 impl From<Canceled> for Error {
     fn from(canceled: Canceled) -> Self {
         Error::SenderDroppedError(canceled.to_string())
+    }
+}
+
+impl From<mempool_notifications::Error> for Error {
+    fn from(error: mempool_notifications::Error) -> Self {
+        Error::UnexpectedError(error.to_string())
     }
 }

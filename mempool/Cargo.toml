@@ -33,6 +33,7 @@ diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 diem-types = { path = "../types" }
 diem-workspace-hack = { path = "../common/workspace-hack" }
 mirai-annotations = "1.10.1"
+mempool-notifications = { path = "../state-sync/inter-component/mempool-notifications" }
 network = { path = "../network" }
 rand = "0.8.3"
 netcore = { path = "../network/netcore" }

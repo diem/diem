@@ -21,6 +21,7 @@ use futures::{
     channel::mpsc::{self, unbounded, UnboundedReceiver},
     FutureExt, StreamExt,
 };
+use mempool_notifications::MempoolNotifier;
 use netcore::transport::ConnectionOrigin;
 use network::{
     peer_manager::{
@@ -591,7 +592,7 @@ fn start_node_mempool(
     let (sender, subscriber) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
-    let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
+    let (_mempool_notifier, mempool_listener) = MempoolNotifier::new();
     let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
     let runtime = Builder::new_multi_thread()
@@ -606,7 +607,7 @@ fn start_node_mempool(
         network_handles,
         ac_endpoint_receiver,
         consensus_events,
-        state_sync_events,
+        mempool_listener,
         reconfig_events_receiver,
         Arc::new(MockDbReader),
         Arc::new(RwLock::new(MockVMValidator)),

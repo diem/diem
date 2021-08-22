@@ -12,8 +12,7 @@ use crate::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
         SubmissionStatusBundle,
     },
-    CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
-    SubmissionStatus,
+    ConsensusRequest, ConsensusResponse, SubmissionStatus,
 };
 use anyhow::Result;
 use diem_config::config::PeerNetworkId;
@@ -27,6 +26,7 @@ use diem_types::{
     vm_status::DiscardedVMStatus,
 };
 use futures::{channel::oneshot, stream::FuturesUnordered};
+use mempool_notifications::CommittedTransaction;
 use rayon::prelude::*;
 use short_hex_str::AsShortHexStr;
 use std::{
@@ -339,32 +339,6 @@ fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<Pe
 // intra-node communication handlers //
 // ================================= //
 
-pub(crate) async fn process_state_sync_request(
-    mempool: Arc<Mutex<CoreMempool>>,
-    req: CommitNotification,
-) {
-    let start_time = Instant::now();
-    debug!(
-        LogSchema::event_log(LogEntry::StateSyncCommit, LogEvent::Received).state_sync_msg(&req)
-    );
-    counters::mempool_service_transactions(
-        counters::COMMIT_STATE_SYNC_LABEL,
-        req.transactions.len(),
-    );
-    commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
-    let result = if req.callback.send(Ok(CommitResponse::success())).is_err() {
-        error!(LogSchema::event_log(
-            LogEntry::StateSyncCommit,
-            LogEvent::CallbackFail
-        ));
-        counters::REQUEST_FAIL_LABEL
-    } else {
-        counters::REQUEST_SUCCESS_LABEL
-    };
-    let latency = start_time.elapsed();
-    counters::mempool_service_latency(counters::COMMIT_STATE_SYNC_LABEL, result, latency);
-}
-
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
     // Start latency timer
     let start_time = Instant::now();
@@ -423,7 +397,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
     counters::mempool_service_latency(counter_label, result, latency);
 }
 
-async fn commit_txns(
+pub async fn commit_txns(
     mempool: &Mutex<CoreMempool>,
     transactions: Vec<CommittedTransaction>,
     block_timestamp_usecs: u64,

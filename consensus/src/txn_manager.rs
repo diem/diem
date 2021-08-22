@@ -5,15 +5,14 @@ use crate::{error::MempoolError, state_replication::TxnManager};
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
 use diem_logger::prelude::*;
-use diem_mempool::{
-    CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
-};
+use diem_mempool::{ConsensusRequest, ConsensusResponse, TransactionExclusion};
 use diem_metrics::monitor;
 use diem_types::transaction::TransactionStatus;
 use executor_types::StateComputeResult;
 use fail::fail_point;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
+use mempool_notifications::CommittedTransaction;
 use std::time::Duration;
 use tokio::time::{sleep, timeout};
 

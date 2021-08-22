@@ -5,7 +5,7 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState},
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::start_shared_mempool,
-    CommitNotification, ConsensusRequest, SubmissionStatus,
+    ConsensusRequest, SubmissionStatus,
 };
 use anyhow::{format_err, Result};
 use channel::{self, diem_channel, message_queues::QueueStyle};
@@ -19,6 +19,7 @@ use diem_types::{
     transaction::{GovernanceRole, SignedTransaction},
 };
 use futures::channel::{mpsc, oneshot};
+use mempool_notifications::{MempoolNotificationListener, MempoolNotifier};
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
@@ -34,14 +35,14 @@ pub struct MockSharedMempool {
     pub ac_client: mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub consensus_sender: mpsc::Sender<ConsensusRequest>,
-    pub state_sync_sender: Option<mpsc::Sender<CommitNotification>>,
+    pub mempool_notifier: Option<MempoolNotifier>,
 }
 
 impl MockSharedMempool {
     /// Creates a mock of a running instance of shared mempool.
     /// Returns the runtime on which the shared mempool is running
     /// and the channel through which shared mempool receives client events.
-    pub fn new(state_sync: Option<mpsc::Receiver<CommitNotification>>) -> Self {
+    pub fn new(mempool_listener: Option<MempoolNotificationListener>) -> Self {
         let runtime = Builder::new_multi_thread()
             .thread_name("mock-shared-mem")
             .enable_all()
@@ -63,12 +64,12 @@ impl MockSharedMempool {
         let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_notifs_rx);
         let (ac_client, client_events) = mpsc::channel(1_024);
         let (consensus_sender, consensus_events) = mpsc::channel(1_024);
-        let (state_sync_sender, state_sync_events) = match state_sync {
+        let (mempool_notifier, mempool_listener) = match mempool_listener {
             None => {
-                let (sender, events) = mpsc::channel(1_024);
-                (Some(sender), events)
+                let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+                (Some(mempool_notifier), mempool_listener)
             }
-            Some(state_sync) => (None, state_sync),
+            Some(mempool_listener) => (None, mempool_listener),
         };
         let (_reconfig_event_publisher, reconfig_event_subscriber) =
             diem_channel::new(QueueStyle::LIFO, 1, None);
@@ -85,7 +86,7 @@ impl MockSharedMempool {
             network_handles,
             client_events,
             consensus_events,
-            state_sync_events,
+            mempool_listener,
             reconfig_event_subscriber,
             Arc::new(MockDbReader),
             Arc::new(RwLock::new(MockVMValidator)),
@@ -97,7 +98,7 @@ impl MockSharedMempool {
             ac_client,
             mempool,
             consensus_sender,
-            state_sync_sender,
+            mempool_notifier,
         }
     }
 
