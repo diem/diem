@@ -71,6 +71,7 @@ pub enum AccountRoleView {
         num_children: u64,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
+        #[serde(skip_serializing_if = "Option::is_none")]
         vasp_domains: Option<Vec<DiemIdVaspDomainIdentifier>>,
     },
     #[serde(rename = "designated_dealer")]
@@ -83,6 +84,7 @@ pub enum AccountRoleView {
         received_mint_events_key: EventKey,
         compliance_key_rotation_events_key: EventKey,
         base_url_rotation_events_key: EventKey,
+        #[serde(skip_serializing_if = "Option::is_none")]
         preburn_queues: Option<Vec<PreburnQueueView>>,
     },
     #[serde(rename = "treasury_compliance")]
@@ -420,7 +422,10 @@ pub enum EventDataView {
         address: AccountAddress,
     },
     #[serde(rename = "unknown")]
-    Unknown { bytes: Option<BytesView> },
+    Unknown {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        bytes: Option<BytesView>,
+    },
 
     // used by client to deserialize server response
     #[serde(other)]
@@ -566,9 +571,13 @@ pub struct MetadataView {
     pub accumulator_root_hash: HashValue,
     pub timestamp: u64,
     pub chain_id: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub script_hash_allow_list: Option<Vec<HashValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub module_publishing_allowed: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub diem_version: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dual_attestation_limit: Option<u64>,
 }
 
@@ -711,6 +720,7 @@ pub enum VMStatusView {
     MoveAbort {
         location: String,
         abort_code: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
         explanation: Option<MoveAbortExplanationView>,
     },
     ExecutionFailure {
@@ -1433,6 +1443,7 @@ impl TryFrom<&AccumulatorConsistencyProofView> for AccumulatorConsistencyProof {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AccountStateWithProofView {
     pub version: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub blob: Option<BytesView>,
     pub proof: AccountStateProofView,
 }
@@ -1533,8 +1544,8 @@ impl TryFrom<&AccountStateProofView> for AccountStateProof {
 #[cfg(test)]
 mod tests {
     use crate::views::{
-        AccountRoleView, AmountView, EventDataView, PreburnWithMetadataView, TransactionDataView,
-        VMStatusView,
+        AccountRoleView, AccountStateWithProofView, AmountView, EventDataView, MetadataView,
+        PreburnWithMetadataView, TransactionDataView, VMStatusView,
     };
     use diem_types::{contract_event::ContractEvent, event::EventKey};
     use move_core_types::language_storage::TypeTag;
@@ -1624,5 +1635,101 @@ mod tests {
         let actual: TransactionDataView = serde_json::from_value(json).unwrap();
         let expected = TransactionDataView::UnknownTransaction;
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_not_serailize_null_fields_in_metadata_view() {
+        let json = json!({
+            "version": 64,
+            "accumulator_root_hash": "cd66d0003f04f14f9c5433549935ac7f49a5c593f7dd56c0339768f3113ecdd9",
+            "timestamp": 123,
+            "chain_id": 8
+        });
+        let actual: MetadataView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn should_not_serailize_null_fields_in_parent_vasp_account_role_view() {
+        let json = json!({
+            "base_url": "",
+            "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
+            "compliance_key": "",
+            "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
+            "expiration_time": 18446744073709551615_u64,
+            "human_name": "name",
+            "num_children": 0,
+            "type": "parent_vasp",
+        });
+
+        let actual: AccountRoleView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn should_not_serailize_null_fields_in_dd_account_role_view() {
+        let json = json!({
+            "base_url": "",
+            "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
+            "compliance_key": "",
+            "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
+            "expiration_time": 18446744073709551615_u64,
+            "human_name": "name",
+            "type": "designated_dealer",
+            "preburn_balances": [],
+            "received_mint_events_key": "0300000000000000000000000000000000000000000000dd",
+        });
+
+        let actual: AccountRoleView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn should_not_serailize_null_fields_in_unknown_event_data_view() {
+        let json = json!({
+            "type": "unknown"
+        });
+
+        let actual: EventDataView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn should_not_serialize_null_fields_in_account_state_with_proof_view() {
+        let json = json!({
+            "version": 111,
+            "proof": {
+                "ledger_info_to_transaction_info_proof": "",
+                "transaction_info": "",
+                "transaction_info_to_account_proof": ""
+            }
+        });
+
+        let actual: AccountStateWithProofView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn should_not_serialize_null_fields_in_vm_status_move_abort_view() {
+        let json = json!({
+            "type": "move_abort",
+            "location": "loc",
+            "abort_code": 12,
+        });
+
+        let actual: VMStatusView = serde_json::from_value(json.clone()).unwrap();
+        let serialized = serde_json::to_value(actual).unwrap();
+
+        assert_eq!(serialized, json);
     }
 }
