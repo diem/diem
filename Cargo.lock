@@ -7474,6 +7474,89 @@ dependencies = [
 ]
 
 [[package]]
+name = "shuffle-custom-move-code"
+version = "0.1.0"
+dependencies = [
+ "diem-framework",
+ "diem-vm",
+ "diem-workspace-hack",
+ "move-stdlib",
+ "move-unit-test",
+]
+
+[[package]]
+name = "shuffle-custom-node"
+version = "0.1.0"
+dependencies = [
+ "abigen",
+ "anyhow",
+ "bcs",
+ "diem-config",
+ "diem-crypto",
+ "diem-genesis-tool",
+ "diem-json-rpc-types",
+ "diem-node",
+ "diem-sdk",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "diemdb",
+ "generate-key",
+ "log",
+ "move-prover",
+ "rand 0.8.3",
+ "structopt 0.3.21",
+ "transaction-builder-generator",
+ "walkdir",
+]
+
+[[package]]
+name = "shuffle-sample-custom-app"
+version = "0.1.0"
+dependencies = [
+ "abigen",
+ "anyhow",
+ "bcs",
+ "diem-config",
+ "diem-crypto",
+ "diem-genesis-tool",
+ "diem-json-rpc-types",
+ "diem-node",
+ "diem-sdk",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "diemdb",
+ "generate-key",
+ "log",
+ "move-prover",
+ "rand 0.8.3",
+ "shuffle-transaction-builder",
+ "structopt 0.3.21",
+ "transaction-builder-generator",
+ "walkdir",
+]
+
+[[package]]
+name = "shuffle-transaction-builder"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "diem-types",
+ "diem-workspace-hack",
+ "hex",
+ "log",
+ "move-core-types",
+ "once_cell",
+ "parking_lot",
+ "proptest",
+ "proptest-derive",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "signal-hook"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
