@@ -71,7 +71,7 @@ impl VerifyCoordinator {
         .await?;
         let ver_max = Version::max_value();
         let state_snapshot = metadata_view.select_state_snapshot(ver_max)?;
-        let transactions = metadata_view.select_transaction_backups(ver_max)?;
+        let transactions = metadata_view.select_transaction_backups(0, ver_max)?;
         let epoch_endings = metadata_view.select_epoch_ending_backups(ver_max)?;
 
         let global_opt = GlobalRestoreOptions {

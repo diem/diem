@@ -81,7 +81,7 @@ impl RestoreCoordinator {
         )
         .await?;
 
-        let transactions = metadata_view.select_transaction_backups(self.target_version())?;
+        let transactions = metadata_view.select_transaction_backups(0, self.target_version())?;
         let actual_target_version = self.get_actual_target_version(&transactions)?;
         let epoch_endings = metadata_view.select_epoch_ending_backups(actual_target_version)?;
         let state_snapshot = if self.replay_all {

@@ -38,7 +38,7 @@ pub struct MetadataCacheOpt {
     #[structopt(
         long = "metadata-cache-dir",
         parse(from_os_str),
-        help = "Metadata cache dir."
+        help = "[Defaults to temporary dir] Metadata cache dir."
     )]
     dir: Option<PathBuf>,
 }

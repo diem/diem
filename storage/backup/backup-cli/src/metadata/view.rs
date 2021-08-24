@@ -49,6 +49,7 @@ impl MetadataView {
 
     pub fn select_transaction_backups(
         &self,
+        start_version: Version,
         target_version: Version,
     ) -> Result<Vec<TransactionBackupMeta>> {
         // This can be more flexible, but for now we assume and check backups are continuous in
@@ -66,7 +67,9 @@ impl MetadataView {
                 backup.first_version,
             );
 
-            res.push(backup.clone());
+            if backup.last_version >= start_version {
+                res.push(backup.clone());
+            }
 
             next_ver = backup.last_version + 1;
         }
