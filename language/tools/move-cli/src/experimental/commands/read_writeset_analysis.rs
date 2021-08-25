@@ -11,13 +11,13 @@ use move_core_types::{
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
 
-use crate::ConcretizeMode;
+use crate::experimental::cli::ConcretizeMode;
 use anyhow::{anyhow, Result};
-use std::fs;
+use std::{fs, path::Path};
 
 pub fn analyze_read_write_set(
     state: &OnDiskStateView,
-    module_file: &str,
+    module_file: &Path,
     function: &str,
     signers: &[String],
     txn_args: &[TransactionArgument],
@@ -96,7 +96,7 @@ pub fn analyze_read_write_set(
             }
         }
     } else {
-        println!("Function {} not found in {}", function, module_file)
+        println!("Function {} not found in {:?}", function, module_file)
     }
     Ok(())
 }

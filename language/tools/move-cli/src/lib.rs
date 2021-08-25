@@ -3,6 +3,7 @@
 
 pub mod base;
 pub mod experimental;
+pub mod package;
 pub mod sandbox;
 
 /// Default directory where saved Move resources live
@@ -23,20 +24,15 @@ pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_DIR;
 /// Extension for resource and event files, which are in BCS format
 const BCS_EXTENSION: &str = "bcs";
 
-use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use anyhow::Result;
 use move_core_types::{
     account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
-    language_storage::TypeTag, parser, transaction_argument::TransactionArgument,
 };
 use move_lang::shared::{self, AddressBytes};
 use move_vm_runtime::native_functions::NativeFunction;
 use sandbox::utils::mode::{Mode, ModeType};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-use structopt::{clap::arg_enum, StructOpt};
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunction);
 
@@ -47,7 +43,7 @@ type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunct
     rename_all = "kebab-case"
 )]
 pub struct Move {
-    /// Named address mapping
+    /// Named address mapping.
     #[structopt(
         name = "NAMED_ADDRESSES",
         short = "a",
@@ -61,11 +57,11 @@ pub struct Move {
     /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, parse(from_os_str), global = true)]
     storage_dir: PathBuf,
-    /// Directory storing build artifacts produced by compilation
+    /// Directory storing build artifacts produced by compilation.
     #[structopt(long, default_value = DEFAULT_BUILD_DIR, parse(from_os_str), global = true)]
     build_dir: PathBuf,
 
-    /// Dependency inclusion mode
+    /// Dependency inclusion mode.
     #[structopt(
         long,
         default_value = DEFAULT_DEP_MODE,
@@ -73,7 +69,7 @@ pub struct Move {
     )]
     mode: ModeType,
 
-    /// Print additional diagnostics
+    /// Print additional diagnostics.
     #[structopt(short = "v", global = true)]
     verbose: bool,
 }
@@ -92,369 +88,46 @@ pub struct MoveCLI {
 
 #[derive(StructOpt)]
 pub enum Command {
-    /// Compile and emit Move bytecode for the specified scripts and/or modules
+    #[structopt(name = "package")]
+    Package {
+        /// Path to package. If none is supplied the current directory will be used.
+        #[structopt(long = "path", short = "p", global = true, parse(from_os_str))]
+        path: Option<PathBuf>,
+
+        #[structopt(flatten)]
+        config: move_package::BuildConfig,
+
+        #[structopt(subcommand)]
+        cmd: package::cli::PackageCommand,
+    },
+    /// Compile and emit Move bytecode for the specified scripts and/or modules.
     #[structopt(name = "compile")]
     Compile {
-        /// The source files to check
+        /// The source files to check.
         #[structopt(
             name = "PATH_TO_SOURCE_FILE",
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// Do not emit source map information along with the compiled bytecode
+        /// Do not emit source map information along with the compiled bytecode.
         #[structopt(long = "no-source-maps")]
         no_source_maps: bool,
         /// Type check and verify the specified scripts and/or modules. Does not emit bytecode.
         #[structopt(long = "check")]
         check: bool,
     },
-    /// Execute a sandbox command
+    /// Execute a sandbox command.
     #[structopt(name = "sandbox")]
     Sandbox {
         #[structopt(subcommand)]
-        cmd: SandboxCommand,
+        cmd: sandbox::cli::SandboxCommand,
     },
-    /// (Experimental) Run static analyses on Move source or bytecode
+    /// (Experimental) Run static analyses on Move source or bytecode.
     #[structopt(name = "experimental")]
     Experimental {
         #[structopt(subcommand)]
-        cmd: ExperimentalCommand,
+        cmd: experimental::cli::ExperimentalCommand,
     },
-}
-
-#[derive(StructOpt)]
-pub enum SandboxCommand {
-    /// Compile the specified modules and publish the resulting bytecodes in global storage
-    #[structopt(name = "publish")]
-    Publish {
-        /// The source files containing modules to publish
-        #[structopt(
-            name = "PATH_TO_SOURCE_FILE",
-            default_value = DEFAULT_SOURCE_DIR,
-        )]
-        source_files: Vec<String>,
-        /// If set, fail during compilation when attempting to publish a module that already
-        /// exists in global storage
-        #[structopt(long = "no-republish")]
-        no_republish: bool,
-        /// By default, code that might cause breaking changes for bytecode
-        /// linking or data layout compatibility checks will not be published.
-        /// Set this flag to ignore breaking changes checks and publish anyway
-        #[structopt(long = "ignore-breaking-changes")]
-        ignore_breaking_changes: bool,
-        /// fix publishing order
-        #[structopt(short = "m", long = "override-ordering")]
-        override_ordering: Option<Vec<String>>,
-    },
-    /// Compile/run a Move script that reads/writes resources stored on disk in `storage`.
-    /// This command compiles the script first before running it.
-    #[structopt(name = "run")]
-    Run {
-        /// Path to .mv file containing either script or module bytecodes. If the file is a module, the
-        /// `script_name` parameter must be set.
-        #[structopt(name = "script")]
-        script_file: String,
-        /// Name of the script function inside `script_file` to call. Should only be set if `script_file`
-        /// points to a module.
-        #[structopt(name = "name")]
-        script_name: Option<String>,
-        /// Possibly-empty list of signers for the current transaction (e.g., `account` in
-        /// `main(&account: signer)`). Must match the number of signers expected by `script_file`.
-        #[structopt(long = "signers")]
-        signers: Vec<String>,
-        /// Possibly-empty list of arguments passed to the transaction (e.g., `i` in
-        /// `main(i: u64)`). Must match the arguments types expected by `script_file`.
-        /// Supported argument types are
-        /// bool literals (true, false),
-        /// u64 literals (e.g., 10, 58),
-        /// address literals (e.g., 0x12, 0x0000000000000000000000000000000f),
-        /// hexadecimal strings (e.g., x"0012" will parse as the vector<u8> value [00, 12]), and
-        /// ASCII strings (e.g., 'b"hi" will parse as the vector<u8> value [68, 69])
-        #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
-        args: Vec<TransactionArgument>,
-        /// Possibly-empty list of type arguments passed to the transaction (e.g., `T` in
-        /// `main<T>()`). Must match the type arguments kinds expected by `script_file`.
-        #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
-        type_args: Vec<TypeTag>,
-        /// Maximum number of gas units to be consumed by execution.
-        /// When the budget is exhaused, execution will abort.
-        /// By default, no `gas-budget` is specified and gas metering is disabled.
-        #[structopt(long = "gas-budget", short = "g")]
-        gas_budget: Option<u64>,
-        /// If set, the effects of executing `script_file` (i.e., published, updated, and
-        /// deleted resources) will NOT be committed to disk.
-        #[structopt(long = "dry-run", short = "n")]
-        dry_run: bool,
-    },
-    /// Run expected value tests using the given batch file
-    #[structopt(name = "test")]
-    Test {
-        /// a directory path in which all the tests will be executed
-        #[structopt(name = "path")]
-        path: String,
-        /// Use an ephemeral directory to serve as the testing workspace.
-        /// By default, the directory containing the `args.txt` will be the workspace
-        #[structopt(long = "use-temp-dir")]
-        use_temp_dir: bool,
-        /// Show coverage information after tests are done.
-        /// By default, coverage will not be tracked nor shown.
-        #[structopt(long = "track-cov")]
-        track_cov: bool,
-        /// Create a new test directory scaffold with the specified <path>
-        #[structopt(long = "create")]
-        create: bool,
-    },
-    /// View Move resources, events files, and modules stored on disk
-    #[structopt(name = "view")]
-    View {
-        /// Path to a resource, events file, or module stored on disk.
-        #[structopt(name = "file")]
-        file: String,
-    },
-    /// Delete all resources, events, and modules stored on disk under `storage`.
-    /// Does *not* delete anything in `src`.
-    Clean {},
-    /// Run well-formedness checks on the `storage` and `build` directories.
-    #[structopt(name = "doctor")]
-    Doctor {},
-    /// Typecheck and verify the scripts and/or modules under `src`.
-    #[structopt(name = "link")]
-    Link {
-        /// The source files containing modules to publish
-        #[structopt(
-            name = "PATH_TO_SOURCE_FILE",
-            default_value = DEFAULT_SOURCE_DIR,
-        )]
-        source_files: Vec<String>,
-
-        /// If set, fail when attempting to typecheck a module that already exists in global storage
-        #[structopt(long = "no-republish")]
-        no_republish: bool,
-    },
-    /// Generate struct layout bindings for the modules stored on disk under `storage`
-    // TODO: expand this to generate script bindings, docs, errmaps, etc.?
-    #[structopt(name = "generate")]
-    Generate {
-        #[structopt(subcommand)]
-        cmd: GenerateCommand,
-    },
-}
-
-#[derive(StructOpt)]
-pub enum GenerateCommand {
-    /// Generate struct layout bindings for the modules stored on disk under `storage`
-    #[structopt(name = "struct-layouts")]
-    StructLayouts {
-        /// Path to a module stored on disk.
-        #[structopt(long)]
-        module: String,
-        /// If set, generate bindings for the specified struct and type arguments. If unset,
-        /// generate bindings for all closed struct definitions
-        #[structopt(flatten)]
-        options: StructLayoutOptions,
-    },
-}
-#[derive(StructOpt)]
-pub struct StructLayoutOptions {
-    /// Generate layout bindings for this struct
-    #[structopt(long = "struct")]
-    struct_: Option<String>,
-    /// Generate layout bindings for `struct` bound to these type arguments
-    #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag), requires="struct")]
-    type_args: Option<Vec<TypeTag>>,
-}
-
-#[derive(StructOpt)]
-pub enum ExperimentalCommand {
-    /// Perform a read/write set analysis and print the results for
-    /// `module_file`::`script_name`
-    #[structopt(name = "read-write-set")]
-    ReadWriteSet {
-        /// Path to .mv file containing module bytecode.
-        #[structopt(name = "module")]
-        module_file: String,
-        /// A function inside `module_file`.
-        #[structopt(name = "function")]
-        fun_name: String,
-        #[structopt(long = "signers")]
-        signers: Vec<String>,
-        #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
-        args: Vec<TransactionArgument>,
-        #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
-        type_args: Vec<TypeTag>,
-        #[structopt(long = "concretize", possible_values = &ConcretizeMode::variants(), case_insensitive = true, default_value = "dont")]
-        concretize: ConcretizeMode,
-    },
-}
-
-// Specify if/how the analysis should concretize and filter the static analysis summary
-arg_enum! {
-    // Specify if/how the analysis should concretize and filter the static analysis summary
-    #[derive(Debug, Clone, Copy)]
-    pub enum ConcretizeMode {
-        // Show the full concretized access paths read or written (e.g. 0xA/0x1::M::S/f/g)
-        Paths,
-        // Show only the concrete resource keys that are read (e.g. 0xA/0x1::M::S)
-        Reads,
-        // Show only the concrete resource keys that are written (e.g. 0xA/0x1::M::S)
-        Writes,
-        // Do not concretize; show the results from the static analysis
-        Dont,
-    }
-}
-
-fn handle_experimental_commands(
-    move_args: &Move,
-    mode: &Mode,
-    experimental_command: &ExperimentalCommand,
-) -> Result<()> {
-    match experimental_command {
-        ExperimentalCommand::ReadWriteSet {
-            module_file,
-            fun_name,
-            signers,
-            args,
-            type_args,
-            concretize,
-        } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            experimental::commands::analyze_read_write_set(
-                &state,
-                module_file,
-                fun_name,
-                signers,
-                args,
-                type_args,
-                *concretize,
-                move_args.verbose,
-            )
-        }
-    }
-}
-
-fn handle_sandbox_commands(
-    natives: Vec<NativeFunctionRecord>,
-    error_descriptions: &ErrorMapping,
-    move_args: &Move,
-    mode: &Mode,
-    sandbox_command: &SandboxCommand,
-) -> Result<()> {
-    let additional_named_addresses =
-        shared::verify_and_create_named_address_mapping(move_args.named_addresses.clone())?;
-    match sandbox_command {
-        SandboxCommand::Link {
-            source_files,
-            no_republish,
-        } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            base::commands::check(
-                &[state.interface_files_dir()?],
-                !*no_republish,
-                source_files,
-                state.get_named_addresses(additional_named_addresses)?,
-                move_args.verbose,
-            )
-        }
-        SandboxCommand::Publish {
-            source_files,
-            no_republish,
-            ignore_breaking_changes,
-            override_ordering,
-        } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            sandbox::commands::publish(
-                natives,
-                &state,
-                source_files,
-                !*no_republish,
-                *ignore_breaking_changes,
-                override_ordering.as_ref().map(|o| o.as_slice()),
-                state.get_named_addresses(additional_named_addresses)?,
-                move_args.verbose,
-            )
-        }
-        SandboxCommand::Run {
-            script_file,
-            script_name,
-            signers,
-            args,
-            type_args,
-            gas_budget,
-            dry_run,
-        } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            sandbox::commands::run(
-                natives,
-                error_descriptions,
-                &state,
-                script_file,
-                script_name,
-                signers,
-                args,
-                type_args.to_vec(),
-                state.get_named_addresses(additional_named_addresses)?,
-                *gas_budget,
-                *dry_run,
-                move_args.verbose,
-            )
-        }
-        SandboxCommand::Test {
-            path,
-            use_temp_dir: _,
-            track_cov: _,
-            create: true,
-        } => sandbox::commands::create_test_scaffold(path),
-        SandboxCommand::Test {
-            path,
-            use_temp_dir,
-            track_cov,
-            create: false,
-        } => sandbox::commands::run_all(
-            path,
-            &std::env::current_exe()?.to_string_lossy(),
-            *use_temp_dir,
-            *track_cov,
-        ),
-        SandboxCommand::View { file } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            sandbox::commands::view(&state, file)
-        }
-        SandboxCommand::Clean {} => {
-            // delete storage
-            let storage_dir = Path::new(&move_args.storage_dir);
-            if storage_dir.exists() {
-                fs::remove_dir_all(&storage_dir)?;
-            }
-
-            // delete build
-            let build_dir = Path::new(&move_args.build_dir);
-            if build_dir.exists() {
-                fs::remove_dir_all(&build_dir)?;
-            }
-            Ok(())
-        }
-        SandboxCommand::Doctor {} => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            sandbox::commands::doctor(&state)
-        }
-        SandboxCommand::Generate { cmd } => {
-            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            handle_generate_commands(cmd, &state)
-        }
-    }
-}
-
-fn handle_generate_commands(cmd: &GenerateCommand, state: &OnDiskStateView) -> Result<()> {
-    match cmd {
-        GenerateCommand::StructLayouts { module, options } => {
-            sandbox::commands::generate::generate_struct_layouts(
-                module,
-                &options.struct_,
-                &options.type_args,
-                state,
-            )
-        }
-    }
 }
 
 pub fn run_cli(
@@ -495,9 +168,12 @@ pub fn run_cli(
             }
         }
         Command::Sandbox { cmd } => {
-            handle_sandbox_commands(natives, error_descriptions, move_args, &mode, cmd)
+            cmd.handle_command(natives, error_descriptions, move_args, &mode)
         }
-        Command::Experimental { cmd } => handle_experimental_commands(move_args, &mode, cmd),
+        Command::Experimental { cmd } => cmd.handle_command(move_args, &mode),
+        Command::Package { path, config, cmd } => {
+            package::cli::handle_package_commands(path, config.clone(), cmd)
+        }
     }
 }
 

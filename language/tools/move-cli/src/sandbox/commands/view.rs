@@ -8,8 +8,7 @@ use crate::sandbox::utils::{
 use anyhow::{bail, Result};
 use std::path::Path;
 /// Print a module or resource stored in `file`
-pub fn view(state: &OnDiskStateView, file: &str) -> Result<()> {
-    let path = Path::new(&file);
+pub fn view(state: &OnDiskStateView, path: &Path) -> Result<()> {
     if state.is_resource_path(path) {
         match state.view_resource(path)? {
             Some(resource) => println!("{}", resource),

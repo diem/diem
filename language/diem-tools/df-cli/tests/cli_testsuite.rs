@@ -3,12 +3,12 @@
 
 use move_cli::sandbox::commands::test;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
     test::run_one(
         args_path,
-        "../../../target/debug/df-cli",
+        &PathBuf::from("../../../target/debug/df-cli"),
         /* use_temp_dir */ true,
         /* track_cov */ false,
     )?;

@@ -107,7 +107,7 @@ fn collect_coverage(
 /// Run the `args_path` batch file with`cli_binary`
 pub fn run_one(
     args_path: &Path,
-    cli_binary: &str,
+    cli_binary: &Path,
     use_temp_dir: bool,
     track_cov: bool,
 ) -> anyhow::Result<Option<ExecCoverageMapWithModules>> {
@@ -127,7 +127,7 @@ pub fn run_one(
     }
 
     let args_file = io::BufReader::new(File::open(args_path)?).lines();
-    let cli_binary_path = Path::new(cli_binary).canonicalize()?;
+    let cli_binary_path = cli_binary.canonicalize()?;
 
     // path where we will run the binary
     let exe_dir = args_path.parent().unwrap();
@@ -276,8 +276,8 @@ pub fn run_one(
 }
 
 pub fn run_all(
-    args_path: &str,
-    cli_binary: &str,
+    args_path: &Path,
+    cli_binary: &Path,
     use_temp_dir: bool,
     track_cov: bool,
 ) -> anyhow::Result<()> {
@@ -286,7 +286,7 @@ pub fn run_all(
     let mut cov_info = ExecCoverageMapWithModules::empty();
 
     // find `args.txt` and iterate over them
-    for entry in find_filenames(&[args_path.to_owned()], |fpath| {
+    for entry in find_filenames(&[args_path], |fpath| {
         fpath.file_name().expect("unexpected file entry path") == TEST_ARGS_FILENAME
     })? {
         match run_one(Path::new(&entry), cli_binary, use_temp_dir, track_cov) {
@@ -320,9 +320,7 @@ pub fn run_all(
 }
 
 /// Create a directory scaffold for writing a Move CLI test.
-pub fn create_test_scaffold(path: &str) -> anyhow::Result<()> {
-    let path = Path::new(path);
-
+pub fn create_test_scaffold(path: &Path) -> anyhow::Result<()> {
     if path.exists() {
         anyhow::bail!("{:#?} already exists. Remove {:#?} and re-run this command if creating it as a test directory was intentional.", path, path);
     }

@@ -11,12 +11,11 @@ use move_core_types::{
 use std::path::Path;
 
 pub fn generate_struct_layouts(
-    module: &str,
+    path: &Path,
     struct_opt: &Option<String>,
     type_params_opt: &Option<Vec<TypeTag>>,
     state: &OnDiskStateView,
 ) -> Result<()> {
-    let path = Path::new(&module);
     if let Some(module_id) = state.get_module_id(path) {
         if let Some(struct_) = struct_opt {
             // Generate for one struct

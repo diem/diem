@@ -28,7 +28,7 @@ pub fn run(
     natives: impl IntoIterator<Item = NativeFunctionRecord>,
     error_descriptions: &ErrorMapping,
     state: &OnDiskStateView,
-    script_file: &str,
+    script_path: &Path,
     script_name_opt: &Option<String>,
     signers: &[String],
     txn_args: &[TransactionArgument],
@@ -40,18 +40,20 @@ pub fn run(
 ) -> Result<()> {
     fn compile_script(
         state: &OnDiskStateView,
-        script_file: &str,
+        script_path: &Path,
         named_address_mapping: BTreeMap<String, AddressBytes>,
         verbose: bool,
     ) -> Result<Option<CompiledScript>> {
         if verbose {
             println!("Compiling transaction script...")
         }
-        let (_files, compiled_units) =
-            Compiler::new(&[script_file.to_string()], &[state.interface_files_dir()?])
-                .set_flags(Flags::empty().set_sources_shadow_deps(false))
-                .set_named_address_values(named_address_mapping)
-                .build_and_report()?;
+        let (_files, compiled_units) = Compiler::new(
+            &[script_path.to_string_lossy().to_string()],
+            &[state.interface_files_dir()?],
+        )
+        .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .set_named_address_values(named_address_mapping)
+        .build_and_report()?;
 
         let mut script_opt = None;
         for c in compiled_units {
@@ -77,29 +79,28 @@ pub fn run(
         Ok(script_opt)
     }
 
-    let path = Path::new(script_file);
-    if !path.exists() {
-        bail!("Script file {:?} does not exist", path)
+    if !script_path.exists() {
+        bail!("Script file {:?} does not exist", script_path)
     };
-    let bytecode = if is_bytecode_file(path) {
+    let bytecode = if is_bytecode_file(script_path) {
         assert!(
-            state.is_module_path(path) || !contains_module(path),
+            state.is_module_path(script_path) || !contains_module(script_path),
             "Attempting to run module {:?} outside of the `storage/` directory.
 move run` must be applied to a module inside `storage/`",
-            path
+            script_path
         );
         // script bytecode; read directly from file
-        fs::read(path)?
+        fs::read(script_path)?
     } else {
         // script source file; compile first and then extract bytecode
-        let script_opt = compile_script(state, script_file, named_address_mapping, verbose)?;
+        let script_opt = compile_script(state, script_path, named_address_mapping, verbose)?;
         match script_opt {
             Some(script) => {
                 let mut script_bytes = vec![];
                 script.serialize(&mut script_bytes)?;
                 script_bytes
             }
-            None => bail!("Unable to find script in file {:?}", script_file),
+            None => bail!("Unable to find script in file {:?}", script_path),
         }
     };
 

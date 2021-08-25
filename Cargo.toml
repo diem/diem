@@ -211,7 +211,6 @@ default-members = [
     "language/move-stdlib",
     "language/tools/disassembler",
     "language/tools/move-bytecode-viewer",
-    "language/tools/move-package",
     "language/tools/genesis-viewer",
     "language/tools/move-cli",
     "language/tools/move-coverage",
