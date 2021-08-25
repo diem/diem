@@ -14,7 +14,6 @@ pub struct BuildPlan {
     root: PackageName,
     sorted_deps: Vec<PackageName>,
     resolution_graph: ResolvedGraph,
-    compiled_packages: BTreeMap<PackageName, CompiledPackage>,
 }
 
 impl BuildPlan {
@@ -33,7 +32,6 @@ impl BuildPlan {
             root: resolution_graph.root_package.package.name,
             sorted_deps,
             resolution_graph,
-            compiled_packages: BTreeMap::new(),
         })
     }
 

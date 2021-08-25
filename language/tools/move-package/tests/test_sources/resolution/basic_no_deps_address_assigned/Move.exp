@@ -2,6 +2,8 @@ ResolutionGraph {
     build_options: BuildConfig {
         dev_mode: true,
         test_mode: false,
+        generate_docs: false,
+        generate_abis: false,
     },
     root_package: SourceManifest {
         package: PackageInfo {
