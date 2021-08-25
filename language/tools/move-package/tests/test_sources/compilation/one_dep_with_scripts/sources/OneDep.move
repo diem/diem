@@ -3,4 +3,5 @@ module A::OneDep {
     public fun do_b() {
         B::foo()
     }
+    public(script) fun aa() {}
 }

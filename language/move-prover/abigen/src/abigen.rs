@@ -26,6 +26,8 @@ use std::{collections::BTreeMap, io::Read, path::PathBuf};
 pub struct AbigenOptions {
     /// Where to find the .mv files of scripts.
     pub compiled_script_directory: String,
+    /// Where to get the script bytes if held in memory
+    pub in_memory_bytes: Option<BTreeMap<String, Vec<u8>>>,
     /// In which directory to store output.
     pub output_directory: String,
 }
@@ -34,6 +36,7 @@ impl Default for AbigenOptions {
     fn default() -> Self {
         Self {
             compiled_script_directory: ".".to_string(),
+            in_memory_bytes: None,
             output_directory: "abi".to_string(),
         }
     }
@@ -188,20 +191,33 @@ impl<'env> Abigen<'env> {
     }
 
     fn load_compiled_bytes(&self, module_env: &ModuleEnv<'env>) -> anyhow::Result<Vec<u8>> {
-        let mut path = PathBuf::from(&self.options.compiled_script_directory);
-        path.push(
-            PathBuf::from(module_env.get_source_path())
-                .with_extension(MOVE_COMPILED_EXTENSION)
-                .file_name()
-                .expect("file name"),
-        );
-        let mut f = match std::fs::File::open(path.clone()) {
-            Ok(f) => f,
-            Err(error) => bail!("Failed to open compiled file {:?}: {}", path, error),
-        };
-        let mut bytes = Vec::new();
-        f.read_to_end(&mut bytes)?;
-        Ok(bytes)
+        match &self.options.in_memory_bytes {
+            Some(map) => {
+                let path =
+                    PathBuf::from(module_env.get_source_path().to_string_lossy().to_string())
+                        .file_stem()
+                        .expect("file stem")
+                        .to_string_lossy()
+                        .to_string();
+                Ok(map.get(&path).unwrap().clone())
+            }
+            None => {
+                let mut path = PathBuf::from(&self.options.compiled_script_directory);
+                path.push(
+                    PathBuf::from(module_env.get_source_path())
+                        .with_extension(MOVE_COMPILED_EXTENSION)
+                        .file_name()
+                        .expect("file name"),
+                );
+                let mut f = match std::fs::File::open(path.clone()) {
+                    Ok(f) => f,
+                    Err(error) => bail!("Failed to open compiled file {:?}: {}", path, error),
+                };
+                let mut bytes = Vec::new();
+                f.read_to_end(&mut bytes)?;
+                Ok(bytes)
+            }
+        }
     }
 
     fn get_type_tag(&self, ty0: &ty::Type) -> anyhow::Result<TypeTag> {

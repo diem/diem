@@ -216,6 +216,7 @@ fn generate_script_abis(
                 .as_ref()
                 .to_string_lossy()
                 .to_string(),
+            ..Default::default()
         },
         ..Default::default()
     };

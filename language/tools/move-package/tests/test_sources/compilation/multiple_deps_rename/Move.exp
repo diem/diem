@@ -28,4 +28,10 @@ CompiledPackageInfo {
     source_digest: Some(
         "ELIDED_FOR_TEST",
     ),
+    build_flags: BuildConfig {
+        dev_mode: true,
+        test_mode: false,
+        generate_docs: false,
+        generate_abis: false,
+    },
 }
