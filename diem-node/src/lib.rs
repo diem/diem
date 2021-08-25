@@ -34,12 +34,11 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    thread,
     time::Instant,
 };
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::{Builder, Handle, Runtime};
 use tokio_stream::wrappers::IntervalStream;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
@@ -47,13 +46,7 @@ const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 const MEMPOOL_NETWORK_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct DiemHandle {
-    _rpc: Runtime,
-    _mempool: Runtime,
-    _state_sync_bootstrapper: StateSyncBootstrapper,
-    _network_runtimes: Vec<Runtime>,
-    _consensus_runtime: Option<Runtime>,
-    _debug: NodeDebugService,
-    _backup: Runtime,
+    _diem_runtime: Runtime,
 }
 
 pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
@@ -192,7 +185,11 @@ fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
     Box::new(Executor::<DiemVM>::new(db))
 }
 
-fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> NodeDebugService {
+fn setup_debug_interface(
+    config: &NodeConfig,
+    logger: Option<Arc<Logger>>,
+    runtime: &Handle,
+) -> NodeDebugService {
     let addr = format!(
         "{}:{}",
         config.debug_interface.address, config.debug_interface.admission_control_node_debug_port,
@@ -202,7 +199,7 @@ fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> No
     .next()
     .unwrap();
 
-    NodeDebugService::new(addr, logger)
+    NodeDebugService::new(addr, logger, runtime)
 }
 
 async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
@@ -250,16 +247,22 @@ async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
 }
 
 pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) -> DiemHandle {
-    let debug_if = setup_debug_interface(node_config, logger);
+    let diem_runtime = Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to start Diem node runtime!");
+
+    // Entering here gives us a runtime to instantiate all the pieces of the builder
+    let _enter = diem_runtime.enter();
+
+    let _debug_if = setup_debug_interface(node_config, logger, diem_runtime.handle());
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    metric_server::start_server(metric_host, metrics_port, false);
     let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
     let public_metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || {
-        metric_server::start_server(public_metric_host, public_metrics_port, true)
-    });
+    metric_server::start_server(public_metric_host, public_metrics_port, true);
 
     let mut instant = Instant::now();
     let (diem_db, db_rw) = DbReaderWriter::wrap(
@@ -272,9 +275,10 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         .expect("DB should open."),
     );
     let _simple_storage_service = start_storage_service_with_db(node_config, Arc::clone(&diem_db));
-    let backup_service = start_backup_service(
+    start_backup_service(
         node_config.storage.backup_service_address,
         Arc::clone(&diem_db),
+        diem_runtime.handle(),
     );
 
     let genesis_waypoint = node_config.base.waypoint.genesis_waypoint();
@@ -298,7 +302,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         instant.elapsed().as_millis()
     );
     let chain_id = fetch_chain_id(&db_rw);
-    let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
     let mut consensus_network_handles = None;
@@ -323,14 +326,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (idx, network_config) in network_configs.into_iter().enumerate() {
         debug!("Creating runtime for {}", network_config.network_id);
-        let runtime = Builder::new_multi_thread()
-            .thread_name(format!("network-{}", network_config.network_id))
-            .enable_all()
-            .build()
-            .expect("Failed to start runtime. Won't be able to start networking.");
-
-        // Entering here gives us a runtime to instantiate all the pieces of the builder
-        let _enter = runtime.enter();
 
         // Perform common instantiation steps
         let mut network_builder = NetworkBuilder::create(
@@ -377,10 +372,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
         let network_context = network_builder.network_context();
-        network_builder.build(runtime.handle().clone());
+        network_builder.build(diem_runtime.handle().clone());
         network_builder.start();
         debug!("Network built for network context: {}", network_context);
-        network_runtimes.push(runtime);
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
@@ -397,16 +391,22 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         node_config,
         genesis_waypoint,
         reconfig_subscriptions,
+        diem_runtime.handle(),
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
-    let rpc_runtime = bootstrap_rpc(node_config, chain_id, diem_db.clone(), mp_client_sender);
+    bootstrap_rpc(
+        node_config,
+        chain_id,
+        diem_db.clone(),
+        mp_client_sender,
+        diem_runtime.handle(),
+    );
 
-    let mut consensus_runtime = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
 
     instant = Instant::now();
-    let mempool = diem_mempool::bootstrap(
+    diem_mempool::bootstrap(
         node_config,
         Arc::clone(&db_rw.reader),
         mempool_network_handles,
@@ -414,6 +414,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
+        diem_runtime.handle(),
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
@@ -435,7 +436,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
         // Initialize and start consensus.
         instant = Instant::now();
-        consensus_runtime = Some(start_consensus(
+        start_consensus(
             node_config,
             consensus_network_sender,
             consensus_network_events,
@@ -443,23 +444,15 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             consensus_to_mempool_sender,
             diem_db,
             consensus_reconfig_events,
-        ));
+            diem_runtime.handle(),
+        );
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
 
     // Spawn a task which will periodically dump some interesting state
-    debug_if
-        .runtime()
-        .handle()
-        .spawn(periodic_state_dump(node_config.to_owned(), db_rw));
+    diem_runtime.spawn(periodic_state_dump(node_config.to_owned(), db_rw));
 
     DiemHandle {
-        _network_runtimes: network_runtimes,
-        _rpc: rpc_runtime,
-        _mempool: mempool,
-        _state_sync_bootstrapper: state_sync_bootstrapper,
-        _consensus_runtime: consensus_runtime,
-        _debug: debug_if,
-        _backup: backup_service,
+        _diem_runtime: diem_runtime,
     }
 }

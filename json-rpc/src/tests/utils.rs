@@ -59,7 +59,7 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{DbReader, MoveDbReader, Order, StartupInfo, TreeState};
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 
 /// Creates JSON RPC server for a Validator node
 /// Should only be used for unit-tests
@@ -76,6 +76,7 @@ pub fn test_bootstrap(
         poll_interval_ms: DEFAULT_STREAM_RPC_POLL_INTERVAL_MS,
         max_poll_interval_ms: DEFAULT_STREAM_RPC_MAX_POLL_INTERVAL_MS,
     };
+    let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
     crate::bootstrap(
         address,
         DEFAULT_BATCH_SIZE_LIMIT,
@@ -88,7 +89,9 @@ pub fn test_bootstrap(
         RoleType::Validator,
         ChainId::test(),
         &stream_config,
-    )
+        runtime.handle(),
+    );
+    runtime
 }
 
 /// Lightweight mock of DiemDB

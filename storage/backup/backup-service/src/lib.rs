@@ -7,30 +7,20 @@ use crate::handlers::get_routes;
 use diem_logger::prelude::*;
 use diemdb::DiemDB;
 use std::{net::SocketAddr, sync::Arc};
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Handle;
 
-pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
+pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>, runtime: &Handle) {
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
-
-    let runtime = Builder::new_multi_thread()
-        .thread_name("backup")
-        .enable_all()
-        .build()
-        .expect("[backup] failed to create runtime");
 
     // Ensure that we actually bind to the socket first before spawning the
     // server tasks. This helps in tests to prevent races where a client attempts
     // to make a request before the server task is actually listening on the
     // socket.
-    //
-    // Note: we need to enter the runtime context first to actually bind, since
-    //       tokio TcpListener can only be bound inside a tokio context.
-    let _guard = runtime.enter();
+
     let server = warp::serve(routes).bind(address);
-    runtime.handle().spawn(server);
+    runtime.spawn(server);
     info!("Backup service spawned.");
-    runtime
 }
 
 #[cfg(test)]
@@ -41,6 +31,7 @@ mod tests {
     use diem_temppath::TempPath;
     use reqwest::blocking::get;
     use std::net::{IpAddr, Ipv4Addr};
+    use tokio::runtime::Builder;
 
     /// 404 - endpoint not found
     /// 400 - params not provided or failed parsing
@@ -52,7 +43,12 @@ mod tests {
         let tmpdir = TempPath::new();
         let db = Arc::new(DiemDB::new_for_test(&tmpdir));
         let port = get_available_port();
-        let _rt = start_backup_service(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port), db);
+        let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
+        let _rt = start_backup_service(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
+            db,
+            runtime.handle(),
+        );
 
         // Endpoint doesn't exist.
         let resp = get(&format!("http://127.0.0.1:{}/", port)).unwrap();

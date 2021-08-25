@@ -72,7 +72,7 @@ use std::{
     ops::DerefMut,
     sync::Arc,
 };
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use vm_genesis::GENESIS_KEYPAIR;
 
 // Networks for validators and fullnodes.
@@ -296,8 +296,9 @@ impl StateSyncEnvironment {
         )));
 
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
+        let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
         let bootstrapper = StateSyncBootstrapper::bootstrap_with_executor_proxy(
-            Runtime::new().unwrap(),
+            runtime.handle(),
             network_handles,
             mempool_channel,
             &config,

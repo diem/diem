@@ -22,7 +22,7 @@ use futures::channel::{
 };
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
-use tokio::runtime::{Builder, Handle, Runtime};
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
 
 /// Bootstrap of SharedMempool.
@@ -97,16 +97,12 @@ pub fn bootstrap(
     consensus_requests: Receiver<ConsensusRequest>,
     state_sync_requests: Receiver<CommitNotification>,
     mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-) -> Runtime {
-    let runtime = Builder::new_multi_thread()
-        .thread_name("shared-mem")
-        .enable_all()
-        .build()
-        .expect("[shared mempool] failed to create runtime");
+    runtime: &Handle,
+) {
     let mempool = Arc::new(Mutex::new(CoreMempool::new(config)));
     let vm_validator = Arc::new(RwLock::new(VMValidator::new(Arc::clone(&db))));
     start_shared_mempool(
-        runtime.handle(),
+        runtime,
         config,
         mempool,
         mempool_network_handles,
@@ -118,5 +114,4 @@ pub fn bootstrap(
         vm_validator,
         vec![],
     );
-    runtime
 }

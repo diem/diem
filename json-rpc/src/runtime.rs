@@ -25,7 +25,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use storage_interface::MoveDbReader;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Handle;
 use warp::{
     http::header,
     reject::{self, Reject},
@@ -107,13 +107,8 @@ pub fn bootstrap(
     role: RoleType,
     chain_id: ChainId,
     stream_config: &StreamConfig,
-) -> Runtime {
-    let runtime = Builder::new_multi_thread()
-        .thread_name("json-rpc")
-        .enable_all()
-        .build()
-        .expect("[json-rpc] failed to create runtime");
-
+    runtime: &Handle,
+) {
     let service = JsonRpcService::new(
         diem_db.clone(),
         mp_sender,
@@ -176,11 +171,6 @@ pub fn bootstrap(
     // server tasks. This helps in tests to prevent races where a client attempts
     // to make a request before the server task is actually listening on the
     // socket.
-    //
-    // Note: we need to enter the runtime context first to actually bind, since
-    //       tokio TcpListener can only be bound inside a tokio context.
-
-    let _guard = runtime.enter();
 
     let full_route =
         health_route
@@ -201,8 +191,7 @@ pub fn bootstrap(
                 .bind(address),
         ),
     };
-    runtime.handle().spawn(server);
-    runtime
+    runtime.spawn(server);
 }
 
 /// Creates JSON RPC endpoint by given node config
@@ -211,7 +200,8 @@ pub fn bootstrap_from_config(
     chain_id: ChainId,
     diem_db: Arc<dyn MoveDbReader>,
     mp_sender: MempoolClientSender,
-) -> Runtime {
+    runtime: &Handle,
+) {
     bootstrap(
         config.json_rpc.address,
         config.json_rpc.batch_size_limit,
@@ -224,6 +214,7 @@ pub fn bootstrap_from_config(
         config.base.role,
         chain_id,
         &config.json_rpc.stream_rpc,
+        runtime,
     )
 }
 

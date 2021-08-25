@@ -31,7 +31,10 @@ use std::{
     sync::Arc,
 };
 use storage_interface::DbReader;
-use tokio::{runtime::Runtime, time::Duration};
+use tokio::{
+    runtime::{Builder, Runtime},
+    time::Duration,
+};
 use warp::Filter;
 
 #[test]
@@ -44,10 +47,12 @@ fn end_to_end() {
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
+    let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
     let port = get_available_port();
-    let rt = start_backup_service(
+    start_backup_service(
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
         src_db,
+        runtime.handle(),
     );
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
@@ -56,7 +61,7 @@ fn end_to_end() {
 
     let latest_epoch = blocks.last().unwrap().1.ledger_info().next_block_epoch();
     let target_version = blocks[blocks.len() / 2].1.ledger_info().version() + 1;
-    let manifest_handle = rt
+    let manifest_handle = runtime
         .block_on(
             EpochEndingBackupController::new(
                 EpochEndingBackupOpt {
@@ -73,24 +78,25 @@ fn end_to_end() {
         )
         .unwrap();
 
-    rt.block_on(
-        EpochEndingRestoreController::new(
-            EpochEndingRestoreOpt { manifest_handle },
-            GlobalRestoreOpt {
-                db_dir: Some(tgt_db_dir.path().to_path_buf()),
-                dry_run: false,
-                target_version: Some(target_version),
-                trusted_waypoints: TrustedWaypointOpt::default(),
-                rocksdb_opt: RocksdbOpt::default(),
-                concurernt_downloads: ConcurrentDownloadsOpt::default(),
-            }
-            .try_into()
-            .unwrap(),
-            store,
+    runtime
+        .block_on(
+            EpochEndingRestoreController::new(
+                EpochEndingRestoreOpt { manifest_handle },
+                GlobalRestoreOpt {
+                    db_dir: Some(tgt_db_dir.path().to_path_buf()),
+                    dry_run: false,
+                    target_version: Some(target_version),
+                    trusted_waypoints: TrustedWaypointOpt::default(),
+                    rocksdb_opt: RocksdbOpt::default(),
+                    concurernt_downloads: ConcurrentDownloadsOpt::default(),
+                }
+                .try_into()
+                .unwrap(),
+                store,
+            )
+            .run(None),
         )
-        .run(None),
-    )
-    .unwrap();
+        .unwrap();
 
     let expected_ledger_infos = blocks
         .into_iter()
@@ -117,7 +123,7 @@ fn end_to_end() {
         expected_ledger_infos,
     );
 
-    rt.shutdown_timeout(Duration::from_secs(1));
+    runtime.shutdown_timeout(Duration::from_secs(1));
 }
 
 prop_compose! {

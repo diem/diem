@@ -5,22 +5,14 @@
 
 use diem_logger::{info, json_log, Filter, Logger};
 use std::{net::SocketAddr, sync::Arc};
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Handle;
 use warp::Filter as _;
 
 #[derive(Debug)]
-pub struct NodeDebugService {
-    runtime: Runtime,
-}
+pub struct NodeDebugService {}
 
 impl NodeDebugService {
-    pub fn new(address: SocketAddr, logger: Option<Arc<Logger>>) -> Self {
-        let runtime = Builder::new_multi_thread()
-            .thread_name("nodedebug")
-            .enable_all()
-            .build()
-            .expect("[rpc] failed to create runtime");
-
+    pub fn new(address: SocketAddr, logger: Option<Arc<Logger>>, runtime: &Handle) -> Self {
         // GET /metrics
         let metrics =
             warp::path("metrics").map(|| warp::reply::json(&diem_metrics::get_all_metrics()));
@@ -67,14 +59,8 @@ impl NodeDebugService {
 
         let routes = log.or(warp::get().and(metrics.or(events)));
 
-        runtime
-            .handle()
-            .spawn(async move { warp::serve(routes).bind(address).await });
+        runtime.spawn(async move { warp::serve(routes).bind(address).await });
 
-        Self { runtime }
-    }
-
-    pub fn runtime(&self) -> &Runtime {
-        &self.runtime
+        Self {}
     }
 }

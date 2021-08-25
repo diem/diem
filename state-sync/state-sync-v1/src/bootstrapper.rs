@@ -13,12 +13,11 @@ use futures::channel::mpsc;
 use std::{boxed::Box, collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Handle;
 
 /// Creates and bootstraps new state syncs and creates clients for
 /// communicating with those state syncs.
 pub struct StateSyncBootstrapper {
-    _runtime: Runtime,
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
@@ -31,13 +30,8 @@ impl StateSyncBootstrapper {
         node_config: &NodeConfig,
         waypoint: Waypoint,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
+        runtime: &Handle,
     ) -> Self {
-        let runtime = Builder::new_multi_thread()
-            .thread_name("state-sync")
-            .enable_all()
-            .build()
-            .expect("[State Sync] Failed to create runtime!");
-
         let executor_proxy = ExecutorProxy::new(storage, executor, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
             runtime,
@@ -50,7 +44,7 @@ impl StateSyncBootstrapper {
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
-        runtime: Runtime,
+        runtime: &Handle,
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         node_config: &NodeConfig,
@@ -78,10 +72,7 @@ impl StateSyncBootstrapper {
         .expect("[State Sync] Unable to create state sync coordinator!");
         runtime.spawn(coordinator.start(network));
 
-        Self {
-            _runtime: runtime,
-            coordinator_sender,
-        }
+        Self { coordinator_sender }
     }
 
     pub fn create_client(&self, commit_timeout_secs: u64) -> StateSyncClient {

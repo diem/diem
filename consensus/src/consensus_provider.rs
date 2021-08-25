@@ -22,7 +22,7 @@ use futures::channel::mpsc;
 use state_sync_v1::client::StateSyncClient;
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
-use tokio::runtime::{self, Runtime};
+use tokio::runtime::Handle;
 
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
@@ -33,12 +33,8 @@ pub fn start_consensus(
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: Arc<dyn DbReader>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
-) -> Runtime {
-    let runtime = runtime::Builder::new_multi_thread()
-        .thread_name("consensus")
-        .enable_all()
-        .build()
-        .expect("Failed to create Tokio runtime!");
+    runtime: &Handle,
+) {
     let storage = Arc::new(StorageWriteProxy::new(node_config, diem_db));
     let txn_manager = Arc::new(MempoolProxy::new(
         consensus_to_mempool_sender,
@@ -53,7 +49,7 @@ pub fn start_consensus(
         state_sync_client,
     ));
 
-    let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
+    let time_service = Arc::new(ClockTimeService::new(runtime.clone()));
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
@@ -79,5 +75,4 @@ pub fn start_consensus(
     runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
 
     debug!("Consensus started.");
-    runtime
 }

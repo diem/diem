@@ -12,7 +12,7 @@ use std::{
     sync::Arc,
 };
 use storage_interface::DbWriter;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 
 pub fn tmp_db_empty() -> (TempPath, Arc<DiemDB>) {
     let tmpdir = TempPath::new();
@@ -44,6 +44,11 @@ pub fn tmp_db_with_random_content() -> (
 
 pub fn start_local_backup_service(db: Arc<DiemDB>) -> (Runtime, u16) {
     let port = get_available_port();
-    let rt = start_backup_service(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port), db);
-    (rt, port)
+    let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
+    start_backup_service(
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
+        db,
+        runtime.handle(),
+    );
+    (runtime, port)
 }
