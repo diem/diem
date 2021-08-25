@@ -31,6 +31,7 @@ pub fn generate_script_abis(output_path: &Path) {
             output_directory: output_path.to_string_lossy().to_string(),
             // we only have script funs and no scripts so this should be fine
             compiled_script_directory: "".to_string(),
+            ..Default::default()
         },
         ..Default::default()
     };

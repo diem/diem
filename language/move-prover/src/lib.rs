@@ -44,7 +44,6 @@ pub fn run_move_prover<W: WriteColor>(
     options: Options,
 ) -> anyhow::Result<()> {
     let now = Instant::now();
-
     // Run the model builder.
     let env = run_model_builder_with_options(
         &options.move_sources,
@@ -52,9 +51,20 @@ pub fn run_move_prover<W: WriteColor>(
         options.model_builder.clone(),
         parse_addresses_from_options(options.move_named_address_values.clone())?,
     )?;
+    run_move_prover_with_model(&env, error_writer, options, Some(now))
+}
+
+pub fn run_move_prover_with_model<W: WriteColor>(
+    env: &GlobalEnv,
+    error_writer: &mut W,
+    options: Options,
+    timer: Option<Instant>,
+) -> anyhow::Result<()> {
+    let now = timer.unwrap_or_else(Instant::now);
+
     let build_duration = now.elapsed();
     check_errors(
-        &env,
+        env,
         &options,
         error_writer,
         "exiting with model building errors",
@@ -67,23 +77,23 @@ pub fn run_move_prover<W: WriteColor>(
 
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.run_docgen {
-        return run_docgen(&env, &options, error_writer, now);
+        return run_docgen(env, &options, error_writer, now);
     }
     // Same for ABI generator.
     if options.run_abigen {
-        return run_abigen(&env, &options, now);
+        return run_abigen(env, &options, now);
     }
     // Same for the error map generator
     if options.run_errmapgen {
         return {
-            run_errmapgen(&env, &options, now);
+            run_errmapgen(env, &options, now);
             Ok(())
         };
     }
     // Same for read/write set analysis
     if options.run_read_write_set {
         return {
-            run_read_write_set(&env, &options, now);
+            run_read_write_set(env, &options, now);
             Ok(())
         };
     }
@@ -93,10 +103,10 @@ pub fn run_move_prover<W: WriteColor>(
 
     // Create and process bytecode
     let now = Instant::now();
-    let targets = create_and_process_bytecode(&options, &env);
+    let targets = create_and_process_bytecode(&options, env);
     let trafo_duration = now.elapsed();
     check_errors(
-        &env,
+        env,
         &options,
         error_writer,
         "exiting with bytecode transformation errors",
@@ -104,10 +114,10 @@ pub fn run_move_prover<W: WriteColor>(
 
     // Generate boogie code
     let now = Instant::now();
-    let code_writer = generate_boogie(&env, &options, &targets)?;
+    let code_writer = generate_boogie(env, &options, &targets)?;
     let gen_duration = now.elapsed();
     check_errors(
-        &env,
+        env,
         &options,
         error_writer,
         "exiting with boogie generation errors",
@@ -115,7 +125,7 @@ pub fn run_move_prover<W: WriteColor>(
 
     // Verify boogie code.
     let now = Instant::now();
-    verify_boogie(&env, &options, &targets, code_writer)?;
+    verify_boogie(env, &options, &targets, code_writer)?;
     let verify_duration = now.elapsed();
 
     // Report durations.
@@ -127,7 +137,7 @@ pub fn run_move_prover<W: WriteColor>(
         verify_duration.as_secs_f64()
     );
     check_errors(
-        &env,
+        env,
         &options,
         error_writer,
         "exiting with boogie verification errors",

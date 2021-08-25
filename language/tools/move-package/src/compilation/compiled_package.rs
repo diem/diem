@@ -5,10 +5,13 @@ use crate::{
     compilation::package_layout::CompiledPackageLayout,
     resolution::resolution_graph::{Renaming, ResolvedGraph, ResolvedPackage, ResolvedTable},
     source_package::parsed_manifest::{FileName, NamedAddress, PackageName},
+    BuildConfig,
 };
+use abigen::{Abigen, AbigenOptions};
 use anyhow::Result;
 use bytecode_source_map::utils::source_map_from_file;
 use colored::Colorize;
+use docgen::{Docgen, DocgenOptions};
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_command_line_common::files::{
     extension_equals, find_filenames, find_move_filenames, MOVE_COMPILED_EXTENSION,
@@ -22,6 +25,7 @@ use move_lang::{
     shared::{AddressBytes, Flags},
     Compiler,
 };
+use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -46,6 +50,8 @@ pub struct CompiledPackageInfo {
     /// The hash of the source directory at the time of compilation. `None` if the source for this
     /// package is not available/this package was not compiled.
     pub source_digest: Option<String>,
+    /// The build flags that were used when compiling this package.
+    pub build_flags: BuildConfig,
 }
 
 /// Represents a compiled package in memory.
@@ -59,14 +65,14 @@ pub struct CompiledPackage {
     pub compiled_units: Vec<CompiledUnit>,
     /// Packages that this package depends on. Non-transitive dependencies.
     pub dependencies: Vec<CompiledPackage>,
-    // TODO: Support for these will be added in the next PR
+
     // Optional artifacts from compilation
     //
-    // filename -> doctext
-    // pub compiled_docs: Option<Vec<(String, String)>>,
-    // filename -> yaml bytes for ScriptABI. Can then be used to generate transaction builders in
-    // various languages.
-    // pub compiled_abis: Option<Vec<(String, Vec<u8>)>>,
+    /// filename -> doctext
+    pub compiled_docs: Option<Vec<(String, String)>>,
+    /// filename -> json bytes for ScriptABI. Can then be used to generate transaction builders in
+    /// various languages.
+    pub compiled_abis: Option<Vec<(String, Vec<u8>)>>,
 }
 
 /// Represents a compiled package that has been saved to disk. This holds only the minimal metadata
@@ -87,17 +93,6 @@ impl OnDiskCompiledPackage {
         let buf = std::fs::read(p)?;
         let on_disk_package = serde_yaml::from_slice::<Self>(&buf)?;
         Ok(on_disk_package)
-    }
-
-    pub fn has_source_changed_since_last_compile(
-        &self,
-        resolved_package: &ResolvedPackage,
-    ) -> bool {
-        match &self.compiled_package_info.source_digest {
-            // Don't have source available to us
-            None => false,
-            Some(digest) => digest != &resolved_package.source_digest,
-        }
     }
 
     pub fn into_compiled_package(&self) -> Result<CompiledPackage> {
@@ -174,11 +169,51 @@ impl OnDiskCompiledPackage {
             )
         }
 
+        let docs_path = self
+            .root_path
+            .join(CompiledPackageLayout::CompiledDocs.path());
+        let compiled_docs = if docs_path.is_dir() {
+            Some(
+                find_filenames(&[docs_path.to_string_lossy().to_string()], |path| {
+                    extension_equals(path, "md")
+                })?
+                .into_iter()
+                .map(|path| {
+                    let contents = std::fs::read_to_string(&path).unwrap();
+                    (path, contents)
+                })
+                .collect(),
+            )
+        } else {
+            None
+        };
+
+        let abi_path = self
+            .root_path
+            .join(CompiledPackageLayout::CompiledABIs.path());
+        let compiled_abis = if abi_path.is_dir() {
+            Some(
+                find_filenames(&[abi_path.to_string_lossy().to_string()], |path| {
+                    extension_equals(path, "abi")
+                })?
+                .into_iter()
+                .map(|path| {
+                    let contents = std::fs::read(&path).unwrap();
+                    (path, contents)
+                })
+                .collect(),
+            )
+        } else {
+            None
+        };
+
         Ok(CompiledPackage {
             compiled_package_info: self.compiled_package_info.clone(),
             sources,
             compiled_units,
             dependencies,
+            compiled_docs,
+            compiled_abis,
         })
     }
 
@@ -191,10 +226,26 @@ impl OnDiskCompiledPackage {
     ) -> Result<()> {
         let mut path_to_save = self.root_path.join(dir_or_file);
         if let Some(under_path) = path_under {
+            let parent = under_path.parent().unwrap();
+            path_to_save.push(parent);
             std::fs::create_dir_all(&path_to_save)?;
-            path_to_save.push(under_path);
+            path_to_save.push(Path::new(under_path.file_name().unwrap()));
         }
         std::fs::write(path_to_save, bytes).map_err(|err| err.into())
+    }
+
+    pub(crate) fn has_source_changed_since_last_compile(
+        &self,
+        resolved_package: &ResolvedPackage,
+    ) -> bool {
+        match &self.compiled_package_info.source_digest {
+            // Don't have source available to us
+            None => false,
+            Some(digest) => digest != &resolved_package.source_digest,
+        }
+    }
+    pub(crate) fn are_build_flags_different(&self, build_config: &BuildConfig) -> bool {
+        build_config != &self.compiled_package_info.build_flags
     }
 
     fn get_compiled_units_paths(&self) -> Result<Vec<String>> {
@@ -258,15 +309,17 @@ impl CompiledPackage {
             package.apply_renaming(&mut module_resolution_metadata, &resolved_package.renaming)
         }
 
-        let path = project_root
-            .join(CompiledPackageLayout::Root.path())
+        let build_root_path = project_root.join(CompiledPackageLayout::Root.path());
+        let path = build_root_path
             .join(resolved_package.source_package.package.name.as_str())
             .join(CompiledPackageLayout::BuildInfo.path());
 
         // Compare the digest of the package being compiled against the digest of the package at the time
         // of the last compilation to determine if we can reuse the already-compiled package or not.
         if let Ok(package) = OnDiskCompiledPackage::from_path(path) {
-            if !package.has_source_changed_since_last_compile(&resolved_package) {
+            if !package.has_source_changed_since_last_compile(&resolved_package)
+                && !package.are_build_flags_different(&resolution_graph.build_options)
+            {
                 // Need to dive deeper to make sure that instantiations haven't changed since that
                 // can be changed by other packages above us in the dependency graph possibly
                 if package.compiled_package_info.address_alias_instantiation
@@ -280,8 +333,7 @@ impl CompiledPackage {
         let dep_paths = dependencies
             .iter()
             .map(|compiled_package| {
-                project_root
-                    .join(CompiledPackageLayout::Root.path())
+                build_root_path
                     .join(
                         compiled_package
                             .compiled_package_info
@@ -319,7 +371,7 @@ impl CompiledPackage {
                     .map(|(x, ident)| (x, ident.to_string()))
                     .collect::<BTreeMap<_, _>>(),
             )
-            .set_named_address_values(in_scope_named_addrs)
+            .set_named_address_values(in_scope_named_addrs.clone())
             .set_interface_files_dir(tmp_interface_dir.path().to_string_lossy().to_string())
             .set_flags(flags)
             .build_and_report()?;
@@ -343,19 +395,43 @@ impl CompiledPackage {
             module_resolution_metadata.insert(mod_id, name);
         }
 
+        let mut compiled_docs = None;
+        let mut compiled_abis = None;
+        if resolution_graph.build_options.generate_docs
+            || resolution_graph.build_options.generate_abis
+        {
+            let model = run_model_builder_with_options(
+                &sources,
+                &[tmp_interface_dir.path().to_string_lossy().to_string()],
+                ModelBuilderOptions::default(),
+                in_scope_named_addrs,
+            )?;
+
+            if resolution_graph.build_options.generate_docs {
+                compiled_docs = Some(Self::build_docs(&model, &build_root_path, &dependencies));
+            }
+
+            if resolution_graph.build_options.generate_abis {
+                compiled_abis = Some(Self::build_abis(&model, &compiled_units));
+            }
+        };
+
         let compiled_package = CompiledPackage {
             compiled_package_info: CompiledPackageInfo {
                 package_name: resolved_package.source_package.package.name,
                 address_alias_instantiation: resolved_package.resolution_table,
                 module_resolution_metadata,
                 source_digest: Some(resolved_package.source_digest),
+                build_flags: resolution_graph.build_options.clone(),
             },
             sources,
             compiled_units,
+            compiled_docs,
+            compiled_abis,
             dependencies,
         };
 
-        compiled_package.save_to_disk(project_root.join(CompiledPackageLayout::Root.path()))?;
+        compiled_package.save_to_disk(build_root_path)?;
 
         Ok(compiled_package)
     }
@@ -403,6 +479,26 @@ impl CompiledPackage {
             )?;
         }
 
+        if let Some(docs) = &self.compiled_docs {
+            for (doc_filename, doc_contents) in docs {
+                on_disk_package.save_under(
+                    CompiledPackageLayout::CompiledDocs.path(),
+                    Some(Path::new(&doc_filename).with_extension("md")),
+                    doc_contents.clone().as_bytes(),
+                )?;
+            }
+        }
+
+        if let Some(abis) = &self.compiled_abis {
+            for (filename, abi_bytes) in abis {
+                on_disk_package.save_under(
+                    CompiledPackageLayout::CompiledABIs.path(),
+                    Some(Path::new(&filename).with_extension("abi")),
+                    abi_bytes,
+                )?;
+            }
+        }
+
         on_disk_package.save_under(
             CompiledPackageLayout::BuildInfo.path(),
             None,
@@ -439,5 +535,46 @@ impl CompiledPackage {
                 None => module_resolution.insert(module_id, ident),
             };
         }
+    }
+
+    fn build_abis(model: &GlobalEnv, compiled_units: &[CompiledUnit]) -> Vec<(String, Vec<u8>)> {
+        let bytecode_map: BTreeMap<_, _> = compiled_units
+            .iter()
+            .map(|unit| match &unit {
+                CompiledUnit::Script(script) => (script.name.to_string(), unit.serialize()),
+                CompiledUnit::Module(module) => (module.name.to_string(), unit.serialize()),
+            })
+            .collect();
+        let abi_options = AbigenOptions {
+            in_memory_bytes: Some(bytecode_map),
+            output_directory: "".to_string(),
+            ..AbigenOptions::default()
+        };
+        let mut abigen = Abigen::new(model, &abi_options);
+        abigen.gen();
+        abigen.into_result()
+    }
+
+    fn build_docs(
+        model: &GlobalEnv,
+        build_root_path: &Path,
+        deps: &[CompiledPackage],
+    ) -> Vec<(String, String)> {
+        let doc_options = DocgenOptions {
+            doc_path: deps
+                .iter()
+                .map(|dep| {
+                    build_root_path
+                        .join(dep.compiled_package_info.package_name.as_str())
+                        .join(CompiledPackageLayout::CompiledDocs.path())
+                        .to_string_lossy()
+                        .to_string()
+                })
+                .collect(),
+            output_directory: "".to_string(),
+            ..DocgenOptions::default()
+        };
+        let docgen = Docgen::new(model, &doc_options);
+        docgen.gen()
     }
 }
