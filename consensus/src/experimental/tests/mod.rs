@@ -5,5 +5,6 @@ mod commit_phase_tests;
 mod execution_phase_tests;
 mod integration_tests;
 mod ordering_state_computer_tests;
-mod signing_phase_test;
+mod persisting_phase_tests;
+mod signing_phase_tests;
 mod test_utils;
