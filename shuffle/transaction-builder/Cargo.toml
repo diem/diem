@@ -25,7 +25,7 @@ parking_lot = "0.11.1"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 move-core-types = { path = "../../language/move-core/types" }
-diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 
 [features]
 default = []

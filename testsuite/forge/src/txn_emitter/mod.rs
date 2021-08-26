@@ -40,6 +40,7 @@ use atomic_histogram::*;
 const MAX_TXN_BATCH_SIZE: usize = 100;
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
+const TXN_EXPIRATION_SECONDS: u64 = 180;
 
 #[derive(Clone)]
 pub struct EmitThreadParams {
@@ -600,7 +601,7 @@ async fn wait_for_accounts_sequence(
     client: &JsonRpcClient,
     accounts: &mut [LocalAccount],
 ) -> Result<(), Vec<AccountAddress>> {
-    let deadline = Instant::now() + Duration::from_secs(30); //TXN_MAX_WAIT;
+    let deadline = Instant::now() + Duration::from_secs(TXN_EXPIRATION_SECONDS); //TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address()).collect();
     let mut uncommitted = addresses.clone().into_iter().collect::<HashSet<_>>();
 

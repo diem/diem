@@ -190,7 +190,7 @@ jobs:
     strategy:
       matrix:
         target_images:
-          [client faucet forge, init tools validator validator-tcb]
+          [client faucet cluster-test forge, init tools validator validator-tcb]
     steps:
       - uses: actions/checkout@v2.4.0
         with:
@@ -1072,3 +1072,95 @@ jobs:
         uses: ./.github/actions/early-terminator
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
+
+  land-blocking-test-forge:
+    name: Run land blocking test in Forge
+    runs-on: self-hosted
+    needs: [prepare, build-images, need-base-images]
+    if: ${{ always() && needs.build-images.result=='success' && needs.prepare.outputs.test-land-blocking == 'true' }}
+    outputs:
+      forge-result: ${{ steps.post-test-result.outputs.forge-result }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Launch forge test
+        # NOTE Remember to update PR comment payload if cti cmd is updated.
+        run: |
+          set +e
+          date
+          export FGI_OUTPUT_LOG=$(mktemp)
+          echo "FGI_OUTPUT_LOG=$FGI_OUTPUT_LOG" >> $GITHUB_ENV
+          cmd=""
+          if ${{ needs.need-base-images.result!='success' }}; then
+            cmd="./scripts/fgi/run --tag ${{ needs.build-images.outputs.head-tag }} --suite land_blocking"
+          else
+            cmd="./scripts/fgi/run -E SLACK_URL=${{ secrets.WEBHOOK_FORGE }} --tag ${{ needs.build-images.outputs.head-tag }} --base-image-tag ${{ needs.need-base-images.outputs.prev-tag }} --suite land_blocking_compat"
+          fi
+          eval $cmd
+          ret=$?
+          echo "fgi exit code: $ret"
+          echo "FGI_REPRO_CMD=$cmd" >> $GITHUB_ENV
+          echo "FGI_EXIT_CODE=$ret" >> $GITHUB_ENV
+      - name: Post test results on PR
+        id: post-test-result
+        if: always()
+        # set result to do comparison instead of fail workflow
+        # once we turn off CT and turn on forge, will post forge testing result instead
+        run: |
+          if [ $FGI_EXIT_CODE -eq 1 ]; then
+            echo "::set-output name=forge-result::failed";
+          else
+            echo "::set-output name=forge-result::success";
+          fi
+
+  #this is a temp job here to compare lbt signals between Forge and Cluster Test
+  #it will be removed once Forge LBT is turned on
+  compare_lbt_signals:
+    name: compare-lbt_signals
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    #always run this job even if needed jobs failed or are skipped.
+    if: ${{ always() && needs.land-blocking-test.result!='skipped' && needs.land-blocking-test-forge.result!='skipped'}}
+    needs:
+      - prepare
+      - land-blocking-test
+      - land-blocking-test-forge
+    steps:
+      - run: |
+          success="${{
+            needs.land-blocking-test.result==needs.land-blocking-test-forge.outputs.forge-result
+          }}"
+          if [[ "$success" != "true" ]]; then
+            jq -n \
+              --arg msg "Alert: Two LBT tests results are mismatch." \
+              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+              --arg pr_url "https://github.com/${{ github.repository }}/pull/${{ needs.prepare.outputs.changes-pull-request-number }}" \
+            '{
+              "attachments": [
+              {
+                "text": $msg,
+                "actions": [
+                {
+                  "type": "button",
+                  "text": "Visit Job",
+                  "url": $url
+                },
+                {
+                  "type": "button",
+                  "text": "Visit PR",
+                  "url": $pr_url
+                }
+                ]
+              }
+              ]
+            }' > /tmp/payload
+            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FORGE }}
+          fi
+      - name: Clean up
+        # always step here to avoid break workflow
+        if: ${{ always() }}
+        run: echo "===== forge tests done ===="
