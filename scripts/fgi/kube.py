@@ -17,7 +17,7 @@ AWS_ACCOUNT = (
 
 
 # ================ Kube job ================
-def create_forge_job(context, user, tag, timeout_secs, forge_envs, forge_args):
+def create_forge_job(context, user, tag, base_tag, timeout_secs, forge_envs, forge_args):
     job_name = f"forge-{user}-{int(time.time())}"
     job_name = job_name.replace("_", "-")  # underscore not allowed in pod name
     cluster_name = get_cluster_name_from_context(context)
@@ -58,7 +58,7 @@ def create_forge_job(context, user, tag, timeout_secs, forge_envs, forge_args):
     cmd = template["spec"]["template"]["spec"]["containers"][0]["command"][2]
     template["spec"]["template"]["spec"]["containers"][0]["command"][2] = cmd.replace(
         "tail -f /dev/null",
-        f"timeout {timeout_secs} forge {' '.join(forge_args)} test k8s-swarm --cluster-name {cluster_name} --image-tag {tag}".strip(),
+        f"timeout {timeout_secs} forge {' '.join(forge_args)} test k8s-swarm --cluster-name {cluster_name} --image-tag {tag} --base-image-tag {base_tag}".strip(),
     )
     # additional environment variables
     for env_var in forge_envs:
@@ -82,8 +82,10 @@ def create_forge_job(context, user, tag, timeout_secs, forge_envs, forge_args):
 def get_cluster_context(cluster_name):
     return f"arn:aws:eks:us-west-2:{AWS_ACCOUNT}:cluster/libra-{cluster_name}"
 
+
 def get_cluster_name_from_context(context):
     return context.split("/")[1]
+
 
 def kube_ensure_cluster(clusters):
     attempts = 360
@@ -120,6 +122,7 @@ def kube_ensure_cluster(clusters):
     print("Failed to schedule forge pod. All clusters are busy")
     return None
 
+
 # randomly select a cluster that is free based on its pod status:
 # - no other forge pods currently Running or Pending
 # - all monitoring pods are ready
@@ -149,7 +152,8 @@ def kube_wait_job(job_name, context):
 
         # error pulling the image
         ret = subprocess.call(
-            f"kubectl --context='{context}' get pod --selector=job-name={job_name} | grep -i -e ImagePullBackOff -e InvalidImageName -e ErrImagePull",
+            f"kubectl --context='{context}' get pod --selector=job-name={job_name} | grep -i -e ImagePullBackOff -e "
+            f"InvalidImageName -e ErrImagePull",
             shell=True,
             # stdout=subprocess.DEVNULL,
             # stderr=subprocess.DEVNULL,
@@ -209,21 +213,24 @@ def kube_init_context(workspace=None):
 
 
 def get_forge_pods_by_phase(context, phase):
-    return json.loads(
-        subprocess.check_output(
-            [
-                "kubectl",
-                "-o=json",
-                f"--context={context}",
-                "get",
-                "pods",
-                "--selector=app.kubernetes.io/name=forge",
-                f"--field-selector=status.phase=={phase}",
-            ],
-            stderr=subprocess.DEVNULL,
-            encoding="UTF-8",
+    try:
+        return json.loads(
+            subprocess.check_output(
+                [
+                    "kubectl",
+                    "-o=json",
+                    f"--context={context}",
+                    "get",
+                    "pods",
+                    "--selector=app.kubernetes.io/name=forge",
+                    f"--field-selector=status.phase=={phase}",
+                ],
+                stderr=subprocess.STDOUT,
+                encoding="UTF-8",
+            )
         )
-    )
+    except subprocess.CalledProcessError as e:
+        print(e.output)
 
 
 def get_monitoring_pod(context):

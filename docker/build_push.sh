@@ -8,7 +8,7 @@ function usage {
   echo "build_push.sh [-p] -g <GITHASH> -b <TARGET_BRANCH> -n <image name> [-u]"
   echo "-p indicates this a prebuild, where images are built and pushed to dockerhub with an prefix of 'pre_', should be run on the 'auto' branch, trigger by bors."
   echo "-b the branch we're building on, or the branch we're targeting if a prebuild"
-  echo "-n name, one of init, faucet, validator, validator-tcb, cluster-test"
+  echo "-n name, one of init, faucet, validator, validator-tcb, cluster-test, forge"
   echo "-u 'upload', or 'push' the docker images will be pushed to dockerhub, otherwise only locally tag"
   echo "-o the org to target on dockerhub.  Defaults to 'diem'"
   echo "should be called from the root folder of the diem project, and must have it's .git history"
