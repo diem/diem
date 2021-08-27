@@ -1,4 +1,4 @@
-// check: Unbound field v
+// check: Unbound struct Self.T
 
 module {{default}}.Token {
     struct T has key {v: u64}
@@ -9,7 +9,7 @@ module {{default}}.Token {
 
     public value(this: &Self.T): u64 {
         let vref: &u64;
-        vref = &copy(this).v;
+        vref = &copy(this).T::v;
         _ = move(this);
         return *move(vref);
     }
@@ -38,7 +38,7 @@ main() {
 
     t = Token.new(1);
     tref = &mut t;
-    balance_ref = &move(tref).v;
+    balance_ref = &move(tref).T::v;
     _ = move(balance_ref);
     return;
 }

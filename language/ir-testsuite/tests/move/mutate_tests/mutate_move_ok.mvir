@@ -7,14 +7,14 @@ module {{default}}.B {
 
   public change(this: &mut Self.T) {
     let g: &mut u64;
-    g = &mut move(this).g;
+    g = &mut move(this).T::g;
     *move(g) = 3;
     return;
   }
 
   public get(this: &mut Self.T): u64 {
     let x: &u64;
-    x = &move(this).g;
+    x = &move(this).T::g;
     return *move(x);
   }
 }

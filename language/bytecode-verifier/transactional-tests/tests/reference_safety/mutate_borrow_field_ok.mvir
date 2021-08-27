@@ -7,13 +7,13 @@ module 0x42.Test {
     }
 
     public thousand(t : &mut Self.T) {
-        *(&mut move(t).v) = 1000;
+        *(&mut move(t).T::v) = 1000;
         return;
     }
 
     public value(this: &mut Self.T): u64 {
         let y: &u64;
-        y = &move(this).v;
+        y = &move(this).T::v;
         return *move(y);
     }
 }

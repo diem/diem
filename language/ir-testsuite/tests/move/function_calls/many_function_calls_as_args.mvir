@@ -7,13 +7,13 @@ module {{default}}.A {
 
     public get_value(this: &mut Self.T): u64 {
         let v: &u64;
-        v = &move(this).value;
+        v = &move(this).T::value;
         return *move(v);
     }
 
     public get_parity(this: &mut Self.T): bool {
         let b: &bool;
-        b = &move(this).even;
+        b = &move(this).T::even;
         return *move(b);
     }
 

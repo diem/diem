@@ -5,7 +5,7 @@ module 0x42.A {
 
     public t(this: &mut Self.T, y: Self.Coin) {
         let x: &mut Self.Coin;
-        x = &mut move(this).f;
+        x = &mut move(this).T::f;
         // cannot assign/mutate without drop ability
         *move(x) = move(y);
         return;

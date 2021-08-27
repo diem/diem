@@ -15,7 +15,7 @@ module 0x1.A {
     public value(this: &Self.K) : u64 {
         let k: &u64;
         // valid field borrow
-        k = &(&move(this).f).v;
+        k = &(&move(this).K::f).T::v;
         return *move(k);
     }
 }

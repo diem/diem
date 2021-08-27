@@ -203,21 +203,21 @@ fn compile_borrow_field() {
 
             public borrow_immut_field(arg: &Self.FooCoin) {
                 let field_ref: &u64;
-                field_ref = &move(arg).value;
+                field_ref = &move(arg).FooCoin::value;
                 _ = move(field_ref);
                 return;
             }
 
             public borrow_immut_field_from_mut_ref(arg: &mut Self.FooCoin) {
                 let field_ref: &u64;
-                field_ref = &move(arg).value;
+                field_ref = &move(arg).FooCoin::value;
                 _ = move(field_ref);
                 return;
             }
 
             public borrow_mut_field(arg: &mut Self.FooCoin) {
                 let field_ref: &mut u64;
-                field_ref = &mut move(arg).value;
+                field_ref = &mut move(arg).FooCoin::value;
                 _ = move(field_ref);
                 return;
             }
@@ -237,21 +237,21 @@ fn compile_borrow_field_generic() {
 
             public borrow_immut_field(arg: &Self.FooCoin<u64>) {
                 let field_ref: &u64;
-                field_ref = &move(arg).value;
+                field_ref = &move(arg).FooCoin<u64>::value;
                 _ = move(field_ref);
                 return;
             }
 
             public borrow_immut_field_from_mut_ref(arg: &mut Self.FooCoin<u128>) {
                 let field_ref: &u64;
-                field_ref = &move(arg).value;
+                field_ref = &move(arg).FooCoin<u128>::value;
                 _ = move(field_ref);
                 return;
             }
 
             public borrow_mut_field(arg: &mut Self.FooCoin<address>) {
                 let field_ref: &mut u64;
-                field_ref = &mut move(arg).value;
+                field_ref = &mut move(arg).FooCoin<address>::value;
                 _ = move(field_ref);
                 return;
             }

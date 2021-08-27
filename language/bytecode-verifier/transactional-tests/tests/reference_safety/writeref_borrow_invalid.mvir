@@ -7,8 +7,8 @@ module 0x1.M {
         let v_mut: &mut u64;
         let g_mut: &mut Self.G;
 
-        v_mut = &mut (&mut copy(root).g).v;
-        g_mut = &mut copy(root).g;
+        v_mut = &mut (&mut copy(root).S::g).G::v;
+        g_mut = &mut copy(root).S::g;
 
         // INVALID cannot write with v_mut live
         *move(g_mut) = G { v: 0 };

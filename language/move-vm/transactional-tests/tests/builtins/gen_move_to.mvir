@@ -22,7 +22,7 @@ module 0x1.M {
 
     // change the elem of a `Container<T>` if T is copyable
     public change_container<T: copy + drop>(c: &mut Self.Container<T>, t: T) {
-        *&mut move(c).elem = move(t);
+        *&mut move(c).Container<T>::elem = move(t);
         return;
     }
 
@@ -40,7 +40,7 @@ module 0x1.M {
 
     // change the `val` in a `Value` instance
     public change_value(value: &mut Self.Value, val: u64) {
-        *&mut move(value).val = move(val);
+        *&mut move(value).Value::val = move(val);
         return;
     }
 
@@ -114,7 +114,7 @@ module 0x1.M {
         let equal: bool;
         sender = Signer.address_of(move(account));
         some = borrow_global<Some<T>>(move(sender));
-        inner_ref = &move(some).v;
+        inner_ref = &move(some).Some<T>::v;
         val_ref = &val;
         equal = (move(inner_ref) == move(val_ref));
         return move(val), move(equal);
@@ -126,7 +126,7 @@ module 0x1.M {
         let some: &mut Self.Some<T>;
         sender = Signer.address_of(move(account));
         some = borrow_global_mut<Some<T>>(move(sender));
-        *(&mut move(some).v) = move(val);
+        *(&mut move(some).Some<T>::v) = move(val);
         return;
     }
 

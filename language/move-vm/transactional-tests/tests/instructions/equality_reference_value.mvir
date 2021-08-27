@@ -13,7 +13,7 @@ module 0x1.Token {
         move_to<T>(copy(account), T { count: 0 });
         sender = Signer.address_of(move(account));
         t_ref = borrow_global_mut<T>(move(sender));
-        count_ref = &mut move(t_ref).count;
+        count_ref = &mut move(t_ref).T::count;
         local = 0;
         local_ref = &mut local;
         // make sure refs are equal even if one is in global storage and one is local

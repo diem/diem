@@ -43,7 +43,7 @@ module 0x1.A {
     }
 
     get_v(x: &mut Self.T1): &mut u64 {
-        return &mut move(x).v;
+        return &mut move(x).T1::v;
     }
 
     acquires_t1(account: &signer) acquires T1 {

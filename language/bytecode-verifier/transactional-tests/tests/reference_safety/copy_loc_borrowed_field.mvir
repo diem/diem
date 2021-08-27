@@ -9,8 +9,8 @@ module 0x1.Tester {
         let f: u64;
 
         x = T { f: 0 };
-        r1 = &(&x).f;
-        r2 = &(&x).f;
+        r1 = &(&x).T::f;
+        r2 = &(&x).T::f;
         // copy is valid here even though immutably borrowed
         T { f: f } = copy(x);
         _ = move(r1);

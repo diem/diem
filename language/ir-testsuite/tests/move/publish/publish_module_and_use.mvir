@@ -1,0 +1,47 @@
+module {{default}}.MoneyHolder {
+        import 0x1.XUS;
+        import 0x1.Diem;
+
+        struct T { money: Diem.Diem<XUS.XUS> }
+
+        public new(m: Diem.Diem<XUS.XUS>): Self.T {
+            return T{ money: move(m) };
+        }
+
+        public value(this :&Self.T): u64 {
+            let ref: &Diem.Diem<XUS.XUS>;
+            let val: u64;
+            ref = &copy(this).T::money;
+            val = Diem.value<XUS.XUS>(move(ref));
+            _ = move(this);
+            return move(val);
+        }
+
+        public destroy_t(t: Self.T) {
+            let money: Diem.Diem<XUS.XUS>;
+            T{ money } = move(t);
+            Diem.destroy_zero<XUS.XUS>(move(money));
+            return;
+        }
+}
+
+//! new-transaction
+
+import {{default}}.MoneyHolder;
+import 0x1.XUS;
+import 0x1.Diem;
+
+main() {
+    let coin: Diem.Diem<XUS.XUS>;
+    let money_holder: MoneyHolder.T;
+    let money_holder_ref: &MoneyHolder.T;
+    let value: u64;
+    coin = Diem.zero<XUS.XUS>();
+    money_holder = MoneyHolder.new(move(coin));
+    money_holder_ref = &money_holder;
+    value = MoneyHolder.value(move(money_holder_ref));
+    assert(copy(value) == 0, 42);
+    MoneyHolder.destroy_t(move(money_holder));
+
+    return;
+}

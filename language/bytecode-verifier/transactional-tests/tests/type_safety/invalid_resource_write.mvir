@@ -5,7 +5,7 @@ module 0x42.RTest {
 
       public update(t: &mut Self.T, i: Self.Coin) {
         let x: &mut Self.Coin;
-        x = &mut move(t).f;
+        x = &mut move(t).T::f;
         // cannot assign to ref where type does not have drop
         *move(x) = move(i);
         return;

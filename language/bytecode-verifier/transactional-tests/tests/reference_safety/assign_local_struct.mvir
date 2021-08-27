@@ -11,7 +11,7 @@ module 0x42.Tester {
         let t_v: &mut u64;
         let new_t: Self.T;
         t2 = copy(t);
-        t_v = &mut copy(t2).v;
+        t_v = &mut copy(t2).T::v;
         *move(t_v) = 10000;
 
         new_t = Self.new(1);
@@ -22,7 +22,7 @@ module 0x42.Tester {
 
     public value(this: &mut Self.T): u64 {
         let ref_v: &u64;
-        ref_v = &move(this).v;
+        ref_v = &move(this).T::v;
         return *move(ref_v);
     }
 

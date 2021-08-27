@@ -19,11 +19,11 @@ module 0x42.Test {
         let t_ref: &Self.T;
 
         t_ref = borrow_global<T>(move(addr));
-        return *&move(t_ref).config;
+        return *&move(t_ref).T::config;
     }
 
     public value(config: &Self.Config): bool {
-        return *&move(config).b;
+        return *&move(config).Config::b;
     }
 
     public set(account: &signer, b: bool) acquires T {
@@ -32,8 +32,8 @@ module 0x42.Test {
         let b_ref: &mut bool;
 
         t_ref = borrow_global_mut<T>(Signer.address_of(move(account)));
-        config_ref = &mut move(t_ref).config;
-        b_ref = &mut move(config_ref).b;
+        config_ref = &mut move(t_ref).T::config;
+        b_ref = &mut move(config_ref).Config::b;
         *move(b_ref) = move(b);
 
         return;

@@ -8,14 +8,14 @@ module 0x42.Tester {
 
     public update(t: &mut Self.T) {
         let vref: &mut u64;
-        vref = &mut move(t).v;
+        vref = &mut move(t).T::v;
         *move(vref) = 1;
         return;
     }
 
     public vref(this: &mut Self.T): &u64 {
         let r: &u64;
-        r = &copy(this).v;
+        r = &copy(this).T::v;
         _ = move(this);
         return move(r);
     }

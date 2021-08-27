@@ -10,7 +10,7 @@ module 0x1.M {
         // correct stack usage
         (&addr);
         (0x1D8);
-        (&borrow_global<R>().data);
+        (&borrow_global<R>().R::data);
         Self.is_ok_();
         return;
     }
