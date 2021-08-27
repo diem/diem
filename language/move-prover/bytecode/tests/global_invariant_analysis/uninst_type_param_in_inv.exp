@@ -1,0 +1,124 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun Demo::f1($t0|addr: address) {
+     var $t1: address
+     var $t2: bool
+     var $t3: u8
+     var $t4: address
+     var $t5: &mut Demo::S1<bool>
+     var $t6: &mut u8
+     var $t7: address
+     var $t8: bool
+     var $t9: u8
+     var $t10: address
+     var $t11: &mut Demo::S1<u64>
+     var $t12: &mut u8
+  0: $t1 := copy($t0)
+  1: $t2 := exists<Demo::S1<bool>>($t1)
+  2: if ($t2) goto 5 else goto 3
+  3: label L1
+  4: goto 12
+  5: label L0
+  6: $t3 := 0
+  7: $t4 := copy($t0)
+  8: $t5 := borrow_global<Demo::S1<bool>>($t4)
+  9: $t6 := borrow_field<Demo::S1<bool>>.v($t5)
+ 10: write_ref($t6, $t3)
+ 11: goto 12
+ 12: label L2
+ 13: $t7 := copy($t0)
+ 14: $t8 := exists<Demo::S1<u64>>($t7)
+ 15: if ($t8) goto 18 else goto 16
+ 16: label L4
+ 17: goto 25
+ 18: label L3
+ 19: $t9 := 0
+ 20: $t10 := copy($t0)
+ 21: $t11 := borrow_global<Demo::S1<u64>>($t10)
+ 22: $t12 := borrow_field<Demo::S1<u64>>.v($t11)
+ 23: write_ref($t12, $t9)
+ 24: goto 25
+ 25: label L5
+ 26: return ()
+}
+
+============ after pipeline `global_invariant_analysis` ================
+
+[variant verification]
+fun Demo::f1($t0|addr: address) {
+     var $t1: bool
+     var $t2: u8
+     var $t3: &mut Demo::S1<bool>
+     var $t4: num
+     var $t5: &mut u8
+     var $t6: bool
+     var $t7: u8
+     var $t8: &mut Demo::S1<u64>
+     var $t9: &mut u8
+  0: assume WellFormed($t0)
+  1: assume forall $rsc: ResourceDomain<Demo::S1<bool>>(): WellFormed($rsc)
+  2: assume forall $rsc: ResourceDomain<Demo::S1<u64>>(): WellFormed($rsc)
+  3: $t1 := exists<Demo::S1<bool>>($t0)
+  4: if ($t1) goto 7 else goto 5
+  5: label L1
+  6: goto 14
+  7: label L0
+  8: $t2 := 0
+  9: $t3 := borrow_global<Demo::S1<bool>>($t0) on_abort goto 29 with $t4
+ 10: $t5 := borrow_field<Demo::S1<bool>>.v($t3)
+ 11: write_ref($t5, $t2)
+ 12: write_back[Reference($t3).v]($t5)
+ 13: write_back[Demo::S1<bool>@]($t3)
+ 14: label L2
+ 15: $t6 := exists<Demo::S1<u64>>($t0)
+ 16: if ($t6) goto 19 else goto 17
+ 17: label L4
+ 18: goto 26
+ 19: label L3
+ 20: $t7 := 0
+ 21: $t8 := borrow_global<Demo::S1<u64>>($t0) on_abort goto 29 with $t4
+ 22: $t9 := borrow_field<Demo::S1<u64>>.v($t8)
+ 23: write_ref($t9, $t7)
+ 24: write_back[Reference($t8).v]($t9)
+ 25: write_back[Demo::S1<u64>@]($t8)
+ 26: label L5
+ 27: label L6
+ 28: return ()
+ 29: label L7
+ 30: abort($t4)
+}
+
+
+********* Result of global invariant instrumentation *********
+
+Demo::f1: [
+  entrypoint {
+    assume @0 = [
+      <> -> [
+        <bool, *error*>
+        <u64, *error*>
+      ]
+    ]
+  }
+  13: write_back[Demo::S1<bool>@]($t3) {
+    assert @0 = [
+      <> -> [
+        <bool, *error*>
+      ]
+    ]
+  }
+  25: write_back[Demo::S1<u64>@]($t8) {
+    assert @0 = [
+      <> -> [
+        <u64, *error*>
+      ]
+    ]
+  }
+]
+
+********* Global invariants by ID *********
+
+@0 => invariant<T1, T2>
+            (exists<S1<T1>>(@0x2) && exists<S2<T2>>(@0x2))
+                ==> global<S1<T1>>(@0x2).v == 0;

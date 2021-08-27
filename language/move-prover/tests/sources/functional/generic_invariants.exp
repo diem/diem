@@ -12,8 +12,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:10: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:34
 
 error: global memory invariant does not hold
@@ -28,8 +26,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:10: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -47,8 +43,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:10: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
    =     at tests/sources/functional/generic_invariants.move:44
@@ -65,8 +59,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
-   =     at tests/sources/functional/generic_invariants.move:10: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:11: publish_u64_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -86,9 +78,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:15: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
 
 error: global memory invariant does not hold
@@ -104,9 +93,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:15: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
    =     at tests/sources/functional/generic_invariants.move:49
 
@@ -123,9 +109,23 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
+   =     at tests/sources/functional/generic_invariants.move:34
+
+error: global memory invariant does not hold
+   ┌─ tests/sources/functional/generic_invariants.move:39:5
+   │
+39 │ ╭     invariant<Y>
+40 │ │         exists<S::Storage<u64, Y>>(@0x23)
+41 │ │             ==> global<S::Storage<u64, Y>>(@0x23).x > 0;
+   │ ╰────────────────────────────────────────────────────────^
+   │
    =     at tests/sources/functional/generic_invariants.move:15: publish_u64_y
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
    =     at tests/sources/functional/generic_invariants.move:34
+   =     at tests/sources/functional/generic_invariants.move:39
 
 error: global memory invariant does not hold
    ┌─ tests/sources/functional/generic_invariants.move:44:5
@@ -139,8 +139,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:15: publish_u64_y
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -158,8 +156,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
-   =     at tests/sources/functional/generic_invariants.move:15: publish_u64_y
    =     at tests/sources/functional/generic_invariants.move:16: publish_u64_y
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -179,9 +175,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:44
 
 error: global memory invariant does not hold
@@ -197,9 +190,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:44
    =     at tests/sources/functional/generic_invariants.move:49
 
@@ -216,8 +206,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:34
 
 error: global memory invariant does not hold
@@ -232,8 +220,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -251,8 +237,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
    =     at tests/sources/functional/generic_invariants.move:44
@@ -269,8 +253,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
-   =     at tests/sources/functional/generic_invariants.move:20: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:21: publish_x_bool
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -290,9 +272,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:49
 
 error: global memory invariant does not hold
@@ -308,8 +287,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
    =     at tests/sources/functional/generic_invariants.move:34
 
 error: global memory invariant does not hold
@@ -325,8 +302,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
 
@@ -343,8 +318,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
    =     at tests/sources/functional/generic_invariants.move:44
@@ -361,8 +334,6 @@ error: global memory invariant does not hold
    =         account = <redacted>
    =         x = <redacted>
    =         y = <redacted>
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
    =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
@@ -370,6 +341,21 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/generic_invariants.move:49
 
 error: global memory invariant does not hold
+   ┌─ tests/sources/functional/generic_invariants.move:39:5
+   │
+39 │ ╭     invariant<Y>
+40 │ │         exists<S::Storage<u64, Y>>(@0x23)
+41 │ │             ==> global<S::Storage<u64, Y>>(@0x23).x > 0;
+   │ ╰────────────────────────────────────────────────────────^
+   │
+   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
+   =         account = <redacted>
+   =         x = <redacted>
+   =         y = <redacted>
+   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
+   =     at tests/sources/functional/generic_invariants.move:39
+
+error: global memory invariant does not hold
    ┌─ tests/sources/functional/generic_invariants.move:49:5
    │
 49 │ ╭     invariant<X, Y>
@@ -382,9 +368,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:39
    =     at tests/sources/functional/generic_invariants.move:49
 
@@ -401,9 +384,6 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:44
 
 error: global memory invariant does not hold
@@ -419,8 +399,5 @@ error: global memory invariant does not hold
    =         x = <redacted>
    =         y = <redacted>
    =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:25: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:26: publish_x_y
-   =     at tests/sources/functional/generic_invariants.move:34
    =     at tests/sources/functional/generic_invariants.move:44
    =     at tests/sources/functional/generic_invariants.move:49

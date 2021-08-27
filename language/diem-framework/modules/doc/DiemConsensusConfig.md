@@ -155,9 +155,9 @@ Must abort if the signer does not have the DiemRoot role [[H12]][PERMISSION].
 The permission "UpdateDiemConsensusConfig" is granted to DiemRoot [[H12]][PERMISSION].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;&gt;(addr):
-    addr == @DiemRoot;
-<b>invariant</b> <b>update</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;())
+<pre><code><b>invariant</b> <b>forall</b> addr: address
+    <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;&gt;(addr): addr == @DiemRoot;
+<b>invariant</b> <b>update</b> [suspendable] <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;())
     && <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;()
     && <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;()) != <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;()
         ==&gt; <a href="Roles.md#0x1_Roles_spec_signed_by_diem_root_role">Roles::spec_signed_by_diem_root_role</a>();

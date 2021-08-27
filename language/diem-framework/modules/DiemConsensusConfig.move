@@ -54,10 +54,10 @@ module DiemFramework::DiemConsensusConfig {
 
     /// The permission "UpdateDiemConsensusConfig" is granted to DiemRoot [[H12]][PERMISSION].
     spec module {
-        invariant [global, isolated] forall addr: address where exists<DiemConfig<DiemConsensusConfig>>(addr):
-            addr == @DiemRoot;
+        invariant forall addr: address
+            where exists<DiemConfig<DiemConsensusConfig>>(addr): addr == @DiemRoot;
 
-        invariant update old(DiemConfig::spec_is_published<DiemConsensusConfig>())
+        invariant update [suspendable] old(DiemConfig::spec_is_published<DiemConsensusConfig>())
             && DiemConfig::spec_is_published<DiemConsensusConfig>()
             && old(DiemConfig::get<DiemConsensusConfig>()) != DiemConfig::get<DiemConsensusConfig>()
                 ==> Roles::spec_signed_by_diem_root_role();

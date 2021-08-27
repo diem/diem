@@ -307,14 +307,14 @@ Return the account address where the globally unique XDX::Reserve resource is st
 After genesis, the Reserve resource exists.
 
 
-<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="XDX.md#0x1_XDX_reserve_exists">reserve_exists</a>();
+<pre><code><b>invariant</b> [suspendable] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="XDX.md#0x1_XDX_reserve_exists">reserve_exists</a>();
 </code></pre>
 
 
 After genesis, XDX is registered.
 
 
-<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="Diem.md#0x1_Diem_is_currency">Diem::is_currency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;();
+<pre><code><b>invariant</b> [suspendable] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="Diem.md#0x1_Diem_is_currency">Diem::is_currency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;();
 </code></pre>
 
 
@@ -341,7 +341,7 @@ AccountLimits::publish_unrestricted_limits, but we can't prove the condition the
 it does not hold for all types (but does hold for XDX).
 
 
-<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>()
+<pre><code><b>invariant</b> [suspendable] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>()
     ==&gt; <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;&gt;(@DiemRoot);
 </code></pre>
 

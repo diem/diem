@@ -213,17 +213,17 @@ module DiemFramework::DiemVMConfig {
     /// # Initialization
 
     spec module {
-        invariant DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVMConfig>();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVMConfig>();
     }
 
     /// # Access Control
 
     /// The permission "UpdateVMConfig" is granted to DiemRoot [[H11]][PERMISSION].
     spec module {
-        invariant [global, isolated] forall addr: address where exists<DiemConfig<DiemVMConfig>>(addr):
-            addr == @DiemRoot;
+        invariant forall addr: address
+            where exists<DiemConfig<DiemVMConfig>>(addr): addr == @DiemRoot;
 
-        invariant update old(DiemConfig::spec_is_published<DiemVMConfig>())
+        invariant update [suspendable] old(DiemConfig::spec_is_published<DiemVMConfig>())
             && DiemConfig::spec_is_published<DiemVMConfig>()
             && old(DiemConfig::get<DiemVMConfig>()) != DiemConfig::get<DiemVMConfig>()
                 ==> Roles::spec_signed_by_diem_root_role();

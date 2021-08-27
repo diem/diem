@@ -85,6 +85,9 @@ module DiemFramework::AccountLimits {
     spec update_deposit_limits {
         pragma opaque;
         modifies global<Window<CoinType>>(addr);
+        ensures exists<Window<CoinType>>(addr);
+        ensures global<Window<CoinType>>(addr).limit_address
+            == old(global<Window<CoinType>>(addr).limit_address);
         include UpdateDepositLimitsAbortsIf<CoinType>;
         include CanReceiveEnsures<CoinType>{receiving: global<Window<CoinType>>(addr)};
     }
@@ -119,6 +122,7 @@ module DiemFramework::AccountLimits {
     spec update_withdrawal_limits {
         pragma opaque;
         modifies global<Window<CoinType>>(addr);
+        ensures exists<Window<CoinType>>(addr);
         include UpdateWithdrawalLimitsAbortsIf<CoinType>;
         include CanWithdrawEnsures<CoinType>{sending: global<Window<CoinType>>(addr)};
     }

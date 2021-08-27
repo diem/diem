@@ -13,19 +13,19 @@ module DiemFramework::DiemTimestampTests {
     #[expected_failure(abort_code = 2)]
     fun set_time_has_started_non_dr_pre_genesis() {
         let s = get_signer();
-        DiemTimestamp::set_time_has_started(&s);
+        DiemTimestamp::set_time_has_started_for_testing(&s);
     }
 
     #[test(dr = @DiemRoot)]
     fun set_time_has_started_dr_pre_genesis(dr: signer) {
-        DiemTimestamp::set_time_has_started(&dr);
+        DiemTimestamp::set_time_has_started_for_testing(&dr);
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
     #[expected_failure(abort_code = 1)]
     fun set_time_has_started_dr_post_genesis(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
-        DiemTimestamp::set_time_has_started(&dr);
+        DiemTimestamp::set_time_has_started_for_testing(&dr);
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
@@ -33,7 +33,7 @@ module DiemFramework::DiemTimestampTests {
     fun set_time_has_started_non_dr_post_genesis(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
         let s = get_signer();
-        DiemTimestamp::set_time_has_started(&s);
+        DiemTimestamp::set_time_has_started_for_testing(&s);
     }
 
     #[test]

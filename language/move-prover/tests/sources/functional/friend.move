@@ -5,24 +5,18 @@ module 0x42::TestFriend {
     }
 
 
-    public fun f(account: &signer, val: u64) {
+    fun f(account: &signer, val: u64) {
         move_to(account, R{x: val});
     }
     spec f {
-        pragma friend = gg;
+        pragma delegate_invariants_to_caller;
     }
 
-    spec f {
-        /// This pragma declaration overwrites the previous one.
-        pragma friend = g;
-    }
-
-    public fun g(account: &signer, val: u64) {
+    fun g(account: &signer, val: u64) {
         f(account, val);
     }
-
     spec g {
-        pragma friend = h;
+        pragma delegate_invariants_to_caller;
     }
 
     public fun h(account: &signer) {
@@ -31,8 +25,8 @@ module 0x42::TestFriend {
 
     spec module {
         /// Function f and g both violate this invariant on their own.
-        /// However, since they can only be called from friend h's context, the following
+        /// However, since they can only be called from h's context, the following
         /// invariant can't be violated and the prover verifies with no errors.
-        invariant [global] forall addr: address where exists<R>(addr): global<R>(addr).x == 42;
+        invariant [suspendable] forall addr: address where exists<R>(addr): global<R>(addr).x == 42;
     }
 }

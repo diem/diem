@@ -53,12 +53,12 @@ module DiemFramework::XUS {
     /// # Persistence of Resources
     spec module {
         /// After genesis, XUS is registered.
-        invariant DiemTimestamp::is_operating() ==> Diem::is_currency<XUS>();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> Diem::is_currency<XUS>();
 
         /// After genesis, `LimitsDefinition<XUS>` is published at Diem root. It's published by
         /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
         /// it does not hold for all types (but does hold for XUS).
-        invariant DiemTimestamp::is_operating()
+        invariant [suspendable] DiemTimestamp::is_operating()
             ==> exists<AccountLimits::LimitsDefinition<XUS>>(@DiemRoot);
 
         /// `LimitsDefinition<XUS>` is not published at any other address

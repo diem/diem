@@ -193,7 +193,7 @@ module DiemFramework::AccountFreezing {
     /// # Initialization
     spec module {
         /// `FreezeEventsHolder` always exists after genesis.
-        invariant DiemTimestamp::is_operating() ==>
+        invariant [suspendable] DiemTimestamp::is_operating() ==>
             exists<FreezeEventsHolder>(@DiemRoot);
     }
 
@@ -201,19 +201,19 @@ module DiemFramework::AccountFreezing {
     spec module {
         /// The account of DiemRoot is not freezable [[F1]][ROLE].
         /// After genesis, FreezingBit of DiemRoot is always false.
-        invariant DiemTimestamp::is_operating() ==>
+        invariant [suspendable] DiemTimestamp::is_operating() ==>
             spec_account_is_not_frozen(@DiemRoot);
 
         /// The account of TreasuryCompliance is not freezable [[F2]][ROLE].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
-        invariant DiemTimestamp::is_operating() ==>
+        invariant [suspendable] DiemTimestamp::is_operating() ==>
             spec_account_is_not_frozen(@TreasuryCompliance);
 
         /// resource struct FreezingBit persists
         invariant update forall addr: address where old(exists<FreezingBit>(addr)): exists<FreezingBit>(addr);
 
         /// resource struct FreezeEventsHolder is there forever after initialization
-        invariant update DiemTimestamp::is_operating() ==> exists<FreezeEventsHolder>(@DiemRoot);
+        invariant [suspendable] DiemTimestamp::is_operating() ==> exists<FreezeEventsHolder>(@DiemRoot);
 
         /// Only TreasuryCompliance can change the freezing bits of accounts [[H7]][PERMISSION].
         invariant update forall addr: address where old(exists<FreezingBit>(addr)):

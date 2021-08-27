@@ -248,9 +248,10 @@ module DiemFramework::SlidingNonce {
         /// >Note: Verification is turned off. For verifying callers, this is effectively abstracted into a function
         /// that returns arbitrary results because `spec_try_record_nonce` is uninterpreted.
         pragma opaque, verify = false;
-        ensures result == spec_try_record_nonce(account, seq_nonce);
         aborts_if !exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
         modifies global<SlidingNonce>(Signer::spec_address_of(account));
+        ensures result == spec_try_record_nonce(account, seq_nonce);
+        ensures exists<SlidingNonce>(Signer::spec_address_of(account));
     }
 
     /// Specification version of `Self::try_record_nonce`.
@@ -278,10 +279,10 @@ module DiemFramework::SlidingNonce {
         use DiemFramework::DiemTimestamp;
 
         /// Sliding nonces are initialized at Diem root and treasury compliance addresses
-        invariant DiemTimestamp::is_operating()
+        invariant [suspendable] DiemTimestamp::is_operating()
             ==> exists<SlidingNonce>(@DiemRoot);
 
-        invariant DiemTimestamp::is_operating()
+        invariant [suspendable] DiemTimestamp::is_operating()
             ==> exists<SlidingNonce>(@TreasuryCompliance);
 
         // In the current code, only Diem root and Treasury compliance have sliding nonces.

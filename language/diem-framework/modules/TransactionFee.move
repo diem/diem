@@ -155,7 +155,7 @@ module DiemFramework::TransactionFee {
 
     spec module {
         /// If time has started ticking, then `TransactionFee` resources have been initialized.
-        invariant DiemTimestamp::is_operating() ==> is_initialized();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> is_initialized();
     }
 
     /// # Helper Function

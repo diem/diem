@@ -346,17 +346,6 @@ module DiemFramework::DiemAccount {
         modifies global<Balance<Token>>(payee);
         modifies global<DiemAccount>(payee);
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payee));
-        // TODO(wrwg): precisely specify what changed in the modified resources using `update_field`
-        ensures exists<DiemAccount>(payee);
-        ensures exists<Balance<Token>>(payee);
-        ensures global<DiemAccount>(payee).withdraw_capability
-            == old(global<DiemAccount>(payee).withdraw_capability);
-        ensures global<DiemAccount>(payee).authentication_key
-            == old(global<DiemAccount>(payee).authentication_key);
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).sent_events,
-                                    old(global<DiemAccount>(payee).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).received_events,
-                                    old(global<DiemAccount>(payee).received_events));
         let amount = to_deposit.value;
         include DepositAbortsIf<Token>{amount: amount};
         include DepositOverflowAbortsIf<Token>{amount: amount};
@@ -400,7 +389,21 @@ module DiemFramework::DiemAccount {
     spec schema DepositEnsures<Token> {
         payee: address;
         amount: u64;
+
+        // TODO(wrwg): precisely specify what changed in the modified resources using `update_field`
+        ensures exists<Balance<Token>>(payee);
         ensures balance<Token>(payee) == old(balance<Token>(payee)) + amount;
+
+        ensures exists<DiemAccount>(payee);
+        ensures global<DiemAccount>(payee).withdraw_capability
+            == old(global<DiemAccount>(payee).withdraw_capability);
+        ensures global<DiemAccount>(payee).authentication_key
+            == old(global<DiemAccount>(payee).authentication_key);
+
+        ensures Event::spec_guid_eq(global<DiemAccount>(payee).sent_events,
+                                    old(global<DiemAccount>(payee).sent_events));
+        ensures Event::spec_guid_eq(global<DiemAccount>(payee).received_events,
+                                    old(global<DiemAccount>(payee).received_events));
     }
     spec schema DepositEmits<Token> {
         payer: address;
@@ -1106,9 +1109,11 @@ module DiemFramework::DiemAccount {
         pragma opaque;
         // This is called from a context where invariants are disabled
         let new_account_addr = Signer::address_of(new_account);
+        requires !exists<DiemAccount>(new_account_addr);
         modifies global<DiemAccount>(new_account_addr);
         modifies global<Event::EventHandleGenerator>(new_account_addr);
         modifies global<AccountFreezing::FreezingBit>(new_account_addr);
+        requires exists<AccountOperationsCapability>(@DiemRoot);
         modifies global<AccountOperationsCapability>(@DiemRoot);
         ensures exists<AccountOperationsCapability>(@DiemRoot);
         // Next requires is needed to prove invariant
@@ -1341,6 +1346,7 @@ module DiemFramework::DiemAccount {
         human_name: vector<u8>,
         add_all_currencies: bool,
     ) acquires AccountOperationsCapability {
+        DiemTimestamp::assert_operating();
         Roles::assert_treasury_compliance(creator_account);
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
@@ -1363,6 +1369,7 @@ module DiemFramework::DiemAccount {
         new_account_address: address;
         auth_key_prefix: vector<u8>;
         add_all_currencies: bool;
+        include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if exists<DesignatedDealer::Dealer>(new_account_address) with Errors::ALREADY_PUBLISHED;
@@ -1449,6 +1456,7 @@ module DiemFramework::DiemAccount {
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
     ) acquires AccountOperationsCapability {
+        DiemTimestamp::assert_operating();
         Roles::assert_parent_vasp_role(parent);
         let new_account = create_signer(new_account_address);
         Roles::new_child_vasp_role(parent, &new_account);
@@ -1475,6 +1483,7 @@ module DiemFramework::DiemAccount {
         new_account_address: address;
         auth_key_prefix: vector<u8>;
         add_all_currencies: bool;
+        include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotParentVasp{account: parent};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         include VASP::PublishChildVASPAbortsIf{child_addr: new_account_address};
@@ -1534,15 +1543,19 @@ module DiemFramework::DiemAccount {
             Errors::invalid_argument(EROLE_CANT_STORE_BALANCE)
         );
         // aborts if this account already has a balance in `Token`
-        assert(!exists<Balance<Token>>(addr), Errors::already_published(EADD_EXISTING_CURRENCY));
+        assert(
+            !exists<Balance<Token>>(addr),
+            Errors::already_published(EADD_EXISTING_CURRENCY)
+        );
 
         move_to(account, Balance<Token>{ coin: Diem::zero<Token>() })
     }
     spec add_currency {
         /// An account must exist at the address
-        aborts_if !exists_at(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+        let addr = Signer::spec_address_of(account);
+        aborts_if !exists_at(addr) with Errors::NOT_PUBLISHED;
         include AddCurrencyAbortsIf<Token>;
-        include AddCurrencyEnsures<Token>{addr: Signer::spec_address_of(account)};
+        include AddCurrencyEnsures<Token>;
     }
     spec schema AddCurrencyAbortsIf<Token> {
         account: signer;
@@ -2138,16 +2151,19 @@ module DiemFramework::DiemAccount {
             Signer::address_of(dr_account) == @DiemRoot,
             Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER)
         );
-        assert(Roles::has_diem_root_role(dr_account), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
+        assert(
+            Roles::has_diem_root_role(dr_account),
+            Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER)
+        );
 
         // Currency code don't matter here as it won't be charged anyway.
         epilogue_common<XUS>(dr_account, txn_sequence_number, 0, 0, 0);
         if (should_trigger_reconfiguration) DiemConfig::reconfigure(dr_account)
     }
     spec writeset_epilogue {
-        include WritesetEpiloguEmits;
+        include WritesetEpilogueEmits;
     }
-    spec schema WritesetEpiloguEmits {
+    spec schema WritesetEpilogueEmits {
         should_trigger_reconfiguration: bool;
         let handle = global<DiemWriteSetManager>(@DiemRoot).upgrade_events;
         let msg = AdminTransactionEvent {
@@ -2337,10 +2353,10 @@ module DiemFramework::DiemAccount {
         invariant update forall addr: address where old(exists_at(addr)): exists_at(addr);
 
         /// After genesis, the `AccountOperationsCapability` exists.
-        invariant DiemTimestamp::is_operating() ==> exists<AccountOperationsCapability>(@DiemRoot);
+        invariant [suspendable] DiemTimestamp::is_operating() ==> exists<AccountOperationsCapability>(@DiemRoot);
 
         /// After genesis, the `DiemWriteSetManager` exists.
-        invariant DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(@DiemRoot);
+        invariant [suspendable] DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(@DiemRoot);
 
         /// resource struct `Balance<CoinType>` is persistent
         invariant<CoinType> update forall addr: address
@@ -2415,13 +2431,13 @@ module DiemFramework::DiemAccount {
         // "move_to" that publishes the account will never abort.
         // TODO: This is too clever.  Should modify code to an assert or requires at
         // beginning of make_account that account does not already exist.
-        invariant forall addr: address:
+        invariant [suspendable] forall addr: address:
             exists_at(addr) ==> exists<AccountFreezing::FreezingBit>(addr);
 
         /// Balances can only be published at addresses where an account exists
         /// >TODO: I think this is redundant with previous invariants. exists_at <==> Role, and
         /// Balance <==> can_hold_balance
-        invariant<CoinType> forall addr: address where exists<Balance<CoinType>>(addr):
+        invariant<CoinType> [suspendable]  forall addr: address where exists<Balance<CoinType>>(addr):
             exists_at(addr);
 
         /// Account has SlidingNonce only if it's Diem Root or Treasury Compliance

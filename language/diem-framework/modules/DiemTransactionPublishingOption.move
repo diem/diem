@@ -159,7 +159,7 @@ module DiemFramework::DiemTransactionPublishingOption {
 
     /// # Initialization
     spec module {
-        invariant DiemTimestamp::is_operating() ==>
+        invariant [suspendable] DiemTimestamp::is_operating() ==>
             DiemConfig::spec_is_published<DiemTransactionPublishingOption>();
     }
 

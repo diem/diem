@@ -25,7 +25,7 @@ use crate::{
     stackless_bytecode::{
         AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
     },
-    usage_analysis, verification_analysis_v2,
+    usage_analysis, verification_analysis,
 };
 use move_model::{
     ast::{Exp, QuantKind},
@@ -108,7 +108,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         let options = ProverOptions::get(fun_env.module_env.env);
         let verification_info =
-            verification_analysis_v2::get_info(&FunctionTarget::new(fun_env, &data));
+            verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
         let is_verified = verification_info.verified;
         let is_inlined = verification_info.inlined;
 

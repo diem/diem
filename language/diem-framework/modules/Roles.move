@@ -429,48 +429,46 @@ module DiemFramework::Roles {
 
         /// The DiemRoot role is globally unique [[B1]][ROLE], and is published at DIEM_ROOT_ADDRESS [[C1]][ROLE].
         /// In other words, a `RoleId` with `DIEM_ROOT_ROLE_ID` uniquely exists at `DIEM_ROOT_ADDRESS`.
-        invariant [global, isolated] forall addr: address where spec_has_diem_root_role_addr(addr):
-          addr == @DiemRoot;
-        invariant [global, isolated]
+        invariant forall addr: address where spec_has_diem_root_role_addr(addr): addr == @DiemRoot;
+        invariant [suspendable]
             DiemTimestamp::is_operating() ==> spec_has_diem_root_role_addr(@DiemRoot);
 
         /// The TreasuryCompliance role is globally unique [[B2]][ROLE], and is published at TREASURY_COMPLIANCE_ADDRESS [[C2]][ROLE].
         /// In other words, a `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` uniquely exists at `TREASURY_COMPLIANCE_ADDRESS`.
-        invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
+        invariant forall addr: address where spec_has_treasury_compliance_role_addr(addr):
           addr == @TreasuryCompliance;
-        invariant [global, isolated]
-            DiemTimestamp::is_operating() ==>
-                spec_has_treasury_compliance_role_addr(@TreasuryCompliance);
+        invariant [suspendable]
+            DiemTimestamp::is_operating() ==> spec_has_treasury_compliance_role_addr(@TreasuryCompliance);
 
         // TODO: These specs really just repeat what's in spec_can_hold_balance_addr. It's nice to
         // be able to link to DIP-2, but can we do that with less verbose specs?
         /// DiemRoot cannot have balances [[D1]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_diem_root_role_addr(addr):
-            !spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_diem_root_role_addr(addr): !spec_can_hold_balance_addr(addr);
 
         /// TreasuryCompliance cannot have balances [[D2]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
-            !spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_treasury_compliance_role_addr(addr): !spec_can_hold_balance_addr(addr);
 
         /// Validator cannot have balances [[D3]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_validator_role_addr(addr):
-            !spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_validator_role_addr(addr): !spec_can_hold_balance_addr(addr);
 
         /// ValidatorOperator cannot have balances [[D4]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_validator_operator_role_addr(addr):
-            !spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_validator_operator_role_addr(addr): !spec_can_hold_balance_addr(addr);
 
         /// DesignatedDealer have balances [[D5]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_designated_dealer_role_addr(addr):
-            spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_designated_dealer_role_addr(addr): spec_can_hold_balance_addr(addr);
 
         /// ParentVASP have balances [[D6]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_parent_VASP_role_addr(addr):
-            spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_parent_VASP_role_addr(addr): spec_can_hold_balance_addr(addr);
 
         /// ChildVASP have balances [[D7]][ROLE].
-        invariant [global, isolated] forall addr: address where spec_has_child_VASP_role_addr(addr):
-            spec_can_hold_balance_addr(addr);
+        invariant forall addr: address
+            where spec_has_child_VASP_role_addr(addr): spec_can_hold_balance_addr(addr);
     }
 
     /// # Helper Functions and Schemas

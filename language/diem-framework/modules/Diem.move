@@ -1602,12 +1602,13 @@ module DiemFramework::Diem {
 
         /// The permission "MintCurrency" is unique per currency [[I1]][PERMISSION].
         /// At most one address has a mint capability for SCS CoinType
-        invariant<CoinType> [global, isolated]
-            is_SCS_currency<CoinType>() ==>
-                (forall mint_cap_owner1: address, mint_cap_owner2: address
-                     where exists<MintCapability<CoinType>>(mint_cap_owner1)
-                                && exists<MintCapability<CoinType>>(mint_cap_owner2):
-                          mint_cap_owner1 == mint_cap_owner2);
+        invariant<CoinType> is_SCS_currency<CoinType>() ==> (
+                forall mint_cap_owner1: address, mint_cap_owner2: address
+                    where (
+                        exists<MintCapability<CoinType>>(mint_cap_owner1) &&
+                        exists<MintCapability<CoinType>>(mint_cap_owner2)
+                    ): mint_cap_owner1 == mint_cap_owner2
+            );
 
         /// If an address has a mint capability, it is an SCS currency.
         invariant<CoinType>

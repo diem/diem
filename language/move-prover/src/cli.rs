@@ -465,8 +465,8 @@ impl Options {
                     .help("instructs boogie to log smtlib files for verified functions")
             )
             .arg(
-                Arg::with_name("experimental_pipeline")
-                    .long("experimental_pipeline")
+                Arg::with_name("experimental-pipeline")
+                    .long("experimental-pipeline")
                     .short("e")
                     .help("whether to run experimental pipeline")
             )
@@ -682,7 +682,7 @@ impl Options {
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
         }
-        if matches.is_present("experimental_pipeline") {
+        if matches.is_present("experimental-pipeline") {
             options.experimental_pipeline = true;
         }
         if matches.is_present("timeout") {

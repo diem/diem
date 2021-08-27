@@ -11,6 +11,4 @@ error: global memory invariant does not hold
    =     at tests/sources/functional/disable_inv_friends.move:85: f5_incorrect
    =         s = <redacted>
    =     at tests/sources/functional/disable_inv_friends.move:86: f5_incorrect
-   =     at tests/sources/functional/disable_inv_friends.move:85: f5_incorrect
-   =     at tests/sources/functional/disable_inv_friends.move:86: f5_incorrect
    =     at tests/sources/functional/disable_inv_friends.move:25

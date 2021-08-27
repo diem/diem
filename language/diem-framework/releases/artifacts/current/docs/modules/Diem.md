@@ -3852,12 +3852,13 @@ The permission "MintCurrency" is unique per currency [[I1]][PERMISSION].
 At most one address has a mint capability for SCS CoinType
 
 
-<pre><code><b>invariant</b>&lt;CoinType&gt; [<b>global</b>, isolated]
-    <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;() ==&gt;
-        (<b>forall</b> mint_cap_owner1: address, mint_cap_owner2: address
-             <b>where</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner1)
-                        && <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner2):
-                  mint_cap_owner1 == mint_cap_owner2);
+<pre><code><b>invariant</b>&lt;CoinType&gt; <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;() ==&gt; (
+        <b>forall</b> mint_cap_owner1: address, mint_cap_owner2: address
+            <b>where</b> (
+                <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner1) &&
+                <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(mint_cap_owner2)
+            ): mint_cap_owner1 == mint_cap_owner2
+    );
 </code></pre>
 
 

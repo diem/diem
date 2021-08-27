@@ -126,6 +126,6 @@ module DiemFramework::DiemBlock {
     /// This implies that `BlockMetadata` is published after initialization and stays published
     /// ever after
     spec module {
-        invariant DiemTimestamp::is_operating() ==> is_initialized();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> is_initialized();
     }
 }

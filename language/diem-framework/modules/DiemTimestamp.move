@@ -14,6 +14,7 @@
 module DiemFramework::DiemTimestamp {
     use DiemFramework::CoreAddresses;
     use Std::Errors;
+    friend DiemFramework::Genesis;
 
     /// A singleton resource holding the current Unix time in microseconds
     struct CurrentTimeMicroseconds has key {
@@ -32,22 +33,34 @@ module DiemFramework::DiemTimestamp {
 
     /// Marks that time has started and genesis has finished. This can only be called from genesis and with the root
     /// account.
-    public fun set_time_has_started(dr_account: &signer) {
+    public(friend) fun set_time_has_started(dr_account: &signer) {
         assert_genesis();
         CoreAddresses::assert_diem_root(dr_account);
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
         move_to(dr_account, timer);
     }
     spec set_time_has_started {
-        /// The friend of this function is `Genesis::initialize` which means that
-        /// this function can't be verified on its own and has to be verified in
-        /// context of Genesis execution.
-        /// After time has started, all invariants guarded by `DiemTimestamp::is_operating`
-        /// will become activated and need to hold.
-        pragma friend = DiemFramework::Genesis::initialize;
+        /// This function can't be verified on its own and has to be verified in the context of Genesis execution.
+        ///
+        /// After time has started, all invariants guarded by `DiemTimestamp::is_operating` will become activated
+        /// and need to hold.
+        pragma delegate_invariants_to_caller;
         include AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         ensures is_operating();
+    }
+
+    // TODO: this is for both df-cli and the unit-test for df
+    // - df-cli, as a few test cases in df-cli uses a customized genesis module and that module needs  to invoke
+    //   `set_time_has_started` in order to complete the genesis process. Until we find a way to solve this issue, this
+    //   temporary function will stay here.
+    // - this is also needed for diem-framework unit test `DiemTimestampTests`. And once the above issue for df-cli is
+    //   resolved, we can mark this function #[test_only]
+    public fun set_time_has_started_for_testing(dr_account: &signer) {
+        set_time_has_started(dr_account);
+    }
+    spec set_time_has_started_for_testing {
+        pragma verify = false;
     }
 
     /// Updates the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.

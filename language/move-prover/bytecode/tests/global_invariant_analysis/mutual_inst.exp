@@ -1,0 +1,430 @@
+============ initial translation from Move ================
+
+[variant baseline]
+public fun S::publish_u64_bool($t0|account: signer, $t1|x: u64, $t2|y: bool) {
+     var $t3: &signer
+     var $t4: u64
+     var $t5: bool
+     var $t6: u8
+     var $t7: S::Storage<u64, bool>
+  0: $t3 := borrow_local($t0)
+  1: $t4 := copy($t1)
+  2: $t5 := copy($t2)
+  3: $t6 := 0
+  4: $t7 := pack S::Storage<u64, bool>($t4, $t5, $t6)
+  5: move_to<S::Storage<u64, bool>>($t7, $t3)
+  6: return ()
+}
+
+
+[variant baseline]
+public fun S::publish_u64_y<#0>($t0|account: signer, $t1|x: u64, $t2|y: #0) {
+     var $t3: &signer
+     var $t4: u64
+     var $t5: #0
+     var $t6: u8
+     var $t7: S::Storage<u64, #0>
+  0: $t3 := borrow_local($t0)
+  1: $t4 := copy($t1)
+  2: $t5 := move($t2)
+  3: $t6 := 1
+  4: $t7 := pack S::Storage<u64, #0>($t4, $t5, $t6)
+  5: move_to<S::Storage<u64, #0>>($t7, $t3)
+  6: return ()
+}
+
+
+[variant baseline]
+public fun S::publish_x_bool<#0>($t0|account: signer, $t1|x: #0, $t2|y: bool) {
+     var $t3: &signer
+     var $t4: #0
+     var $t5: bool
+     var $t6: u8
+     var $t7: S::Storage<#0, bool>
+  0: $t3 := borrow_local($t0)
+  1: $t4 := move($t1)
+  2: $t5 := copy($t2)
+  3: $t6 := 2
+  4: $t7 := pack S::Storage<#0, bool>($t4, $t5, $t6)
+  5: move_to<S::Storage<#0, bool>>($t7, $t3)
+  6: return ()
+}
+
+
+[variant baseline]
+public fun S::publish_x_y<#0, #1>($t0|account: signer, $t1|x: #0, $t2|y: #1) {
+     var $t3: &signer
+     var $t4: #0
+     var $t5: #1
+     var $t6: u8
+     var $t7: S::Storage<#0, #1>
+  0: $t3 := borrow_local($t0)
+  1: $t4 := move($t1)
+  2: $t5 := move($t2)
+  3: $t6 := 3
+  4: $t7 := pack S::Storage<#0, #1>($t4, $t5, $t6)
+  5: move_to<S::Storage<#0, #1>>($t7, $t3)
+  6: return ()
+}
+
+
+[variant baseline]
+public fun A::good($t0|account1: signer, $t1|account2: signer) {
+     var $t2: signer
+     var $t3: u64
+     var $t4: bool
+     var $t5: signer
+     var $t6: u64
+     var $t7: bool
+  0: $t2 := move($t0)
+  1: $t3 := 1
+  2: $t4 := true
+  3: S::publish_x_y<u64, bool>($t2, $t3, $t4)
+  4: $t5 := move($t1)
+  5: $t6 := 1
+  6: $t7 := true
+  7: S::publish_x_y<u64, bool>($t5, $t6, $t7)
+  8: return ()
+}
+
+============ after pipeline `global_invariant_analysis` ================
+
+[variant verification]
+public fun S::publish_u64_bool($t0|account: signer, $t1|x: u64, $t2|y: bool) {
+     var $t3: u8
+     var $t4: S::Storage<u64, bool>
+     var $t5: num
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: assume WellFormed($t2)
+  3: assume forall $rsc: ResourceDomain<S::Storage<u64, bool>>(): WellFormed($rsc)
+  4: $t3 := 0
+  5: $t4 := pack S::Storage<u64, bool>($t1, $t2, $t3)
+  6: move_to<S::Storage<u64, bool>>($t4, $t0) on_abort goto 9 with $t5
+  7: label L1
+  8: return ()
+  9: label L2
+ 10: abort($t5)
+}
+
+
+[variant verification]
+public fun S::publish_u64_y<#0>($t0|account: signer, $t1|x: u64, $t2|y: #0) {
+     var $t3: u8
+     var $t4: S::Storage<u64, #0>
+     var $t5: num
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: assume WellFormed($t2)
+  3: assume forall $rsc: ResourceDomain<S::Storage<u64, #0>>(): WellFormed($rsc)
+  4: $t3 := 1
+  5: $t4 := pack S::Storage<u64, #0>($t1, $t2, $t3)
+  6: move_to<S::Storage<u64, #0>>($t4, $t0) on_abort goto 9 with $t5
+  7: label L1
+  8: return ()
+  9: label L2
+ 10: abort($t5)
+}
+
+
+[variant verification]
+public fun S::publish_x_bool<#0>($t0|account: signer, $t1|x: #0, $t2|y: bool) {
+     var $t3: u8
+     var $t4: S::Storage<#0, bool>
+     var $t5: num
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: assume WellFormed($t2)
+  3: assume forall $rsc: ResourceDomain<S::Storage<#0, bool>>(): WellFormed($rsc)
+  4: $t3 := 2
+  5: $t4 := pack S::Storage<#0, bool>($t1, $t2, $t3)
+  6: move_to<S::Storage<#0, bool>>($t4, $t0) on_abort goto 9 with $t5
+  7: label L1
+  8: return ()
+  9: label L2
+ 10: abort($t5)
+}
+
+
+[variant baseline]
+public fun S::publish_x_y<#0, #1>($t0|account: signer, $t1|x: #0, $t2|y: #1) {
+     var $t3: u8
+     var $t4: S::Storage<#0, #1>
+     var $t5: num
+  0: $t3 := 3
+  1: $t4 := pack S::Storage<#0, #1>($t1, $t2, $t3)
+  2: move_to<S::Storage<#0, #1>>($t4, $t0) on_abort goto 5 with $t5
+  3: label L1
+  4: return ()
+  5: label L2
+  6: abort($t5)
+}
+
+
+[variant verification]
+public fun S::publish_x_y<#0, #1>($t0|account: signer, $t1|x: #0, $t2|y: #1) {
+     var $t3: u8
+     var $t4: S::Storage<#0, #1>
+     var $t5: num
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: assume WellFormed($t2)
+  3: assume forall $rsc: ResourceDomain<S::Storage<#0, #1>>(): WellFormed($rsc)
+  4: $t3 := 3
+  5: $t4 := pack S::Storage<#0, #1>($t1, $t2, $t3)
+  6: move_to<S::Storage<#0, #1>>($t4, $t0) on_abort goto 9 with $t5
+  7: label L1
+  8: return ()
+  9: label L2
+ 10: abort($t5)
+}
+
+
+[variant verification]
+public fun A::good($t0|account1: signer, $t1|account2: signer) {
+     var $t2: u64
+     var $t3: bool
+     var $t4: num
+     var $t5: u64
+     var $t6: bool
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: assume forall $rsc: ResourceDomain<S::Storage<u64, bool>>(): WellFormed($rsc)
+  3: $t2 := 1
+  4: $t3 := true
+  5: S::publish_x_y<u64, bool>($t0, $t2, $t3) on_abort goto 11 with $t4
+  6: $t5 := 1
+  7: $t6 := true
+  8: S::publish_x_y<u64, bool>($t1, $t5, $t6) on_abort goto 11 with $t4
+  9: label L1
+ 10: return ()
+ 11: label L2
+ 12: abort($t4)
+}
+
+
+********* Result of global invariant instrumentation *********
+
+S::publish_u64_bool: [
+  entrypoint {
+    assume @0 = [
+      <> -> [
+        <>
+      ]
+    ]
+    assume @1 = [
+      <> -> [
+        <bool>
+      ]
+    ]
+    assume @2 = [
+      <> -> [
+        <u64>
+      ]
+    ]
+    assume @3 = [
+      <> -> [
+        <u64, bool>
+      ]
+    ]
+  }
+  6: move_to<S::Storage<u64, bool>>($t4, $t0) on_abort goto L2 with $t5 {
+    assert @0 = [
+      <> -> [
+        <>
+      ]
+    ]
+    assert @1 = [
+      <> -> [
+        <bool>
+      ]
+    ]
+    assert @2 = [
+      <> -> [
+        <u64>
+      ]
+    ]
+    assert @3 = [
+      <> -> [
+        <u64, bool>
+      ]
+    ]
+  }
+]
+S::publish_u64_y: [
+  entrypoint {
+    assume @0 = [
+      <bool> -> [
+        <>
+      ]
+    ]
+    assume @1 = [
+      <#0> -> [
+        <#0>
+      ]
+    ]
+    assume @2 = [
+      <bool> -> [
+        <u64>
+      ]
+    ]
+    assume @3 = [
+      <#0> -> [
+        <u64, #0>
+      ]
+    ]
+  }
+  6: move_to<S::Storage<u64, #0>>($t4, $t0) on_abort goto L2 with $t5 {
+    assert @0 = [
+      <bool> -> [
+        <>
+      ]
+    ]
+    assert @1 = [
+      <#0> -> [
+        <#0>
+      ]
+    ]
+    assert @2 = [
+      <bool> -> [
+        <u64>
+      ]
+    ]
+    assert @3 = [
+      <#0> -> [
+        <u64, #0>
+      ]
+    ]
+  }
+]
+S::publish_x_bool: [
+  entrypoint {
+    assume @0 = [
+      <u64> -> [
+        <>
+      ]
+    ]
+    assume @1 = [
+      <u64> -> [
+        <bool>
+      ]
+    ]
+    assume @2 = [
+      <#0> -> [
+        <#0>
+      ]
+    ]
+    assume @3 = [
+      <#0> -> [
+        <#0, bool>
+      ]
+    ]
+  }
+  6: move_to<S::Storage<#0, bool>>($t4, $t0) on_abort goto L2 with $t5 {
+    assert @0 = [
+      <u64> -> [
+        <>
+      ]
+    ]
+    assert @1 = [
+      <u64> -> [
+        <bool>
+      ]
+    ]
+    assert @2 = [
+      <#0> -> [
+        <#0>
+      ]
+    ]
+    assert @3 = [
+      <#0> -> [
+        <#0, bool>
+      ]
+    ]
+  }
+]
+S::publish_x_y: [
+  entrypoint {
+    assume @0 = [
+      <u64, bool> -> [
+        <>
+      ]
+    ]
+    assume @1 = [
+      <u64, #0> -> [
+        <#0>
+      ]
+    ]
+    assume @2 = [
+      <#0, bool> -> [
+        <#0>
+      ]
+    ]
+    assume @3 = [
+      <#0, #1> -> [
+        <#0, #1>
+      ]
+    ]
+  }
+  6: move_to<S::Storage<#0, #1>>($t4, $t0) on_abort goto L2 with $t5 {
+    assert @0 = [
+      <u64, bool> -> [
+        <>
+      ]
+    ]
+    assert @1 = [
+      <u64, #0> -> [
+        <#0>
+      ]
+    ]
+    assert @2 = [
+      <#0, bool> -> [
+        <#0>
+      ]
+    ]
+    assert @3 = [
+      <#0, #1> -> [
+        <#0, #1>
+      ]
+    ]
+  }
+]
+A::good: [
+  entrypoint {
+    assume @0 = [
+      <> -> [
+        <>
+      ]
+    ]
+    assume @1 = [
+      <> -> [
+        <bool>
+      ]
+    ]
+    assume @2 = [
+      <> -> [
+        <u64>
+      ]
+    ]
+    assume @3 = [
+      <> -> [
+        <u64, bool>
+      ]
+    ]
+  }
+]
+
+********* Global invariants by ID *********
+
+@0 => invariant
+        exists<S::Storage<u64, bool>>(@0x22)
+            ==> global<S::Storage<u64, bool>>(@0x22).x == 1;
+@1 => invariant<Y>
+        exists<S::Storage<u64, Y>>(@0x23)
+            ==> global<S::Storage<u64, Y>>(@0x23).x > 0;
+@2 => invariant<X>
+        exists<S::Storage<X, bool>>(@0x24)
+            ==> global<S::Storage<X, bool>>(@0x24).y;
+@3 => invariant<X, Y>
+        (exists<S::Storage<X, Y>>(@0x25) && exists<S::Storage<X, Y>>(@0x26))
+            ==> global<S::Storage<X, Y>>(@0x25) == global<S::Storage<X, Y>>(@0x26);

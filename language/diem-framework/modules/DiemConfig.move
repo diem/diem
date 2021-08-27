@@ -125,6 +125,8 @@ module DiemFramework::DiemConfig {
     }
     spec set {
         pragma opaque;
+        pragma delegate_invariants_to_caller;
+        requires DiemTimestamp::is_operating() ==> spec_has_config();
         modifies global<Configuration>(@DiemRoot);
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include SetAbortsIf<Config>;
@@ -166,6 +168,8 @@ module DiemFramework::DiemConfig {
     }
     spec set_with_capability_and_reconfigure {
         pragma opaque;
+        pragma delegate_invariants_to_caller;
+        requires DiemTimestamp::is_operating() ==> spec_has_config();
         modifies global<Configuration>(@DiemRoot);
         include AbortsIfNotPublished<Config>;
         include ReconfigureAbortsIf;
@@ -221,6 +225,7 @@ module DiemFramework::DiemConfig {
     }
     spec publish_new_config_and_get_capability {
         pragma opaque;
+        pragma delegate_invariants_to_caller;
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include AbortsIfPublished<Config>;
@@ -246,6 +251,7 @@ module DiemFramework::DiemConfig {
     }
     spec publish_new_config {
         pragma opaque;
+        pragma delegate_invariants_to_caller;
         modifies global<DiemConfig<Config>>(@DiemRoot);
         modifies global<ModifyConfigCapability<Config>>(@DiemRoot);
         include PublishNewConfigAbortsIf<Config>;
@@ -274,6 +280,7 @@ module DiemFramework::DiemConfig {
     spec reconfigure {
         pragma opaque;
         modifies global<Configuration>(@DiemRoot);
+        ensures old(spec_has_config()) == spec_has_config();
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include ReconfigureAbortsIf;
         include ReconfigureEmits;
@@ -323,6 +330,7 @@ module DiemFramework::DiemConfig {
     spec reconfigure_ {
         pragma opaque;
         modifies global<Configuration>(@DiemRoot);
+        requires DiemTimestamp::is_operating() ==> spec_has_config();
         ensures old(spec_has_config()) == spec_has_config();
         let config = global<Configuration>(@DiemRoot);
         let post post_config = global<Configuration>(@DiemRoot);
@@ -424,7 +432,7 @@ module DiemFramework::DiemConfig {
     /// # Initialization
     spec module {
         /// After genesis, the `Configuration` is published.
-        invariant DiemTimestamp::is_operating() ==> spec_has_config();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> spec_has_config();
     }
 
     /// # Invariants

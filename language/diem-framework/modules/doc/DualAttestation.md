@@ -1384,7 +1384,7 @@ The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 The Limit resource should be published after genesis
 
 
-<pre><code><b>invariant</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
+<pre><code><b>invariant</b> [suspendable] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 </code></pre>
 
 

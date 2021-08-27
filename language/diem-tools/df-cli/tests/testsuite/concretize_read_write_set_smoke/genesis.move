@@ -84,7 +84,7 @@ script {
         let tc_rotate_key_cap = DiemAccount::extract_key_rotation_capability(tc_account);
         DiemAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
         DiemAccount::restore_key_rotation_capability(tc_rotate_key_cap);
-        DiemTimestamp::set_time_has_started(dr_account);
+        DiemTimestamp::set_time_has_started_for_testing(dr_account);
     }
 
 }

@@ -166,6 +166,7 @@ module DiemFramework::DesignatedDealer {
         include TieredMintEmits<CoinType>;
 
         modifies global<Dealer>(dd_addr);
+        ensures exists<Dealer>(dd_addr);
         modifies global<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures exists<Diem::CurrencyInfo<CoinType>>(@CurrencyInfo);
         modifies global<TierInfo<CoinType>>(dd_addr);

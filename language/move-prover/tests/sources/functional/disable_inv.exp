@@ -1,25 +1,29 @@
 Move prover returns: exiting with bytecode transformation errors
 error: Public or script functions cannot delegate invariants
-   ┌─ tests/sources/functional/disable_inv.move:11:5
+   ┌─ tests/sources/functional/disable_inv.move:13:5
    │
-11 │ ╭     public fun f1_incorrect(s: &signer) {
-12 │ │         move_to(s, R1 {});
-13 │ │         move_to(s, R2 {});
-14 │ │     }
+13 │ ╭     public fun f1_incorrect(s: &signer) {
+14 │ │         move_to(s, R1 {});
+15 │ │         move_to(s, R2 {});
+16 │ │     }
    │ ╰─────^
 
-error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
-   ┌─ tests/sources/functional/disable_inv.move:31:5
+error: Functions must not have `pragma disable_invariants_in_body` when invariant checking is turned-off on this function
+   ┌─ tests/sources/functional/disable_inv.move:34:5
    │
-31 │ ╭     fun f3_incorrect(s: &signer) {
-32 │ │         move_to(s, R1 {});
-33 │ │     }
+34 │ ╭     fun f3_incorrect(s: &signer) {
+35 │ │         move_to(s, R1 {});
+36 │ │     }
    │ ╰─────^
+   │
+   = disabled by DisableInv::f3_incorrect <- DisableInv::f2
 
-error: Functions must not have a disable invariant pragma when invariants are disabled in a transitive caller or there is a pragma delegate_invariants_to_caller
-   ┌─ tests/sources/functional/disable_inv.move:46:5
+error: Functions must not have `pragma disable_invariants_in_body` when invariant checking is turned-off on this function
+   ┌─ tests/sources/functional/disable_inv.move:50:5
    │
-46 │ ╭     fun f5_incorrect(s: &signer) {
-47 │ │         move_to(s, R2 {});
-48 │ │     }
+50 │ ╭     fun f5_incorrect(s: &signer) {
+51 │ │         move_to(s, R2 {});
+52 │ │     }
    │ ╰─────^
+   │
+   = disabled by DisableInv::f5_incorrect <- DisableInv::f4 <- DisableInv::f2

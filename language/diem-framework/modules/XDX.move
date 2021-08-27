@@ -121,10 +121,10 @@ module DiemFramework::XDX {
 
     spec module {
         /// After genesis, the Reserve resource exists.
-        invariant DiemTimestamp::is_operating() ==> reserve_exists();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> reserve_exists();
 
         /// After genesis, XDX is registered.
-        invariant DiemTimestamp::is_operating() ==> Diem::is_currency<XDX>();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> Diem::is_currency<XDX>();
     }
 
     /// # Helper Functions
@@ -137,7 +137,7 @@ module DiemFramework::XDX {
         /// After genesis, `LimitsDefinition<XDX>` is published at Diem root. It's published by
         /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
         /// it does not hold for all types (but does hold for XDX).
-        invariant DiemTimestamp::is_operating()
+        invariant [suspendable] DiemTimestamp::is_operating()
             ==> exists<AccountLimits::LimitsDefinition<XDX>>(@DiemRoot);
 
         /// `LimitsDefinition<XDX>` is not published at any other address

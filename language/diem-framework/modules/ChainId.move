@@ -47,7 +47,7 @@ module DiemFramework::ChainId {
 
     spec module {
         /// When Diem is operating, the chain id is always available.
-        invariant DiemTimestamp::is_operating() ==> exists<ChainId>(@DiemRoot);
+        invariant [suspendable] DiemTimestamp::is_operating() ==> exists<ChainId>(@DiemRoot);
 
         // Could also specify that ChainId is not stored on any other address, but it doesn't matter.
     }

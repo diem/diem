@@ -88,7 +88,7 @@ module DiemFramework::RegisteredCurrencies {
 
     spec module {
         /// Global invariant that currency config is always available after genesis.
-        invariant DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<RegisteredCurrencies>();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<RegisteredCurrencies>();
     }
 
     /// # Helper Functions

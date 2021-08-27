@@ -67,17 +67,17 @@ module DiemFramework::DiemVersion {
     /// # Initialization
     spec module {
         /// After genesis, version is published.
-        invariant DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVersion>();
+        invariant [suspendable] DiemTimestamp::is_operating() ==> DiemConfig::spec_is_published<DiemVersion>();
     }
 
     /// # Access Control
 
     /// The permission "UpdateDiemProtocolVersion" is granted to DiemRoot [[H10]][PERMISSION].
     spec module {
-        invariant [global, isolated] forall addr: address where exists<DiemConfig<DiemVersion>>(addr):
-            addr == @DiemRoot;
+        invariant forall addr: address
+            where exists<DiemConfig<DiemVersion>>(addr): addr == @DiemRoot;
 
-        invariant update old(DiemConfig::spec_is_published<DiemVersion>())
+        invariant update [suspendable] old(DiemConfig::spec_is_published<DiemVersion>())
             && DiemConfig::spec_is_published<DiemVersion>()
             && old(DiemConfig::get<DiemVersion>().major) != DiemConfig::get<DiemVersion>().major
                 ==> Roles::spec_signed_by_diem_root_role();
@@ -98,8 +98,9 @@ module DiemFramework::DiemVersion {
     /// # Other Invariants
     spec module {
         /// Version number never decreases
-        invariant update [global, isolated]
-            old(DiemConfig::get<DiemVersion>().major) <= DiemConfig::get<DiemVersion>().major;
+        invariant update [suspendable]
+            DiemTimestamp::is_operating() ==>
+                (old(DiemConfig::get<DiemVersion>().major) <= DiemConfig::get<DiemVersion>().major);
     }
 
 }

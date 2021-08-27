@@ -21,6 +21,7 @@ which reflect that the system has been successfully initialized.
 -  [Resource `CurrentTimeMicroseconds`](#0x1_DiemTimestamp_CurrentTimeMicroseconds)
 -  [Constants](#@Constants_0)
 -  [Function `set_time_has_started`](#0x1_DiemTimestamp_set_time_has_started)
+-  [Function `set_time_has_started_for_testing`](#0x1_DiemTimestamp_set_time_has_started_for_testing)
 -  [Function `update_global_time`](#0x1_DiemTimestamp_update_global_time)
 -  [Function `now_microseconds`](#0x1_DiemTimestamp_now_microseconds)
 -  [Function `now_seconds`](#0x1_DiemTimestamp_now_seconds)
@@ -118,7 +119,7 @@ Marks that time has started and genesis has finished. This can only be called fr
 account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">set_time_has_started</a>(dr_account: &signer)
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">set_time_has_started</a>(dr_account: &signer)
 </code></pre>
 
 
@@ -127,7 +128,7 @@ account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">set_time_has_started</a>(dr_account: &signer) {
+<pre><code><b>public</b>(<b>friend</b>) <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">set_time_has_started</a>(dr_account: &signer) {
     <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">assert_genesis</a>();
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_diem_root">CoreAddresses::assert_diem_root</a>(dr_account);
     <b>let</b> timer = <a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
@@ -143,17 +144,52 @@ account.
 <summary>Specification</summary>
 
 
-The friend of this function is <code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code> which means that
-this function can't be verified on its own and has to be verified in
-context of Genesis execution.
-After time has started, all invariants guarded by <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a></code>
-will become activated and need to hold.
+This function can't be verified on its own and has to be verified in the context of Genesis execution.
+
+After time has started, all invariants guarded by <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a></code> will become activated
+and need to hold.
 
 
-<pre><code><b>pragma</b> <b>friend</b> = DiemFramework::Genesis::initialize;
+<pre><code><b>pragma</b> delegate_invariants_to_caller;
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>ensures</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>();
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemTimestamp_set_time_has_started_for_testing"></a>
+
+## Function `set_time_has_started_for_testing`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started_for_testing">set_time_has_started_for_testing</a>(dr_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started_for_testing">set_time_has_started_for_testing</a>(dr_account: &signer) {
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">set_time_has_started</a>(dr_account);
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 
