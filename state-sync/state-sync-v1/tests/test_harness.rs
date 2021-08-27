@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use channel::{diem_channel, message_queues::QueueStyle};
+use consensus_notifications::{ConsensusNotificationSender, ConsensusNotifier};
 use diem_config::{
     config::{NodeConfig, Peer, PeerRole, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
@@ -85,6 +86,7 @@ pub static PFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Public);
 pub struct StateSyncPeer {
     bootstrapper: Option<StateSyncBootstrapper>,
     client: Option<StateSyncClient>,
+    consensus_notifier: Option<ConsensusNotifier>,
     mempool: Option<MockSharedMempool>,
     multi_peer_ids: HashMap<NetworkId, PeerId>, // Holds the peer's PeerIds (to support nodes with multiple network IDs).
     network_addr: NetworkAddress,
@@ -109,11 +111,14 @@ impl StateSyncPeer {
         let mempool = self.mempool.as_ref().unwrap();
         assert!(mempool.add_txns(signed_txns.clone()).is_ok());
 
-        // Run StateSyncClient::commit on a tokio runtime to support tokio::timeout
-        // in commit().
         assert!(Runtime::new()
             .unwrap()
-            .block_on(self.client.as_ref().unwrap().commit(committed_txns, vec![]))
+            .block_on(
+                self.consensus_notifier
+                    .as_ref()
+                    .unwrap()
+                    .notify_new_commit(committed_txns, vec![])
+            )
             .is_ok());
         let mempool_txns = mempool.read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {
@@ -159,7 +164,13 @@ impl StateSyncPeer {
     }
 
     pub fn sync_to(&self, target: LedgerInfoWithSignatures) {
-        block_on(self.client.as_ref().unwrap().sync_to(target)).unwrap()
+        block_on(
+            self.consensus_notifier
+                .as_ref()
+                .unwrap()
+                .sync_to_target(target),
+        )
+        .unwrap();
     }
 
     pub fn wait_for_version(&self, target_version: u64, highest_li_version: Option<u64>) -> bool {
@@ -206,6 +217,7 @@ impl StateSyncEnvironment {
             let peer = StateSyncPeer {
                 client: None,
                 mempool: None,
+                consensus_notifier: None,
                 multi_peer_ids: HashMap::new(),
                 network_addr: network_addrs[peer_index].clone(),
                 network_key: network_keys[peer_index].clone(),
@@ -299,15 +311,19 @@ impl StateSyncEnvironment {
         let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
         peer.mempool = Some(MockSharedMempool::new(Some(mempool_listener)));
 
+        let (consensus_notifier, consensus_listener) = ConsensusNotifier::new(1000);
+
         let bootstrapper = StateSyncBootstrapper::bootstrap_with_executor_proxy(
             Runtime::new().unwrap(),
             network_handles,
             mempool_notifier,
+            consensus_listener,
             &config,
             waypoint,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
-        peer.client = Some(bootstrapper.create_client(config.state_sync.client_commit_timeout_ms));
+        peer.client = Some(bootstrapper.create_client());
+        peer.consensus_notifier = Some(consensus_notifier);
         peer.bootstrapper = Some(bootstrapper);
         peer.storage_proxy = Some(storage_proxy);
     }

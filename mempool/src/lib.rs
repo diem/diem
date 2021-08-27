@@ -60,7 +60,7 @@ mod tests;
 pub use shared_mempool::{
     bootstrap, network,
     types::{
-        gen_mempool_reconfig_subscription, CommitResponse, ConsensusRequest, ConsensusResponse,
+        gen_mempool_reconfig_subscription, ConsensusRequest, ConsensusResponse,
         MempoolClientSender, SubmissionStatus, TransactionExclusion,
     },
 };

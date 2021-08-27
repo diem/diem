@@ -1,0 +1,24 @@
+[package]
+name = "consensus-notifications"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+repository = "https://github.com/diem/diem"
+description = "The notification interface between state sync and consensus"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+async-trait = "0.1.42"
+futures = "0.3.12"
+serde = { version = "1.0.124", default-features = false }
+thiserror = "1.0.24"
+tokio = { version = "1.8.1" }
+
+diem-crypto = { path = "../../../crypto/crypto" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+
+[dev-dependencies]
+move-core-types = { path = "../../../language/move-core/types" }

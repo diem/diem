@@ -21,6 +21,7 @@ tokio-stream = "0.1.4"
 
 backup-service = { path = "../storage/backup/backup-service" }
 consensus = { path = "../consensus" }
+consensus-notifications = { path = "../state-sync/inter-component/consensus-notifications" }
 crash-handler = { path = "../common/crash-handler" }
 debug-interface = { path = "../common/debug-interface" }
 executor = { path = "../execution/executor" }

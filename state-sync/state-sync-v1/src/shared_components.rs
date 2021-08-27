@@ -85,6 +85,7 @@ pub(crate) mod test_utils {
     use diem_types::waypoint::Waypoint;
 
     use channel::{diem_channel, message_queues::QueueStyle};
+    use consensus_notifications::ConsensusNotifier;
     use diem_config::{
         config::{NodeConfig, RoleType},
         network_id::{NetworkId, NodeNetworkId},
@@ -166,11 +167,13 @@ pub(crate) mod test_utils {
         // Create channel senders and receivers
         let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();
         let (mempool_notifier, _) = MempoolNotifier::new();
+        let (_, consensus_listener) = ConsensusNotifier::new(1000);
 
         // Return the new state sync coordinator
         StateSyncCoordinator::new(
             coordinator_receiver,
             mempool_notifier,
+            consensus_listener,
             network_senders,
             &node_config,
             waypoint,

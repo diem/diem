@@ -6,6 +6,7 @@ use crate::{
     state_replication::{StateComputer, StateComputerCommitCallBackType},
 };
 use anyhow::Result;
+use consensus_notifications::ConsensusNotificationSender;
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
@@ -14,24 +15,23 @@ use diem_types::ledger_info::LedgerInfoWithSignatures;
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
-use state_sync_v1::client::StateSyncClient;
 use std::{boxed::Box, sync::Arc};
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
-    synchronizer: StateSyncClient,
+    state_sync_notifier: Box<dyn ConsensusNotificationSender>,
 }
 
 impl ExecutionProxy {
     pub fn new(
         execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
-        synchronizer: StateSyncClient,
+        state_sync_notifier: Box<dyn ConsensusNotificationSender>,
     ) -> Self {
         Self {
             execution_correctness_client,
-            synchronizer,
+            state_sync_notifier,
         }
     }
 }
@@ -89,7 +89,9 @@ impl StateComputer for ExecutionProxy {
 
         if let Err(e) = monitor!(
             "notify_state_sync",
-            self.synchronizer.commit(txns, reconfig_events).await
+            self.state_sync_notifier
+                .notify_new_commit(txns, reconfig_events)
+                .await
         ) {
             error!(error = ?e, "Failed to notify state synchronizer");
         }
@@ -109,7 +111,10 @@ impl StateComputer for ExecutionProxy {
         // commitments, the the sync state of ChunkExecutor may be not up to date so
         // it is required to reset the cache of ChunkExecutor in State Sync
         // when requested to sync.
-        let res = monitor!("sync_to", self.synchronizer.sync_to(target).await);
+        let res = monitor!(
+            "sync_to",
+            self.state_sync_notifier.sync_to_target(target).await
+        );
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
         self.execution_correctness_client.reset()?;

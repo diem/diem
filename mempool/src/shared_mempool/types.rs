@@ -164,31 +164,6 @@ pub enum ConsensusResponse {
     CommitResponse(),
 }
 
-#[derive(Debug)]
-pub struct CommitResponse {
-    pub success: bool,
-    /// The error message if `success` is false.
-    pub error_message: Option<String>,
-}
-
-impl CommitResponse {
-    // Returns a new CommitResponse without an error.
-    pub fn success() -> Self {
-        CommitResponse {
-            success: true,
-            error_message: None,
-        }
-    }
-
-    // Returns a new CommitResponse holding the given error message.
-    pub fn error(error_message: String) -> Self {
-        CommitResponse {
-            success: false,
-            error_message: Some(error_message),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct TransactionExclusion {
     pub sender: AccountAddress,

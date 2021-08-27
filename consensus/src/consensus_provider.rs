@@ -12,6 +12,7 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use channel::diem_channel;
+use consensus_notifications::ConsensusNotificationSender;
 use diem_config::config::NodeConfig;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
@@ -19,7 +20,6 @@ use diem_mempool::ConsensusRequest;
 use diem_types::on_chain_config::OnChainConfigPayload;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
-use state_sync_v1::client::StateSyncClient;
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
@@ -29,7 +29,7 @@ pub fn start_consensus(
     node_config: &NodeConfig,
     mut network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
-    state_sync_client: StateSyncClient,
+    state_sync_notifier: Box<dyn ConsensusNotificationSender>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: Arc<dyn DbReader>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
@@ -50,7 +50,7 @@ pub fn start_consensus(
 
     let state_computer = Arc::new(ExecutionProxy::new(
         execution_correctness_manager.client(),
-        state_sync_client,
+        state_sync_notifier,
     ));
 
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));

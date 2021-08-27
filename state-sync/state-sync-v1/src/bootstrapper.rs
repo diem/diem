@@ -6,6 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSyncEvents, StateSyncSender},
 };
+use consensus_notifications::ConsensusNotificationListener;
 use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
 use diem_types::waypoint::Waypoint;
 use executor_types::ChunkExecutor;
@@ -27,6 +28,7 @@ impl StateSyncBootstrapper {
     pub fn bootstrap<M: MempoolNotificationSender + 'static>(
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
         mempool_notifier: M,
+        consensus_listener: ConsensusNotificationListener,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
         node_config: &NodeConfig,
@@ -44,6 +46,7 @@ impl StateSyncBootstrapper {
             runtime,
             network,
             mempool_notifier,
+            consensus_listener,
             node_config,
             waypoint,
             executor_proxy,
@@ -57,6 +60,7 @@ impl StateSyncBootstrapper {
         runtime: Runtime,
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
         mempool_notifier: M,
+        consensus_listener: ConsensusNotificationListener,
         node_config: &NodeConfig,
         waypoint: Waypoint,
         executor_proxy: E,
@@ -73,6 +77,7 @@ impl StateSyncBootstrapper {
         let coordinator = StateSyncCoordinator::new(
             coordinator_receiver,
             mempool_notifier,
+            consensus_listener,
             network_senders,
             node_config,
             waypoint,
@@ -88,7 +93,7 @@ impl StateSyncBootstrapper {
         }
     }
 
-    pub fn create_client(&self, commit_timeout_secs: u64) -> StateSyncClient {
-        StateSyncClient::new(self.coordinator_sender.clone(), commit_timeout_secs)
+    pub fn create_client(&self) -> StateSyncClient {
+        StateSyncClient::new(self.coordinator_sender.clone())
     }
 }

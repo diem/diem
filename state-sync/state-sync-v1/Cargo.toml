@@ -22,6 +22,7 @@ thiserror = "1.0.24"
 tokio = { version = "1.8.1", features = ["full"] }
 tokio-stream = "0.1.4"
 
+consensus-notifications = { path = "../inter-component/consensus-notifications" }
 channel = { path = "../../common/channel" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
@@ -50,6 +51,7 @@ vm-genesis = { path = "../../language/tools/vm-genesis", optional = true }
 bytes = "1.0.1"
 proptest = "1.0.0"
 
+consensus-notifications = { path = "../inter-component/consensus-notifications" }
 channel = { path = "../../common/channel" }
 diem-framework-releases= { path = "../../language/diem-framework/releases" }
 diem-crypto = { path = "../../crypto/crypto" }

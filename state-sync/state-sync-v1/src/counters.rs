@@ -86,7 +86,6 @@ pub const FAIL_LABEL: &str = "fail";
 // commit flow fail component label
 pub const MEMPOOL_LABEL: &str = "mempool";
 pub const CONSENSUS_LABEL: &str = "consensus";
-pub const STATE_SYNC_LABEL: &str = "state_sync";
 
 // sync request result labels
 pub const COMPLETE_LABEL: &str = "complete";

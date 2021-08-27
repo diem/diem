@@ -4,7 +4,7 @@
 use crate::{
     chunk_request::{GetChunkRequest, TargetType},
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
-    client::{CoordinatorMessage, SyncRequest},
+    client::CoordinatorMessage,
     counters,
     error::Error,
     executor_proxy::ExecutorProxyTrait,
@@ -13,12 +13,15 @@ use crate::{
     request_manager::RequestManager,
     shared_components::SyncState,
 };
+use consensus_notifications::{
+    ConsensusCommitNotification, ConsensusNotification, ConsensusNotificationListener,
+    ConsensusSyncNotification,
+};
 use diem_config::{
     config::{NodeConfig, PeerNetworkId, RoleType, StateSyncConfig},
     network_id::NodeNetworkId,
 };
 use diem_logger::prelude::*;
-use diem_mempool::CommitResponse;
 use diem_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
@@ -29,6 +32,7 @@ use diem_types::{
 use fail::fail_point;
 use futures::{
     channel::{mpsc, oneshot},
+    executor::block_on,
     stream::select_all,
     StreamExt,
 };
@@ -51,6 +55,12 @@ struct PendingRequestInfo {
     chunk_limit: u64,
 }
 
+/// A sync request for a specified target ledger info.
+pub struct SyncRequest {
+    pub last_commit_timestamp: SystemTime,
+    pub consensus_sync_notification: ConsensusSyncNotification,
+}
+
 /// Coordination of the state sync process is driven by StateSyncCoordinator. The `start()`
 /// function runs an infinite event loop and triggers actions based on external and internal
 /// (local) requests. The coordinator works in two modes (depending on the role):
@@ -64,6 +74,8 @@ pub(crate) struct StateSyncCoordinator<T, M> {
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
     mempool_notifier: M,
+    // Used to listen and respond to notifications from consensus
+    consensus_listener: ConsensusNotificationListener,
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
@@ -97,6 +109,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         mempool_notifier: M,
+        consensus_listener: ConsensusNotificationListener,
         network_senders: HashMap<NodeNetworkId, StateSyncSender>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
@@ -127,6 +140,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         Ok(Self {
             client_events,
             mempool_notifier,
+            consensus_listener,
             local_state: initial_state,
             config: node_config.state_sync.clone(),
             role,
@@ -160,26 +174,30 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         loop {
             let _timer = counters::MAIN_LOOP.start_timer();
             ::futures::select! {
-                msg = self.client_events.select_next_some() => {
+                msg = self.consensus_listener.notification_receiver.select_next_some() => {
                     match msg {
-                        CoordinatorMessage::SyncRequest(request) => {
+                        ConsensusNotification::SyncToTarget(sync_notification) => {
                             let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
                                 .with_label_values(&[counters::SYNC_MSG_LABEL])
                                 .start_timer();
-                            if let Err(e) = self.process_sync_request(*request) {
+                            if let Err(e) = self.process_sync_request(sync_notification).await {
                                 error!(LogSchema::new(LogEntry::SyncRequest).error(&e));
                                 counters::SYNC_REQUEST_RESULT.with_label_values(&[counters::FAIL_LABEL]).inc();
                             }
-                        }
-                        CoordinatorMessage::CommitNotification(notification) => {
+                        },
+                        ConsensusNotification::NotifyCommit(commit_notification) => {
                             let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
                                 .with_label_values(&[counters::COMMIT_MSG_LABEL])
                                 .start_timer();
-                            if let Err(e) = self.process_commit_notification(notification.committed_transactions, Some(notification.callback), notification.reconfiguration_events, None).await {
+                            if let Err(e) = self.process_commit_notification(commit_notification.transactions.clone(), commit_notification.reconfiguration_events.clone(), Some(commit_notification), None).await {
                                 counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
                                 error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e));
                             }
                         }
+                    }
+                }
+                msg = self.client_events.select_next_some() => {
+                    match msg {
                         CoordinatorMessage::GetSyncState(callback) => {
                             let _ = self.get_sync_state(callback);
                         }
@@ -343,12 +361,21 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     /// If there is an existing sync request it will be overridden.
     /// Note: when processing a sync request, state sync assumes that it's the only one
     /// modifying storage, i.e., consensus is not trying to commit transactions concurrently.
-    fn process_sync_request(&mut self, request: SyncRequest) -> Result<(), Error> {
+    async fn process_sync_request(
+        &mut self,
+        sync_notification: ConsensusSyncNotification,
+    ) -> Result<(), Error> {
         fail_point!("state_sync_v1::process_sync_request_message", |_| {
             Err(crate::error::Error::UnexpectedError(
                 "Injected error in process_sync_request_message".into(),
             ))
         });
+
+        // Convert sync notification from consensus into a sync request wrapper
+        let request = SyncRequest {
+            last_commit_timestamp: SystemTime::now(),
+            consensus_sync_notification: sync_notification,
+        };
 
         // Full nodes don't support sync requests
         if self.role == RoleType::FullNode {
@@ -356,7 +383,11 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         }
 
         let local_li_version = self.local_state.committed_version();
-        let target_version = request.target.ledger_info().version();
+        let target_version = request
+            .consensus_sync_notification
+            .target
+            .ledger_info()
+            .version();
         info!(
             LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Received)
                 .target_version(target_version)
@@ -371,13 +402,14 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         }
 
         if target_version == local_li_version {
-            return Self::send_sync_req_callback(request, Ok(()));
+            return self.send_sync_req_callback(request, Ok(())).await;
         }
         if target_version < local_li_version {
-            Self::send_sync_req_callback(
+            self.send_sync_req_callback(
                 request,
                 Err(Error::UnexpectedError("Sync request to old version".into())),
-            )?;
+            )
+            .await?;
             return Err(Error::OldSyncRequestVersion(
                 target_version,
                 local_li_version,
@@ -397,23 +429,27 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     }
 
     /// Notifies consensus of the given commit response.
-    /// Note: if a callback is not specified, the response isn't sent anywhere.
-    fn notify_consensus_of_commit_response(
-        &self,
-        commit_response: CommitResponse,
-        callback: Option<oneshot::Sender<Result<CommitResponse, Error>>>,
+    async fn notify_consensus_of_commit_response(
+        &mut self,
+        result: Result<(), Error>,
+        commit_notification: ConsensusCommitNotification,
     ) -> Result<(), Error> {
-        if let Some(callback) = callback {
-            if let Err(error) = callback.send(Ok(commit_response)) {
-                counters::COMMIT_FLOW_FAIL
-                    .with_label_values(&[counters::CONSENSUS_LABEL])
-                    .inc();
-                return Err(Error::CallbackSendFailed(format!(
-                    "Failed to send commit ACK to consensus!: {:?}",
-                    error
-                )));
-            }
-        }
+        let result = result.map_err(|error| {
+            consensus_notifications::Error::UnexpectedErrorEncountered(format!("{:?}", error))
+        });
+        if let Err(error) = self
+            .consensus_listener
+            .respond_to_commit_notification(commit_notification, result)
+            .await
+        {
+            counters::COMMIT_FLOW_FAIL
+                .with_label_values(&[counters::CONSENSUS_LABEL])
+                .inc();
+            return Err(Error::CallbackSendFailed(format!(
+                "Failed to send commit ACK to consensus!: {:?}",
+                error
+            )));
+        };
         Ok(())
     }
 
@@ -425,8 +461,8 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     async fn process_commit_notification(
         &mut self,
         committed_transactions: Vec<Transaction>,
-        commit_callback: Option<oneshot::Sender<Result<CommitResponse, Error>>>,
         reconfiguration_events: Vec<ContractEvent>,
+        commit_notification: Option<ConsensusCommitNotification>,
         chunk_sender: Option<&PeerNetworkId>,
     ) -> Result<(), Error> {
         // We choose to re-sync the state with the storage as it's the simplest approach:
@@ -435,23 +471,23 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         self.sync_state_with_local_storage()?;
         self.update_sync_state_metrics_and_logs()?;
 
-        // Notify mempool of commit
-        let commit_response = match self
+        // Notify mempool of the new commit
+        let commit_response = self
             .notify_mempool_of_committed_transactions(committed_transactions)
             .await
-        {
-            Ok(()) => CommitResponse::success(),
-            Err(error) => {
+            .map_err(|error| {
                 error!(LogSchema::new(LogEntry::CommitFlow).error(&error));
-                CommitResponse::error(error.to_string())
-            }
-        };
+                error
+            });
 
         // Notify consensus of the commit response
-        if let Err(error) =
-            self.notify_consensus_of_commit_response(commit_response, commit_callback)
-        {
-            error!(LogSchema::new(LogEntry::CommitFlow).error(&error),);
+        if let Some(commit_notification) = commit_notification {
+            if let Err(error) = self
+                .notify_consensus_of_commit_response(commit_response, commit_notification)
+                .await
+            {
+                error!(LogSchema::new(LogEntry::CommitFlow).error(&error));
+            }
         }
 
         // Check long poll subscriptions, update peer requests and sync request last progress
@@ -467,7 +503,8 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         }
 
         // Check if we're now initialized or if we hit the sync request target
-        self.check_initialized_or_sync_request_completed(synced_version)?;
+        self.check_initialized_or_sync_request_completed(synced_version)
+            .await?;
 
         // Publish the on chain config updates
         if let Err(error) = self
@@ -485,7 +522,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
 
     /// Checks if we are now at the initialization point (i.e., the waypoint), or at the version
     /// specified by a sync request made by consensus.
-    fn check_initialized_or_sync_request_completed(
+    async fn check_initialized_or_sync_request_completed(
         &mut self,
         synced_version: u64,
     ) -> Result<(), Error> {
@@ -505,7 +542,11 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
 
         // Check if we're now at the sync request target
         if let Some(sync_request) = self.sync_request.as_ref() {
-            let sync_target_version = sync_request.target.ledger_info().version();
+            let sync_target_version = sync_request
+                .consensus_sync_notification
+                .target
+                .ledger_info()
+                .version();
             if synced_version > sync_target_version {
                 return Err(Error::SyncedBeyondTarget(
                     synced_version,
@@ -523,7 +564,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
                     .with_label_values(&[counters::COMPLETE_LABEL])
                     .inc();
                 if let Some(sync_request) = self.sync_request.take() {
-                    Self::send_sync_req_callback(sync_request, Ok(()))?;
+                    self.send_sync_req_callback(sync_request, Ok(())).await?;
                 }
             }
         }
@@ -1032,8 +1073,8 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         // Process the newly committed chunk
         self.process_commit_notification(
             response.txn_list_with_proof.transactions.clone(),
-            None,
             vec![],
+            None,
             Some(peer),
         )
         .await
@@ -1114,7 +1155,11 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         // If we're syncing to a specific target for consensus, valid responses
         // should not exceed the ledger info version of the sync request.
         if let Some(sync_request) = self.sync_request.as_ref() {
-            let sync_request_version = sync_request.target.ledger_info().version();
+            let sync_request_version = sync_request
+                .consensus_sync_notification
+                .target
+                .ledger_info()
+                .version();
             let response_version = target_li.ledger_info().version();
             if sync_request_version < response_version {
                 let error_message = format!("Verifiable ledger info version is higher than the sync target. Received: {}, requested: {}.",
@@ -1170,7 +1215,11 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         let current_highest_version = if !self.is_initialized() {
             self.waypoint.version()
         } else if let Some(sync_request) = self.sync_request.as_ref() {
-            sync_request.target.ledger_info().version()
+            sync_request
+                .consensus_sync_notification
+                .target
+                .ledger_info()
+                .version()
         } else if let Some(new_highest_li) = new_highest_li.as_ref() {
             new_highest_li.ledger_info().version()
         } else if let Some(target_ledger_info) = self.target_ledger_info.as_ref() {
@@ -1229,12 +1278,17 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     /// Returns a chunk target for consensus request synchronization.
     fn create_sync_request_chunk_target(&self, known_version: u64) -> Result<TargetType, Error> {
         if let Some(sync_request) = &self.sync_request {
-            let target_version = sync_request.target.ledger_info().version();
+            let target_version = sync_request
+                .consensus_sync_notification
+                .target
+                .ledger_info()
+                .version();
             if target_version <= known_version {
                 Err(Error::SyncedBeyondTarget(known_version, target_version))
             } else {
-                let chunk_target =
-                    self.create_highest_available_chunk_target(Some(sync_request.target.clone()));
+                let chunk_target = self.create_highest_available_chunk_target(Some(
+                    sync_request.consensus_sync_notification.target.clone(),
+                ));
                 Ok(chunk_target)
             }
         } else {
@@ -1461,10 +1515,10 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
 
                 // Remove the sync request and notify consensus that the request timed out!
                 if let Some(sync_request) = self.sync_request.take() {
-                    if let Err(e) = Self::send_sync_req_callback(
+                    if let Err(e) = block_on(self.send_sync_req_callback(
                         sync_request,
                         Err(Error::UnexpectedError("Sync request timed out!".into())),
-                    ) {
+                    )) {
                         error!(
                             LogSchema::event_log(LogEntry::SyncRequest, LogEvent::CallbackFail)
                                 .error(&e)
@@ -1621,16 +1675,26 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         });
     }
 
-    fn send_sync_req_callback(sync_req: SyncRequest, msg: Result<(), Error>) -> Result<(), Error> {
-        sync_req.callback.send(msg).map_err(|failed_msg| {
-            counters::FAILED_CHANNEL_SEND
-                .with_label_values(&[counters::CONSENSUS_SYNC_REQ_CALLBACK])
-                .inc();
-            Error::UnexpectedError(format!(
-                "Consensus sync request callback error - failed to send the following message: {:?}",
-                failed_msg
-            ))
-        })
+    async fn send_sync_req_callback(
+        &mut self,
+        sync_req: SyncRequest,
+        msg: Result<(), Error>,
+    ) -> Result<(), Error> {
+        let msg = msg.map_err(|error| {
+            consensus_notifications::Error::UnexpectedErrorEncountered(format!("{:?}", error))
+        });
+        self.consensus_listener
+            .respond_to_sync_notification(sync_req.consensus_sync_notification, msg)
+            .await
+            .map_err(|error| {
+                counters::FAILED_CHANNEL_SEND
+                    .with_label_values(&[counters::CONSENSUS_SYNC_REQ_CALLBACK])
+                    .inc();
+                Error::UnexpectedError(format!(
+                    "Consensus sync request callback error: {:?}",
+                    error
+                ))
+            })
     }
 
     fn send_initialization_callback(
@@ -1656,12 +1720,14 @@ mod tests {
     use crate::{
         chunk_request::{GetChunkRequest, TargetType},
         chunk_response::{GetChunkResponse, ResponseLedgerInfo},
-        client::SyncRequest,
         coordinator::StateSyncCoordinator,
         error::Error,
         executor_proxy::ExecutorProxy,
         network::StateSyncMessage,
         shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
+    };
+    use consensus_notifications::{
+        ConsensusCommitNotification, ConsensusNotificationResponse, ConsensusSyncNotification,
     };
     use diem_config::{
         config::{NodeConfig, PeerNetworkId, PeerRole, RoleType},
@@ -1671,11 +1737,11 @@ mod tests {
         ed25519::{Ed25519PrivateKey, Ed25519Signature},
         HashValue, PrivateKey, Uniform,
     };
-    use diem_mempool::CommitResponse;
     use diem_types::{
         account_address::AccountAddress,
         block_info::BlockInfo,
         chain_id::ChainId,
+        contract_event::ContractEvent,
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
         proof::TransactionListProof,
         transaction::{
@@ -1689,7 +1755,7 @@ mod tests {
     use mempool_notifications::MempoolNotifier;
     use netcore::transport::ConnectionOrigin;
     use network::transport::ConnectionMetadata;
-    use std::{collections::BTreeMap, time::SystemTime};
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_process_sync_request() {
@@ -1697,8 +1763,8 @@ mod tests {
         let mut full_node_coordinator = test_utils::create_full_node_coordinator();
 
         // Verify that fullnodes can't process sync requests
-        let (sync_request, _) = create_sync_request_at_version(0);
-        let process_result = full_node_coordinator.process_sync_request(sync_request);
+        let (sync_request, _) = create_sync_notification_at_version(0);
+        let process_result = block_on(full_node_coordinator.process_sync_request(sync_request));
         if !matches!(process_result, Err(Error::FullNodeSyncRequest)) {
             panic!(
                 "Expected an full node sync request error, but got: {:?}",
@@ -1710,13 +1776,11 @@ mod tests {
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Perform sync request for version that matches initial waypoint version
-        let (sync_request, mut callback_receiver) = create_sync_request_at_version(0);
-        validator_coordinator
-            .process_sync_request(sync_request)
-            .unwrap();
+        let (sync_request, mut callback_receiver) = create_sync_notification_at_version(0);
+        block_on(validator_coordinator.process_sync_request(sync_request)).unwrap();
         match callback_receiver.try_recv() {
-            Ok(Some(result)) => {
-                assert!(result.is_ok())
+            Ok(Some(notification_result)) => {
+                assert!(notification_result.result.is_ok())
             }
             result => panic!("Expected okay but got: {:?}", result),
         };
@@ -1729,8 +1793,8 @@ mod tests {
             create_coordinator_with_config_and_waypoint(NodeConfig::default(), waypoint);
 
         // Verify coordinator won't process sync requests as it's not yet initialized
-        let (sync_request, mut callback_receiver) = create_sync_request_at_version(10);
-        let process_result = validator_coordinator.process_sync_request(sync_request);
+        let (sync_request, mut callback_receiver) = create_sync_notification_at_version(10);
+        let process_result = block_on(validator_coordinator.process_sync_request(sync_request));
         if !matches!(process_result, Err(Error::UninitializedError(..))) {
             panic!(
                 "Expected an uninitialized error, but got: {:?}",
@@ -1822,32 +1886,34 @@ mod tests {
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Verify that a commit notification with no transactions doesn't error!
-        block_on(validator_coordinator.process_commit_notification(vec![], None, vec![], None))
+        block_on(validator_coordinator.process_commit_notification(vec![], vec![], None, None))
             .unwrap();
 
         // Verify that consensus is sent a commit ack when everything works
-        let (callback_sender, mut callback_receiver) =
-            oneshot::channel::<Result<CommitResponse, Error>>();
+        let (commit_notification, mut callback_receiver) =
+            create_commit_notification(vec![], vec![]);
         block_on(validator_coordinator.process_commit_notification(
             vec![],
-            Some(callback_sender),
             vec![],
+            Some(commit_notification),
             None,
         ))
         .unwrap();
-        let callback_result = callback_receiver.try_recv();
-        if !matches!(callback_result, Ok(Some(Ok(..)))) {
-            panic!("Expected an okay result but got: {:?}", callback_result);
-        }
+        match callback_receiver.try_recv() {
+            Ok(Some(notification_result)) => {
+                assert!(notification_result.result.is_ok());
+            }
+            callback_result => panic!("Expected an okay result but got: {:?}", callback_result),
+        };
 
         // TODO(joshlind): verify that mempool is sent the correct transactions!
-        let (callback_sender, _callback_receiver) =
-            oneshot::channel::<Result<CommitResponse, Error>>();
         let committed_transactions = vec![create_test_transaction()];
+        let (commit_notification, _callback_receiver) =
+            create_commit_notification(committed_transactions.clone(), vec![]);
         block_on(validator_coordinator.process_commit_notification(
             committed_transactions,
-            Some(callback_sender),
             vec![],
+            Some(commit_notification),
             None,
         ))
         .unwrap();
@@ -1874,8 +1940,8 @@ mod tests {
         validator_coordinator.check_progress().unwrap();
 
         // Send a sync request to state sync (to mark that consensus is no longer running)
-        let (sync_request, _) = create_sync_request_at_version(1);
-        let _ = validator_coordinator.process_sync_request(sync_request);
+        let (sync_request, _) = create_sync_notification_at_version(1);
+        let _ = block_on(validator_coordinator.process_sync_request(sync_request));
 
         // Verify the no available peers error is returned
         let progress_result = validator_coordinator.check_progress();
@@ -1891,15 +1957,17 @@ mod tests {
             create_coordinator_with_config_and_waypoint(node_config, Waypoint::default());
 
         // Set a new sync request
-        let (sync_request, mut callback_receiver) = create_sync_request_at_version(1);
-        let _ = validator_coordinator.process_sync_request(sync_request);
+        let (sync_request, mut callback_receiver) = create_sync_notification_at_version(1);
+        let _ = block_on(validator_coordinator.process_sync_request(sync_request));
 
         // Verify sync request timeout notifies the callback
         validator_coordinator.check_progress().unwrap_err();
-        let callback_result = callback_receiver.try_recv();
-        if !matches!(callback_result, Ok(Some(Err(..)))) {
-            panic!("Expected an err result but got: {:?}", callback_result);
-        }
+        match callback_receiver.try_recv() {
+            Ok(Some(notification_result)) => {
+                assert!(notification_result.result.is_err());
+            }
+            callback_result => panic!("Expected an error result but got: {:?}", callback_result),
+        };
 
         // TODO(joshlind): check request resend after timeout.
 
@@ -2053,8 +2121,8 @@ mod tests {
         }
 
         // Make a sync request (to force consensus to yield)
-        let (sync_request, _) = create_sync_request_at_version(10);
-        let _ = validator_coordinator.process_sync_request(sync_request);
+        let (sync_request, _) = create_sync_notification_at_version(10);
+        let _ = block_on(validator_coordinator.process_sync_request(sync_request));
 
         // Verify we now get a downstream error (as the peer is downstream to us)
         for chunk_response in &empty_chunk_responses {
@@ -2155,8 +2223,8 @@ mod tests {
         process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
         // Make a sync request (to force consensus to yield)
-        let (sync_request, _) = create_sync_request_at_version(10);
-        let _ = validator_coordinator.process_sync_request(sync_request);
+        let (sync_request, _) = create_sync_notification_at_version(10);
+        let _ = block_on(validator_coordinator.process_sync_request(sync_request));
 
         // Verify wrong chunk type for waypoint message
         let chunk_responses = create_non_empty_chunk_responses(1);
@@ -2275,21 +2343,29 @@ mod tests {
         LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
     }
 
-    fn create_sync_request_at_version(
+    fn create_commit_notification(
+        transactions: Vec<Transaction>,
+        reconfiguration_events: Vec<ContractEvent>,
+    ) -> (
+        ConsensusCommitNotification,
+        oneshot::Receiver<ConsensusNotificationResponse>,
+    ) {
+        let (commit_notification, callback_receiver) =
+            ConsensusCommitNotification::new(transactions, reconfiguration_events);
+
+        (commit_notification, callback_receiver)
+    }
+
+    fn create_sync_notification_at_version(
         version: Version,
-    ) -> (SyncRequest, oneshot::Receiver<Result<(), Error>>) {
-        // Create ledger info with signatures at given version
+    ) -> (
+        ConsensusSyncNotification,
+        oneshot::Receiver<ConsensusNotificationResponse>,
+    ) {
         let ledger_info = create_ledger_info_at_version(version);
+        let (sync_notification, callback_receiver) = ConsensusSyncNotification::new(ledger_info);
 
-        // Create sync request with target version and callback
-        let (callback_sender, callback_receiver) = oneshot::channel();
-        let sync_request = SyncRequest {
-            callback: callback_sender,
-            target: ledger_info,
-            last_commit_timestamp: SystemTime::now(),
-        };
-
-        (sync_request, callback_receiver)
+        (sync_notification, callback_receiver)
     }
 
     /// Creates a set of chunk requests (one for each type of possible request).
