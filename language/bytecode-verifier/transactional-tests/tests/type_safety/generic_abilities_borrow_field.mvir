@@ -9,7 +9,7 @@ module 0x1.M {
     bar<T>(x: Self.Foo<u64>) {
         let y: &mut u64;
         let z: u64;
-        y = &mut (&mut x).x;
+        y = &mut (&mut x).Foo<u64>::x;
         _ = move(y);
         Foo<u64> { x: z } = move(x);
         return;

@@ -8,8 +8,8 @@ module 0x42.M {
       let a_ref: &mut u64;
       let b_ref: &mut u64;
       // multiple mutable references to same ref valid
-      a_ref = &mut copy(addr).a;
-      b_ref = &mut copy(addr).b;
+      a_ref = &mut copy(addr).Foo::a;
+      b_ref = &mut copy(addr).Foo::b;
       _ = move(a_ref);
       _ = move(b_ref);
       _ = move(addr);

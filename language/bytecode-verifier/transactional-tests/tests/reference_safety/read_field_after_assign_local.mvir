@@ -10,7 +10,7 @@ module 0x42.Tester {
         let t_v: &mut u64;
         let new_t: Self.T;
 
-        t_v = &mut copy(t).v;
+        t_v = &mut copy(t).T::v;
         new_t = Self.new(1);
         // cannot write to t, still borrowed
         *move(t) = move(new_t);

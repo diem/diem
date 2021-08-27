@@ -20,7 +20,7 @@ module 0x42.TestMoveFrom {
 
       sender_address = Signer.address_of(move(account));
       t_ref = borrow_global_mut<Counter>(move(sender_address));
-      counter_ref = &mut copy(t_ref).i;
+      counter_ref = &mut copy(t_ref).Counter::i;
       _ = move(t_ref);
       *move(counter_ref) = *copy(counter_ref) + 1;
 

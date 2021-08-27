@@ -14,8 +14,8 @@ import 0x1.XUS;
         let ref1: &mut u64;
         let new_money: Diem.Diem<XUS.XUS>;
 
-        ref0 = &mut copy(this).money;
-        ref1 = &mut copy(ref0).balance;
+        ref0 = &mut copy(this).T::money;
+        ref1 = &mut copy(ref0).T::balance;
         *move(ref1) = 1000000000000;
         new_money = Diem.withdraw<XUS.XUS>(move(ref0), 1000000000000);
         DiemAccount.deposit<XUS.XUS>(move(addr), move(new_money));

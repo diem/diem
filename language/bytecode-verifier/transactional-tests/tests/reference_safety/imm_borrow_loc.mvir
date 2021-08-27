@@ -12,14 +12,14 @@ module 0x1.Tester {
 
         sender = Signer.address_of(move(account));
         data = borrow_global_mut<Data>(move(sender));
-        *&mut copy(b1).f = *&copy(data).v1;
-        *&mut copy(b2).f = *&move(data).v2;
-        if (*&copy(b1).f >= *&copy(b2).f) {
+        *&mut copy(b1).Box::f = *&copy(data).Data::v1;
+        *&mut copy(b2).Box::f = *&move(data).Data::v2;
+        if (*&copy(b1).Box::f >= *&copy(b2).Box::f) {
             _ = move(b2);
-            return &move(b1).f;
+            return &move(b1).Box::f;
         } else {
             _ = move(b1);
-            return &move(b2).f;
+            return &move(b2).Box::f;
         }
     }
 
@@ -32,18 +32,18 @@ module 0x1.Tester {
         b1 = move_from<Box>(Signer.address_of(copy(account)));
         b2 = move_from<Box>(move(drop));
 
-        assert(*&(&b1).f == 0, 42);
-        assert(*&(&b2).f == 0, 42);
+        assert(*&(&b1).Box::f == 0, 42);
+        assert(*&(&b2).Box::f == 0, 42);
 
         returned_ref = Self.bump_and_pick(copy(account), &mut b1, &mut b2);
 
         // it is valid to immutably borrow the local
         // even though a mut borrow + freeze would be invalid
-        assert(*&(&b1).f != 0, 42);
-        assert(*&(&b2).f != 0, 42);
+        assert(*&(&b1).Box::f != 0, 42);
+        assert(*&(&b2).Box::f != 0, 42);
         assert(
-            // (*copy(returned_ref) == *&(&b1).f) ^ (*copy(returned_ref) == *&(&b2).f),
-            (*copy(returned_ref) == *&(&b1).f) != (*copy(returned_ref) == *&(&b2).f),
+            // (*copy(returned_ref) == *&(&b1).Box::f) ^ (*copy(returned_ref) == *&(&b2).Box::f),
+            (*copy(returned_ref) == *&(&b1).Box::f) != (*copy(returned_ref) == *&(&b2).Box::f),
             42
         );
 

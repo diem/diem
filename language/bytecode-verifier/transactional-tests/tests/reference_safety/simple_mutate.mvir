@@ -8,7 +8,7 @@ module 0x42.A {
 
     public t(this: &mut Self.T) {
         let f: &mut u64;
-        f = &mut copy(this).f;
+        f = &mut copy(this).T::f;
         // mutation allowed
         *copy(f) = 2;
         assert(*move(f) == 2, 42);

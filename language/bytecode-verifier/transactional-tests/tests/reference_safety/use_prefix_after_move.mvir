@@ -8,7 +8,7 @@ module 0x42.B {
 
     public t(this: &mut Self.T) {
         let g: &mut u64;
-        g = &mut move(this).g;
+        g = &mut move(this).T::g;
         *move(g) = 3;
         return;
     }
@@ -26,7 +26,7 @@ module 0x42.A {
     public t(this: &mut Self.T) {
         let ref1: &mut B.T;
         let ok: B.T;
-        ref1 = &mut move(this).f;
+        ref1 = &mut move(this).T::f;
         B.t(copy(ref1));
         ok = *move(ref1);
         return;

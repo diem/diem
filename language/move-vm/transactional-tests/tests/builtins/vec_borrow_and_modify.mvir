@@ -14,12 +14,12 @@ module 0x1.M {
     }
 
     public borrow_and_modify(addr: address) acquires R {
-        *Vector.borrow_mut<u64>(&mut borrow_global_mut<R>(move(addr)).v, 0) = 300;
+        *Vector.borrow_mut<u64>(&mut borrow_global_mut<R>(move(addr)).R::v, 0) = 300;
         return;
     }
 
     public verify_effects(addr: address) acquires R {
-        assert(*Vector.borrow<u64>(&borrow_global<R>(move(addr)).v, 0) == 300, 1000);
+        assert(*Vector.borrow<u64>(&borrow_global<R>(move(addr)).R::v, 0) == 300, 1000);
         return;
     }
 }

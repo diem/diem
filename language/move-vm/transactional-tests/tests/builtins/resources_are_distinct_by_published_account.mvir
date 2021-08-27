@@ -11,7 +11,7 @@ module 0x42.Account {
 
     public sequence_number(this: &Self.T): u64 {
         let ref: &u64;
-        ref = &copy(this).sequence_number;
+        ref = &copy(this).T::sequence_number;
         _ = move(this);
         return *move(ref);
     }

@@ -246,7 +246,7 @@ module {{default}}.TestBinaryOps {
   public ret_access_path_exp(p: &Self.Pair): u64
   ensures RET == p.x + p.y
   {
-      return *&copy(p).x + *&move(p).y;
+      return *&copy(p).Pair::y;
   }
 
   public ret_implies(x: u64): u64

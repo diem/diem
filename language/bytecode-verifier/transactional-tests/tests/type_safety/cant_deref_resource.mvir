@@ -11,7 +11,7 @@ module 0x1.Token {
     public value(this: &Self.T): u64 {
         let vref: &u64;
         let res: u64;
-        vref = &move(this).v;
+        vref = &move(this).T::v;
         // T does not have copy
         res = *move(vref);
         return move(res);

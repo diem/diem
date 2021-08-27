@@ -12,7 +12,7 @@ module 0x42.Token {
 
     public read_value(this: &Self.T): u64 {
         let val: &u64;
-        val = &copy(this).value;
+        val = &copy(this).T::value;
         // type mismatch, cannot make imm to mut
         Self.bump_value(move(this));
         return *move(val);
@@ -21,7 +21,7 @@ module 0x42.Token {
     public bump_value(this: &mut Self.T) {
         let val: &mut u64;
         let x: u64;
-        val = &mut move(this).value;
+        val = &mut move(this).T::value;
         x = *copy(val) + 1;
         *move(val) = copy(x);
         return;

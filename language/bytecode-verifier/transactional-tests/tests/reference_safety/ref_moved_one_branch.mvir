@@ -5,7 +5,7 @@ module 0x1.A {
     public t(changed: bool, s: &mut Self.S) {
         // valid to move a reference in one branch and not the other
         if (move(changed)) {
-            Self.foo(&mut move(s).value);
+            Self.foo(&mut move(s).S::value);
         }
         return;
     }

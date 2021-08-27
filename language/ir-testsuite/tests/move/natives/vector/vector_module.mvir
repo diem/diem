@@ -1,0 +1,60 @@
+module {{default}}.M {
+import 0x1.XUS;
+    import 0x1.Diem;
+    import 0x1.Vector;
+    import 0x1.Signer;
+    struct Coins has key { f: vector<Diem.Diem<XUS.XUS>> }
+
+    public new(account: &signer) {
+        let coin_vec: vector<Diem.Diem<XUS.XUS>>;
+        let coins: Self.Coins;
+        coin_vec = Vector.empty<Diem.Diem<XUS.XUS>>();
+        coins = Coins { f: move(coin_vec)};
+
+        move_to<Coins>(move(account), move(coins));
+        return;
+    }
+
+    public put_coin(account: &signer, coin: Diem.Diem<XUS.XUS>) acquires Coins {
+        let coins_ref: &mut Self.Coins;
+        let v_ref: &mut vector<Diem.Diem<XUS.XUS>>;
+
+        coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
+        v_ref = &mut move(coins_ref).Coins::f;
+        Vector.push_back<Diem.Diem<XUS.XUS>>(move(v_ref), move(coin));
+        return;
+    }
+
+    public get_value(account: &signer, i: u64): u64 acquires Coins {
+        let coins_ref: &Self.Coins;
+        let v_ref: &vector<Diem.Diem<XUS.XUS>>;
+        let coin_ref: &Diem.Diem<XUS.XUS>;
+
+        coins_ref = borrow_global<Coins>(Signer.address_of(move(account)));
+        v_ref = &move(coins_ref).Coins::f;
+        coin_ref = Vector.borrow<Diem.Diem<XUS.XUS>>(move(v_ref), move(i));
+
+        return Diem.value<XUS.XUS>(move(coin_ref));
+    }
+
+    public pop(account: &signer): Diem.Diem<XUS.XUS> acquires Coins {
+        let coins_ref: &mut Self.Coins;
+        let v_ref: &mut vector<Diem.Diem<XUS.XUS>>;
+
+        coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
+        v_ref = &mut move(coins_ref).Coins::f;
+        return Vector.pop_back<Diem.Diem<XUS.XUS>>(move(v_ref));
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+import 0x1.XUS;
+import 0x1.Diem;
+
+main(account: signer) {
+    M.new(&account);
+    M.put_coin(&account, Diem.zero<XUS.XUS>());
+
+    return;
+}

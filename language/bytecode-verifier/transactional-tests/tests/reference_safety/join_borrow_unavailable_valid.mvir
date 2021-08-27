@@ -12,7 +12,7 @@ module 0x1.M {
             x = &u;
         } else {
             _ = move(u);
-            x = &move(root).f;
+            x = &move(root).S::f;
         }
         // it is okay for the two branches to disagree on the state of u, even though it is
         // borrowed in one branch

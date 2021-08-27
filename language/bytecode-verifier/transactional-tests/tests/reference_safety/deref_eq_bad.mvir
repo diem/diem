@@ -9,7 +9,7 @@ module 0x1.M {
     public compare(t1: &mut Self.T, t2: &mut Self.T) : bool {
         let b: bool;
         let x_ref: &mut u64;
-        x_ref = &mut copy(t1).v;
+        x_ref = &mut copy(t1).T::v;
         // cannot read from t1 as it is borrowed by x_ref
         b = move(t1) == move(t2);
         return move(b);

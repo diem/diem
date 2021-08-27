@@ -14,7 +14,7 @@ module 0x1.M {
         let r: &mut Self.R;
         let v: &mut vector<u64>;
         r = borrow_global_mut<R>(move(addr));
-        v = &mut move(r).v;
+        v = &mut move(r).R::v;
         *vec_mut_borrow<u64>(move(v), 0) = 300;
         return;
     }
@@ -23,7 +23,7 @@ module 0x1.M {
         let r: &Self.R;
         let v: &vector<u64>;
         r = borrow_global<R>(move(addr));
-        v = &move(r).v;
+        v = &move(r).R::v;
         assert(*vec_imm_borrow<u64>(move(v), 0) == 300, 1000);
         return;
     }

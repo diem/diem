@@ -12,12 +12,12 @@ module 0x1.Tester {
 
         sender = Signer.address_of(move(account));
         init = borrow_global_mut<Initializer>(move(sender));
-        *&mut copy(p).x = *&copy(init).x;
-        *&mut copy(p).y = *&move(init).y;
-        if (*&copy(p).x >= *&copy(p).y) {
-            return &mut move(p).x;
+        *&mut copy(p).Point::x = *&copy(init).Initializer::x;
+        *&mut copy(p).Point::y = *&move(init).Initializer::y;
+        if (*&copy(p).Point::x >= *&copy(p).Point::y) {
+            return &mut move(p).Point::x;
         } else {
-            return &mut move(p).y;
+            return &mut move(p).Point::y;
         }
     }
 
@@ -31,12 +31,12 @@ module 0x1.Tester {
         let returned_ref: &u64;
         let x_val: u64;
 
-        assert(*&copy(point_ref).x == 0, 42);
-        assert(*&copy(point_ref).y == 0, 42);
+        assert(*&copy(point_ref).Point::x == 0, 42);
+        assert(*&copy(point_ref).Point::y == 0, 42);
 
         field_ref = Self.set_and_pick(move(account), copy(point_ref));
         // this borrow is invalid because of field_ref
-        x_val = *freeze(&mut move(point_ref).x);
+        x_val = *freeze(&mut move(point_ref).Point::x);
         returned_ref = Self.bump_and_give(move(field_ref));
 
         // imagine some more interesting check than this assert
@@ -63,12 +63,12 @@ module 0x1.Tester2 {
 
         sender = Signer.address_of(move(account));
         init = borrow_global_mut<Initializer>(move(sender));
-        *&mut copy(p).x = *&copy(init).x;
-        *&mut copy(p).y = *&move(init).y;
-        if (*&copy(p).x >= *&copy(p).y) {
-            return &mut move(p).x;
+        *&mut copy(p).Point::x = *&copy(init).Initializer::x;
+        *&mut copy(p).Point::y = *&move(init).Initializer::y;
+        if (*&copy(p).Point::x >= *&copy(p).Point::y) {
+            return &mut move(p).Point::x;
         } else {
-            return &mut move(p).y;
+            return &mut move(p).Point::y;
         }
     }
 
@@ -82,12 +82,12 @@ module 0x1.Tester2 {
         let returned_ref: &u64;
         let x_val: u64;
 
-        assert(*&copy(point_ref).x == 0, 42);
-        assert(*&copy(point_ref).y == 0, 42);
+        assert(*&copy(point_ref).Point::x == 0, 42);
+        assert(*&copy(point_ref).Point::y == 0, 42);
 
         field_ref = Self.set_and_pick(move(account), copy(point_ref));
         // this freeze is invalid because of field_ref
-        x_val = *(&freeze(move(point_ref)).x);
+        x_val = *(&freeze(move(point_ref)).Point::x);
         returned_ref = Self.bump_and_give(move(field_ref));
 
         // imagine some more interesting check than this assert

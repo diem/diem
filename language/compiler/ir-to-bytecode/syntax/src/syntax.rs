@@ -216,6 +216,27 @@ fn parse_field(tokens: &mut Lexer) -> Result<Field, ParseError<Loc, anyhow::Erro
     Ok(spanned(tokens.file_name(), start_loc, end_loc, f))
 }
 
+/// field-ident: name-and-type-actuals '::' field
+fn parse_field_ident(tokens: &mut Lexer) -> Result<FieldIdent, ParseError<Loc, anyhow::Error>> {
+    let start_loc = tokens.start_loc();
+    let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+    // For now, the lexer produces 2 ':' tokens instead of a single '::' token.
+    consume_token(tokens, Tok::Colon)?;
+    consume_token(tokens, Tok::Colon)?;
+    let field = parse_field(tokens)?;
+    let end_loc = tokens.previous_end_loc();
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        end_loc,
+        FieldIdent_ {
+            struct_name: StructName(name),
+            type_actuals,
+            field,
+        },
+    ))
+}
+
 // CopyableVal: CopyableVal = {
 //     AccountAddress => CopyableVal::Address(<>),
 //     "true" => CopyableVal::Bool(true),
@@ -470,11 +491,11 @@ fn parse_borrow_field_(
         parse_unary_exp(tokens)?
     };
     consume_token(tokens, Tok::Period)?;
-    let f = parse_field(tokens)?.value;
+    let field = parse_field_ident(tokens)?;
     Ok(Exp_::Borrow {
         is_mutable: mutable,
         exp: Box::new(e),
-        field: f,
+        field,
     })
 }
 

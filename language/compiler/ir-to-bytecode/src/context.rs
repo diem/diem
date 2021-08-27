@@ -866,16 +866,4 @@ impl<'a> Context<'a> {
         self.ensure_function_declared(m, f.clone())?;
         Ok(self.function_handles.get(&(m, f)).unwrap())
     }
-
-    /// Given an identifier, find the function signature and its index.
-    /// Creates the handle+signature and adds it to the pool if it it is the *first* time it looks
-    /// up the function in a dependency.
-    pub fn function_signature(
-        &mut self,
-        m: ModuleName,
-        f: FunctionName,
-    ) -> Result<&FunctionSignature> {
-        self.ensure_function_declared(m, f.clone())?;
-        Ok(self.function_signatures.get(&(m, f)).unwrap())
-    }
 }
