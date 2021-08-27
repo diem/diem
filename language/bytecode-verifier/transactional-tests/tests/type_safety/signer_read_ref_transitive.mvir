@@ -16,6 +16,6 @@ module 0x42.M {
         let x: Self.S<signer>;
         x = S<signer> { s: move(s) };
         // cannot copy signer
-        return *(&(&x).s);
+        return *(&(&x).S<signer>::s);
     }
 }

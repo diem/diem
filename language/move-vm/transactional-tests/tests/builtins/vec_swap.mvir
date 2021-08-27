@@ -16,13 +16,13 @@ module 0x1.M {
     public borrow_and_swap(addr: address) acquires R {
         let r: &mut Self.R;
         r = borrow_global_mut<R>(move(addr));
-        Vector.swap<u64>(&mut move(r).v, 0, 1);
+        Vector.swap<u64>(&mut move(r).R::v, 0, 1);
         return;
     }
 
     public verify_effects(addr: address) acquires R {
         let v: &vector<u64>;
-        v = & borrow_global<R>(move(addr)).v;
+        v = & borrow_global<R>(move(addr)).R::v;
         assert(*Vector.borrow<u64>(copy(v), 0) == 200, 1000);
         assert(*Vector.borrow<u64>(move(v), 1) == 100, 1001);
         return;

@@ -8,7 +8,7 @@ module 0x1.Tester {
         let f: u64;
 
         x = T { f: 0 };
-        r1 = &mut (&mut x).f;
+        r1 = &mut (&mut x).T::f;
         // cannot copy x, data is partially owned by r1. violates ref trans
         T { f: f } = copy(x);
         T { f: f } = move(x);

@@ -4,7 +4,7 @@ module 0x1.A {
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
-        return &mut move(x).v;
+        return &mut move(x).T1::v;
     }
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;
@@ -36,7 +36,7 @@ module 0x1.A2 {
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
-        return &mut move(x).v;
+        return &mut move(x).T1::v;
     }
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;
@@ -68,7 +68,7 @@ module 0x1.A3 {
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
-        return &mut move(x).v;
+        return &mut move(x).T1::v;
     }
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;

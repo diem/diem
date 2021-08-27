@@ -8,7 +8,7 @@ module 0x42.B {
 
     public t(this: &mut Self.T) {
         let g: &mut u64;
-        g = &mut copy(this).g;
+        g = &mut copy(this).T::g;
         *copy(g) = 2;
         assert(*move(g) == 2, 42);
         _ = move(this);
@@ -27,7 +27,7 @@ module 0x42.A {
 
     public t(this: &mut Self.T) {
         let f: &mut B.T;
-        f = &mut copy(this).f;
+        f = &mut copy(this).T::f;
         // safe to modify reference through nested calls
         B.t(move(f));
         _ = move(this);

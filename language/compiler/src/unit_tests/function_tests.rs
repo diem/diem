@@ -12,7 +12,7 @@ fn compile_module_with_functions() {
 
             public value(this: &Self.FooCoin): u64 {
                 let value_ref: &u64;
-                value_ref = &move(this).value;
+                value_ref = &move(this).FooCoin::value;
                 return *move(value_ref);
             }
 
@@ -23,7 +23,7 @@ fn compile_module_with_functions() {
                 let check_value: u64;
                 let new_value: u64;
                 let i: u64;
-                value_ref = &mut move(this).value;
+                value_ref = &mut move(this).FooCoin::value;
                 value = *copy(value_ref);
                 check_ref = &check;
                 check_value = Self.value(move(check_ref));

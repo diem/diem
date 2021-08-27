@@ -13,8 +13,8 @@ module 0x1.M {
         x = X { f: Y { g: 0, h: 0 } };
 
         ref_x = &mut x;
-        ref_x_f = &mut move(ref_x).f;
-        ref_x_f_g = &mut copy(ref_x_f).g;
+        ref_x_f = &mut move(ref_x).X::f;
+        ref_x_f_g = &mut copy(ref_x_f).Y::g;
 
         // Error: the argument for parameter b is borrowed
         Self.foo(move(ref_x_f_g), move(ref_x_f));
@@ -40,8 +40,8 @@ module 0x1.M2 {
         x = X { f: Y { g: 0, h: 0 } };
 
         ref_x = &mut x;
-        ref_x_f = &mut move(ref_x).f;
-        ref_x_f_g = &mut copy(ref_x_f).g;
+        ref_x_f = &mut move(ref_x).X::f;
+        ref_x_f_g = &mut copy(ref_x_f).Y::g;
 
         // Error: the argument for parameter a is borrowed
         Self.bar(move(ref_x_f), move(ref_x_f_g));

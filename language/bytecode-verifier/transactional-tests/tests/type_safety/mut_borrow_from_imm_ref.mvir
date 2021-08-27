@@ -14,7 +14,7 @@ module 0x42.Token {
         let val: &mut u64;
         let x: u64;
         // cannot mut borrow imm reff
-        val = &mut move(this).value;
+        val = &mut move(this).T::value;
         x = *copy(val) + 1;
         *move(val) = copy(x);
         return;

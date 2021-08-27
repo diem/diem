@@ -21,7 +21,7 @@ module 0x42.A {
         let ref2: &mut B.T;
         let b2: B.T;
         let x: B.T;
-        ref1 = &mut move(this).value;
+        ref1 = &mut move(this).T::value;
         ref2 = copy(ref1);
         b2 = B.new(3);
         // cannot write to ref1, ref2 still borrows

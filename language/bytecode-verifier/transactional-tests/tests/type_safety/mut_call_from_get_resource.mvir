@@ -11,7 +11,7 @@ module 0x42.Token {
     public value(this: &Self.T): u64 {
         let b: u64;
         let b_ref: &u64;
-        b_ref = &move(this).balance;
+        b_ref = &move(this).T::balance;
         b = *move(b_ref);
         return move(b);
     }
@@ -19,7 +19,7 @@ module 0x42.Token {
     public bump(this: &mut Self.T) {
         let val: &mut u64;
         let x: u64;
-        val = &mut move(this).balance;
+        val = &mut move(this).T::balance;
         x = *copy(val) + 1;
         *move(val) = copy(x);
         return;

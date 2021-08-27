@@ -23,7 +23,7 @@ use std::{
     clone::Clone,
     collections::{
         hash_map::Entry::{Occupied, Vacant},
-        BTreeSet, HashMap, VecDeque,
+        BTreeSet, HashMap,
     },
 };
 
@@ -146,136 +146,6 @@ impl ControlFlowInfo {
     }
 }
 
-// Inferred representation of SignatureToken's
-// In essence, it's a signature token with a "bottom" type added
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum InferredType {
-    // Result of the compiler failing to infer the type of an expression
-    // Not translatable to a signature token
-    Anything,
-
-    // Signature tokens
-    Bool,
-    U8,
-    U64,
-    U128,
-    Address,
-    Signer,
-    Vector(Box<InferredType>),
-    Struct(StructHandleIndex, Vec<InferredType>),
-    Reference(Box<InferredType>),
-    MutableReference(Box<InferredType>),
-    TypeParameter(String),
-}
-
-impl InferredType {
-    fn from_signature_token_with_subst(
-        subst: &HashMap<TypeParameterIndex, InferredType>,
-        sig_token: &SignatureToken,
-    ) -> Self {
-        use InferredType as I;
-        use SignatureToken as S;
-        match sig_token {
-            S::Bool => I::Bool,
-            S::U8 => I::U8,
-            S::U64 => I::U64,
-            S::U128 => I::U128,
-            S::Address => I::Address,
-            S::Signer => I::Signer,
-            S::Vector(s_inner) => I::Vector(Box::new(Self::from_signature_token_with_subst(
-                subst, s_inner,
-            ))),
-            S::Struct(si) => {
-                let tys = Self::from_signature_tokens_with_subst(subst, &[]);
-                I::Struct(*si, tys)
-            }
-            S::StructInstantiation(si, sig_tys) => {
-                let tys = Self::from_signature_tokens_with_subst(subst, sig_tys);
-                I::Struct(*si, tys)
-            }
-            S::Reference(s_inner) => {
-                let i_inner = Self::from_signature_token_with_subst(subst, s_inner);
-                I::Reference(Box::new(i_inner))
-            }
-            S::MutableReference(s_inner) => {
-                let i_inner = Self::from_signature_token_with_subst(subst, s_inner);
-                I::MutableReference(Box::new(i_inner))
-            }
-            S::TypeParameter(tp) => match subst.get(tp) {
-                Some(bound_type) => bound_type.clone(),
-                None => I::TypeParameter(tp.to_string()),
-            },
-        }
-    }
-
-    fn from_signature_tokens_with_subst(
-        subst: &HashMap<TypeParameterIndex, InferredType>,
-        sig_tokens: &[SignatureToken],
-    ) -> Vec<Self> {
-        sig_tokens
-            .iter()
-            .map(|sig_ty| Self::from_signature_token_with_subst(subst, sig_ty))
-            .collect()
-    }
-
-    fn from_signature_token(sig_token: &SignatureToken) -> Self {
-        Self::from_signature_token_with_subst(&HashMap::new(), sig_token)
-    }
-
-    fn from_signature_tokens(sig_tokens: &[SignatureToken]) -> Vec<Self> {
-        Self::from_signature_tokens_with_subst(&HashMap::new(), sig_tokens)
-    }
-
-    fn get_struct_handle(&self) -> Result<(StructHandleIndex, &Vec<InferredType>)> {
-        match self {
-            InferredType::Anything => bail!("could not infer struct type"),
-            InferredType::Bool => bail!("no struct type for Bool"),
-            InferredType::U8 => bail!("no struct type for U8"),
-            InferredType::U64 => bail!("no struct type for U64"),
-            InferredType::U128 => bail!("no struct type for U128"),
-            InferredType::Address => bail!("no struct type for Address"),
-            InferredType::Signer => bail!("no struct type for Signer"),
-            InferredType::Vector(_) => bail!("no struct type for vector"),
-            InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
-                inner.get_struct_handle()
-            }
-            InferredType::Struct(idx, tys) => Ok((*idx, tys)),
-            InferredType::TypeParameter(_) => bail!("no struct type for type parameter"),
-        }
-    }
-
-    fn to_signature_token(ty: &Self) -> Result<SignatureToken> {
-        use InferredType as I;
-        use SignatureToken as S;
-        Ok(match ty {
-            I::Bool => S::Bool,
-            I::U8 => S::U8,
-            I::U64 => S::U64,
-            I::U128 => S::U128,
-            I::Address => S::Address,
-            I::Signer => S::Signer,
-            I::Vector(inner) => S::Vector(Box::new(Self::to_signature_token(inner)?)),
-            I::Struct(si, tys) if tys.is_empty() => S::Struct(*si),
-            I::Struct(si, tys) => S::StructInstantiation(*si, Self::build_signature_tokens(tys)?),
-            I::Reference(inner) => S::Reference(Box::new(Self::to_signature_token(inner)?)),
-            I::MutableReference(inner) => {
-                S::MutableReference(Box::new(Self::to_signature_token(inner)?))
-            }
-            I::TypeParameter(s) => match s.parse::<TableIndex>() {
-                Ok(idx) => S::TypeParameter(idx),
-                Err(_) => bail!(
-                    "ICE unsubstituted type parameter when converting back to signature tokens"
-                ),
-            },
-            I::Anything => bail!("Could not infer type"),
-        })
-    }
-
-    fn build_signature_tokens(tys: &[InferredType]) -> Result<Vec<SignatureToken>> {
-        tys.iter().map(Self::to_signature_token).collect()
-    }
-}
-
 // Holds information about a function being compiled.
 #[derive(Debug)]
 struct FunctionFrame {
@@ -327,13 +197,6 @@ impl FunctionFrame {
             None => bail!("variable {} undefined", var),
             Some(idx) => Ok(*idx),
         }
-    }
-
-    fn get_local_type(&self, idx: u8) -> Result<&SignatureToken> {
-        self.local_types
-            .0
-            .get(idx as usize)
-            .ok_or_else(|| format_err!("variable {} undefined", idx))
     }
 
     fn define_local(&mut self, var: &Var_, type_: SignatureToken) -> Result<u8> {
@@ -671,19 +534,6 @@ fn type_parameter_indexes<'a>(
         }
     }
     Ok(m)
-}
-
-fn make_type_argument_subst(
-    tokens: &[InferredType],
-) -> Result<HashMap<TypeParameterIndex, InferredType>> {
-    let mut subst = HashMap::new();
-    for (idx, token) in tokens.iter().enumerate() {
-        if idx > TABLE_MAX_SIZE {
-            bail!("Too many type arguments")
-        }
-        subst.insert(idx as TypeParameterIndex, token.clone());
-    }
-    Ok(subst)
 }
 
 fn struct_type_parameters(ast_tys: &[ast::StructTypeParameter]) -> Vec<StructTypeParameter> {
@@ -1229,34 +1079,12 @@ fn compile_lvalues(
     Ok(())
 }
 
-macro_rules! vec_deque {
-    ($($x:expr),*) => {
-        VecDeque::from(vec![$($x),*])
-    }
-}
-
-fn infer_int_bin_op_result_ty(
-    tys1: &VecDeque<InferredType>,
-    tys2: &VecDeque<InferredType>,
-) -> InferredType {
-    use InferredType as I;
-    if tys1.len() != 1 || tys2.len() != 1 {
-        return I::Anything;
-    }
-    match (&tys1[0], &tys2[0]) {
-        (I::U8, I::U8) => I::U8,
-        (I::U64, I::U64) => I::U64,
-        (I::U128, I::U128) => I::U128,
-        _ => I::Anything,
-    }
-}
-
 fn compile_expression(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
     exp: Exp,
-) -> Result<VecDeque<InferredType>> {
+) -> Result<()> {
     make_push_instr!(context, code);
     Ok(match exp.value {
         Exp_::Move(v) => {
@@ -1264,30 +1092,21 @@ fn compile_expression(
             let load_loc = Bytecode::MoveLoc(loc_idx);
             push_instr!(exp.loc, load_loc);
             function_frame.push()?;
-            let loc_type = function_frame.get_local_type(loc_idx)?;
-            vec_deque![InferredType::from_signature_token(loc_type)]
         }
         Exp_::Copy(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::CopyLoc(loc_idx);
             push_instr!(exp.loc, load_loc);
             function_frame.push()?;
-            let loc_type = function_frame.get_local_type(loc_idx)?;
-            vec_deque![InferredType::from_signature_token(loc_type)]
         }
         Exp_::BorrowLocal(is_mutable, v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
-            let loc_type = function_frame.get_local_type(loc_idx)?;
-            let inner_token = Box::new(InferredType::from_signature_token(loc_type));
             if is_mutable {
                 push_instr!(exp.loc, Bytecode::MutBorrowLoc(loc_idx));
-                function_frame.push()?;
-                vec_deque![InferredType::MutableReference(inner_token)]
             } else {
                 push_instr!(exp.loc, Bytecode::ImmBorrowLoc(loc_idx));
-                function_frame.push()?;
-                vec_deque![InferredType::Reference(inner_token)]
             }
+            function_frame.push()?;
         }
         Exp_::Value(cv) => match cv.value {
             CopyableVal_::Address(address) => {
@@ -1296,22 +1115,18 @@ fn compile_expression(
                 let idx = context.constant_index(constant)?;
                 push_instr!(exp.loc, Bytecode::LdConst(idx));
                 function_frame.push()?;
-                vec_deque![InferredType::Address]
             }
             CopyableVal_::U8(i) => {
                 push_instr!(exp.loc, Bytecode::LdU8(i));
                 function_frame.push()?;
-                vec_deque![InferredType::U8]
             }
             CopyableVal_::U64(i) => {
                 push_instr!(exp.loc, Bytecode::LdU64(i));
                 function_frame.push()?;
-                vec_deque![InferredType::U64]
             }
             CopyableVal_::U128(i) => {
                 push_instr!(exp.loc, Bytecode::LdU128(i));
                 function_frame.push()?;
-                vec_deque![InferredType::U128]
             }
             CopyableVal_::ByteArray(buf) => {
                 let vec_value = MoveValue::vector_u8(buf);
@@ -1320,7 +1135,6 @@ fn compile_expression(
                 let idx = context.constant_index(constant)?;
                 push_instr!(exp.loc, Bytecode::LdConst(idx));
                 function_frame.push()?;
-                vec_deque![InferredType::Vector(Box::new(InferredType::U8))]
             }
             CopyableVal_::Bool(b) => {
                 push_instr! {exp.loc,
@@ -1331,12 +1145,10 @@ fn compile_expression(
                     }
                 };
                 function_frame.push()?;
-                vec_deque![InferredType::Bool]
             }
         },
         Exp_::Pack(name, ast_tys, fields) => {
             let sig_tys = compile_types(context, function_frame.type_parameters(), &ast_tys)?;
-            let tys = InferredType::from_signature_tokens(&sig_tys);
             let tokens = Signature(sig_tys);
             let type_actuals_id = context.signature_index(tokens)?;
             let def_idx = context.struct_definition_index(&name)?;
@@ -1358,7 +1170,7 @@ fn compile_expression(
 
                 compile_expression(context, function_frame, code, e)?;
             }
-            if tys.is_empty() {
+            if ast_tys.is_empty() {
                 push_instr!(exp.loc, Bytecode::Pack(def_idx));
             } else {
                 let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
@@ -1368,95 +1180,74 @@ fn compile_expression(
                 function_frame.pop()?;
             }
             function_frame.push()?;
-
-            vec_deque![InferredType::Struct(sh_idx, tys)]
         }
         Exp_::UnaryExp(op, e) => {
             compile_expression(context, function_frame, code, *e)?;
             match op {
                 UnaryOp::Not => {
                     push_instr!(exp.loc, Bytecode::Not);
-                    vec_deque![InferredType::Bool]
                 }
             }
         }
         Exp_::BinopExp(e1, op, e2) => {
-            let tys1 = compile_expression(context, function_frame, code, *e1)?;
-            let tys2 = compile_expression(context, function_frame, code, *e2)?;
+            compile_expression(context, function_frame, code, *e1)?;
+            compile_expression(context, function_frame, code, *e2)?;
 
             function_frame.pop()?;
             match op {
                 BinOp::Add => {
                     push_instr!(exp.loc, Bytecode::Add);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Sub => {
                     push_instr!(exp.loc, Bytecode::Sub);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mul => {
                     push_instr!(exp.loc, Bytecode::Mul);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mod => {
                     push_instr!(exp.loc, Bytecode::Mod);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Div => {
                     push_instr!(exp.loc, Bytecode::Div);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitOr => {
                     push_instr!(exp.loc, Bytecode::BitOr);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitAnd => {
                     push_instr!(exp.loc, Bytecode::BitAnd);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Xor => {
                     push_instr!(exp.loc, Bytecode::Xor);
-                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Shl => {
                     push_instr!(exp.loc, Bytecode::Shl);
-                    tys1
                 }
                 BinOp::Shr => {
                     push_instr!(exp.loc, Bytecode::Shr);
-                    tys1
                 }
                 BinOp::Or => {
                     push_instr!(exp.loc, Bytecode::Or);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::And => {
                     push_instr!(exp.loc, Bytecode::And);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Eq => {
                     push_instr!(exp.loc, Bytecode::Eq);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Neq => {
                     push_instr!(exp.loc, Bytecode::Neq);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Lt => {
                     push_instr!(exp.loc, Bytecode::Lt);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Gt => {
                     push_instr!(exp.loc, Bytecode::Gt);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Le => {
                     push_instr!(exp.loc, Bytecode::Le);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Ge => {
                     push_instr!(exp.loc, Bytecode::Ge);
-                    vec_deque![InferredType::Bool]
                 }
                 BinOp::Subrange => {
                     unreachable!("Subrange operators should only appear in specification ASTs.");
@@ -1464,70 +1255,69 @@ fn compile_expression(
             }
         }
         Exp_::Dereference(e) => {
-            let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
+            compile_expression(context, function_frame, code, *e)?;
             push_instr!(exp.loc, Bytecode::ReadRef);
-            match loc_type {
-                Some(InferredType::MutableReference(sig_ref_token)) => vec_deque![*sig_ref_token],
-                Some(InferredType::Reference(sig_ref_token)) => vec_deque![*sig_ref_token],
-                _ => vec_deque![InferredType::Anything],
-            }
         }
         Exp_::Borrow {
             is_mutable,
             exp: inner_exp,
             field,
         } => {
-            let loc_type_opt =
-                compile_expression(context, function_frame, code, *inner_exp)?.pop_front();
-            let loc_type =
-                loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
-            let (sh_idx, tys) = loc_type.get_struct_handle()?;
-            let subst = make_type_argument_subst(tys)?;
-            let (def_idx, field_type, field_offset) = context.field(sh_idx, field)?;
+            // Compile the "inner expression." In the case of a field borrow
+            // such as `&mut move(s).S::f`, `move(s)` would be the inner
+            // expression.
+            compile_expression(context, function_frame, code, *inner_exp)?;
+
+            // We're compiling a field borrow expression. To transform an
+            // expression like this into bytecode, we need to create a borrow
+            // field instruction that references the correct field handle index.
+            // We can't know what the index of the field is without determining
+            // the type of the underlying struct.
+            let struct_ident = QualifiedStructIdent {
+                module: ModuleName::module_self(),
+                name: field.value.struct_name,
+            };
+            let sh_idx = context.struct_handle_index(struct_ident)?;
+            let (def_idx, _, field_offset) = context.field(sh_idx, field.value.field.value)?;
 
             function_frame.pop()?;
-            let inner_token = Box::new(InferredType::from_signature_token_with_subst(
-                &subst,
-                &field_type,
-            ));
 
             let fh_idx = context.field_handle_index(def_idx, field_offset as u16)?;
-            if tys.is_empty() {
+
+            if field.value.type_actuals.is_empty() {
+                // The field handle index is sufficient if borrowing a field
+                // from a struct with a concrete type.
                 if is_mutable {
                     push_instr!(exp.loc, Bytecode::MutBorrowField(fh_idx));
                 } else {
                     push_instr!(exp.loc, Bytecode::ImmBorrowField(fh_idx));
                 }
             } else {
-                let inst = InferredType::build_signature_tokens(tys)?;
-                let inst_idx = context.signature_index(Signature(inst))?;
-                let field_inst_idx = context.field_instantiation_index(fh_idx, inst_idx)?;
+                // To borrow a field from a generic struct, the generic borrow
+                // instruction needs the index of the field instantiation.
+                let tokens = Signature(compile_types(
+                    context,
+                    function_frame.type_parameters(),
+                    &field.value.type_actuals,
+                )?);
+                let type_parameters_id = context.signature_index(tokens)?;
+                let fi_idx = context.field_instantiation_index(fh_idx, type_parameters_id)?;
                 if is_mutable {
-                    push_instr!(exp.loc, Bytecode::MutBorrowFieldGeneric(field_inst_idx));
+                    push_instr!(exp.loc, Bytecode::MutBorrowFieldGeneric(fi_idx));
                 } else {
-                    push_instr!(exp.loc, Bytecode::ImmBorrowFieldGeneric(field_inst_idx));
+                    push_instr!(exp.loc, Bytecode::ImmBorrowFieldGeneric(fi_idx));
                 }
-            };
-            function_frame.push()?;
-            if is_mutable {
-                vec_deque![InferredType::MutableReference(inner_token)]
-            } else {
-                vec_deque![InferredType::Reference(inner_token)]
             }
+            function_frame.push()?;
         }
         Exp_::FunctionCall(f, exps) => {
-            let mut actuals_tys = vec_deque![];
-            for types in compile_expression(context, function_frame, code, *exps)? {
-                actuals_tys.push_back(types);
-            }
-            compile_call(context, function_frame, code, f, actuals_tys)?
+            compile_expression(context, function_frame, code, *exps)?;
+            compile_call(context, function_frame, code, f)?
         }
         Exp_::ExprList(exps) => {
-            let mut result = vec_deque![];
             for e in exps {
-                result.append(&mut compile_expression(context, function_frame, code, e)?);
+                compile_expression(context, function_frame, code, e)?;
             }
-            result
         }
     })
 }
@@ -1537,8 +1327,7 @@ fn compile_call(
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
     call: FunctionCall,
-    mut argument_types: VecDeque<InferredType>,
-) -> Result<VecDeque<InferredType>> {
+) -> Result<()> {
     make_push_instr!(context, code);
     Ok(match call.value {
         FunctionCall_::Builtin(function) => {
@@ -1560,16 +1349,14 @@ fn compile_call(
                     }
                     function_frame.pop()?;
                     function_frame.push()?;
-                    vec_deque![InferredType::Bool]
                 }
                 Builtin::BorrowGlobal(mut_, name, ast_tys) => {
                     let sig_tys =
                         compile_types(context, function_frame.type_parameters(), &ast_tys)?;
-                    let tys = InferredType::from_signature_tokens(&sig_tys);
                     let tokens = Signature(sig_tys);
                     let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    if tys.is_empty() {
+                    if ast_tys.is_empty() {
                         push_instr! {call.loc,
                             if mut_ {
                                 Bytecode::MutBorrowGlobal(def_idx)
@@ -1590,28 +1377,14 @@ fn compile_call(
                     }
                     function_frame.pop()?;
                     function_frame.push()?;
-
-                    let self_name = ModuleName::module_self();
-                    let ident = QualifiedStructIdent {
-                        module: self_name,
-                        name,
-                    };
-                    let sh_idx = context.struct_handle_index(ident)?;
-                    let inner = Box::new(InferredType::Struct(sh_idx, tys));
-                    vec_deque![if mut_ {
-                        InferredType::MutableReference(inner)
-                    } else {
-                        InferredType::Reference(inner)
-                    }]
                 }
                 Builtin::MoveFrom(name, ast_tys) => {
                     let sig_tys =
                         compile_types(context, function_frame.type_parameters(), &ast_tys)?;
-                    let tys = InferredType::from_signature_tokens(&sig_tys);
                     let tokens = Signature(sig_tys);
                     let type_actuals_id = context.signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    if tys.is_empty() {
+                    if ast_tys.is_empty() {
                         push_instr!(call.loc, Bytecode::MoveFrom(def_idx));
                     } else {
                         let si_idx =
@@ -1620,14 +1393,6 @@ fn compile_call(
                     }
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
-
-                    let self_name = ModuleName::module_self();
-                    let ident = QualifiedStructIdent {
-                        module: self_name,
-                        name,
-                    };
-                    let sh_idx = context.struct_handle_index(ident)?;
-                    vec_deque![InferredType::Struct(sh_idx, tys)]
                 }
                 Builtin::MoveTo(name, tys) => {
                     let tokens = Signature(compile_types(
@@ -1646,7 +1411,6 @@ fn compile_call(
                     }
                     function_frame.pop()?; // pop the address
                     function_frame.pop()?; // pop the value to be moved
-                    vec_deque![]
                 }
                 Builtin::VecPack(tys, num) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1657,10 +1421,6 @@ fn compile_call(
                         function_frame.pop()?;
                     }
                     function_frame.push()?; // push the return value
-
-                    // NOTE: we do actually infer the type here because we want to allow the type
-                    // actuals to have multiple tokens in order to test our bytecode verifier passes
-                    vec_deque![InferredType::Anything]
                 }
                 Builtin::VecLen(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1669,7 +1429,6 @@ fn compile_call(
 
                     function_frame.pop()?; // pop the vector ref
                     function_frame.push()?; // push the return value
-                    vec_deque![InferredType::U64]
                 }
                 Builtin::VecImmBorrow(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1679,9 +1438,6 @@ fn compile_call(
                     function_frame.pop()?; // pop the vector ref
                     function_frame.pop()?; // pop the index
                     function_frame.push()?; // push the return value
-
-                    // NOTE: similar to VecEmpty, we do actually infer the type here
-                    vec_deque![InferredType::Anything]
                 }
                 Builtin::VecMutBorrow(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1691,9 +1447,6 @@ fn compile_call(
                     function_frame.pop()?; // pop the vector ref
                     function_frame.pop()?; // pop the index
                     function_frame.push()?; // push the return value
-
-                    // NOTE: similar to VecEmpty, we do actually infer the type here
-                    vec_deque![InferredType::Anything]
                 }
                 Builtin::VecPushBack(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1702,7 +1455,6 @@ fn compile_call(
 
                     function_frame.pop()?; // pop the vector ref
                     function_frame.pop()?; // pop the value
-                    vec_deque![]
                 }
                 Builtin::VecPopBack(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1711,7 +1463,6 @@ fn compile_call(
 
                     function_frame.pop()?; // pop the vector ref
                     function_frame.push()?; // push the value
-                    vec_deque![InferredType::Anything]
                 }
                 Builtin::VecUnpack(tys, num) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1722,7 +1473,6 @@ fn compile_call(
                     for _ in 0..num {
                         function_frame.push()?;
                     }
-                    vec_deque![]
                 }
                 Builtin::VecSwap(tys) => {
                     let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
@@ -1732,37 +1482,26 @@ fn compile_call(
                     function_frame.pop()?; // pop the vector ref
                     function_frame.pop()?; // pop the first index
                     function_frame.pop()?; // pop the second index
-                    vec_deque![]
                 }
                 Builtin::Freeze => {
                     push_instr!(call.loc, Bytecode::FreezeRef);
                     function_frame.pop()?; // pop mut ref
                     function_frame.push()?; // push imm ref
-                    let inner_token = match argument_types.pop_front() {
-                        Some(InferredType::Reference(inner_token))
-                        | Some(InferredType::MutableReference(inner_token)) => inner_token,
-                        // Incorrect call
-                        _ => Box::new(InferredType::Anything),
-                    };
-                    vec_deque![InferredType::Reference(inner_token)]
                 }
                 Builtin::ToU8 => {
                     push_instr!(call.loc, Bytecode::CastU8);
                     function_frame.pop()?;
                     function_frame.push()?;
-                    vec_deque![InferredType::U8]
                 }
                 Builtin::ToU64 => {
                     push_instr!(call.loc, Bytecode::CastU64);
                     function_frame.pop()?;
                     function_frame.push()?;
-                    vec_deque![InferredType::U64]
                 }
                 Builtin::ToU128 => {
                     push_instr!(call.loc, Bytecode::CastU128);
                     function_frame.pop()?;
                     function_frame.push()?;
-                    vec_deque![InferredType::U128]
                 }
             }
         }
@@ -1773,14 +1512,9 @@ fn compile_call(
         } => {
             let ty_arg_tokens =
                 compile_types(context, function_frame.type_parameters(), &type_actuals)?;
-            let ty_args = ty_arg_tokens
-                .iter()
-                .map(InferredType::from_signature_token)
-                .collect::<Vec<_>>();
-            let subst = &make_type_argument_subst(&ty_args)?;
             let tokens = Signature(ty_arg_tokens);
             let type_actuals_id = context.signature_index(tokens)?;
-            let fh_idx = context.function_handle(module, name.clone())?.1;
+            let fh_idx = context.function_handle(module, name)?.1;
             let fcall = if type_actuals.is_empty() {
                 Bytecode::Call(fh_idx)
             } else {
@@ -1788,17 +1522,11 @@ fn compile_call(
                 Bytecode::CallGeneric(fi_idx)
             };
             push_instr!(call.loc, fcall);
-            for _ in 0..argument_types.len() {
+            for _ in 0..type_actuals.len() {
                 function_frame.pop()?;
             }
             // Return value of current function is pushed onto the stack.
             function_frame.push()?;
-            let signature = context.function_signature(module, name)?;
-            signature
-                .return_
-                .iter()
-                .map(|t| InferredType::from_signature_token_with_subst(subst, t))
-                .collect()
         }
     })
 }

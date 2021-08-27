@@ -38,8 +38,8 @@ module 0x1.M3 {
         let u: &u64;
         s = X { y: Y { u: 0 } };
         x = &s;
-        y = &move(x).y;
-        u = &move(y).u;
+        y = &move(x).X::y;
+        u = &move(y).Y::u;
         // invalid return, borrowing a local
         return move(u);
     }
@@ -56,8 +56,8 @@ module 0x1.M4 {
         let u: &u64;
         s = X { y: Y { u: 0 } };
         x = &s;
-        y = &copy(x).y;
-        u = &copy(y).u;
+        y = &copy(x).X::y;
+        u = &copy(y).Y::u;
         // invalid return, borrowing a local
         return copy(u);
     }

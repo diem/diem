@@ -15,7 +15,7 @@ module 0x1.M {
             eps = &x1;
         }
         // valid to extend even though imm borrowed in one branch
-        g = &move(root).g;
+        g = &move(root).S::g;
         return;
     }
 
@@ -57,7 +57,7 @@ module 0x1.M {
     }
 
     bar(a: &mut Self.S): &u64 {
-        return &move(a).g;
+        return &move(a).S::g;
     }
 
     baz(a: &u64, b: &u64) {

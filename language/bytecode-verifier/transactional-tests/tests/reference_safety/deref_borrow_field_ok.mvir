@@ -9,7 +9,7 @@ module 0x1.M {
     public t(this: &Self.T) {
         let y: u64;
         // valid deref/read
-        y = *&move(this).f;
+        y = *&move(this).T::f;
         assert(copy(y) == 2, 42);
         return;
     }

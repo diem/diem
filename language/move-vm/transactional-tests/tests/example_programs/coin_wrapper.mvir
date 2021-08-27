@@ -7,7 +7,7 @@ module 0x1.Coin {
     }
 
     public value<CoinType>(c: &Self.Coin<CoinType>): u64 {
-        return *&move(c).value;
+        return *&move(c).Coin<CoinType>::value;
     }
 
     public destroy_zero<CoinType>(c: Self.Coin<CoinType>) {
@@ -65,8 +65,8 @@ module 0x1.M {
 
         sender = Signer.address_of(copy(account));
         coin_wrapper_ref = borrow_global<CoinWrapper>(move(sender));
-        foo_ref = &move(coin_wrapper_ref).f;
-        coin_ref = &move(foo_ref).x;
+        foo_ref = &move(coin_wrapper_ref).CoinWrapper::f;
+        coin_ref = &move(foo_ref).Foo<Coin.Coin<YYZ.YYZ>>::x;
 
         return Coin.value<YYZ.YYZ>(move(coin_ref));
     }
@@ -79,10 +79,10 @@ module 0x1.M {
 
         sender = Signer.address_of(copy(account));
         inner_wrapper_ref = borrow_global<InnerWrapper>(move(sender));
-        foo_ref = &move(inner_wrapper_ref).f;
-        inner_ref = &move(foo_ref).x;
+        foo_ref = &move(inner_wrapper_ref).InnerWrapper::f;
+        inner_ref = &move(foo_ref).Foo<Self.Inner>::x;
 
-        return *(&move(inner_ref).b);
+        return *(&move(inner_ref).Inner::b);
     }
 
 

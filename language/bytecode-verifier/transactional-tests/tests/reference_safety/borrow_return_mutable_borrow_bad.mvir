@@ -7,8 +7,8 @@ module 0x1.M {
         let ref_x_f: &mut Self.Y;
         let ref_x_f_g: &u64;
 
-        ref_x_f = &mut move(ref_x).f;
-        ref_x_f_g = & copy(ref_x_f).g;
+        ref_x_f = &mut move(ref_x).X::f;
+        ref_x_f_g = & copy(ref_x_f).Y::g;
 
         // mutable return value overlaps with other return value
         return (move(ref_x_f), move(ref_x_f_g));

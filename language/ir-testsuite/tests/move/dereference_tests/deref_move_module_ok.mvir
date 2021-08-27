@@ -7,7 +7,7 @@ module {{default}}.M {
 
     public value (this: &mut Self.T) : u64 {
         let b: &u64;
-        b = &move(this).v;
+        b = &move(this).T::v;
         return *move(b);
     }
 }

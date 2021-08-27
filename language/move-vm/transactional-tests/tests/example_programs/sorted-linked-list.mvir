@@ -26,7 +26,7 @@ module 0x1.SortedLinkedList
         assert(exists<Node>(copy(node_address)), 20);
 
         node_ref = borrow_global<Node>(move(node_address));
-        result = *&move(node_ref).value;
+        result = *&move(node_ref).Node::value;
 
         return move(result);
     }
@@ -43,7 +43,7 @@ module 0x1.SortedLinkedList
 
         //find the head node
 		current_node_ref = borrow_global<Node>(copy(current_node_address));
-        head_node_address = *&move(current_node_ref).head;
+        head_node_address = *&move(current_node_ref).Node::head;
 
         //check if this is the head node
         result = (move(head_node_address) == move(current_node_address));
@@ -101,13 +101,13 @@ module 0x1.SortedLinkedList
 
         //get a reference to prev_node and find the address and reference to next_node, head
         prev_node_ref = borrow_global<Node>(copy(prev_node_address));
-        next_node_address = *&copy(prev_node_ref).next;
+        next_node_address = *&copy(prev_node_ref).Node::next;
         next_node_ref = borrow_global<Node>(copy(next_node_address));
-        head_address = *&copy(next_node_ref).head;
+        head_address = *&copy(next_node_ref).Node::head;
 
         //see if either prev or next are the head and get their values
-        prev_value = *&move(prev_node_ref).value;
-        next_value = *&move(next_node_ref).value;
+        prev_value = *&move(prev_node_ref).Node::value;
+        next_value = *&move(next_node_ref).Node::value;
         prev_is_head = Self.is_head_node(copy(prev_node_address));
         next_is_head = Self.is_head_node(copy(next_node_address));
 
@@ -126,11 +126,11 @@ module 0x1.SortedLinkedList
 
         //fix the pointers at prev
         prev_node_mut_ref = borrow_global_mut<Node>(move(prev_node_address));
-        *&mut move(prev_node_mut_ref).next = copy(sender_address);
+        *&mut move(prev_node_mut_ref).Node::next = copy(sender_address);
 
         //fix the pointers at next
         next_node_mut_ref = borrow_global_mut<Node>(move(next_node_address));
-        *&mut move(next_node_mut_ref).prev = copy(sender_address);
+        *&mut move(next_node_mut_ref).Node::prev = copy(sender_address);
 
         return;
     }
@@ -155,8 +155,8 @@ module 0x1.SortedLinkedList
         current_node_ref = borrow_global<Node>(copy(sender_address));
 
         //check that the list is empty
-        next_node_address = *&copy(current_node_ref).next;
-        prev_node_address = *&move(current_node_ref).prev;
+        next_node_address = *&copy(current_node_ref).Node::next;
+        prev_node_address = *&move(current_node_ref).Node::prev;
         assert(move(next_node_address) == copy(sender_address), 9);
         assert(move(prev_node_address) == copy(sender_address), 10);
 
@@ -199,7 +199,7 @@ module 0x1.SortedLinkedList
 
         //make sure the caller owns the list
         node_ref = borrow_global<Node>(copy(node_address));
-        list_owner = *&move(node_ref).head;
+        list_owner = *&move(node_ref).Node::head;
         assert(move(list_owner) == Signer.address_of(move(account)), 15);
 
         //remove it
@@ -224,17 +224,17 @@ module 0x1.SortedLinkedList
 
         //find prev and next
         current_node_ref = borrow_global<Node>(copy(node_address));
-        next_node_address = *&copy(current_node_ref).next;
-        prev_node_address = *&move(current_node_ref).prev;
+        next_node_address = *&copy(current_node_ref).Node::next;
+        prev_node_address = *&move(current_node_ref).Node::prev;
 
 
         //update next
         next_node_mut_ref = borrow_global_mut<Node>(copy(next_node_address));
-        *&mut move(next_node_mut_ref).prev = copy(prev_node_address);
+        *&mut move(next_node_mut_ref).Node::prev = copy(prev_node_address);
 
         //update prev
         prev_node_mut_ref = borrow_global_mut<Node>(move(prev_node_address));
-        *&mut move(prev_node_mut_ref).next = move(next_node_address);
+        *&mut move(prev_node_mut_ref).Node::next = move(next_node_address);
 
         //destroy the current node
         Node {temp_address,temp_address,temp_address,temp_value} = move_from<Node>(move(node_address));

@@ -8,7 +8,7 @@ module 0x42.B {
 
     public t(this: &Self.T): &u64 {
         let g: &u64;
-        g = &move(this).g;
+        g = &move(this).T::g;
         return move(g);
     }
 }
@@ -27,7 +27,7 @@ module 0x42.A {
         let ref1: &mut B.T;
         let ref2: &u64;
         let b2: B.T;
-        ref1 = &mut move(this).f;
+        ref1 = &mut move(this).T::f;
         ref2 = B.t(freeze(copy(ref1)));
         b2 = B.new(3);
         // cannot modify, ref2 still borrows ref1

@@ -100,7 +100,7 @@ module 0x1.M {
 
     // cannot use refs in generics
     foo(s: Self.S<&u64>): u64 {
-        return *(*(&(&s).v));
+        return *(*(&(&s).S::v));
     }
 }
 
@@ -110,6 +110,6 @@ module 0x1.M {
 
     // cannot use refs in generics
     foo(s: Self.S<&u64>): u64 {
-        return *(*(&mut (&mut s).v));
+        return *(*(&mut (&mut s).S::v));
     }
 }
