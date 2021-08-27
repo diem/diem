@@ -16,12 +16,12 @@ module 0x1.M {
             eps = &x1;
         }
         // Error: root has weak empty borrow and hence a field cannot be borrowed mutably
-        g_mut = &mut move(root).g;
+        g_mut = &mut move(root).S::g;
         g_imm = freeze(move(g_mut));
         return;
     }
 
     bar(a: &mut Self.S): &u64 {
-        return &move(a).g;
+        return &move(a).S::g;
     }
 }

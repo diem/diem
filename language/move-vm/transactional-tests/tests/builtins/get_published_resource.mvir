@@ -10,7 +10,7 @@ module 0x1.Token {
 
     public value(this: &Self.T): u64 {
         let vref: &u64;
-        vref = &copy(this).v;
+        vref = &copy(this).T::v;
         _ = move(this);
         return *move(vref);
     }

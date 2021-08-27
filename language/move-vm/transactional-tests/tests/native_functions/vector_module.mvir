@@ -2,7 +2,7 @@
 module 0x1.Coin {
     struct Coin has store { value: u64 }
     public value(c: &Self.Coin): u64 {
-        return *&move(c).value;
+        return *&move(c).Coin::value;
     }
     public zero(): Self.Coin {
         return Coin { value: 0 };
@@ -31,7 +31,7 @@ module 0x42.M {
         let v_ref: &mut vector<Coin.Coin>;
 
         coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
-        v_ref = &mut move(coins_ref).f;
+        v_ref = &mut move(coins_ref).Coins::f;
         Vector.push_back<Coin.Coin>(move(v_ref), move(coin));
         return;
     }
@@ -42,7 +42,7 @@ module 0x42.M {
         let coin_ref: &Coin.Coin;
 
         coins_ref = borrow_global<Coins>(Signer.address_of(move(account)));
-        v_ref = &move(coins_ref).f;
+        v_ref = &move(coins_ref).Coins::f;
         coin_ref = Vector.borrow<Coin.Coin>(move(v_ref), move(i));
 
         return Coin.value(move(coin_ref));
@@ -53,7 +53,7 @@ module 0x42.M {
         let v_ref: &mut vector<Coin.Coin>;
 
         coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
-        v_ref = &mut move(coins_ref).f;
+        v_ref = &mut move(coins_ref).Coins::f;
         return Vector.pop_back<Coin.Coin>(move(v_ref));
     }
 }

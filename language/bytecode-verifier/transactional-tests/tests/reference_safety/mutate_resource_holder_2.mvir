@@ -24,8 +24,8 @@ module 0x42.A {
         let ref_balance: &mut u64;
 
         // safe to modify resources inner values (if they have drop)
-        ref = &mut move(a_ref).c;
-        ref_balance = &mut move(ref).balance;
+        ref = &mut move(a_ref).A::c;
+        ref_balance = &mut move(ref).Coin::balance;
         *move(ref_balance) = 100;
 
         return;

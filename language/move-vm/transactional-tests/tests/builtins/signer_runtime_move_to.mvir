@@ -16,11 +16,11 @@ module 0x42.M {
     }
 
     public read(s: &signer): bool acquires R1 {
-        return *&(borrow_global<R1>(Signer.address_of(move(s)))).f;
+        return *&(borrow_global<R1>(Signer.address_of(move(s)))).R1::f;
     }
 
     public read_gen<T: copy + drop + store>(s: &signer): T acquires R2 {
-        return *&(borrow_global<R2<T>>(Signer.address_of(move(s)))).f;
+        return *&(borrow_global<R2<T>>(Signer.address_of(move(s)))).R2<T>::f; // problem is here
     }
 }
 

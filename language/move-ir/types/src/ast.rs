@@ -214,6 +214,25 @@ pub struct Field_(pub Symbol);
 /// A field coupled with source location information
 pub type Field = Spanned<Field_>;
 
+/// A fully-qualified field identifier.
+///
+/// Rather than simply referring to a field 'f' with a single identifier and
+/// relying on type inference to determine the type of the struct being
+/// accessed, this type refers to the field 'f' on the explicit struct type
+/// 'S<T>' -- that is, 'S<T>::f'.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FieldIdent_ {
+    /// The name of the struct type on which the field is declared.
+    pub struct_name: StructName,
+    /// For generic struct types, the type parameters used to instantiate the
+    /// struct type (this is an empty vector for non-generic struct types).
+    pub type_actuals: Vec<Type>,
+    /// The name of the field.
+    pub field: Field,
+}
+
+pub type FieldIdent = Spanned<FieldIdent_>;
+
 /// A field map
 pub type Fields<T> = Vec<(Field, T)>;
 
@@ -619,7 +638,7 @@ pub enum Exp_ {
         /// the expression containing the reference
         exp: Box<Exp>,
         /// the field being borrowed
-        field: Field_,
+        field: FieldIdent,
     },
     /// `move(x)`
     Move(Var),
@@ -1098,7 +1117,7 @@ impl Exp_ {
     }
 
     /// Creates a new borrow field `Exp` with no location information
-    pub fn borrow(is_mutable: bool, exp: Box<Exp>, field: Field_) -> Exp {
+    pub fn borrow(is_mutable: bool, exp: Box<Exp>, field: FieldIdent) -> Exp {
         Spanned::unsafe_no_loc(Exp_::Borrow {
             is_mutable,
             exp,
@@ -1351,6 +1370,12 @@ impl fmt::Display for Function_ {
 impl fmt::Display for Field_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for FieldIdent_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}::{}", self.struct_name, self.field)
     }
 }
 

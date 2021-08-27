@@ -13,14 +13,14 @@ module 0x42.DeepCopy {
         c2 = copy(c1);
 
         // mutate c1.i to 1
-        *(&mut (&mut c1).i) = 1;
+        *(&mut (&mut c1).Config::i) = 1;
         // c2.i should still be 0
-        assert(*&(&c2).i == 0, 77);
+        assert(*&(&c2).Config::i == 0, 77);
 
         // mutate c2.i to 2
-        *(&mut (&mut c2).i) = 2;
+        *(&mut (&mut c2).Config::i) = 2;
         // c1.i should still be 1
-        assert(*&(&c1).i == 1, 78);
+        assert(*&(&c1).Config::i == 1, 78);
 
         return;
     }
@@ -33,18 +33,18 @@ module 0x42.DeepCopy {
         n2 = copy(n1);
 
         // mutate n1.c.i to 1
-        *(&mut (&mut (&mut n1).c).i) = 1;
+        *(&mut (&mut (&mut n1).Nested::c).Config::i) = 1;
         // n2.c.i should still be 0
-        assert(*&(&(&n2).c).i == 0, 79);
+        assert(*&(&(&n2).Nested::c).Config::i == 0, 79);
         // n1.c.i is 1
-        assert(*&(&(&n1).c).i == 1, 80);
+        assert(*&(&(&n1).Nested::c).Config::i == 1, 80);
 
         // mutate n2.c.i to 2
-        *(&mut (&mut (&mut n2).c).i) = 2;
+        *(&mut (&mut (&mut n2).Nested::c).Config::i) = 2;
         // n1.c.i should still be 1
-        assert(*&(&(&n1).c).i == 1, 81);
+        assert(*&(&(&n1).Nested::c).Config::i == 1, 81);
         // n2.c.i is 2
-        assert(*&(&(&n2).c).i == 2, 82);
+        assert(*&(&(&n2).Nested::c).Config::i == 2, 82);
 
         return;
     }
@@ -76,7 +76,7 @@ module 0x42.DeepCopy {
 
         c1 = Config { i: 0 };
         c2 = copy(c1);
-        *(&mut (&mut c2).i) = 1;
+        *(&mut (&mut c2).Config::i) = 1;
 
         v1 = Vector.empty<Self.Config>();
         Vector.push_back<Self.Config>(&mut v1, move(c1));
@@ -85,13 +85,13 @@ module 0x42.DeepCopy {
 
         r1 = Vector.borrow_mut<Self.Config>(&mut v1, 0);
         r2 = Vector.borrow_mut<Self.Config>(&mut v2, 0);
-        assert(*&copy(r1).i == 0, 90);
-        assert(*&copy(r1).i == *&move(r2).i, 91);
+        assert(*&copy(r1).Config::i == 0, 90);
+        assert(*&copy(r1).Config::i == *&move(r2).Config::i, 91);
         r2 = Vector.borrow_mut<Self.Config>(&mut v2, 1);
-        assert(*&copy(r2).i == 1, 91);
-        assert(*&copy(r1).i != *&copy(r2).i, 91);
-        *&mut copy(r1).i = 1;
-        assert(*&copy(r1).i == *&copy(r2).i, 92);
+        assert(*&copy(r2).Config::i == 1, 91);
+        assert(*&copy(r1).Config::i != *&copy(r2).Config::i, 91);
+        *&mut copy(r1).Config::i = 1;
+        assert(*&copy(r1).Config::i == *&copy(r2).Config::i, 92);
 
         return;
     }

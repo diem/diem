@@ -3,6 +3,6 @@ module 0x1.M {
     struct X has drop { v: u64 }
     struct S<T> has drop { f: T }
     t(s: Self.S<Self.X>): u64 {
-        return *(&(&(&s).f).v);
+        return *(&(&(&s).S<Self.X>::f).X::v);
     }
 }

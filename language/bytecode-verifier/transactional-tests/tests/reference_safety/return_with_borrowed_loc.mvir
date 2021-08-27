@@ -18,8 +18,8 @@ module 0x1.M {
         let u: &u64;
         s = X { y: Y { u: 0 } };
         x = &s;
-        y = &copy(x).y;
-        u = &copy(y).u;
+        y = &copy(x).X::y;
+        u = &copy(y).Y::u;
         // all references are automatically released, return is safe
         return;
     }

@@ -8,10 +8,10 @@ module 0x1.M {
         let v2_mut: &mut u64;
         let g2_mut: &mut Self.G;
 
-        v1_mut = &mut (&mut copy(root).g1).v1;
-        v2_mut = &mut (&mut copy(root).g1).v2;
+        v1_mut = &mut (&mut copy(root).S::g1).G::v1;
+        v2_mut = &mut (&mut copy(root).S::g1).G::v2;
 
-        g2_mut = &mut copy(root).g2;
+        g2_mut = &mut copy(root).S::g2;
 
         // all writes valid as they are on different fields/subtrees
         *copy(g2_mut) = G { v1: 0, v2: 0 };

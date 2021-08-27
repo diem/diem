@@ -219,7 +219,7 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (CompiledModule, Signed
             public change_t1(account: &signer, v: u64) acquires T1 {{
                 let t1: &mut Self.T1;
                 t1 = borrow_global_mut<T1>(Signer.address_of(move(account)));
-                *&mut move(t1).v = move(v);
+                *&mut move(t1).T1::v = move(v);
                 return;
             }}
 

@@ -7,6 +7,6 @@ module 0x1.M {
     }
 
     t(x: Self.X): u64 {
-        return *(&Self.id<Self.X>(&x).v);
+        return *(&Self.id<Self.X>(&x).X::v);
     }
 }

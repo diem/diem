@@ -15,7 +15,7 @@ module 0x1.A {
 
     borrow_acquires_t1(account: &signer, x: &mut Self.T1): &mut u64 acquires T1 {
         _ = borrow_global_mut<T1>(Signer.address_of(move(account)));
-        return &mut move(x).v;
+        return &mut move(x).T1::v;
     }
 
     acquires_t1(account: &signer) acquires T1 {

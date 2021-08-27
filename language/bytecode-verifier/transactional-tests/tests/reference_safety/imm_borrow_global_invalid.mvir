@@ -70,10 +70,10 @@ module 0x1.Tester {
         let c2: &A.Coin;
 
         p1 = borrow_global_mut<Pair>(move(addr1));
-        c1 = &move(p1).x;
+        c1 = &move(p1).Pair::x;
         // Pair still acquired mutably
         p2 = borrow_global_mut<Pair>(move(addr2));
-        c2 = &move(p2).x;
+        c2 = &move(p2).Pair::x;
         return move(c1) == move(c2);
     }
 }

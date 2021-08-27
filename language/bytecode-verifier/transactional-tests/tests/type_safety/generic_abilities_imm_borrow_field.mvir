@@ -11,7 +11,7 @@ module 0x1.M {
         let y: &u64;
         let z: u64;
         ref = &x;
-        y = &(&x).x;
+        y = &(&x).Foo<u64>::x;
         _ = move(ref);
         _ = move(y);
         Foo<u64> { x: z } = move(x);

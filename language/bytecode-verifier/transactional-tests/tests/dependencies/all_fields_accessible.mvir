@@ -14,8 +14,8 @@ module 0x42.M {
     public set_a_with_b(a: &mut Self.A, b: &Self.B) {
         let x_ref: &mut u64;
         let y_ref: &u64;
-        x_ref = &mut copy(a).x;
-        y_ref = &copy(b).y;
+        x_ref = &mut copy(a).A::x;
+        y_ref = &copy(b).B::y;
         *move(x_ref) = *move(y_ref);
         _ = move(a);
         _ = move(b);
@@ -25,8 +25,8 @@ module 0x42.M {
     public set_b_with_a(b: &mut Self.B, a: &Self.A) {
         let x_ref: &u64;
         let y_ref: &mut u64;
-        y_ref = &mut copy(b).y;
-        x_ref = &copy(a).x;
+        y_ref = &mut copy(b).B::y;
+        x_ref = &copy(a).A::x;
         *move(y_ref) = *move(x_ref);
         _ = move(a);
         _ = move(b);

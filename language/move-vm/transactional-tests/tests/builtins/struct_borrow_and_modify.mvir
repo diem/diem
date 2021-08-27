@@ -9,22 +9,22 @@ module 0x1.M {
     }
 
     public modify_x(addr: address) acquires R {
-        *&mut borrow_global_mut<R>(move(addr)).x = true;
+        *&mut borrow_global_mut<R>(move(addr)).R::x = true;
         return;
     }
 
     public verify_x(addr: address) acquires R {
-        assert(*&borrow_global<R>(move(addr)).x == true, 1000);
+        assert(*&borrow_global<R>(move(addr)).R::x == true, 1000);
         return;
     }
 
     public modify_y_x(addr: address) acquires R {
-        *&mut (&mut borrow_global_mut<R>(move(addr)).y).x = 42;
+        *&mut ((&mut borrow_global_mut<R>(move(addr)).R::y)).Y::x = 42;
         return;
     }
 
     public verify_y_x(addr: address) acquires R {
-        assert(*&(&borrow_global<R>(move(addr)).y).x == 42, 1001);
+        assert(*&(&borrow_global<R>(move(addr)).R::y).Y::x == 42, 1001);
         return;
     }
 }

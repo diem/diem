@@ -6,13 +6,13 @@ module 0x1.M {
         let x: &mut u64;
 
         if (move(cond)) {
-            x = &mut copy(root).f;
+            x = &mut copy(root).S::f;
         } else {
-            x = &mut copy(root).g;
+            x = &mut copy(root).S::g;
         }
 
         // can write even though f and g are borrowed
-        *(&mut copy(root).h) = 0;
+        *(&mut copy(root).S::h) = 0;
 
         return;
     }
@@ -21,14 +21,14 @@ module 0x1.M {
         let x: &mut u64;
 
         if (move(cond)) {
-            x = &mut copy(root).f;
+            x = &mut copy(root).S::f;
         } else {
-            x = &mut copy(root).g;
+            x = &mut copy(root).S::g;
         }
 
         // can borrow even though f and g are borrowed
-        _ = &mut copy(root).f;
-        _ = &mut copy(root).g;
+        _ = &mut copy(root).S::f;
+        _ = &mut copy(root).S::g;
 
         return;
     }

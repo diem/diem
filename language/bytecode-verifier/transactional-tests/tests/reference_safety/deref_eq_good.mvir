@@ -14,7 +14,7 @@ module 0x1.M {
     public compare2 (t1: &mut Self.T, t2: &mut Self.T) : bool {
         let b: bool;
         let x_ref: &u64;
-        x_ref = &copy(t1).v;
+        x_ref = &copy(t1).T::v;
         b = move(t1) == move(t2);
         _ = move(x_ref);
         return move(b);

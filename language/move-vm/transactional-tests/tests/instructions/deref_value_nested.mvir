@@ -9,7 +9,7 @@ module 0x1.B {
     public t(this: &Self.T) {
         let g: &u64;
         let y: u64;
-        g = &move(this).g;
+        g = &move(this).T::g;
         y = *move(g);
         assert(copy(y) == 2, 42);
         return;
@@ -28,7 +28,7 @@ module 0x1.A {
 
     public t(this: &Self.T) {
         let f: &B.T;
-        f = &move(this).f;
+        f = &move(this).T::f;
         B.t(move(f));
         return;
     }
