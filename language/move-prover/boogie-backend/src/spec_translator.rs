@@ -21,9 +21,9 @@ use move_model::{
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global, boogie_field_sel,
-        boogie_global_declarator, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
-        boogie_struct_name, boogie_type, boogie_type_suffix, boogie_well_formed_expr,
+        boogie_inst_suffix, boogie_modifies_memory_name, boogie_resource_memory_name,
+        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
+        boogie_type_suffix, boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -241,19 +241,6 @@ impl<'env> SpecTranslator<'env> {
         }
         emitln!(self.writer, "// spec fun {}", fun.loc.display(self.env));
         let result_type = boogie_type(self.env, &self.inst(&fun.result_type));
-        let spec_var_params = fun.used_spec_vars.iter().map(|spec_var| {
-            let spec_var = &spec_var.to_owned().instantiate(&self.type_inst);
-            let declaring_module = self.env.get_module(spec_var.module_id);
-            let decl = declaring_module.get_spec_var(spec_var.id);
-            let boogie_name =
-                boogie_spec_var_name(&declaring_module, decl.name, &spec_var.inst, &None);
-            boogie_global_declarator(
-                declaring_module.env,
-                &boogie_name,
-                decl.type_params.len(),
-                &self.inst(&decl.type_),
-            )
-        });
         // it is possible that the spec fun may refer to the same memory after monomorphization,
         // (e.g., one via concrete type and the other via type parameter being instantiated).
         // In this case, we mark the other parameter as unused
@@ -281,7 +268,7 @@ impl<'env> SpecTranslator<'env> {
         });
         self.writer.set_location(&fun.loc);
         let boogie_name = boogie_spec_fun_name(module_env, id, &self.type_inst);
-        let param_list = mem_params.chain(spec_var_params).chain(params).join(", ");
+        let param_list = mem_params.chain(params).join(", ");
         emit!(
             self.writer,
             "function {{:inline}} {}({}): {}",
@@ -564,16 +551,6 @@ impl<'env> SpecTranslator<'env> {
                 self.set_writer_location(*node_id);
                 self.translate_temporary(*node_id, *idx);
             }
-            ExpData::SpecVar(node_id, module_id, var_id, mem_label) => {
-                let inst = &self.get_node_instantiation(*node_id);
-                self.set_writer_location(*node_id);
-                let module_env = self.env.get_module(*module_id);
-                let spec_var = module_env.get_spec_var(*var_id);
-                emit!(
-                    self.writer,
-                    &boogie_spec_var_name(&module_env, spec_var.name, inst, mem_label)
-                );
-            }
             ExpData::Call(node_id, oper, args) => {
                 self.set_writer_location(*node_id);
                 self.translate_call(*node_id, oper, args);
@@ -848,22 +825,6 @@ impl<'env> SpecTranslator<'env> {
             maybe_comma();
             let memory = boogie_resource_memory_name(self.env, memory, &label_at(i));
             emit!(self.writer, &memory);
-            i = usize::saturating_add(i, 1);
-        }
-        for spec_var in &fun_decl.used_spec_vars {
-            let spec_var = spec_var.to_owned().instantiate(inst);
-            maybe_comma();
-            let declaring_module = self.env.get_module(spec_var.module_id);
-            let var_decl = declaring_module.get_spec_var(spec_var.id);
-            emit!(
-                self.writer,
-                &boogie_spec_var_name(
-                    &declaring_module,
-                    var_decl.name,
-                    &spec_var.inst,
-                    &label_at(i)
-                )
-            );
             i = usize::saturating_add(i, 1);
         }
         for exp in args {

@@ -73,25 +73,25 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
 
 ==== spec-instrumenter input specs ====
 
-fun Generics::remove[baseline[
+fun Generics::remove[baseline]
 spec {
   modifies global<Generics::R<#0>>($t0);
   ensures Not(exists<Generics::R<#0>>($t0));
 }
 
-fun Generics::remove[verification[
+fun Generics::remove[verification]
 spec {
   modifies global<Generics::R<#0>>($t0);
   ensures Not(exists<Generics::R<#0>>($t0));
 }
 
-fun Generics::remove_u64[baseline[
+fun Generics::remove_u64[baseline]
 spec {
   modifies global<Generics::R<u64>>($t0);
   ensures Not(exists<Generics::R<u64>>($t0));
 }
 
-fun Generics::remove_u64[verification[
+fun Generics::remove_u64[verification]
 spec {
   modifies global<Generics::R<u64>>($t0);
   ensures Not(exists<Generics::R<u64>>($t0));

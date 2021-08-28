@@ -166,8 +166,8 @@ function Test::update [baseline] {
   directly asserted = {}
 }
 function Test::assert_assume_memory [baseline] {
-  accessed = {}
-  directly accessed = {}
+  accessed = {Test::A<bool, u64>, Test::A<u64, bool>}
+  directly accessed = {Test::A<bool, u64>, Test::A<u64, bool>}
   modified = {}
   directly modified = {}
   assumed = {Test::A<bool, u64>}
@@ -176,7 +176,7 @@ function Test::assert_assume_memory [baseline] {
   directly asserted = {Test::A<u64, bool>}
 }
 function Test::call_assert_assume_memory [baseline] {
-  accessed = {}
+  accessed = {Test::A<bool, u64>, Test::A<u64, bool>}
   directly accessed = {}
   modified = {}
   directly modified = {}

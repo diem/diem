@@ -202,10 +202,6 @@ impl<'env> Evaluator<'env> {
                 self.exp_state
                     .get_var(env.symbol_pool().string(*name).as_str())
             }
-            ExpData::SpecVar(..) => {
-                // TODO (mengxu) handle spec var if they are still here
-                unreachable!()
-            }
             ExpData::Call(node_id, op, args) => self.evaluate_operation(*node_id, op, args)?,
             ExpData::IfElse(_, cond, t_exp, f_exp) => {
                 self.evaluate_if_then_else(cond, t_exp, f_exp)?

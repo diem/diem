@@ -9,8 +9,9 @@ use crate::{
         FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, QualifiedInstId, StructId,
     },
     symbol::Symbol,
-    ty::{Type, BOOL_TYPE, NUM_TYPE},
+    ty::{PrimitiveType, Type, BOOL_TYPE, NUM_TYPE},
 };
+use num::BigUint;
 
 /// A trait that defines a generator for `Exp`.
 pub trait ExpGenerator<'env> {
@@ -59,6 +60,12 @@ pub trait ExpGenerator<'env> {
     fn mk_bool_const(&self, value: bool) -> Exp {
         let node_id = self.new_node(BOOL_TYPE.clone(), None);
         ExpData::Value(node_id, Value::Bool(value)).into_exp()
+    }
+
+    /// Make an address constant.
+    fn mk_address_const(&self, value: BigUint) -> Exp {
+        let node_id = self.new_node(Type::Primitive(PrimitiveType::Address), None);
+        ExpData::Value(node_id, Value::Address(value)).into_exp()
     }
 
     /// Makes a Call expression.

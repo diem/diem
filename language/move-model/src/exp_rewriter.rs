@@ -190,16 +190,6 @@ pub trait ExpRewriterFunctions {
                     exp
                 }
             }
-            SpecVar(id, mid, vid, label) => {
-                let (id_changed, new_id) = self.internal_rewrite_id(id);
-                if let Some(new_exp) = self.rewrite_spec_var(new_id, *mid, *vid, label) {
-                    new_exp
-                } else if id_changed {
-                    SpecVar(new_id, *mid, *vid, label.to_owned()).into_exp()
-                } else {
-                    exp
-                }
-            }
             Call(id, oper, args) => {
                 let (id_changed, new_id) = self.internal_rewrite_id(id);
                 let new_args_opt = self.internal_rewrite_vec(args);

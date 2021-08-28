@@ -369,29 +369,27 @@ impl Type {
     /// Attempt to convert this type into a normalized::Type
     pub fn into_struct_type(self, env: &GlobalEnv) -> Option<MType> {
         use Type::*;
-        Some(match self {
+        match self {
             Struct(mid, sid, ts) => env.get_struct_type(mid, sid, &ts),
-            _ => return None,
-        })
+            _ => None,
+        }
     }
 
     /// Attempt to convert this type into a normalized::Type
     pub fn into_normalized_type(self, env: &GlobalEnv) -> Option<MType> {
         use Type::*;
-        Some (
-                match self {
-                    Primitive(p) => p.into_normalized_type().expect("Invariant violation: unexpected spec primitive"),
-                    Struct(mid, sid, ts) =>
-                        env.get_struct_type(mid, sid, &ts),
-                    Vector(et) => MType::Vector(
-                        Box::new(et.into_normalized_type(env)
-                                 .expect("Invariant violation: vector type argument contains incomplete, tuple, reference, or spec type"))
-                    ),
-                    TypeParameter(idx) => MType::TypeParameter(idx as u16),
-                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | Var(..) | Reference(..) =>
-                        return None
-                }
-            )
+        match self {
+            Primitive(p) => Some(p.into_normalized_type().expect("Invariant violation: unexpected spec primitive")),
+            Struct(mid, sid, ts) =>
+                env.get_struct_type(mid, sid, &ts),
+            Vector(et) => Some(MType::Vector(
+                Box::new(et.into_normalized_type(env)
+                    .expect("Invariant violation: vector type argument contains incomplete, tuple, reference, or spec type"))
+            )),
+            TypeParameter(idx) => Some(MType::TypeParameter(idx as u16)),
+            Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | Var(..) | Reference(..) =>
+                None
+        }
     }
 
     /// Attempt to convert this type into a language_storage::StructTag

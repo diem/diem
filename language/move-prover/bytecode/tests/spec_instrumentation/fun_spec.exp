@@ -388,83 +388,83 @@ fun Test::resource_with_old($t0|val: u64) {
 
 ==== spec-instrumenter input specs ====
 
-fun Test::branching_result[baseline[
+fun Test::branching_result[baseline]
 spec {
   aborts_if And($t0, Eq<u64>($t2, 0));
   ensures Implies($t0, Eq<u64>(result0(), Div($t1, $t2)));
   ensures Implies(Not($t0), Eq<u64>(result0(), Mul($t1, $t2)));
 }
 
-fun Test::branching_result[verification[
+fun Test::branching_result[verification]
 spec {
   aborts_if And($t0, Eq<u64>($t2, 0));
   ensures Implies($t0, Eq<u64>(result0(), Div($t1, $t2)));
   ensures Implies(Not($t0), Eq<u64>(result0(), Mul($t1, $t2)));
 }
 
-fun Test::implicit_and_explicit_abort[baseline[
+fun Test::implicit_and_explicit_abort[baseline]
 spec {
   aborts_if Eq<u64>($t1, 0);
   aborts_if Eq<u64>($t0, 0);
   ensures Eq<u64>(result0(), Div($t0, $t1));
 }
 
-fun Test::implicit_and_explicit_abort[verification[
+fun Test::implicit_and_explicit_abort[verification]
 spec {
   aborts_if Eq<u64>($t1, 0);
   aborts_if Eq<u64>($t0, 0);
   ensures Eq<u64>(result0(), Div($t0, $t1));
 }
 
-fun Test::multiple_results[baseline[
+fun Test::multiple_results[baseline]
 spec {
   aborts_if Eq<u64>($t1, 0);
   ensures Eq<u64>(result0(), Div($t0, $t1));
   ensures Eq<u64>(result1(), Mod($t0, $t1));
 }
 
-fun Test::multiple_results[verification[
+fun Test::multiple_results[verification]
 spec {
   aborts_if Eq<u64>($t1, 0);
   ensures Eq<u64>(result0(), Div($t0, $t1));
   ensures Eq<u64>(result1(), Mod($t0, $t1));
 }
 
-fun Test::mut_ref_param[baseline[
+fun Test::mut_ref_param[baseline]
 spec {
   aborts_if Eq<u64>(select Test::R.v($t0), 0);
   ensures Eq<u64>(result0(), Old<u64>(select Test::R.v($t0)));
   ensures Eq<u64>(select Test::R.v($t0), Add(Old<u64>(select Test::R.v($t0)), 1));
 }
 
-fun Test::mut_ref_param[verification[
+fun Test::mut_ref_param[verification]
 spec {
   aborts_if Eq<u64>(select Test::R.v($t0), 0);
   ensures Eq<u64>(result0(), Old<u64>(select Test::R.v($t0)));
   ensures Eq<u64>(select Test::R.v($t0), Add(Old<u64>(select Test::R.v($t0)), 1));
 }
 
-fun Test::ref_param[baseline[
+fun Test::ref_param[baseline]
 spec {
   ensures Eq<u64>(result0(), select Test::R.v($t0));
 }
 
-fun Test::ref_param[verification[
+fun Test::ref_param[verification]
 spec {
   ensures Eq<u64>(result0(), select Test::R.v($t0));
 }
 
-fun Test::ref_param_return_ref[baseline[
+fun Test::ref_param_return_ref[baseline]
 spec {
   ensures Eq<u64>(result0(), select Test::R.v($t0));
 }
 
-fun Test::ref_param_return_ref[verification[
+fun Test::ref_param_return_ref[verification]
 spec {
   ensures Eq<u64>(result0(), select Test::R.v($t0));
 }
 
-fun Test::resource_with_old[baseline[
+fun Test::resource_with_old[baseline]
 spec {
   requires Gt($t0, 0);
   aborts_if Not(exists<Test::R>(0));
@@ -473,7 +473,7 @@ spec {
   modifies global<Test::R>(0);
 }
 
-fun Test::resource_with_old[verification[
+fun Test::resource_with_old[verification]
 spec {
   requires Gt($t0, 0);
   aborts_if Not(exists<Test::R>(0));

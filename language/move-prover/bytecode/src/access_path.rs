@@ -882,6 +882,7 @@ impl<'a> fmt::Display for OffsetDisplay<'a> {
                         .get_struct(*sid)
                         .get_field_by_offset(*fld)
                         .get_identifier()
+                        .expect("identifier defined")
                         .as_str(),
                 ),
                 Type::Error => {

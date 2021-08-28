@@ -46,11 +46,12 @@ use crate::{
         CONDITION_CONCRETE_PROP, CONDITION_DEACTIVATED_PROP, CONDITION_INJECTED_PROP,
         OPAQUE_PRAGMA, VERIFY_PRAGMA,
     },
-    project_1st, project_2nd,
+    project_1st,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
 };
 use codespan_reporting::diagnostic::Severity;
+use std::default::Default;
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
@@ -365,7 +366,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             params,
             context_params: None,
             result_type,
-            used_spec_vars: BTreeSet::new(),
             used_memory: BTreeSet::new(),
             uninterpreted: false,
             is_move_fun: true,
@@ -404,6 +404,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 name,
                 type_,
                 type_parameters,
+                init: _,
             } => self.decl_ana_global_var(
                 &loc,
                 name,
@@ -446,7 +447,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             params,
             context_params: None,
             result_type,
-            used_spec_vars: BTreeSet::new(),
             used_memory: BTreeSet::new(),
             uninterpreted,
             is_move_fun: false,
@@ -503,15 +503,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             self.qualified_by_module(name),
             self.module_id,
             var_id,
-            project_2nd(&type_params),
+            type_params.clone(),
             type_.clone(),
         );
-        // Add the variable to the module build.
+        // Add the variable to the module builder. For now, the init expression stays unset.
         let var_decl = SpecVarDecl {
             loc: loc.clone(),
             name,
             type_params,
             type_,
+            init: None,
         };
         self.spec_vars.push(var_decl);
     }
@@ -532,6 +533,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 name,
                 type_,
                 type_parameters,
+                init: _,
             } = &member.value
             {
                 if !type_parameters.is_empty() {
@@ -973,7 +975,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 exclusion_patterns,
             } => self.def_ana_schema_apply(loc, context, exp, patterns, exclusion_patterns),
             Pragma { properties } => self.def_ana_pragma(loc, context, properties),
-            Variable { .. } => { /* nothing to do right now */ }
+            Variable {
+                is_global: true,
+                name,
+                init,
+                ..
+            } => self.def_ana_global_var(loc, name, init.as_ref()),
+            Variable {
+                is_global: false, ..
+            } => { /* nothing to do right now */ }
+            Update { lhs, rhs } => self.def_ana_global_var_update(loc, context, lhs, rhs),
         }
     }
 }
@@ -1780,6 +1791,72 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
         }
         self.spec_fun_index += 1;
+    }
+}
+
+/// ## Global Variable Definition Analysis
+
+impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
+    /// Definition analysis for a specification variable function.
+    fn def_ana_global_var(&mut self, loc: &Loc, name: &Name, init: Option<&EA::Exp>) {
+        if let Some(exp) = init {
+            // Type check and translate the initialization expression.
+            let sym = self.qualified_by_module_from_name(name);
+            let entry = &self
+                .parent
+                .spec_var_table
+                .get(&sym)
+                .expect("spec var defined")
+                .clone();
+            let mut et = ExpTranslator::new(self);
+            for (n, ty) in &entry.type_params {
+                et.define_type_param(loc, *n, ty.clone());
+            }
+            let translated = et.translate_exp(exp, &entry.type_);
+            et.finalize_types();
+            // Store the translated init expression into the declaration.
+            let decl = self
+                .spec_vars
+                .iter_mut()
+                .find(|d| d.name == sym.symbol)
+                .expect("spec var defined");
+            decl.init = Some(translated.into_exp())
+        }
+    }
+
+    fn def_ana_global_var_update(
+        &mut self,
+        loc: &Loc,
+        context: &SpecBlockContext,
+        lhs: &EA::Exp,
+        rhs: &EA::Exp,
+    ) {
+        // Type check and translate lhs and rhs. They must have the same type.
+        let mut et = self.exp_translator_for_context(loc, context, &ConditionKind::Requires);
+        let (expected_ty, lhs) = et.translate_exp_free(lhs);
+        let rhs = et.translate_exp(rhs, &expected_ty);
+        et.finalize_types();
+        if lhs.extract_ghost_mem_access(self.parent.env).is_some() {
+            // Add as a condition to the context.
+            self.add_conditions_to_context(
+                context,
+                loc,
+                vec![Condition {
+                    loc: loc.clone(),
+                    kind: ConditionKind::Update,
+                    properties: Default::default(),
+                    exp: rhs.into_exp(),
+                    additional_exps: vec![lhs.into_exp()],
+                }],
+                PropertyBag::default(),
+                "",
+            );
+        } else {
+            self.parent.error(
+                &self.parent.env.get_node_loc(lhs.node_id()),
+                "target of `update` restricted to specification variables",
+            )
+        }
     }
 }
 
@@ -2608,13 +2685,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // translated.
                 let module_env = self.parent.env.get_module(mid);
                 let fun_decl = module_env.get_spec_fun(fid);
-                fun_decl.used_spec_vars.is_empty() && fun_decl.used_memory.is_empty()
+                fun_decl.used_memory.is_empty()
             } else {
                 // This is calling a function from the module we are currently translating.
                 let fun_decl = &self.spec_funs[fid.as_usize()];
-                fun_decl.used_spec_vars.is_empty() && fun_decl.used_memory.is_empty()
+                fun_decl.used_memory.is_empty()
             }
         };
+
         for struct_spec in self.struct_specs.values() {
             for cond in &struct_spec.conditions {
                 if matches!(cond.kind, ConditionKind::StructInvariant)
@@ -2648,10 +2726,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             return;
         };
 
-        let (used_spec_vars, used_memory) = self.compute_state_usage_for_exp(Some(visited), &body);
+        let used_memory = self.compute_state_usage_for_exp(Some(visited), &body);
         let fun_decl = &mut self.spec_funs[fun_idx];
         fun_decl.body = Some(body);
-        fun_decl.used_spec_vars = used_spec_vars;
         fun_decl.used_memory = used_memory;
     }
 
@@ -2662,18 +2739,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         mut visited_opt: Option<&mut BTreeSet<usize>>,
         exp: &ExpData,
-    ) -> (
-        BTreeSet<QualifiedInstId<SpecVarId>>,
-        BTreeSet<QualifiedInstId<StructId>>,
-    ) {
-        let mut used_spec_vars = BTreeSet::new();
+    ) -> BTreeSet<QualifiedInstId<StructId>> {
         let mut used_memory = BTreeSet::new();
         exp.visit(&mut |e: &ExpData| {
             match e {
-                ExpData::SpecVar(id, mid, vid, _) => {
-                    let inst = self.parent.env.get_node_instantiation(*id);
-                    used_spec_vars.insert(mid.qualified_inst(*vid, inst));
-                }
                 ExpData::Call(id, Operation::Function(mid, fid, _), _) => {
                     let inst = self.parent.env.get_node_instantiation(*id);
                     // Extend used memory with that of called functions, after applying type
@@ -2683,12 +2752,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         // translated.
                         let module_env = self.parent.env.get_module(*mid);
                         let fun_decl = module_env.get_spec_fun(*fid);
-                        used_spec_vars.extend(
-                            fun_decl
-                                .used_spec_vars
-                                .iter()
-                                .map(|id| id.instantiate_ref(&inst)),
-                        );
                         used_memory.extend(
                             fun_decl
                                 .used_memory
@@ -2704,12 +2767,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             self.compute_state_usage_for_fun(visited, fid.as_usize());
                         }
                         let fun_decl = &self.spec_funs[fid.as_usize()];
-                        used_spec_vars.extend(
-                            fun_decl
-                                .used_spec_vars
-                                .iter()
-                                .map(|id| id.instantiate_ref(&inst)),
-                        );
                         used_memory.extend(
                             fun_decl
                                 .used_memory
@@ -2731,7 +2788,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 _ => {}
             }
         });
-        (used_spec_vars, used_memory)
+        used_memory
     }
 }
 
@@ -2745,14 +2802,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 cond.kind,
                 ConditionKind::GlobalInvariant(..) | ConditionKind::GlobalInvariantUpdate(..)
             ) {
-                let (spec_var_usage, mem_usage) = self.compute_state_usage_for_exp(None, &cond.exp);
+                let mem_usage = self.compute_state_usage_for_exp(None, &cond.exp);
                 let id = self.parent.env.new_global_id();
                 let Condition { loc, exp, .. } = cond;
                 self.parent.env.add_global_invariant(GlobalInvariant {
                     id,
                     loc,
                     kind: cond.kind,
-                    spec_var_usage,
                     mem_usage,
                     declaring_module: self.module_id,
                     cond: exp,
@@ -2934,7 +2990,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         .remove(&name).unwrap_or_default();
                     Some((
                         StructId::new(name),
-                        self.parent.env.create_struct_data(
+                        self.parent.env.create_move_struct_data(
                             &module,
                             def_idx,
                             name,

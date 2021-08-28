@@ -29,7 +29,9 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
                 .find_module_by_language_storage_id(&raw_module.self_id())
                 .expect("Module not found");
             assert_eq!(m.get_function_count(), other_m.get_function_count());
-            assert_eq!(m.get_struct_count(), other_m.get_struct_count());
+            // other_m can have ghost structs, so only check that we have at least as many
+            // structs as in bytecode.
+            assert!(m.get_struct_count() <= other_m.get_struct_count());
             for (i, _) in raw_module.struct_defs().iter().enumerate() {
                 let idx = StructDefinitionIndex(i as u16);
                 let s = m.get_struct_by_def_idx(idx);

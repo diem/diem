@@ -346,32 +346,24 @@ impl<'a> Analyzer<'a> {
             for ref ty in self.env.get_node_instantiation(node_id) {
                 self.add_type_root(ty);
             }
-            match e {
-                ExpData::Call(node_id, ast::Operation::Function(mid, fid, _), _) => {
-                    let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
-                    // Only if this call has not been processed yet, queue it for future processing.
-                    let module = self.env.get_module(*mid);
-                    let spec_fun = module.get_spec_fun(*fid);
-                    if spec_fun.is_native && !actuals.is_empty() {
-                        // Add module to native modules
-                        self.info
-                            .native_inst
-                            .entry(module.get_id())
-                            .or_default()
-                            .insert(actuals);
-                    } else {
-                        let entry = (mid.qualified(*fid), actuals);
-                        if !self.done_spec_funs.contains(&entry) {
-                            self.todo_spec_funs.push(entry);
-                        }
+            if let ExpData::Call(node_id, ast::Operation::Function(mid, fid, _), _) = e {
+                let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
+                // Only if this call has not been processed yet, queue it for future processing.
+                let module = self.env.get_module(*mid);
+                let spec_fun = module.get_spec_fun(*fid);
+                if spec_fun.is_native && !actuals.is_empty() {
+                    // Add module to native modules
+                    self.info
+                        .native_inst
+                        .entry(module.get_id())
+                        .or_default()
+                        .insert(actuals);
+                } else {
+                    let entry = (mid.qualified(*fid), actuals);
+                    if !self.done_spec_funs.contains(&entry) {
+                        self.todo_spec_funs.push(entry);
                     }
                 }
-                ExpData::SpecVar(node_id, mid, sid, _) => {
-                    let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
-                    let qid = mid.qualified(*sid);
-                    self.info.spec_vars.entry(qid).or_default().insert(actuals);
-                }
-                _ => {}
             }
         });
     }

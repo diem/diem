@@ -1,162 +1,145 @@
 module 0x42::TestGlobalVars {
 
-    /*
-    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
-      drop it in which case the test should be removed.
+    use Std::Signer;
+
+    // ================================================================================
+    // Counting
 
     spec module {
-        pragma verify = true;
+        global sum_of_T: u64 = 0;
     }
 
-    spec module {
-        global sum_of_T: u64;
-    }
-
-    resource struct T {
+    struct T has key {
       i: u64,
     }
-    spec T {
-      invariant pack sum_of_T = sum_of_T + i;
-      invariant unpack sum_of_T = sum_of_T - i;
+
+    fun add() acquires T {
+        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i + 1
+    }
+    spec add {
+        update sum_of_T = sum_of_T + 1;
     }
 
-    // ----------
-    // Pack tests
-    // ----------
-
-    fun pack_correct(): T {
-        T {i: 2}
+    fun sub() acquires T {
+        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i - 1
     }
-    spec pack_correct {
-        ensures sum_of_T == old(sum_of_T) + 2;
+    spec sub {
+        update sum_of_T = sum_of_T - 1;
     }
 
-    fun pack_incorrect(): T {
-        T {i: 2}
+    fun call_add_sub() acquires T {
+        add(); add(); sub();
     }
-    spec pack_incorrect {
-        ensures sum_of_T == old(sum_of_T) + 1;
-        ensures result.i == 2;
-    }
-
-
-    // ------------
-    // Unpack tests
-    // ------------
-
-    fun unpack_correct(t: T): u64 {
-        let T {i: x} = t;
-        x
-    }
-    spec unpack_correct {
-        ensures sum_of_T == old(sum_of_T) - old(t.i);
-        ensures result == old(t.i);
+    spec call_add_sub {
+        ensures sum_of_T == 1;
     }
 
-    fun unpack_incorrect(t: T): u64 {
-        let T {i: x} = t;
-        x
+    fun call_add_sub_invalid() acquires T {
+        add(); sub(); add();
     }
-    spec unpack_incorrect {
-        ensures sum_of_T == old(sum_of_T);
-        ensures result == old(t.i);
+    spec call_add_sub_invalid {
+        ensures sum_of_T == 2;
     }
 
-    // ------------
-    // Update tests
-    // ------------
+    // ================================================================================
+    // Access Control
 
-    fun update_valid_still_mutating(t: &mut T) {
-        t.i = t.i + 3;
-    }
-    spec update_valid_still_mutating {
-        // sum should not change because we have not ended mutating t
-        ensures sum_of_T == old(sum_of_T);
+    spec module {
+        // Indicates whether a specific access has been verified. This is kept intentionally
+        // uninitialized so the prover will find situations where this is false but access is required.
+        global access_verified: bool;
     }
 
-    fun update_correct(): T {
-        let t = T {i: 0};
-        update_valid_still_mutating(&mut t);
-        t
+    fun assert_access(s: &signer) {
+        // Do some assertions which validate access
+        assert(Signer::address_of(s) == @0, 1);
     }
-    spec update_correct {
-        // sum should change because we have ended mutating t
-        ensures sum_of_T == old(sum_of_T) + 3;
-    }
-
-    fun update_incorrect(): T {
-        let t = T {i: 0};
-        update_valid_still_mutating(&mut t);
-        t
-    }
-    spec update_incorrect {
-        // sum should change because we have ended mutating t
-        ensures sum_of_T == old(sum_of_T);
+    spec assert_access {
+        aborts_if Signer::spec_address_of(s) != @0;
+        update access_verified = true;
     }
 
-
-    // -----------------------------------------------
-    // Test with the combination of pack/unpack/update
-    // -----------------------------------------------
-
-    fun combi_correct(): T {
-        let t = T{i:2};
-        let r = T{i:3};
-        let s = &mut r;
-        s.i = 4;
-        let T {i: _} = t;
-        r
+    fun requires_access() {
+        // Do some things which require access to be validated.
     }
-    spec combi_correct {
-        ensures sum_of_T == old(sum_of_T) + 2 + 3 - 3 + 4 - 2;
+    spec requires_access {
+        requires access_verified;
     }
 
-    fun combi_incorrect(): T {
-        let t = T{i:2};
-        let r = T{i:3};
-        let s = &mut r;
-        s.i = 4;
-        let T {i: _} = t;
-        r
-    }
-    spec combi_incorrect {
-        ensures sum_of_T == old(sum_of_T) + 2;
+    fun do_privileged(s: &signer) {
+        assert_access(s);
+        requires_access();
     }
 
-
-    // ----------------------------------------------
-    // Test with pack/unpack in the absence of update
-    // ----------------------------------------------
-
-    resource struct S {
-      x: u64
-    }
-    spec S {
-        global sum_of_S: u64;
-        // If there are no update invariants, unpack and pack is used during mutation.
-        invariant pack sum_of_S = sum_of_S + x;
-        invariant unpack sum_of_S = sum_of_S - x;
+    fun do_privileged_invalid(_s: &signer) {
+        requires_access();
     }
 
-    fun update_S_correct(): S {
-        let s = S {x: 0};
-        let r = &mut s;
-        r.x = 2;
-        s
-    }
-    spec update_S_correct {
-        ensures sum_of_S == old(sum_of_S) + 2;
+    // ================================================================================
+    // Generic spec vars
+
+    spec module {
+        global type_has_property<X>: bool;
     }
 
-    fun update_S_incorrect(): S {
-        let s = S {x: 0};
-        let r = &mut s;
-        r.x = 2;
-        s
+    fun give_property_to<X>() {
     }
-    spec update_S_incorrect {
-        ensures sum_of_S == old(sum_of_S) + 1;
+    spec give_property_to {
+        update type_has_property<X> = true;
     }
 
-    */
+    fun expect_property_of_bool() {
+        give_property_to<bool>();
+    }
+    spec expect_property_of_bool {
+        ensures type_has_property<bool>;
+    }
+
+    fun expect_property_of_u64_invalid() {
+        give_property_to<bool>();
+    }
+    spec expect_property_of_u64_invalid {
+        ensures type_has_property<u64>;
+    }
+
+    // ================================================================================
+    // Invariants and spec vars
+
+    spec module {
+        global limit: num = 2;
+    }
+
+    struct R has key { v: u64 }
+
+    invariant global<R>(@0).v <= limit;
+
+    fun publish(s: &signer) {
+        move_to<R>(s, R{v: 2});
+    }
+    spec publish {
+        // TODO: this hack is currently required because spec_instrumentation does not inject assumptions for
+        //   memory used only by invariants which are injected into the code, but not the original code.
+        //   This is a general bug not related to spec vars. Since the function `publish` does not directly
+        //   reference `limit, but only the invariant which is injected, memory usage analysis does not
+        //   report this dependency on limit. The below forces the analysis to see this dependency.
+        ensures limit == limit;
+    }
+
+    fun update_invalid() acquires R {
+        borrow_global_mut<R>(@0).v = 3;
+    }
+    spec update_invalid {
+        // TODO: see above
+        ensures limit == limit;
+    }
+
+    fun limit_change_invalid(s: &signer) {
+        publish(s);
+    }
+    spec limit_change_invalid {
+        update limit = 1;
+    }
+
+    // ================================================================================
+    // TODO: implement and test opaque
 }

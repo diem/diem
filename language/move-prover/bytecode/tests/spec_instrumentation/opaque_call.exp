@@ -192,7 +192,7 @@ fun Test::incr_twice() {
 
 ==== spec-instrumenter input specs ====
 
-fun Test::get_and_incr[baseline[
+fun Test::get_and_incr[baseline]
 spec {
   requires Neq<address>($t0, 0);
   aborts_if Not(exists<Test::R>($t0));
@@ -202,7 +202,7 @@ spec {
   ensures Eq<u64>(result0(), select Test::R.v(global<Test::R>($t0)));
 }
 
-fun Test::get_and_incr[verification[
+fun Test::get_and_incr[verification]
 spec {
   requires Neq<address>($t0, 0);
   aborts_if Not(exists<Test::R>($t0));
@@ -212,13 +212,13 @@ spec {
   ensures Eq<u64>(result0(), select Test::R.v(global<Test::R>($t0)));
 }
 
-fun Test::incr_twice[baseline[
+fun Test::incr_twice[baseline]
 spec {
   aborts_if Not(exists<Test::R>(1));
   ensures Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(1))), 2));
 }
 
-fun Test::incr_twice[verification[
+fun Test::incr_twice[verification]
 spec {
   aborts_if Not(exists<Test::R>(1));
   ensures Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(Old<Test::R>(global<Test::R>(1))), 2));

@@ -15,7 +15,7 @@ use crate::{
     },
     exp_generator::ExpGenerator,
     exp_rewriter::ExpRewriterFunctions,
-    model::{FunctionEnv, GlobalId, Loc, ModuleId, NodeId, QualifiedInstId, SpecVarId, StructId},
+    model::{FunctionEnv, GlobalId, Loc, NodeId, QualifiedInstId, SpecVarId, StructId},
     pragmas::{
         ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
         CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
@@ -68,6 +68,7 @@ pub struct TranslatedSpec {
     pub modifies: Vec<(Loc, Exp)>,
     pub invariants: Vec<(Loc, GlobalId, Exp)>,
     pub lets: Vec<(Loc, bool, TempIndex, Exp)>,
+    pub updates: Vec<(Loc, Exp, Exp)>,
 }
 
 impl TranslatedSpec {
@@ -337,6 +338,18 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             self.result.pre.push((cond.loc.clone(), exp));
         }
 
+        // Next process updates. They come between pre and post conditions.
+        for cond in spec
+            .filter_kind(ConditionKind::Update)
+            .filter(is_applicable)
+        {
+            self.in_post_state = false;
+            let lhs =
+                self.translate_exp(&self.auto_trace(&cond.loc, &cond.additional_exps[0]), false);
+            let rhs = self.translate_exp(&self.auto_trace(&cond.loc, &cond.exp), false);
+            self.result.updates.push((cond.loc.clone(), lhs, rhs));
+        }
+
         // Aborts conditions are translated in post state when they aren't handled for a call
         // but for a definition. Otherwise, they are translated for a call of an opaque function
         // and are evaluated in pre state.
@@ -485,15 +498,6 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         }
     }
 
-    fn save_spec_var(&mut self, qid: QualifiedInstId<SpecVarId>) -> MemoryLabel {
-        let builder = &mut self.builder;
-        *self
-            .result
-            .saved_spec_vars
-            .entry(qid)
-            .or_insert_with(|| builder.global_env().new_global_id())
-    }
-
     fn save_memory(&mut self, qid: QualifiedInstId<StructId>) -> MemoryLabel {
         let builder = &mut self.builder;
         *self
@@ -636,29 +640,6 @@ impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b
         }
     }
 
-    fn rewrite_spec_var(
-        &mut self,
-        id: NodeId,
-        mid: ModuleId,
-        vid: SpecVarId,
-        label: &Option<MemoryLabel>,
-    ) -> Option<Exp> {
-        if self.in_old && label.is_none() {
-            let inst = self.builder.global_env().get_node_instantiation(id);
-            Some(
-                ExpData::SpecVar(
-                    id,
-                    mid,
-                    vid,
-                    Some(self.save_spec_var(mid.qualified_inst(vid, inst))),
-                )
-                .into_exp(),
-            )
-        } else {
-            None
-        }
-    }
-
     fn rewrite_call(&mut self, id: NodeId, oper: &Operation, args: &[Exp]) -> Option<Exp> {
         use ExpData::*;
         use Operation::*;
@@ -680,22 +661,18 @@ impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b
                 .into_exp(),
             ),
             Function(mid, fid, None) if self.in_old => {
-                let (used_memory, used_spec_vars) = {
+                let used_memory = {
                     let module_env = self.builder.global_env().get_module(*mid);
                     let decl = module_env.get_spec_fun(*fid);
                     // Unfortunately, the below clones are necessary, as we cannot borrow decl
                     // and at the same time mutate self later.
-                    (decl.used_memory.clone(), decl.used_spec_vars.clone())
+                    decl.used_memory.clone()
                 };
                 let inst = self.builder.global_env().get_node_instantiation(id);
                 let mut labels = vec![];
                 for mem in used_memory {
                     let mem = mem.instantiate(&inst);
                     labels.push(self.save_memory(mem));
-                }
-                for var in used_spec_vars {
-                    let var = var.instantiate(&inst);
-                    labels.push(self.save_spec_var(var));
                 }
                 Some(Call(id, Function(*mid, *fid, Some(labels)), args.to_owned()).into_exp())
             }

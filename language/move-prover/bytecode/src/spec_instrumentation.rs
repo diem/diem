@@ -23,7 +23,8 @@ use crate::{
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{
-        AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
+        AbortAction, AssignKind, AttrId, BorrowEdge, BorrowNode, Bytecode, HavocKind, Label,
+        Operation, PropKind,
     },
     usage_analysis, verification_analysis_v2,
 };
@@ -32,6 +33,7 @@ use move_model::{
     exp_generator::ExpGenerator,
     spec_translator::{SpecTranslator, TranslatedSpec},
 };
+use num::{BigUint, Zero};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -163,7 +165,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
                     if !spec.conditions.is_empty() {
                         writeln!(
                             f,
-                            "fun {}[{}[\n{}",
+                            "fun {}[{}]\n{}",
                             fun.get_full_name_str(),
                             variant,
                             fun.module_env.env.display(spec)
@@ -325,6 +327,41 @@ impl<'a> Instrumenter<'a> {
                     })
                     .expect("quant defined");
                 self.builder.emit_with(move |id| Prop(id, Assume, exp));
+
+                // If this is ghost memory, assume it exists, and if it has an initializer,
+                // assume it has this value.
+                if let Some(spec_var) = struct_env.get_ghost_memory_spec_var() {
+                    let mem_ty = mem.to_type();
+                    let zero_addr = self.builder.mk_address_const(BigUint::zero());
+                    let exists = self.builder.mk_call_with_inst(
+                        &BOOL_TYPE,
+                        vec![mem_ty.clone()],
+                        ast::Operation::Exists(None),
+                        vec![zero_addr.clone()],
+                    );
+                    self.builder.emit_with(move |id| Prop(id, Assume, exists));
+                    let svar_module = self.builder.global_env().get_module(spec_var.module_id);
+                    let svar = svar_module.get_spec_var(spec_var.id);
+                    if let Some(init) = &svar.init {
+                        let mem_val = self.builder.mk_call_with_inst(
+                            &mem_ty,
+                            mem.inst.clone(),
+                            ast::Operation::Pack(mem.module_id, mem.id),
+                            vec![init.clone()],
+                        );
+                        let mem_access = self.builder.mk_call_with_inst(
+                            &mem_ty,
+                            vec![mem_ty.clone()],
+                            ast::Operation::Global(None),
+                            vec![zero_addr],
+                        );
+                        let eq_with_init = self
+                            .builder
+                            .mk_bool_call(ast::Operation::Identical, vec![mem_access, mem_val]);
+                        self.builder
+                            .emit_with(move |id| Prop(id, Assume, eq_with_init));
+                    }
+                }
             }
         }
 
@@ -725,6 +762,80 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
+    fn emit_updates(&mut self, spec: &TranslatedSpec, targs: &[Type]) {
+        for (loc, lhs, rhs) in &spec.updates {
+            // Emit update of lhs, which is guaranteed to represent a ghost memory access.
+            // We generate the actual byte code operations which would appear on a regular
+            // memory update, such that subsequent phases (like invariant instrumentation)
+            // interpret this like any other memory access.
+            self.builder.set_loc(loc.clone());
+            self.emit_traces(spec, targs, lhs);
+            let lhs = self.instantiate_exp(lhs.to_owned(), targs);
+            self.emit_traces(spec, targs, rhs);
+            let rhs = self.instantiate_exp(rhs.to_owned(), targs);
+
+            // Extract the ghost mem from lhs
+            let (ghost_mem, _field_id, addr) = lhs
+                .extract_ghost_mem_access(self.builder.global_env())
+                .expect("lhs of update valid");
+            let ghost_mem_ty = ghost_mem.to_type();
+
+            // Construct new ghost mem struct value from rhs. We assign the struct value
+            // directly, ignoring the `_field_id`. This is currently possible because
+            // each ghost memory struct contains exactly one field. Should this change,
+            // this code here needs to be generalized.
+            let (rhs_temp, _) = self.builder.emit_let(self.builder.mk_call_with_inst(
+                &ghost_mem_ty,
+                ghost_mem.inst.clone(),
+                ast::Operation::Pack(ghost_mem.module_id, ghost_mem.id),
+                vec![rhs],
+            ));
+
+            // Update memory. We create a mut ref for the location then write the value back to it.
+            let (addr_temp, _) = self.builder.emit_let(addr);
+            let mem_ref = self
+                .builder
+                .new_temp(Type::Reference(true, Box::new(ghost_mem_ty)));
+            // mem_ref = borrow_global_mut<ghost_mem>(addr)
+            self.builder.emit_with(|id| {
+                Bytecode::Call(
+                    id,
+                    vec![mem_ref],
+                    Operation::BorrowGlobal(
+                        ghost_mem.module_id,
+                        ghost_mem.id,
+                        ghost_mem.inst.clone(),
+                    ),
+                    vec![addr_temp],
+                    None,
+                )
+            });
+            // *mem_ref = rhs_temp
+            self.builder.emit_with(|id| {
+                Bytecode::Call(
+                    id,
+                    vec![],
+                    Operation::WriteRef,
+                    vec![mem_ref, rhs_temp],
+                    None,
+                )
+            });
+            // write_back[GhostMem](mem_ref)
+            self.builder.emit_with(|id| {
+                Bytecode::Call(
+                    id,
+                    vec![],
+                    Operation::WriteBack(
+                        BorrowNode::GlobalRoot(ghost_mem.clone()),
+                        BorrowEdge::Direct,
+                    ),
+                    vec![mem_ref],
+                    None,
+                )
+            });
+        }
+    }
+
     fn emit_lets(&mut self, spec: &TranslatedSpec, targs: &[Type], post_state: bool) {
         use Bytecode::*;
         let lets = spec
@@ -864,6 +975,10 @@ impl<'a> Instrumenter<'a> {
             .set_loc(self.builder.fun_env.get_loc().at_end());
         let ret_label = self.ret_label;
         self.builder.emit_with(|id| Label(id, ret_label));
+
+        // Emit specification variable updates. They are generated for both verified and inlined
+        // function variants, as the evolution of state updates is always the same.
+        self.emit_updates(spec, &[]);
 
         if self.is_verified() {
             // Emit `let` bindings.

@@ -1208,20 +1208,29 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
             name,
             type_parameters: pty_params,
             type_: t,
+            init,
         } => {
             let type_parameters = type_parameters(context, pty_params);
             let old_aliases = context
                 .aliases
                 .shadow_for_type_parameters(type_parameters.iter().map(|(name, _)| name));
             let t = type_(context, t);
+            let i = init.map(|e| exp_(context, e));
             context.set_to_outer_scope(old_aliases);
             EM::Variable {
                 is_global,
                 name,
                 type_parameters,
                 type_: t,
+                init: i,
             }
         }
+        PM::Update { lhs, rhs } => {
+            let lhs = exp_(context, lhs);
+            let rhs = exp_(context, rhs);
+            EM::Update { lhs, rhs }
+        }
+
         PM::Let {
             name,
             post_state: old,
@@ -2078,6 +2087,7 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
         // And will error in the Move prover
         M::Function { .. }
         | M::Variable { .. }
+        | M::Update { .. }
         | M::Let { .. }
         | M::Include { .. }
         | M::Apply { .. }

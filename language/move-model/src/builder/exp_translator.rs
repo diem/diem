@@ -7,7 +7,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use num::{BigInt, BigUint, FromPrimitive};
+use num::{BigInt, BigUint, FromPrimitive, Zero};
 
 use move_core_types::value::MoveValue;
 use move_ir_types::location::Spanned;
@@ -1061,14 +1061,39 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             let ty = entry.type_.clone();
             let module_id = entry.module_id;
-            let var_id = entry.var_id;
             let instantiation = self.translate_types(type_args);
             let ty = ty.instantiate(&instantiation);
             let ty = self.check_type(loc, &ty, expected_type, "in spec var expression");
-            let id = self.new_node_id_with_type_loc(&ty, loc);
-            // Remember the instantiation as an attribute on the expression node.
-            self.set_node_instantiation(id, instantiation);
-            return ExpData::SpecVar(id, module_id, var_id, None);
+            // Create expression global<GhostMem>(@0).v which backs up the ghost variable.
+            let ghost_mem_id = StructId::new(
+                self.parent
+                    .parent
+                    .env
+                    .ghost_memory_name(global_var_sym.symbol),
+            );
+            let ghost_mem_ty = Type::Struct(module_id, ghost_mem_id, instantiation.clone());
+            let zero_addr = ExpData::Value(
+                self.new_node_id_with_type_loc(&Type::Primitive(PrimitiveType::Address), loc),
+                Value::Address(BigUint::zero()),
+            );
+            let global_id = self.new_node_id_with_type_loc(&ghost_mem_ty, loc);
+            self.set_node_instantiation(global_id, vec![ghost_mem_ty]);
+            let global_access = ExpData::Call(
+                global_id,
+                Operation::Global(None),
+                vec![zero_addr.into_exp()],
+            );
+            let select_id = self.new_node_id_with_type_loc(&ty, loc);
+            self.set_node_instantiation(select_id, instantiation);
+            return ExpData::Call(
+                select_id,
+                Operation::Select(
+                    module_id,
+                    ghost_mem_id,
+                    FieldId::new(self.symbol_pool().make("v")),
+                ),
+                vec![global_access.into_exp()],
+            );
         }
 
         self.error(

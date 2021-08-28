@@ -1,0 +1,70 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+   ┌─ tests/sources/functional/global_vars.move:41:9
+   │
+41 │         ensures sum_of_T == 2;
+   │         ^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/global_vars.move:37: call_add_sub_invalid
+   =     at tests/sources/functional/global_vars.move:38: call_add_sub_invalid
+   =     at tests/sources/functional/global_vars.move:17: add
+   =     at tests/sources/functional/global_vars.move:18: add
+   =     at tests/sources/functional/global_vars.move:20
+   =     at tests/sources/functional/global_vars.move:24: sub
+   =     at tests/sources/functional/global_vars.move:25: sub
+   =     at tests/sources/functional/global_vars.move:27
+   =     at tests/sources/functional/global_vars.move:17: add
+   =     at tests/sources/functional/global_vars.move:18: add
+   =     at tests/sources/functional/global_vars.move:20
+   =     at tests/sources/functional/global_vars.move:39: call_add_sub_invalid
+   =     at tests/sources/functional/global_vars.move:41
+
+error: precondition does not hold at this call
+   ┌─ tests/sources/functional/global_vars.move:66:9
+   │
+66 │         requires access_verified;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/global_vars.move:74: do_privileged_invalid
+   =         _s = <redacted>
+   =     at tests/sources/functional/global_vars.move:66
+
+error: post-condition does not hold
+    ┌─ tests/sources/functional/global_vars.move:102:9
+    │
+102 │         ensures type_has_property<u64>;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/global_vars.move:98: expect_property_of_u64_invalid
+    =     at tests/sources/functional/global_vars.move:99: expect_property_of_u64_invalid
+    =     at tests/sources/functional/global_vars.move:86: give_property_to
+    =     at tests/sources/functional/global_vars.move:88
+    =     at tests/sources/functional/global_vars.move:100: expect_property_of_u64_invalid
+    =     at tests/sources/functional/global_vars.move:102
+
+error: global memory invariant does not hold
+    ┌─ tests/sources/functional/global_vars.move:114:5
+    │
+114 │     invariant global<R>(@0).v <= limit;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/global_vars.move:136: limit_change_invalid
+    =         s = <redacted>
+    =     at tests/sources/functional/global_vars.move:137: limit_change_invalid
+    =     at tests/sources/functional/global_vars.move:116: publish
+    =         s = <redacted>
+    =     at tests/sources/functional/global_vars.move:117: publish
+    =     at tests/sources/functional/global_vars.move:118: publish
+    =     at tests/sources/functional/global_vars.move:138: limit_change_invalid
+    =     at tests/sources/functional/global_vars.move:140
+    =     at tests/sources/functional/global_vars.move:114
+
+error: global memory invariant does not hold
+    ┌─ tests/sources/functional/global_vars.move:114:5
+    │
+114 │     invariant global<R>(@0).v <= limit;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/global_vars.move:128: update_invalid
+    =     at tests/sources/functional/global_vars.move:129: update_invalid
+    =     at tests/sources/functional/global_vars.move:114

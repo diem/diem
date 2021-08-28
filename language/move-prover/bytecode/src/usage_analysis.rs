@@ -18,6 +18,7 @@ use move_model::{
 };
 
 use itertools::Itertools;
+use move_model::ast::{ConditionKind, Spec};
 use paste::paste;
 use std::{collections::BTreeSet, fmt, fmt::Formatter};
 
@@ -41,16 +42,15 @@ pub struct MemoryUsage {
 
 #[derive(Default, Clone)]
 pub struct UsageState {
-    // The memory accessed by this function.
+    /// The memory accessed by this function. This is the union of the three individual fields
+    /// below.
     pub accessed: MemoryUsage,
-    // The memory modified by this function.
+    /// The memory modified by this function.
     pub modified: MemoryUsage,
-    // The memory mentioned by the assume expressions in this function.
+    /// The memory mentioned by the assume expressions in this function.
     pub assumed: MemoryUsage,
-    // The memory mentioned by the assert expressions in this function.
+    /// The memory mentioned by the assert expressions in this function.
     pub asserted: MemoryUsage,
-    // The union of the above sets
-    pub all: MemoryUsage,
 }
 
 impl MemoryUsage {
@@ -140,7 +140,7 @@ macro_rules! generate_inserter {
             #[allow(dead_code)]
             fn [<$method _ $field>](&mut self, mem: QualifiedInstId<StructId>) {
                 self.$field.$method(mem.clone());
-                self.all.$method(mem);
+                self.accessed.$method(mem);
             }
 
             #[allow(dead_code)]
@@ -195,10 +195,8 @@ impl AbstractDomain for UsageState {
             self.modified.join(&other.modified),
             self.assumed.join(&other.assumed),
             self.asserted.join(&other.asserted),
-            self.all.join(&other.all),
         ) {
             (
-                JoinResult::Unchanged,
                 JoinResult::Unchanged,
                 JoinResult::Unchanged,
                 JoinResult::Unchanged,
@@ -266,12 +264,10 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                 | MoveFrom(mid, sid, inst)
                 | BorrowGlobal(mid, sid, inst) => {
                     let mem = mid.qualified_inst(*sid, inst.to_owned());
-                    state.add_direct_modified(mem.clone());
-                    state.add_direct_accessed(mem);
+                    state.add_direct_modified(mem);
                 }
                 WriteBack(BorrowNode::GlobalRoot(mem), _) => {
                     state.add_direct_modified(mem.clone());
-                    state.add_direct_accessed(mem.clone());
                 }
                 Exists(mid, sid, inst) | GetGlobal(mid, sid, inst) => {
                     let mem = mid.qualified_inst(*sid, inst.to_owned());
@@ -300,6 +296,37 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
     }
 }
 
+impl<'a> MemoryUsageAnalysis<'a> {
+    /// Compute usage information for the given spec. This spec is injected in later
+    /// phases into the code, but we need to account for it's memory usage already here
+    /// as spec injection itself depends on this information.
+    fn compute_spec_usage(&self, spec: &Spec, state: &mut UsageState) {
+        use ConditionKind::*;
+        for cond in &spec.conditions {
+            let mut used_memory = cond.exp.used_memory(self.cache.global_env());
+            for exp in &cond.additional_exps {
+                used_memory.extend(exp.used_memory(self.cache.global_env()));
+            }
+            match &cond.kind {
+                Ensures | AbortsIf | Emits => {
+                    state.add_direct_asserted_iter(used_memory.into_iter().map(|(usage, _)| usage));
+                }
+                _ => {
+                    state.add_direct_assumed_iter(used_memory.into_iter().map(|(usage, _)| usage));
+                }
+            }
+            if matches!(cond.kind, Update) {
+                // Add target of spec update to modified memory
+                if let Some((mem, _, _)) =
+                    cond.additional_exps[0].extract_ghost_mem_access(self.cache.global_env())
+                {
+                    state.add_direct_modified(mem);
+                }
+            }
+        }
+    }
+}
+
 pub struct UsageProcessor();
 
 impl UsageProcessor {
@@ -318,7 +345,8 @@ impl FunctionTargetProcessor for UsageProcessor {
         let func_target = FunctionTarget::new(func_env, &data);
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = MemoryUsageAnalysis { cache };
-        let summary = analysis.summarize(&func_target, UsageState::default());
+        let mut summary = analysis.summarize(&func_target, UsageState::default());
+        analysis.compute_spec_usage(func_env.get_spec(), &mut summary);
         data.annotations.set(summary);
         data
     }

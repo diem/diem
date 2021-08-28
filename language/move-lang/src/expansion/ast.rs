@@ -235,6 +235,11 @@ pub enum SpecBlockMember_ {
         name: Name,
         type_parameters: Vec<(Name, AbilitySet)>,
         type_: Type,
+        init: Option<Exp>,
+    },
+    Update {
+        lhs: Exp,
+        rhs: Exp,
     },
     Let {
         name: Name,
@@ -1004,6 +1009,7 @@ impl AstDebug for SpecBlockMember_ {
                 name,
                 type_parameters,
                 type_,
+                init: _,
             } => {
                 if *is_global {
                     w.write("global ");
@@ -1014,6 +1020,12 @@ impl AstDebug for SpecBlockMember_ {
                 type_parameters.ast_debug(w);
                 w.write(": ");
                 type_.ast_debug(w);
+            }
+            SpecBlockMember_::Update { lhs, rhs } => {
+                w.write("update ");
+                lhs.ast_debug(w);
+                w.write(" = ");
+                rhs.ast_debug(w);
             }
             SpecBlockMember_::Let {
                 name,

@@ -81,6 +81,9 @@ pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
 /// Names used in the bytecode/AST to represent the main function of a script
 pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
 
+/// A prefix used for structs which are backing specification ("ghost") memory.
+pub const GHOST_MEMORY_PREFIX: &str = "Ghost$";
+
 // =================================================================================================
 /// # Locations
 
@@ -477,8 +480,6 @@ pub struct GlobalEnv {
     global_id_counter: RefCell<usize>,
     /// A map of global invariants.
     global_invariants: BTreeMap<GlobalId, GlobalInvariant>,
-    /// A map from spec vars to global invariants which refer to them.
-    global_invariants_for_spec_var: BTreeMap<QualifiedInstId<SpecVarId>, BTreeSet<GlobalId>>,
     /// A map from global memories to global invariants which refer to them.
     global_invariants_for_memory: BTreeMap<QualifiedInstId<StructId>, BTreeSet<GlobalId>>,
     /// A set containing spec functions which are called/used in specs. Note that these
@@ -534,7 +535,6 @@ impl GlobalEnv {
             global_id_counter: RefCell::new(0),
             global_invariants: Default::default(),
             global_invariants_for_memory: Default::default(),
-            global_invariants_for_spec_var: Default::default(),
             used_spec_funs: BTreeSet::new(),
             extensions: Default::default(),
         }
@@ -857,12 +857,6 @@ impl GlobalEnv {
     /// Adds a global invariant to this environment.
     pub fn add_global_invariant(&mut self, inv: GlobalInvariant) {
         let id = inv.id;
-        for spec_var in &inv.spec_var_usage {
-            self.global_invariants_for_spec_var
-                .entry(spec_var.clone())
-                .or_insert_with(BTreeSet::new)
-                .insert(id);
-        }
         for memory in &inv.mem_usage {
             self.global_invariants_for_memory
                 .entry(memory.clone())
@@ -935,7 +929,7 @@ impl GlobalEnv {
         module: CompiledModule,
         source_map: SourceMap,
         named_constants: BTreeMap<NamedConstantId, NamedConstantData>,
-        struct_data: BTreeMap<StructId, StructData>,
+        mut struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
         spec_funs: Vec<SpecFunDecl>,
@@ -957,7 +951,10 @@ impl GlobalEnv {
         let name = ModuleName::from_str(&module.self_id().address().to_string(), effective_name);
         let struct_idx_to_id: BTreeMap<StructDefinitionIndex, StructId> = struct_data
             .iter()
-            .map(|(id, data)| (data.def_idx, *id))
+            .filter_map(|(id, data)| match &data.info {
+                StructInfo::Declared { def_idx, .. } => Some((*def_idx, *id)),
+                StructInfo::Generated { .. } => None,
+            })
             .collect();
         let function_idx_to_id: BTreeMap<FunctionDefinitionIndex, FunId> = function_data
             .iter()
@@ -968,6 +965,16 @@ impl GlobalEnv {
             .enumerate()
             .map(|(i, v)| (SpecVarId::new(i), v))
             .collect();
+        // Generate ghost memory struct declarations for spec vars.
+        for (svar_id, svar) in &spec_vars {
+            let data = self.create_ghost_struct_data(
+                svar.loc.clone(),
+                svar.name,
+                *svar_id,
+                svar.type_.clone(),
+            );
+            struct_data.insert(StructId::new(data.name), data);
+        }
         let spec_funs: BTreeMap<SpecFunId, SpecFunDecl> = spec_funs
             .into_iter()
             .enumerate()
@@ -1036,9 +1043,9 @@ impl GlobalEnv {
         }
     }
 
-    /// Creates data for a struct. Currently all information is contained in the byte code. This is
-    /// a helper for adding a new module to the environment.
-    pub fn create_struct_data(
+    /// Creates data for a struct declared in Move. Currently all information is contained in
+    /// the byte code. This is a helper for adding a new module to the environment.
+    pub fn create_move_struct_data(
         &self,
         module: &CompiledModule,
         def_idx: StructDefinitionIndex,
@@ -1055,26 +1062,60 @@ impl GlobalEnv {
                 let name = self
                     .symbol_pool
                     .make(module.identifier_at(field.name).as_str());
-                map.insert(
-                    FieldId(name),
-                    FieldData {
-                        name,
-                        def_idx,
-                        offset,
-                    },
-                );
+                let info = FieldInfo::Declared { def_idx };
+                map.insert(FieldId(name), FieldData { name, offset, info });
             }
             map
         } else {
             BTreeMap::new()
         };
+        let info = StructInfo::Declared {
+            def_idx,
+            handle_idx,
+        };
         StructData {
             name,
             loc,
-            def_idx,
-            handle_idx,
+            info,
             field_data,
             spec,
+        }
+    }
+
+    /// Return the name of the ghost memory associated with spec var.
+    pub fn ghost_memory_name(&self, spec_var_name: Symbol) -> Symbol {
+        self.symbol_pool.make(&format!(
+            "{}{}",
+            GHOST_MEMORY_PREFIX,
+            self.symbol_pool.string(spec_var_name)
+        ))
+    }
+
+    /// Create a ghost memory struct declaration.
+    fn create_ghost_struct_data(
+        &self,
+        loc: Loc,
+        var_name: Symbol,
+        var_id: SpecVarId,
+        ty: Type,
+    ) -> StructData {
+        let field_name = self.symbol_pool.make("v");
+        let mut field_data = BTreeMap::new();
+        let field_id = FieldId::new(field_name);
+        field_data.insert(
+            field_id,
+            FieldData {
+                name: field_name,
+                offset: 0,
+                info: FieldInfo::Generated { type_: ty },
+            },
+        );
+        StructData {
+            name: self.ghost_memory_name(var_name),
+            loc,
+            info: StructInfo::Generated { spec_var: var_id },
+            field_data,
+            spec: Spec::default(),
         }
     }
 
@@ -1284,21 +1325,21 @@ impl GlobalEnv {
         sid: StructId,
         ts: &[Type],
     ) -> Option<language_storage::StructTag> {
-        self.get_struct_type(mid, sid, ts).into_struct_tag()
+        self.get_struct_type(mid, sid, ts)?.into_struct_tag()
     }
 
     /// Attempt to compute a struct type for (`mid`, `sid`, `ts`).
-    pub fn get_struct_type(&self, mid: ModuleId, sid: StructId, ts: &[Type]) -> MType {
+    pub fn get_struct_type(&self, mid: ModuleId, sid: StructId, ts: &[Type]) -> Option<MType> {
         let menv = self.get_module(mid);
-        MType::Struct {
+        Some(MType::Struct {
             address: *menv.self_address(),
             module: menv.get_identifier(),
-            name: menv.get_struct(sid).get_identifier(),
+            name: menv.get_struct(sid).get_identifier()?,
             type_arguments: ts
                 .iter()
                 .map(|t| t.clone().into_normalized_type(self).unwrap())
                 .collect(),
-        }
+        })
     }
 
     /// Gets the location of the given node.
@@ -1802,12 +1843,13 @@ impl<'env> ModuleEnv<'env> {
 
     /// Gets a StructEnv in this module by identifier
     pub fn find_struct_by_identifier(&self, identifier: Identifier) -> Option<StructId> {
+        let some_id = Some(identifier);
         for data in self.data.struct_data.values() {
             let senv = StructEnv {
                 module_env: self.clone(),
                 data,
             };
-            if senv.get_identifier() == identifier {
+            if senv.get_identifier() == some_id {
                 return Some(senv.get_id());
             }
         }
@@ -2041,17 +2083,28 @@ pub struct StructData {
     /// The location of this struct.
     loc: Loc,
 
-    /// The definition index of this struct in its module.
-    def_idx: StructDefinitionIndex,
-
-    /// The handle index of this struct in its module.
-    handle_idx: StructHandleIndex,
+    /// Information about this struct.
+    info: StructInfo,
 
     /// Field definitions.
     field_data: BTreeMap<FieldId, FieldData>,
 
     // Associated specification.
     spec: Spec,
+}
+
+#[derive(Debug)]
+enum StructInfo {
+    /// Struct is declared in Move and info found in VM format.
+    Declared {
+        /// The definition index of this struct in its module.
+        def_idx: StructDefinitionIndex,
+
+        /// The handle index of this struct in its module.
+        handle_idx: StructHandleIndex,
+    },
+    /// Struct is generated by the prover.
+    Generated { spec_var: SpecVarId },
 }
 
 #[derive(Debug, Clone)]
@@ -2079,17 +2132,20 @@ impl<'env> StructEnv<'env> {
     }
 
     /// Returns the VM identifier for this struct
-    pub fn get_identifier(&self) -> Identifier {
-        let handle = self
-            .module_env
-            .data
-            .module
-            .struct_handle_at(self.data.handle_idx);
-        self.module_env
-            .data
-            .module
-            .identifier_at(handle.name)
-            .to_owned()
+    pub fn get_identifier(&self) -> Option<Identifier> {
+        match &self.data.info {
+            StructInfo::Declared { handle_idx, .. } => {
+                let handle = self.module_env.data.module.struct_handle_at(*handle_idx);
+                Some(
+                    self.module_env
+                        .data
+                        .module
+                        .identifier_at(handle.name)
+                        .to_owned(),
+                )
+            }
+            StructInfo::Generated { .. } => None,
+        }
     }
 
     /// Shortcut for accessing the symbol pool.
@@ -2124,30 +2180,53 @@ impl<'env> StructEnv<'env> {
 
     /// Determines whether this struct is native.
     pub fn is_native(&self) -> bool {
-        let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
-        def.field_information == StructFieldInformation::Native
+        match &self.data.info {
+            StructInfo::Declared { def_idx, .. } => {
+                let def = self.module_env.data.module.struct_def_at(*def_idx);
+                def.field_information == StructFieldInformation::Native
+            }
+            StructInfo::Generated { .. } => false,
+        }
     }
 
     /// Determines whether this struct is the well-known vector type.
     pub fn is_vector(&self) -> bool {
-        let name = self
-            .module_env
-            .env
-            .symbol_pool
-            .string(self.module_env.get_name().name());
+        let name = self.symbol_pool().string(self.module_env.get_name().name());
         let addr = self.module_env.get_name().addr();
         name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
     }
 
+    /// Returns true if this struct is ghost memory for a specification variable.
+    pub fn is_ghost_memory(&self) -> bool {
+        self.symbol_pool()
+            .string(self.data.name)
+            .starts_with(GHOST_MEMORY_PREFIX)
+    }
+
+    /// Get the specification variable associated with this struct if this is ghost memory.
+    pub fn get_ghost_memory_spec_var(&self) -> Option<QualifiedId<SpecVarId>> {
+        if self.is_ghost_memory() {
+            if let StructInfo::Generated { spec_var } = &self.data.info {
+                return Some(self.module_env.get_id().qualified(*spec_var));
+            }
+        }
+        None
+    }
+
     /// Get the abilities of this struct.
     pub fn get_abilities(&self) -> AbilitySet {
-        let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
-        let handle = self
-            .module_env
-            .data
-            .module
-            .struct_handle_at(def.struct_handle);
-        handle.abilities
+        match &self.data.info {
+            StructInfo::Declared { def_idx, .. } => {
+                let def = self.module_env.data.module.struct_def_at(*def_idx);
+                let handle = self
+                    .module_env
+                    .data
+                    .module
+                    .struct_handle_at(def.struct_handle);
+                handle.abilities
+            }
+            StructInfo::Generated { .. } => AbilitySet::ALL,
+        }
     }
 
     /// Determines whether memory-related operations needs to be declared for this struct.
@@ -2205,62 +2284,85 @@ impl<'env> StructEnv<'env> {
 
     /// Whether the type parameter at position `idx` is declared as phantom.
     pub fn is_phantom_parameter(&self, idx: usize) -> bool {
-        let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
-        self.module_env
-            .data
-            .module
-            .struct_handle_at(def.struct_handle)
-            .type_parameters[idx]
-            .is_phantom
+        match &self.data.info {
+            StructInfo::Declared { def_idx, .. } => {
+                let def = self.module_env.data.module.struct_def_at(*def_idx);
+                self.module_env
+                    .data
+                    .module
+                    .struct_handle_at(def.struct_handle)
+                    .type_parameters[idx]
+                    .is_phantom
+            }
+            StructInfo::Generated { .. } => false,
+        }
     }
 
     /// Returns the type parameters associated with this struct.
     pub fn get_type_parameters(&self) -> Vec<TypeParameter> {
         // TODO: we currently do not know the original names of those formals, so we generate them.
-        let view = StructDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env.data.module.struct_def_at(self.data.def_idx),
-        );
-        view.type_parameters()
-            .iter()
-            .enumerate()
-            .map(|(i, k)| {
-                TypeParameter(
-                    self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
-                    AbilityConstraint(k.constraints),
-                )
-            })
-            .collect_vec()
+        let pool = &self.module_env.env.symbol_pool;
+        match &self.data.info {
+            StructInfo::Declared { def_idx, .. } => {
+                let view = StructDefinitionView::new(
+                    &self.module_env.data.module,
+                    self.module_env.data.module.struct_def_at(*def_idx),
+                );
+                view.type_parameters()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, k)| {
+                        TypeParameter(
+                            pool.make(&format!("$tv{}", i)),
+                            AbilityConstraint(k.constraints),
+                        )
+                    })
+                    .collect_vec()
+            }
+            StructInfo::Generated { spec_var } => {
+                let var_decl = self.module_env.get_spec_var(*spec_var);
+                var_decl
+                    .type_params
+                    .iter()
+                    .map(|(n, _)| TypeParameter(*n, AbilityConstraint(AbilitySet::ALL)))
+                    .collect()
+            }
+        }
     }
 
     /// Returns the type parameters associated with this struct, with actual names.
     pub fn get_named_type_parameters(&self) -> Vec<TypeParameter> {
-        let view = StructDefinitionView::new(
-            &self.module_env.data.module,
-            self.module_env.data.module.struct_def_at(self.data.def_idx),
-        );
-        view.type_parameters()
-            .iter()
-            .enumerate()
-            .map(|(i, k)| {
-                let name = self
-                    .module_env
-                    .data
-                    .source_map
-                    .get_struct_source_map(self.data.def_idx)
-                    .ok()
-                    .and_then(|smap| smap.type_parameters.get(i))
-                    .map(|(s, _)| s.clone())
-                    .unwrap_or_else(|| format!("unknown#{}", i));
-                TypeParameter(
-                    self.module_env.env.symbol_pool.make(&name),
-                    AbilityConstraint(k.constraints),
-                )
-            })
-            .collect_vec()
+        match &self.data.info {
+            StructInfo::Declared { def_idx, .. } => {
+                let view = StructDefinitionView::new(
+                    &self.module_env.data.module,
+                    self.module_env.data.module.struct_def_at(*def_idx),
+                );
+                view.type_parameters()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, k)| {
+                        let name = self
+                            .module_env
+                            .data
+                            .source_map
+                            .get_struct_source_map(*def_idx)
+                            .ok()
+                            .and_then(|smap| smap.type_parameters.get(i))
+                            .map(|(s, _)| s.clone())
+                            .unwrap_or_else(|| format!("unknown#{}", i));
+                        TypeParameter(
+                            self.module_env.env.symbol_pool.make(&name),
+                            AbilityConstraint(k.constraints),
+                        )
+                    })
+                    .collect_vec()
+            }
+            StructInfo::Generated { .. } => self.get_type_parameters(),
+        }
     }
 
-    /// Returns true if this struct has specifcation conditions.
+    /// Returns true if this struct has specification conditions.
     pub fn has_conditions(&self) -> bool {
         !self.data.spec.conditions.is_empty()
     }
@@ -2298,11 +2400,22 @@ pub struct FieldData {
     /// The name of this field.
     name: Symbol,
 
-    /// The struct definition index of this field in its module.
-    def_idx: StructDefinitionIndex,
-
     /// The offset of this field.
     offset: usize,
+
+    /// More information about this field
+    info: FieldInfo,
+}
+
+#[derive(Debug)]
+enum FieldInfo {
+    /// The field is declared in Move.
+    Declared {
+        /// The struct definition index of this field in its VM module.
+        def_idx: StructDefinitionIndex,
+    },
+    /// The field is generated by the prover.
+    Generated { type_: Type },
 }
 
 #[derive(Debug)]
@@ -2326,30 +2439,40 @@ impl<'env> FieldEnv<'env> {
     }
 
     /// Returns the VM identifier for this field
-    pub fn get_identifier(&'env self) -> Identifier {
-        let m = &self.struct_env.module_env.data.module;
-        let def = m.struct_def_at(self.data.def_idx);
-        let offset = self.data.offset;
-        FieldDefinitionView::new(m, def.field(offset).expect("Bad field offset"))
-            .name()
-            .to_owned()
+    pub fn get_identifier(&'env self) -> Option<Identifier> {
+        if let FieldInfo::Declared { def_idx } = &self.data.info {
+            let m = &self.struct_env.module_env.data.module;
+            let def = m.struct_def_at(*def_idx);
+            let offset = self.data.offset;
+            Some(
+                FieldDefinitionView::new(m, def.field(offset).expect("Bad field offset"))
+                    .name()
+                    .to_owned(),
+            )
+        } else {
+            None
+        }
     }
 
     /// Get documentation associated with this field.
     pub fn get_doc(&self) -> &str {
-        if let Ok(smap) = self
-            .struct_env
-            .module_env
-            .data
-            .source_map
-            .get_struct_source_map(self.data.def_idx)
-        {
-            let loc = self
+        if let FieldInfo::Declared { def_idx } = &self.data.info {
+            if let Ok(smap) = self
                 .struct_env
                 .module_env
-                .env
-                .to_loc(&smap.fields[self.data.offset]);
-            self.struct_env.module_env.env.get_doc(&loc)
+                .data
+                .source_map
+                .get_struct_source_map(*def_idx)
+            {
+                let loc = self
+                    .struct_env
+                    .module_env
+                    .env
+                    .to_loc(&smap.fields[self.data.offset]);
+                self.struct_env.module_env.env.get_doc(&loc)
+            } else {
+                ""
+            }
         } else {
             ""
         }
@@ -2357,19 +2480,24 @@ impl<'env> FieldEnv<'env> {
 
     /// Gets the type of this field.
     pub fn get_type(&self) -> Type {
-        let struct_def = self
-            .struct_env
-            .module_env
-            .data
-            .module
-            .struct_def_at(self.data.def_idx);
-        let field = match &struct_def.field_information {
-            StructFieldInformation::Declared(fields) => &fields[self.data.offset],
-            StructFieldInformation::Native => unreachable!(),
-        };
-        self.struct_env
-            .module_env
-            .globalize_signature(&field.signature.0)
+        match &self.data.info {
+            FieldInfo::Declared { def_idx } => {
+                let struct_def = self
+                    .struct_env
+                    .module_env
+                    .data
+                    .module
+                    .struct_def_at(*def_idx);
+                let field = match &struct_def.field_information {
+                    StructFieldInformation::Declared(fields) => &fields[self.data.offset],
+                    StructFieldInformation::Native => unreachable!(),
+                };
+                self.struct_env
+                    .module_env
+                    .globalize_signature(&field.signature.0)
+            }
+            FieldInfo::Generated { type_ } => type_.clone(),
+        }
     }
 
     /// Get field offset.

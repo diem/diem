@@ -538,6 +538,10 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
         M::Let { def: e, .. } | M::Include { exp: e, .. } | M::Apply { exp: e, .. } => {
             exp(context, e)
         }
+        M::Update { lhs, rhs } => {
+            exp(context, lhs);
+            exp(context, rhs);
+        }
         // A special treatment to the `pragma friend` declarations.
         //
         // The `pragma friend = <address::module_name::function_name>` notion exists before the

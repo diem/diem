@@ -484,80 +484,80 @@ public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 ==== spec-instrumenter input specs ====
 
-fun A::mutate_at[baseline[
+fun A::mutate_at[baseline]
 spec {
   ensures Eq<u64>(select A::S.x(global<A::S>($t0)), 2);
   aborts_if Not(exists<A::S>($t0));
   modifies global<A::S>($t0);
 }
 
-fun A::mutate_at[verification[
+fun A::mutate_at[verification]
 spec {
   ensures Eq<u64>(select A::S.x(global<A::S>($t0)), 2);
   aborts_if Not(exists<A::S>($t0));
   modifies global<A::S>($t0);
 }
 
-fun A::read_at[baseline[
+fun A::read_at[baseline]
 spec {
   aborts_if Not(exists<A::S>($t0));
   ensures Eq<u64>(result0(), select A::S.x(global<A::S>($t0)));
 }
 
-fun A::read_at[verification[
+fun A::read_at[verification]
 spec {
   aborts_if Not(exists<A::S>($t0));
   ensures Eq<u64>(result0(), select A::S.x(global<A::S>($t0)));
 }
 
-fun B::move_from_test_incorrect[baseline[
+fun B::move_from_test_incorrect[baseline]
 spec {
   modifies global<B::T>($t1);
 }
 
-fun B::move_from_test_incorrect[verification[
+fun B::move_from_test_incorrect[verification]
 spec {
   modifies global<B::T>($t1);
 }
 
-fun B::move_to_test_incorrect[baseline[
+fun B::move_to_test_incorrect[baseline]
 spec {
   modifies global<B::T>($t1);
 }
 
-fun B::move_to_test_incorrect[verification[
+fun B::move_to_test_incorrect[verification]
 spec {
   modifies global<B::T>($t1);
 }
 
-fun B::mutate_S_test1_incorrect[baseline[
+fun B::mutate_S_test1_incorrect[baseline]
 spec {
   requires Neq<address>($t0, $t1);
   modifies global<A::S>($t1);
 }
 
-fun B::mutate_S_test1_incorrect[verification[
+fun B::mutate_S_test1_incorrect[verification]
 spec {
   requires Neq<address>($t0, $t1);
   modifies global<A::S>($t1);
 }
 
-fun B::mutate_S_test2_incorrect[baseline[
+fun B::mutate_S_test2_incorrect[baseline]
 spec {
   modifies global<A::S>($t0);
 }
 
-fun B::mutate_S_test2_incorrect[verification[
+fun B::mutate_S_test2_incorrect[verification]
 spec {
   modifies global<A::S>($t0);
 }
 
-fun B::mutate_at_test_incorrect[baseline[
+fun B::mutate_at_test_incorrect[baseline]
 spec {
   modifies global<B::T>($t1);
 }
 
-fun B::mutate_at_test_incorrect[verification[
+fun B::mutate_at_test_incorrect[verification]
 spec {
   modifies global<B::T>($t1);
 }

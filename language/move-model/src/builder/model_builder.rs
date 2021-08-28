@@ -77,7 +77,7 @@ pub(crate) struct SpecVarEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
     pub var_id: SpecVarId,
-    pub type_params: Vec<Type>,
+    pub type_params: Vec<(Symbol, Type)>,
     pub type_: Type,
 }
 
@@ -183,7 +183,7 @@ impl<'env> ModelBuilder<'env> {
         name: QualifiedSymbol,
         module_id: ModuleId,
         var_id: SpecVarId,
-        type_params: Vec<Type>,
+        type_params: Vec<(Symbol, Type)>,
         type_: Type,
     ) {
         let entry = SpecVarEntry {

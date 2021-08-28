@@ -285,25 +285,6 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
     )
 }
 
-pub fn boogie_global_declarator(
-    env: &GlobalEnv,
-    name: &str,
-    param_count: usize,
-    ty: &Type,
-) -> String {
-    assert!(!ty.is_reference());
-    if param_count > 0 {
-        format!(
-            "{} : [{}]{}",
-            name,
-            (0..param_count).map(|_| "$TypeValue").join(", "),
-            boogie_type(env, ty)
-        )
-    } else {
-        format!("{} : {}", name, boogie_type(env, ty))
-    }
-}
-
 pub fn boogie_byte_blob(_options: &BoogieOptions, val: &[u8]) -> String {
     let args = val.iter().map(|v| format!("{}", *v)).collect_vec();
     if args.is_empty() {

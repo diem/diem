@@ -2297,7 +2297,7 @@ fn parse_spec_target_signature_opt(
 // Parse a spec block member:
 //    SpecBlockMember = <DocComments> ( <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
 //                                   | <SpecInclude> | <SpecApply> | <SpecPragma> | <SpecLet>
-//                                   | <SpecAxiom> )
+//                                   | <SpecUpdate> | <SpecAxiom> )
 fn parse_spec_block_member(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
     tokens.match_doc_comments();
     match tokens.peek() {
@@ -2312,6 +2312,7 @@ fn parse_spec_block_member(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagno
             "apply" => parse_spec_apply(tokens),
             "pragma" => parse_spec_pragma(tokens),
             "global" | "local" => parse_spec_variable(tokens),
+            "update" => parse_spec_update(tokens),
             _ => {
                 // local is optional but supported to be able to declare variables which are
                 // named like the weak keywords above
@@ -2548,7 +2549,11 @@ fn parse_spec_function(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic
 }
 
 // Parse a specification variable.
-//     SpecVariable = ( "global" | "local" )? <Identifier> <OptionalTypeParameters> ":" <Type> ";"
+//     SpecVariable = ( "global" | "local" )?
+//                    <Identifier> <OptionalTypeParameters>
+//                    ":" <Type>
+//                    [ "=" Exp ]  // global only
+//                    ";"
 fn parse_spec_variable(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
     let start_loc = tokens.start_loc();
     let is_global = match tokens.content() {
@@ -2566,6 +2571,13 @@ fn parse_spec_variable(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic
     let type_parameters = parse_optional_type_parameters(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let type_ = parse_type(tokens)?;
+    let init = if is_global && tokens.peek() == Tok::Equal {
+        tokens.advance()?;
+        Some(parse_exp(tokens)?)
+    } else {
+        None
+    };
+
     consume_token(tokens, Tok::Semicolon)?;
     Ok(spanned(
         tokens.file_name(),
@@ -2576,7 +2588,25 @@ fn parse_spec_variable(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic
             name,
             type_parameters,
             type_,
+            init,
         },
+    ))
+}
+
+// Parse a specification update.
+//     SpecUpdate = "update" <Exp> = <Exp> ";"
+fn parse_spec_update(tokens: &mut Lexer) -> Result<SpecBlockMember, Diagnostic> {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, Tok::IdentifierValue)?;
+    let lhs = parse_unary_exp(tokens)?;
+    consume_token(tokens, Tok::Equal)?;
+    let rhs = parse_exp(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        SpecBlockMember_::Update { lhs, rhs },
     ))
 }
 

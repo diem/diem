@@ -7,11 +7,6 @@
 
 use num::{BigInt, BigUint, Num};
 
-use crate::{
-    model::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
-    symbol::{Symbol, SymbolPool},
-    ty::Type,
-};
 use move_binary_format::file_format::CodeOffset;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -22,10 +17,11 @@ use std::{
 use crate::{
     exp_rewriter::ExpRewriterFunctions,
     model::{
-        EnvDisplay, FunId, FunctionVisibility, GlobalEnv, GlobalId, QualifiedInstId, SchemaId,
-        TypeParameter,
+        EnvDisplay, FieldId, FunId, FunctionVisibility, GlobalEnv, GlobalId, Loc, ModuleId, NodeId,
+        QualifiedInstId, SchemaId, SpecFunId, StructId, TypeParameter, GHOST_MEMORY_PREFIX,
     },
-    ty::TypeDisplayContext,
+    symbol::{Symbol, SymbolPool},
+    ty::{Type, TypeDisplayContext},
 };
 use internment::LocalIntern;
 use itertools::Itertools;
@@ -41,6 +37,7 @@ pub struct SpecVarDecl {
     pub name: Symbol,
     pub type_params: Vec<(Symbol, Type)>,
     pub type_: Type,
+    pub init: Option<Exp>,
 }
 
 #[derive(Clone, Debug)]
@@ -51,7 +48,6 @@ pub struct SpecFunDecl {
     pub params: Vec<(Symbol, Type)>,
     pub context_params: Option<Vec<(Symbol, bool)>>,
     pub result_type: Type,
-    pub used_spec_vars: BTreeSet<QualifiedInstId<SpecVarId>>,
     pub used_memory: BTreeSet<QualifiedInstId<StructId>>,
     pub uninterpreted: bool,
     pub is_move_fun: bool,
@@ -83,6 +79,7 @@ pub enum ConditionKind {
     GlobalInvariantUpdate(Vec<Symbol>),
     SchemaInvariant,
     Axiom(Vec<Symbol>),
+    Update,
 }
 
 impl ConditionKind {
@@ -116,6 +113,7 @@ impl ConditionKind {
                 | FunctionInvariant
                 | LetPost(..)
                 | LetPre(..)
+                | Update
         )
     }
 
@@ -187,6 +185,9 @@ impl std::fmt::Display for ConditionKind {
             Axiom(ty_params) => {
                 write!(f, "axiom")?;
                 display_ty_params(f, ty_params)
+            }
+            Update => {
+                write!(f, "update")
             }
         }
     }
@@ -325,7 +326,6 @@ pub struct GlobalInvariant {
     pub loc: Loc,
     pub kind: ConditionKind,
     pub mem_usage: BTreeSet<QualifiedInstId<StructId>>,
-    pub spec_var_usage: BTreeSet<QualifiedInstId<SpecVarId>>,
     pub declaring_module: ModuleId,
     pub properties: PropertyBag,
     pub cond: Exp,
@@ -361,8 +361,6 @@ pub enum ExpData {
     LocalVar(NodeId, Symbol),
     /// Represents a reference to a temporary used in bytecode.
     Temporary(NodeId, TempIndex),
-    /// Represents a reference to a global specification (ghost) variable.
-    SpecVar(NodeId, ModuleId, SpecVarId, Option<MemoryLabel>),
     /// Represents a call to an operation. The `Operation` enum covers all builtin functions
     /// (including operators, constants, ...) as well as user functions.
     Call(NodeId, Operation, Vec<Exp>),
@@ -457,7 +455,6 @@ impl ExpData {
             | Value(node_id, ..)
             | LocalVar(node_id, ..)
             | Temporary(node_id, ..)
-            | SpecVar(node_id, ..)
             | Call(node_id, ..)
             | Invoke(node_id, ..)
             | Lambda(node_id, ..)
@@ -645,7 +642,7 @@ impl ExpData {
                 e.visit_pre_post(visitor);
             }
             // Explicitly list all enum variants
-            Value(..) | LocalVar(..) | Temporary(..) | SpecVar(..) | Invalid(..) => {}
+            Value(..) | LocalVar(..) | Temporary(..) | Invalid(..) => {}
         }
         visitor(true, self);
     }
@@ -720,8 +717,8 @@ impl ExpData {
 
     /// Returns the set of module ids used by this expression.
     pub fn module_usage(&self, usage: &mut BTreeSet<ModuleId>) {
-        self.visit(&mut |e| match e {
-            ExpData::Call(_, oper, _) => {
+        self.visit(&mut |e| {
+            if let ExpData::Call(_, oper, _) = e {
                 use Operation::*;
                 match oper {
                     Function(mid, ..) | Pack(mid, ..) | Select(mid, ..) | UpdateField(mid, ..) => {
@@ -730,11 +727,33 @@ impl ExpData {
                     _ => {}
                 }
             }
-            ExpData::SpecVar(_, mid, ..) => {
-                usage.insert(*mid);
-            }
-            _ => {}
         });
+    }
+
+    /// Extract access to ghost memory from expression. Returns a tuple of the instantiated
+    /// struct, the field of the selected value, and the expression with the address of the access.
+    pub fn extract_ghost_mem_access(
+        &self,
+        env: &GlobalEnv,
+    ) -> Option<(QualifiedInstId<StructId>, FieldId, Exp)> {
+        if let ExpData::Call(_, Operation::Select(_, _, field_id), sargs) = self {
+            if let ExpData::Call(id, Operation::Global(None), gargs) = sargs[0].as_ref() {
+                let ty = &env.get_node_type(*id);
+                let (mid, sid, targs) = ty.require_struct();
+                if env
+                    .symbol_pool()
+                    .string(sid.symbol())
+                    .starts_with(GHOST_MEMORY_PREFIX)
+                {
+                    return Some((
+                        mid.qualified_inst(sid, targs.to_vec()),
+                        *field_id,
+                        gargs[0].clone(),
+                    ));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -832,7 +851,7 @@ pub enum Operation {
     NoOp,
 }
 
-/// A label used for referring to a specific memory in Global, Exists, and SpecVar expressions.
+/// A label used for referring to a specific memory in Global and Exists expressions.
 pub type MemoryLabel = GlobalId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -888,12 +907,10 @@ impl ExpData {
     {
         use ExpData::*;
         let mut no_use = true;
-        self.visit(&mut |exp: &ExpData| match exp {
-            Call(_, oper, _) => {
+        self.visit(&mut |exp: &ExpData| {
+            if let Call(_, oper, _) = exp {
                 no_use = no_use && oper.uses_memory(check_pure);
             }
-            SpecVar(..) => no_use = false,
-            _ => {}
         });
         no_use
     }
@@ -918,13 +935,12 @@ impl ExpData {
                     Function(mid, fid, _) => {
                         let module = env.get_module(*mid);
                         let fun = module.get_spec_fun(*fid);
-                        if !fun.used_memory.is_empty() || !fun.used_spec_vars.is_empty() {
+                        if !fun.used_memory.is_empty() {
                             is_pure = false;
                         }
                     }
                     _ => {}
                 },
-                SpecVar(..) => is_pure = false,
                 _ => {}
             }
         };
@@ -1105,20 +1121,6 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
             Value(_, v) => write!(f, "{}", v),
             LocalVar(_, name) => write!(f, "{}", name.display(self.env.symbol_pool())),
             Temporary(_, idx) => write!(f, "$t{}", idx),
-            SpecVar(_, mid, vid, label) => {
-                let module_env = self.env.get_module(*mid);
-                let spec_var = module_env.get_spec_var(*vid);
-                write!(
-                    f,
-                    "{}::{}",
-                    module_env.get_name().display(self.env.symbol_pool()),
-                    spec_var.name.display(self.env.symbol_pool())
-                )?;
-                if let Some(label) = label {
-                    write!(f, "[{}]", label)?;
-                }
-                Ok(())
-            }
             Call(node_id, oper, args) => {
                 write!(
                     f,
@@ -1351,6 +1353,12 @@ impl<'a> fmt::Display for EnvDisplay<'a, Condition> {
                 }
                 write!(f, ";")?
             }
+            ConditionKind::Update => write!(
+                f,
+                "update {} = {};",
+                self.val.additional_exps[0].display(self.env),
+                self.val.exp.display(self.env)
+            )?,
             _ => write!(f, "{} {};", self.val.kind, self.val.exp.display(self.env))?,
         }
         Ok(())
