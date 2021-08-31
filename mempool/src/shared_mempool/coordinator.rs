@@ -80,7 +80,7 @@ pub(crate) async fn coordinator<V>(
             msg = consensus_requests.select_next_some() => {
                 tasks::process_consensus_request(&smp.mempool, msg).await;
             },
-            msg = mempool_listener.notification_receiver.select_next_some() => {
+            msg = mempool_listener.select_next_some() => {
                 handle_state_sync_request(&mut smp, msg, &mut mempool_listener).await;
             },
             config_update = mempool_reconfig_events.select_next_some() => {

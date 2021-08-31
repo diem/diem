@@ -8,7 +8,7 @@ use crate::{
 };
 use diem_types::transaction::Transaction;
 use futures::{channel::oneshot, executor::block_on, sink::SinkExt};
-use mempool_notifications::{CommittedTransaction, MempoolNotificationSender, MempoolNotifier};
+use mempool_notifications::{CommittedTransaction, MempoolNotificationSender};
 use tokio::runtime::Builder;
 
 #[test]
@@ -58,7 +58,8 @@ fn test_mempool_notify_committed_txns() {
     let _enter = runtime.enter();
 
     // Create a new mempool notifier, listener and shared mempool
-    let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+    let (mempool_notifier, mempool_listener) =
+        mempool_notifications::new_mempool_notifier_listener_pair();
     let smp = MockSharedMempool::new(Some(mempool_listener));
 
     // Add txns 1, 2, 3, 4

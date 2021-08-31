@@ -6,8 +6,16 @@ use std::{fmt, time::Duration};
 
 use async_trait::async_trait;
 use diem_types::{account_address::AccountAddress, transaction::Transaction};
-use futures::channel::{mpsc, oneshot};
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::FusedStream,
+    Stream,
+};
 use serde::{Deserialize, Serialize};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 use thiserror::Error;
 use tokio::time::timeout;
 
@@ -36,27 +44,31 @@ pub trait MempoolNotificationSender: Send {
     ) -> Result<(), Error>;
 }
 
-/// The state sync component responsible for notifying mempool.
+/// This method returns a (MempoolNotifier, MempoolNotificationListener) pair that can be used
+/// to allow state sync and mempool to communicate.
 ///
-/// Note: When a MempoolNotifier instance is created, mempool must take and
-/// listen to the receiver in the corresponding MempoolNotificationListener.
+/// Note: state sync should take the notifier and mempool should take the listener.
+pub fn new_mempool_notifier_listener_pair() -> (MempoolNotifier, MempoolNotificationListener) {
+    let (notification_sender, notification_receiver) =
+        mpsc::channel(MEMPOOL_NOTIFICATION_CHANNEL_SIZE);
+
+    let mempool_notifier = MempoolNotifier::new(notification_sender);
+    let mempool_listener = MempoolNotificationListener::new(notification_receiver);
+
+    (mempool_notifier, mempool_listener)
+}
+
+/// The state sync component responsible for notifying mempool.
 #[derive(Debug)]
 pub struct MempoolNotifier {
     notification_sender: mpsc::Sender<MempoolCommitNotification>,
 }
 
 impl MempoolNotifier {
-    /// Returns a new MempoolNotifier and MempoolNotificationListener (to be
-    /// used in conjuction with one another).
-    pub fn new() -> (Self, MempoolNotificationListener) {
-        let (notification_sender, notification_receiver) =
-            mpsc::channel(MEMPOOL_NOTIFICATION_CHANNEL_SIZE);
-
-        let mempool_notifier = MempoolNotifier {
+    fn new(notification_sender: mpsc::Sender<MempoolCommitNotification>) -> Self {
+        Self {
             notification_sender,
-        };
-        let mempool_listener = MempoolNotificationListener::new(notification_receiver);
-        (mempool_notifier, mempool_listener)
+        }
     }
 }
 
@@ -122,6 +134,45 @@ impl MempoolNotificationSender for MempoolNotifier {
     }
 }
 
+/// The mempool component responsible for responding to state sync notifications.
+#[derive(Debug)]
+pub struct MempoolNotificationListener {
+    notification_receiver: mpsc::Receiver<MempoolCommitNotification>,
+}
+
+impl MempoolNotificationListener {
+    fn new(notification_receiver: mpsc::Receiver<MempoolCommitNotification>) -> Self {
+        MempoolNotificationListener {
+            notification_receiver,
+        }
+    }
+
+    /// Respond (succesfully) to the commit notification previously sent by state sync.
+    pub async fn ack_commit_notification(
+        &self,
+        mempool_commit_notification: MempoolCommitNotification,
+    ) -> Result<(), Error> {
+        mempool_commit_notification
+            .callback
+            .send(MempoolNotificationResponse::Success)
+            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
+    }
+}
+
+impl Stream for MempoolNotificationListener {
+    type Item = MempoolCommitNotification;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.get_mut().notification_receiver).poll_next(cx)
+    }
+}
+
+impl FusedStream for MempoolNotificationListener {
+    fn is_terminated(&self) -> bool {
+        self.notification_receiver.is_terminated()
+    }
+}
+
 /// A notification for newly committed transactions sent by state sync to mempool.
 #[derive(Debug)]
 pub struct MempoolCommitNotification {
@@ -153,31 +204,6 @@ impl fmt::Display for CommittedTransaction {
     }
 }
 
-/// The mempool component responsible for responding to state sync notifications.
-#[derive(Debug)]
-pub struct MempoolNotificationListener {
-    pub notification_receiver: mpsc::Receiver<MempoolCommitNotification>,
-}
-
-impl MempoolNotificationListener {
-    pub fn new(notification_receiver: mpsc::Receiver<MempoolCommitNotification>) -> Self {
-        MempoolNotificationListener {
-            notification_receiver,
-        }
-    }
-
-    /// Respond (succesfully) to the commit notification previously sent by state sync.
-    pub async fn ack_commit_notification(
-        &mut self,
-        mempool_commit_notification: MempoolCommitNotification,
-    ) -> Result<(), Error> {
-        mempool_commit_notification
-            .callback
-            .send(MempoolNotificationResponse::Success)
-            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
-    }
-}
-
 /// A response from mempool for a notification.
 ///
 /// Note: failure responses are not currently used.
@@ -188,7 +214,7 @@ enum MempoolNotificationResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::{CommittedTransaction, Error, MempoolNotificationSender, MempoolNotifier};
+    use crate::{CommittedTransaction, Error, MempoolNotificationSender};
     use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, SigningKey, Uniform};
     use diem_types::{
         account_address::AccountAddress,
@@ -208,7 +234,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, mut mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Send a notification and expect a timeout (no listener)
         let notify_result =
@@ -233,7 +259,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut _mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, _mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Send a notification and expect a timeout (zero timeout)
         let notify_result =
@@ -249,7 +275,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut _mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, _mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Send a notification and verify no timeout because no notification was sent!
         let notify_result = block_on(mempool_notifier.notify_new_commit(vec![], 0, 1000));
@@ -261,7 +287,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut _mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, _mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Create several transactions that should be filtered out
         let mut transactions = vec![];
@@ -291,7 +317,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, mut mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Send a notification
         let user_transaction = create_user_transaction();
@@ -327,7 +353,7 @@ mod tests {
         // Create runtime and mempool notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (mempool_notifier, mut mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, mut mempool_listener) = crate::new_mempool_notifier_listener_pair();
 
         // Spawn a new thread to handle any messages on the receiver
         let _handler = std::thread::spawn(move || loop {

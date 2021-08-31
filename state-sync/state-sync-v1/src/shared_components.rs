@@ -166,7 +166,7 @@ pub(crate) mod test_utils {
 
         // Create channel senders and receivers
         let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();
-        let (mempool_notifier, _) = MempoolNotifier::new();
+        let (mempool_notifier, _) = mempool_notifications::new_mempool_notifier_listener_pair();
         let (_, consensus_listener) = ConsensusNotifier::new(1000);
 
         // Return the new state sync coordinator

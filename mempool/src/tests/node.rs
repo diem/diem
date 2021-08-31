@@ -24,7 +24,6 @@ use futures::{
     channel::mpsc::{self, unbounded, UnboundedReceiver},
     FutureExt, StreamExt,
 };
-use mempool_notifications::MempoolNotifier;
 use netcore::transport::ConnectionOrigin;
 use network::{
     peer_manager::{
@@ -595,7 +594,8 @@ fn start_node_mempool(
     let (sender, subscriber) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
-    let (_mempool_notifier, mempool_listener) = MempoolNotifier::new();
+    let (_mempool_notifier, mempool_listener) =
+        mempool_notifications::new_mempool_notifier_listener_pair();
     let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
     let runtime = Builder::new_multi_thread()

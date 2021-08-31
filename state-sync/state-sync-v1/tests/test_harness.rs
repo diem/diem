@@ -41,7 +41,6 @@ use diem_types::{
 };
 use executor_types::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, StreamExt};
-use mempool_notifications::MempoolNotifier;
 use memsocket::MemoryListener;
 use netcore::transport::ConnectionOrigin;
 use network::{
@@ -308,7 +307,8 @@ impl StateSyncEnvironment {
             peer.signer.clone(),
         )));
 
-        let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+        let (mempool_notifier, mempool_listener) =
+            mempool_notifications::new_mempool_notifier_listener_pair();
         peer.mempool = Some(MockSharedMempool::new(Some(mempool_listener)));
 
         let (consensus_notifier, consensus_listener) = ConsensusNotifier::new(1000);

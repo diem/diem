@@ -24,7 +24,6 @@ use diemdb::DiemDB;
 use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
-use mempool_notifications::MempoolNotifier;
 use network_builder::builder::NetworkBuilder;
 use state_sync_v1::bootstrapper::StateSyncBootstrapper;
 use std::{
@@ -392,7 +391,8 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // and pass network handles to mempool/state sync
 
     // For state sync to send notifications to mempool and receive notifications from consensus.
-    let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+    let (mempool_notifier, mempool_listener) =
+        mempool_notifications::new_mempool_notifier_listener_pair();
     let (consensus_notifier, consensus_listener) =
         ConsensusNotifier::new(node_config.state_sync.client_commit_timeout_ms);
 

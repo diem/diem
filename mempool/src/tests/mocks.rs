@@ -20,7 +20,7 @@ use diem_types::{
     transaction::{GovernanceRole, SignedTransaction},
 };
 use futures::channel::{mpsc, oneshot};
-use mempool_notifications::{MempoolNotificationListener, MempoolNotifier};
+use mempool_notifications::{self, MempoolNotificationListener, MempoolNotifier};
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
@@ -67,7 +67,8 @@ impl MockSharedMempool {
         let (consensus_sender, consensus_events) = mpsc::channel(1_024);
         let (mempool_notifier, mempool_listener) = match mempool_listener {
             None => {
-                let (mempool_notifier, mempool_listener) = MempoolNotifier::new();
+                let (mempool_notifier, mempool_listener) =
+                    mempool_notifications::new_mempool_notifier_listener_pair();
                 (Some(mempool_notifier), mempool_listener)
             }
             Some(mempool_listener) => (None, mempool_listener),
