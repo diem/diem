@@ -8,7 +8,6 @@ use crate::{
     test_utils::{EmptyStorage, TreeInserter},
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_notifications::ConsensusNotifier;
 use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use diem_config::config::NodeConfig;
 use diem_crypto::{ed25519::Ed25519PrivateKey, Uniform};
@@ -64,7 +63,7 @@ fn build_inserter(
 ) -> TreeInserter {
     let client_commit_timeout_ms = config.state_sync.client_commit_timeout_ms;
     let (consensus_notifier, _consensus_listener) =
-        ConsensusNotifier::new(client_commit_timeout_ms);
+        consensus_notifications::new_consensus_notifier_listener_pair(client_commit_timeout_ms);
 
     let state_computer = Arc::new(ExecutionProxy::new(
         lec_client,

@@ -174,7 +174,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         loop {
             let _timer = counters::MAIN_LOOP.start_timer();
             ::futures::select! {
-                msg = self.consensus_listener.notification_receiver.select_next_some() => {
+                msg = self.consensus_listener.select_next_some() => {
                     match msg {
                         ConsensusNotification::SyncToTarget(sync_notification) => {
                             let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY

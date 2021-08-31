@@ -311,7 +311,10 @@ impl StateSyncEnvironment {
             mempool_notifications::new_mempool_notifier_listener_pair();
         peer.mempool = Some(MockSharedMempool::new(Some(mempool_listener)));
 
-        let (consensus_notifier, consensus_listener) = ConsensusNotifier::new(1000);
+        let (consensus_notifier, consensus_listener) =
+            consensus_notifications::new_consensus_notifier_listener_pair(
+                config.state_sync.client_commit_timeout_ms,
+            );
 
         let bootstrapper = StateSyncBootstrapper::bootstrap_with_executor_proxy(
             Runtime::new().unwrap(),

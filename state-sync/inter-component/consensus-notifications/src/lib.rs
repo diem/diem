@@ -10,9 +10,14 @@ use diem_types::{
 };
 use futures::{
     channel::{mpsc, oneshot},
-    SinkExt,
+    stream::FusedStream,
+    SinkExt, Stream,
 };
 use serde::{Deserialize, Serialize};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 use thiserror::Error;
 use tokio::time::timeout;
 
@@ -41,6 +46,21 @@ pub trait ConsensusNotificationSender: Send + Sync {
     async fn sync_to_target(&self, target: LedgerInfoWithSignatures) -> Result<(), Error>;
 }
 
+/// This method returns a (ConsensusNotifier, ConsensusNotificationListener) pair that can be used
+/// to allow consensus and state sync to communicate.
+///
+/// Note: consensus should take the notifier and state sync should take the listener.
+pub fn new_consensus_notifier_listener_pair(
+    timeout_ms: u64,
+) -> (ConsensusNotifier, ConsensusNotificationListener) {
+    let (notification_sender, notification_receiver) = mpsc::unbounded();
+
+    let consensus_notifier = ConsensusNotifier::new(notification_sender, timeout_ms);
+    let consensus_listener = ConsensusNotificationListener::new(notification_receiver);
+
+    (consensus_notifier, consensus_listener)
+}
+
 /// The consensus component responsible for sending notifications and requests to
 /// state sync.
 ///
@@ -56,17 +76,14 @@ pub struct ConsensusNotifier {
 }
 
 impl ConsensusNotifier {
-    /// Returns a new ConsensusNotifier and ConsensusNotificationListener (to be
-    /// used in conjuction with one another).
-    pub fn new(timeout_ms: u64) -> (Self, ConsensusNotificationListener) {
-        let (notification_sender, notification_receiver) = mpsc::unbounded();
-
-        let consensus_synchronizer = ConsensusNotifier {
+    fn new(
+        notification_sender: mpsc::UnboundedSender<ConsensusNotification>,
+        timeout_ms: u64,
+    ) -> Self {
+        ConsensusNotifier {
             notification_sender,
             timeout_ms,
-        };
-        let consensus_listener = ConsensusNotificationListener::new(notification_receiver);
-        (consensus_synchronizer, consensus_listener)
+        }
     }
 }
 
@@ -144,6 +161,59 @@ impl ConsensusNotificationSender for ConsensusNotifier {
     }
 }
 
+/// The state sync component responsible for handling consensus requests and
+/// notifications.
+#[derive(Debug)]
+pub struct ConsensusNotificationListener {
+    notification_receiver: mpsc::UnboundedReceiver<ConsensusNotification>,
+}
+
+impl ConsensusNotificationListener {
+    fn new(notification_receiver: mpsc::UnboundedReceiver<ConsensusNotification>) -> Self {
+        ConsensusNotificationListener {
+            notification_receiver,
+        }
+    }
+
+    /// Respond to the commit notification previously sent by consensus.
+    pub async fn respond_to_commit_notification(
+        &mut self,
+        consensus_commit_notification: ConsensusCommitNotification,
+        result: Result<(), Error>,
+    ) -> Result<(), Error> {
+        consensus_commit_notification
+            .callback
+            .send(ConsensusNotificationResponse { result })
+            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
+    }
+
+    /// Respond to the sync notification previously sent by consensus.
+    pub async fn respond_to_sync_notification(
+        &mut self,
+        consensus_sync_notification: ConsensusSyncNotification,
+        result: Result<(), Error>,
+    ) -> Result<(), Error> {
+        consensus_sync_notification
+            .callback
+            .send(ConsensusNotificationResponse { result })
+            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
+    }
+}
+
+impl Stream for ConsensusNotificationListener {
+    type Item = ConsensusNotification;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.get_mut().notification_receiver).poll_next(cx)
+    }
+}
+
+impl FusedStream for ConsensusNotificationListener {
+    fn is_terminated(&self) -> bool {
+        self.notification_receiver.is_terminated()
+    }
+}
+
 #[derive(Debug)]
 pub enum ConsensusNotification {
     NotifyCommit(ConsensusCommitNotification),
@@ -198,48 +268,9 @@ impl ConsensusSyncNotification {
     }
 }
 
-/// The state sync component responsible for handling consensus requests and
-/// notifications.
-#[derive(Debug)]
-pub struct ConsensusNotificationListener {
-    pub notification_receiver: mpsc::UnboundedReceiver<ConsensusNotification>,
-}
-
-impl ConsensusNotificationListener {
-    pub fn new(notification_receiver: mpsc::UnboundedReceiver<ConsensusNotification>) -> Self {
-        ConsensusNotificationListener {
-            notification_receiver,
-        }
-    }
-
-    /// Respond to the commit notification previously sent by consensus.
-    pub async fn respond_to_commit_notification(
-        &mut self,
-        consensus_commit_notification: ConsensusCommitNotification,
-        result: Result<(), Error>,
-    ) -> Result<(), Error> {
-        consensus_commit_notification
-            .callback
-            .send(ConsensusNotificationResponse { result })
-            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
-    }
-
-    /// Respond to the sync notification previously sent by consensus.
-    pub async fn respond_to_sync_notification(
-        &mut self,
-        consensus_sync_notification: ConsensusSyncNotification,
-        result: Result<(), Error>,
-    ) -> Result<(), Error> {
-        consensus_sync_notification
-            .callback
-            .send(ConsensusNotificationResponse { result })
-            .map_err(|error| Error::UnexpectedErrorEncountered(format!("{:?}", error)))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::{ConsensusNotification, ConsensusNotificationSender, ConsensusNotifier, Error};
+    use crate::{ConsensusNotification, ConsensusNotificationSender, Error};
     use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, SigningKey, Uniform};
     use diem_types::{
         account_address::AccountAddress,
@@ -255,12 +286,15 @@ mod tests {
     use std::{collections::BTreeMap, time::Duration};
     use tokio::runtime::{Builder, Runtime};
 
+    const CONSENSUS_NOTIFICATION_TIMEOUT: u64 = 1000;
+
     #[test]
     fn test_commit_state_sync_not_listening() {
         // Create runtime and consensus notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (consensus_notifier, mut consensus_listener) = ConsensusNotifier::new(1000);
+        let (consensus_notifier, mut consensus_listener) =
+            crate::new_consensus_notifier_listener_pair(CONSENSUS_NOTIFICATION_TIMEOUT);
 
         // Send a notification and expect a timeout (no listener)
         let notify_result =
@@ -282,7 +316,8 @@ mod tests {
         // Create runtime and consensus notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (consensus_notifier, _consensus_listener) = ConsensusNotifier::new(1000);
+        let (consensus_notifier, _consensus_listener) =
+            crate::new_consensus_notifier_listener_pair(CONSENSUS_NOTIFICATION_TIMEOUT);
 
         // Send a notification
         let notify_result = block_on(consensus_notifier.notify_new_commit(vec![], vec![]));
@@ -294,7 +329,8 @@ mod tests {
         // Create runtime and consensus notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (consensus_notifier, mut consensus_listener) = ConsensusNotifier::new(1000);
+        let (consensus_notifier, mut consensus_listener) =
+            crate::new_consensus_notifier_listener_pair(CONSENSUS_NOTIFICATION_TIMEOUT);
 
         // Send a commit notification
         let transactions = vec![create_user_transaction()];
@@ -347,7 +383,8 @@ mod tests {
         // Create runtime and consensus notifier
         let runtime = create_runtime();
         let _enter = runtime.enter();
-        let (consensus_notifier, mut consensus_listener) = ConsensusNotifier::new(1000);
+        let (consensus_notifier, mut consensus_listener) =
+            crate::new_consensus_notifier_listener_pair(CONSENSUS_NOTIFICATION_TIMEOUT);
 
         // Spawn a new thread to handle any messages on the receiver
         let _handler = std::thread::spawn(move || loop {

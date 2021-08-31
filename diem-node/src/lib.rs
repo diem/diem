@@ -3,7 +3,6 @@
 
 use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
-use consensus_notifications::ConsensusNotifier;
 use debug_interface::node_debug_service::NodeDebugService;
 use diem_config::{
     config::{NetworkConfig, NodeConfig, PersistableConfig},
@@ -394,7 +393,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     let (mempool_notifier, mempool_listener) =
         mempool_notifications::new_mempool_notifier_listener_pair();
     let (consensus_notifier, consensus_listener) =
-        ConsensusNotifier::new(node_config.state_sync.client_commit_timeout_ms);
+        consensus_notifications::new_consensus_notifier_listener_pair(
+            node_config.state_sync.client_commit_timeout_ms,
+        );
 
     // Create state sync bootstrapper
     let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
