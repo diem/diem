@@ -107,7 +107,7 @@ print(f"""
 
 if args.local_swarm:
     print("Running Forge on backend: local swarm")
-    ret = subprocess.call(["cargo", "run", "-p", "forge", "--", "--local-swarm"])
+    ret = subprocess.call(["cargo", "run", "-p", "forge-cli", "--", "--local-swarm"])
     sys.exit(ret)
 
 print("Running Forge on backend: kubernetes testnet")

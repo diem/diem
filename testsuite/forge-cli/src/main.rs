@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use diem_sdk::{
     client::{BlockingClient, MethodRequest},
     move_types::account_address::AccountAddress,
@@ -41,7 +42,7 @@ struct Args {
     ops_cmd: Option<OperatorCommand>,
 
     #[structopt(long, help = "Name of the EKS cluster")]
-    cluster_name: String,
+    cluster_name: Option<String>,
     #[structopt(
         long,
         help = "Override the helm repo used for k8s tests",
@@ -111,6 +112,10 @@ struct Resize {
 
 fn main() -> Result<()> {
     let args = Args::from_args();
+    let cluster_name = match args.cluster_name {
+        Some(cluster_name) => cluster_name,
+        None => "".to_string(),
+    };
 
     if let Some(ops_cmd) = args.ops_cmd {
         match ops_cmd {
@@ -122,8 +127,11 @@ fn main() -> Result<()> {
                 )
             }
             OperatorCommand::Resize(resize) => {
+                if cluster_name.is_empty() {
+                    return Err(anyhow!("Need to specify cluster name for cluster resize"));
+                }
                 set_eks_nodegroup_size(
-                    args.cluster_name,
+                    cluster_name,
                     resize.num_validators,
                     resize.auth_with_k8s_env,
                 )?;
@@ -137,8 +145,11 @@ fn main() -> Result<()> {
                 );
             }
             OperatorCommand::CleanUp(cleanup) => {
+                if cluster_name.is_empty() {
+                    return Err(anyhow!("Need to specify cluster name for cluster clean up"));
+                }
                 uninstall_from_k8s_cluster()?;
-                return set_eks_nodegroup_size(args.cluster_name, 0, cleanup.auth_with_k8s_env);
+                return set_eks_nodegroup_size(cluster_name, 0, cleanup.auth_with_k8s_env);
             }
         }
     }
@@ -150,6 +161,9 @@ fn main() -> Result<()> {
             &args.options,
         )
     } else {
+        if cluster_name.is_empty() {
+            return Err(anyhow!("Need to specify cluster name to run forge"));
+        }
         let mut test_suite = k8s_test_suite();
         if let Some(suite) = args.suite.as_ref() {
             test_suite = get_test_suite(suite);
@@ -157,7 +171,7 @@ fn main() -> Result<()> {
         forge_main(
             test_suite,
             K8sFactory::new(
-                args.cluster_name,
+                cluster_name,
                 args.helm_repo,
                 args.image_tag,
                 args.base_image_tag,
