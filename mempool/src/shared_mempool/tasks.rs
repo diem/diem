@@ -10,7 +10,7 @@ use crate::{
     network::MempoolSyncMsg,
     shared_mempool::types::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
-        SubmissionStatusBundle,
+        SubmissionStatusBundle, TransactionSummary,
     },
     ConsensusRequest, ConsensusResponse, SubmissionStatus,
 };
@@ -26,7 +26,6 @@ use diem_types::{
     vm_status::DiscardedVMStatus,
 };
 use futures::{channel::oneshot, stream::FuturesUnordered};
-use mempool_notifications::CommittedTransaction;
 use rayon::prelude::*;
 use short_hex_str::AsShortHexStr;
 use std::{
@@ -399,7 +398,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
 
 pub async fn commit_txns(
     mempool: &Mutex<CoreMempool>,
-    transactions: Vec<CommittedTransaction>,
+    transactions: Vec<TransactionSummary>,
     block_timestamp_usecs: u64,
     is_rejected: bool,
 ) {

@@ -13,7 +13,7 @@ use crate::{
         tasks::commit_txns,
         types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
     },
-    ConsensusRequest, SubmissionStatus,
+    ConsensusRequest, SubmissionStatus, TransactionSummary,
 };
 use ::network::protocols::network::Event;
 use anyhow::Result;
@@ -145,7 +145,13 @@ async fn handle_state_sync_request<V>(
     );
     commit_txns(
         &smp.mempool.clone(),
-        msg.transactions.clone(),
+        msg.transactions
+            .iter()
+            .map(|txn| TransactionSummary {
+                sender: txn.sender,
+                sequence_number: txn.sequence_number,
+            })
+            .collect(),
         msg.block_timestamp_usecs,
         false,
     )

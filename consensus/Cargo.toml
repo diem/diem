@@ -48,7 +48,6 @@ diem-temppath = { path = "../crates/diem-temppath" }
 diem-types = { path = "../types" }
 diem-vm = { path = "../language/diem-vm" }
 diem-workspace-hack = { path = "../crates/diem-workspace-hack" }
-mempool-notifications = { path = "../state-sync/inter-component/mempool-notifications" }
 network = { path = "../network" }
 safety-rules = { path = "safety-rules" }
 short-hex-str = { path = "../crates/short-hex-str" }

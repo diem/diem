@@ -51,7 +51,6 @@ vm-genesis = { path = "../../language/tools/vm-genesis", optional = true }
 bytes = "1.0.1"
 proptest = "1.0.0"
 
-consensus-notifications = { path = "../inter-component/consensus-notifications" }
 channel = { path = "../../crates/channel" }
 diem-framework-releases= { path = "../../language/diem-framework/releases" }
 diem-crypto = { path = "../../crates/diem-crypto" }

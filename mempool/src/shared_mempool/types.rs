@@ -26,7 +26,6 @@ use futures::{
     future::Future,
     task::{Context, Poll},
 };
-use mempool_notifications::CommittedTransaction;
 use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
@@ -121,13 +120,16 @@ pub enum ConsensusRequest {
     GetBlockRequest(
         // max block size
         u64,
-        // transactions to exclude from requested block
-        Vec<TransactionExclusion>,
+        // transactions to exclude from the requested block
+        Vec<TransactionSummary>,
+        // callback to respond to
         oneshot::Sender<Result<ConsensusResponse>>,
     ),
     /// Notifications about *rejected* committed txns.
     RejectNotification(
-        Vec<CommittedTransaction>,
+        // rejected transactions from consensus
+        Vec<TransactionSummary>,
+        // callback to respond to
         oneshot::Sender<Result<ConsensusResponse>>,
     ),
 }
@@ -166,13 +168,13 @@ pub enum ConsensusResponse {
     CommitResponse(),
 }
 
-#[derive(Clone)]
-pub struct TransactionExclusion {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransactionSummary {
     pub sender: AccountAddress,
     pub sequence_number: u64,
 }
 
-impl fmt::Display for TransactionExclusion {
+impl fmt::Display for TransactionSummary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", self.sender, self.sequence_number,)
     }

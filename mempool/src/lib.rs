@@ -61,7 +61,7 @@ pub use shared_mempool::{
     bootstrap, network,
     types::{
         gen_mempool_reconfig_subscription, ConsensusRequest, ConsensusResponse,
-        MempoolClientSender, SubmissionStatus, TransactionExclusion,
+        MempoolClientSender, SubmissionStatus, TransactionSummary,
     },
 };
 #[cfg(any(test, feature = "fuzzing"))]

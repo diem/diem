@@ -3,12 +3,13 @@
 
 use crate::{
     mocks::MockSharedMempool,
+    shared_mempool::types::TransactionSummary,
     tests::common::{batch_add_signed_txn, TestTransaction},
     ConsensusRequest,
 };
 use diem_types::transaction::Transaction;
 use futures::{channel::oneshot, executor::block_on, sink::SinkExt};
-use mempool_notifications::{CommittedTransaction, MempoolNotificationSender};
+use mempool_notifications::MempoolNotificationSender;
 use tokio::runtime::Builder;
 
 #[test]
@@ -33,12 +34,12 @@ fn test_consensus_events_rejected_txns() {
         assert!(batch_add_signed_txn(&mut pool, txns).is_ok());
     }
 
-    let committed_txns = vec![CommittedTransaction {
+    let transactions = vec![TransactionSummary {
         sender: committed_txn.sender(),
         sequence_number: committed_txn.sequence_number(),
     }];
     let (callback, callback_rcv) = oneshot::channel();
-    let req = ConsensusRequest::RejectNotification(committed_txns, callback);
+    let req = ConsensusRequest::RejectNotification(transactions, callback);
     let mut consensus_sender = smp.consensus_sender.clone();
     block_on(async {
         assert!(consensus_sender.send(req).await.is_ok());
