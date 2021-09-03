@@ -8,31 +8,26 @@
 
 Explore the technical and economic concepts behind the Diem Payment Networks.
 
-## Note to Developers
+## Note to developers
 * Diem Core is a prototype.
 * The APIs are constantly evolving and designed to demonstrate types of functionality. Expect substantial changes before the release.
 * We've launched a testnet that is a live demonstration of an early prototype of the Diem Blockchain software.
 
 ## Getting started
 
-### Learn About Diem
-* [Welcome](https://developers.diem.com/docs/welcome-to-diem)
-* [Diem Core Overview](https://developers.diem.com/docs/core/overview)
-* [Diem Protocol: Key Concepts](https://developers.diem.com/docs/diem-protocol)
-* [Life of a Transaction](https://developers.diem.com/docs/life-of-a-transaction)
+### Explore the basics of the Diem Blockchain
+* [Welcome](/docs/welcome-to-diem.mdx)
+* [Transactions and States](docs/basics/basics-txns-states.md)
+* [Life of a Transaction](/docs/transactions/basics-life-of-txn.md)
 
-### Try Diem Core
-* [My First Transaction](https://developers.diem.com/docs/my-first-transaction)
-* [Getting Started With Move](https://developers.diem.com/docs/move-overview)
+### Use the Diem reference projects
+* [Diem Reference Wallet](/docs/wallets-and-merchant-stores/diem-reference-wallet.md)
+* [Diem Reference Merchant Store](/docs/wallets-and-merchant-stores/diem-reference-merchant-store.md)
 
-### Technical Papers
-* [The Diem Blockchain](https://developers.diem.com/docs/the-diem-blockchain-paper)
-* [Move: A Language With Programmable Resources](https://developers.diem.com/docs/move-paper)
-* [State Machine Replication in the Diem Blockchain](https://developers.diem.com/docs/state-machine-replication-paper)
-
-### Blog
-* [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
-
+### Read technical papers
+* [The Diem Blockchain](/docs/technical-papers/the-diem-blockchain-paper.md)
+* [Move: A Language With Programmable Resources](/docs/technical-papers/move-paper.md)
+* [State Machine Replication in the Diem Blockchain](/docs/technical-papers/state-machine-replication-paper.md)
 
 ## License
 
