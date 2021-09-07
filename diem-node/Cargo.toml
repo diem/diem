@@ -24,7 +24,9 @@ backup-service = { path = "../storage/backup/backup-service" }
 consensus = { path = "../consensus" }
 consensus-notifications = { path = "../state-sync/inter-component/consensus-notifications" }
 crash-handler = { path = "../common/crash-handler" }
+diem-infallible = { path = "../common/infallible" }
 debug-interface = { path = "../common/debug-interface" }
+event-notifications = { path = "../state-sync/inter-component/event-notifications" }
 executor = { path = "../execution/executor" }
 executor-types = { path = "../execution/executor-types" }
 diem-config = { path = "../config" }

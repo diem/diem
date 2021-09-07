@@ -9,9 +9,9 @@ use diem_config::{
     network_id::NodeNetworkId,
     utils::get_genesis_txn,
 };
+use diem_infallible::RwLock;
 use diem_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use diem_logger::{prelude::*, Logger};
-use diem_mempool::gen_mempool_reconfig_subscription;
 use diem_metrics::metric_server;
 use diem_time_service::TimeService;
 use diem_types::{
@@ -20,6 +20,7 @@ use diem_types::{
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
+use event_notifications::EventSubscriptionService;
 use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
@@ -307,9 +308,13 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     let mut consensus_network_handles = None;
     let mut reconfig_subscriptions = vec![];
 
-    let (mempool_reconfig_subscription, mempool_reconfig_events) =
-        gen_mempool_reconfig_subscription();
-    reconfig_subscriptions.push(mempool_reconfig_subscription);
+    // Create an event subscription service so that components can be notified of events and reconfigs
+    let mut event_subscription_service =
+        EventSubscriptionService::new(Arc::new(RwLock::new(db_rw.clone())));
+    let mempool_reconfig_subscription = event_subscription_service
+        .subscribe_to_reconfigurations()
+        .unwrap();
+
     // consensus has to subscribe to ALL on-chain configs
     let (consensus_reconfig_subscription, consensus_reconfig_events) =
         gen_consensus_reconfig_subscription();
@@ -423,7 +428,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         mp_client_events,
         consensus_requests,
         mempool_listener,
-        mempool_reconfig_events,
+        mempool_reconfig_subscription,
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 

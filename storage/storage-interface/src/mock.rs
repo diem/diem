@@ -3,7 +3,7 @@
 
 //! This module provides mock dbreader for tests.
 
-use crate::{DbReader, Order, StartupInfo, TreeState};
+use crate::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 use anyhow::Result;
 use diem_crypto::HashValue;
 use diem_types::{
@@ -18,16 +18,17 @@ use diem_types::{
     proof::SparseMerkleProof,
     state_proof::StateProof,
     transaction::{
-        AccountTransactionsWithProof, TransactionListWithProof, TransactionWithProof, Version,
+        AccountTransactionsWithProof, TransactionListWithProof, TransactionToCommit,
+        TransactionWithProof, Version,
     },
 };
 use move_core_types::move_resource::MoveResource;
 use std::convert::TryFrom;
 
-/// This is a mock of the dbreader in tests.
-pub struct MockDbReader;
+/// This is a mock of the DbReaderWriter in tests.
+pub struct MockDbReaderWriter;
 
-impl DbReader for MockDbReader {
+impl DbReader for MockDbReaderWriter {
     fn get_epoch_ending_ledger_infos(
         &self,
         _start_epoch: u64,
@@ -184,4 +185,15 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
     );
 
     AccountStateBlob::try_from(&account_state).unwrap()
+}
+
+impl DbWriter for MockDbReaderWriter {
+    fn save_transactions(
+        &self,
+        _txns_to_commit: &[TransactionToCommit],
+        _first_version: Version,
+        _ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
+    ) -> Result<()> {
+        unimplemented!()
+    }
 }

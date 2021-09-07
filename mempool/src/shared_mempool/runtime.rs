@@ -12,10 +12,10 @@ use crate::{
     ConsensusRequest, SubmissionStatus,
 };
 use anyhow::Result;
-use channel::diem_channel;
 use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
 use diem_infallible::{Mutex, RwLock};
-use diem_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
+use diem_types::transaction::SignedTransaction;
+use event_notifications::ReconfigNotificationListener;
 use futures::channel::{
     mpsc::{self, Receiver, UnboundedSender},
     oneshot,
@@ -41,7 +41,7 @@ pub(crate) fn start_shared_mempool<V>(
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mempool_listener: MempoolNotificationListener,
-    mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    mempool_reconfig_events: ReconfigNotificationListener,
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -97,7 +97,7 @@ pub fn bootstrap(
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,
     mempool_listener: MempoolNotificationListener,
-    mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    mempool_reconfig_events: ReconfigNotificationListener,
 ) -> Runtime {
     let runtime = Builder::new_multi_thread()
         .thread_name("shared-mem")

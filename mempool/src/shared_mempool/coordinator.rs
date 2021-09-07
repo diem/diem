@@ -18,7 +18,6 @@ use crate::{
 use ::network::protocols::network::Event;
 use anyhow::Result;
 use bounded_executor::BoundedExecutor;
-use channel::diem_channel;
 use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -26,6 +25,7 @@ use diem_types::{
     mempool_status::MempoolStatus, on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction, vm_status::DiscardedVMStatus,
 };
+use event_notifications::ReconfigNotificationListener;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, FuturesUnordered},
@@ -51,7 +51,7 @@ pub(crate) async fn coordinator<V>(
     )>,
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut mempool_listener: MempoolNotificationListener,
-    mut mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    mut mempool_reconfig_events: ReconfigNotificationListener,
 ) where
     V: TransactionValidation,
 {
@@ -83,8 +83,8 @@ pub(crate) async fn coordinator<V>(
             msg = mempool_listener.select_next_some() => {
                 handle_state_sync_request(&mut smp, msg, &mut mempool_listener).await;
             },
-            config_update = mempool_reconfig_events.select_next_some() => {
-                handle_mempool_reconfig_event(&mut smp, &bounded_executor, config_update).await;
+            reconfig_notification = mempool_reconfig_events.select_next_some() => {
+                handle_mempool_reconfig_event(&mut smp, &bounded_executor, reconfig_notification.on_chain_configs).await;
             },
             (peer, backoff) = scheduled_broadcasts.select_next_some() => {
                 tasks::execute_broadcast(peer, backoff, &mut smp, &mut scheduled_broadcasts, executor.clone());

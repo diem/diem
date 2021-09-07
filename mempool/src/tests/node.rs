@@ -20,6 +20,7 @@ use diem_types::{
     transaction::GovernanceRole, PeerId,
 };
 use enum_dispatch::enum_dispatch;
+use event_notifications::EventSubscriptionService;
 use futures::{
     channel::mpsc::{self, unbounded, UnboundedReceiver},
     FutureExt, StreamExt,
@@ -36,7 +37,7 @@ use network::{
 };
 use rand::rngs::StdRng;
 use std::{collections::HashMap, sync::Arc};
-use storage_interface::mock::MockDbReader;
+use storage_interface::{mock::MockDbReaderWriter, DbReaderWriter};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
@@ -596,7 +597,10 @@ fn start_node_mempool(
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_mempool_notifier, mempool_listener) =
         mempool_notifications::new_mempool_notifier_listener_pair();
-    let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
+    let mut event_subscriber = EventSubscriptionService::new(Arc::new(RwLock::new(
+        DbReaderWriter::new(MockDbReaderWriter),
+    )));
+    let reconfig_event_subscriber = event_subscriber.subscribe_to_reconfigurations().unwrap();
 
     let runtime = Builder::new_multi_thread()
         .thread_name("shared-mem")
@@ -611,8 +615,8 @@ fn start_node_mempool(
         ac_endpoint_receiver,
         consensus_events,
         mempool_listener,
-        reconfig_events_receiver,
-        Arc::new(MockDbReader),
+        reconfig_event_subscriber,
+        Arc::new(MockDbReaderWriter),
         Arc::new(RwLock::new(MockVMValidator)),
         vec![sender],
     );

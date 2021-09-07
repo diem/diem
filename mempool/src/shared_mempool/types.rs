@@ -8,17 +8,13 @@ use crate::{
     shared_mempool::{network::MempoolNetworkSender, peer_manager::PeerManager},
 };
 use anyhow::Result;
-use channel::diem_channel::Receiver;
 use diem_config::{
     config::{MempoolConfig, PeerNetworkId},
     network_id::NodeNetworkId,
 };
 use diem_infallible::{Mutex, RwLock};
 use diem_types::{
-    account_address::AccountAddress,
-    mempool_status::MempoolStatus,
-    on_chain_config::{ConfigID, DiemVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
-    transaction::SignedTransaction,
+    account_address::AccountAddress, mempool_status::MempoolStatus, transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
 };
 use futures::{
@@ -28,7 +24,6 @@ use futures::{
 };
 use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
-use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::TransactionValidation;
 
@@ -184,10 +179,3 @@ pub type SubmissionStatusBundle = (SignedTransaction, SubmissionStatus);
 
 pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;
-
-const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[DiemVersion::CONFIG_ID, VMConfig::CONFIG_ID];
-
-pub fn gen_mempool_reconfig_subscription(
-) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    ReconfigSubscription::subscribe_all("mempool", MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![])
-}

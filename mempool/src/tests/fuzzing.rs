@@ -14,7 +14,7 @@ use proptest::{
     strategy::{Just, Strategy},
 };
 use std::{collections::HashMap, sync::Arc};
-use storage_interface::mock::MockDbReader;
+use storage_interface::mock::MockDbReaderWriter;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 pub fn mempool_incoming_transactions_strategy(
@@ -33,7 +33,7 @@ pub fn test_mempool_process_incoming_transactions_impl(
     timeline_state: TimelineState,
 ) {
     let config = NodeConfig::default();
-    let mock_db = MockDbReader;
+    let mock_db = MockDbReaderWriter;
     let vm_validator = Arc::new(RwLock::new(MockVMValidator));
     let smp = SharedMempool {
         mempool: Arc::new(Mutex::new(CoreMempool::new(&config))),

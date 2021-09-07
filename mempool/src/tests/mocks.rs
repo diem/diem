@@ -19,6 +19,7 @@ use diem_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},
 };
+use event_notifications::EventSubscriptionService;
 use futures::channel::{mpsc, oneshot};
 use mempool_notifications::{self, MempoolNotificationListener, MempoolNotifier};
 use network::{
@@ -26,7 +27,7 @@ use network::{
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
 use std::sync::Arc;
-use storage_interface::mock::MockDbReader;
+use storage_interface::{mock::MockDbReaderWriter, DbReaderWriter};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
@@ -73,8 +74,10 @@ impl MockSharedMempool {
             }
             Some(mempool_listener) => (None, mempool_listener),
         };
-        let (_reconfig_event_publisher, reconfig_event_subscriber) =
-            diem_channel::new(QueueStyle::LIFO, 1, None);
+        let mut event_subscriber = EventSubscriptionService::new(Arc::new(RwLock::new(
+            DbReaderWriter::new(MockDbReaderWriter),
+        )));
+        let reconfig_event_subscriber = event_subscriber.subscribe_to_reconfigurations().unwrap();
         let network_handles = vec![(
             NodeNetworkId::new(NetworkId::Validator, 0),
             network_sender,
@@ -90,7 +93,7 @@ impl MockSharedMempool {
             consensus_events,
             mempool_listener,
             reconfig_event_subscriber,
-            Arc::new(MockDbReader),
+            Arc::new(MockDbReaderWriter),
             Arc::new(RwLock::new(MockVMValidator)),
             vec![],
         );
