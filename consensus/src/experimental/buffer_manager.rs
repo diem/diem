@@ -12,29 +12,34 @@ use crate::{
     round_manager::VerifiedEvent,
     state_replication::StateComputerCommitCallBackType,
 };
-use consensus_types::{common::Author, executed_block::ExecutedBlock};
+use consensus_types::{block::Block, common::Author, executed_block::ExecutedBlock};
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_types::{
-    account_address::AccountAddress, ledger_info::LedgerInfoWithSignatures,
+    account_address::AccountAddress,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_verifier::ValidatorVerifier,
 };
-use futures::channel::{
-    mpsc::{UnboundedReceiver, UnboundedSender},
-    oneshot,
+use futures::{
+    channel::{
+        mpsc::{UnboundedReceiver, UnboundedSender},
+        oneshot,
+    },
+    SinkExt,
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, ops::Deref, sync::Arc};
 
-pub type ResetAck = ();
-pub fn reset_ack_new() -> ResetAck {}
+pub type SyncAck = ();
+pub fn sync_ack_new() -> SyncAck {}
 
-pub struct ResetRequest {
-    tx: oneshot::Sender<ResetAck>,
+pub struct SyncRequest {
+    tx: oneshot::Sender<SyncAck>,
+    ledger_info: LedgerInfo,
     reconfig: bool,
 }
 
 pub struct OrderedBlocks {
     pub blocks: Vec<ExecutedBlock>,
-    pub finality_proof: LedgerInfoWithSignatures,
+    pub ordered_proof: LedgerInfoWithSignatures,
     pub callback: StateComputerCommitCallBackType,
 }
 
@@ -47,16 +52,17 @@ pub struct OrderedBlocks {
  *                      └─────┬──────┘                    └─────┬──────┘
  *                            │ Link                            │ Link
  *                            │                                 │
- *     ┌────────────┐   ┌─────▼──────┐   ┌────────────┐   ┌─────▼──────┐
- *     │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │
- * ────►            ├───►            ├───►            ├───►            ├───►
- *     │ Block      │   │ LedgerInfo │   │ Block      │   │ LedgerInfo │
- *     └────────────┘   └────────────┘   └────────────┘   └────────────┘
+ *     ┌────────────┐   ┌─────▼──────┐   ┌────────────┐   ┌─────▼──────┐   ┌────────────┐   ┌────────────┐
+ *     │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │
+ * ────►            ├───►            ├───►            ├───►            ├───►            ├───►            ├───►
+ *     │ Block      │   │ LedgerInfo │   │ Block      │   │ LedgerInfo │   │ Block      │   │ LedgerInfo │
+ *     └────────────┘   └────────────┘   └────────────┘   └────────────┘   └────────────┘   └────────────┘
  *
  *      Buffer
  */
 
-pub struct FinalityProofItem(
+// this might represent an aggregated execution proof or an ordered proof
+pub struct ProofItem(
     LedgerInfoWithSignatures,
     BTreeMap<AccountAddress, Ed25519Signature>,
     StateComputerCommitCallBackType,
@@ -66,7 +72,7 @@ pub enum BufferItem {
     Block(Arc<ExecutedBlock>), // TODO: remove Arc
     // the second item is to store a signature received from a commit vote
     // before the prefix of blocks have been executed
-    FinalityProof(Box<FinalityProofItem>), // use box to avoid large size difference in enum
+    Proof(Box<ProofItem>), // use box to avoid large size difference in enum
 }
 
 pub struct LedgerInfoBufferItem {
@@ -106,7 +112,7 @@ pub struct StateManager {
     persisting_phase_rx: Receiver<PersistingResponse>,
 
     block_rx: UnboundedReceiver<OrderedBlocks>,
-    reset_rx: UnboundedReceiver<ResetRequest>,
+    sync_rx: UnboundedReceiver<SyncRequest>,
     end_epoch: bool,
 
     verifier: ValidatorVerifier,
@@ -124,7 +130,7 @@ impl StateManager {
         persisting_phase_tx: Sender<PersistingRequest>,
         persisting_phase_rx: Receiver<PersistingResponse>,
         block_rx: UnboundedReceiver<OrderedBlocks>,
-        reset_rx: UnboundedReceiver<ResetRequest>,
+        sync_rx: UnboundedReceiver<SyncRequest>,
         verifier: ValidatorVerifier,
     ) -> Self {
         let buffer = List::<BufferItem>::new();
@@ -157,11 +163,95 @@ impl StateManager {
             persisting_phase_rx,
 
             block_rx,
-            reset_rx,
+            sync_rx,
             end_epoch: false,
 
             verifier,
         }
+    }
+
+    async fn process_ordered_blocks(
+        &mut self,
+        ordered_blocks: OrderedBlocks,
+    ) -> anyhow::Result<()> {
+        let OrderedBlocks {
+            blocks,
+            ordered_proof,
+            callback,
+        } = ordered_blocks;
+
+        // push blocks to buffer
+        for eb in blocks.iter() {
+            self.buffer
+                .push_back(BufferItem::Block(Arc::new(eb.clone())));
+        }
+
+        self.buffer.push_back(BufferItem::Proof(Box::new(ProofItem(
+            ordered_proof.clone(),
+            BTreeMap::new(),
+            callback,
+        ))));
+
+        // send blocks to execution phase
+        self.execution_phase_tx
+            .send(ExecutionRequest {
+                blocks: blocks
+                    .iter()
+                    .map(|eb| eb.block().clone())
+                    .collect::<Vec<Block>>(),
+            })
+            .await?;
+        Ok(())
+    }
+
+    async fn process_sync_req(&mut self, sync_event: SyncRequest) -> anyhow::Result<()> {
+        let SyncRequest {
+            tx,
+            ledger_info,
+            reconfig,
+        } = sync_event;
+
+        if reconfig {
+            // buffer manager will stop
+            self.end_epoch = true;
+        } else {
+            // clear the buffer until (including) the ledger_info
+            while let Some(ptr) = self.buffer.pop_front() {
+                if let BufferItem::Proof(proof_item) = ptr {
+                    // we have to use ordered-onsly matching because
+                    // proof_item might not contain the execution result
+                    if ledger_info
+                        .commit_info()
+                        .match_ordered_only(proof_item.deref().0.ledger_info().commit_info())
+                    {
+                        break;
+                    }
+                }
+            }
+            // clear the second layer
+            while let Some(ptr) = self.li_buffer.pop_back() {
+                let LedgerInfoBufferItem {
+                    commit_ledger_info,
+                    link: _,
+                } = ptr;
+                // here we use match ordered-only because of fewer comparisons
+                if ledger_info
+                    .commit_info()
+                    .match_ordered_only(commit_ledger_info.commit_info())
+                {
+                    break;
+                }
+            }
+
+            // reset roots
+            self.execution_root = self.buffer.head.as_ref().cloned();
+            self.signing_root = self.li_buffer.head.as_ref().cloned();
+            self.aggregation_root = self.buffer.head.as_ref().cloned();
+        }
+
+        // ack reset
+        tx.send(sync_ack_new()).unwrap();
+        Ok(())
     }
 
     async fn start(self) {

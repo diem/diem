@@ -3,7 +3,7 @@
 
 use crate::{
     experimental::{
-        buffer_manager::ResetAck, execution_phase::ExecutionRequest,
+        buffer_manager::SyncAck, execution_phase::ExecutionRequest,
         ordering_state_computer::OrderingStateComputer,
     },
     test_utils::EmptyStateComputer,
@@ -20,11 +20,11 @@ pub fn prepare_ordering_state_computer(
 ) -> (
     Arc<OrderingStateComputer>,
     Receiver<ExecutionRequest>,
-    Receiver<oneshot::Sender<ResetAck>>,
+    Receiver<oneshot::Sender<SyncAck>>,
 ) {
     let (commit_result_tx, commit_result_rx) = channel::new_test::<ExecutionRequest>(channel_size);
     let (execution_phase_reset_tx, execution_phase_reset_rx) =
-        channel::new_test::<oneshot::Sender<ResetAck>>(1);
+        channel::new_test::<oneshot::Sender<SyncAck>>(1);
     let state_computer = Arc::new(OrderingStateComputer::new(
         commit_result_tx,
         Arc::new(EmptyStateComputer {}),

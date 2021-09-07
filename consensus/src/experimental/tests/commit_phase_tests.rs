@@ -45,7 +45,7 @@ use crate::{
 };
 
 use crate::experimental::{
-    buffer_manager::ResetAck,
+    buffer_manager::SyncAck,
     tests::test_utils::{
         prepare_commit_phase_with_block_store_state_computer,
         prepare_executed_blocks_with_executed_ledger_info,
@@ -62,7 +62,7 @@ pub fn prepare_commit_phase(
 ) -> (
     Sender<CommitChannelType>,
     Sender<VerifiedEvent>,
-    Sender<oneshot::Sender<ResetAck>>,
+    Sender<oneshot::Sender<SyncAck>>,
     Receiver<ExecutionRequest>,
     Receiver<Event<ConsensusMsg>>,
     Arc<Mutex<MetricsSafetyRules>>,
@@ -143,7 +143,7 @@ mod commit_phase_e2e_tests {
             }
 
             // reset
-            let (tx, rx) = oneshot::channel::<ResetAck>();
+            let (tx, rx) = oneshot::channel::<SyncAck>();
             commit_phase_reset_tx.send(tx).await.ok();
             rx.await.ok();
 
@@ -498,7 +498,7 @@ mod commit_phase_function_tests {
             )));
 
             // reset
-            let (tx, rx) = oneshot::channel::<ResetAck>();
+            let (tx, rx) = oneshot::channel::<SyncAck>();
             commit_phase.process_reset_event(tx).await.ok();
             rx.await.ok();
 

@@ -33,7 +33,7 @@ use std::{
 use tokio::time;
 
 use crate::{
-    experimental::buffer_manager::{reset_ack_new, ResetAck},
+    experimental::buffer_manager::{sync_ack_new, SyncAck},
     state_replication::StateComputerCommitCallBackType,
 };
 use diem_logger::error;
@@ -143,7 +143,7 @@ pub struct CommitPhase {
     network_sender: NetworkSender,
     timeout_event_tx: Sender<CommitVote>,
     timeout_event_rx: Receiver<CommitVote>,
-    reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
+    reset_event_rx: Receiver<oneshot::Sender<SyncAck>>,
 }
 
 /// Wrapper for ExecutionProxy.commit
@@ -203,7 +203,7 @@ impl CommitPhase {
         author: Author,
         back_pressure: Arc<AtomicU64>,
         network_sender: NetworkSender,
-        reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
+        reset_event_rx: Receiver<oneshot::Sender<SyncAck>>,
     ) -> Self {
         let (timeout_event_tx, timeout_event_rx) = channel::new::<CommitVote>(
             2,
@@ -365,7 +365,7 @@ impl CommitPhase {
 
     pub async fn process_reset_event(
         &mut self,
-        reset_event_callback: oneshot::Sender<ResetAck>,
+        reset_event_callback: oneshot::Sender<SyncAck>,
     ) -> anyhow::Result<()> {
         // reset the commit phase
 
@@ -378,7 +378,7 @@ impl CommitPhase {
 
         // activate the callback
         reset_event_callback
-            .send(reset_ack_new())
+            .send(sync_ack_new())
             .map_err(|_| Error::ResetDropped)?;
 
         Ok(())

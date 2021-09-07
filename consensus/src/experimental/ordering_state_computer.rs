@@ -16,7 +16,7 @@ use futures::SinkExt;
 use std::{boxed::Box, sync::Arc};
 
 use crate::{
-    experimental::{buffer_manager::ResetAck, errors::Error},
+    experimental::{buffer_manager::SyncAck, errors::Error},
     state_replication::StateComputerCommitCallBackType,
 };
 use futures::channel::oneshot;
@@ -29,14 +29,14 @@ pub struct OrderingStateComputer {
     // the real execution phase (will be handled in ExecutionPhase).
     executor_channel: Sender<ExecutionRequest>,
     state_computer_for_sync: Arc<dyn StateComputer>,
-    reset_event_channel_tx: Sender<oneshot::Sender<ResetAck>>,
+    reset_event_channel_tx: Sender<oneshot::Sender<SyncAck>>,
 }
 
 impl OrderingStateComputer {
     pub fn new(
         executor_channel: Sender<ExecutionRequest>,
         state_computer_for_sync: Arc<dyn StateComputer>,
-        reset_event_channel_tx: Sender<oneshot::Sender<ResetAck>>,
+        reset_event_channel_tx: Sender<oneshot::Sender<SyncAck>>,
     ) -> Self {
         Self {
             executor_channel,
@@ -85,7 +85,7 @@ impl StateComputer for OrderingStateComputer {
         self.state_computer_for_sync.sync_to(target).await?;
 
         // reset execution phase and commit phase
-        let (tx, rx) = oneshot::channel::<ResetAck>();
+        let (tx, rx) = oneshot::channel::<SyncAck>();
         self.reset_event_channel_tx
             .clone()
             .send(tx)
