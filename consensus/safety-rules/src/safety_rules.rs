@@ -36,6 +36,7 @@ use diem_types::{
     waypoint::Waypoint,
 };
 use serde::Serialize;
+use std::cmp::Ordering;
 
 pub(crate) fn next_round(round: Round) -> Result<Round, Error> {
     u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round))
@@ -302,26 +303,37 @@ impl SafetyRules {
             .cloned()
             .ok_or(Error::InvalidLedgerInfo)?;
 
-        let current_epoch = self.persistent_storage.safety_data()?.epoch;
-        if current_epoch < epoch_state.epoch {
-            // This is ordered specifically to avoid configuration issues:
-            // * First set the waypoint to lock in the minimum restarting point,
-            // * set the round information,
-            // * finally, set the epoch information because once the epoch is set, this `if`
-            // statement cannot be re-entered.
-            let waypoint = &Waypoint::new_epoch_boundary(ledger_info)
-                .map_err(|error| Error::InternalError(error.to_string()))?;
-            self.persistent_storage.set_waypoint(waypoint)?;
-            self.persistent_storage.set_safety_data(SafetyData::new(
-                epoch_state.epoch,
-                0,
-                0,
-                0,
-                None,
-            ))?;
-
-            info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update).epoch(epoch_state.epoch));
+        // Update the waypoint to a newer value, this might still be older than the current epoch.
+        let new_waypoint = &Waypoint::new_epoch_boundary(ledger_info)
+            .map_err(|error| Error::InternalError(error.to_string()))?;
+        if new_waypoint.version() > waypoint.version() {
+            self.persistent_storage.set_waypoint(new_waypoint)?;
         }
+
+        let current_epoch = self.persistent_storage.safety_data()?.epoch;
+        match current_epoch.cmp(&epoch_state.epoch) {
+            Ordering::Greater => {
+                // waypoint is not up to the current epoch.
+                return Err(Error::NotInitialized(format!(
+                    "Provided epoch {} is older than current {}, likely waypoint is too old",
+                    epoch_state.epoch, current_epoch
+                )));
+            }
+            Ordering::Less => {
+                // start new epoch
+                self.persistent_storage.set_safety_data(SafetyData::new(
+                    epoch_state.epoch,
+                    0,
+                    0,
+                    0,
+                    None,
+                ))?;
+
+                info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update)
+                    .epoch(epoch_state.epoch));
+            }
+            Ordering::Equal => (),
+        };
         self.epoch_state = Some(epoch_state.clone());
 
         let author = self.persistent_storage.author()?;
