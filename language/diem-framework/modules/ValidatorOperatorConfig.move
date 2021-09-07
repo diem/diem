@@ -6,6 +6,12 @@ module DiemFramework::ValidatorOperatorConfig {
     use DiemFramework::DiemTimestamp;
     friend DiemFramework::DiemAccount;
 
+    #[test_only]
+    friend DiemFramework::ValidatorOperatorConfigTests;
+
+    #[test_only]
+    friend DiemFramework::ValidatorConfigTests;
+
     struct ValidatorOperatorConfig has key {
         /// The human readable name of this entity. Immutable.
         human_name: vector<u8>,

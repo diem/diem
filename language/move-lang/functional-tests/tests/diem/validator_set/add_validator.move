@@ -37,30 +37,6 @@ fun main(creator: signer) {
 stdlib_script::AccountCreationScripts::create_validator_account
 // check: "Keep(EXECUTED)"
 
-// TODO: ValidatorConfig::publish is now a friend function.
-// Make this into a unit test.
-// //! new-transaction
-// //! sender: diemroot
-// //! execute-as: alex
-// script {
-// use DiemFramework::ValidatorConfig;
-// fun main(dr_account: signer, alex_signer: signer) {
-//     let dr_account = &dr_account;
-//     let alex_signer = &alex_signer;
-//     ValidatorConfig::publish(alex_signer, dr_account, b"alex");
-// }
-// }
-// // check: "Discard(INVALID_WRITE_SET)"
-
-//! new-transaction
-script {
-use DiemFramework::ValidatorConfig;
-fun main() {
-    let _ = ValidatorConfig::get_config(@{{alex}});
-}
-}
-// check: "Keep(ABORTED { code: 7,"
-
 // TODO(valerini): enable the following test once the sender format is supported
 // //! new-transaction
 // //! sender: 0xAA
