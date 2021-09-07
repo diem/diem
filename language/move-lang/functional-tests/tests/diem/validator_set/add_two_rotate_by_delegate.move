@@ -29,32 +29,6 @@ script {
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
-//! sender: bob
-// check bob can not rotate his consensus key
-script {
-    use DiemFramework::ValidatorConfig;
-    fun main(account: signer) {
-    let account = &account;
-        ValidatorConfig::set_config(account, @{{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
-    }
-}
-
-// check: "Keep(ABORTED { code: 263,"
-
-//! new-transaction
-//! sender: bob
-// check bob can not rotate alice's consensus key
-script {
-    use DiemFramework::ValidatorConfig;
-    fun main(account: signer) {
-    let account = &account;
-        ValidatorConfig::set_config(account, @{{alice}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
-    }
-}
-
-// check: "Keep(ABORTED { code: 5,"
-
-//! new-transaction
 //! sender: alice
 // check alice can rotate bob's consensus key
 script {

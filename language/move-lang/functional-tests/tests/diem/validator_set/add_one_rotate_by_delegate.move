@@ -42,23 +42,6 @@ script {
 
 // check: "Keep(EXECUTED)"
 
-//! new-transaction
-//! sender: bob
-script {
-    use DiemFramework::ValidatorConfig;
-    // test bob can not rotate his public key because it delegated
-    fun main(account: signer) {
-    let account = &account;
-        // check initial key was "beefbeef"
-        let config = ValidatorConfig::get_config(@{{bob}});
-        assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", 99);
-
-        ValidatorConfig::set_config(account, @{{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
-    }
-}
-
-// check: "Keep(ABORTED { code: 263,"
-
 //! block-prologue
 //! proposer: carrol
 //! block-time: 300000001
