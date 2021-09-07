@@ -13,6 +13,9 @@ module DiemFramework::ValidatorConfig {
     use Std::Signer;
     friend DiemFramework::DiemAccount;
 
+    #[test_only]
+    friend DiemFramework::ValidatorConfigTests;
+
     struct Config has copy, drop, store {
         consensus_pubkey: vector<u8>,
         validator_network_addresses: vector<u8>,
