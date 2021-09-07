@@ -6,6 +6,7 @@ custom_edit_url: https://github.com/diem/diem/edit/main/consensus/README.md
 
 
 The consensus component supports state machine replication using the DiemBFT consensus protocol.
+Edit
 
 ## Overview
 
