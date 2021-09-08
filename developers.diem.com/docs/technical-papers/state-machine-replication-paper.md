@@ -27,6 +27,6 @@ may change everything from the validator set to the protocol itself.
 ### Downloads
 <PublicationLink
     image="https://diem-developers-components.netlify.app/images/state-machine-pdf.png"
-    doc_link="https://diem-developers-components.netlify.app/papers/diem-consensus-state-machine-replication-in-the-diem-blockchain/2021-08-17.pdf"
+    doc_link="https://diem-developers-components.netlify.app/papers/diem-consensus-state-machine-replication-in-the-diem-blockchain/2020-05-26.pdf"
     title="State Machine Replication in the Diem Blockchain"
 />
