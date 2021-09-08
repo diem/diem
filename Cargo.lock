@@ -3198,7 +3198,7 @@ name = "event-notifications"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bcs",
+ "bcs 0.1.3",
  "channel",
  "diem-crypto",
  "diem-infallible",
@@ -3209,7 +3209,7 @@ dependencies = [
  "diemdb",
  "executor-test-helpers",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-core-types",
  "serde",
  "storage-interface",
