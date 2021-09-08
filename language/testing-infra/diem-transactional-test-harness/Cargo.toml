@@ -30,6 +30,7 @@ diem-framework = { path = "../../diem-framework" }
 diem-state-view = { path = "../../../storage/state-view" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-command-line-common = { path = "../../move-command-line-common" }
+vm-genesis = { path = "../../tools/vm-genesis" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

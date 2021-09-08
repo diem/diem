@@ -187,6 +187,7 @@ members = [
     "diem-e2e-tests-replay",
     "diem-fuzz",
     "diem-fuzzer",
+    "diem-framework-transactional-tests",
     "diem-json-rpc-client",
     "diem-keygen",
     "diem-parallel-executor", # Will be removed once parallel execution is used in production.
@@ -255,6 +256,7 @@ diem_crates_in_language = [
     "diem-e2e-tests-replay",
     "diem-framework",
     "diem-framework-releases",
+    "diem-framework-transactional-tests",
     "diem-events-fetcher",
     "diem-keygen",
     "diem-read-write-set",

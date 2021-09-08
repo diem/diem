@@ -9,7 +9,7 @@ move_unit_test::register_move_unit_tests!(
     UnitTestingConfig::default_with_bound(Some(100_000))
         .with_named_addresses(diem_framework_named_addresses()),
     ".",
-    r".*\.move$",
+    r"\./(modules|tests)/.*\.move$",
     &move_stdlib::move_stdlib_modules_full_path(),
     Some(diem_natives())
 );

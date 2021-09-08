@@ -1827,6 +1827,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-framework-transactional-tests"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "diem-transactional-test-harness",
+ "diem-workspace-hack",
+]
+
+[[package]]
 name = "diem-fuzz"
 version = "0.1.0"
 dependencies = [
@@ -2590,6 +2599,7 @@ dependencies = [
  "move-transactional-test-runner",
  "once_cell",
  "structopt 0.3.21",
+ "vm-genesis",
 ]
 
 [[package]]

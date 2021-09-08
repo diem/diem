@@ -1,4 +1,5 @@
 processed 2 tasks
 
 task 1 'run'. lines 11-18:
-Error: Transaction discarded. VMStatus: status INVALID_AUTH_KEY of type Validation
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: INVALID_AUTH_KEY }

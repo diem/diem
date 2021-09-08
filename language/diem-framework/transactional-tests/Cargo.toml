@@ -1,0 +1,20 @@
+[package]
+name = "diem-framework-transactional-tests"
+version = "0.1.0"
+edition = "2018"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem framework transactional tests"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diem-transactional-test-harness = { path = "../../testing-infra/diem-transactional-test-harness" }
+
+datatest-stable = "0.1.1"
+
+[[test]]
+name = "tests"
+harness = false

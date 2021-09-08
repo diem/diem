@@ -1,9 +1,10 @@
 processed 6 tasks
 
-task 4 'run'. lines 39-41:
-Error: Failed to execute transaction. VMStatus: status ABORTED of type Execution with sub status 42
+task 4 'run'. lines 41-43:
+Error: Failed to execute transaction.
+VMStatus: ABORTED { code: 42, location: 4777EB94491650DD3F095CE6F778ACB6::M }
 
-task 5 'view'. lines 44-44:
+task 5 'view'. lines 46-46:
 key 0x1::DiemAccount::DiemAccount {
     authentication_key: f75daa73fc071f93593335eb9033da804777eb94491650dd3f095ce6f778acb6
     withdraw_capability: copy drop store 0x1::Option::Option<0x1::DiemAccount::WithdrawCapability> {

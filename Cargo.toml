@@ -68,6 +68,7 @@ members = [
     "language/compiler/ir-to-bytecode/syntax",
     "language/diem-framework",
     "language/diem-framework/releases",
+    "language/diem-framework/transactional-tests",
     "language/diem-tools/df-cli",
     "language/diem-tools/diem-events-fetcher",
     "language/diem-tools/diem-keygen",

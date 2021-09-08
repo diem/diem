@@ -1,0 +1,17 @@
+processed 9 tasks
+
+task 2 'run'. lines 16-23:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: SEQUENCE_NUMBER_TOO_NEW }
+
+task 4 'run'. lines 36-44:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: SEQUENCE_NUMBER_TOO_OLD }
+
+task 7 'run'. lines 69-76:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: SEQUENCE_NUMBER_TOO_OLD }
+
+task 8 'run'. lines 79-86:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: SEQUENCE_NUMBER_TOO_NEW }

@@ -308,7 +308,7 @@ fn main() {
         } else {
             collect_enabled_tests(&mut reqs, "unit", feature, "tests/sources");
             collect_enabled_tests(&mut reqs, "stdlib", feature, "../move-stdlib");
-            collect_enabled_tests(&mut reqs, "diem", feature, "../diem-framework");
+            collect_enabled_tests(&mut reqs, "diem", feature, "../diem-framework/modules");
         }
     }
     datatest_stable::runner(&reqs);

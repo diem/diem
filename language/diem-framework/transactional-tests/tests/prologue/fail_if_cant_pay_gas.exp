@@ -1,0 +1,9 @@
+processed 6 tasks
+
+task 2 'run'. lines 18-38:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE }
+
+task 4 'run'. lines 55-63:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE }

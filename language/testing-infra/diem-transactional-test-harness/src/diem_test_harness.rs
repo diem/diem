@@ -43,6 +43,7 @@ use std::{
     path::Path,
 };
 use structopt::StructOpt;
+use vm_genesis::GENESIS_KEYPAIR;
 
 /// The Diem transaction test adapter.
 ///
@@ -54,6 +55,7 @@ struct DiemTestAdapter<'a> {
     compiled_state: CompiledState<'a>,
     storage: FakeDataStore,
     default_syntax: SyntaxChoice,
+    private_key_mapping: BTreeMap<String, Ed25519PrivateKey>,
 }
 
 /// Parameters *required* to create a Diem transaction.
@@ -72,15 +74,46 @@ fn parse_ed25519_private_key(s: &str) -> Result<Ed25519PrivateKey> {
 /// Diem-specific arguments for the publish command.
 #[derive(StructOpt, Debug)]
 struct DiemPublishArgs {
-    #[structopt(short = "k", long = "private-key", parse(try_from_str = parse_ed25519_private_key))]
-    privkey: Ed25519PrivateKey,
+    #[structopt(short = "k", long = "private-key")]
+    privkey: String,
+
+    #[structopt(short = "n", long = "sequence-number")]
+    sequence_number: Option<u64>,
+
+    #[structopt(long = "gas-price")]
+    gas_price: Option<u64>,
 }
 
 /// Diem-specifc arguments for the run command,
 #[derive(StructOpt, Debug)]
 struct DiemRunArgs {
-    #[structopt(short = "k", long = "private-key", parse(try_from_str = parse_ed25519_private_key))]
-    privkey: Ed25519PrivateKey,
+    #[structopt(short = "k", long = "private-key")]
+    privkey: String,
+
+    #[structopt(short = "n", long = "sequence-number")]
+    sequence_number: Option<u64>,
+
+    #[structopt(long = "gas-price")]
+    gas_price: Option<u64>,
+}
+
+#[derive(StructOpt, Debug)]
+struct DiemInitArgs {
+    #[structopt(long = "private-keys", parse(try_from_str = parse_named_private_key))]
+    private_keys: Option<Vec<(String, Ed25519PrivateKey)>>,
+}
+
+fn parse_named_private_key(s: &str) -> Result<(String, Ed25519PrivateKey)> {
+    let before_after = s.split('=').collect::<Vec<_>>();
+
+    if before_after.len() != 2 {
+        bail!("Invalid named private key assignment. Must be of the form <private_key_name>=<private_key>, but found '{}'", s);
+    }
+
+    let name = before_after[0].to_string();
+    let private_key = parse_ed25519_private_key(before_after[1])?;
+
+    Ok((name, private_key))
 }
 
 impl<'a> DiemTestAdapter<'a> {
@@ -185,21 +218,44 @@ impl<'a> DiemTestAdapter<'a> {
                     self.storage.add_write_set(output.write_set());
                 }
                 _ => {
-                    bail!("Failed to execute transaction. VMStatus: {}", status)
+                    bail!("Failed to execute transaction.\nVMStatus: {:?}", status)
                 }
             },
             TransactionStatus::Discard(_) => {
-                bail!("Transaction discarded. VMStatus: {}", status)
+                bail!("Transaction discarded.\nVMStatus: {:?}", status)
             }
             TransactionStatus::Retry => panic!(),
         }
 
         Ok(())
     }
+
+    /// Parses the private key if it is a hex string, or look it up if it is an alias.
+    fn resolve_private_key(&self, s: &str) -> Ed25519PrivateKey {
+        if let Some(private_key) = self.private_key_mapping.get(s) {
+            return private_key.clone();
+        }
+        if let Ok(private_key) = parse_ed25519_private_key(s) {
+            return private_key;
+        }
+        panic!(
+            "Invalid private key! Must be a valid hex string or known alias, but found '{}'",
+            s
+        )
+    }
+}
+
+/// Default private key mappings for special Diem accounts.
+fn diem_framework_private_key_mapping() -> Vec<(String, Ed25519PrivateKey)> {
+    vec![
+        ("DiemRoot".to_string(), GENESIS_KEYPAIR.0.clone()),
+        ("TreasuryCompliance".to_string(), GENESIS_KEYPAIR.0.clone()),
+        ("DesignatedDealer".to_string(), GENESIS_KEYPAIR.0.clone()),
+    ]
 }
 
 impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
-    type ExtraInitArgs = EmptyCommand;
+    type ExtraInitArgs = DiemInitArgs;
     type ExtraPublishArgs = DiemPublishArgs;
     type ExtraRunArgs = DiemRunArgs;
     type Subcommand = EmptyCommand;
@@ -217,20 +273,17 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
         task_opt: Option<TaskInput<(InitCommand, Self::ExtraInitArgs)>>,
     ) -> Self {
-        let additional_mapping = match task_opt.map(|t| t.command) {
+        let additional_named_address_mapping = match task_opt.as_ref().map(|t| &t.command) {
             Some((InitCommand { named_addresses }, _)) => {
-                verify_and_create_named_address_mapping(named_addresses).unwrap()
+                verify_and_create_named_address_mapping(named_addresses.clone()).unwrap()
             }
             None => BTreeMap::new(),
         };
 
         let mut named_address_mapping = diem_framework::diem_framework_named_addresses();
-        for (name, addr) in additional_mapping {
+        for (name, addr) in additional_named_address_mapping {
             if named_address_mapping.contains_key(&name) {
-                panic!(
-                    "Invalid init. The named address '{}' is reserved by either the move-stdlib or diem-framework",
-                    name
-                )
+                panic!("Invalid init. The named address '{}' already exists.", name)
             }
             named_address_mapping.insert(name, addr);
         }
@@ -239,10 +292,29 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         let mut storage = FakeDataStore::new(HashMap::new());
         storage.add_write_set(GENESIS_CHANGE_SET_FRESH.write_set());
 
+        let mut private_key_mapping = BTreeMap::new();
+        for (name, private_key) in diem_framework_private_key_mapping() {
+            private_key_mapping.insert(name, private_key);
+        }
+        if let Some(task) = task_opt {
+            if let Some(additional_private_key_mapping) = task.command.1.private_keys {
+                for (name, private_key) in additional_private_key_mapping {
+                    if private_key_mapping.contains_key(&name) {
+                        panic!(
+                            "Invalid init. The named private key '{}' already exists",
+                            name
+                        )
+                    }
+                    private_key_mapping.insert(name, private_key);
+                }
+            }
+        }
+
         Self {
             compiled_state: CompiledState::new(named_address_mapping, pre_compiled_deps),
             default_syntax,
             storage,
+            private_key_mapping,
         }
     }
 
@@ -259,20 +331,19 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         let mut module_blob = vec![];
         module.serialize(&mut module_blob).unwrap();
 
+        let private_key = self.resolve_private_key(&extra_args.privkey);
+
         let txn = RawTransaction::new_module(
             *signer,
-            params.sequence_number,
+            extra_args.sequence_number.unwrap_or(params.sequence_number),
             TransactionModule::new(module_blob),
             gas_budget.unwrap_or(params.max_gas_amount),
-            params.gas_unit_price,
+            extra_args.gas_price.unwrap_or(params.gas_unit_price),
             params.gas_currency_code,
             params.expiration_timestamp_secs,
             ChainId::test(),
         )
-        .sign(
-            &extra_args.privkey,
-            Ed25519PublicKey::from(&extra_args.privkey),
-        )?
+        .sign(&private_key, Ed25519PublicKey::from(&private_key))?
         .into_inner();
 
         self.run_transaction(txn)?;
@@ -294,19 +365,20 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         let mut script_blob = vec![];
         script.serialize(&mut script_blob)?;
 
+        let private_key = self.resolve_private_key(&extra_args.privkey);
         let params = self.fetch_default_transaction_parameters(&signers[0])?;
 
         let txn = RawTransaction::new_script(
             signers[0],
-            params.sequence_number,
+            extra_args.sequence_number.unwrap_or(params.sequence_number),
             TransactionScript::new(script_blob, type_args, txn_args),
             gas_budget.unwrap_or(params.max_gas_amount),
-            params.gas_unit_price,
+            extra_args.gas_price.unwrap_or(params.gas_unit_price),
             params.gas_currency_code,
             params.expiration_timestamp_secs,
             ChainId::test(),
         )
-        .sign_multi_agent(&extra_args.privkey, vec![], vec![])
+        .sign_multi_agent(&private_key, vec![], vec![])
         .unwrap()
         .into_inner();
 
@@ -327,10 +399,12 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
     ) -> Result<()> {
         assert!(!signers.is_empty());
 
+        let private_key = self.resolve_private_key(&extra_args.privkey);
+
         let params = self.fetch_default_transaction_parameters(&signers[0])?;
         let txn = RawTransaction::new_script_function(
             signers[0],
-            params.sequence_number,
+            extra_args.sequence_number.unwrap_or(params.sequence_number),
             TransactionScriptFunction::new(
                 module.clone(),
                 function.to_owned(),
@@ -338,15 +412,12 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
                 convert_txn_args(&txn_args),
             ),
             gas_budget.unwrap_or(params.max_gas_amount),
-            params.gas_unit_price,
+            extra_args.gas_price.unwrap_or(params.gas_unit_price),
             params.gas_currency_code,
             params.expiration_timestamp_secs,
             ChainId::test(),
         )
-        .sign(
-            &extra_args.privkey,
-            Ed25519PublicKey::from(&extra_args.privkey),
-        )?
+        .sign(&private_key, Ed25519PublicKey::from(&private_key))?
         .into_inner();
 
         self.run_transaction(txn)?;
