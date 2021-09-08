@@ -61,6 +61,7 @@ allowed = [
     "dead_code",
     "semicolon-in-expressions-from-macros",
     "clippy::needless-late-init",
+    "clippy::derivable-impls",
 ]
 warn = [
     "clippy::wildcard_dependencies",
