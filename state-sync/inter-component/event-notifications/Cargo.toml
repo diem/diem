@@ -17,18 +17,18 @@ serde = { version = "1.0.124", default-features = false }
 thiserror = "1.0.24"
 tokio = { version = "1.8.1" }
 
-channel = { path = "../../../common/channel" }
-diem-infallible = { path = "../../../common/infallible" }
+channel = { path = "../../../crates/channel" }
+diem-infallible = { path = "../../../crates/diem-infallible" }
 diem-types = { path = "../../../types" }
-diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 storage-interface = { path = "../../../storage/storage-interface" }
 
 
 [dev-dependencies]
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 
-diem-crypto = { path = "../../../crypto/crypto" }
-diem-temppath = { path = "../../../common/temppath" }
+diem-crypto = { path = "../../../crates/diem-crypto" }
+diem-temppath = { path = "../../../crates/diem-temppath" }
 diem-vm = { path = "../../../language/diem-vm" }
 diemdb = { path = "../../../storage/diemdb" }
 executor-test-helpers = { path = "../../../execution/executor-test-helpers" }

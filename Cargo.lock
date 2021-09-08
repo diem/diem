@@ -3199,7 +3199,7 @@ dependencies = [
  "diemdb",
  "executor-test-helpers",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-core-types",
  "serde",
  "storage-interface",

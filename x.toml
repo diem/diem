@@ -64,6 +64,7 @@ allowed = [
     "clippy::map-identity",
     "clippy::unnecessary-to-owned",
     "clippy::derivable-impls",
+    "clippy::await-holding-refcell-ref",
 ]
 warn = [
     "clippy::wildcard_dependencies",
