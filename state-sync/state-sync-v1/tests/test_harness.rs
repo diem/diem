@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use async_trait::async_trait;
 use channel::{diem_channel, message_queues::QueueStyle};
 use consensus_notifications::{ConsensusNotificationSender, ConsensusNotifier};
 use diem_config::{
@@ -841,6 +842,7 @@ impl MockExecutorProxy {
     }
 }
 
+#[async_trait]
 impl ExecutorProxyTrait for MockExecutorProxy {
     fn get_local_storage_state(&self) -> Result<SyncState, Error> {
         Ok(self.storage.read().get_local_storage_state())
@@ -899,7 +901,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(0)
     }
 
-    fn publish_on_chain_config_updates(
+    async fn publish_events_and_reconfig_notifications(
         &mut self,
         _events: Vec<ContractEvent>,
     ) -> Result<(), Error> {

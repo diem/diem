@@ -37,9 +37,9 @@ proptest! {
 }
 
 pub fn test_state_sync_msg_fuzzer_impl(message: StateSyncMessage) {
+    let mut state_sync_coordinator = STATE_SYNC_COORDINATOR.lock();
     block_on(async move {
-        let _ = STATE_SYNC_COORDINATOR
-            .lock()
+        let _ = state_sync_coordinator
             .process_chunk_message(
                 NodeNetworkId::new(NetworkId::Validator, 0),
                 PeerId::new([0u8; PeerId::LENGTH]),

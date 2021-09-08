@@ -81,3 +81,9 @@ impl From<mempool_notifications::Error> for Error {
         Error::UnexpectedError(error.to_string())
     }
 }
+
+impl From<event_notifications::Error> for Error {
+    fn from(error: event_notifications::Error) -> Self {
+        Error::UnexpectedError(error.to_string())
+    }
+}

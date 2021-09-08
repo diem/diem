@@ -306,7 +306,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
     let mut consensus_network_handles = None;
-    let mut reconfig_subscriptions = vec![];
 
     // Create an event subscription service so that components can be notified of events and reconfigs
     let mut event_subscription_service =
@@ -314,6 +313,17 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     let mempool_reconfig_subscription = event_subscription_service
         .subscribe_to_reconfigurations()
         .unwrap();
+
+    // Create a consensus subscription for reconfiguration events (if this node is a validator).
+    let consensus_reconfig_subscription = if node_config.base.role.is_validator() {
+        Some(
+            event_subscription_service
+                .subscribe_to_reconfigurations()
+                .unwrap(),
+        )
+    } else {
+        None
+    };
 
     // Gather all network configs into a single vector.
     let mut network_configs: Vec<&NetworkConfig> = node_config.full_node_networks.iter().collect();
@@ -403,7 +413,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         chunk_executor,
         node_config,
         genesis_waypoint,
-        reconfig_subscriptions,
+        event_subscription_service,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
@@ -439,11 +449,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             .expect("State sync initialization failure");
         debug!("State sync initialization complete.");
 
-        // Create a consensus subscription for reconfiguration events
-        let consensus_reconfig_subscription = event_subscription_service
-            .subscribe_to_reconfigurations()
-            .unwrap();
-
         // Initialize and start consensus.
         instant = Instant::now();
         consensus_runtime = Some(start_consensus(
@@ -453,7 +458,8 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             Box::new(consensus_notifier),
             consensus_to_mempool_sender,
             diem_db,
-            consensus_reconfig_subscription,
+            consensus_reconfig_subscription
+                .expect("Consensus requires a reconfiguration subscription!"),
         ));
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }

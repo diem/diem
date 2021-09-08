@@ -7,23 +7,20 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     shared_components::SyncState,
 };
+use async_trait::async_trait;
 use diem_logger::prelude::*;
 use diem_types::{
-    account_state::AccountState,
-    contract_event::ContractEvent,
-    ledger_info::LedgerInfoWithSignatures,
-    move_resource::MoveStorage,
-    on_chain_config,
-    on_chain_config::{config_address, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
-    transaction::TransactionListWithProof,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
+    move_resource::MoveStorage, transaction::TransactionListWithProof,
 };
+use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use executor_types::{ChunkExecutor, ExecutedTrees};
-use itertools::Itertools;
-use std::{collections::HashSet, convert::TryFrom, sync::Arc};
+use futures::executor::block_on;
+use std::sync::Arc;
 use storage_interface::DbReader;
-use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
+#[async_trait]
 pub trait ExecutorProxyTrait: Send {
     /// Sync the local state with the latest in storage.
     fn get_local_storage_state(&self) -> Result<SyncState, Error>;
@@ -54,90 +51,48 @@ pub trait ExecutorProxyTrait: Send {
     /// Returns the ledger's timestamp for the given version in microseconds
     fn get_version_timestamp(&self, version: u64) -> Result<u64, Error>;
 
-    /// publishes on-chain config updates to subscribed components
-    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error>;
+    /// Publishes on-chain event notifications and reconfigurations to subscribed components
+    async fn publish_events_and_reconfig_notifications(
+        &mut self,
+        events: Vec<ContractEvent>,
+    ) -> Result<(), Error>;
 }
 
 pub(crate) struct ExecutorProxy {
     storage: Arc<dyn DbReader>,
     executor: Box<dyn ChunkExecutor>,
-    reconfig_subscriptions: Vec<ReconfigSubscription>,
-    on_chain_configs: OnChainConfigPayload,
+    event_subscription_service: EventSubscriptionService,
 }
 
 impl ExecutorProxy {
     pub(crate) fn new(
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
-        mut reconfig_subscriptions: Vec<ReconfigSubscription>,
+        event_subscription_service: EventSubscriptionService,
     ) -> Self {
-        let on_chain_configs = Self::fetch_all_configs(&*storage)
-            .expect("[state sync] Failed initial read of on-chain configs");
-        for subscription in reconfig_subscriptions.iter_mut() {
-            subscription
-                .publish(on_chain_configs.clone())
-                .expect("[state sync] Failed to publish initial on-chain config");
-        }
         Self {
             storage,
             executor,
-            reconfig_subscriptions,
-            on_chain_configs,
+            event_subscription_service,
         }
     }
 
-    fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload, Error> {
-        let access_paths = ON_CHAIN_CONFIG_REGISTRY
-            .iter()
-            .map(|config_id| config_id.access_path())
-            .collect();
-        let configs = storage
-            .batch_fetch_resources(access_paths)
-            .map_err(|error| {
-                Error::UnexpectedError(format!("Failed batch fetch of resources: {}", error))
-            })?;
-        let synced_version = storage.fetch_synced_version().map_err(|error| {
-            Error::UnexpectedError(format!("Failed to fetch storage synced version: {}", error))
-        })?;
-
-        let account_state_blob = storage
-            .get_account_state_with_proof_by_version(config_address(), synced_version)
-            .map_err(|error| {
-                Error::UnexpectedError(format!(
-                    "Failed to fetch account state with proof {}",
-                    error
-                ))
-            })?
-            .0;
-        let epoch = account_state_blob
-            .map(|blob| {
-                AccountState::try_from(&blob).and_then(|state| {
-                    Ok(state
-                        .get_configuration_resource()?
-                        .ok_or_else(|| {
-                            Error::UnexpectedError("Configuration resource does not exist".into())
-                        })?
-                        .epoch())
-                })
-            })
-            .ok_or_else(|| Error::UnexpectedError("Missing account state blob".into()))?
-            .map_err(|error| {
-                Error::UnexpectedError(format!("Failed to fetch configuration resource: {}", error))
-            })?;
-
-        Ok(OnChainConfigPayload::new(
-            epoch,
-            Arc::new(
-                ON_CHAIN_CONFIG_REGISTRY
-                    .iter()
-                    .cloned()
-                    .zip_eq(configs)
-                    .collect(),
-            ),
-        ))
+    /// This method is required to force notify subscribers of the initial configurations
+    /// when the node starts up.
+    pub(crate) async fn force_notify_reconfig_subscribers(&mut self) -> Result<(), Error> {
+        // Force the event subscription service to notify all listeners of a new reconfiguration
+        match (&*self.storage).fetch_synced_version() {
+            Ok(synced_version) => self
+                .event_subscription_service
+                .force_reconfiguration(synced_version)
+                .await
+                .map_err(|error| error.into()),
+            Err(error) => panic!("Failed to fetch storage synced version: {}", error),
+        }
     }
 }
 
+#[async_trait]
 impl ExecutorProxyTrait for ExecutorProxy {
     fn get_local_storage_state(&self) -> Result<SyncState, Error> {
         let storage_info = self.storage.get_startup_info().map_err(|error| {
@@ -182,8 +137,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
             })?;
         timer.stop_and_record();
-        let reconfig_events = extract_reconfig_events(events);
-        if let Err(e) = self.publish_on_chain_config_updates(reconfig_events) {
+        if let Err(e) = block_on(self.publish_events_and_reconfig_notifications(events)) {
             error!(
                 LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&e),
                 "Failed to publish reconfig updates in execute_chunk"
@@ -246,88 +200,42 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .map_err(|error| Error::UnexpectedError(error.to_string()))
     }
 
-    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error> {
-        if events.is_empty() {
-            return Ok(());
-        }
+    async fn publish_events_and_reconfig_notifications(
+        &mut self,
+        events: Vec<ContractEvent>,
+    ) -> Result<(), Error> {
         info!(LogSchema::new(LogEntry::Reconfig)
             .count(events.len())
             .reconfig_events(events.clone()));
 
-        let event_keys = events
-            .iter()
-            .map(|event| *event.key())
-            .collect::<HashSet<_>>();
+        let synced_version = (&*self.storage).fetch_synced_version().map_err(|error| {
+            Error::UnexpectedError(format!("Failed to fetch storage synced version: {}", error))
+        })?;
 
-        // calculate deltas
-        let new_configs = Self::fetch_all_configs(&*self.storage)?;
-        let changed_configs = new_configs
-            .configs()
-            .iter()
-            .filter(|(id, cfg)| {
-                &self.on_chain_configs.configs().get(id).unwrap_or_else(|| {
-                    panic!("Missing on-chain config value in local copy: {}", id)
-                }) != cfg
-            })
-            .map(|(id, _)| *id)
-            .collect::<HashSet<_>>();
-
-        // notify subscribers
-        let mut publish_success = true;
-        for subscription in self.reconfig_subscriptions.iter_mut() {
-            // publish updates if *any* of the subscribed configs changed
-            // or any of the subscribed events were emitted
-            let subscribed_items = subscription.subscribed_items();
-            if !changed_configs.is_disjoint(&subscribed_items.configs)
-                || !event_keys.is_disjoint(&subscribed_items.events)
-            {
-                if let Err(e) = subscription.publish(new_configs.clone()) {
-                    publish_success = false;
-                    error!(
-                        LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError)
-                            .subscription_name(subscription.name.clone())
-                            .error(&Error::UnexpectedError(e.to_string())),
-                        "Failed to publish reconfig notification to subscription {}",
-                        subscription.name
-                    );
-                } else {
-                    info!(
-                        LogSchema::event_log(LogEntry::Reconfig, LogEvent::Success)
-                            .subscription_name(subscription.name.clone()),
-                        "Successfully published reconfig notification to subscription {}",
-                        subscription.name
-                    );
-                }
-            }
-        }
-
-        self.on_chain_configs = new_configs;
-        if publish_success {
+        if let Err(error) = self
+            .event_subscription_service
+            .notify_events(synced_version, events)
+            .await
+        {
+            error!(
+                LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError)
+                    .error(&Error::UnexpectedError(error.to_string())),
+            );
+            Err(error.into())
+        } else {
             counters::RECONFIG_PUBLISH_COUNT
                 .with_label_values(&[counters::SUCCESS_LABEL])
                 .inc();
             Ok(())
-        } else {
-            Err(Error::UnexpectedError(
-                "Failed to publish at least one subscription!".into(),
-            ))
         }
     }
-}
-
-fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
-    let new_epoch_event_key = on_chain_config::new_epoch_event_key();
-    events
-        .into_iter()
-        .filter(|event| *event.key() == new_epoch_event_key)
-        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use channel::diem_channel::Receiver;
     use diem_crypto::{ed25519::*, PrivateKey, Uniform};
+    use diem_infallible::RwLock;
     use diem_transaction_builder::stdlib::{
         encode_peer_to_peer_with_metadata_script,
         encode_set_validator_config_and_reconfigure_script,
@@ -339,14 +247,12 @@ mod tests {
         block_metadata::BlockMetadata,
         contract_event::ContractEvent,
         ledger_info::LedgerInfoWithSignatures,
-        on_chain_config::{
-            ConsensusConfigV1, DiemVersion, OnChainConfig, OnChainConfigPayload,
-            OnChainConsensusConfig, VMConfig, ValidatorSet,
-        },
+        on_chain_config::{ConsensusConfigV1, DiemVersion, OnChainConsensusConfig},
         transaction::{Transaction, TransactionPayload, WriteSetPayload},
     };
     use diem_vm::DiemVM;
     use diemdb::DiemDB;
+    use event_notifications::ReconfigNotificationListener;
     use executor::Executor;
     use executor_test_helpers::{
         bootstrap_genesis, gen_block_id, gen_ledger_info_with_sigs, get_test_signed_transaction,
@@ -354,7 +260,6 @@ mod tests {
     use executor_types::BlockExecutor;
     use futures::{future::FutureExt, stream::StreamExt};
     use storage_interface::DbReaderWriter;
-    use subscription_service::ReconfigSubscription;
     use vm_genesis::TestValidator;
 
     // TODO(joshlind): add unit tests for general executor proxy behaviour!
@@ -362,10 +267,8 @@ mod tests {
 
     #[test]
     fn test_pub_sub_different_subscription() {
-        let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![VMConfig::CONFIG_ID], vec![]);
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, mut executor_proxy, mut reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer, and update the validator set
         let validator_account = validators[0].data.address;
@@ -377,23 +280,20 @@ mod tests {
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
+        block_on(executor_proxy.publish_events_and_reconfig_notifications(reconfig_events))
             .unwrap();
 
         // Verify no reconfig notification is sent (we only subscribed to VMConfig)
         assert!(reconfig_receiver
             .select_next_some()
             .now_or_never()
-            .is_none());
+            .is_some());
     }
 
     #[test]
     fn test_pub_sub_drop_receiver() {
-        let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, mut executor_proxy, reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].data.address;
@@ -408,20 +308,16 @@ mod tests {
         drop(reconfig_receiver);
 
         // Verify publishing on-chain config updates fails due to dropped receiver
-        assert!(executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
-            .is_err());
+        assert!(block_on(
+            executor_proxy.publish_events_and_reconfig_notifications(reconfig_events)
+        )
+        .is_err());
     }
 
     #[test]
     fn test_pub_sub_multiple_subscriptions() {
-        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
-            "",
-            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
-            vec![],
-        );
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, mut executor_proxy, mut reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].data.address;
@@ -437,8 +333,7 @@ mod tests {
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
+        block_on(executor_proxy.publish_events_and_reconfig_notifications(reconfig_events))
             .unwrap();
 
         // Verify reconfig notification is sent
@@ -450,43 +345,11 @@ mod tests {
 
     #[test]
     fn test_pub_sub_no_reconfig_events() {
-        let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
-        let (_, _, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (_validators, _block_executor, mut executor_proxy, mut reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Publish no on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(vec![])
-            .unwrap();
-
-        // Verify no reconfig notification is sent
-        assert!(reconfig_receiver
-            .select_next_some()
-            .now_or_never()
-            .is_none());
-    }
-
-    #[test]
-    fn test_pub_sub_no_subscriptions() {
-        let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![], vec![]);
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
-
-        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
-        let validator_account = validators[0].data.address;
-        let dummy_txn = create_dummy_transaction(1, validator_account);
-        let reconfig_txn = create_new_update_diem_version_transaction(1);
-
-        // Execute and commit the reconfig block
-        let block = vec![dummy_txn, reconfig_txn];
-        let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
-
-        // Publish the on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
-            .unwrap();
+        block_on(executor_proxy.publish_events_and_reconfig_notifications(vec![])).unwrap();
 
         // Verify no reconfig notification is sent
         assert!(reconfig_receiver
@@ -497,10 +360,8 @@ mod tests {
 
     #[test]
     fn test_pub_sub_diem_version() {
-        let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, mut executor_proxy, mut reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].data.address;
@@ -512,25 +373,19 @@ mod tests {
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
+        block_on(executor_proxy.publish_events_and_reconfig_notifications(reconfig_events))
             .unwrap();
 
         // Verify the correct reconfig notification is sent
-        let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
-        let received_config = payload.get::<DiemVersion>().unwrap();
+        let notification = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        let received_config = notification.on_chain_configs.get::<DiemVersion>().unwrap();
         assert_eq!(received_config, DiemVersion { major: 7 });
     }
 
     #[test]
     fn test_pub_sub_with_executor_proxy() {
-        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
-            "",
-            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
-            vec![],
-        );
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, mut executor_proxy, _reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer and update the Diem version
         let validator_account = validators[0].data.address;
@@ -589,13 +444,8 @@ mod tests {
 
     #[test]
     fn test_pub_sub_with_executor_sync_state() {
-        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
-            "",
-            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
-            vec![],
-        );
-        let (validators, mut block_executor, executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
+        let (validators, mut block_executor, executor_proxy, _reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(true);
 
         // Create a dummy prologue transaction that will bump the timer and update the Diem version
         let validator_account = validators[0].data.address;
@@ -631,15 +481,12 @@ mod tests {
 
     #[test]
     fn test_pub_sub_consensus_config() {
-        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
-            "",
-            vec![OnChainConsensusConfig::CONFIG_ID],
-            vec![],
-        );
-        let (validators, mut block_executor, mut executor_proxy) =
-            bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
-        // it's initialized to empty vec so can't be deserialized
-        assert!(executor_proxy
+        let (validators, mut block_executor, mut executor_proxy, mut reconfig_receiver) =
+            bootstrap_genesis_and_set_subscription(false);
+
+        // Verify that the first OnChainConsensusConfig can't be fetched (it's empty).
+        let reconfig_notification = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        assert!(reconfig_notification
             .on_chain_configs
             .get::<OnChainConsensusConfig>()
             .is_err());
@@ -654,13 +501,15 @@ mod tests {
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
-        executor_proxy
-            .publish_on_chain_config_updates(reconfig_events)
+        block_on(executor_proxy.publish_events_and_reconfig_notifications(reconfig_events))
             .unwrap();
 
         // Verify the correct reconfig notification is sent
-        let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
-        let received_config = payload.get::<OnChainConsensusConfig>().unwrap();
+        let reconfig_notification = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        let received_config = reconfig_notification
+            .on_chain_configs
+            .get::<OnChainConsensusConfig>()
+            .unwrap();
         assert_eq!(
             received_config,
             OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true })
@@ -670,9 +519,13 @@ mod tests {
     /// Executes a genesis transaction, creates the executor proxy and sets the given reconfig
     /// subscription.
     fn bootstrap_genesis_and_set_subscription(
-        subscription: ReconfigSubscription,
-        reconfig_receiver: &mut Receiver<(), OnChainConfigPayload>,
-    ) -> (Vec<TestValidator>, Box<Executor<DiemVM>>, ExecutorProxy) {
+        verify_initial_config: bool,
+    ) -> (
+        Vec<TestValidator>,
+        Box<Executor<DiemVM>>,
+        ExecutorProxy,
+        ReconfigNotificationListener,
+    ) {
         // Generate a genesis change set
         let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -687,19 +540,32 @@ mod tests {
 
         // Create executor proxy with given subscription
         let block_executor = Box::new(Executor::<DiemVM>::new(db_rw.clone()));
-        let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw));
-        let executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
+        let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw.clone()));
+        let mut event_subscription_service =
+            EventSubscriptionService::new(Arc::new(RwLock::new(db_rw)));
+        let mut reconfig_receiver = event_subscription_service
+            .subscribe_to_reconfigurations()
+            .unwrap();
+        let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
+        block_on(executor_proxy.force_notify_reconfig_subscribers()).unwrap();
 
-        // Verify initial reconfiguration notification is sent
-        assert!(
-            reconfig_receiver
-                .select_next_some()
-                .now_or_never()
-                .is_some(),
-            "Expected an initial reconfig notification on executor proxy creation!",
-        );
+        if verify_initial_config {
+            // Verify initial reconfiguration notification is sent
+            assert!(
+                reconfig_receiver
+                    .select_next_some()
+                    .now_or_never()
+                    .is_some(),
+                "Expected an initial reconfig notification on executor proxy creation!",
+            );
+        }
 
-        (validators, block_executor, executor_proxy)
+        (
+            validators,
+            block_executor,
+            executor_proxy,
+            reconfig_receiver,
+        )
     }
 
     /// Creates a transaction that rotates the consensus key of the given validator account.

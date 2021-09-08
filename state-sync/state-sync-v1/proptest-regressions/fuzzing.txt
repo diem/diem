@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9fee85f4ed972863fbc52c3b8aa1aee4639531997e2eed2c1dc6e5d5c48bb151 # shrinks to input = GetChunkRequest([ChunkRequest: known version: 5742128, epoch: 15509589933910008642, limit: 14325678301560936244, target: Waypoint(1689929044481995947)])

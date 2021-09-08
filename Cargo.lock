@@ -7611,6 +7611,7 @@ dependencies = [
 name = "state-sync-v1"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bcs",
  "bytes",
  "channel",
@@ -7631,6 +7632,7 @@ dependencies = [
  "diem-vm",
  "diem-workspace-hack",
  "diemdb",
+ "event-notifications",
  "executor",
  "executor-test-helpers",
  "executor-types",

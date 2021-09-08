@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+async-trait = "0.1.42"
 bcs = "0.1.2"
 fail = "0.4.0"
 futures = "0.3.12"
@@ -36,6 +37,7 @@ diem-types = { path = "../../types" }
 diem-vm = { path = "../../language/diem-vm" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diemdb = { path = "../../storage/diemdb", optional = true }
+event-notifications = { path = "../../state-sync/inter-component/event-notifications" }
 executor = { path = "../../execution/executor" }
 executor-test-helpers = { path = "../../execution/executor-test-helpers", optional = true }
 executor-types = { path = "../../execution/executor-types" }

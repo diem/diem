@@ -89,18 +89,20 @@ pub(crate) mod test_utils {
         config::{NodeConfig, RoleType},
         network_id::{NetworkId, NodeNetworkId},
     };
+    use diem_infallible::RwLock;
     use diem_types::transaction::{Transaction, WriteSetPayload};
     use diem_vm::DiemVM;
     use diemdb::DiemDB;
+    use event_notifications::EventSubscriptionService;
     use executor::Executor;
     use executor_test_helpers::bootstrap_genesis;
-    use futures::channel::mpsc;
+    use futures::{channel::mpsc, executor::block_on};
     use mempool_notifications::MempoolNotifier;
     use network::{
         peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
         protocols::network::NewNetworkSender,
     };
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Arc};
     use storage_interface::DbReaderWriter;
 
     #[cfg(test)]
@@ -145,8 +147,11 @@ pub(crate) mod test_utils {
         bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
 
         // Create executor proxy
-        let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw));
-        let executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![]);
+        let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw.clone()));
+        let event_subscription_service =
+            EventSubscriptionService::new(Arc::new(RwLock::new(db_rw)));
+        let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
+        block_on(executor_proxy.force_notify_reconfig_subscribers()).unwrap();
 
         // Get initial state
         let initial_state = executor_proxy.get_local_storage_state().unwrap();

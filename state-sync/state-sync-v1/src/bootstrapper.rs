@@ -9,12 +9,12 @@ use crate::{
 use consensus_notifications::ConsensusNotificationListener;
 use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
 use diem_types::waypoint::Waypoint;
+use event_notifications::EventSubscriptionService;
 use executor_types::ChunkExecutor;
-use futures::channel::mpsc;
+use futures::{channel::mpsc, executor::block_on};
 use mempool_notifications::MempoolNotificationSender;
 use std::{boxed::Box, collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
-use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Runtime};
 
 /// Creates and bootstraps new state syncs and creates clients for
@@ -33,7 +33,7 @@ impl StateSyncBootstrapper {
         executor: Box<dyn ChunkExecutor>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
-        reconfig_event_subscriptions: Vec<ReconfigSubscription>,
+        event_subscription_service: EventSubscriptionService,
     ) -> Self {
         let runtime = Builder::new_multi_thread()
             .thread_name("state-sync")
@@ -41,7 +41,11 @@ impl StateSyncBootstrapper {
             .build()
             .expect("[State Sync] Failed to create runtime!");
 
-        let executor_proxy = ExecutorProxy::new(storage, executor, reconfig_event_subscriptions);
+        // We notify all reconfig subscribers upon executor proxy creation
+        let mut executor_proxy = ExecutorProxy::new(storage, executor, event_subscription_service);
+        block_on(executor_proxy.force_notify_reconfig_subscribers())
+            .expect("Failed to notify reconfig subscribers on initialization!");
+
         Self::bootstrap_with_executor_proxy(
             runtime,
             network,
