@@ -74,6 +74,10 @@ pub trait EventNotificationSender: Send {
         version: Version,
         events: Vec<ContractEvent>,
     ) -> Result<(), Error>;
+
+    /// Force the subscription service to notify subscribers of a reconfiguration.
+    /// This is useful for forcing reconfiguration events on startup.
+    async fn force_reconfiguration(&mut self, version: Version) -> Result<(), Error>;
 }
 
 /// The subscription service offered by state sync, responsible for notifying
@@ -339,14 +343,20 @@ impl EventNotificationSender for EventSubscriptionService {
         // If a reconfiguration event was found, also notify the reconfig subscribers
         // of the new configuration values.
         if reconfig_event_processed {
-            if self.reconfig_subscriptions.is_empty() {
-                return Ok(()); // No reconfiguration subscribers!
-            }
+            self.force_reconfiguration(version).await
+        } else {
+            Ok(())
+        }
+    }
 
-            let new_configs = self.read_on_chain_configs(version)?;
-            for (_, reconfig_subscription) in self.reconfig_subscriptions.iter_mut() {
-                reconfig_subscription.notify_subscriber_of_configs(version, new_configs.clone())?;
-            }
+    async fn force_reconfiguration(&mut self, version: Version) -> Result<(), Error> {
+        if self.reconfig_subscriptions.is_empty() {
+            return Ok(()); // No reconfiguration subscribers!
+        }
+
+        let new_configs = self.read_on_chain_configs(version)?;
+        for (_, reconfig_subscription) in self.reconfig_subscriptions.iter_mut() {
+            reconfig_subscription.notify_subscriber_of_configs(version, new_configs.clone())?;
         }
 
         Ok(())
