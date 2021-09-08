@@ -219,6 +219,7 @@ members = [
     "diem-transaction-benchmarks",
     "diem-wallet",
     "diemdb-benchmark",
+    "event-notifications", # Will be removed once the subscription service is plugged in.
     "executor-benchmark",
     "executor-test-helpers",
     "forge",
