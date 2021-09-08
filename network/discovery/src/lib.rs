@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters::DISCOVERY_COUNTS, file::FileStream, validator_set::ValidatorSetStream};
-use channel::{diem_channel, diem_channel::Receiver};
 use diem_config::{config::PeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_logger::prelude::*;
 use diem_network_address_encryption::Encryptor;
 use diem_secure_storage::Storage;
 use diem_time_service::TimeService;
-use diem_types::on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY};
+use event_notifications::ReconfigNotificationListener;
 use futures::{Stream, StreamExt};
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
@@ -23,7 +22,6 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 
 mod counters;
@@ -66,7 +64,7 @@ impl DiscoveryChangeListener {
         update_channel: channel::Sender<ConnectivityRequest>,
         expected_pubkey: x25519::PublicKey,
         encryptor: Encryptor<Storage>,
-        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: ReconfigNotificationListener,
     ) -> Self {
         let source_stream = DiscoveryChangeStream::ValidatorSet(ValidatorSetStream::new(
             network_context.clone(),
@@ -151,9 +149,4 @@ impl DiscoveryChangeListener {
     pub fn discovery_source(&self) -> DiscoverySource {
         self.discovery_source
     }
-}
-
-pub fn gen_simple_discovery_reconfig_subscription(
-) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    ReconfigSubscription::subscribe_all("network", ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
 }

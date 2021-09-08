@@ -18,6 +18,7 @@ tokio = { version = "1.8.1", features = ["full"] }
 
 channel = {path = "../../common/channel"}
 bcs = "0.1.2"
+event-notifications = { path = "../../state-sync/inter-component/event-notifications" }
 diem-config = { path = "../../config"}
 diem-crypto = {path = "../../crypto/crypto"}
 diem-logger = {path = "../../common/logger"}

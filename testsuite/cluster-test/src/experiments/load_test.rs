@@ -274,6 +274,7 @@ impl StubbedNode {
             pfn_config.base.role,
             network_config,
             TimeService::real(),
+            None,
         );
 
         let state_sync_handle = Some(

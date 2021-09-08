@@ -5,7 +5,6 @@ use crate::{
     counters::{DISCOVERY_COUNTS, EVENT_PROCESSING_LOOP_BUSY_DURATION_S, NETWORK_KEY_MISMATCH},
     DiscoveryError,
 };
-use channel::diem_channel;
 use diem_config::{
     config::{Peer, PeerRole, PeerSet},
     network_id::NetworkContext,
@@ -15,6 +14,7 @@ use diem_logger::prelude::*;
 use diem_network_address_encryption::{Encryptor, Error as EncryptorError};
 use diem_secure_storage::Storage;
 use diem_types::on_chain_config::{OnChainConfigPayload, ValidatorSet};
+use event_notifications::ReconfigNotificationListener;
 use futures::Stream;
 use network::{counters::inc_by_with_context, logging::NetworkSchema};
 use short_hex_str::AsShortHexStr;
@@ -29,7 +29,7 @@ pub struct ValidatorSetStream {
     pub(crate) network_context: Arc<NetworkContext>,
     expected_pubkey: x25519::PublicKey,
     encryptor: Encryptor<Storage>,
-    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    reconfig_events: ReconfigNotificationListener,
 }
 
 impl ValidatorSetStream {
@@ -37,7 +37,7 @@ impl ValidatorSetStream {
         network_context: Arc<NetworkContext>,
         expected_pubkey: x25519::PublicKey,
         encryptor: Encryptor<Storage>,
-        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: ReconfigNotificationListener,
     ) -> Self {
         Self {
             network_context,
@@ -104,7 +104,10 @@ impl Stream for ValidatorSetStream {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Pin::new(&mut self.reconfig_events)
             .poll_next(cx)
-            .map(|maybe_config| maybe_config.map(|config| Ok(self.extract_updates(config))))
+            .map(|maybe_notification| {
+                maybe_notification
+                    .map(|notification| Ok(self.extract_updates(notification.on_chain_configs)))
+            })
     }
 }
 
@@ -162,7 +165,8 @@ fn extract_validator_set_updates(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{gen_simple_discovery_reconfig_subscription, DiscoveryChangeListener};
+    use crate::DiscoveryChangeListener;
+    use channel::{diem_channel, message_queues::QueueStyle};
     use diem_config::config::HANDSHAKE_VERSION;
     use diem_crypto::{
         ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -173,10 +177,10 @@ mod tests {
         network_address::NetworkAddress, on_chain_config::OnChainConfig,
         validator_config::ValidatorConfig, validator_info::ValidatorInfo, PeerId,
     };
+    use event_notifications::ReconfigNotification;
     use futures::executor::block_on;
     use rand::{rngs::StdRng, SeedableRng};
     use std::{collections::HashMap, time::Instant};
-    use subscription_service::ReconfigSubscription;
     use tokio::{
         runtime::Runtime,
         time::{timeout_at, Duration},
@@ -194,14 +198,17 @@ mod tests {
 
         // Build up the Reconfig Listener
         let (conn_mgr_reqs_tx, _rx) = channel::new_test(1);
-        let (mut reconfig_tx, reconfig_rx) = gen_simple_discovery_reconfig_subscription();
+        let (mut reconfig_sender, reconfig_events) = diem_channel::new(QueueStyle::LIFO, 1, None);
+        let reconfig_listener = ReconfigNotificationListener {
+            notification_receiver: reconfig_events,
+        };
         let network_context = NetworkContext::mock_with_peer_id(peer_id);
         let listener = DiscoveryChangeListener::validator_set(
             network_context.clone(),
             conn_mgr_reqs_tx,
             pubkey,
             Encryptor::for_testing(),
-            reconfig_rx,
+            reconfig_listener,
         );
 
         // Build up and send an update with a different pubkey
@@ -209,7 +216,7 @@ mod tests {
             peer_id,
             consensus_pubkey,
             different_pubkey,
-            &mut reconfig_tx,
+            &mut reconfig_sender,
         );
 
         let listener_future = async move {
@@ -246,7 +253,7 @@ mod tests {
         peer_id: PeerId,
         consensus_pubkey: Ed25519PublicKey,
         pubkey: x25519::PublicKey,
-        reconfig_tx: &mut ReconfigSubscription,
+        reconfig_tx: &mut channel::diem_channel::Sender<(), ReconfigNotification>,
     ) {
         let validator_address =
             NetworkAddress::mock().append_prod_protos(pubkey, HANDSHAKE_VERSION);
@@ -266,7 +273,15 @@ mod tests {
             bcs::to_bytes(&validator_set).unwrap(),
         );
         let payload = OnChainConfigPayload::new(1, Arc::new(configs));
-        reconfig_tx.publish(payload).unwrap();
+        reconfig_tx
+            .push(
+                (),
+                ReconfigNotification {
+                    version: 1,
+                    on_chain_configs: payload,
+                },
+            )
+            .unwrap();
     }
 
     fn test_pubkey(seed: [u8; 32]) -> x25519::PublicKey {

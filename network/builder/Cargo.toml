@@ -29,6 +29,7 @@ diem-secure-storage = { path = "../../secure/storage" }
 diem-time-service = { path = "../../common/time-service", features = ["async"] }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+event-notifications = { path = "../../state-sync/inter-component/event-notifications" }
 netcore = { path = "../netcore" }
 network = { path = "../." }
 network-discovery = { path = "../discovery" }

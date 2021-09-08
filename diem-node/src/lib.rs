@@ -339,6 +339,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             node_config.base.role,
             network_config,
             TimeService::real(),
+            Some(&mut event_subscription_service),
         );
         let network_id = network_config.network_id.clone();
 
@@ -374,8 +375,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
                     .add_protocol_handler(consensus::network_interface::network_endpoint_config()),
             );
         }
-
-        reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
         let network_context = network_builder.network_context();
         network_builder.build(runtime.handle().clone());
