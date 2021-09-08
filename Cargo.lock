@@ -1086,6 +1086,7 @@ dependencies = [
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
+ "event-notifications",
  "execution-correctness",
  "executor",
  "executor-test-helpers",

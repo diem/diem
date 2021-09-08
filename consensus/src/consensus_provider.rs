@@ -11,13 +11,12 @@ use crate::{
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
-use channel::diem_channel;
 use consensus_notifications::ConsensusNotificationSender;
 use diem_config::config::NodeConfig;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_mempool::ConsensusRequest;
-use diem_types::on_chain_config::OnChainConfigPayload;
+use event_notifications::ReconfigNotificationListener;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
 use std::{collections::HashMap, sync::Arc};
@@ -32,7 +31,7 @@ pub fn start_consensus(
     state_sync_notifier: Box<dyn ConsensusNotificationSender>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: Arc<dyn DbReader>,
-    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    reconfig_events: ReconfigNotificationListener,
 ) -> Runtime {
     let runtime = runtime::Builder::new_multi_thread()
         .thread_name("consensus")

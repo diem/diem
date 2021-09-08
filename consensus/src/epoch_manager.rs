@@ -23,7 +23,7 @@ use crate::{
     util::time_service::TimeService,
 };
 use anyhow::{anyhow, bail, ensure, Context};
-use channel::{diem_channel, Sender};
+use channel::Sender;
 use consensus_types::{
     common::{Author, Round},
     epoch_retrieval::EpochRetrievalRequest,
@@ -38,6 +38,7 @@ use diem_types::{
     epoch_state::EpochState,
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
+use event_notifications::ReconfigNotificationListener;
 use futures::{select, SinkExt, StreamExt};
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
@@ -85,7 +86,7 @@ pub struct EpochManager {
     storage: Arc<dyn PersistentLivenessStorage>,
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
-    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    reconfig_events: ReconfigNotificationListener,
     commit_msg_tx: Option<Sender<VerifiedEvent>>,
     back_pressure: Arc<AtomicU64>,
 }
@@ -100,7 +101,7 @@ impl EpochManager {
         txn_manager: Arc<dyn TxnManager>,
         commit_state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
-        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: ReconfigNotificationListener,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
@@ -580,8 +581,9 @@ impl EpochManager {
     }
 
     async fn expect_new_epoch(&mut self) {
-        if let Some(payload) = self.reconfig_events.next().await {
-            self.start_processor(payload).await;
+        if let Some(reconfig_notification) = self.reconfig_events.next().await {
+            self.start_processor(reconfig_notification.on_chain_configs)
+                .await;
         } else {
             panic!("Reconfig sender dropped, unable to start new epoch.");
         }

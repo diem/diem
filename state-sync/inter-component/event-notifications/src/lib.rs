@@ -429,7 +429,8 @@ pub type ReconfigNotificationListener = NotificationListener<ReconfigNotificatio
 
 /// The component responsible for listening to subscription notifications.
 pub struct NotificationListener<T> {
-    notification_receiver: channel::diem_channel::Receiver<(), T>,
+    // TODO(joshlind): make this field private when dependencies have better test infrastructures.
+    pub notification_receiver: channel::diem_channel::Receiver<(), T>,
 }
 
 impl<T> Stream for NotificationListener<T> {

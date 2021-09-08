@@ -26,6 +26,7 @@ use diem_types::{
     validator_info::ValidatorInfo,
     waypoint::Waypoint,
 };
+use event_notifications::{ReconfigNotification, ReconfigNotificationListener};
 use futures::channel::mpsc;
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
@@ -83,13 +84,24 @@ impl SMRNode {
             consensus_to_mempool_sender,
         )));
         let (mut reconfig_sender, reconfig_events) = diem_channel::new(QueueStyle::LIFO, 1, None);
+        let reconfig_listener = ReconfigNotificationListener {
+            notification_receiver: reconfig_events,
+        };
         let mut configs = HashMap::new();
         configs.insert(
             ValidatorSet::CONFIG_ID,
             bcs::to_bytes(storage.get_validator_set()).unwrap(),
         );
         let payload = OnChainConfigPayload::new(1, Arc::new(configs));
-        reconfig_sender.push((), payload).unwrap();
+        reconfig_sender
+            .push(
+                (),
+                ReconfigNotification {
+                    version: 1,
+                    on_chain_configs: payload,
+                },
+            )
+            .unwrap();
 
         let runtime = Builder::new_multi_thread()
             .thread_name(format!(
@@ -116,7 +128,7 @@ impl SMRNode {
             txn_manager,
             state_computer,
             storage.clone(),
-            reconfig_events,
+            reconfig_listener,
         );
         let (network_task, network_receiver) =
             NetworkTask::new(network_events, self_receiver, playground.peer_protocols());

@@ -32,6 +32,7 @@ tokio = { version = "1.8.1", features = ["full"] }
 channel = { path = "../common/channel" }
 consensus-notifications = { path = "../state-sync/inter-component/consensus-notifications" }
 consensus-types = { path = "consensus-types", default-features = false }
+event-notifications = { path = "../state-sync/inter-component/event-notifications" }
 execution-correctness = { path = "../execution/execution-correctness" }
 executor = { path = "../execution/executor" }
 executor-types = { path = "../execution/executor-types" }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use backup_service::start_backup_service;
-use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
+use consensus::consensus_provider::start_consensus;
 use debug_interface::node_debug_service::NodeDebugService;
 use diem_config::{
     config::{NetworkConfig, NodeConfig, PersistableConfig},
@@ -315,13 +315,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         .subscribe_to_reconfigurations()
         .unwrap();
 
-    // consensus has to subscribe to ALL on-chain configs
-    let (consensus_reconfig_subscription, consensus_reconfig_events) =
-        gen_consensus_reconfig_subscription();
-    if node_config.base.role.is_validator() {
-        reconfig_subscriptions.push(consensus_reconfig_subscription);
-    }
-
     // Gather all network configs into a single vector.
     let mut network_configs: Vec<&NetworkConfig> = node_config.full_node_networks.iter().collect();
     if let Some(network_config) = node_config.validator_network.as_ref() {
@@ -447,6 +440,11 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             .expect("State sync initialization failure");
         debug!("State sync initialization complete.");
 
+        // Create a consensus subscription for reconfiguration events
+        let consensus_reconfig_subscription = event_subscription_service
+            .subscribe_to_reconfigurations()
+            .unwrap();
+
         // Initialize and start consensus.
         instant = Instant::now();
         consensus_runtime = Some(start_consensus(
@@ -456,7 +454,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             Box::new(consensus_notifier),
             consensus_to_mempool_sender,
             diem_db,
-            consensus_reconfig_events,
+            consensus_reconfig_subscription,
         ));
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
