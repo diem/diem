@@ -3184,6 +3184,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "event-notifications"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bcs",
+ "channel",
+ "diem-crypto",
+ "diem-infallible",
+ "diem-temppath",
+ "diem-types",
+ "diem-vm",
+ "diem-workspace-hack",
+ "diemdb",
+ "executor-test-helpers",
+ "futures",
+ "itertools 0.10.0",
+ "move-core-types",
+ "serde",
+ "storage-interface",
+ "thiserror",
+ "tokio",
+ "vm-genesis",
+]
+
+[[package]]
 name = "execution-correctness"
 version = "0.1.0"
 dependencies = [
