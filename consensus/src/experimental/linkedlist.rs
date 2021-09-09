@@ -17,7 +17,7 @@ pub struct List<T> {
 pub type Link<T> = Option<Rc<RefCell<Node<T>>>>;
 
 pub struct Node<T> {
-    pub elem: T,
+    pub elem: Option<T>,
     pub next: Link<T>,
     pub prev: Link<T>,
 }
@@ -25,7 +25,7 @@ pub struct Node<T> {
 impl<T> Node<T> {
     pub fn new(elem: T) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Node {
-            elem,
+            elem: Some(elem),
             prev: None,
             next: None,
         }))
@@ -40,11 +40,11 @@ impl<T> Node<T> {
     }
 
     pub fn elem(&self) -> &T {
-        &self.elem
+        self.elem.as_ref().unwrap()
     }
 
     pub fn elem_mut(&mut self) -> &mut T {
-        &mut self.elem
+        self.elem.as_mut().unwrap()
     }
 }
 
@@ -97,7 +97,12 @@ impl<T> List<T> {
                     self.head.take();
                 }
             }
-            Rc::try_unwrap(old_tail).ok().unwrap().into_inner().elem
+            Rc::try_unwrap(old_tail)
+                .ok()
+                .unwrap()
+                .into_inner()
+                .elem
+                .unwrap()
         })
     }
 
@@ -112,32 +117,37 @@ impl<T> List<T> {
                     self.tail.take();
                 }
             }
-            Rc::try_unwrap(old_head).ok().unwrap().into_inner().elem
+            Rc::try_unwrap(old_head)
+                .ok()
+                .unwrap()
+                .into_inner()
+                .elem
+                .unwrap()
         })
     }
 
     pub fn peek_front(&self) -> Option<Ref<T>> {
         self.head
             .as_ref()
-            .map(|node| Ref::map(node.borrow(), |node| &node.elem))
+            .map(|node| Ref::map(node.borrow(), |node| node.elem.as_ref().unwrap()))
     }
 
     pub fn peek_back(&self) -> Option<Ref<T>> {
         self.tail
             .as_ref()
-            .map(|node| Ref::map(node.borrow(), |node| &node.elem))
+            .map(|node| Ref::map(node.borrow(), |node| node.elem.as_ref().unwrap()))
     }
 
     pub fn peek_back_mut(&mut self) -> Option<RefMut<T>> {
         self.tail
             .as_ref()
-            .map(|node| RefMut::map((**node).borrow_mut(), |node| &mut node.elem))
+            .map(|node| RefMut::map((**node).borrow_mut(), |node| node.elem.as_mut().unwrap()))
     }
 
     pub fn peek_front_mut(&mut self) -> Option<RefMut<T>> {
         self.head
             .as_ref()
-            .map(|node| RefMut::map((**node).borrow_mut(), |node| &mut node.elem))
+            .map(|node| RefMut::map((**node).borrow_mut(), |node| node.elem.as_mut().unwrap()))
     }
 
     pub fn into_iter(self) -> IntoIter<T> {
@@ -180,6 +190,11 @@ pub fn get_elem<T>(link: &Link<T>) -> Ref<T> {
     Ref::map((**link.as_ref().unwrap()).borrow(), |borrow| borrow.elem())
 }
 
+pub fn take_elem<T>(link: &Link<T>) -> T {
+    let mut node = (**link.as_ref().unwrap()).borrow_mut();
+    node.elem.take().unwrap()
+}
+
 // same for this function
 pub fn get_elem_mut<T>(link: &Link<T>) -> RefMut<T> {
     RefMut::map((**link.as_ref().unwrap()).borrow_mut(), |borrow_mut| {
@@ -188,13 +203,14 @@ pub fn get_elem_mut<T>(link: &Link<T>) -> RefMut<T> {
 }
 
 pub fn set_elem<T>(link: &Link<T>, new_val: T) {
-    // TODO: maybe we can use Option to replace in place?
     let mut node = (**link.as_ref().unwrap()).borrow_mut();
-    *node = Node {
-        elem: new_val,
-        prev: node.prev(),
-        next: node.next(),
-    };
+    node.elem.replace(new_val);
+}
+
+pub fn link_eq<T>(link_a: &Link<T>, link_b: &Link<T>) -> bool {
+    link_a.is_some()
+        && link_b.is_some()
+        && Rc::ptr_eq(link_a.as_ref().unwrap(), link_b.as_ref().unwrap())
 }
 
 // tests

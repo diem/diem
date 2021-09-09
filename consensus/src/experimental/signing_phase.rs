@@ -8,7 +8,8 @@ use std::{
 };
 
 use crate::{
-    experimental::pipeline_phase::StatelessPipeline, metrics_safety_rules::MetricsSafetyRules,
+    experimental::pipeline_phase::{ResponseWithInstruction, StatelessPipeline},
+    metrics_safety_rules::MetricsSafetyRules,
 };
 use async_trait::async_trait;
 use diem_crypto::ed25519::Ed25519Signature;
@@ -58,13 +59,16 @@ impl SigningPhase {
 impl StatelessPipeline for SigningPhase {
     type Request = SigningRequest;
     type Response = SigningResponse;
-    async fn process(&self, req: SigningRequest) -> SigningResponse {
+    async fn process(&self, req: SigningRequest) -> ResponseWithInstruction<SigningResponse> {
         let SigningRequest {
             ordered_ledger_info,
             commit_ledger_info,
         } = req;
-        self.safety_rule_handle
-            .lock()
-            .sign_commit_vote(ordered_ledger_info, commit_ledger_info)
+
+        ResponseWithInstruction::from(
+            self.safety_rule_handle
+                .lock()
+                .sign_commit_vote(ordered_ledger_info, commit_ledger_info),
+        )
     }
 }
