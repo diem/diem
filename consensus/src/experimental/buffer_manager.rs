@@ -3,8 +3,9 @@
 
 use crate::{
     experimental::{
+        buffer_item::BufferItem,
         execution_phase::{ExecutionRequest, ExecutionResponse},
-        linkedlist::{Link, List},
+        linkedlist::{get_elem, get_next, link_eq, set_elem, take_elem, Link, List},
         persisting_phase::{PersistingRequest, PersistingResponse},
         signing_phase::{SigningRequest, SigningResponse},
     },
@@ -12,8 +13,7 @@ use crate::{
     round_manager::VerifiedEvent,
     state_replication::StateComputerCommitCallBackType,
 };
-use consensus_types::{block::Block, common::Author, executed_block::ExecutedBlock};
-use diem_crypto::ed25519::Ed25519Signature;
+use consensus_types::{common::Author, executed_block::ExecutedBlock};
 use diem_types::{
     account_address::AccountAddress,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -26,7 +26,6 @@ use futures::{
     },
     SinkExt,
 };
-use std::{collections::BTreeMap, ops::Deref, sync::Arc};
 
 pub type SyncAck = ();
 pub fn sync_ack_new() -> SyncAck {}
@@ -38,52 +37,12 @@ pub struct SyncRequest {
 }
 
 pub struct OrderedBlocks {
-    pub blocks: Vec<ExecutedBlock>,
+    pub ordered_blocks: Vec<ExecutedBlock>,
     pub ordered_proof: LedgerInfoWithSignatures,
     pub callback: StateComputerCommitCallBackType,
 }
 
-/*
- *                       LedgerInfo Buffer
- *
- *                      ┌────────────┐                    ┌────────────┐
- *                      │ LedgerInfo │                    │ LedgerInfo │
- *                  ────► BufferItem ├────────────────────► BufferItem ├───►
- *                      └─────┬──────┘                    └─────┬──────┘
- *                            │ Link                            │ Link
- *                            │                                 │
- *     ┌────────────┐   ┌─────▼──────┐   ┌────────────┐   ┌─────▼──────┐   ┌────────────┐   ┌────────────┐
- *     │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │   │ BufferItem │
- * ────►            ├───►            ├───►            ├───►            ├───►            ├───►            ├───►
- *     │ Block      │   │ LedgerInfo │   │ Block      │   │ LedgerInfo │   │ Block      │   │ LedgerInfo │
- *     └────────────┘   └────────────┘   └────────────┘   └────────────┘   └────────────┘   └────────────┘
- *
- *      Buffer
- */
-
-// this might represent an aggregated execution proof or an ordered proof
-pub struct ProofItem(
-    LedgerInfoWithSignatures,
-    BTreeMap<AccountAddress, Ed25519Signature>,
-    StateComputerCommitCallBackType,
-);
-
-pub enum BufferItem {
-    Block(Arc<ExecutedBlock>), // TODO: remove Arc
-    // the second item is to store a signature received from a commit vote
-    // before the prefix of blocks have been executed
-    Proof(Box<ProofItem>), // use box to avoid large size difference in enum
-}
-
-pub struct LedgerInfoBufferItem {
-    // signatures are collected in ledger_info
-    pub commit_ledger_info: LedgerInfoWithSignatures, // duplicating for efficiency
-    // jump back to BufferItem cursor
-    pub link: Link<BufferItem>,
-}
-
 pub type BufferItemRootType = Link<BufferItem>;
-pub type LedgerInfoRootType = Link<LedgerInfoBufferItem>;
 pub type Sender<T> = UnboundedSender<T>;
 pub type Receiver<T> = UnboundedReceiver<T>;
 
@@ -94,13 +53,12 @@ pub struct StateManager {
     author: Author,
 
     buffer: List<BufferItem>,
-    li_buffer: List<LedgerInfoBufferItem>,
-    // the second item is for updating aggregation_root and jumping between LI's easily
+
     execution_root: BufferItemRootType,
     execution_phase_tx: Sender<ExecutionRequest>,
     execution_phase_rx: Receiver<ExecutionResponse>,
 
-    signing_root: LedgerInfoRootType,
+    signing_root: BufferItemRootType,
     signing_phase_tx: Sender<SigningRequest>,
     signing_phase_rx: Receiver<SigningResponse>,
 
@@ -134,18 +92,16 @@ impl StateManager {
         verifier: ValidatorVerifier,
     ) -> Self {
         let buffer = List::<BufferItem>::new();
-        let li_buffer = List::<LedgerInfoBufferItem>::new();
 
         // point the roots to the head
         let execution_root = buffer.head.as_ref().cloned();
-        let signing_root = li_buffer.head.as_ref().cloned();
+        let signing_root = buffer.head.as_ref().cloned();
         let aggregation_root = buffer.head.as_ref().cloned();
 
         Self {
             author,
 
             buffer,
-            li_buffer,
 
             execution_root,
             execution_phase_tx,
@@ -175,31 +131,21 @@ impl StateManager {
         ordered_blocks: OrderedBlocks,
     ) -> anyhow::Result<()> {
         let OrderedBlocks {
-            blocks,
+            ordered_blocks,
             ordered_proof,
             callback,
         } = ordered_blocks;
 
         // push blocks to buffer
-        for eb in blocks.iter() {
-            self.buffer
-                .push_back(BufferItem::Block(Arc::new(eb.clone())));
-        }
-
-        self.buffer.push_back(BufferItem::Proof(Box::new(ProofItem(
-            ordered_proof.clone(),
-            BTreeMap::new(),
+        self.buffer.push_back(BufferItem::new_ordered(
+            ordered_blocks.clone(),
+            ordered_proof,
             callback,
-        ))));
+        ));
 
         // send blocks to execution phase
         self.execution_phase_tx
-            .send(ExecutionRequest {
-                blocks: blocks
-                    .iter()
-                    .map(|eb| eb.block().clone())
-                    .collect::<Vec<Block>>(),
-            })
+            .send(ExecutionRequest { ordered_blocks })
             .await?;
         Ok(())
     }
@@ -216,28 +162,10 @@ impl StateManager {
             self.end_epoch = true;
         } else {
             // clear the buffer until (including) the ledger_info
-            while let Some(ptr) = self.buffer.pop_front() {
-                if let BufferItem::Proof(proof_item) = ptr {
-                    // we have to use ordered-onsly matching because
-                    // proof_item might not contain the execution result
-                    if ledger_info
-                        .commit_info()
-                        .match_ordered_only(proof_item.deref().0.ledger_info().commit_info())
-                    {
-                        break;
-                    }
-                }
-            }
-            // clear the second layer
-            while let Some(ptr) = self.li_buffer.pop_back() {
-                let LedgerInfoBufferItem {
-                    commit_ledger_info,
-                    link: _,
-                } = ptr;
-                // here we use match ordered-only because of fewer comparisons
-                if ledger_info
-                    .commit_info()
-                    .match_ordered_only(commit_ledger_info.commit_info())
+            while let Some(buffer_item) = self.buffer.pop_front() {
+                if buffer_item
+                    .get_commit_info()
+                    .match_ordered_only(ledger_info.commit_info())
                 {
                     break;
                 }
@@ -245,13 +173,121 @@ impl StateManager {
 
             // reset roots
             self.execution_root = self.buffer.head.as_ref().cloned();
-            self.signing_root = self.li_buffer.head.as_ref().cloned();
+            self.signing_root = self.buffer.head.as_ref().cloned();
             self.aggregation_root = self.buffer.head.as_ref().cloned();
         }
 
         // ack reset
         tx.send(sync_ack_new()).unwrap();
         Ok(())
+    }
+
+    /// this function updates the buffer according to the response from the execution phase
+    /// it also initiates a request to the signing phase.
+    async fn process_successful_execution_response(
+        &mut self,
+        executed_blocks: Vec<ExecutedBlock>,
+    ) -> anyhow::Result<()> {
+        if self.execution_root.is_none() {
+            // right after a sync
+            return Ok(());
+        }
+
+        let current_cursor = get_next(&self.execution_root);
+
+        if current_cursor.is_some() {
+            // update buffer
+            let buffer_item = take_elem(&current_cursor);
+            if let BufferItem::Ordered(ordered_box) = &buffer_item {
+                if ordered_box.ordered_blocks.first().unwrap().id()
+                    != executed_blocks.first().unwrap().id()
+                {
+                    // an sync req happened before the response
+                    // we do nothing except putting the item back
+                    // the process_execution_resp function will retry the next ordered batch
+                    set_elem(&current_cursor, buffer_item);
+                    return Ok(());
+                }
+
+                // push to the signing phase
+                let commit_ledger_info = LedgerInfo::new(
+                    executed_blocks.last().unwrap().block_info(),
+                    ordered_box
+                        .ordered_proof
+                        .ledger_info()
+                        .consensus_data_hash(),
+                );
+
+                self.signing_phase_tx
+                    .send(SigningRequest {
+                        ordered_ledger_info: ordered_box.ordered_proof.clone(),
+                        commit_ledger_info,
+                    })
+                    .await?;
+
+                set_elem(
+                    &current_cursor,
+                    buffer_item.advance_to_executed(executed_blocks),
+                );
+                self.execution_root = current_cursor;
+            } else {
+                // even if there is a sync happened before the response
+                // the buffer item right after execution root should be an ordered buffer item
+                panic!("Inconsistent buffer item state");
+            }
+        }
+        Ok(())
+    }
+
+    /// this function handles the execution response and updates the buffer
+    /// if the execution fails: it re-collects a larger batch and retries.
+    async fn process_execution_resp(
+        &mut self,
+        execution_resp: ExecutionResponse,
+    ) -> anyhow::Result<()> {
+        // we do not use callback from the execution phase to fetch the retry blocks
+        // because we want the buffer accessed by a single thread
+
+        let ExecutionResponse { inner } = execution_resp;
+
+        if let Ok(executed_blocks) = inner {
+            let res = self
+                .process_successful_execution_response(executed_blocks)
+                .await;
+            // try the next item (even if sending to signing phase failed)
+            let cursor = get_next(&self.execution_root);
+            let buffer_item = get_elem(&cursor);
+            self.execution_phase_tx
+                .send(ExecutionRequest {
+                    ordered_blocks: buffer_item.get_blocks().clone(),
+                })
+                .await?;
+            res
+        } else {
+            // it might be possible that the buffer is already reset
+            // in which case we are retrying an irrelevant large batch
+            // this is ok as blocks can be executed more than once
+            let mut cursor = self.buffer.head.clone();
+            let mut ordered_blocks: Vec<ExecutedBlock> = vec![];
+            while cursor.is_some() {
+                ordered_blocks.extend(get_elem(&cursor).get_blocks().clone());
+                if link_eq(&cursor, &self.execution_root) {
+                    // there must be a successor since the last execution failed
+                    cursor = get_next(&cursor);
+                    ordered_blocks.extend(get_elem(&cursor).get_blocks().clone());
+                    // retry execution with the larger batch
+                    // send blocks to execution phase
+                    self.execution_phase_tx
+                        .send(ExecutionRequest { ordered_blocks })
+                        .await?;
+                    break;
+                }
+                cursor = get_next(&cursor);
+            }
+            // the only case that cursor did not meet execution root is when the buffer is empty
+            // in which case we do nothing
+            Ok(())
+        }
     }
 
     async fn start(self) {

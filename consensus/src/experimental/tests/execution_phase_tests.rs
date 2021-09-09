@@ -4,13 +4,17 @@
 use crate::{
     experimental::{
         execution_phase::{ExecutionPhase, ExecutionRequest, ExecutionResponse},
-        pipeline_phase::{PipelinePhase, StatelessPipeline},
+        pipeline_phase::{PipelinePhase, ResponseWithInstruction, StatelessPipeline},
     },
     test_utils::{consensus_runtime, timed_block_on, RandomComputeResultStateComputer},
 };
-use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
+use consensus_types::{
+    block::{block_test_utils::certificate_for_genesis, Block},
+    executed_block::ExecutedBlock,
+};
 use diem_crypto::HashValue;
 use diem_types::validator_verifier::random_validator_verifier;
+use executor_types::StateComputeResult;
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     SinkExt, StreamExt,
@@ -58,14 +62,17 @@ fn test_execution_phase_process() {
     let block = Block::new_proposal(vec![], 1, 1, genesis_qc, &signers[0]);
 
     timed_block_on(&mut runtime, async move {
-        let out_item = execution_phase
+        let ResponseWithInstruction {
+            resp,
+            instruction: _,
+        } = execution_phase
             .process(ExecutionRequest {
-                blocks: vec![block],
+                ordered_blocks: vec![ExecutedBlock::new(block, StateComputeResult::new_dummy())],
             })
             .await;
 
         assert_eq!(
-            out_item.inner.unwrap()[0].compute_result().root_hash(),
+            resp.inner.unwrap()[0].compute_result().root_hash(),
             random_hash_value
         );
     });
@@ -87,7 +94,7 @@ fn test_execution_phase_happy_path() {
     timed_block_on(&mut runtime, async move {
         in_channel_tx
             .send(ExecutionRequest {
-                blocks: vec![block],
+                ordered_blocks: vec![ExecutedBlock::new(block, StateComputeResult::new_dummy())],
             })
             .await
             .ok();
