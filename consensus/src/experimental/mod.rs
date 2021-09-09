@@ -22,6 +22,7 @@
  */
 
 #![allow(dead_code)]
+pub mod buffer_item;
 pub mod buffer_manager;
 pub mod commit_phase;
 pub mod errors;
