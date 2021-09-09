@@ -18,8 +18,11 @@ use diem_types::{
     transaction::TransactionListWithProof,
 };
 use executor_types::{ChunkExecutor, ExecutedTrees};
-use itertools::Itertools;
-use std::{collections::HashSet, convert::TryFrom, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    sync::Arc,
+};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 
@@ -121,23 +124,52 @@ impl ExecutorProxy {
         on_chain_configs
     }
 
+    /// Fetches the configs on-chain at the currently synchronized storage version.
+    /// Note: We cannot assume that all configs will exist on-chain. As such, we must fetch
+    /// each resource one at a time. For resources that don't exist, we'll simply log
+    /// an error. Reconfig subscribers must be able to handle on-chain configs not
+    /// existing in a reconfiguration notification.
     fn fetch_all_configs(
         config_registry: &[ConfigID],
         storage: &dyn DbReader,
     ) -> Result<OnChainConfigPayload, Error> {
-        let access_paths = config_registry
-            .iter()
-            .map(|config_id| config_id.access_path())
-            .collect();
-        let configs = storage
-            .batch_fetch_resources(access_paths)
-            .map_err(|error| {
-                Error::UnexpectedError(format!("Failed batch fetch of resources: {}", error))
-            })?;
         let synced_version = storage.fetch_synced_version().map_err(|error| {
             Error::UnexpectedError(format!("Failed to fetch storage synced version: {}", error))
         })?;
 
+        // Build a map from config ID to the config value found on-chain
+        let mut config_id_to_config = HashMap::new();
+        for config_id in config_registry.iter() {
+            // TODO(joshlind): refactor the move storage so we aren't batch fetching individual configs...
+            if let Ok(config_list) = storage.batch_fetch_resources(vec![config_id.access_path()]) {
+                match &config_list[..] {
+                    [config] => {
+                        if let Some(old_entry) =
+                            config_id_to_config.insert(*config_id, config.clone())
+                        {
+                            panic!(
+                                "Unexpected config values for duplicate config id found! Key: {}, Value: {:?}!",
+                                config_id, old_entry
+                            );
+                        }
+                    }
+                    _ => {
+                        panic!(
+                            "Expected a single on-chain config, but found: {:?}",
+                            config_list
+                        );
+                    }
+                }
+            } else {
+                info!(
+                    LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError),
+                    "Failed to fetch on-chain config resource id: {}, at version: {}. Continuing anyway.",
+                   config_id, synced_version
+                );
+            }
+        }
+
+        // Fetch the current epoch from the configuration resource
         let account_state_blob = storage
             .get_account_state_with_proof_by_version(config_address(), synced_version)
             .map_err(|error| {
@@ -163,15 +195,10 @@ impl ExecutorProxy {
                 Error::UnexpectedError(format!("Failed to fetch configuration resource: {}", error))
             })?;
 
+        // Return the new on-chain config payload (containing all found configs at this version).
         Ok(OnChainConfigPayload::new(
             epoch,
-            Arc::new(
-                ON_CHAIN_CONFIG_REGISTRY
-                    .iter()
-                    .cloned()
-                    .zip_eq(configs)
-                    .collect(),
-            ),
+            Arc::new(config_id_to_config),
         ))
     }
 }
@@ -302,10 +329,16 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let changed_configs = new_configs
             .configs()
             .iter()
-            .filter(|(id, cfg)| {
-                &self.on_chain_configs.configs().get(id).unwrap_or_else(|| {
-                    panic!("Missing on-chain config value in local copy: {}", id)
-                }) != cfg
+            .filter(|(config_id, config_value)| {
+                if let Some(old_config_value) = self.on_chain_configs.configs().get(config_id) {
+                    &old_config_value != config_value
+                } else {
+                    info!(
+                        LogSchema::event_log(LogEntry::Reconfig, LogEvent::Received),
+                        "Found a new on-chain config, for config id: {}", config_id
+                    );
+                    true
+                }
             })
             .map(|(id, _)| *id)
             .collect::<HashSet<_>>();
