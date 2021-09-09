@@ -15,7 +15,6 @@ DiemConfig, and may be updated by Diem root.
 
 
 <pre><code><b>use</b> <a href="DiemConfig.md#0x1_DiemConfig">0x1::DiemConfig</a>;
-<b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
 <b>use</b> <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector">0x1::Vector</a>;
 </code></pre>
@@ -110,8 +109,6 @@ Allows Diem root to update the config.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig_set">set</a>(dr_account: &signer, config: vector&lt;u8&gt;) {
-    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_operating">DiemTimestamp::assert_operating</a>();
-
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
 
     <a href="DiemConfig.md#0x1_DiemConfig_set">DiemConfig::set</a>(
@@ -133,7 +130,6 @@ Must abort if the signer does not have the DiemRoot role [[H12]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
-<b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetAbortsIf">DiemConfig::SetAbortsIf</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;{account: dr_account};
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetEnsures">DiemConfig::SetEnsures</a>&lt;<a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>&gt;{payload: <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a> { config }};
 </code></pre>

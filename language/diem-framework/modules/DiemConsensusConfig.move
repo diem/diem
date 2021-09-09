@@ -2,7 +2,6 @@
 /// DiemConfig, and may be updated by Diem root.
 module DiemFramework::DiemConsensusConfig {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
-    use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
     use Std::Vector;
 
@@ -27,8 +26,6 @@ module DiemFramework::DiemConsensusConfig {
 
     /// Allows Diem root to update the config.
     public fun set(dr_account: &signer, config: vector<u8>) {
-        DiemTimestamp::assert_operating();
-
         Roles::assert_diem_root(dr_account);
 
         DiemConfig::set(
@@ -40,7 +37,6 @@ module DiemFramework::DiemConsensusConfig {
         /// Must abort if the signer does not have the DiemRoot role [[H12]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
-        include DiemTimestamp::AbortsIfNotOperating;
         include DiemConfig::SetAbortsIf<DiemConsensusConfig>{account: dr_account};
         include DiemConfig::SetEnsures<DiemConsensusConfig>{payload: DiemConsensusConfig { config }};
     }

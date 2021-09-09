@@ -4,7 +4,11 @@
 use crate::builder::GenesisBuilder;
 use diem_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
 use diem_secure_storage::Storage;
-use diem_types::{chain_id::ChainId, transaction::Transaction};
+use diem_types::{
+    chain_id::ChainId,
+    on_chain_config::{ConsensusConfigV1, OnChainConsensusConfig},
+    transaction::Transaction,
+};
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
 
@@ -35,7 +39,11 @@ impl Genesis {
         let chain_id = config.chain_id;
         let storage = Storage::from(&config.shared_backend);
         let genesis = GenesisBuilder::new(storage)
-            .build(chain_id, None)
+            .build(
+                chain_id,
+                None,
+                OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
+            )
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
 
         if let Some(path) = self.path {

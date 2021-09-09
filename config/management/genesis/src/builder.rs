@@ -11,7 +11,7 @@ use diem_management::constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR};
 use diem_secure_storage::{KVStorage, Namespaced};
 use diem_types::{
     chain_id::ChainId,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{OnChainConsensusConfig, VMPublishingOption},
     transaction::{
         authenticator::AuthenticationKey, ScriptFunction, Transaction, TransactionPayload,
     },
@@ -215,6 +215,7 @@ impl<S: KVStorage> GenesisBuilder<S> {
         &self,
         chain_id: ChainId,
         publishing_option: Option<VMPublishingOption>,
+        consensus_config: OnChainConsensusConfig,
     ) -> Result<Transaction> {
         let diem_root_key = self.root_key()?;
         let treasury_compliance_key = self.treasury_compliance_key()?;
@@ -227,6 +228,7 @@ impl<S: KVStorage> GenesisBuilder<S> {
             &validators,
             &move_modules,
             publishing_option,
+            consensus_config,
             chain_id,
         );
 

@@ -710,19 +710,19 @@ mod tests {
         );
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
-        // it's initialized to empty vec so can't be deserialized
+        // it's initialized in genesis
         assert!(executor_proxy
             .on_chain_configs
             .get::<OnChainConsensusConfig>()
-            .is_err());
+            .is_ok());
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].data.address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let allowlist_txn = create_new_update_consensus_config_transaction(1);
+        let update_txn = create_new_update_consensus_config_transaction(1);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn, allowlist_txn];
+        let block = vec![dummy_txn, update_txn];
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
@@ -735,7 +735,7 @@ mod tests {
         let received_config = payload.get::<OnChainConsensusConfig>().unwrap();
         assert_eq!(
             received_config,
-            OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true })
+            OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: false })
         );
     }
 
@@ -773,7 +773,6 @@ mod tests {
         // Verify that the initial configs returned to the subscriber don't contain the unknown on-chain config
         let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
         payload.get::<DiemVersion>().unwrap();
-        assert!(payload.get::<OnChainConsensusConfig>().is_err());
         assert!(payload.get::<TestOnChainConfig>().is_err());
 
         // Create a dummy prologue transaction that will bump the timer, and update the Diem version
@@ -896,7 +895,7 @@ mod tests {
             Some(encode_update_diem_consensus_config_script_function(
                 0,
                 bcs::to_bytes(&OnChainConsensusConfig::V1(ConsensusConfigV1 {
-                    two_chain: true,
+                    two_chain: false,
                 }))
                 .unwrap(),
             )),

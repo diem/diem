@@ -21,7 +21,9 @@ use diem_types::{
     },
     chain_id::{ChainId, NamedChain},
     contract_event::ContractEvent,
-    on_chain_config::{VMPublishingOption, DIEM_MAX_KNOWN_VERSION},
+    on_chain_config::{
+        ConsensusConfigV1, OnChainConsensusConfig, VMPublishingOption, DIEM_MAX_KNOWN_VERSION,
+    },
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, ScriptFunction, Transaction, WriteSetPayload,
     },
@@ -59,6 +61,7 @@ pub fn encode_genesis_transaction(
     validators: &[Validator],
     stdlib_module_bytes: &[Vec<u8>],
     vm_publishing_option: Option<VMPublishingOption>,
+    consensus_config: OnChainConsensusConfig,
     chain_id: ChainId,
 ) -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(encode_genesis_change_set(
@@ -68,6 +71,7 @@ pub fn encode_genesis_transaction(
         stdlib_module_bytes,
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
+        consensus_config,
         chain_id,
     )))
 }
@@ -78,6 +82,7 @@ pub fn encode_genesis_change_set(
     validators: &[Validator],
     stdlib_module_bytes: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
+    consensus_config: OnChainConsensusConfig,
     chain_id: ChainId,
 ) -> ChangeSet {
     let mut stdlib_modules = Vec::new();
@@ -105,6 +110,7 @@ pub fn encode_genesis_change_set(
         diem_root_key,
         treasury_compliance_key,
         vm_publishing_option,
+        consensus_config,
         &xdx_ty,
         chain_id,
     );
@@ -187,10 +193,10 @@ fn exec_script_function(
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
-
     diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
+    consensus_config: OnChainConsensusConfig,
     xdx_ty: &TypeTag,
     chain_id: ChainId,
 ) {
@@ -214,6 +220,9 @@ fn create_and_initialize_main_accounts(
     let native_gas_costs = bcs::to_bytes(&genesis_gas_schedule.native_table)
         .expect("Failure serializing genesis native gas costs");
 
+    let consensus_config_bytes =
+        bcs::to_bytes(&consensus_config).expect("Failure serializing genesis consensus config");
+
     exec_function(
         session,
         GENESIS_MODULE_NAME,
@@ -230,6 +239,7 @@ fn create_and_initialize_main_accounts(
             MoveValue::vector_u8(native_gas_costs),
             MoveValue::U8(chain_id.id()),
             MoveValue::U64(DIEM_MAX_KNOWN_VERSION.major),
+            MoveValue::vector_u8(consensus_config_bytes),
         ]),
     );
 
@@ -530,6 +540,7 @@ pub fn generate_test_genesis(
         validators,
         stdlib_modules,
         vm_publishing_option,
+        OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
         ChainId::test(),
     );
     (genesis, test_validators)
