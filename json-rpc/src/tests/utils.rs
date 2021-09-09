@@ -292,7 +292,7 @@ impl DbReader for MockDiemDB {
         _limit: u64,
         _known_version: Option<u64>,
     ) -> Result<Vec<EventWithProof>> {
-        unimplemented!()
+        Ok(Vec::new())
     }
 
     fn get_event_by_version_with_proof(
@@ -301,7 +301,15 @@ impl DbReader for MockDiemDB {
         _version: u64,
         _proof_version: u64,
     ) -> Result<EventByVersionWithProof> {
-        unimplemented!()
+        Ok(EventByVersionWithProof::new(None, None))
+    }
+
+    fn get_accumulator_consistency_proof(
+        &self,
+        _client_known_version: Option<Version>,
+        _ledger_version: Version,
+    ) -> Result<AccumulatorConsistencyProof> {
+        Ok(AccumulatorConsistencyProof::new(Vec::new()))
     }
 
     fn get_state_proof(&self, known_version: u64) -> Result<StateProof> {

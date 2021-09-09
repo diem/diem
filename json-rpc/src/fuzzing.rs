@@ -27,32 +27,58 @@ fn test_json_rpc_service_fuzzer() {
 #[test]
 fn test_method_fuzzer() {
     method_fuzzer(&gen_request_params!([]), "get_metadata");
+    method_fuzzer(&gen_request_params!([0]), "get_metadata");
     method_fuzzer(
         &gen_request_params!(["000000000000000000000000000000dd"]),
         "get_account",
     );
+    method_fuzzer(&gen_request_params!([0, 1, true]), "get_transactions");
     method_fuzzer(
         &gen_request_params!(["000000000000000000000000000000dd", 0, true]),
         "get_account_transaction",
     );
-    // todo: fix fuzzing test data to make the following test pass
-    // method_fuzzer(
-    //     &gen_request_params!([ADDRESS, 0, 1, true]),
-    //     "get_account_transactions",
-    // );
-    method_fuzzer(&gen_request_params!([0, 1, true]), "get_transactions");
+    method_fuzzer(
+        &gen_request_params!(["000000000000000000000000000000dd", 0, 1, true]),
+        "get_account_transactions",
+    );
     method_fuzzer(
         &gen_request_params!(["00000000000000000000000000000000000000000a550c18", 0, 10]),
         "get_events",
     );
-    method_fuzzer(&gen_request_params!([0]), "get_metadata");
     method_fuzzer(&gen_request_params!([]), "get_currencies");
+    method_fuzzer(&gen_request_params!([]), "get_network_status");
+    // TODO(philiphayes): fails because generated AccountStateWithProof doesn't
+    // include a DiemAccount resource and the non-fuzzer tests assert that the
+    // response is Ok. Should still work fine inside the fuzzer.
+    // method_fuzzer(
+    //     &gen_request_params!(["000000000000000000000000000000dd"]),
+    //     "get_resources",
+    // );
     method_fuzzer(&gen_request_params!([1]), "get_state_proof");
+    method_fuzzer(
+        &gen_request_params!([]),
+        "get_accumulator_consistency_proof",
+    );
     method_fuzzer(
         &gen_request_params!(["000000000000000000000000000000dd", 0, 1]),
         "get_account_state_with_proof",
     );
-    method_fuzzer(&gen_request_params!([]), "get_network_status");
+    method_fuzzer(
+        &gen_request_params!([0, 1, true]),
+        "get_transactions_with_proofs",
+    );
+    method_fuzzer(
+        &gen_request_params!(["000000000000000000000000000000dd", 0, 1, true]),
+        "get_account_transactions_with_proofs",
+    );
+    method_fuzzer(
+        &gen_request_params!(["00000000000000000000000000000000000000000a550c18", 0, 1]),
+        "get_events_with_proofs",
+    );
+    method_fuzzer(
+        &gen_request_params!(["00000000000000000000000000000000000000000a550c18", 0]),
+        "get_event_by_version_with_proof",
+    );
 }
 
 pub fn method_fuzzer(params_data: &[u8], method: &str) {
