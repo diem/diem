@@ -14,7 +14,7 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     on_chain_config,
-    on_chain_config::{config_address, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
+    on_chain_config::{config_address, ConfigID, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
 };
 use executor_types::{ChunkExecutor, ExecutedTrees};
@@ -71,13 +71,11 @@ impl ExecutorProxy {
         executor: Box<dyn ChunkExecutor>,
         mut reconfig_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
-        let on_chain_configs = Self::fetch_all_configs(&*storage)
-            .expect("[state sync] Failed initial read of on-chain configs");
-        for subscription in reconfig_subscriptions.iter_mut() {
-            subscription
-                .publish(on_chain_configs.clone())
-                .expect("[state sync] Failed to publish initial on-chain config");
-        }
+        let on_chain_configs = Self::publish_initial_on_chain_configs(
+            ON_CHAIN_CONFIG_REGISTRY,
+            &*storage,
+            &mut reconfig_subscriptions,
+        );
         Self {
             storage,
             executor,
@@ -86,8 +84,48 @@ impl ExecutorProxy {
         }
     }
 
-    fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload, Error> {
-        let access_paths = ON_CHAIN_CONFIG_REGISTRY
+    #[cfg(test)]
+    pub(crate) fn new_for_test(
+        storage: Arc<dyn DbReader>,
+        executor: Box<dyn ChunkExecutor>,
+        mut reconfig_subscriptions: Vec<ReconfigSubscription>,
+        config_registry: &[ConfigID],
+    ) -> Self {
+        let on_chain_configs = Self::publish_initial_on_chain_configs(
+            config_registry,
+            &*storage,
+            &mut reconfig_subscriptions,
+        );
+        Self {
+            storage,
+            executor,
+            reconfig_subscriptions,
+            on_chain_configs,
+        }
+    }
+
+    fn publish_initial_on_chain_configs(
+        config_registry: &[ConfigID],
+        storage: &dyn DbReader,
+        reconfig_subscriptions: &mut Vec<ReconfigSubscription>,
+    ) -> OnChainConfigPayload {
+        let on_chain_configs = Self::fetch_all_configs(config_registry, storage)
+            .expect("[state sync] Failed initial read of on-chain configs");
+
+        for subscription in reconfig_subscriptions.iter_mut() {
+            subscription
+                .publish(on_chain_configs.clone())
+                .expect("[state sync] Failed to publish initial on-chain config");
+        }
+
+        on_chain_configs
+    }
+
+    fn fetch_all_configs(
+        config_registry: &[ConfigID],
+        storage: &dyn DbReader,
+    ) -> Result<OnChainConfigPayload, Error> {
+        let access_paths = config_registry
             .iter()
             .map(|config_id| config_id.access_path())
             .collect();
@@ -260,7 +298,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .collect::<HashSet<_>>();
 
         // calculate deltas
-        let new_configs = Self::fetch_all_configs(&*self.storage)?;
+        let new_configs = Self::fetch_all_configs(ON_CHAIN_CONFIG_REGISTRY, &*self.storage)?;
         let changed_configs = new_configs
             .configs()
             .iter()
@@ -353,6 +391,7 @@ mod tests {
     };
     use executor_types::BlockExecutor;
     use futures::{future::FutureExt, stream::StreamExt};
+    use serde::{Deserialize, Serialize};
     use storage_interface::DbReaderWriter;
     use subscription_service::ReconfigSubscription;
     use vm_genesis::TestValidator;
@@ -667,6 +706,65 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_missing_on_chain_config() {
+        // Create a new subscriber for on-chain configs (including the new on-chain test config!)
+        let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
+            "",
+            vec![
+                DiemVersion::CONFIG_ID,
+                OnChainConsensusConfig::CONFIG_ID,
+                TestOnChainConfig::CONFIG_ID,
+            ],
+            vec![],
+        );
+
+        // Create a test diem database
+        let db_path = diem_temppath::TempPath::new();
+        db_path.create_as_dir().unwrap();
+        let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(db_path.path()));
+
+        // Bootstrap the database with regular genesis
+        let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+        let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
+        bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
+
+        // Initialize the executor proxy and verify that the node doesn't panic
+        // (even though it can't find the TestOnChainConfig on the blockchain!).
+        let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw.clone()));
+        let mut config_registry = ON_CHAIN_CONFIG_REGISTRY.to_owned();
+        config_registry.push(TestOnChainConfig::CONFIG_ID);
+        let mut executor_proxy =
+            ExecutorProxy::new_for_test(db, chunk_executor, vec![subscription], &config_registry);
+
+        // Verify that the initial configs returned to the subscriber don't contain the unknown on-chain config
+        let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        payload.get::<DiemVersion>().unwrap();
+        assert!(payload.get::<OnChainConsensusConfig>().is_err());
+        assert!(payload.get::<TestOnChainConfig>().is_err());
+
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
+        let validator_account = validators[0].data.address;
+        let dummy_txn = create_dummy_transaction(1, validator_account);
+        let allowlist_txn = create_new_update_consensus_config_transaction(1);
+
+        // Execute and commit the reconfig block
+        let mut block_executor = Box::new(Executor::<DiemVM>::new(db_rw));
+        let block = vec![dummy_txn, allowlist_txn];
+        let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
+
+        // Publish the on chain config updates
+        executor_proxy
+            .publish_on_chain_config_updates(reconfig_events)
+            .unwrap();
+
+        // Verify the reconfig notification still doesn't contain the unknown config
+        let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
+        payload.get::<DiemVersion>().unwrap();
+        payload.get::<OnChainConsensusConfig>().unwrap();
+        assert!(payload.get::<TestOnChainConfig>().is_err());
+    }
+
     /// Executes a genesis transaction, creates the executor proxy and sets the given reconfig
     /// subscription.
     fn bootstrap_genesis_and_set_subscription(
@@ -820,5 +918,15 @@ mod tests {
             .unwrap();
 
         (output.reconfig_events().to_vec(), ledger_info_with_sigs)
+    }
+
+    /// Defines a new on-chain config for test purposes.
+    #[derive(Clone, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+    pub struct TestOnChainConfig {
+        pub some_value: u64,
+    }
+
+    impl OnChainConfig for TestOnChainConfig {
+        const IDENTIFIER: &'static str = "TestOnChainConfig";
     }
 }
