@@ -24,7 +24,6 @@ use crate::{
 use anyhow::{bail, ensure, Context, Result};
 use consensus_types::{
     block::Block,
-    block_data::BlockData,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Round},
     experimental::{commit_decision::CommitDecision, commit_vote::CommitVote},
@@ -348,24 +347,15 @@ impl RoundManager {
         {
             let proposal_msg = Box::new(self.generate_proposal(new_round_event).await?);
             let mut network = self.network.clone();
-            if Self::should_inject_reconfiguration_error(proposal_msg.proposal().block_data()) {
-                // We send the proposal to half of the validators to force a timeout.
-                let mut half_peers: Vec<_> = self
-                    .epoch_state
-                    .verifier
-                    .get_ordered_account_addresses_iter()
-                    .collect();
-                half_peers.truncate(half_peers.len() / 2);
-                network
-                    .send(ConsensusMsg::ProposalMsg(proposal_msg), half_peers)
-                    .await;
-                return Err(anyhow::anyhow!("Injected error in reconfiguration suffix"));
-            } else {
-                network
-                    .broadcast(ConsensusMsg::ProposalMsg(proposal_msg))
-                    .await;
-                counters::PROPOSALS_COUNT.inc();
+            #[cfg(feature = "failpoints")]
+            {
+                self.attempt_to_inject_reconfiguration_error(&proposal_msg)
+                    .await?;
             }
+            network
+                .broadcast(ConsensusMsg::ProposalMsg(proposal_msg))
+                .await;
+            counters::PROPOSALS_COUNT.inc();
         }
         Ok(())
     }
@@ -947,22 +937,40 @@ impl RoundManager {
 
     /// Given R1 <- B2 if R1 has the reconfiguration txn, we inject error on B2 if R1.round + 1 = B2.round
     /// Direct suffix is checked by parent.has_reconfiguration && !parent.parent.has_reconfiguration
+    /// The error is injected by sending proposals to half of the validators to force a timeout.
     ///
     /// It's only enabled with fault injection (failpoints feature).
-    #[allow(unused_variables)]
-    fn should_inject_reconfiguration_error(block_data: &BlockData) -> bool {
-        #[cfg(feature = "failpoints")]
-        {
-            let direct_suffix = block_data.is_reconfiguration_suffix()
-                && !block_data
-                    .quorum_cert()
-                    .parent_block()
-                    .has_reconfiguration();
-            let continuous_round =
-                block_data.round() == block_data.quorum_cert().certified_block().round() + 1;
-            direct_suffix && continuous_round
+    #[cfg(feature = "failpoints")]
+    async fn attempt_to_inject_reconfiguration_error(
+        &self,
+        proposal_msg: &ProposalMsg,
+    ) -> anyhow::Result<()> {
+        let block_data = proposal_msg.proposal().block_data();
+        let direct_suffix = block_data.is_reconfiguration_suffix()
+            && !block_data
+                .quorum_cert()
+                .parent_block()
+                .has_reconfiguration();
+        let continuous_round =
+            block_data.round() == block_data.quorum_cert().certified_block().round() + 1;
+        let should_inject = direct_suffix && continuous_round;
+        if should_inject {
+            let mut half_peers: Vec<_> = self
+                .epoch_state
+                .verifier
+                .get_ordered_account_addresses_iter()
+                .collect();
+            half_peers.truncate(half_peers.len() / 2);
+            self.network
+                .clone()
+                .send(
+                    ConsensusMsg::ProposalMsg(Box::new(proposal_msg.clone())),
+                    half_peers,
+                )
+                .await;
+            Err(anyhow::anyhow!("Injected error in reconfiguration suffix"))
+        } else {
+            Ok(())
         }
-        #[cfg(not(feature = "failpoints"))]
-        false
     }
 }
