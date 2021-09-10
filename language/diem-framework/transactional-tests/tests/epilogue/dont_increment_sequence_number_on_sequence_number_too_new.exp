@@ -1,0 +1,5 @@
+processed 4 tasks
+
+task 2 'run'. lines 16-22:
+Error: Transaction discarded.
+VMStatus: ERROR { status_code: SEQUENCE_NUMBER_TOO_NEW }

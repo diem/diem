@@ -169,13 +169,13 @@ impl<'a> DiemTestAdapter<'a> {
     fn fetch_default_transaction_parameters(
         &self,
         signer_addr: &AccountAddress,
+        gas_unit_price: u64,
     ) -> Result<TransactionParameters> {
         let account_resource = self.fetch_account_resource(signer_addr)?;
 
         let sequence_number = account_resource.sequence_number();
         let gas_currency_code = XUS_NAME.to_string();
         let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
-        let gas_unit_price = 0;
         let max_gas_amount = if gas_unit_price == 0 {
             max_number_of_gas_units.get()
         } else {
@@ -213,14 +213,15 @@ impl<'a> DiemTestAdapter<'a> {
 
         let (status, output) = outputs.pop().unwrap();
         match output.status() {
-            TransactionStatus::Keep(kept_vm_status) => match kept_vm_status {
-                KeptVMStatus::Executed => {
-                    self.storage.add_write_set(output.write_set());
+            TransactionStatus::Keep(kept_vm_status) => {
+                self.storage.add_write_set(output.write_set());
+                match kept_vm_status {
+                    KeptVMStatus::Executed => (),
+                    _ => {
+                        bail!("Failed to execute transaction.\nVMStatus: {:?}", status)
+                    }
                 }
-                _ => {
-                    bail!("Failed to execute transaction.\nVMStatus: {:?}", status)
-                }
-            },
+            }
             TransactionStatus::Discard(_) => {
                 bail!("Transaction discarded.\nVMStatus: {:?}", status)
             }
@@ -326,7 +327,8 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
     ) -> Result<()> {
         let module_id = module.self_id();
         let signer = module_id.address();
-        let params = self.fetch_default_transaction_parameters(signer)?;
+        let params =
+            self.fetch_default_transaction_parameters(signer, extra_args.gas_price.unwrap_or(0))?;
 
         let mut module_blob = vec![];
         module.serialize(&mut module_blob).unwrap();
@@ -366,7 +368,8 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         script.serialize(&mut script_blob)?;
 
         let private_key = self.resolve_private_key(&extra_args.privkey);
-        let params = self.fetch_default_transaction_parameters(&signers[0])?;
+        let params = self
+            .fetch_default_transaction_parameters(&signers[0], extra_args.gas_price.unwrap_or(0))?;
 
         let txn = RawTransaction::new_script(
             signers[0],
@@ -401,7 +404,8 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
 
         let private_key = self.resolve_private_key(&extra_args.privkey);
 
-        let params = self.fetch_default_transaction_parameters(&signers[0])?;
+        let params = self
+            .fetch_default_transaction_parameters(&signers[0], extra_args.gas_price.unwrap_or(0))?;
         let txn = RawTransaction::new_script_function(
             signers[0],
             extra_args.sequence_number.unwrap_or(params.sequence_number),

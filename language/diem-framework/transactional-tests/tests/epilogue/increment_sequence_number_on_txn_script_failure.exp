@@ -1,0 +1,5 @@
+processed 4 tasks
+
+task 2 'run'. lines 18-24:
+Error: Failed to execute transaction.
+VMStatus: ABORTED { code: 77, location: Script }

@@ -29,5 +29,5 @@ key 0x1::DiemAccount::DiemAccount {
         counter: 0
         guid: 01000000000000004777eb94491650dd3f095ce6f778acb6
     }
-    sequence_number: 2
+    sequence_number: 3
 }

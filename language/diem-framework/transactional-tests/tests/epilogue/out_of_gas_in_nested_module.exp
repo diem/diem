@@ -1,0 +1,5 @@
+processed 7 tasks
+
+task 5 'run'. lines 52-62:
+Error: Failed to execute transaction.
+VMStatus: EXECUTION_FAILURE { status_code: OUT_OF_GAS, location: 94B0C6BF91AC1AD628B48A9A6727DDCC::Foo, function_definition: 0, code_offset: 0 }

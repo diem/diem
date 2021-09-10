@@ -1,0 +1,5 @@
+processed 6 tasks
+
+task 4 'run'. lines 40-51:
+Error: Failed to execute transaction.
+VMStatus: EXECUTION_FAILURE { status_code: OUT_OF_GAS, location: Script, function_definition: 0, code_offset: 1 }

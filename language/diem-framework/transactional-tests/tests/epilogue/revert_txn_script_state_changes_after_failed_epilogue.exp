@@ -1,0 +1,5 @@
+processed 6 tasks
+
+task 3 'run'. lines 42-59:
+Error: Failed to execute transaction.
+VMStatus: ABORTED { code: 257288, location: 00000000000000000000000000000001::DiemAccount }
