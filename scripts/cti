@@ -154,8 +154,8 @@ while (( "$#" )); do
       TIMEOUT_SECS=$2
       shift 2
       ;;
-    -M|--master)
-      TAG=master
+    -S|--stable)
+      TAG=stable
       shift 1
       ;;
     -T|--tag)
@@ -192,11 +192,11 @@ if [ -z "$PR" ] && [ -z "$TAG" ] && [ -z "$LOCAL_BUILD" ]
 then
       echo "No PR or tag or --local-build specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master|--tag <TAG>|--local-build] [--workspace <WORKSPACE>] [-E <env>] [--timeout-secs <timeout_in_seconds>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--stable|--tag <TAG>|--local-build] [--workspace <WORKSPACE>] [-E <env>] [--timeout-secs <timeout_in_seconds>] <cluster test arguments>"
       echo
       echo "--local-build - Build image locally"
       echo "--pr <PR>: Build image from pull request #<PR>"
-      echo "-M|--master: Use latest image available in CI"
+      echo "-S|--stable: Use latest image available in CI"
       echo "-T|--tag <TAG>: Use image with tag TAG"
       echo "--timeout-secs: Timeout in seconds"
       echo "--cluster-test-tag <TAG>: Use this tag for cluster test"
@@ -204,11 +204,11 @@ then
       echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
       echo "-R|--report file.json: Generate json report into file.json"
       echo
-      echo "To see cluster test runner arguments run cti --master"
+      echo "To see cluster test runner arguments run cti --stable"
       echo
       echo "Examples:"
       echo "cti --pr <PR> --run bench # Run benchmark"
-      echo "cti --master --emit-tx # Submit transactions until Ctrl+C pressed"
+      echo "cti --stable --emit-tx # Submit transactions until Ctrl+C pressed"
       exit 1
 fi
 
