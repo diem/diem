@@ -105,7 +105,7 @@ if not args.tag:
         )
         TAG = f"dev_{USER}_pull_{args.pr}"
         print(
-            f"**TIP Use ./scripts/fgi -T {TAG} <...> to restart this run with the same tag without rebuilding it"
+            f"**TIP Use ./scripts/fgi/run -T {TAG} <...> to restart this run with the same tag without rebuilding it"
         )
 if not args.base_image_tag:
     BASE_TAG = "devnet"
