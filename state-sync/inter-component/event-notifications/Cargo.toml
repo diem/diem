@@ -25,7 +25,7 @@ storage-interface = { path = "../../../storage/storage-interface" }
 
 
 [dev-dependencies]
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 
 diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-temppath = { path = "../../../crates/diem-temppath" }

@@ -241,8 +241,6 @@ pub fn clean_k8s_cluster(
             &format!("chain.era={}", &new_era),
             "--set",
             &format!("imageTag={}", &base_validator_image_tag),
-            "--set",
-            "loggingToNull=true",
         ];
         upgrade_validator(&format!("val{}", i), &helm_repo, &validator_upgrade_options).unwrap();
     });

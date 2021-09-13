@@ -1080,7 +1080,7 @@ jobs:
     if: ${{ always() && needs.build-images.result=='success' && needs.prepare.outputs.test-land-blocking == 'true' }}
     outputs:
       forge-result: ${{ steps.post-test-result.outputs.forge-result }}
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v2.3.4
         with:
@@ -1122,7 +1122,7 @@ jobs:
   compare_lbt_signals:
     name: compare-lbt_signals
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 20
     #always run this job even if needed jobs failed or are skipped.
     if: ${{ always() && needs.land-blocking-test.result!='skipped' && needs.land-blocking-test-forge.result!='skipped'}}
     needs:
