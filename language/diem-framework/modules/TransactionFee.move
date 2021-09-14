@@ -102,18 +102,14 @@ module DiemFramework::TransactionFee {
             // extract fees
             let fees = borrow_global_mut<TransactionFee<CoinType>>(@TreasuryCompliance);
             let coin = Diem::withdraw_all(&mut fees.balance);
-            let burn_cap = Diem::remove_burn_capability<CoinType>(tc_account);
             // burn
             Diem::burn_now(
+                tc_account,
                 coin,
                 &mut fees.preburn,
-                @TreasuryCompliance,
-                &burn_cap
             );
-            Diem::publish_burn_capability(tc_account, burn_cap);
         }
     }
-
     spec burn_fees {
         /// Must abort if the account does not have the TreasuryCompliance role [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
@@ -142,7 +138,7 @@ module DiemFramework::TransactionFee {
         include Diem::AbortsIfNoBurnCapability<CoinType>{account: tc_account};
 
         let fees = spec_transaction_fee<CoinType>();
-        include Diem::BurnNowAbortsIf<CoinType>{coin: fees.balance, preburn: fees.preburn};
+        include Diem::BurnNowAbortsIf<CoinType>{account: tc_account, coin: fees.balance, preburn: fees.preburn};
 
         /// tc_account retrieves BurnCapability [[H3]][PERMISSION].
         /// BurnCapability is not transferrable [[J3]][PERMISSION].

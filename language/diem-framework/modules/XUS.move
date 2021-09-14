@@ -66,4 +66,31 @@ module DiemFramework::XUS {
             addr == @DiemRoot;
 
     }
+
+    spec module {
+        use Std::Signer;
+        invariant update [suspendable] (
+                old(Diem::spec_is_currency<XUS>()) &&
+                Diem::spec_is_currency<XUS>() &&
+                old(Diem::spec_currency_info<XUS>().total_value) < Diem::spec_currency_info<XUS>().total_value
+            ) ==> (exists a: address: Signer::is_txn_signer_addr(a) && exists<Diem::MintCapability<XUS>>(a));
+
+        invariant update [suspendable] (
+                old(Diem::spec_is_currency<XUS>()) &&
+                Diem::spec_is_currency<XUS>() &&
+                old(Diem::spec_currency_info<XUS>().total_value) > Diem::spec_currency_info<XUS>().total_value
+            ) ==> (exists a: address: Signer::is_txn_signer_addr(a) && exists<Diem::BurnCapability<XUS>>(a));
+
+        invariant update [suspendable] (
+                old(Diem::spec_is_currency<XUS>()) &&
+                Diem::spec_is_currency<XUS>() &&
+                old(Diem::spec_currency_info<XUS>().preburn_value) > Diem::spec_currency_info<XUS>().preburn_value
+            ) ==> (exists a: address: Signer::is_txn_signer_addr(a) && exists<Diem::BurnCapability<XUS>>(a));
+
+        invariant update [suspendable] (
+                old(Diem::spec_is_currency<XUS>()) &&
+                Diem::spec_is_currency<XUS>() &&
+                old(Diem::spec_currency_info<XUS>().preburn_value) < Diem::spec_currency_info<XUS>().preburn_value
+            ) ==> (exists a: address: Signer::is_txn_signer_addr(a) && exists<Diem::PreburnQueue<XUS>>(a));
+    }
 }
