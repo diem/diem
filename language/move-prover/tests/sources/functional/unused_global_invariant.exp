@@ -1,0 +1,29 @@
+warning: Global invariant is not checked anywhere in the code
+   ┌─ tests/sources/functional/unused_global_invariant.move:41:9
+   │
+41 │         invariant exists<R0>(@0x2) ==> exists<R0>(@0x3);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Global invariant is not checked anywhere in the code
+   ┌─ tests/sources/functional/unused_global_invariant.move:46:9
+   │
+46 │         invariant exists<R1<u64>>(@0x2) ==> exists<R1<u64>>(@0x3);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Global invariant is not checked anywhere in the code
+   ┌─ tests/sources/functional/unused_global_invariant.move:51:9
+   │
+51 │         invariant [suspendable] exists<R2>(@0x2) ==> exists<R2>(@0x3);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Global invariant is not checked anywhere in the code
+   ┌─ tests/sources/functional/unused_global_invariant.move:57:9
+   │
+57 │         invariant [suspendable] exists<R3<u64>>(@0x2) ==> exists<R3<u64>>(@0x3);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Global invariant is not checked anywhere in the code
+   ┌─ tests/sources/functional/unused_global_invariant.move:63:9
+   │
+63 │         invariant exists<R4>(@0x2) ==> exists<R4>(@0x3);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

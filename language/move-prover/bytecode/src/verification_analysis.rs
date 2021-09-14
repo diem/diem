@@ -23,6 +23,7 @@ use move_model::{
     ty::{TypeUnificationAdapter, Variance},
 };
 
+use codespan_reporting::diagnostic::Severity;
 use itertools::Itertools;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -313,6 +314,29 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         // prune the function-to-invariants map with the pragma-magic
         let fun_to_inv_map =
             Self::prune_function_to_invariants_map(env, fun_to_inv_map, &fun_set_with_no_inv_check);
+
+        // check for unused invariants defined in the target module
+        let all_checked_invariants: BTreeSet<_> = fun_to_inv_map
+            .values()
+            .map(|rel| rel.direct_modified.iter())
+            .flatten()
+            .cloned()
+            .collect();
+        for module_env in env.get_modules() {
+            if !module_env.is_target() {
+                continue;
+            }
+            for inv_id in env.get_global_invariants_by_module(module_env.get_id()) {
+                if !all_checked_invariants.contains(&inv_id) {
+                    let inv = env.get_global_invariant(inv_id).unwrap();
+                    env.diag(
+                        Severity::Warning,
+                        &inv.loc,
+                        "Global invariant is not checked anywhere in the code",
+                    );
+                }
+            }
+        }
 
         // save the analysis results in the env
         let result = InvariantAnalysisData {
