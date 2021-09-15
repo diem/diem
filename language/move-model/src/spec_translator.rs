@@ -4,9 +4,9 @@
 //! This module supports translations of specifications as found in the move-model to
 //! expressions which can be used in assumes/asserts in bytecode.
 
-use std::collections::{BTreeMap, BTreeSet};
-
+use codespan_reporting::diagnostic::Severity;
 use itertools::Itertools;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     ast::{
@@ -23,7 +23,6 @@ use crate::{
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
-use codespan_reporting::diagnostic::Severity;
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
@@ -605,15 +604,9 @@ impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b
 
     fn rewrite_temporary(&mut self, id: NodeId, idx: TempIndex) -> Option<Exp> {
         // Compute the effective index.
-        let local_type = if idx < self.fun_env.get_parameter_count() {
-            // if the idx is a function argument, get its original type
-            self.fun_env.get_local_type(idx)
-        } else {
-            // otherwise, get type from the builder
-            self.builder.get_local_type(idx)
-        };
-        let is_mut = local_type.is_mutable_reference();
-        let effective_idx = if self.in_old || self.in_post_state && !is_mut {
+        let mut effective_idx = self.apply_param_substitution(idx);
+        let local_type = self.builder.get_local_type(effective_idx);
+        if self.in_old || (self.in_post_state && !local_type.is_mutable_reference()) {
             // We access a param inside of old context, or a value which might have been
             // mutated as we are in the post state. We need to create a temporary
             // to save their value at function entry, and deliver this temporary here.
@@ -621,17 +614,10 @@ impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b
             // Notice that a redundant copy of a value (i.e. one which is not mutated)
             // is removed by copy propagation, so we do not need to
             // care about optimizing this here.
-            self.save_param(self.apply_param_substitution(idx))
-        } else {
-            self.apply_param_substitution(idx)
-        };
+            effective_idx = self.save_param(effective_idx);
+        }
         if effective_idx != idx {
-            // The type of this temporary might be different than the node's type w.r.t.
-            // references. Create a new node id with the effective type.
-            let effective_type = self
-                .builder
-                .get_local_type(effective_idx)
-                .instantiate(self.type_args);
+            let effective_type = self.builder.get_local_type(effective_idx);
             let loc = self.builder.global_env().get_node_loc(id);
             let new_id = self.builder.global_env().new_node(loc, effective_type);
             Some(ExpData::Temporary(new_id, effective_idx).into_exp())
