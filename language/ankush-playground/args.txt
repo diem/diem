@@ -1,0 +1,8 @@
+sandbox clean
+sandbox link --mode diem  --addresses DiemFramework=0x1
+sandbox publish  --mode diem --addresses DiemFramework=0x1
+sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv initialize_approval_policy --mode diem --addresses DiemFramework=0x1 --signers 0x1
+sandbox view storage/0x00000000000000000000000000000001/resources/0x00000000000000000000000000000001::CreateValidatorAccount::ApprovalPolicy.bcs
+sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv propose_create_validator_account --mode diem --addresses DiemFramework=0x1 --signers 0x2 --args 0x1234 b"abcd" b"abcd"
+sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv vote_on_create_validator_account --mode diem --addresses DiemFramework=0x1 --signers 0x2 --args 0 0x2 0x1234 b"abcd" b"abcd"
+sandbox view storage/0x00000000000000000000000000000002/resources/0x00000000000000000000000000000001::Vote::Ballots<0x00000000000000000000000000000001::CreateValidatorAccount::CreateValidatorAccount>.bcs

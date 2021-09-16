@@ -1,0 +1,43 @@
+Command `sandbox clean`:
+Command `sandbox link --mode diem  --addresses DiemFramework=0x1`:
+Command `sandbox publish  --mode diem --addresses DiemFramework=0x1`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv initialize_approval_policy --mode diem --addresses DiemFramework=0x1 --signers 0x1`:
+Command `sandbox view storage/0x00000000000000000000000000000001/resources/0x00000000000000000000000000000001::CreateValidatorAccount::ApprovalPolicy.bcs`:
+key 0x1::CreateValidatorAccount::ApprovalPolicy {
+    approval_policy: copy drop store 0x1::ApprovalPolicy::ApprovalPolicy {
+        allowed_voters: [
+            00000000000000000000000000000002,
+        ]
+        num_votes_required: 1
+    }
+}
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv propose_create_validator_account --mode diem --addresses DiemFramework=0x1 --signers 0x2 --args 0x1234 b"abcd" b"abcd"`:
+Command `sandbox run storage/0x00000000000000000000000000000001/modules/CreateValidatorAccount.mv vote_on_create_validator_account --mode diem --addresses DiemFramework=0x1 --signers 0x2 --args 0 0x2 0x1234 b"abcd" b"abcd"`:
+Command `sandbox view storage/0x00000000000000000000000000000002/resources/0x00000000000000000000000000000001::Vote::Ballots<0x00000000000000000000000000000001::CreateValidatorAccount::CreateValidatorAccount>.bcs`:
+key 0x1::Vote::Ballots<0x1::CreateValidatorAccount::CreateValidatorAccount> {
+    ballots: [
+        store 0x1::Vote::Ballot<0x1::CreateValidatorAccount::CreateValidatorAccount> {
+            proposal: copy drop store 0x1::CreateValidatorAccount::CreateValidatorAccount {
+                new_account_address: 1234
+                auth_key_prefix: 61626364
+                human_name: 61626364
+            }
+            proposal_type: 6372656174655f76616c696461746f725f6163636f756e74
+            approval_policy: copy drop store 0x1::ApprovalPolicy::ApprovalPolicy {
+                allowed_voters: [
+                    00000000000000000000000000000002,
+                ]
+                num_votes_required: 1
+            }
+            votes_received: [
+                2,
+            ]
+            ballot_id: copy drop store 0x1::Vote::BallotID {
+                counter: 0
+                proposer: 2
+            }
+            start_timestamp_secs: 0
+            expiration_timestamp_secs: 16313756410
+        },
+    ]
+}
