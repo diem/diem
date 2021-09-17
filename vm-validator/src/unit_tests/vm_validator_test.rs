@@ -3,25 +3,31 @@
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_state_view::StateViewId;
 use diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script;
 use diem_types::{
     account_address, account_config,
     account_config::{xus_tag, XUS_NAME},
     chain_id::ChainId,
     test_helpers::transaction_test_helpers,
-    transaction::{Module, Script, TransactionArgument, TransactionPayload},
+    transaction::{
+        Module, Script, SignedTransaction, TransactionArgument, TransactionPayload,
+        VMValidatorResult,
+    },
     vm_status::StatusCode,
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES};
 use rand::SeedableRng;
-use std::u64;
-use storage_interface::DbReaderWriter;
+use scratchpad::SparseMerkleTree;
+use std::{sync::Arc, u64};
+use storage_interface::{state_view::VerifiedStateView, DbReader, DbReaderWriter};
 
 struct TestValidator {
     vm_validator: VMValidator,
     _db_path: diem_temppath::TempPath,
+    pub db: Arc<dyn DbReader>,
 }
 
 impl TestValidator {
@@ -37,10 +43,11 @@ impl TestValidator {
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
-        let vm_validator = VMValidator::new(db);
+        let vm_validator = VMValidator::new(db.clone());
         TestValidator {
             vm_validator,
             _db_path,
+            db,
         }
     }
 }
@@ -86,7 +93,7 @@ fn test_validate_transaction() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(TransactionPayload::Script(program)),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status(), None);
 }
 
@@ -107,7 +114,7 @@ fn test_validate_invalid_signature() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::INVALID_SIGNATURE);
 }
 
@@ -135,7 +142,7 @@ fn test_validate_known_script_too_large_args() {
         XUS_NAME.to_owned(), /* gas currency code */
         None,
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
@@ -158,7 +165,7 @@ fn test_validate_max_gas_units_above_max() {
         XUS_NAME.to_owned(), /* gas currency code */
         Some(u64::MAX),      // Max gas units
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
@@ -191,7 +198,7 @@ fn test_validate_max_gas_units_below_min() {
         XUS_NAME.to_owned(), /* gas currency code */
         Some(0),             // Max gas units
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
@@ -214,7 +221,7 @@ fn test_validate_max_gas_price_above_bounds() {
         XUS_NAME.to_owned(), /* gas currency code */
         None,
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
@@ -242,7 +249,7 @@ fn test_validate_max_gas_price_below_bounds() {
         XUS_NAME.to_owned(), /* gas currency code */
         None,
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status(), None);
     //assert_eq!(
     //    ret.status().unwrap().major_status,
@@ -266,7 +273,7 @@ fn test_validate_unknown_script() {
             vec![],
         ))),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     println!("{:?}", ret);
     assert_eq!(ret.status().unwrap(), StatusCode::UNKNOWN_SCRIPT);
 }
@@ -284,7 +291,7 @@ fn test_validate_module_publishing() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Module::new(vec![]),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status(), None);
 }
 
@@ -301,7 +308,7 @@ fn test_validate_module_publishing_non_association() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Module::new(vec![]),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::INVALID_MODULE_PUBLISHER);
 }
 
@@ -322,7 +329,7 @@ fn test_validate_invalid_auth_key() {
         other_private_key.public_key(),
         Some(TransactionPayload::Script(program)),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::INVALID_AUTH_KEY);
 }
 
@@ -344,7 +351,7 @@ fn test_validate_account_doesnt_exist() {
         XUS_NAME.to_owned(), /* gas currency code */
         None,
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
@@ -364,7 +371,7 @@ fn test_validate_sequence_number_too_new() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(TransactionPayload::Script(program)),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status(), None);
 }
 
@@ -384,7 +391,7 @@ fn test_validate_invalid_arguments() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(TransactionPayload::Script(program)),
     );
-    let _ret = vm_validator.validate_transaction(transaction).unwrap();
+    let _ = validate_transaction(&transaction, vm_validator);
     // TODO: Script arguement types are now checked at execution time. Is this an idea behavior?
     // assert_eq!(ret.status().unwrap().major_status, StatusCode::TYPE_MISMATCH);
 }
@@ -403,10 +410,11 @@ fn test_validate_non_genesis_write_set() {
         None,
     )
     .into_inner();
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert!(ret.status().is_none());
 
     // A WriteSet txn is only valid when sent from the Diem root account.
+    let vm_validator = TestValidator::new();
     let bad_transaction = transaction_test_helpers::get_write_set_txn(
         account_config::treasury_compliance_account_address(),
         1,
@@ -415,7 +423,7 @@ fn test_validate_non_genesis_write_set() {
         None,
     )
     .into_inner();
-    let ret = vm_validator.validate_transaction(bad_transaction).unwrap();
+    let ret = validate_transaction(&bad_transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::REJECTED_WRITE_SET);
 }
 
@@ -435,7 +443,7 @@ fn test_validate_expiration_time() {
         XUS_NAME.to_owned(),
         None, /* max_gas_amount */
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::TRANSACTION_EXPIRED);
 }
 
@@ -452,7 +460,7 @@ fn test_validate_chain_id() {
         // all tests use ChainId::test() for chain_id, so pick something different
         ChainId::new(ChainId::test().id() + 1),
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::BAD_CHAIN_ID);
 }
 
@@ -474,7 +482,7 @@ fn test_validate_gas_currency_with_bad_identifier() {
         "Bad_ID".to_string(),
         None, /* max_gas_amount */
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(ret.status().unwrap(), StatusCode::INVALID_GAS_SPECIFIER);
 }
 
@@ -494,9 +502,32 @@ fn test_validate_gas_currency_code() {
         "INVALID".to_string(),
         None, /* max_gas_amount */
     );
-    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    let ret = validate_transaction(&transaction, vm_validator);
     assert_eq!(
         ret.status().unwrap(),
         StatusCode::CURRENCY_INFO_DOES_NOT_EXIST
     );
+}
+
+fn validate_transaction(
+    transaction: &SignedTransaction,
+    vm_validator: TestValidator,
+) -> VMValidatorResult {
+    let (version, state_root) = vm_validator.db.get_latest_state_root().unwrap();
+    let db_reader = Arc::clone(&vm_validator.db);
+
+    let smt = SparseMerkleTree::new(state_root);
+    let state_view = VerifiedStateView::new(
+        StateViewId::TransactionValidation {
+            base_version: version,
+        },
+        db_reader,
+        Some(version),
+        state_root,
+        &smt,
+    );
+
+    vm_validator
+        .validate_transaction(transaction.clone(), &state_view)
+        .unwrap()
 }

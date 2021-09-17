@@ -11,6 +11,7 @@ use diem_types::{
     vm_status::StatusCode,
 };
 use diem_vm::VMValidator;
+use storage_interface::state_view::VerifiedStateView;
 
 #[derive(Clone)]
 pub struct MockVMValidator;
@@ -27,7 +28,11 @@ impl VMValidator for MockVMValidator {
 
 impl TransactionValidation for MockVMValidator {
     type ValidationInstance = MockVMValidator;
-    fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
+    fn validate_transaction(
+        &self,
+        txn: SignedTransaction,
+        _state_view: &VerifiedStateView,
+    ) -> Result<VMValidatorResult> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,
             Err(_) => {

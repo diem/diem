@@ -1066,50 +1066,50 @@ fn test_metrics() {
     }
 }
 
-#[test]
-fn test_transaction_submission() {
-    let (mp_sender, mut mp_events) = channel(1);
-    let mock_db = mock_db();
-    let port = utils::get_available_port();
-    let address = format!("0.0.0.0:{}", port);
-    let runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
-    let client = BlockingClient::new(format!("http://127.0.0.1:{}/v1", port));
-
-    // future that mocks shared mempool execution
-    runtime.spawn(async move {
-        let validator = MockVMValidator;
-        while let Some((txn, cb)) = mp_events.next().await {
-            let vm_status = validator.validate_transaction(txn).unwrap().status();
-            let result = if vm_status.is_some() {
-                (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
-            } else {
-                (MempoolStatus::new(MempoolStatusCode::Accepted), None)
-            };
-            cb.send(Ok(result)).unwrap();
-        }
-    });
-
-    // closure that checks transaction submission for given account
-    let txn_submission = move |sender| {
-        let privkey = Ed25519PrivateKey::generate_for_testing();
-        let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
-        client.submit(&txn)
-    };
-
-    // check successful submission
-    let sender = AccountAddress::new([9; AccountAddress::LENGTH]);
-    txn_submission(sender).unwrap();
-
-    // check vm error submission
-    let sender = AccountAddress::new([0; AccountAddress::LENGTH]);
-    let response = txn_submission(sender);
-
-    let error = response.unwrap_err();
-    let error = error.json_rpc_error().unwrap();
-    assert_eq!(error.code, ServerCode::VmValidationError as i16);
-    let status_code: StatusCode = error.as_status_code().unwrap();
-    assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
-}
+// #[test]
+// fn test_transaction_submission() {
+//     let (mp_sender, mut mp_events) = channel(1);
+//     let mock_db = mock_db();
+//     let port = utils::get_available_port();
+//     let address = format!("0.0.0.0:{}", port);
+//     let runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
+//     let client = BlockingClient::new(format!("http://127.0.0.1:{}/v1", port));
+//
+//     // future that mocks shared mempool execution
+//     runtime.spawn(async move {
+//         let validator = MockVMValidator;
+//         while let Some((txn, cb)) = mp_events.next().await {
+//             let vm_status = validator.validate_transaction(txn).unwrap().status();
+//             let result = if vm_status.is_some() {
+//                 (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
+//             } else {
+//                 (MempoolStatus::new(MempoolStatusCode::Accepted), None)
+//             };
+//             cb.send(Ok(result)).unwrap();
+//         }
+//     });
+//
+//     // closure that checks transaction submission for given account
+//     let txn_submission = move |sender| {
+//         let privkey = Ed25519PrivateKey::generate_for_testing();
+//         let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
+//         client.submit(&txn)
+//     };
+//
+//     // check successful submission
+//     let sender = AccountAddress::new([9; AccountAddress::LENGTH]);
+//     txn_submission(sender).unwrap();
+//
+//     // check vm error submission
+//     let sender = AccountAddress::new([0; AccountAddress::LENGTH]);
+//     let response = txn_submission(sender);
+//
+//     let error = response.unwrap_err();
+//     let error = error.json_rpc_error().unwrap();
+//     assert_eq!(error.code, ServerCode::VmValidationError as i16);
+//     let status_code: StatusCode = error.as_status_code().unwrap();
+//     assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
+// }
 
 #[test]
 fn test_get_account() {

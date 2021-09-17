@@ -24,7 +24,11 @@ pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: diem_vm::VMValidator;
 
     /// Validate a txn from client
-    fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
+    fn validate_transaction(
+        &self,
+        txn: SignedTransaction,
+        state_view: &VerifiedStateView,
+    ) -> Result<VMValidatorResult>;
 
     /// Restart the transaction validation instance
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()>;
@@ -56,7 +60,11 @@ impl VMValidator {
 impl TransactionValidation for VMValidator {
     type ValidationInstance = DiemVM;
 
-    fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
+    fn validate_transaction(
+        &self,
+        txn: SignedTransaction,
+        state_view: &VerifiedStateView,
+    ) -> Result<VMValidatorResult> {
         fail_point!("vm_validator::validate_transaction", |_| {
             Err(anyhow::anyhow!(
                 "Injected error in vm_validator::validate_transaction"
@@ -64,22 +72,8 @@ impl TransactionValidation for VMValidator {
         });
         use diem_vm::VMValidator;
 
-        let (version, state_root) = self.db_reader.get_latest_state_root()?;
-        let db_reader = Arc::clone(&self.db_reader);
         let vm = self.vm.clone();
-
-        let smt = SparseMerkleTree::new(state_root);
-        let state_view = VerifiedStateView::new(
-            StateViewId::TransactionValidation {
-                base_version: version,
-            },
-            db_reader,
-            Some(version),
-            state_root,
-            &smt,
-        );
-
-        Ok(vm.validate_transaction(txn, &state_view))
+        Ok(vm.validate_transaction(txn, state_view))
     }
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {

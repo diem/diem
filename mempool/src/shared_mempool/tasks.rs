@@ -19,6 +19,7 @@ use diem_config::config::PeerNetworkId;
 use diem_infallible::{Mutex, RwLock};
 use diem_logger::prelude::*;
 use diem_metrics::HistogramTimer;
+use diem_state_view::StateViewId;
 use diem_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::OnChainConfigPayload,
@@ -27,6 +28,7 @@ use diem_types::{
 };
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use rayon::prelude::*;
+use scratchpad::SparseMerkleTree;
 use short_hex_str::AsShortHexStr;
 use std::{
     cmp,
@@ -34,6 +36,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use storage_interface::state_view::VerifiedStateView;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation};
 
@@ -251,9 +254,26 @@ where
     let vm_validation_timer = counters::PROCESS_TXN_BREAKDOWN_LATENCY
         .with_label_values(&[counters::VM_VALIDATION_LABEL])
         .start_timer();
+
+    let (version, state_root) = smp.db.as_ref().get_latest_state_root().unwrap();
+    let db_reader = Arc::clone(&smp.db);
+    let smt = SparseMerkleTree::new(state_root);
+    let state_view = VerifiedStateView::new(
+        StateViewId::TransactionValidation {
+            base_version: version,
+        },
+        db_reader,
+        Some(version),
+        state_root,
+        &smt,
+    );
     let validation_results = transactions
         .par_iter()
-        .map(|t| smp.validator.read().validate_transaction(t.0.clone()))
+        .map(|t| {
+            smp.validator
+                .read()
+                .validate_transaction(t.0.clone(), &state_view)
+        })
         .collect::<Vec<_>>();
     vm_validation_timer.stop_and_record();
 

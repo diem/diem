@@ -36,7 +36,7 @@ full_node_networks:
   discovery_method: "onchain"
 
 mempool:
-  default_failovers: 0
+  default_failovers: 3
 
 storage:
   prune_window: 50000
