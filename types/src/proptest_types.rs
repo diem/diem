@@ -16,7 +16,7 @@ use crate::{
     event::{EventHandle, EventKey},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
-    proof::TransactionListProof,
+    proof::TransactionInfoListWithProof,
     transaction::{
         ChangeSet, Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
@@ -892,7 +892,7 @@ fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWit
             ),
             0..10,
         ),
-        any::<TransactionListProof>(),
+        any::<TransactionInfoListWithProof>(),
     )
         .prop_flat_map(|(transaction_and_events, proof)| {
             let transactions: Vec<_> = transaction_and_events

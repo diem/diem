@@ -616,7 +616,7 @@ proptest! {
             prop_assert_eq!(db.get_latest_version().unwrap(), num_txns as Version);
             let txn_list = db.get_transactions(1 /* start version */, num_txns, num_txns as Version /* ledger version */, false /* fetch events */).unwrap();
             prop_assert_eq!(&block.txns, &txn_list.transactions);
-            let (_, txn_infos) = txn_list.proof.unpack();
+            let txn_infos = txn_list.proof.transaction_infos;
 
             // replay txns in one batch across epoch boundary,
             // and the replayer should deal with `Retry`s automatically

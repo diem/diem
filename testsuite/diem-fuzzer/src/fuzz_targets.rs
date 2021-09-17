@@ -52,7 +52,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(proof::TransactionInfoWithProofFuzzer::default()),
         Box::new(proof::AccountStateProofFuzzer::default()),
         Box::new(proof::EventProofFuzzer::default()),
-        Box::new(proof::TransactionListProofFuzzer::default()),
+        Box::new(proof::TransactionInfoListWithProofFuzzer::default()),
         // Network
         Box::new(network::NetworkNoiseInitiator::default()),
         Box::new(network::NetworkNoiseResponder::default()),

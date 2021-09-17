@@ -28,7 +28,7 @@ use diem_types::{
         parse_memory, NetworkAddress, Protocol,
     },
     on_chain_config::ValidatorSet,
-    proof::TransactionListProof,
+    proof::TransactionInfoListWithProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         authenticator::AuthenticationKey, SignedTransaction, Transaction, TransactionListWithProof,
@@ -859,7 +859,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
             txns,
             None,
             first_txn_version,
-            TransactionListProof::new_empty(),
+            TransactionInfoListWithProof::new_empty(),
         );
         (self.handler)(txns_with_proof)
     }

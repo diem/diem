@@ -17,7 +17,7 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::{SparseMerkleProof, TransactionListProof},
+    proof::{SparseMerkleProof, TransactionInfoListWithProof},
     state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, RawTransaction, Script, SignedTransaction, Transaction,
@@ -309,7 +309,7 @@ impl DbReader for MockDbReaderWriter {
             transactions,
             events,
             first_transaction_version: Some(start_version),
-            proof: TransactionListProof::new_empty(),
+            proof: TransactionInfoListWithProof::new_empty(),
         })
     }
 

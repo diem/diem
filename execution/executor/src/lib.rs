@@ -216,12 +216,13 @@ where
 
         // If the proof is verified, then the length of txn_infos and txns must be the same.
         let skipped_transaction_infos =
-            &txn_list_with_proof.proof.transaction_infos()[..num_txns_to_skip as usize];
+            &txn_list_with_proof.proof.transaction_infos[..num_txns_to_skip as usize];
 
         // Left side of the proof happens to be the frozen subtree roots of the accumulator
         // right before the list of txns are applied.
         let frozen_subtree_roots_from_proof = txn_list_with_proof
             .proof
+            .ledger_info_to_transaction_infos_proof
             .left_siblings()
             .iter()
             .rev()
@@ -246,7 +247,7 @@ where
         // 3. Return verified transactions to be applied.
         let mut txns: Vec<_> = txn_list_with_proof.transactions;
         txns.drain(0..num_txns_to_skip as usize);
-        let (_, mut txn_infos) = txn_list_with_proof.proof.unpack();
+        let mut txn_infos = txn_list_with_proof.proof.transaction_infos;
         txn_infos.drain(0..num_txns_to_skip as usize);
 
         Ok((txns, txn_infos))

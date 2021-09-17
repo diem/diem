@@ -769,21 +769,15 @@ impl EventProof {
     }
 }
 
-/// The complete proof used to authenticate a list of consecutive transactions.
+/// The proof used to authenticate a list of consecutive transaction infos.
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct TransactionListProof {
-    /// The accumulator range proof from ledger info root to leaves that authenticates the hashes
-    /// of all `TransactionInfo` objects.
+pub struct TransactionInfoListWithProof {
     pub ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
-
-    /// The `TransactionInfo` objects that correspond to all the transactions.
     pub transaction_infos: Vec<TransactionInfo>,
 }
 
-impl TransactionListProof {
-    /// Constructs a new `TransactionListProof` using `ledger_info_to_transaction_info_proof` and
-    /// `transaction_infos`.
+impl TransactionInfoListWithProof {
     pub fn new(
         ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
         transaction_infos: Vec<TransactionInfo>,
@@ -794,56 +788,18 @@ impl TransactionListProof {
         }
     }
 
-    /// Constructs a proof for an empty list of transactions.
+    /// Constructs a proof for an empty list of transaction infos. Mostly used for tests.
     pub fn new_empty() -> Self {
         Self::new(AccumulatorRangeProof::new_empty(), vec![])
     }
 
-    /// Returns the list of `TransactionInfo` objects.
-    pub fn transaction_infos(&self) -> &[TransactionInfo] {
-        &self.transaction_infos
-    }
-
-    pub fn left_siblings(&self) -> &Vec<HashValue> {
-        self.ledger_info_to_transaction_infos_proof.left_siblings()
-    }
-
-    pub fn unpack(self) -> (TransactionAccumulatorRangeProof, Vec<TransactionInfo>) {
-        (
-            self.ledger_info_to_transaction_infos_proof,
-            self.transaction_infos,
-        )
-    }
-
-    /// Verifies the list of transactions are correct using the proof. The verifier needs to have
-    /// the ledger info and the version of the first transaction in possession.
+    /// Verifies the list of transaction infos are correct using the proof. The verifier
+    /// needs to have the ledger info and the version of the first transaction in possession.
     pub fn verify(
         &self,
         ledger_info: &LedgerInfo,
-        first_transaction_version: Option<Version>,
-        transaction_hashes: &[HashValue],
+        first_transaction_info_version: Option<Version>,
     ) -> Result<()> {
-        ensure!(
-            self.transaction_infos.len() == transaction_hashes.len(),
-            "The number of TransactionInfo objects ({}) does not match the number of \
-             transactions ({}).",
-            self.transaction_infos.len(),
-            transaction_hashes.len(),
-        );
-
-        itertools::zip_eq(transaction_hashes, &self.transaction_infos)
-            .map(|(txn_hash, txn_info)| {
-                ensure!(
-                    *txn_hash == txn_info.transaction_hash(),
-                    "The hash of transaction does not match the transaction info in proof. \
-                     Transaction hash: {:x}. Transaction hash in txn_info: {:x}.",
-                    txn_hash,
-                    txn_info.transaction_hash(),
-                );
-                Ok(())
-            })
-            .collect::<Result<Vec<_>>>()?;
-
         let txn_info_hashes: Vec<_> = self
             .transaction_infos
             .iter()
@@ -851,10 +807,9 @@ impl TransactionListProof {
             .collect();
         self.ledger_info_to_transaction_infos_proof.verify(
             ledger_info.transaction_accumulator_hash(),
-            first_transaction_version,
+            first_transaction_info_version,
             &txn_info_hashes,
-        )?;
-        Ok(())
+        )
     }
 }
 

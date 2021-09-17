@@ -25,7 +25,7 @@ use diem_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
         AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
-        TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
+        TransactionAccumulatorProof, TransactionInfoListWithProof, TransactionInfoWithProof,
     },
     state_proof::StateProof,
     transaction::{
@@ -238,7 +238,8 @@ impl DbReader for MockDiemDB {
                 ));
             });
         let first_transaction_version = transactions.first().map(|_| start_version);
-        let proof = TransactionListProof::new(AccumulatorRangeProof::new_empty(), txn_infos);
+        let proof =
+            TransactionInfoListWithProof::new(AccumulatorRangeProof::new_empty(), txn_infos);
 
         let events = if fetch_events {
             let events = (start_version..start_version + transactions.len() as u64)

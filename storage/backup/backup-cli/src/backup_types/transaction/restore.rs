@@ -21,7 +21,7 @@ use diem_logger::prelude::*;
 use diem_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{TransactionAccumulatorRangeProof, TransactionListProof},
+    proof::{TransactionAccumulatorRangeProof, TransactionInfoListWithProof},
     transaction::{Transaction, TransactionInfo, TransactionListWithProof, Version},
 };
 use diem_vm::DiemVM;
@@ -115,12 +115,15 @@ impl LoadedChunk {
             txns,
             Some(event_vecs),
             Some(manifest.first_version),
-            TransactionListProof::new(range_proof, txn_infos),
+            TransactionInfoListWithProof::new(range_proof, txn_infos),
         );
         txn_list_with_proof.verify(ledger_info.ledger_info(), Some(manifest.first_version))?;
         // and disassemble it to get things back.
         let txns = txn_list_with_proof.transactions;
-        let (range_proof, txn_infos) = txn_list_with_proof.proof.unpack();
+        let range_proof = txn_list_with_proof
+            .proof
+            .ledger_info_to_transaction_infos_proof;
+        let txn_infos = txn_list_with_proof.proof.transaction_infos;
         let event_vecs = txn_list_with_proof.events.expect("unknown to be Some.");
 
         Ok(Self {

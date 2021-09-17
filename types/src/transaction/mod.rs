@@ -10,7 +10,9 @@ use crate::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     nibble::nibble_path::NibblePath,
-    proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
+    proof::{
+        accumulator::InMemoryAccumulator, TransactionInfoListWithProof, TransactionInfoWithProof,
+    },
     transaction::authenticator::{AccountAuthenticator, TransactionAuthenticator},
     vm_status::{DiscardedVMStatus, KeptVMStatus, StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
@@ -1047,7 +1049,7 @@ pub struct TransactionListWithProof {
     pub transactions: Vec<Transaction>,
     pub events: Option<Vec<Vec<ContractEvent>>>,
     pub first_transaction_version: Option<Version>,
-    pub proof: TransactionListProof,
+    pub proof: TransactionInfoListWithProof,
 }
 
 impl TransactionListWithProof {
@@ -1055,7 +1057,7 @@ impl TransactionListWithProof {
         transactions: Vec<Transaction>,
         events: Option<Vec<Vec<ContractEvent>>>,
         first_transaction_version: Option<Version>,
-        proof: TransactionListProof,
+        proof: TransactionInfoListWithProof,
     ) -> Self {
         Self {
             transactions,
@@ -1067,7 +1069,12 @@ impl TransactionListWithProof {
 
     /// A convenience function to create an empty proof. Mostly used for tests.
     pub fn new_empty() -> Self {
-        Self::new(vec![], None, None, TransactionListProof::new_empty())
+        Self::new(
+            vec![],
+            None,
+            None,
+            TransactionInfoListWithProof::new_empty(),
+        )
     }
 
     /// Verifies the transaction list with proof using the given `ledger_info`.
@@ -1090,11 +1097,33 @@ impl TransactionListWithProof {
             first_transaction_version,
         );
 
-        // Verify the transaction hashes match those of the transaction infos and
-        // that the transaction infos are proven by the ledger info.
-        let txn_hashes: Vec<_> = self.transactions.iter().map(CryptoHash::hash).collect();
+        // Verify the lengths of the transactions and transaction infos match
+        ensure!(
+            self.proof.transaction_infos.len() == self.transactions.len(),
+            "The number of TransactionInfo objects ({}) does not match the number of \
+             transactions ({}).",
+            self.proof.transaction_infos.len(),
+            self.transactions.len(),
+        );
+
+        // Verify the transaction hashes match those of the transaction infos
+        let transaction_hashes: Vec<_> = self.transactions.iter().map(CryptoHash::hash).collect();
+        itertools::zip_eq(transaction_hashes, &self.proof.transaction_infos)
+            .map(|(txn_hash, txn_info)| {
+                ensure!(
+                    txn_hash == txn_info.transaction_hash(),
+                    "The hash of transaction does not match the transaction info in proof. \
+                     Transaction hash: {:x}. Transaction hash in txn_info: {:x}.",
+                    txn_hash,
+                    txn_info.transaction_hash(),
+                );
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // Verify the transaction infos are proven by the ledger info.
         self.proof
-            .verify(ledger_info, self.first_transaction_version, &txn_hashes)?;
+            .verify(ledger_info, self.first_transaction_version)?;
 
         // Verify the events if they exist.
         if let Some(event_lists) = &self.events {
@@ -1104,24 +1133,101 @@ impl TransactionListWithProof {
                 event_lists.len(),
                 self.transactions.len(),
             );
-            itertools::zip_eq(event_lists, self.proof.transaction_infos())
-                .map(|(events, txn_info)| {
-                    let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
-                    let event_root_hash =
-                        InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
-                            .root_hash();
-                    ensure!(
-                        event_root_hash == txn_info.event_root_hash(),
-                        "Some event root hash calculated doesn't match that carried on the \
-                         transaction info.",
-                    );
-                    Ok(())
-                })
+            itertools::zip_eq(event_lists, &self.proof.transaction_infos)
+                .map(|(events, txn_info)| verify_events_against_root_hash(events, txn_info))
                 .collect::<Result<Vec<_>>>()?;
         }
 
         Ok(())
     }
+}
+
+/// This differs from TransactionListWithProof in that TransactionOutputs are
+/// stored (no transactions). Events are stored inside each TransactionOutput.
+///
+/// Note: the proof cannot verify the TransactionOutputs themselves. This
+/// requires speculative execution of each TransactionOutput to verify that the
+/// resulting state matches the expected state in the proof (for each version).
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct TransactionOutputListWithProof {
+    pub transaction_outputs: Vec<TransactionOutput>,
+    pub first_transaction_output_version: Option<Version>,
+    pub proof: TransactionInfoListWithProof,
+}
+
+impl TransactionOutputListWithProof {
+    pub fn new(
+        transaction_outputs: Vec<TransactionOutput>,
+        first_transaction_output_version: Option<Version>,
+        proof: TransactionInfoListWithProof,
+    ) -> Self {
+        Self {
+            transaction_outputs,
+            first_transaction_output_version,
+            proof,
+        }
+    }
+
+    /// A convenience function to create an empty proof. Mostly used for tests.
+    pub fn new_empty() -> Self {
+        Self::new(vec![], None, TransactionInfoListWithProof::new_empty())
+    }
+
+    /// Verifies the transaction output list with proof using the given `ledger_info`.
+    /// This method will ensure:
+    /// 1. All transaction infos exist on the given `ledger_info`.
+    /// 2. If `first_transaction_output_version` is None, the transaction output list is empty.
+    ///    Otherwise, the list starts at `first_transaction_output_version`.
+    /// 3. Events in each transaction output match the expected event root hashes in the proof.
+    ///
+    /// Note: the proof cannot verify the TransactionOutputs themselves. This
+    /// requires speculative execution of each TransactionOutput to verify that the
+    /// resulting state matches the expected state in the proof (for each version).
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        first_transaction_output_version: Option<Version>,
+    ) -> Result<()> {
+        // Verify the first transaction output versions match
+        ensure!(
+            self.first_transaction_output_version == first_transaction_output_version,
+            "First transaction output version ({:?}) doesn't match given version ({:?}).",
+            self.first_transaction_output_version,
+            first_transaction_output_version,
+        );
+
+        // Verify the transaction infos are proven by the ledger info.
+        self.proof
+            .verify(ledger_info, self.first_transaction_output_version)?;
+
+        // Verify the events
+        itertools::zip_eq(&self.transaction_outputs, &self.proof.transaction_infos)
+            .map(|(txn_output, txn_info)| {
+                verify_events_against_root_hash(&txn_output.events, txn_info)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(())
+    }
+}
+
+/// Verifies a list of events against an expected event root hash. This is done
+/// by calculating the hash of the events using an event accumulator hasher.
+fn verify_events_against_root_hash(
+    events: &[ContractEvent],
+    transaction_info: &TransactionInfo,
+) -> Result<()> {
+    let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
+    let event_root_hash =
+        InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes).root_hash();
+    ensure!(
+        event_root_hash == transaction_info.event_root_hash(),
+        "The event root hash calculated doesn't match that carried on the \
+                         transaction info! Calculated hash {:?}, transaction info hash {:?}",
+        event_root_hash,
+        transaction_info.event_root_hash()
+    );
+    Ok(())
 }
 
 /// A list of transactions under an account that are contiguous by sequence number

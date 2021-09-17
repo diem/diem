@@ -1741,7 +1741,7 @@ mod tests {
         chain_id::ChainId,
         contract_event::ContractEvent,
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-        proof::TransactionListProof,
+        proof::TransactionInfoListWithProof,
         transaction::{
             RawTransaction, Script, SignedTransaction, Transaction, TransactionListWithProof,
             TransactionPayload, Version,
@@ -2365,7 +2365,7 @@ mod tests {
             vec![create_test_transaction()],
             None,
             Some(version),
-            TransactionListProof::new_empty(),
+            TransactionInfoListWithProof::new_empty(),
         )
     }
 

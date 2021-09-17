@@ -19,7 +19,7 @@ use diem_types::{
     event::EventKey,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, SparseMerkleProof,
-        TransactionAccumulatorProof, TransactionInfoWithProof, TransactionListProof,
+        TransactionAccumulatorProof, TransactionInfoListWithProof, TransactionInfoWithProof,
     },
     state_proof::StateProof,
     transaction::{
@@ -966,7 +966,7 @@ impl TransactionsWithProofsView {
             transactions,
             events,
             first_transaction_version,
-            proof: TransactionListProof::try_from(&self.proofs)?,
+            proof: TransactionInfoListWithProof::try_from(&self.proofs)?,
         })
     }
 }
@@ -1001,10 +1001,10 @@ pub struct TransactionsProofsView {
     pub transaction_infos: BytesView,
 }
 
-impl TryFrom<&TransactionListProof> for TransactionsProofsView {
+impl TryFrom<&TransactionInfoListWithProof> for TransactionsProofsView {
     type Error = Error;
 
-    fn try_from(proof: &TransactionListProof) -> Result<Self, Self::Error> {
+    fn try_from(proof: &TransactionInfoListWithProof) -> Result<Self, Self::Error> {
         Ok(TransactionsProofsView {
             ledger_info_to_transaction_infos_proof: BytesView::new(bcs::to_bytes(
                 &proof.ledger_info_to_transaction_infos_proof,
@@ -1014,11 +1014,11 @@ impl TryFrom<&TransactionListProof> for TransactionsProofsView {
     }
 }
 
-impl TryFrom<&TransactionsProofsView> for TransactionListProof {
+impl TryFrom<&TransactionsProofsView> for TransactionInfoListWithProof {
     type Error = Error;
 
     fn try_from(view: &TransactionsProofsView) -> Result<Self, Self::Error> {
-        Ok(TransactionListProof {
+        Ok(TransactionInfoListWithProof {
             ledger_info_to_transaction_infos_proof: bcs::from_bytes(
                 &view.ledger_info_to_transaction_infos_proof,
             )?,

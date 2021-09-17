@@ -69,7 +69,7 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-        TransactionListProof,
+        TransactionInfoListWithProof,
     },
     state_proof::StateProof,
     transaction::{
@@ -725,7 +725,7 @@ impl DbReader for DiemDB {
             } else {
                 None
             };
-            let proof = TransactionListProof::new(
+            let proof = TransactionInfoListWithProof::new(
                 self.ledger_store.get_transaction_range_proof(
                     Some(start_version),
                     limit,

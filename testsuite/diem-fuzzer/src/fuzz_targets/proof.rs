@@ -9,7 +9,7 @@ use diem_types::{
     ledger_info::LedgerInfo,
     proof::{
         AccountStateProof, EventProof, SparseMerkleProof, TestAccumulatorProof,
-        TestAccumulatorRangeProof, TransactionInfoWithProof, TransactionListProof,
+        TestAccumulatorRangeProof, TransactionInfoListWithProof, TransactionInfoWithProof,
     },
     transaction::Version,
 };
@@ -204,33 +204,30 @@ impl FuzzTargetImpl for EventProofFuzzer {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct TransactionListProofFuzzer;
+pub struct TransactionInfoListWithProofFuzzer;
 
 #[derive(Debug, Arbitrary)]
-struct TransactionListProofFuzzerInput {
-    proof: TransactionListProof,
+struct TransactionInfoListWithProofFuzzerInput {
+    proof: TransactionInfoListWithProof,
     ledger_info: LedgerInfo,
     first_transaction_version: Option<Version>,
-    transaction_hashes: Vec<HashValue>,
 }
 
-impl FuzzTargetImpl for TransactionListProofFuzzer {
+impl FuzzTargetImpl for TransactionInfoListWithProofFuzzer {
     fn description(&self) -> &'static str {
-        "Proof: TransactionListProof"
+        "Proof: TransactionInfoListWithProof"
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(
-            any::<TransactionListProofFuzzerInput>(),
-        ))
+        Some(corpus_from_strategy(any::<
+            TransactionInfoListWithProofFuzzerInput,
+        >()))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let input = fuzz_data_to_value(data, any::<TransactionListProofFuzzerInput>());
-        let _res = input.proof.verify(
-            &input.ledger_info,
-            input.first_transaction_version,
-            &input.transaction_hashes[..],
-        );
+        let input = fuzz_data_to_value(data, any::<TransactionInfoListWithProofFuzzerInput>());
+        let _res = input
+            .proof
+            .verify(&input.ledger_info, input.first_transaction_version);
     }
 }
