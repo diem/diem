@@ -1042,11 +1042,6 @@ impl TransactionToCommit {
     }
 }
 
-/// The list may have three states:
-/// 1. The list is empty. Both proofs must be `None`.
-/// 2. The list has only 1 transaction/transaction_info. Then `proof_of_first_transaction`
-/// must exist and `proof_of_last_transaction` must be `None`.
-/// 3. The list has 2+ transactions/transaction_infos. The both proofs must exist.
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionListWithProof {
     pub transactions: Vec<Transaction>,
@@ -1056,7 +1051,6 @@ pub struct TransactionListWithProof {
 }
 
 impl TransactionListWithProof {
-    /// Constructor.
     pub fn new(
         transactions: Vec<Transaction>,
         events: Option<Vec<Vec<ContractEvent>>>,
@@ -1071,38 +1065,33 @@ impl TransactionListWithProof {
         }
     }
 
-    /// Creates an empty transaction list.
+    /// A convenience function to create an empty proof. Mostly used for tests.
     pub fn new_empty() -> Self {
         Self::new(vec![], None, None, TransactionListProof::new_empty())
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.transactions.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.transactions.len()
-    }
-
-    /// Verifies the transaction list with the proofs, both carried on `self`.
-    ///
-    /// Two things are ensured if no error is raised:
-    ///   1. All the transactions exist on the ledger represented by `ledger_info`.
-    ///   2. And the transactions in the list has consecutive versions starting from
-    /// `first_transaction_version`. When `first_transaction_version` is None, ensures the list is
-    /// empty.
+    /// Verifies the transaction list with proof using the given `ledger_info`.
+    /// This method will ensure:
+    /// 1. All transactions exist on the given `ledger_info`.
+    /// 2. All transactions in the list have consecutive versions.
+    /// 3. If `first_transaction_version` is None, the transaction list is empty.
+    ///    Otherwise, the transaction list starts at `first_transaction_version`.
+    /// 4. If events exist, they match the expected event root hashes in the proof.
     pub fn verify(
         &self,
         ledger_info: &LedgerInfo,
         first_transaction_version: Option<Version>,
     ) -> Result<()> {
+        // Verify the first transaction versions match
         ensure!(
             self.first_transaction_version == first_transaction_version,
-            "First transaction version ({}) not expected ({}).",
-            Self::display_option_version(self.first_transaction_version),
-            Self::display_option_version(first_transaction_version),
+            "First transaction version ({:?}) doesn't match given version ({:?}).",
+            self.first_transaction_version,
+            first_transaction_version,
         );
 
+        // Verify the transaction hashes match those of the transaction infos and
+        // that the transaction infos are proven by the ledger info.
         let txn_hashes: Vec<_> = self.transactions.iter().map(CryptoHash::hash).collect();
         self.proof
             .verify(ledger_info, self.first_transaction_version, &txn_hashes)?;
@@ -1132,13 +1121,6 @@ impl TransactionListWithProof {
         }
 
         Ok(())
-    }
-
-    fn display_option_version(version: Option<Version>) -> String {
-        match version {
-            Some(v) => format!("{}", v),
-            None => String::from("absent"),
-        }
     }
 }
 

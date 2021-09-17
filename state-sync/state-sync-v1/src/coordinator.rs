@@ -948,7 +948,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
 
         // Process the chunk based on the response type
         let txn_list_with_proof = response.txn_list_with_proof.clone();
-        let chunk_size = response.txn_list_with_proof.len() as u64;
+        let chunk_size = response.txn_list_with_proof.transactions.len() as u64;
         let known_version = self.local_state.synced_version();
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
@@ -1241,7 +1241,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         let new_version = self
             .local_state
             .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
+            .checked_add(txn_list_with_proof.transactions.len() as u64)
             .ok_or_else(|| {
                 Error::IntegerOverflow("Potential state sync version has overflown".into())
             })?;

@@ -863,7 +863,7 @@ impl TryFrom<TransactionListWithProof> for TransactionListView {
     type Error = Error;
 
     fn try_from(txs: TransactionListWithProof) -> Result<Self, Self::Error> {
-        if txs.is_empty() {
+        if txs.transactions.is_empty() {
             return Ok(Self::empty());
         }
         let start_version = txs

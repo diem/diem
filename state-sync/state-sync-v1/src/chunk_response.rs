@@ -87,7 +87,7 @@ impl fmt::Display for GetChunkResponse {
             None => "empty".to_string(),
             Some(first_version) => {
                 let last_version = first_version
-                    .checked_add(self.txn_list_with_proof.len() as u64)
+                    .checked_add(self.txn_list_with_proof.transactions.len() as u64)
                     .and_then(|v| v.checked_sub(1)) // last_version = first_version + txns.len() - 1
                     .map(|v| v.to_string())
                     .unwrap_or_else(|| "Last version has overflown!".into());
