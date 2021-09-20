@@ -2,19 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    account_address::AccountAddress,
     account_config::XUS_NAME,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
+    block_metadata::BlockMetadata,
     chain_id::ChainId,
+    contract_event::ContractEvent,
+    event::EventKey,
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, AccumulatorExtensionProof,
-        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, SparseMerkleInternalNode,
-        SparseMerkleLeafNode, TestAccumulatorInternalNode, TestAccumulatorProof,
-        TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
+        AccumulatorRangeProof, EventAccumulatorInternalNode, EventAccumulatorProof, EventProof,
+        SparseMerkleInternalNode, SparseMerkleLeafNode, TestAccumulatorInternalNode,
+        TestAccumulatorProof, TransactionAccumulatorInternalNode, TransactionAccumulatorProof,
+        TransactionInfoListWithProof, TransactionInfoWithProof,
     },
-    transaction::{RawTransaction, Script, Transaction, TransactionInfo},
+    transaction::{
+        RawTransaction, Script, Transaction, TransactionInfo, TransactionListWithProof,
+        TransactionOutput, TransactionOutputListWithProof, TransactionStatus,
+    },
     vm_status::KeptVMStatus,
+    write_set::WriteSet,
 };
 use diem_crypto::{
     ed25519::Ed25519PrivateKey,
@@ -24,6 +33,7 @@ use diem_crypto::{
     },
     HashValue, PrivateKey, Uniform,
 };
+use move_core_types::language_storage::TypeTag;
 
 type SparseMerkleProof = crate::proof::SparseMerkleProof<AccountStateBlob>;
 
@@ -503,4 +513,179 @@ fn test_accumulator_extension_proof() {
     // Test nonsense breaks
     let derived_tree_err = two_tree.verify(*ACCUMULATOR_PLACEHOLDER_HASH);
     assert!(derived_tree_err.is_err());
+}
+
+#[test]
+fn test_transaction_info_list_with_proof() {
+    // Create transaction info list proof
+    let transaction_info_list_proof = create_single_transaction_info_proof(None, None);
+
+    // Verify first transaction version must match the proof
+    let empty_ledger_info = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
+    transaction_info_list_proof
+        .verify(&empty_ledger_info, None)
+        .unwrap_err();
+
+    // Verify info hash mismatch (the empty ledger info expected an info hash of zero)
+    transaction_info_list_proof
+        .verify(&empty_ledger_info, Some(1))
+        .unwrap_err();
+
+    // Calculate the expected transaction info hash
+    let expected_info_hash = transaction_info_list_proof.transaction_infos[0].hash();
+
+    // Verify correct info hash according to the expected hash in the block
+    let block_info = BlockInfo::new(0, 0, HashValue::random(), expected_info_hash, 0, 0, None);
+    let ledger_info = LedgerInfo::new(block_info, HashValue::zero());
+    transaction_info_list_proof
+        .verify(&ledger_info, Some(1))
+        .unwrap();
+}
+
+#[test]
+fn test_transaction_list_with_proof() {
+    // Create test event and transaction
+    let event = create_event();
+    let transactions = vec![Transaction::BlockMetadata(BlockMetadata::new(
+        HashValue::random(),
+        0,
+        0,
+        vec![],
+        AccountAddress::random(),
+    ))];
+
+    // Create transaction list with proof
+    let transaction_list_with_proof = TransactionListWithProof::new(
+        transactions.clone(),
+        Some(vec![vec![event.clone()]]),
+        Some(1),
+        create_single_transaction_info_proof(None, None),
+    );
+
+    // Verify first transaction version must match the proof
+    let empty_ledger_info = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
+    transaction_list_with_proof
+        .verify(&empty_ledger_info, None)
+        .unwrap_err();
+
+    // Verify mismatch between hash of transaction and hash stored in transaction info
+    transaction_list_with_proof
+        .verify(&empty_ledger_info, Some(1))
+        .unwrap_err();
+
+    // Verify transaction hashes match but info root hash verification fails (ledger info expected zero root hash)
+    let transaction_list_proof =
+        create_single_transaction_info_proof(Some(transactions[0].hash()), None);
+    let transaction_list_with_proof = TransactionListWithProof::new(
+        transactions.clone(),
+        Some(vec![vec![event.clone()]]),
+        Some(1),
+        transaction_list_proof.clone(),
+    );
+    transaction_list_with_proof
+        .verify(&empty_ledger_info, Some(1))
+        .unwrap_err();
+
+    // Verify correct info hash but event verification fails (event hash mismatch)
+    let expected_info_hash = transaction_list_proof.transaction_infos[0].hash();
+    let block_info = BlockInfo::new(0, 0, HashValue::random(), expected_info_hash, 0, 0, None);
+    let ledger_info = LedgerInfo::new(block_info, HashValue::zero());
+    transaction_list_with_proof
+        .verify(&ledger_info, Some(1))
+        .unwrap_err();
+
+    // Construct a new transaction list with proof where the transaction info and event hashes match
+    let transaction_list_proof =
+        create_single_transaction_info_proof(Some(transactions[0].hash()), Some(event.hash()));
+    let transaction_list_with_proof = TransactionListWithProof::new(
+        transactions,
+        Some(vec![vec![event]]),
+        Some(1),
+        transaction_list_proof.clone(),
+    );
+
+    // Ensure ledger verification now passes
+    let expected_info_hash = transaction_list_proof.transaction_infos[0].hash();
+    let block_info = BlockInfo::new(0, 0, HashValue::random(), expected_info_hash, 0, 0, None);
+    let ledger_info = LedgerInfo::new(block_info, HashValue::zero());
+    transaction_list_with_proof
+        .verify(&ledger_info, Some(1))
+        .unwrap();
+}
+
+#[test]
+fn test_transaction_output_list_with_proof() {
+    // Create test event and transaction output
+    let event = create_event();
+    let transaction_output = TransactionOutput::new(
+        WriteSet::default(),
+        vec![event.clone()],
+        0,
+        TransactionStatus::Retry,
+    );
+
+    // Create transaction output list with proof
+    let transaction_info_list_proof = create_single_transaction_info_proof(None, None);
+    let transaction_output_list_proof = TransactionOutputListWithProof::new(
+        vec![transaction_output.clone()],
+        Some(1),
+        transaction_info_list_proof.clone(),
+    );
+
+    // Verify first transaction version must match the proof
+    let empty_ledger_info = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
+    transaction_output_list_proof
+        .verify(&empty_ledger_info, None)
+        .unwrap_err();
+
+    // Verify correct info hash but event verification now fails (event hash mismatch)
+    let expected_info_hash = transaction_info_list_proof.transaction_infos[0].hash();
+    let block_info = BlockInfo::new(0, 0, HashValue::random(), expected_info_hash, 0, 0, None);
+    let ledger_info = LedgerInfo::new(block_info, HashValue::zero());
+    transaction_output_list_proof
+        .verify(&ledger_info, Some(1))
+        .unwrap_err();
+
+    // Construct a new transaction output list proof where the transaction info and event hashes match
+    let transaction_info_list_proof =
+        create_single_transaction_info_proof(None, Some(event.hash()));
+    let expected_info_hash = transaction_info_list_proof.transaction_infos[0].hash();
+    let transaction_output_list_proof = TransactionOutputListWithProof::new(
+        vec![transaction_output],
+        Some(1),
+        transaction_info_list_proof,
+    );
+
+    // Ensure ledger verification now passes
+    let block_info = BlockInfo::new(0, 0, HashValue::random(), expected_info_hash, 0, 0, None);
+    let ledger_info = LedgerInfo::new(block_info, HashValue::zero());
+    transaction_output_list_proof
+        .verify(&ledger_info, Some(1))
+        .unwrap();
+}
+
+fn create_single_transaction_info_proof(
+    transaction_hash: Option<HashValue>,
+    event_root_hash: Option<HashValue>,
+) -> TransactionInfoListWithProof {
+    let transaction_infos = vec![create_transaction_info(transaction_hash, event_root_hash)];
+    TransactionInfoListWithProof::new(AccumulatorRangeProof::new_empty(), transaction_infos)
+}
+
+fn create_transaction_info(
+    transaction_hash: Option<HashValue>,
+    event_root_hash: Option<HashValue>,
+) -> TransactionInfo {
+    TransactionInfo::new(
+        transaction_hash.unwrap_or_else(HashValue::random),
+        HashValue::random(),
+        event_root_hash.unwrap_or_else(HashValue::random),
+        0,
+        KeptVMStatus::MiscellaneousError,
+    )
+}
+
+fn create_event() -> ContractEvent {
+    let event_key = EventKey::new_from_address(&AccountAddress::random(), 0);
+    ContractEvent::new(event_key, 0, TypeTag::Bool, bcs::to_bytes(&0).unwrap())
 }
