@@ -42,6 +42,7 @@ move-binary-format = { path = "../../move-binary-format" }
 move-package = { path = "../move-package" }
 move-prover = { path = "../../move-prover" }
 move-unit-test = { path = "../move-unit-test" }
+move-explain = { path = "../move-explain" }
 errmapgen = { path = "../../move-prover/errmapgen" }
 
 [dev-dependencies]

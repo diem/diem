@@ -13,9 +13,9 @@ pub mod utils;
 pub mod natives;
 
 const MODULES_DIR: &str = "sources";
-const NURSERY_DIR: &str = "nursery";
+const NURSERY_DIR: &str = "Nursery/sources";
 const DOCS_DIR: &str = "docs";
-const NURSERY_DOCS_DIR: &str = "nursery/docs";
+const NURSERY_DOCS_DIR: &str = "Nursery/docs";
 const ERRMAP_FILE: &str = "error_description.errmap";
 
 const REFERENCES_TEMPLATE: &str = "doc_templates/references.md";

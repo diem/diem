@@ -4927,6 +4927,7 @@ dependencies = [
  "move-command-line-common",
  "move-core-types",
  "move-coverage",
+ "move-explain",
  "move-ir-types",
  "move-lang",
  "move-package",

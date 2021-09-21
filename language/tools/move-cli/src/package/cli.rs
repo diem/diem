@@ -25,6 +25,8 @@ use move_prover::run_move_prover_with_model;
 use move_unit_test::UnitTestingConfig;
 use structopt::StructOpt;
 
+const ERROR_MAP_FILENAME: &str = "error_map";
+
 #[derive(StructOpt)]
 pub enum PackageCommand {
     /// Create a new Move package with name `name` at `path`. If `path` is not provided the package
@@ -42,11 +44,8 @@ pub enum PackageCommand {
     #[structopt(name = "errmap")]
     ErrMapGen {
         /// The prefix that all error reasons within modules will be prefixed with, e.g., "E" if
-        /// all error reasons are "E_CANNOT_PERFORM_OPERATION", "E_CANNOT_ACCESS", etc.
+        /// all error reasons are "ECANNOT_PERFORM_OPERATION", "ECANNOT_ACCESS", etc.
         error_prefix: Option<String>,
-        /// The file to serialize the generated error map to.
-        #[structopt(default_value = "error_map", parse(from_os_str))]
-        output_file: PathBuf,
     },
     /// Run the Move Prover on the package at `path`. If no path is provided defaults to current
     /// directory.
@@ -98,6 +97,16 @@ pub enum PackageCommand {
         #[structopt(long = "verbose")]
         verbose_mode: bool,
     },
+    /// Explain abort codes raised from a package
+    #[structopt(name = "explain")]
+    Explain {
+        /// The location (module id) returned with a `MoveAbort` error
+        #[structopt(long = "location")]
+        location: String,
+        /// The abort code returned with a `MoveAbort` error
+        #[structopt(long = "code")]
+        abort_code: u64,
+    },
 }
 
 #[derive(StructOpt)]
@@ -143,16 +152,15 @@ pub fn handle_package_commands(
             let now = Instant::now();
             let model = config.move_model_for_package(&path)?;
             run_move_prover_with_model(&model, &mut error_writer, options, Some(now))?;
+            println!("Verification succeeded");
         }
-        PackageCommand::ErrMapGen {
-            error_prefix,
-            output_file,
-        } => {
+        PackageCommand::ErrMapGen { error_prefix } => {
             let mut errmap_options = errmapgen::ErrmapOptions::default();
             if let Some(err_prefix) = error_prefix {
                 errmap_options.error_prefix = err_prefix.to_string();
             }
-            errmap_options.output_file = output_file
+            errmap_options.output_file = path
+                .join(ERROR_MAP_FILENAME)
                 .with_extension(move_command_line_common::files::MOVE_ERROR_DESC_EXTENSION)
                 .to_string_lossy()
                 .to_string();
@@ -160,6 +168,27 @@ pub fn handle_package_commands(
             let mut errmap_gen = errmapgen::ErrmapGen::new(&model, &errmap_options);
             errmap_gen.gen();
             errmap_gen.save_result();
+        }
+        PackageCommand::Explain {
+            location,
+            abort_code,
+        } => {
+            let errmap_path = path
+                .join("error_map")
+                .with_extension(move_command_line_common::files::MOVE_ERROR_DESC_EXTENSION);
+            if !errmap_path.is_file() {
+                eprintln!(
+                    "Error map for package not found at '{:?}' you may need to generate it",
+                    errmap_path
+                );
+                std::process::exit(1);
+            }
+            move_explain::parse_and_explain(
+                &mut std::io::stdout(),
+                location,
+                *abort_code,
+                &errmap_path,
+            )
         }
         PackageCommand::UnitTest {
             instruction_execution_bound,
