@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main, release-*, gha-test-*]
 
+# Just forcing a build
+
 defaults:
   run:
     shell: bash
@@ -959,7 +961,7 @@ jobs:
       - name: Use Node.js 12
         uses: actions/setup-node@v2.4.0
         with:
-          node-version: '14'
+          node-version: "14"
       # Install git
       - name: Install git
         run: |
@@ -969,7 +971,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: "3.8"
       # Test that building the site is successful
       - name: Build Site
         run: |
