@@ -458,7 +458,7 @@ function install_dotnet {
 function install_boogie {
   echo "Installing boogie"
   mkdir -p "${DOTNET_INSTALL_DIR}tools/" || true
-  if [[ "$("${DOTNET_INSTALL_DIR}dotnet" tool list -g)" =~ .*boogie.*${BOOGIE_VERSION}.* ]]; then
+  if [[ "$("${DOTNET_INSTALL_DIR}dotnet" tool list --tool-path "${DOTNET_INSTALL_DIR}tools/")" =~ .*boogie.*${BOOGIE_VERSION}.* ]]; then
     echo "Boogie $BOOGIE_VERSION already installed"
   else
     "${DOTNET_INSTALL_DIR}dotnet" tool update --tool-path "${DOTNET_INSTALL_DIR}tools/" Boogie --version $BOOGIE_VERSION
