@@ -43,6 +43,7 @@ allowed = [
     "clippy::bool-assert-comparison",
     "clippy::needless-collect",
     "clippy::enum-variant-names",
+    "clippy::self-named-constructors",
 ]
 warn = [
     "clippy::wildcard_dependencies",
