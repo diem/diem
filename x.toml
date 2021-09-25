@@ -47,6 +47,7 @@ allowed = [
 ]
 warn = [
     "clippy::wildcard_dependencies",
+    "clippy::disallowed-type",
 ]
 
 [hakari]

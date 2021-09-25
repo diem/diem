@@ -4,3 +4,11 @@ cognitive-complexity-threshold = 100
 type-complexity-threshold = 10000
 # manipulating complex states machines in consensus
 too-many-arguments-threshold = 13
+
+# List of types that shouldn't be used in diem/diem
+disallowed-types = [
+    # In order to eliminate non-determinism you should use
+    # BTreeMap and BTreeSet instead
+    "std::collections::HashMap",
+    "std::collections::HashSet",
+]
