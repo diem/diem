@@ -27,7 +27,7 @@ use petgraph::{
     visit::EdgeRef,
     Graph,
 };
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{hash_map, BTreeMap, BTreeSet};
 
 /// Data attached to each node.
 /// Each node corresponds to a type formal of a generic function in the module.
@@ -65,8 +65,8 @@ pub struct InstantiationLoopChecker<'a> {
     module: &'a CompiledModule,
 
     graph: Graph<Node, Edge<'a>>,
-    node_map: HashMap<Node, NodeIndex>,
-    func_handle_def_map: HashMap<FunctionHandleIndex, FunctionDefinitionIndex>,
+    node_map: BTreeMap<Node, NodeIndex>,
+    func_handle_def_map: BTreeMap<FunctionHandleIndex, FunctionDefinitionIndex>,
 }
 
 impl<'a> InstantiationLoopChecker<'a> {
@@ -74,7 +74,7 @@ impl<'a> InstantiationLoopChecker<'a> {
         Self {
             module,
             graph: Graph::new(),
-            node_map: HashMap::new(),
+            node_map: BTreeMap::new(),
             func_handle_def_map: module
                 .function_defs()
                 .iter()
@@ -135,12 +135,12 @@ impl<'a> InstantiationLoopChecker<'a> {
 
     /// Helper function that extracts type parameters from a given type.
     /// Duplicated entries are removed.
-    fn extract_type_parameters(&self, ty: &SignatureToken) -> HashSet<TypeParameterIndex> {
+    fn extract_type_parameters(&self, ty: &SignatureToken) -> BTreeSet<TypeParameterIndex> {
         use SignatureToken::*;
 
-        let mut type_params = HashSet::new();
+        let mut type_params = BTreeSet::new();
 
-        fn rec(type_params: &mut HashSet<TypeParameterIndex>, ty: &SignatureToken) {
+        fn rec(type_params: &mut BTreeSet<TypeParameterIndex>, ty: &SignatureToken) {
             match ty {
                 Bool | Address | U8 | U64 | U128 | Signer | Struct(_) => (),
                 TypeParameter(idx) => {
@@ -247,7 +247,7 @@ impl<'a> InstantiationLoopChecker<'a> {
         tarjan_scc(&self.graph)
             .into_iter()
             .filter_map(move |nodes| {
-                let node_set: HashSet<_> = nodes.iter().cloned().collect();
+                let node_set: BTreeSet<_> = nodes.iter().cloned().collect();
 
                 let edges: Vec<_> = nodes
                     .iter()

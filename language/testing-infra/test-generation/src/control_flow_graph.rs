@@ -4,14 +4,14 @@
 use crate::abstract_state::{AbstractValue, BorrowState};
 use move_binary_format::file_format::{AbilitySet, Bytecode, Signature, SignatureToken};
 use rand::{rngs::StdRng, Rng};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 use tracing::debug;
 
 /// This type holds basic block identifiers
 type BlockIDSize = u16;
 
 /// This type represents the locals that a basic block has
-type BlockLocals = HashMap<usize, (AbstractValue, BorrowState)>;
+type BlockLocals = BTreeMap<usize, (AbstractValue, BorrowState)>;
 
 /// This represents a basic block in a control flow graph
 #[derive(Debug, Default, Clone)]
@@ -29,8 +29,8 @@ pub struct BasicBlock {
 impl BasicBlock {
     pub fn new() -> BasicBlock {
         BasicBlock {
-            locals_in: HashMap::new(),
-            locals_out: HashMap::new(),
+            locals_in: BTreeMap::new(),
+            locals_out: BTreeMap::new(),
             instructions: Vec::new(),
         }
     }
@@ -56,7 +56,7 @@ impl BasicBlock {
 pub struct CFG {
     /// The set of basic blocks that make up the graph, mapped to `BlockIDSize`'s used
     /// as their identifiers
-    basic_blocks: HashMap<BlockIDSize, BasicBlock>,
+    basic_blocks: BTreeMap<BlockIDSize, BasicBlock>,
 
     /// The directed edges of the graph represented by pairs of basic block identifiers
     edges: Vec<(BlockIDSize, BlockIDSize)>,
@@ -73,7 +73,7 @@ impl CFG {
         target_blocks: BlockIDSize,
     ) -> CFG {
         checked_precondition!(target_blocks > 0, "The CFG must haave at least one block");
-        let mut basic_blocks: HashMap<BlockIDSize, BasicBlock> = HashMap::new();
+        let mut basic_blocks: BTreeMap<BlockIDSize, BasicBlock> = BTreeMap::new();
         // Generate basic blocks
         for i in 0..target_blocks {
             basic_blocks.insert(i, BasicBlock::new());
@@ -140,12 +140,12 @@ impl CFG {
     }
 
     /// Get a reference to all of the basic blocks of the CFG
-    pub fn get_basic_blocks(&self) -> &HashMap<BlockIDSize, BasicBlock> {
+    pub fn get_basic_blocks(&self) -> &BTreeMap<BlockIDSize, BasicBlock> {
         &self.basic_blocks
     }
 
     /// Get a mutable reference to all of the basic blocks of the CFG
-    pub fn get_basic_blocks_mut(&mut self) -> &mut HashMap<BlockIDSize, BasicBlock> {
+    pub fn get_basic_blocks_mut(&mut self) -> &mut BTreeMap<BlockIDSize, BasicBlock> {
         &mut self.basic_blocks
     }
 

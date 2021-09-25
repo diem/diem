@@ -63,7 +63,7 @@ mod tests {
     use diem_types::{network_address::NetworkAddress, PeerId};
     use futures::StreamExt;
     use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
-    use std::{collections::HashSet, str::FromStr, sync::Arc};
+    use std::{collections::BTreeSet, str::FromStr, sync::Arc};
     use tokio::time::sleep;
 
     fn create_listener(path: Arc<TempPath>) -> Receiver<ConnectivityRequest> {
@@ -119,7 +119,7 @@ mod tests {
         let addr = NetworkAddress::from_str("/ip4/1.2.3.4/tcp/6180/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0").unwrap();
         let key = addr.find_noise_proto().unwrap();
         let addrs = vec![addr];
-        let mut keys = HashSet::new();
+        let mut keys = BTreeSet::new();
         keys.insert(key);
         peers.insert(
             PeerId::random(),

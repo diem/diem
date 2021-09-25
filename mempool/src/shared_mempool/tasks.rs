@@ -30,7 +30,7 @@ use rayon::prelude::*;
 use short_hex_str::AsShortHexStr;
 use std::{
     cmp,
-    collections::HashSet,
+    collections::BTreeSet,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -345,7 +345,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
 
     let (resp, callback, counter_label) = match req {
         ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
-            let exclude_transactions: HashSet<TxnPointer> = transactions
+            let exclude_transactions: BTreeSet<TxnPointer> = transactions
                 .iter()
                 .map(|txn| (txn.sender, txn.sequence_number))
                 .collect();

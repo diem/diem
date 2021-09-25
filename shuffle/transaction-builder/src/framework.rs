@@ -5009,7 +5009,7 @@ fn decode_update_minting_ability_script_function(
     }
 }
 
-type ScriptFunctionDecoderMap = std::collections::HashMap<
+type ScriptFunctionDecoderMap = std::collections::BTreeMap<
     String,
     Box<
         dyn Fn(&TransactionPayload) -> Option<ScriptFunctionCall>
@@ -5020,7 +5020,7 @@ type ScriptFunctionDecoderMap = std::collections::HashMap<
 
 static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderMap> =
     once_cell::sync::Lazy::new(|| {
-        let mut map: ScriptFunctionDecoderMap = std::collections::HashMap::new();
+        let mut map: ScriptFunctionDecoderMap = std::collections::BTreeMap::new();
         map.insert(
             "SampleModulemint_coin".to_string(),
             Box::new(decode_mint_coin_script_function),

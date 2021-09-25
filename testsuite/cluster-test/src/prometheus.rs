@@ -6,7 +6,7 @@
 use anyhow::{anyhow, bail, format_err, Result};
 use reqwest::Url;
 use serde::Deserialize;
-use std::{collections::HashMap, time::Duration};
+use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Clone)]
 pub struct Prometheus {
@@ -16,7 +16,7 @@ pub struct Prometheus {
 }
 
 pub struct MatrixResponse {
-    inner: HashMap<String, TimeSeries>,
+    inner: BTreeMap<String, TimeSeries>,
 }
 
 pub struct TimeSeries {
@@ -185,7 +185,7 @@ struct PrometheusMetric {
 
 impl MatrixResponse {
     fn from_prometheus(data: PrometheusData) -> Result<Self> {
-        let mut inner = HashMap::new();
+        let mut inner = BTreeMap::new();
         for entry in data.result {
             let peer_id = entry.metric.peer_id;
             if entry.values.is_empty() {

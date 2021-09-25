@@ -15,7 +15,7 @@ use move_lang::shared::AddressBytes;
 use move_stdlib::move_stdlib_named_addresses;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     path::Path,
     str::FromStr,
 };
@@ -37,12 +37,12 @@ static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| {
             SourceFilter {
                 source_dir: &DIR_MOVE_STDLIB,
                 inclusion: None, // include everything
-                exclusion: HashSet::new(),
+                exclusion: BTreeSet::new(),
             },
             SourceFilter {
                 source_dir: &DIR_MOVE_STDLIB_NURSERY,
                 inclusion: None, // include everything
-                exclusion: HashSet::new(),
+                exclusion: BTreeSet::new(),
             },
         ],
         vec![],
@@ -69,7 +69,7 @@ static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
         vec![SourceFilter {
             source_dir: &DIR_DIEM_FRAMEWORK,
             inclusion: None, // include everything
-            exclusion: HashSet::new(),
+            exclusion: BTreeSet::new(),
         }],
         vec![&PACKAGE_MOVE_STDLIB],
         named_addresses,

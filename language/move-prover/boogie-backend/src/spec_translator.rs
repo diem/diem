@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, BTreeMap};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -945,9 +945,9 @@ impl<'env> SpecTranslator<'env> {
     fn with_range_selector_assignments<F>(
         &self,
         ranges: &[(LocalVarDecl, Exp)],
-        range_tmps: &HashMap<Symbol, String>,
-        quant_vars: &HashMap<Symbol, String>,
-        resource_vars: &HashMap<Symbol, String>,
+        range_tmps: &BTreeMap<Symbol, String>,
+        quant_vars: &BTreeMap<Symbol, String>,
+        resource_vars: &BTreeMap<Symbol, String>,
         f: F,
     ) where
         F: Fn(),
@@ -1007,7 +1007,7 @@ impl<'env> SpecTranslator<'env> {
         assert!(!kind.is_choice());
         // Translate range expressions. While doing, check for currently unsupported
         // type quantification
-        let mut range_tmps = HashMap::new();
+        let mut range_tmps = BTreeMap::new();
         for (var, range) in ranges {
             match self.get_node_type(range.node_id()).skip_reference() {
                 Type::Vector(..) | Type::Primitive(PrimitiveType::Range) => {
@@ -1022,8 +1022,8 @@ impl<'env> SpecTranslator<'env> {
         }
         // Translate quantified variables.
         emit!(self.writer, "({} ", kind);
-        let mut quant_vars = HashMap::new();
-        let mut resource_vars = HashMap::new();
+        let mut quant_vars = BTreeMap::new();
+        let mut resource_vars = BTreeMap::new();
         let mut comma = "";
         for (var, range) in ranges {
             let var_name = self.env.symbol_pool().string(var.name);

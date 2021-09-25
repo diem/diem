@@ -21,12 +21,12 @@ use move_binary_format::{
     },
 };
 use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, BTreeMap};
 
 struct ReferenceSafetyAnalysis<'a> {
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &'a FunctionView<'a>,
-    name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+    name_def_map: &'a BTreeMap<IdentifierIndex, FunctionDefinitionIndex>,
     stack: Vec<AbstractValue>,
 }
 
@@ -34,7 +34,7 @@ impl<'a> ReferenceSafetyAnalysis<'a> {
     fn new(
         resolver: &'a BinaryIndexedView<'a>,
         function_view: &'a FunctionView<'a>,
-        name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+        name_def_map: &'a BTreeMap<IdentifierIndex, FunctionDefinitionIndex>,
     ) -> Self {
         Self {
             resolver,
@@ -48,7 +48,7 @@ impl<'a> ReferenceSafetyAnalysis<'a> {
 pub(crate) fn verify<'a>(
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &FunctionView,
-    name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+    name_def_map: &'a BTreeMap<IdentifierIndex, FunctionDefinitionIndex>,
 ) -> PartialVMResult<()> {
     let initial_state = AbstractState::new(function_view);
 

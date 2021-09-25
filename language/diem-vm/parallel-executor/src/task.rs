@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use mvhashmap::{MVHashMapView, Version};
+use mvhashmap::{MVBTreeMapView, Version};
 use std::{fmt::Debug, hash::Hash};
 
 /// The execution result of a transaction
@@ -66,7 +66,7 @@ pub trait ExecutorTask: Sync {
     /// Execute one single transaction given the view of the current state.
     fn execute_transaction(
         &self,
-        view: MVHashMapView<<Self::T as Transaction>::Key, <Self::T as Transaction>::Value>,
+        view: MVBTreeMapView<<Self::T as Transaction>::Key, <Self::T as Transaction>::Value>,
         txn: &Self::T,
     ) -> ExecutionStatus<Self::Output, Self::Error>;
 }

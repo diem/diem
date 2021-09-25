@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::MVHashMap;
+use super::MVBTreeMap;
 use proptest::{collection::vec, prelude::*, sample::Index, strategy::Strategy};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     fmt::Debug,
     hash::Hash,
     sync::atomic::{AtomicUsize, Ordering},
@@ -27,7 +27,7 @@ enum ExpectedOutput<V: Debug + Clone + PartialEq> {
     Value(V),
 }
 
-struct Baseline<K, V>(HashMap<K, BTreeMap<usize, Option<V>>>);
+struct Baseline<K, V>(BTreeMap<K, BTreeMap<usize, Option<V>>>);
 
 impl<K, V> Baseline<K, V>
 where
@@ -35,7 +35,7 @@ where
     V: Clone + Debug + PartialEq,
 {
     pub fn new(txns: &[(K, Operator<V>)]) -> Self {
-        let mut baseline: HashMap<K, BTreeMap<usize, Option<V>>> = HashMap::new();
+        let mut baseline: BTreeMap<K, BTreeMap<usize, Option<V>>> = BTreeMap::new();
         for (idx, (k, op)) in txns.iter().enumerate() {
             let value_to_update = match op {
                 Operator::Insert(v) => Some(v.clone()),
@@ -96,7 +96,7 @@ where
         .collect::<Vec<_>>();
 
     let baseline = Baseline::new(transactions.as_slice());
-    let (map, _) = MVHashMap::<K, Option<V>>::new_from_parallel(versions_to_write);
+    let (map, _) = MVBTreeMap::<K, Option<V>>::new_from_parallel(versions_to_write);
     let curent_idx = AtomicUsize::new(0);
 
     // Spawn a few threads in parallel to commit each operator.

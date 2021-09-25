@@ -9,13 +9,13 @@ use crate::{
     },
 };
 use anyhow::Result as AResult;
-use mvhashmap::MVHashMapView;
+use mvhashmap::MVBTreeMapView;
 use proptest::{
     arbitrary::Arbitrary, collection::vec, prelude::*, proptest, sample::Index, strategy::Strategy,
 };
 use proptest_derive::Arbitrary;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, BTreeMap},
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
@@ -240,7 +240,7 @@ where
 
     fn execute_transaction(
         &self,
-        view: MVHashMapView<K, V>,
+        view: MVBTreeMapView<K, V>,
         txn: &Self::T,
     ) -> ExecutionStatus<Self::Output, Self::Error> {
         match txn {
@@ -297,7 +297,7 @@ pub enum ExpectedOutput<V> {
 
 impl<V: Clone + Eq> ExpectedOutput<V> {
     pub fn generate_baseline<K: Hash + Clone + Eq>(txns: &[Transaction<K, V>]) -> Self {
-        let mut current_world = HashMap::new();
+        let mut current_world = BTreeMap::new();
         let mut result_vec = vec![];
         for (idx, txn) in txns.iter().enumerate() {
             match txn {

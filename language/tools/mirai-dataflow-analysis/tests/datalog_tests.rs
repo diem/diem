@@ -3,7 +3,7 @@
 
 use regex::Regex;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs,
     fs::read_to_string,
     io::Write,
@@ -30,7 +30,7 @@ fn gather_tests(directory_path: PathBuf) -> Vec<String> {
 
 // Parse expected or actual output into a map
 // from trimmed non-empty lines to counts.
-fn build_output_counter(output: &str) -> HashMap<&str, u32> {
+fn build_output_counter(output: &str) -> BTreeMap<&str, u32> {
     let items: Vec<&str> = Vec::from_iter(
         output
             .split('\n')
@@ -39,7 +39,7 @@ fn build_output_counter(output: &str) -> HashMap<&str, u32> {
             .filter(|x| !x.is_empty())
             .map(|x| x.trim()),
     );
-    let mut counter = HashMap::<&str, u32>::new();
+    let mut counter = BTreeMap::<&str, u32>::new();
     for item in items.iter() {
         *counter.entry(item).or_insert(0) += 1;
     }

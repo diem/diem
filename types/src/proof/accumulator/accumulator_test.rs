@@ -12,7 +12,7 @@ use diem_crypto::{
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn compute_parent_hash(left_hash: HashValue, right_hash: HashValue) -> HashValue {
     if left_hash == *ACCUMULATOR_PLACEHOLDER_HASH && right_hash == *ACCUMULATOR_PLACEHOLDER_HASH {
@@ -24,9 +24,9 @@ fn compute_parent_hash(left_hash: HashValue, right_hash: HashValue) -> HashValue
 
 /// Given a list of leaves, constructs the smallest accumulator that has all the leaves and
 /// computes the hash of every node in the tree.
-fn compute_hashes_for_all_positions(leaves: &[HashValue]) -> HashMap<Position, HashValue> {
+fn compute_hashes_for_all_positions(leaves: &[HashValue]) -> BTreeMap<Position, HashValue> {
     if leaves.is_empty() {
-        return HashMap::new();
+        return BTreeMap::new();
     }
 
     let mut current_leaves = leaves.to_vec();
@@ -34,7 +34,7 @@ fn compute_hashes_for_all_positions(leaves: &[HashValue]) -> HashMap<Position, H
         leaves.len().next_power_of_two(),
         *ACCUMULATOR_PLACEHOLDER_HASH,
     );
-    let mut position_to_hash = HashMap::new();
+    let mut position_to_hash = BTreeMap::new();
     let mut current_level = 0;
 
     while current_leaves.len() > 1 {

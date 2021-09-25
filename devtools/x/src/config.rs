@@ -7,7 +7,7 @@ use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -29,7 +29,7 @@ pub struct XConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     /// Package exceptions which need to be run special
-    system_tests: HashMap<String, Package>,
+    system_tests: BTreeMap<String, Package>,
     /// Configuration for generating summaries
     summaries: SummariesConfig,
     /// Workspace configuration
@@ -146,9 +146,9 @@ pub struct EnforcedAttributesConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct BannedDepsConfig {
     /// Banned direct dependencies
-    pub direct: HashMap<String, String>,
+    pub direct: BTreeMap<String, String>,
     /// Banned dependencies in the default build set
-    pub default_build: HashMap<String, String>,
+    pub default_build: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -159,8 +159,8 @@ pub struct DirectDepDupsConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct MoveToDiemDepsConfig {
-    pub diem_crates_in_language: HashSet<String>,
-    pub exclude: HashSet<String>,
+    pub diem_crates_in_language: BTreeSet<String>,
+    pub exclude: BTreeSet<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -217,7 +217,7 @@ impl Config {
         &self.cargo
     }
 
-    pub fn system_tests(&self) -> &HashMap<String, Package> {
+    pub fn system_tests(&self) -> &BTreeMap<String, Package> {
         &self.system_tests
     }
 

@@ -5,7 +5,7 @@ use crate::{Factory, Result, Swarm, Version};
 use anyhow::Context;
 use rand::rngs::StdRng;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     num::NonZeroUsize,
     path::{Path, PathBuf},
     sync::Arc,
@@ -43,18 +43,18 @@ impl LocalVersion {
 }
 
 pub struct LocalFactory {
-    versions: Arc<HashMap<Version, LocalVersion>>,
+    versions: Arc<BTreeMap<Version, LocalVersion>>,
 }
 
 impl LocalFactory {
-    pub fn new(versions: HashMap<Version, LocalVersion>) -> Self {
+    pub fn new(versions: BTreeMap<Version, LocalVersion>) -> Self {
         Self {
             versions: Arc::new(versions),
         }
     }
 
     pub fn from_workspace() -> Result<Self> {
-        let mut versions = HashMap::new();
+        let mut versions = BTreeMap::new();
         let new_version = cargo::get_diem_node_binary_from_worktree().map(|(revision, bin)| {
             let version = Version::new(usize::max_value(), revision.clone());
             LocalVersion {
@@ -69,7 +69,7 @@ impl LocalFactory {
     }
 
     pub fn from_revision(revision: &str) -> Result<Self> {
-        let mut versions = HashMap::new();
+        let mut versions = BTreeMap::new();
         let new_version =
             cargo::get_diem_node_binary_at_revision(revision).map(|(revision, bin)| {
                 let version = Version::new(usize::max_value(), revision.clone());
@@ -103,7 +103,7 @@ impl LocalFactory {
                 }
             })?;
 
-        let mut versions = HashMap::new();
+        let mut versions = BTreeMap::new();
         versions.insert(workspace.version(), workspace);
         versions.insert(revision.version(), revision);
         Ok(Self::new(versions))

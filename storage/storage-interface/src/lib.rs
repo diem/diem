@@ -29,7 +29,7 @@ use itertools::Itertools;
 use move_core_types::resolver::{ModuleResolver, ResourceResolver};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     sync::Arc,
 };
@@ -402,7 +402,7 @@ impl<PS: ProtocolSpec> MoveStorage for &dyn DbReader<PS> {
     ) -> Result<Vec<Vec<u8>>> {
         let addresses: Vec<AccountAddress> = access_paths
             .iter()
-            .collect::<HashSet<_>>()
+            .collect::<BTreeSet<_>>()
             .iter()
             .map(|path| path.address)
             .collect();
@@ -422,7 +422,7 @@ impl<PS: ProtocolSpec> MoveStorage for &dyn DbReader<PS> {
                 })?)?;
                 Ok((addr, account_state))
             })
-            .collect::<Result<HashMap<_, AccountState>>>()?;
+            .collect::<Result<BTreeMap<_, AccountState>>>()?;
 
         access_paths
             .iter()

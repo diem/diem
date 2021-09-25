@@ -8407,14 +8407,14 @@ fn decode_update_minting_ability_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-type TransactionScriptDecoderMap = std::collections::HashMap<
+type TransactionScriptDecoderMap = std::collections::BTreeMap<
     Vec<u8>,
     Box<dyn Fn(&Script) -> Option<ScriptCall> + std::marker::Sync + std::marker::Send>,
 >;
 
 static TRANSACTION_SCRIPT_DECODER_MAP: once_cell::sync::Lazy<TransactionScriptDecoderMap> =
     once_cell::sync::Lazy::new(|| {
-        let mut map: TransactionScriptDecoderMap = std::collections::HashMap::new();
+        let mut map: TransactionScriptDecoderMap = std::collections::BTreeMap::new();
         map.insert(
             ADD_CURRENCY_TO_ACCOUNT_CODE.to_vec(),
             Box::new(decode_add_currency_to_account_script),
@@ -8544,7 +8544,7 @@ static TRANSACTION_SCRIPT_DECODER_MAP: once_cell::sync::Lazy<TransactionScriptDe
         map
     });
 
-type ScriptFunctionDecoderMap = std::collections::HashMap<
+type ScriptFunctionDecoderMap = std::collections::BTreeMap<
     String,
     Box<
         dyn Fn(&TransactionPayload) -> Option<ScriptFunctionCall>
@@ -8555,7 +8555,7 @@ type ScriptFunctionDecoderMap = std::collections::HashMap<
 
 static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderMap> =
     once_cell::sync::Lazy::new(|| {
-        let mut map: ScriptFunctionDecoderMap = std::collections::HashMap::new();
+        let mut map: ScriptFunctionDecoderMap = std::collections::BTreeMap::new();
         map.insert(
             "AccountAdministrationScriptsadd_currency_to_account".to_string(),
             Box::new(decode_add_currency_to_account_script_function),

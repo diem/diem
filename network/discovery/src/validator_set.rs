@@ -19,7 +19,7 @@ use futures::Stream;
 use network::{counters::inc_by_with_context, logging::NetworkSchema};
 use short_hex_str::AsShortHexStr;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -46,7 +46,7 @@ impl ValidatorSetStream {
         }
     }
 
-    fn find_key_mismatches(&self, onchain_keys: Option<&HashSet<x25519::PublicKey>>) {
+    fn find_key_mismatches(&self, onchain_keys: Option<&BTreeSet<x25519::PublicKey>>) {
         let mismatch = onchain_keys.map_or(0, |pubkeys| {
             if !pubkeys.contains(&self.expected_pubkey) {
                 error!(
@@ -179,7 +179,7 @@ mod tests {
     use event_notifications::ReconfigNotification;
     use futures::executor::block_on;
     use rand::{rngs::StdRng, SeedableRng};
-    use std::{collections::HashMap, sync::Arc, time::Instant};
+    use std::{collections::BTreeMap, sync::Arc, time::Instant};
     use tokio::{
         runtime::Runtime,
         time::{timeout_at, Duration},
@@ -266,7 +266,7 @@ mod tests {
             ValidatorConfig::new(consensus_pubkey, encrypted_addresses, encoded_addresses),
         );
         let validator_set = ValidatorSet::new(vec![validator]);
-        let mut configs = HashMap::new();
+        let mut configs = BTreeMap::new();
         configs.insert(
             ValidatorSet::CONFIG_ID,
             bcs::to_bytes(&validator_set).unwrap(),

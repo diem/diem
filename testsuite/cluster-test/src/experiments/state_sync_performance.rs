@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{collections::BTreeSet, fmt, time::Duration};
 
 use structopt::StructOpt;
 use tokio::time;
@@ -56,8 +56,8 @@ impl ExperimentParam for StateSyncPerformanceParams {
 
 #[async_trait]
 impl Experiment for StateSyncPerformance {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut result = HashSet::new();
+    fn affected_validators(&self) -> BTreeSet<String> {
+        let mut result = BTreeSet::new();
         result.insert(self.validator_instance.peer_name().clone());
         result
     }

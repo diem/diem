@@ -9,7 +9,7 @@ use diemdb::test_helper::arb_blocks_to_commit;
 use itertools::zip_eq;
 use proptest::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
 use storage_client::StorageClient;
@@ -48,7 +48,7 @@ proptest! {
                 Some(ledger_info_with_sigs.clone()),
             ).unwrap();
             version += txns_to_commit.len() as u64;
-            let mut account_states = HashMap::new();
+            let mut account_states = BTreeMap::new();
             // Get the ground truth of account states.
             txns_to_commit.iter().for_each(|txn_to_commit| {
                 account_states.extend(txn_to_commit.account_states().clone())

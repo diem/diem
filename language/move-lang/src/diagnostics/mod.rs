@@ -20,7 +20,7 @@ use move_command_line_common::env::read_env_var;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeMap, BTreeSet},
     iter::FromIterator,
     ops::Range,
 };
@@ -31,8 +31,8 @@ use std::{
 
 pub type FileId = usize;
 
-pub type FilesSourceText = HashMap<Symbol, String>;
-type FileMapping = HashMap<Symbol, FileId>;
+pub type FilesSourceText = BTreeMap<Symbol, String>;
+type FileMapping = BTreeMap<Symbol, FileId>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Diagnostic {
@@ -104,7 +104,7 @@ fn output_diagnostics<W: WriteColor>(
     diags: Diagnostics,
 ) {
     let mut files = SimpleFiles::new();
-    let mut file_mapping = HashMap::new();
+    let mut file_mapping = BTreeMap::new();
     for (fname, source) in sources {
         let id = files.add(*fname, source.as_str());
         file_mapping.insert(*fname, id);
@@ -123,7 +123,7 @@ fn render_diagnostics(
         let loc2: &Loc = &e2.primary_label.0;
         loc1.cmp(loc2)
     });
-    let mut seen: HashSet<Diagnostic> = HashSet::new();
+    let mut seen: BTreeSet<Diagnostic> = BTreeSet::new();
     for diag in diags.diagnostics {
         if seen.contains(&diag) {
             continue;

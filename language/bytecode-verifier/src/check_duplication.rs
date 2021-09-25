@@ -21,7 +21,7 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
 };
-use std::{collections::HashSet, hash::Hash};
+use std::{collections::BTreeSet, hash::Hash};
 
 pub struct DuplicationChecker<'a> {
     module: &'a CompiledModule,
@@ -238,7 +238,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Check that each struct handle in self module is implemented (has a declaration)
-        let implemented_struct_handles: HashSet<StructHandleIndex> = self
+        let implemented_struct_handles: BTreeSet<StructHandleIndex> = self
             .module
             .struct_defs()
             .iter()
@@ -291,7 +291,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Check that each function handle in self module is implemented (has a declaration)
-        let implemented_function_handles: HashSet<FunctionHandleIndex> = self
+        let implemented_function_handles: BTreeSet<FunctionHandleIndex> = self
             .module
             .function_defs()
             .iter()
@@ -316,7 +316,7 @@ impl<'a> DuplicationChecker<'a> {
         T: IntoIterator,
         T::Item: Eq + Hash,
     {
-        let mut uniq = HashSet::new();
+        let mut uniq = BTreeSet::new();
         for (i, x) in iter.into_iter().enumerate() {
             if !uniq.insert(x) {
                 return Some(i as TableIndex);

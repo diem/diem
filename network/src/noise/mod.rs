@@ -19,7 +19,7 @@
 //! use diem_infallible::RwLock;
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use diem_types::PeerId;
-//! use std::{collections::{HashSet, HashMap}, io, sync::Arc};
+//! use std::{collections::{BTreeSet, BTreeMap}, io, sync::Arc};
 //!
 //! fn example() -> io::Result<()> {
 //! // create client and server NoiseUpgrader
@@ -33,9 +33,9 @@
 //! let server_peer_id = PeerId::random();
 //!
 //! // create list of trusted peers
-//! let client_pubkey_set: HashSet<_> = vec![client_public].into_iter().collect();
-//! let server_pubkey_set: HashSet<_> = vec![server_public].into_iter().collect();
-//! let trusted_peers: HashMap<_, _> = vec![
+//! let client_pubkey_set: BTreeSet<_> = vec![client_public].into_iter().collect();
+//! let server_pubkey_set: BTreeSet<_> = vec![server_public].into_iter().collect();
+//! let trusted_peers: BTreeMap<_, _> = vec![
 //!     (client_peer_id, Peer::new(Vec::new(), client_pubkey_set, PeerRole::Validator)),
 //!     (server_peer_id, Peer::new(Vec::new(), server_pubkey_set, PeerRole::Validator))
 //! ].into_iter().collect();

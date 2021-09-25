@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{collections::BTreeSet, fmt, time::Duration};
 
 use structopt::StructOpt;
 use tokio::time;
@@ -46,8 +46,8 @@ impl ExperimentParam for RecoveryTimeParams {
 
 #[async_trait]
 impl Experiment for RecoveryTime {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut result = HashSet::new();
+    fn affected_validators(&self) -> BTreeSet<String> {
+        let mut result = BTreeSet::new();
         result.insert(self.instance.peer_name().clone());
         result
     }

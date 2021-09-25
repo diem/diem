@@ -7,7 +7,7 @@ use crate::application::{
 };
 use async_trait::async_trait;
 use diem_types::PeerId;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, BTreeMap};
 
 /// A generic `NetworkInterface` for applications to connect to networking
 ///
@@ -25,7 +25,7 @@ pub trait NetworkInterface {
     fn sender(&self) -> Self::Sender;
 
     /// Retrieve only connected peers
-    fn connected_peers(&self) -> HashMap<PeerId, PeerInfo> {
+    fn connected_peers(&self) -> BTreeMap<PeerId, PeerInfo> {
         self.filtered_peers(|(_, peer_info)| peer_info.status == PeerState::Connected)
     }
 
@@ -33,12 +33,12 @@ pub trait NetworkInterface {
     fn filtered_peers<F: FnMut(&(&PeerId, &PeerInfo)) -> bool>(
         &self,
         filter: F,
-    ) -> HashMap<PeerId, PeerInfo> {
+    ) -> BTreeMap<PeerId, PeerInfo> {
         self.peer_metadata_storage().read_filtered(filter)
     }
 
     /// Retrieve PeerInfo for the node
-    fn peers(&self) -> HashMap<PeerId, PeerInfo> {
+    fn peers(&self) -> BTreeMap<PeerId, PeerInfo> {
         self.peer_metadata_storage().read_all()
     }
 

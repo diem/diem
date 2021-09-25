@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use short_hex_str::AsShortHexStr;
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
     ops::Add,
     time::{Duration, Instant, SystemTime},
 };
@@ -30,7 +30,7 @@ use vm_validator::vm_validator::TransactionValidation;
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
 /// Peers that receive txns from this node.
-pub(crate) type PeerSyncStates = HashMap<PeerNetworkId, PeerSyncState>;
+pub(crate) type PeerSyncStates = BTreeMap<PeerNetworkId, PeerSyncState>;
 
 /// State of last sync with peer:
 /// `timeline_id` is position in log of ready transactions

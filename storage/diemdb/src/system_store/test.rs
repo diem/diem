@@ -8,13 +8,13 @@ use crate::{
     DiemDB,
 };
 use diem_temppath::TempPath;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn bump_ledger_counters(
     store: &SystemStore,
     first_version: Version,
     last_version: Version,
-    counter_bumps: HashMap<Version, LedgerCounterBumps>,
+    counter_bumps: BTreeMap<Version, LedgerCounterBumps>,
 ) -> LedgerCounters {
     let mut cs = ChangeSet::new_with_bumps(counter_bumps);
     let counters = store
@@ -28,8 +28,8 @@ fn bump_ledger_counters(
 fn create_bumps_map(
     first_version: Version,
     events_created_list: Vec<usize>,
-) -> HashMap<Version, LedgerCounterBumps> {
-    let mut bumps_map = HashMap::new();
+) -> BTreeMap<Version, LedgerCounterBumps> {
+    let mut bumps_map = BTreeMap::new();
     events_created_list
         .into_iter()
         .enumerate()
@@ -97,7 +97,7 @@ fn test_inc_ledger_counters() {
             store,
             15, /* first_version */
             15, /* last_version */
-            HashMap::new(),
+            BTreeMap::new(),
         );
         assert_eq!(counters.get(LedgerCounter::EventsCreated), 15);
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_ir_types::ast as IR;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, BTreeMap};
 
 // Removes any "fall through jumps", i.e. this a is a jump directly to the next instruction.
 // Iterates to find a fixpoint as it might create empty blocks which could create more jumps to
@@ -42,7 +42,7 @@ fn remove_fall_through(
 }
 
 fn remove_empty_blocks(blocks: &mut IR::BytecodeBlocks) -> bool {
-    let mut label_map = HashMap::new();
+    let mut label_map = BTreeMap::new();
     let mut cur_label = None;
     let mut removed = false;
     let old_blocks = std::mem::take(blocks);

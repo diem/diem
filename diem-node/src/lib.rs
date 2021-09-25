@@ -32,7 +32,7 @@ use network_builder::builder::NetworkBuilder;
 use state_sync_v1::bootstrapper::StateSyncBootstrapper;
 use std::{
     boxed::Box,
-    collections::HashSet,
+    collections::BTreeSet,
     convert::TryFrom,
     io::Write,
     net::ToSocketAddrs,
@@ -342,7 +342,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     }
 
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
-    let mut network_ids = HashSet::new();
+    let mut network_ids = BTreeSet::new();
     for network_config in network_configs.into_iter() {
         debug!("Creating runtime for {}", network_config.network_id);
         let runtime = Builder::new_multi_thread()

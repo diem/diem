@@ -68,7 +68,7 @@ pub use diem_metrics_core::{
 use diem_logger::prelude::*;
 use once_cell::sync::Lazy;
 use prometheus::proto::MetricType;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub static NUM_METRICS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
@@ -110,11 +110,11 @@ pub fn gather_metrics() -> Vec<prometheus::proto::MetricFamily> {
     metric_families
 }
 
-pub fn get_all_metrics() -> HashMap<String, String> {
+pub fn get_all_metrics() -> BTreeMap<String, String> {
     // TODO: use an existing metric encoder (same as used by
     // prometheus/metric-server)
     let all_metric_families = gather_metrics();
-    let mut all_metrics = HashMap::new();
+    let mut all_metrics = BTreeMap::new();
     for metric_family in all_metric_families {
         let values: Vec<_> = match metric_family.get_field_type() {
             MetricType::COUNTER => metric_family

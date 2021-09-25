@@ -17,7 +17,7 @@ use diem_types::{
 use futures::{channel::mpsc::SendError, stream::FusedStream, Stream};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     iter::FromIterator,
     ops::Deref,
@@ -75,11 +75,11 @@ pub trait EventNotificationSender: Send {
 /// subscribers of on-chain events.
 pub struct EventSubscriptionService {
     // Event subscription registry
-    event_key_subscriptions: HashMap<EventKey, HashSet<SubscriptionId>>,
-    subscription_id_to_event_subscription: HashMap<SubscriptionId, EventSubscription>,
+    event_key_subscriptions: BTreeMap<EventKey, BTreeSet<SubscriptionId>>,
+    subscription_id_to_event_subscription: BTreeMap<SubscriptionId, EventSubscription>,
 
     // Reconfig subscription registry
-    reconfig_subscriptions: HashMap<SubscriptionId, ReconfigSubscription>,
+    reconfig_subscriptions: BTreeMap<SubscriptionId, ReconfigSubscription>,
 
     // Database to fetch on-chain configuration data
     storage: Arc<RwLock<DbReaderWriter>>,
@@ -94,9 +94,9 @@ pub struct EventSubscriptionService {
 impl EventSubscriptionService {
     pub fn new(config_registry: &[ConfigID], storage: Arc<RwLock<DbReaderWriter>>) -> Self {
         Self {
-            event_key_subscriptions: HashMap::new(),
-            subscription_id_to_event_subscription: HashMap::new(),
-            reconfig_subscriptions: HashMap::new(),
+            event_key_subscriptions: BTreeMap::new(),
+            subscription_id_to_event_subscription: BTreeMap::new(),
+            reconfig_subscriptions: BTreeMap::new(),
             config_registry: config_registry.to_vec(),
             storage,
             next_subscription_id: AtomicU64::new(0),
@@ -147,7 +147,7 @@ impl EventSubscriptionService {
                 .and_modify(|subscriptions| {
                     subscriptions.insert(subscription_id);
                 })
-                .or_insert_with(|| HashSet::from_iter(vec![subscription_id].iter().cloned()));
+                .or_insert_with(|| BTreeSet::from_iter(vec![subscription_id].iter().cloned()));
         }
 
         Ok(EventNotificationListener {
@@ -201,7 +201,7 @@ impl EventSubscriptionService {
         events: Vec<ContractEvent>,
     ) -> Result<bool, Error> {
         let mut reconfig_event_found = false;
-        let mut event_subscription_ids_to_notify = HashSet::new();
+        let mut event_subscription_ids_to_notify = BTreeSet::new();
 
         for event in events.iter() {
             let event_key = event.key();
@@ -266,7 +266,7 @@ impl EventSubscriptionService {
     /// to handle on-chain configs not existing in a reconfiguration notification.
     fn read_on_chain_configs(&self, version: Version) -> Result<OnChainConfigPayload, Error> {
         // Build a map from config ID to the config value found on-chain
-        let mut config_id_to_config = HashMap::new();
+        let mut config_id_to_config = BTreeMap::new();
         for config_id in self.config_registry.iter() {
             if let Ok(config_list) = self
                 .storage

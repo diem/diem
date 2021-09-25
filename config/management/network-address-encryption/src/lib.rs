@@ -18,7 +18,7 @@ use diem_types::{
     },
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -205,7 +205,7 @@ where
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ValidatorKeys {
-    keys: HashMap<KeyVersion, StorageKey>,
+    keys: BTreeMap<KeyVersion, StorageKey>,
     current: KeyVersion,
 }
 
@@ -213,7 +213,7 @@ impl Default for ValidatorKeys {
     fn default() -> Self {
         ValidatorKeys {
             current: 0,
-            keys: HashMap::new(),
+            keys: BTreeMap::new(),
         }
     }
 }

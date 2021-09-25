@@ -18,7 +18,7 @@ use proptest::{
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     ops::Bound,
 };
 
@@ -62,7 +62,7 @@ pub fn plus_one(key: HashValue) -> HashValue {
 }
 
 /// Initializes a DB with a set of key-value pairs by inserting one key at each version.
-pub fn init_mock_db<V>(kvs: &HashMap<HashValue, V>) -> (MockTreeStore<V>, Version)
+pub fn init_mock_db<V>(kvs: &BTreeMap<HashValue, V>) -> (MockTreeStore<V>, Version)
 where
     V: crate::TestValue,
 {
@@ -84,7 +84,7 @@ where
 pub fn arb_existent_kvs_and_nonexistent_keys<V: crate::TestValue>(
     num_kvs: usize,
     num_non_existing_keys: usize,
-) -> impl Strategy<Value = (HashMap<HashValue, V>, Vec<HashValue>)> {
+) -> impl Strategy<Value = (BTreeMap<HashValue, V>, Vec<HashValue>)> {
     hash_map(any::<HashValue>(), any::<V>(), 1..num_kvs).prop_flat_map(move |kvs| {
         let kvs_clone = kvs.clone();
         (
@@ -101,7 +101,7 @@ pub fn arb_existent_kvs_and_nonexistent_keys<V: crate::TestValue>(
 }
 
 pub fn test_get_with_proof<V: crate::TestValue>(
-    (existent_kvs, nonexistent_keys): (HashMap<HashValue, V>, Vec<HashValue>),
+    (existent_kvs, nonexistent_keys): (BTreeMap<HashValue, V>, Vec<HashValue>),
 ) {
     let (db, version) = init_mock_db(&existent_kvs);
     let tree = JellyfishMerkleTree::new(&db);
@@ -127,7 +127,7 @@ pub fn arb_kv_pair_with_distinct_last_nibble<V: crate::TestValue>(
 pub fn test_get_with_proof_with_distinct_last_nibble<V: crate::TestValue>(
     (kv1, kv2): ((HashValue, V), (HashValue, V)),
 ) {
-    let mut kvs = HashMap::new();
+    let mut kvs = BTreeMap::new();
     kvs.insert(kv1.0, kv1.1);
     kvs.insert(kv2.0, kv2.1);
 
@@ -162,7 +162,7 @@ pub fn test_get_range_proof<V: crate::TestValue>((btree, n): (BTreeMap<HashValue
 fn test_existent_keys_impl<'a, V: crate::TestValue>(
     tree: &JellyfishMerkleTree<'a, MockTreeStore<V>, V>,
     version: Version,
-    existent_kvs: &HashMap<HashValue, V>,
+    existent_kvs: &BTreeMap<HashValue, V>,
 ) {
     let root_hash = tree.get_root_hash(version).unwrap();
 

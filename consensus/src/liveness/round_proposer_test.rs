@@ -8,7 +8,7 @@ use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
 use diem_types::validator_signer::ValidatorSigner;
 
 use consensus_types::common::{Author, Round};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[test]
 fn test_round_proposer() {
@@ -20,7 +20,7 @@ fn test_round_proposer() {
     let another_author = another_validator_signer.author();
 
     // A map that specifies the proposer per round
-    let mut round_proposers: HashMap<Round, Author> = HashMap::new();
+    let mut round_proposers: BTreeMap<Round, Author> = BTreeMap::new();
     round_proposers.insert(1, chosen_author_round1);
     round_proposers.insert(2, chosen_author_round2);
 

@@ -13,10 +13,7 @@ use guppy::{
     Version, VersionReq,
 };
 use hakari::summaries::HakariBuilderSummary;
-use std::{
-    collections::{BTreeMap, HashMap},
-    iter,
-};
+use std::{collections::BTreeMap, iter};
 use x_core::WorkspaceStatus;
 use x_lint::prelude::*;
 
@@ -46,7 +43,7 @@ impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
     ) -> Result<RunStatus<'l>> {
         let package_graph = ctx.package_graph()?;
 
-        let filter_ban = |banned: &'cfg HashMap<String, String>| {
+        let filter_ban = |banned: &'cfg BTreeMap<String, String>| {
             package_graph.packages().filter_map(move |package| {
                 banned
                     .get(package.name())

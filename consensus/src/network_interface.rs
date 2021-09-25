@@ -30,7 +30,7 @@ use network::{
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 /// Network type for consensus
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -80,7 +80,7 @@ pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 #[derive(Clone)]
 pub struct ConsensusNetworkSender {
     network_sender: NetworkSender<ConsensusMsg>,
-    peers_protocols: Option<Arc<RwLock<HashMap<PeerId, SupportedProtocols>>>>,
+    peers_protocols: Option<Arc<RwLock<BTreeMap<PeerId, SupportedProtocols>>>>,
 }
 
 /// Supported protocols in preferred order (from highest priority to lowest).
@@ -140,7 +140,7 @@ impl ConsensusNetworkSender {
         recipients: impl Iterator<Item = PeerId>,
         message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
-        let mut peers_per_protocol = HashMap::new();
+        let mut peers_per_protocol = BTreeMap::new();
         for peer in recipients {
             match self.preferred_protocol_for_peer(peer, DIRECT_SEND) {
                 Ok(protocol) => peers_per_protocol
@@ -171,7 +171,7 @@ impl ConsensusNetworkSender {
     }
 
     /// Initialize a shared hashmap about connections metadata that is updated by the receiver.
-    pub fn initialize(&mut self, connections: Arc<RwLock<HashMap<PeerId, SupportedProtocols>>>) {
+    pub fn initialize(&mut self, connections: Arc<RwLock<BTreeMap<PeerId, SupportedProtocols>>>) {
         self.peers_protocols = Some(connections);
     }
 

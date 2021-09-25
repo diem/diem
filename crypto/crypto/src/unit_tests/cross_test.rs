@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 // (here, Ed25519(PublicKey|PrivateKey|Signature) and MultiEd25519(...)).
 //
 // Note that we do not break type safety (see towards the end), and that
-// this enum can safely be put into the usual collection (Vec, HashMap).
+// this enum can safely be put into the usual collection (Vec, BTreeMap).
 //
 
 #[derive(

@@ -20,7 +20,7 @@ use diem_types::protocol_spec::DpnProto;
 use event_notifications::ReconfigNotificationListener;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
 
@@ -57,7 +57,7 @@ pub fn start_consensus(
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-    let shared_connections = Arc::new(RwLock::new(HashMap::new()));
+    let shared_connections = Arc::new(RwLock::new(BTreeMap::new()));
     network_sender.initialize(shared_connections.clone());
 
     let epoch_mgr = EpochManager::new(

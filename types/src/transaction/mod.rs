@@ -31,7 +31,7 @@ use move_core_types::transaction_argument::convert_txn_args;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     fmt,
     fmt::{Debug, Display, Formatter},
@@ -1016,8 +1016,8 @@ impl Display for TransactionInfo {
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionToCommit {
     transaction: Transaction,
-    account_states: HashMap<AccountAddress, AccountStateBlob>,
-    jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
+    account_states: BTreeMap<AccountAddress, AccountStateBlob>,
+    jf_node_hashes: Option<BTreeMap<NibblePath, HashValue>>,
     events: Vec<ContractEvent>,
     gas_used: u64,
     status: KeptVMStatus,
@@ -1026,8 +1026,8 @@ pub struct TransactionToCommit {
 impl TransactionToCommit {
     pub fn new(
         transaction: Transaction,
-        account_states: HashMap<AccountAddress, AccountStateBlob>,
-        jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
+        account_states: BTreeMap<AccountAddress, AccountStateBlob>,
+        jf_node_hashes: Option<BTreeMap<NibblePath, HashValue>>,
         events: Vec<ContractEvent>,
         gas_used: u64,
         status: KeptVMStatus,
@@ -1046,11 +1046,11 @@ impl TransactionToCommit {
         &self.transaction
     }
 
-    pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
+    pub fn account_states(&self) -> &BTreeMap<AccountAddress, AccountStateBlob> {
         &self.account_states
     }
 
-    pub fn jf_node_hashes(&self) -> Option<&HashMap<NibblePath, HashValue>> {
+    pub fn jf_node_hashes(&self) -> Option<&BTreeMap<NibblePath, HashValue>> {
         self.jf_node_hashes.as_ref()
     }
 

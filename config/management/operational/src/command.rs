@@ -10,7 +10,7 @@ use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
 use diem_management::{error::Error, execute_command};
 use diem_types::{account_address::AccountAddress, waypoint::Waypoint, PeerId};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -301,7 +301,7 @@ impl Command {
         )
     }
 
-    pub fn extract_peer_from_storage(self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn extract_peer_from_storage(self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         execute_command!(
             self,
             Command::ExtractPeerFromStorage,
@@ -309,7 +309,7 @@ impl Command {
         )
     }
 
-    pub fn extract_peer_from_file(self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn extract_peer_from_file(self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         execute_command!(
             self,
             Command::ExtractPeerFromFile,
@@ -317,7 +317,7 @@ impl Command {
         )
     }
 
-    pub fn extract_peers_from_keys(self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn extract_peers_from_keys(self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         execute_command!(
             self,
             Command::ExtractPeersFromKeys,

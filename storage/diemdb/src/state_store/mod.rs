@@ -24,7 +24,7 @@ use diem_types::{
     transaction::Version,
 };
 use schemadb::{SchemaBatch, DB};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 type LeafNode = diem_jellyfish_merkle::node_type::LeafNode<AccountStateBlob>;
 type Node = diem_jellyfish_merkle::node_type::Node<AccountStateBlob>;
@@ -65,8 +65,8 @@ impl StateStore {
     /// hashes for each write set.
     pub fn put_account_state_sets(
         &self,
-        account_state_sets: Vec<HashMap<AccountAddress, AccountStateBlob>>,
-        node_hashes: Option<Vec<&HashMap<NibblePath, HashValue>>>,
+        account_state_sets: Vec<BTreeMap<AccountAddress, AccountStateBlob>>,
+        node_hashes: Option<Vec<&BTreeMap<NibblePath, HashValue>>>,
         first_version: Version,
         cs: &mut ChangeSet,
     ) -> Result<Vec<HashValue>> {

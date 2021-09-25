@@ -27,7 +27,7 @@ use diem_types::{
     write_set::WriteSet,
 };
 use rayon::prelude::*;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 /// This trait describes the VM adapter's interface.
 /// TODO: bring more of the execution logic in diem_vm into this file.
@@ -159,7 +159,7 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveResolver, A: VMAdapt
 
 fn preload_cache(signature_verified_block: &[PreprocessedTransaction], data_view: &impl StateView) {
     // generate a collection of addresses
-    let mut addresses_to_preload = HashSet::new();
+    let mut addresses_to_preload = BTreeSet::new();
     for txn in signature_verified_block {
         if let PreprocessedTransaction::UserTransaction(txn) = txn {
             if let TransactionPayload::Script(script) = txn.payload() {

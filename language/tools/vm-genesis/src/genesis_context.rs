@@ -7,17 +7,17 @@ use anyhow::Result;
 use diem_state_view::StateView;
 use diem_types::access_path::AccessPath;
 use move_core_types::language_storage::ModuleId;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 // `StateView` has no data given we are creating the genesis
 pub(crate) struct GenesisStateView {
-    data: HashMap<AccessPath, Vec<u8>>,
+    data: BTreeMap<AccessPath, Vec<u8>>,
 }
 
 impl GenesisStateView {
     pub(crate) fn new() -> Self {
         Self {
-            data: HashMap::new(),
+            data: BTreeMap::new(),
         }
     }
 

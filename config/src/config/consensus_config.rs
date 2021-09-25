@@ -4,7 +4,7 @@
 use crate::config::SafetyRulesConfig;
 use diem_types::{account_address::AccountAddress, block_info::Round};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -72,7 +72,7 @@ pub enum ConsensusProposerType {
     // Pre-specified proposers for each round,
     // or default proposer if round proposer not
     // specified
-    RoundProposer(HashMap<Round, AccountAddress>),
+    RoundProposer(BTreeMap<Round, AccountAddress>),
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]

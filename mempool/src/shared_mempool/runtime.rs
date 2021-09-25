@@ -21,7 +21,7 @@ use futures::channel::{
     oneshot,
 };
 use mempool_notifications::MempoolNotificationListener;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
@@ -51,7 +51,7 @@ pub(crate) fn start_shared_mempool<V>(
     let peer_manager = Arc::new(PeerManager::new(config.base.role, config.mempool.clone()));
 
     let mut all_network_events = vec![];
-    let mut network_senders = HashMap::new();
+    let mut network_senders = BTreeMap::new();
     for (network_id, network_sender, network_events) in mempool_network_handles.into_iter() {
         all_network_events.push((network_id, network_events));
         network_senders.insert(network_id, network_sender);

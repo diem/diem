@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::BTreeMap, env, sync::Arc};
 
 use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
@@ -32,7 +32,7 @@ use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use rusoto_sts::WebIdentityProvider;
 use serde::de::DeserializeOwned;
-use std::{collections::HashSet, convert::TryFrom, process::Command, time::Duration};
+use std::{collections::BTreeSet, convert::TryFrom, process::Command, time::Duration};
 use tokio::sync::Semaphore;
 
 pub const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337133713371337";
@@ -118,7 +118,7 @@ pub struct ClusterSwarmKube {
     client: Client,
     http_client: HttpClient,
     s3_client: S3Client,
-    pub node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
+    pub node_map: Arc<Mutex<BTreeMap<String, KubeNode>>>,
 }
 
 impl ClusterSwarmKube {
@@ -143,7 +143,7 @@ impl ClusterSwarmKube {
         let dispatcher =
             rusoto_core::HttpClient::new().expect("failed to create request dispatcher");
         let s3_client = S3Client::new_with(dispatcher, credentials_provider, Region::UsWest2);
-        let node_map = Arc::new(Mutex::new(HashMap::new()));
+        let node_map = Arc::new(Mutex::new(BTreeMap::new()));
         Ok(Self {
             client,
             http_client,
@@ -490,7 +490,7 @@ impl ClusterSwarmKube {
         if let Some(existed) = node_map.get(pod_name) {
             return Ok(existed.clone());
         }
-        let used_nodes: HashSet<_> = node_map.values().map(|node| &node.name).collect();
+        let used_nodes: BTreeSet<_> = node_map.values().map(|node| &node.name).collect();
         for node in nodes {
             if !used_nodes.contains(&node.name) {
                 node_map.insert(pod_name.to_string(), node.clone());

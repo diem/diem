@@ -21,7 +21,7 @@ use move_core_types::{
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
 /// Dummy genesis ChangeSet for testing
@@ -37,12 +37,12 @@ pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
 /// `RemoteCache` is needed.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct FakeDataStore {
-    data: HashMap<AccessPath, Vec<u8>>,
+    data: BTreeMap<AccessPath, Vec<u8>>,
 }
 
 impl FakeDataStore {
     /// Creates a new `FakeDataStore` with the provided initial data.
-    pub fn new(data: HashMap<AccessPath, Vec<u8>>) -> Self {
+    pub fn new(data: BTreeMap<AccessPath, Vec<u8>>) -> Self {
         FakeDataStore { data }
     }
 
@@ -89,7 +89,7 @@ impl FakeDataStore {
     }
 
     /// Yields a reference to the internal data structure of the global state
-    pub fn inner(&self) -> &HashMap<AccessPath, Vec<u8>> {
+    pub fn inner(&self) -> &BTreeMap<AccessPath, Vec<u8>> {
         &self.data
     }
 }

@@ -124,7 +124,7 @@ cfg_async_or_blocking! {
         requests: &[JsonRpcRequest],
         raw_responses: Vec<diem_json_rpc_types::response::JsonRpcResponse>,
     ) -> Result<Vec<Result<Response<MethodResponse>>>> {
-        let mut responses = std::collections::HashMap::new();
+        let mut responses = std::collections::BTreeMap::new();
         for raw_response in &raw_responses {
             let id = get_id(raw_response)?;
             let response = validate(state_manager, req_state, raw_response, false);

@@ -752,7 +752,7 @@ impl Arbitrary for StatusCode {
 
 #[test]
 fn test_status_codes() {
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
     // Make sure that within the 0-EXECUTION_STATUS_MAX_CODE that all of the status codes succeed
     // when they should, and fail when they should.
     for possible_major_status_code in 0..=EXECUTION_STATUS_MAX_CODE {
@@ -766,8 +766,8 @@ fn test_status_codes() {
         }
     }
 
-    let mut seen_statuses = HashSet::new();
-    let mut seen_codes = HashSet::new();
+    let mut seen_statuses = BTreeSet::new();
+    let mut seen_codes = BTreeSet::new();
     // Now make sure that all of the error codes (including any that may be out-of-range) succeed.
     // Make sure there aren't any duplicate mappings
     for major_status_code in STATUS_CODE_VALUES.iter() {

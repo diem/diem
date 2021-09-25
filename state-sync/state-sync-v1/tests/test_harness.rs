@@ -70,7 +70,7 @@ use state_sync_v1::{
 };
 use std::{
     cell::{Ref, RefCell},
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     ops::DerefMut,
     sync::Arc,
 };
@@ -84,7 +84,7 @@ pub struct StateSyncPeer {
     client: Option<StateSyncClient>,
     consensus_notifier: Option<ConsensusNotifier>,
     mempool: Option<MockSharedMempool>,
-    multi_peer_ids: HashMap<NetworkId, PeerId>, // Holds the peer's PeerIds (to support nodes with multiple network IDs).
+    multi_peer_ids: BTreeMap<NetworkId, PeerId>, // Holds the peer's PeerIds (to support nodes with multiple network IDs).
     network_addr: NetworkAddress,
     network_key: x25519::PrivateKey,
     peer_id: PeerId,
@@ -186,11 +186,11 @@ impl StateSyncPeer {
 }
 
 pub struct StateSyncEnvironment {
-    network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
+    network_conn_event_notifs_txs: BTreeMap<PeerId, conn_notifs_channel::Sender>,
     network_notifs_txs:
-        HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        BTreeMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_reqs_rxs:
-        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
+        BTreeMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     peers: Vec<RefCell<StateSyncPeer>>,
     runtime: Runtime,
 }
@@ -211,7 +211,7 @@ impl StateSyncEnvironment {
                 client: None,
                 mempool: None,
                 consensus_notifier: None,
-                multi_peer_ids: HashMap::new(),
+                multi_peer_ids: BTreeMap::new(),
                 network_addr: network_addrs[peer_index].clone(),
                 network_key: network_keys[peer_index].clone(),
                 peer_id: signers[peer_index].author(),
@@ -224,9 +224,9 @@ impl StateSyncEnvironment {
         }
 
         Self {
-            network_conn_event_notifs_txs: HashMap::new(),
-            network_notifs_txs: HashMap::new(),
-            network_reqs_rxs: HashMap::new(),
+            network_conn_event_notifs_txs: BTreeMap::new(),
+            network_notifs_txs: BTreeMap::new(),
+            network_reqs_rxs: BTreeMap::new(),
             peers,
             runtime: Runtime::new().unwrap(),
         }
@@ -370,7 +370,7 @@ impl StateSyncEnvironment {
             let auth_mode = AuthenticationMode::Mutual(peer.network_key.clone());
             let network_context = NetworkContext::new(*role, NetworkId::Validator, peer.peer_id);
 
-            let seeds: HashMap<_, _> = self
+            let seeds: BTreeMap<_, _> = self
                 .peers
                 .iter()
                 .map(|peer| {
@@ -381,7 +381,7 @@ impl StateSyncEnvironment {
                     )
                 })
                 .collect();
-            let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+            let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
 
             // Recover the base address we bound previously.
             let addr_protos = peer.network_addr.as_slice();
@@ -583,7 +583,7 @@ pub struct MockStorage {
     // the executed trees after applying the txns above.
     synced_trees: ExecutedTrees,
     // latest ledger info per epoch
-    ledger_infos: HashMap<u64, LedgerInfoWithSignatures>,
+    ledger_infos: BTreeMap<u64, LedgerInfoWithSignatures>,
     // latest epoch number (starts with 1)
     epoch_num: u64,
     // Validator signer of the latest epoch
@@ -597,7 +597,7 @@ impl MockStorage {
     pub fn new(genesis_li: LedgerInfoWithSignatures, signer: ValidatorSigner) -> Self {
         let epoch_state = genesis_li.ledger_info().next_epoch_state().unwrap().clone();
         let epoch_num = genesis_li.ledger_info().epoch() + 1;
-        let mut ledger_infos = HashMap::new();
+        let mut ledger_infos = BTreeMap::new();
         ledger_infos.insert(0, genesis_li);
         Self {
             transactions: vec![],

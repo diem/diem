@@ -11,7 +11,7 @@ use proptest::{
     collection::{hash_map, vec},
     prelude::*,
 };
-use std::{collections::HashMap, path::Path};
+use std::{collections::BTreeMap, path::Path};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn to_file_name(backup_name: &str, file_name: &str) -> String {
@@ -23,7 +23,7 @@ fn to_file_name(backup_name: &str, file_name: &str) -> String {
 
 pub async fn test_write_and_read_impl(
     store: Box<dyn BackupStorage>,
-    backups: HashMap<ShellSafeName, HashMap<ShellSafeName, Vec<u8>>>,
+    backups: BTreeMap<ShellSafeName, BTreeMap<ShellSafeName, Vec<u8>>>,
 ) {
     for (backup_name, files) in &backups {
         let backup_handle = store.create_backup(backup_name).await.unwrap();
@@ -48,7 +48,7 @@ pub async fn test_write_and_read_impl(
 }
 
 pub fn arb_backups(
-) -> impl Strategy<Value = HashMap<ShellSafeName, HashMap<ShellSafeName, Vec<u8>>>> {
+) -> impl Strategy<Value = BTreeMap<ShellSafeName, BTreeMap<ShellSafeName, Vec<u8>>>> {
     hash_map(
         any::<ShellSafeName>(), // backup_name
         hash_map(
@@ -99,6 +99,6 @@ pub async fn test_save_and_list_metadata_files_impl(
 
 pub fn arb_metadata_files() -> impl Strategy<Value = Vec<(ShellSafeName, TextLine)>> {
     hash_map(any::<ShellSafeName>(), any::<TextLine>(), 0..10)
-        .prop_map(HashMap::into_iter)
+        .prop_map(BTreeMap::into_iter)
         .prop_map(Iterator::collect)
 }

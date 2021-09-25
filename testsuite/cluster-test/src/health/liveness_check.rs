@@ -8,10 +8,10 @@ use crate::{
     health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent},
 };
 use async_trait::async_trait;
-use std::{collections::HashMap, time::Duration};
+use std::{collections::BTreeMap, time::Duration};
 
 pub struct LivenessHealthCheck {
-    last_committed: HashMap<String, LastCommitInfo>,
+    last_committed: BTreeMap<String, LastCommitInfo>,
 }
 
 const MAX_BEHIND: Duration = Duration::from_secs(120);
@@ -24,7 +24,7 @@ struct LastCommitInfo {
 
 impl LivenessHealthCheck {
     pub fn new(cluster: &Cluster) -> Self {
-        let mut last_committed = HashMap::new();
+        let mut last_committed = BTreeMap::new();
         for instance in cluster.validator_instances() {
             last_committed.insert(instance.peer_name().clone(), LastCommitInfo::default());
         }

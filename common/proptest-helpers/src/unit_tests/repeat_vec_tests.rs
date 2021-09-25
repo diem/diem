@@ -7,7 +7,7 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt, iter,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -211,7 +211,7 @@ proptest! {
     #[test]
     fn counter_uniqueness(counters in vec(Counter::strategy(), 0..100usize)) {
         let counters_len = counters.len();
-        let set: HashSet<_> = counters.into_iter().collect();
+        let set: BTreeSet<_> = counters.into_iter().collect();
         prop_assert_eq!(counters_len, set.len());
     }
 

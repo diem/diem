@@ -24,7 +24,7 @@ use rand::{
 use rand_core::SeedableRng;
 use std::{
     cmp::{max, min},
-    collections::HashSet,
+    collections::BTreeSet,
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
@@ -545,7 +545,7 @@ async fn wait_for_signed_transactions(
             .saturating_sub(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?);
 
     #[allow(clippy::mutable_key_type)]
-    let mut uncommitted_txns = txns.iter().collect::<HashSet<_>>();
+    let mut uncommitted_txns = txns.iter().collect::<BTreeSet<_>>();
 
     while Instant::now() < deadline {
         if uncommitted_txns.is_empty() {
@@ -603,7 +603,7 @@ async fn wait_for_accounts_sequence(
 ) -> Result<(), Vec<AccountAddress>> {
     let deadline = Instant::now() + Duration::from_secs(TXN_EXPIRATION_SECONDS); //TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address()).collect();
-    let mut uncommitted = addresses.clone().into_iter().collect::<HashSet<_>>();
+    let mut uncommitted = addresses.clone().into_iter().collect::<BTreeSet<_>>();
 
     while Instant::now() < deadline {
         match query_sequence_numbers(client, &addresses).await {

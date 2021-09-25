@@ -23,7 +23,7 @@ fn put_account_state_set(
     let expected_new_leaves = account_state_set.len();
     let root = store
         .put_account_state_sets(
-            vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
+            vec![account_state_set.into_iter().collect::<BTreeMap<_, _>>()],
             None,
             version,
             &mut cs,
@@ -367,7 +367,7 @@ proptest! {
 fn init_store(store: &StateStore, input: impl Iterator<Item = (AccountAddress, AccountStateBlob)>) {
     for (i, (key, value)) in input.enumerate() {
         let mut cs = ChangeSet::new();
-        let account_state_set: HashMap<_, _> = std::iter::once((key, value)).collect();
+        let account_state_set: BTreeMap<_, _> = std::iter::once((key, value)).collect();
         store
             .put_account_state_sets(vec![account_state_set], None, i as Version, &mut cs)
             .unwrap();

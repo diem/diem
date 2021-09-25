@@ -19,7 +19,7 @@ mod twin_validator;
 mod versioning_test;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt::Display,
     time::Duration,
 };
@@ -59,8 +59,8 @@ use structopt::{clap::AppSettings, StructOpt};
 
 #[async_trait]
 pub trait Experiment: Display + Send {
-    fn affected_validators(&self) -> HashSet<String> {
-        HashSet::new()
+    fn affected_validators(&self) -> BTreeSet<String> {
+        BTreeSet::new()
     }
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()>;
     fn deadline(&self) -> Duration;
@@ -133,7 +133,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         Box::new(from_args::<P>)
     }
 
-    let mut known_experiments = HashMap::new();
+    let mut known_experiments = BTreeMap::new();
 
     known_experiments.insert("recovery_time", f::<RecoveryTimeParams>());
     known_experiments.insert(

@@ -14,7 +14,7 @@ use diem_config::{
 use diem_types::network_address::{NetworkAddress, Protocol};
 use forge::{NodeExt, Swarm, SwarmExt};
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     net::Ipv4Addr,
     time::{Duration, Instant},
 };
@@ -315,10 +315,10 @@ fn add_node_to_seeds(
             .push(Protocol::NoiseIK(seed_key))
             .push(Protocol::Handshake(HANDSHAKE_VERSION));
 
-        Peer::new(vec![address], HashSet::new(), peer_role)
+        Peer::new(vec![address], BTreeSet::new(), peer_role)
     } else {
         // For downstreams, we don't know the address, but we know the keys
-        let mut seed_keys = HashSet::new();
+        let mut seed_keys = BTreeSet::new();
         seed_keys.insert(seed_key);
         Peer::new(vec![], seed_keys, peer_role)
     };

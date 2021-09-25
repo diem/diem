@@ -32,7 +32,7 @@ use netcore::transport::{
     tcp::{TcpSocket, TcpTransport},
     Transport,
 };
-use std::{clone::Clone, collections::HashMap, fmt::Debug, net::IpAddr, sync::Arc};
+use std::{clone::Clone, collections::BTreeMap, fmt::Debug, net::IpAddr, sync::Arc};
 use tokio::runtime::Handle;
 
 /// Inbound and Outbound connections are always secured with NoiseIK.  The dialer
@@ -108,7 +108,7 @@ struct PeerManagerContext {
     peer_metadata_storage: Arc<PeerMetadataStorage>,
     trusted_peers: Arc<RwLock<PeerSet>>,
     upstream_handlers:
-        HashMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        BTreeMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
     max_concurrent_network_reqs: usize,
@@ -129,7 +129,7 @@ impl PeerManagerContext {
 
         peer_metadata_storage: Arc<PeerMetadataStorage>,
         trusted_peers: Arc<RwLock<PeerSet>>,
-        upstream_handlers: HashMap<
+        upstream_handlers: BTreeMap<
             ProtocolId,
             diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,
@@ -247,7 +247,7 @@ impl PeerManagerBuilder {
                 connection_reqs_rx,
                 peer_metadata_storage,
                 trusted_peers,
-                HashMap::new(),
+                BTreeMap::new(),
                 Vec::new(),
                 max_concurrent_network_reqs,
                 channel_size,

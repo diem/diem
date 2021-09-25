@@ -17,7 +17,7 @@ use diem_logger::{info, warn};
 use futures::{future::try_join_all, FutureExt};
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt::{Display, Error, Formatter},
     time::Duration,
 };
@@ -157,7 +157,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
 
 #[async_trait]
 impl Experiment for PerformanceBenchmark {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.down_validators)
     }
 

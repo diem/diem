@@ -14,7 +14,7 @@
 //! that bucket are iterated upon. If no entries match the string, a new
 //! entry is appended to the end of the linked list of entries.
 //!
-//! * Why not use a [`HashSet`]? A set is dynamically resized as elements are
+//! * Why not use a [`BTreeSet`]? A set is dynamically resized as elements are
 //!   added. Ideally converting a [`Symbol`] to its string value is as
 //!   performant as dereferencing a pointer. But implementing the [`Symbol]` as
 //!   a pointer would not be safe if the data being pointed to could be
@@ -22,14 +22,14 @@
 //! * Why not use a [`LinkedList`]? A linked list does not unique the elements.
 //!   Ensuring the elements in the list are unique would require traversing the
 //!   list, which would not be performant for large lists.
-//! * Why not use a [`HashSet`] in conjunction with a [`LinkedList`]? This would
+//! * Why not use a [`BTreeSet`] in conjunction with a [`LinkedList`]? This would
 //!   be simpler to implement, but would involve storing the string data twice:
 //!   once in the set for uniqueness checking, and once in the linked list to
 //!   maintain a constant memory address for the string data. This pool
 //!   implementation is more space-efficient.
 //!
 //! [`Symbol`]: crate::Symbol
-//! [`HashSet`]: std::collections::HashSet
+//! [`BTreeSet`]: std::collections::BTreeSet
 //! [`LinkedList`]: std::collections::LinkedList
 
 use std::{

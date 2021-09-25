@@ -18,7 +18,7 @@ use diem_types::{block_info::BlockInfo, ledger_info::LedgerInfoWithSignatures};
 use mirai_annotations::{checked_verify_eq, precondition};
 use short_hex_str::AsShortHexStr;
 use std::{
-    collections::{vec_deque::VecDeque, HashMap, HashSet},
+    collections::{vec_deque::VecDeque, BTreeMap, BTreeSet},
     sync::Arc,
 };
 
@@ -28,14 +28,14 @@ struct LinkableBlock {
     /// Executed block that has raw block data and execution output.
     executed_block: Arc<ExecutedBlock>,
     /// The set of children for cascading pruning. Note: a block may have multiple children.
-    children: HashSet<HashValue>,
+    children: BTreeSet<HashValue>,
 }
 
 impl LinkableBlock {
     pub fn new(block: ExecutedBlock) -> Self {
         Self {
             executed_block: Arc::new(block),
-            children: HashSet::new(),
+            children: BTreeSet::new(),
         }
     }
 
@@ -43,7 +43,7 @@ impl LinkableBlock {
         &self.executed_block
     }
 
-    pub fn children(&self) -> &HashSet<HashValue> {
+    pub fn children(&self) -> &BTreeSet<HashValue> {
         &self.children
     }
 
@@ -67,7 +67,7 @@ impl LinkableBlock {
 /// should only be used internally in BlockStore.
 pub struct BlockTree {
     /// All the blocks known to this replica (with parent links)
-    id_to_block: HashMap<HashValue, LinkableBlock>,
+    id_to_block: BTreeMap<HashValue, LinkableBlock>,
     /// Root of the tree. This is the root of ordering phase
     ordered_root_id: HashValue,
     /// Commit Root id: this is the root of commit phase
@@ -86,7 +86,7 @@ pub struct BlockTree {
     /// The quorum certificate that has highest commit decision info.
     highest_ledger_info: LedgerInfoWithSignatures,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
-    id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
+    id_to_quorum_cert: BTreeMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
     pruned_block_ids: VecDeque<HashValue>,
     /// Num pruned blocks to keep in memory.
@@ -110,12 +110,12 @@ impl BlockTree {
         );
         let root_id = root.id();
 
-        let mut id_to_block = HashMap::new();
+        let mut id_to_block = BTreeMap::new();
         id_to_block.insert(root_id, LinkableBlock::new(root));
         counters::NUM_BLOCKS_IN_TREE.set(1);
 
         let root_quorum_cert = Arc::new(root_quorum_cert);
-        let mut id_to_quorum_cert = HashMap::new();
+        let mut id_to_quorum_cert = BTreeMap::new();
         id_to_quorum_cert.insert(
             root_quorum_cert.certified_block().id(),
             Arc::clone(&root_quorum_cert),

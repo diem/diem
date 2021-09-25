@@ -28,7 +28,7 @@ use crate::{
 use anyhow::{ensure, format_err, Result};
 use diem_logger::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeMap, BTreeSet},
     iter::Iterator,
     marker::PhantomData,
     path::Path,
@@ -57,7 +57,7 @@ enum WriteOp {
 /// will be applied in the order in which they are added to the `SchemaBatch`.
 #[derive(Debug, Default)]
 pub struct SchemaBatch {
-    rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
+    rows: BTreeMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
 }
 
 impl SchemaBatch {
@@ -207,7 +207,7 @@ impl DB {
         db_opts: &rocksdb::Options,
     ) -> Result<Self> {
         {
-            let cfs_set: HashSet<_> = column_families.iter().collect();
+            let cfs_set: BTreeSet<_> = column_families.iter().collect();
             ensure!(
                 cfs_set.contains(&DEFAULT_CF_NAME),
                 "No \"default\" column family name is provided.",

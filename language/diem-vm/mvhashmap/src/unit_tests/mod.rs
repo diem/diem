@@ -13,7 +13,7 @@ fn create_write_read_placeholder_struct() {
 
     let data = vec![(ap1.clone(), 10), (ap2.clone(), 10), (ap2.clone(), 20)];
 
-    let (mvtbl, max_dep) = MVHashMap::new_from(data);
+    let (mvtbl, max_dep) = MVBTreeMap::new_from(data);
 
     assert_eq!(2, max_dep);
 

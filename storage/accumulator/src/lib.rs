@@ -5,7 +5,7 @@
 
 //! This module provides algorithms for accessing and updating a Merkle Accumulator structure
 //! persisted in a key-value store. Note that this doesn't write to the storage directly, rather,
-//! it reads from it via the `HashReader` trait and yields writes via an in memory `HashMap`.
+//! it reads from it via the `HashReader` trait and yields writes via an in memory `BTreeMap`.
 //!
 //! # Merkle Accumulator
 //! Given an ever growing (append only) series of "leaf" hashes, we construct an evolving Merkle

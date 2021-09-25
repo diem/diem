@@ -12,7 +12,7 @@ use move_ir_types::ast as IR;
 use move_symbol_pool::Symbol;
 use std::{
     clone::Clone,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
 };
 use IR::Ability;
 
@@ -57,12 +57,12 @@ impl<'a> Context<'a> {
 
     pub fn materialize(
         self,
-        dependency_orderings: &HashMap<ModuleIdent, usize>,
-        struct_declarations: &HashMap<
+        dependency_orderings: &BTreeMap<ModuleIdent, usize>,
+        struct_declarations: &BTreeMap<
             (ModuleIdent, StructName),
             (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>),
         >,
-        function_declarations: &HashMap<
+        function_declarations: &BTreeMap<
             (ModuleIdent, FunctionName),
             (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
         >,
@@ -134,7 +134,7 @@ impl<'a> Context<'a> {
     }
 
     fn struct_dependencies(
-        struct_declarations: &HashMap<
+        struct_declarations: &BTreeMap<
             (ModuleIdent, StructName),
             (BTreeSet<Ability>, Vec<IR::StructTypeParameter>),
         >,
@@ -151,7 +151,7 @@ impl<'a> Context<'a> {
     }
 
     fn struct_dependency(
-        struct_declarations: &HashMap<
+        struct_declarations: &BTreeMap<
             (ModuleIdent, StructName),
             (BTreeSet<Ability>, Vec<IR::StructTypeParameter>),
         >,
@@ -169,7 +169,7 @@ impl<'a> Context<'a> {
     }
 
     fn function_dependencies(
-        function_declarations: &HashMap<
+        function_declarations: &BTreeMap<
             (ModuleIdent, FunctionName),
             (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
         >,
@@ -189,7 +189,7 @@ impl<'a> Context<'a> {
     }
 
     fn function_dependency(
-        function_declarations: &HashMap<
+        function_declarations: &BTreeMap<
             (ModuleIdent, FunctionName),
             (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
         >,

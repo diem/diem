@@ -5,7 +5,7 @@
 
 use crate::health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent};
 use async_trait::async_trait;
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{hash_map::Entry, BTreeMap, BTreeSet};
 
 type EpochAndRound = (u64, u64);
 
@@ -14,13 +14,13 @@ type EpochAndRound = (u64, u64);
 /// do not contradict each other
 #[derive(Default)]
 pub struct CommitHistoryHealthCheck {
-    epoch_round_to_commit: HashMap<EpochAndRound, CommitAndValidators>,
-    latest_committed_epoch_round: HashMap<String, EpochAndRound>,
+    epoch_round_to_commit: BTreeMap<EpochAndRound, CommitAndValidators>,
+    latest_committed_epoch_round: BTreeMap<String, EpochAndRound>,
 }
 
 struct CommitAndValidators {
     pub hash: String,
-    pub validators: HashSet<String>,
+    pub validators: BTreeSet<String>,
 }
 
 impl CommitHistoryHealthCheck {
@@ -58,7 +58,7 @@ impl HealthCheck for CommitHistoryHealthCheck {
                 }
             }
             Entry::Vacant(va) => {
-                let mut validators = HashSet::new();
+                let mut validators = BTreeSet::new();
                 validators.insert(ve.validator.clone());
                 va.insert(CommitAndValidators {
                     hash: commit.commit.clone(),

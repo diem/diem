@@ -41,7 +41,7 @@ use network::{protocols::network::Event, transport::ConnectionMetadata};
 use short_hex_str::AsShortHexStr;
 use std::{
     cmp,
-    collections::HashMap,
+    collections::BTreeMap,
     time::{Duration, SystemTime},
 };
 use tokio::time::interval;
@@ -102,7 +102,7 @@ pub(crate) struct StateSyncCoordinator<T, M> {
     initialization_listener: Option<oneshot::Sender<Result<(), Error>>>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
-    subscriptions: HashMap<PeerNetworkId, PendingRequestInfo>,
+    subscriptions: BTreeMap<PeerNetworkId, PendingRequestInfo>,
     executor_proxy: T,
 }
 
@@ -111,7 +111,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         mempool_notifier: M,
         consensus_listener: ConsensusNotificationListener,
-        network_senders: HashMap<NetworkId, StateSyncSender>,
+        network_senders: BTreeMap<NetworkId, StateSyncSender>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
         executor_proxy: T,
@@ -147,7 +147,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
             role,
             waypoint,
             request_manager,
-            subscriptions: HashMap::new(),
+            subscriptions: BTreeMap::new(),
             sync_request: None,
             target_ledger_info: None,
             initialization_listener: None,

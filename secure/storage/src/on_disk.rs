@@ -7,7 +7,7 @@ use diem_time_service::{TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs::{self, File},
     io::{Read, Write},
     path::PathBuf,
@@ -49,18 +49,18 @@ impl OnDiskStorage {
         }
     }
 
-    fn read(&self) -> Result<HashMap<String, Value>, Error> {
+    fn read(&self) -> Result<BTreeMap<String, Value>, Error> {
         let mut file = File::open(&self.file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         if contents.is_empty() {
-            return Ok(HashMap::new());
+            return Ok(BTreeMap::new());
         }
         let data = serde_json::from_str(&contents)?;
         Ok(data)
     }
 
-    fn write(&self, data: &HashMap<String, Value>) -> Result<(), Error> {
+    fn write(&self, data: &BTreeMap<String, Value>) -> Result<(), Error> {
         let contents = serde_json::to_vec(data)?;
         let mut file = File::create(self.temp_path.path())?;
         file.write_all(&contents)?;
@@ -93,7 +93,7 @@ impl KVStorage for OnDiskStorage {
 
     #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
-        self.write(&HashMap::new())
+        self.write(&BTreeMap::new())
     }
 }
 

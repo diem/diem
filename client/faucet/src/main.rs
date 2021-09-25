@@ -140,11 +140,11 @@ mod tests {
             },
         },
     };
-    use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+    use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
     use warp::Filter;
 
     fn setup(
-        accounts: Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>>,
+        accounts: Arc<RwLock<BTreeMap<AccountAddress, serde_json::Value>>>,
     ) -> Arc<mint::Service> {
         let f = tempfile::NamedTempFile::new()
             .unwrap()
@@ -311,7 +311,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_fullnode_error() {
-        let accounts = Arc::new(RwLock::new(HashMap::new()));
+        let accounts = Arc::new(RwLock::new(BTreeMap::new()));
         let service = setup(accounts);
         let filter = routes(service);
 
@@ -422,7 +422,7 @@ mod tests {
     fn handle_request(
         req: serde_json::Value,
         chain_id: ChainId,
-        accounts: Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>>,
+        accounts: Arc<RwLock<BTreeMap<AccountAddress, serde_json::Value>>>,
     ) -> serde_json::Value {
         if let serde_json::Value::Array(reqs) = req {
             return reqs
@@ -554,8 +554,8 @@ mod tests {
         })
     }
 
-    fn genesis_accounts() -> Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>> {
-        let mut accounts: HashMap<AccountAddress, serde_json::Value> = HashMap::new();
+    fn genesis_accounts() -> Arc<RwLock<BTreeMap<AccountAddress, serde_json::Value>>> {
+        let mut accounts: BTreeMap<AccountAddress, serde_json::Value> = BTreeMap::new();
         let blessed = "0000000000000000000000000b1e55ed";
         accounts.insert(
             AccountAddress::try_from(blessed.to_owned()).unwrap(),

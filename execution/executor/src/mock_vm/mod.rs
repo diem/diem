@@ -26,7 +26,7 @@ use diem_types::{
 use diem_vm::VMExecutor;
 use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 enum MockVMTransaction {
@@ -79,7 +79,7 @@ impl VMExecutor for MockVM {
 
         // output_cache is used to store the output of transactions so they are visible to later
         // transactions.
-        let mut output_cache = HashMap::new();
+        let mut output_cache = BTreeMap::new();
         let mut outputs = vec![];
 
         for txn in transactions {
@@ -168,7 +168,7 @@ impl VMExecutor for MockVM {
 }
 
 fn read_balance(
-    output_cache: &HashMap<AccessPath, u64>,
+    output_cache: &BTreeMap<AccessPath, u64>,
     state_view: &impl StateView,
     account: AccountAddress,
 ) -> u64 {
@@ -180,7 +180,7 @@ fn read_balance(
 }
 
 fn read_seqnum(
-    output_cache: &HashMap<AccessPath, u64>,
+    output_cache: &BTreeMap<AccessPath, u64>,
     state_view: &impl StateView,
     account: AccountAddress,
 ) -> u64 {

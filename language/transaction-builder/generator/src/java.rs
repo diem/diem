@@ -522,7 +522,7 @@ private static java.util.Map<Class<?>, ScriptEncodingHelper> initTransactionScri
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<Class<?>, ScriptEncodingHelper> map = new java.util.HashMap<>();"
+            "java.util.BTreeMap<Class<?>, ScriptEncodingHelper> map = new java.util.BTreeMap<>();"
         )?;
         for abi in abis {
             let params = std::iter::empty()
@@ -562,7 +562,7 @@ private static java.util.Map<Class<?>, ScriptFunctionEncodingHelper> initScriptF
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<Class<?>, ScriptFunctionEncodingHelper> map = new java.util.HashMap<>();"
+            "java.util.BTreeMap<Class<?>, ScriptFunctionEncodingHelper> map = new java.util.BTreeMap<>();"
         )?;
         for abi in abis {
             let params = std::iter::empty()
@@ -605,7 +605,7 @@ private static java.util.Map<Bytes, TransactionScriptDecodingHelper> initTransac
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<Bytes, TransactionScriptDecodingHelper> map = new java.util.HashMap<>();"
+            "java.util.BTreeMap<Bytes, TransactionScriptDecodingHelper> map = new java.util.BTreeMap<>();"
         )?;
         for abi in abis {
             writeln!(
@@ -635,7 +635,7 @@ private static java.util.Map<String, ScriptFunctionDecodingHelper> initDecoderMa
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<String, ScriptFunctionDecodingHelper> map = new java.util.HashMap<>();"
+            "java.util.BTreeMap<String, ScriptFunctionDecodingHelper> map = new java.util.BTreeMap<>();"
         )?;
         for abi in abis {
             writeln!(

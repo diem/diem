@@ -4,7 +4,7 @@
 use crate::{
     application::{
         interface::NetworkInterface,
-        storage::{LockingHashMap, PeerMetadataStorage},
+        storage::{LockingBTreeMap, PeerMetadataStorage},
         types::{PeerError, PeerState},
     },
     transport::ConnectionMetadata,
@@ -15,7 +15,7 @@ use std::{collections::hash_map::Entry, sync::Arc};
 /// Dummy network so we can test the interfaces
 struct DummyNetworkInterface {
     peer_metadata_storage: Arc<PeerMetadataStorage>,
-    app_data: LockingHashMap<PeerId, usize>,
+    app_data: LockingBTreeMap<PeerId, usize>,
 }
 
 impl NetworkInterface for DummyNetworkInterface {
@@ -54,7 +54,7 @@ fn test_interface() {
     let peer_metadata_storage = Arc::new(PeerMetadataStorage::new());
     let interface = DummyNetworkInterface {
         peer_metadata_storage: peer_metadata_storage.clone(),
-        app_data: LockingHashMap::new(),
+        app_data: LockingBTreeMap::new(),
     };
     let peer_1 = PeerId::random();
     let peer_2 = PeerId::random();

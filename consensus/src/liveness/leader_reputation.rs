@@ -18,7 +18,7 @@ use diem_types::{
 };
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
 use storage_interface::{DbReader, Order};
@@ -122,7 +122,7 @@ impl ReputationHeuristic for ActiveInactiveHeuristic {
         let mut committed_proposals: usize = 0;
         let mut committed_votes: usize = 0;
 
-        let set = history.iter().fold(HashSet::new(), |mut set, meta| {
+        let set = history.iter().fold(BTreeSet::new(), |mut set, meta| {
             set.insert(meta.proposer());
             for vote in meta.votes() {
                 set.insert(vote);
@@ -162,7 +162,7 @@ pub struct LeaderReputation {
     proposers: Vec<Author>,
     backend: Box<dyn MetadataBackend>,
     heuristic: Box<dyn ReputationHeuristic>,
-    already_proposed: Mutex<(Round, HashMap<Author, HashValue>)>,
+    already_proposed: Mutex<(Round, BTreeMap<Author, HashValue>)>,
 }
 
 impl LeaderReputation {
@@ -175,7 +175,7 @@ impl LeaderReputation {
             proposers,
             backend,
             heuristic,
-            already_proposed: Mutex::new((0, HashMap::new())),
+            already_proposed: Mutex::new((0, BTreeMap::new())),
         }
     }
 }

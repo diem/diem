@@ -16,7 +16,7 @@ use diem_sdk::{
     },
 };
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     fs, mem,
     num::NonZeroUsize,
@@ -80,7 +80,7 @@ struct ValidatorNetworkAddressEncryptionKey {
 }
 
 pub struct LocalSwarmBuilder {
-    versions: Arc<HashMap<Version, LocalVersion>>,
+    versions: Arc<BTreeMap<Version, LocalVersion>>,
     initial_version: Option<Version>,
     template: NodeConfig,
     number_of_validators: NonZeroUsize,
@@ -88,7 +88,7 @@ pub struct LocalSwarmBuilder {
 }
 
 impl LocalSwarmBuilder {
-    pub fn new(versions: Arc<HashMap<Version, LocalVersion>>) -> Self {
+    pub fn new(versions: Arc<BTreeMap<Version, LocalVersion>>) -> Self {
         Self {
             versions,
             initial_version: None,
@@ -159,7 +159,7 @@ impl LocalSwarmBuilder {
                 let node = LocalNode::new(version.to_owned(), v.name, v.directory)?;
                 Ok((node.peer_id(), node))
             })
-            .collect::<Result<HashMap<_, _>>>()?;
+            .collect::<Result<BTreeMap<_, _>>>()?;
 
         let validator_network_address_encryption_key = ValidatorNetworkAddressEncryptionKey {
             key: root_keys.validator_network_address_encryption_key,
@@ -194,7 +194,7 @@ impl LocalSwarmBuilder {
             genesis_waypoint,
             versions,
             validators,
-            fullnodes: HashMap::new(),
+            fullnodes: BTreeMap::new(),
             dir,
             validator_network_address_encryption_key,
             root_account,
@@ -210,9 +210,9 @@ pub struct LocalSwarm {
     node_name_counter: u64,
     genesis: Transaction,
     genesis_waypoint: Waypoint,
-    versions: Arc<HashMap<Version, LocalVersion>>,
-    validators: HashMap<PeerId, LocalNode>,
-    fullnodes: HashMap<PeerId, LocalNode>,
+    versions: Arc<BTreeMap<Version, LocalVersion>>,
+    validators: BTreeMap<PeerId, LocalNode>,
+    fullnodes: BTreeMap<PeerId, LocalNode>,
     dir: SwarmDirectory,
     validator_network_address_encryption_key: ValidatorNetworkAddressEncryptionKey,
     root_account: LocalAccount,
@@ -222,7 +222,7 @@ pub struct LocalSwarm {
 }
 
 impl LocalSwarm {
-    pub fn builder(versions: Arc<HashMap<Version, LocalVersion>>) -> LocalSwarmBuilder {
+    pub fn builder(versions: Arc<BTreeMap<Version, LocalVersion>>) -> LocalSwarmBuilder {
         LocalSwarmBuilder::new(versions)
     }
 

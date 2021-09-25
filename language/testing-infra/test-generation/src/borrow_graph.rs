@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::abstract_state::Mutability;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Each partition is associated with a (unique) ID
 type PartitionID = u16;
@@ -36,7 +36,7 @@ pub struct BorrowGraph {
     partitions: Vec<PartitionID>,
 
     /// A mapping from partitions to the associated with them
-    partition_map: HashMap<PartitionID, NonceSet>,
+    partition_map: BTreeMap<PartitionID, NonceSet>,
 
     /// The edges of the graph
     edges: Vec<Edge>,
@@ -50,7 +50,7 @@ impl BorrowGraph {
     pub fn new(num_locals: u8) -> BorrowGraph {
         BorrowGraph {
             partitions: Vec::with_capacity(num_locals as usize),
-            partition_map: HashMap::new(),
+            partition_map: BTreeMap::new(),
             edges: Vec::new(),
             partition_counter: u16::from(num_locals),
         }

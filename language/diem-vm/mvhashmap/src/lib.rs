@@ -4,7 +4,7 @@
 use once_cell::sync::OnceCell;
 use std::{
     cmp::{max, PartialOrd},
-    collections::{btree_map::BTreeMap, HashMap},
+    collections::{btree_map::BTreeMap, BTreeMap},
     fmt::Debug,
     hash::Hash,
 };
@@ -25,8 +25,8 @@ mod unit_tests;
 
 pub type Version = usize;
 
-pub struct MVHashMap<K, V> {
-    data: HashMap<K, BTreeMap<Version, WriteCell<V>>>,
+pub struct MVBTreeMap<K, V> {
+    data: BTreeMap<K, BTreeMap<Version, WriteCell<V>>>,
 }
 
 #[derive(Debug)]
@@ -63,13 +63,13 @@ impl<V> WriteCell<V> {
     }
 }
 
-impl<K: Hash + Clone + Eq, V> MVHashMap<K, V> {
-    /// Create the MVHashMap structure from a list of possible writes. Each element in the list
+impl<K: Hash + Clone + Eq, V> MVBTreeMap<K, V> {
+    /// Create the MVBTreeMap structure from a list of possible writes. Each element in the list
     /// indicates a key that could potentially be modified at its given version.
     ///
-    /// Returns the MVHashMap, and the maximum number of writes that can write to one single key.
+    /// Returns the MVBTreeMap, and the maximum number of writes that can write to one single key.
     pub fn new_from(possible_writes: Vec<(K, Version)>) -> (Self, usize) {
-        let mut outer_map: HashMap<K, BTreeMap<Version, WriteCell<V>>> = HashMap::new();
+        let mut outer_map: BTreeMap<K, BTreeMap<Version, WriteCell<V>>> = BTreeMap::new();
         for (key, version) in possible_writes.into_iter() {
             outer_map
                 .entry(key)
@@ -80,10 +80,10 @@ impl<K: Hash + Clone + Eq, V> MVHashMap<K, V> {
             .values()
             .fold(0, |max_depth, btree_map| max(max_depth, btree_map.len()));
 
-        (MVHashMap { data: outer_map }, max_dependency_size)
+        (MVBTreeMap { data: outer_map }, max_dependency_size)
     }
 
-    /// Get the number of keys in the MVHashMap.
+    /// Get the number of keys in the MVBTreeMap.
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -177,14 +177,14 @@ impl<K: Hash + Clone + Eq, V> MVHashMap<K, V> {
         Err(None)
     }
 
-    pub fn view(&self, version: Version) -> MVHashMapView<K, V> {
-        MVHashMapView { map: self, version }
+    pub fn view(&self, version: Version) -> MVBTreeMapView<K, V> {
+        MVBTreeMapView { map: self, version }
     }
 }
 
 const PARALLEL_THRESHOLD: usize = 1000;
 
-impl<K, V> MVHashMap<K, V>
+impl<K, V> MVBTreeMap<K, V>
 where
     K: PartialOrd + Send + Clone + Hash + Eq,
     V: Send,
@@ -193,9 +193,9 @@ where
         num_cpus: usize,
         recursion_depth: usize,
         split: Vec<(K, Version)>,
-    ) -> (usize, HashMap<K, BTreeMap<Version, WriteCell<V>>>) {
+    ) -> (usize, BTreeMap<K, BTreeMap<Version, WriteCell<V>>>) {
         if (1 << recursion_depth) > num_cpus || split.len() < PARALLEL_THRESHOLD {
-            let mut data = HashMap::new();
+            let mut data = BTreeMap::new();
             let mut max_len = 0;
             for (path, version) in split.into_iter() {
                 let place = data.entry(path).or_insert_with(BTreeMap::new);
@@ -217,21 +217,21 @@ where
         }
     }
 
-    /// Create the MVHashMap structure from a list of possible writes in parallel.
+    /// Create the MVBTreeMap structure from a list of possible writes in parallel.
     pub fn new_from_parallel(possible_writes: Vec<(K, Version)>) -> (Self, usize) {
         let num_cpus = num_cpus::get();
 
         let (max_dependency_len, data) = Self::split_merge(num_cpus, 0, possible_writes);
-        (MVHashMap { data }, max_dependency_len)
+        (MVBTreeMap { data }, max_dependency_len)
     }
 }
 
-pub struct MVHashMapView<'a, K, V> {
-    map: &'a MVHashMap<K, V>,
+pub struct MVBTreeMapView<'a, K, V> {
+    map: &'a MVBTreeMap<K, V>,
     version: Version,
 }
 
-impl<'a, K: Hash + Clone + Eq, V> MVHashMapView<'a, K, V> {
+impl<'a, K: Hash + Clone + Eq, V> MVBTreeMapView<'a, K, V> {
     pub fn read(&self, key: &K) -> Result<&V, Option<Version>> {
         self.map.read(key, self.version)
     }

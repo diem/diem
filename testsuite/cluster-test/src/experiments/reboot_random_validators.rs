@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{collections::BTreeSet, fmt, time::Duration};
 
 use rand::seq::SliceRandom;
 
@@ -84,7 +84,7 @@ impl ExperimentParam for RebootRandomValidatorsParams {
 
 #[async_trait]
 impl Experiment for RebootRandomValidators {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.instances)
     }
 

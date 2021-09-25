@@ -33,7 +33,7 @@ use network::{
     protocols::network::{NewNetworkEvents, NewNetworkSender},
     ProtocolId,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -87,7 +87,7 @@ impl SMRNode {
         let reconfig_listener = ReconfigNotificationListener {
             notification_receiver: reconfig_events,
         };
-        let mut configs = HashMap::new();
+        let mut configs = BTreeMap::new();
         configs.insert(
             ValidatorSet::CONFIG_ID,
             bcs::to_bytes(storage.get_validator_set()).unwrap(),
@@ -151,7 +151,7 @@ impl SMRNode {
         num_twins: usize,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
-        round_proposers_idx: Option<HashMap<Round, usize>>,
+        round_proposers_idx: Option<BTreeMap<Round, usize>>,
     ) -> Vec<Self> {
         assert!(num_nodes >= num_twins);
         let ValidatorSwarm {
@@ -189,7 +189,7 @@ impl SMRNode {
 
         let proposer_type = match proposer_type {
             RoundProposer(_) => {
-                let mut round_proposers: HashMap<Round, Author> = HashMap::new();
+                let mut round_proposers: BTreeMap<Round, Author> = BTreeMap::new();
 
                 if let Some(proposers) = round_proposers_idx {
                     proposers.iter().for_each(|(round, idx)| {

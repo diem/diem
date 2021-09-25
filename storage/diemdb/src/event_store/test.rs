@@ -20,7 +20,7 @@ use proptest::{
     strategy::Union,
 };
 use rand::Rng;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashValue {
     let mut cs = ChangeSet::new();
@@ -207,7 +207,7 @@ fn test_index_get_impl(event_batches: Vec<Vec<ContractEvent>>) {
     );
 
     // Calculate expected event sequence per access_path.
-    let mut events_by_event_key = HashMap::new();
+    let mut events_by_event_key = BTreeMap::new();
     event_batches
         .into_iter()
         .enumerate()

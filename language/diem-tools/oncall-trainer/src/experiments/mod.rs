@@ -5,7 +5,7 @@ use anyhow::Result;
 use cli::client_proxy::ClientProxy;
 use gag::Gag;
 use rustyline::{config::CompletionType, Config, Editor};
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::BTreeMap, rc::Rc};
 
 mod get_sequence_number;
 mod get_writeset_version;
@@ -58,13 +58,13 @@ pub fn run_experiment(client: &mut ClientProxy, experiment: Rc<dyn Experiment>) 
     experiment.reset_states(client)
 }
 
-pub fn experiments() -> HashMap<&'static str, Rc<dyn Experiment>> {
+pub fn experiments() -> BTreeMap<&'static str, Rc<dyn Experiment>> {
     let experiments: Vec<Rc<dyn Experiment>> = vec![
         Rc::new(get_sequence_number::GetSequenceNumber()),
         Rc::new(get_writeset_version::GetWriteSetVersion()),
     ];
 
-    let mut name_to_experiment = HashMap::new();
+    let mut name_to_experiment = BTreeMap::new();
     for exp in experiments {
         name_to_experiment.insert(exp.name(), exp);
     }

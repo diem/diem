@@ -4,7 +4,7 @@
 use crate::ledger_counters::LedgerCounterBumps;
 use diem_types::transaction::Version;
 use schemadb::SchemaBatch;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Structure that collects changes to be made to the DB in one transaction.
 ///
@@ -15,7 +15,7 @@ pub(crate) struct ChangeSet {
     /// A batch of db alternations.
     pub batch: SchemaBatch,
     /// Counter bumps to be made on commit.
-    counter_bumps: HashMap<Version, LedgerCounterBumps>,
+    counter_bumps: BTreeMap<Version, LedgerCounterBumps>,
 }
 
 impl ChangeSet {
@@ -23,7 +23,7 @@ impl ChangeSet {
     pub fn new() -> Self {
         Self {
             batch: SchemaBatch::new(),
-            counter_bumps: HashMap::new(),
+            counter_bumps: BTreeMap::new(),
         }
     }
 
@@ -34,7 +34,7 @@ impl ChangeSet {
     }
 
     #[cfg(test)]
-    pub fn new_with_bumps(counter_bumps: HashMap<Version, LedgerCounterBumps>) -> Self {
+    pub fn new_with_bumps(counter_bumps: BTreeMap<Version, LedgerCounterBumps>) -> Self {
         Self {
             batch: SchemaBatch::new(),
             counter_bumps,

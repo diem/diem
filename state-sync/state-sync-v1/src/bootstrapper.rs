@@ -13,7 +13,7 @@ use event_notifications::EventSubscriptionService;
 use executor_types::ChunkExecutor;
 use futures::channel::mpsc;
 use mempool_notifications::MempoolNotificationSender;
-use std::{boxed::Box, collections::HashMap, sync::Arc};
+use std::{boxed::Box, collections::BTreeMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 
@@ -74,7 +74,7 @@ impl StateSyncBootstrapper {
         let initial_state = executor_proxy
             .get_local_storage_state()
             .expect("[State Sync] Starting failure: cannot sync with storage!");
-        let network_senders: HashMap<_, _> = network
+        let network_senders: BTreeMap<_, _> = network
             .iter()
             .map(|(network_id, sender, _events)| (*network_id, sender.clone()))
             .collect();

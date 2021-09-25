@@ -7,26 +7,26 @@ use crate::{
 use diem_infallible::RwLock;
 use diem_types::PeerId;
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, BTreeMap},
     fmt::Debug,
     hash::Hash,
 };
 
-pub type PeerMetadataStorage = LockingHashMap<PeerId, PeerInfo>;
+pub type PeerMetadataStorage = LockingBTreeMap<PeerId, PeerInfo>;
 
 /// A generic locking hash map with ability to read before write consistency
-pub struct LockingHashMap<Key: Clone + Debug + Eq + Hash, Value: Clone + Debug> {
-    map: RwLock<HashMap<Key, Value>>,
+pub struct LockingBTreeMap<Key: Clone + Debug + Eq + Hash, Value: Clone + Debug> {
+    map: RwLock<BTreeMap<Key, Value>>,
 }
 
-impl<Key, Value> LockingHashMap<Key, Value>
+impl<Key, Value> LockingBTreeMap<Key, Value>
 where
     Key: Clone + Debug + Eq + Hash,
     Value: Clone + Debug,
 {
     pub fn new() -> Self {
         Self {
-            map: RwLock::new(HashMap::new()),
+            map: RwLock::new(BTreeMap::new()),
         }
     }
 
@@ -39,7 +39,7 @@ where
     pub fn read_filtered<F: FnMut(&(&Key, &Value)) -> bool>(
         &self,
         filter: F,
-    ) -> HashMap<Key, Value> {
+    ) -> BTreeMap<Key, Value> {
         self.map
             .read()
             .iter()
@@ -54,7 +54,7 @@ where
     }
 
     /// Read a clone of the entire state
-    pub fn read_all(&self) -> HashMap<Key, Value> {
+    pub fn read_all(&self) -> BTreeMap<Key, Value> {
         self.map.read().clone()
     }
 

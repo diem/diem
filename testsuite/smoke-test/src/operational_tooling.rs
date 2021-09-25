@@ -41,7 +41,7 @@ use diem_types::{
 use forge::{LocalNode, LocalSwarm, Node, NodeExt, SwarmExt};
 use rand::rngs::OsRng;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     convert::{TryFrom, TryInto},
     fs,
     path::PathBuf,
@@ -479,7 +479,7 @@ fn test_extract_peers_from_keys() {
     let output_path = TempPath::new();
     output_path.create_as_file().unwrap();
 
-    let mut keys = HashSet::new();
+    let mut keys = BTreeSet::new();
     for _ in 1..10 {
         let key_path = TempPath::new();
         key_path.create_as_file().unwrap();

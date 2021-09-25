@@ -18,7 +18,7 @@ use diem_types::{
 };
 use itertools::Itertools;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     path::Path,
 };
 use structopt::StructOpt;
@@ -245,7 +245,7 @@ impl OperationalTool {
         &self,
         key_file: &Path,
         encoding: EncodingType,
-    ) -> Result<HashMap<PeerId, Peer>, Error> {
+    ) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let args = format!(
             "
                 {command}
@@ -265,7 +265,7 @@ impl OperationalTool {
         &self,
         key_name: &str,
         backend: &config::SecureBackend,
-    ) -> Result<HashMap<PeerId, Peer>, Error> {
+    ) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let args = format!(
             "
                 {command}
@@ -283,9 +283,9 @@ impl OperationalTool {
 
     pub fn extract_peers_from_keys(
         &self,
-        keys: HashSet<x25519::PublicKey>,
+        keys: BTreeSet<x25519::PublicKey>,
         output_file: &Path,
-    ) -> Result<HashMap<PeerId, Peer>, Error> {
+    ) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let args = format!(
             "
                 {command}

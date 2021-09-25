@@ -4,7 +4,7 @@
 use crate::error::Error;
 use diem_config::config::{self, GitHubConfig, OnDiskStorageConfig, Token, VaultConfig};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     path::PathBuf,
     str::FromStr,
@@ -30,7 +30,7 @@ const RESPONSE_TIMEOUT_MS: u64 = 10_000;
 #[derive(Clone, Debug)]
 pub struct SecureBackend {
     pub backend: String,
-    pub parameters: HashMap<String, String>,
+    pub parameters: BTreeMap<String, String>,
 }
 
 impl FromStr for SecureBackend {
@@ -46,7 +46,7 @@ impl TryFrom<&str> for SecureBackend {
 
     fn try_from(s: &str) -> Result<Self, Error> {
         let kvs = s.split(';');
-        let mut parameters = HashMap::new();
+        let mut parameters = BTreeMap::new();
         for pair in kvs {
             let kv = pair.split('=').collect::<Vec<_>>();
             if kv.len() != 2 {

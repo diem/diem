@@ -3,7 +3,7 @@
 
 use crate::{pick_slice_idxs, Index};
 use proptest::{collection::vec, prelude::*};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 proptest! {
     /// All values returned from `pick_slice_idxs` are in bounds.
@@ -17,7 +17,7 @@ proptest! {
     fn uniqueness(total_len in 0..100usize, idxs in vec(any::<Index>(), 0..200usize)) {
         let picked = pick_slice_idxs(total_len, &idxs);
         let picked_len = picked.len();
-        let picked_set: HashSet<_> = picked.into_iter().collect();
+        let picked_set: BTreeSet<_> = picked.into_iter().collect();
         prop_assert_eq!(picked_set.len(), picked_len);
         prop_assert!(picked_len <= total_len);
     }

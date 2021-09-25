@@ -6,7 +6,7 @@
 
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::BTreeMap,
     fmt,
     fmt::{Error, Formatter},
     rc::Rc,
@@ -45,7 +45,7 @@ pub struct SymbolPool {
 #[derive(Debug)]
 struct InnerPool {
     strings: Vec<Rc<String>>,
-    lookup: HashMap<Rc<String>, usize>,
+    lookup: BTreeMap<Rc<String>, usize>,
 }
 
 impl SymbolPool {
@@ -54,7 +54,7 @@ impl SymbolPool {
         SymbolPool {
             inner: RefCell::new(InnerPool {
                 strings: vec![],
-                lookup: HashMap::new(),
+                lookup: BTreeMap::new(),
             }),
         }
     }

@@ -20,7 +20,7 @@ use diem_types::{
 };
 use executor_types::ExecutedTrees;
 use serde::Deserialize;
-use std::{cmp::max, collections::HashSet, sync::Arc};
+use std::{cmp::max, collections::BTreeSet, sync::Arc};
 use storage_interface::DbReader;
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
@@ -292,7 +292,7 @@ impl RecoveryData {
         quorum_certs: &mut Vec<QuorumCert>,
     ) -> Vec<HashValue> {
         // prune all the blocks that don't have root as ancestor
-        let mut tree = HashSet::new();
+        let mut tree = BTreeSet::new();
         let mut to_remove = vec![];
         tree.insert(root_id);
         // assume blocks are sorted by round already

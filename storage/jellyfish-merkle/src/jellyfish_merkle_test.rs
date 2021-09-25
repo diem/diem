@@ -12,7 +12,7 @@ use diem_types::{nibble::Nibble, transaction::PRE_GENESIS_VERSION};
 use mock_tree_store::MockTreeStore;
 use proptest::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn update_nibble(original_key: &HashValue, n: usize, nibble: u8) -> HashValue {
     assert!(nibble < 16);
@@ -127,7 +127,7 @@ fn test_insert_at_leaf_with_internal_created() {
 
     let leaf1 = Node::new_leaf(key1, value1);
     let leaf2 = Node::new_leaf(key2, value2);
-    let mut children = HashMap::new();
+    let mut children = BTreeMap::new();
     children.insert(
         Nibble::from(0),
         Child::new(leaf1.hash(), 1 /* version */, true /* is_leaf */),
@@ -194,7 +194,7 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
     let leaf1 = Node::new_leaf(key1, value1.clone());
     let leaf2 = Node::new_leaf(key2, value2.clone());
     let internal = {
-        let mut children = HashMap::new();
+        let mut children = BTreeMap::new();
         children.insert(
             Nibble::from(0),
             Child::new(leaf1.hash(), 1 /* version */, true /* is_leaf */),
@@ -207,7 +207,7 @@ fn test_insert_at_leaf_with_multiple_internals_created() {
     };
 
     let root_internal = {
-        let mut children = HashMap::new();
+        let mut children = BTreeMap::new();
         children.insert(
             Nibble::from(0),
             Child::new(

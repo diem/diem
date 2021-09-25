@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::disallowed_type)]
+
 //! Logging metrics for determining quality of log submission
 use once_cell::sync::Lazy;
 use prometheus::{register_int_counter, IntCounter};

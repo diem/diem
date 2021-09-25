@@ -22,7 +22,7 @@ use diem_types::{
     vm_status::{KeptVMStatus, StatusCode},
 };
 use proptest::prelude::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn verify_epochs(db: &DiemDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
     const LIMIT: usize = 2;
@@ -323,7 +323,7 @@ fn group_events_by_event_key(
     first_version: Version,
     txns_to_commit: &[TransactionToCommit],
 ) -> Vec<(EventKey, Vec<(Version, ContractEvent)>)> {
-    let mut event_key_to_events: HashMap<EventKey, Vec<(Version, ContractEvent)>> = HashMap::new();
+    let mut event_key_to_events: BTreeMap<EventKey, Vec<(Version, ContractEvent)>> = BTreeMap::new();
     for (batch_idx, txn) in txns_to_commit.iter().enumerate() {
         for event in txn.events() {
             event_key_to_events
@@ -389,7 +389,7 @@ fn verify_get_event_by_version(
 
 fn verify_account_txns(
     db: &DiemDB,
-    expected_txns_by_account: HashMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>>,
+    expected_txns_by_account: BTreeMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>>,
     ledger_info: &LedgerInfo,
 ) {
     let actual_txns_by_account = expected_txns_by_account
@@ -434,15 +434,15 @@ fn verify_account_txns(
 
             (account, txns_and_events)
         })
-        .collect::<HashMap<_, _>>();
+        .collect::<BTreeMap<_, _>>();
 
     assert_eq!(actual_txns_by_account, expected_txns_by_account);
 }
 
 fn group_txns_by_account(
     txns_to_commit: &[TransactionToCommit],
-) -> HashMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>> {
-    let mut account_to_txns = HashMap::new();
+) -> BTreeMap<AccountAddress, Vec<(Transaction, Vec<ContractEvent>)>> {
+    let mut account_to_txns = BTreeMap::new();
     for txn in txns_to_commit {
         if let Ok(signed_txn) = txn.transaction().as_signed_user_txn() {
             let account = signed_txn.sender();

@@ -5,7 +5,7 @@ use prometheus::{
     proto::{LabelPair, Metric, MetricFamily, MetricType},
     Encoder, Result,
 };
-use std::{collections::HashMap, io::Write};
+use std::{collections::BTreeMap, io::Write};
 
 const JSON_FORMAT: &str = "application/json";
 
@@ -21,7 +21,7 @@ pub struct JsonEncoder;
 
 impl Encoder for JsonEncoder {
     fn encode<W: Write>(&self, metric_familys: &[MetricFamily], writer: &mut W) -> Result<()> {
-        let mut export_me: HashMap<String, f64> = HashMap::new();
+        let mut export_me: BTreeMap<String, f64> = BTreeMap::new();
 
         for mf in metric_familys {
             let name = mf.get_name();

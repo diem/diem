@@ -15,7 +15,7 @@ use move_core_types::{
     move_resource::{MoveResource, MoveStructType},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{collections::BTreeMap, fmt, sync::Arc};
 
 mod consensus_config;
 mod diem_version;
@@ -80,11 +80,11 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
 #[derive(Clone, Debug, PartialEq)]
 pub struct OnChainConfigPayload {
     epoch: u64,
-    configs: Arc<HashMap<ConfigID, Vec<u8>>>,
+    configs: Arc<BTreeMap<ConfigID, Vec<u8>>>,
 }
 
 impl OnChainConfigPayload {
-    pub fn new(epoch: u64, configs: Arc<HashMap<ConfigID, Vec<u8>>>) -> Self {
+    pub fn new(epoch: u64, configs: Arc<BTreeMap<ConfigID, Vec<u8>>>) -> Self {
         Self { epoch, configs }
     }
 
@@ -100,7 +100,7 @@ impl OnChainConfigPayload {
         T::deserialize_into_config(bytes)
     }
 
-    pub fn configs(&self) -> &HashMap<ConfigID, Vec<u8>> {
+    pub fn configs(&self) -> &BTreeMap<ConfigID, Vec<u8>> {
         &self.configs
     }
 }

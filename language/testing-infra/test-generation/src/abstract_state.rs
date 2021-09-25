@@ -12,7 +12,7 @@ use move_binary_format::{
     },
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt,
 };
 
@@ -119,14 +119,14 @@ impl AbstractValue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallGraph {
-    calls: HashMap<FunctionHandleIndex, HashSet<FunctionHandleIndex>>,
+    calls: BTreeMap<FunctionHandleIndex, BTreeSet<FunctionHandleIndex>>,
     max_function_handle_index: usize,
 }
 
 impl CallGraph {
     pub fn new(max_function_handle_index: usize) -> Self {
         Self {
-            calls: HashMap::new(),
+            calls: BTreeMap::new(),
             max_function_handle_index,
         }
     }
@@ -134,7 +134,7 @@ impl CallGraph {
     pub fn add_call(&mut self, caller: FunctionHandleIndex, callee: FunctionHandleIndex) {
         self.calls
             .entry(caller)
-            .or_insert_with(HashSet::new)
+            .or_insert_with(BTreeSet::new)
             .insert(callee);
     }
 
@@ -205,16 +205,16 @@ impl CallGraph {
 pub struct InstantiableModule {
     // A reverse lookup table for instantiations.
     sig_instance_for_offset: Vec<Vec<SignatureToken>>,
-    instantiations: HashMap<Vec<SignatureToken>, SignatureIndex>,
+    instantiations: BTreeMap<Vec<SignatureToken>, SignatureIndex>,
 
     struct_instance_for_offset: Vec<StructDefInstantiation>,
-    struct_instantiations: HashMap<StructDefInstantiation, StructDefInstantiationIndex>,
+    struct_instantiations: BTreeMap<StructDefInstantiation, StructDefInstantiationIndex>,
 
     func_instance_for_offset: Vec<FunctionInstantiation>,
-    function_instantiations: HashMap<FunctionInstantiation, FunctionInstantiationIndex>,
+    function_instantiations: BTreeMap<FunctionInstantiation, FunctionInstantiationIndex>,
 
     field_instance_for_offset: Vec<FieldInstantiation>,
-    field_instantiations: HashMap<FieldInstantiation, FieldInstantiationIndex>,
+    field_instantiations: BTreeMap<FieldInstantiation, FieldInstantiationIndex>,
 
     pub module: CompiledModule,
 }
@@ -227,7 +227,7 @@ impl InstantiableModule {
                 .iter()
                 .enumerate()
                 .map(|(index, sig)| (sig.0.clone(), SignatureIndex(index as TableIndex)))
-                .collect::<HashMap<_, _>>(),
+                .collect::<BTreeMap<_, _>>(),
             sig_instance_for_offset: module
                 .signatures()
                 .iter()
@@ -239,7 +239,7 @@ impl InstantiableModule {
                 .iter()
                 .enumerate()
                 .map(|(index, si)| (si.clone(), StructDefInstantiationIndex(index as TableIndex)))
-                .collect::<HashMap<_, _>>(),
+                .collect::<BTreeMap<_, _>>(),
             struct_instance_for_offset: module.struct_instantiations().to_vec(),
 
             function_instantiations: module
@@ -247,7 +247,7 @@ impl InstantiableModule {
                 .iter()
                 .enumerate()
                 .map(|(index, fi)| (fi.clone(), FunctionInstantiationIndex(index as TableIndex)))
-                .collect::<HashMap<_, _>>(),
+                .collect::<BTreeMap<_, _>>(),
             func_instance_for_offset: module.function_instantiations().to_vec(),
 
             field_instantiations: module
@@ -255,7 +255,7 @@ impl InstantiableModule {
                 .iter()
                 .enumerate()
                 .map(|(index, fi)| (fi.clone(), FieldInstantiationIndex(index as TableIndex)))
-                .collect::<HashMap<_, _>>(),
+                .collect::<BTreeMap<_, _>>(),
             field_instance_for_offset: module.field_instantiations().to_vec(),
             module,
         }
@@ -420,8 +420,8 @@ pub struct AbstractState {
     /// in.
     pub instantiation: Vec<AbilitySet>,
 
-    /// A HashMap mapping local indicies to `AbstractValue`s and `BorrowState`s
-    locals: HashMap<usize, (AbstractValue, BorrowState)>,
+    /// A BTreeMap mapping local indicies to `AbstractValue`s and `BorrowState`s
+    locals: BTreeMap<usize, (AbstractValue, BorrowState)>,
 
     /// Temporary location for storing the results of instruction effects for
     /// access by subsequent instructions' effects
@@ -455,7 +455,7 @@ impl AbstractState {
         AbstractState {
             stack: Vec::new(),
             instantiation: Vec::new(),
-            locals: HashMap::new(),
+            locals: BTreeMap::new(),
             register: None,
             module: InstantiableModule::new(compiled_module),
             acquires_global_resources: Vec::new(),
@@ -470,7 +470,7 @@ impl AbstractState {
     /// the (available) locals that the state will have, as well as the module state
     pub fn from_locals(
         module: CompiledModule,
-        locals: HashMap<usize, (AbstractValue, BorrowState)>,
+        locals: BTreeMap<usize, (AbstractValue, BorrowState)>,
         instantiation: Vec<AbilitySet>,
         acquires_global_resources: Vec<StructDefinitionIndex>,
         call_graph: CallGraph,
@@ -663,7 +663,7 @@ impl AbstractState {
     }
 
     /// Get all of the locals
-    pub fn get_locals(&self) -> &HashMap<usize, (AbstractValue, BorrowState)> {
+    pub fn get_locals(&self) -> &BTreeMap<usize, (AbstractValue, BorrowState)> {
         &self.locals
     }
 

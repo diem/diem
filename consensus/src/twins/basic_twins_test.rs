@@ -10,7 +10,7 @@ use crate::{
 use consensus_types::{block::Block, common::Round};
 use diem_config::config::ConsensusProposerType::{FixedProposer, RotatingProposer, RoundProposer};
 use futures::StreamExt;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[test]
 /// This test checks that the first proposal has its parent and
@@ -196,7 +196,7 @@ fn twins_proposer_test() {
 
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
-    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
+    let mut round_proposers: BTreeMap<Round, usize> = BTreeMap::new();
     // Leaders are n0 (and implicitly twin0) for round 1..10
     for i in 1..10 {
         round_proposers.insert(i, 0);
@@ -206,7 +206,7 @@ fn twins_proposer_test() {
         num_nodes,
         num_twins,
         &mut playground,
-        RoundProposer(HashMap::new()),
+        RoundProposer(BTreeMap::new()),
         Some(round_proposers),
     );
 
@@ -223,7 +223,7 @@ fn twins_proposer_test() {
     let n3_twin_id = nodes[3].id;
 
     // Create per round partitions
-    let mut round_partitions: HashMap<u64, Vec<Vec<TwinId>>> = HashMap::new();
+    let mut round_partitions: BTreeMap<u64, Vec<Vec<TwinId>>> = BTreeMap::new();
     // Round 1 to 10 partitions: [node0, node1, node2], [node3, twin0, twin1]
     for i in 1..10 {
         round_partitions.insert(
@@ -279,7 +279,7 @@ fn twins_commit_test() {
 
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
-    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
+    let mut round_proposers: BTreeMap<Round, usize> = BTreeMap::new();
     // Leaders are n0 and twin0 for round 1..10
     for i in 1..10 {
         round_proposers.insert(i, 0);
@@ -289,7 +289,7 @@ fn twins_commit_test() {
         num_nodes,
         num_twins,
         &mut playground,
-        RoundProposer(HashMap::new()),
+        RoundProposer(BTreeMap::new()),
         Some(round_proposers),
     );
     runtime.spawn(playground.start());

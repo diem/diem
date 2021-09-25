@@ -6,14 +6,14 @@ use anyhow::{ensure, format_err, Result};
 use diem_crypto::hash::{HashValue, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH};
 use diem_types::proof::{definition::LeafCount, position::Position};
 use proptest::{collection::vec, prelude::*};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub(crate) type InMemoryAccumulator =
     diem_types::proof::accumulator::InMemoryAccumulator<TestOnlyHasher>;
 pub(crate) type TestAccumulator = MerkleAccumulator<MockHashStore, TestOnlyHasher>;
 
 pub(crate) struct MockHashStore {
-    store: HashMap<Position, HashValue>,
+    store: BTreeMap<Position, HashValue>,
 }
 
 impl HashReader for MockHashStore {
@@ -36,7 +36,7 @@ struct Subtree {
 impl MockHashStore {
     pub fn new() -> Self {
         MockHashStore {
-            store: HashMap::new(),
+            store: BTreeMap::new(),
         }
     }
 

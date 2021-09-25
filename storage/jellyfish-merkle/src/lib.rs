@@ -97,7 +97,7 @@ use proptest::arbitrary::Arbitrary;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
     marker::PhantomData,
 };
 use thiserror::Error;
@@ -250,7 +250,7 @@ where
     fn get_hash(
         node_key: &NodeKey,
         node: &Node<V>,
-        hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
+        hash_cache: &Option<&BTreeMap<NibblePath, HashValue>>,
     ) -> HashValue {
         if let Some(cache) = hash_cache {
             match cache.get(node_key.nibble_path()) {
@@ -266,7 +266,7 @@ where
     pub fn batch_put_value_sets(
         &self,
         value_sets: Vec<Vec<(HashValue, V)>>,
-        node_hashes: Option<Vec<&HashMap<NibblePath, HashValue>>>,
+        node_hashes: Option<Vec<&BTreeMap<NibblePath, HashValue>>>,
         first_version: Version,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch<V>)> {
         let mut tree_cache = TreeCache::new(self.reader, first_version)?;
@@ -311,7 +311,7 @@ where
         version: Version,
         kvs: &[(HashValue, V)],
         depth: usize,
-        hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
+        hash_cache: &Option<&BTreeMap<NibblePath, HashValue>>,
         tree_cache: &mut TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         assert!(!kvs.is_empty());
@@ -416,7 +416,7 @@ where
         existing_leaf_node: LeafNode<V>,
         kvs: &[(HashValue, V)],
         depth: usize,
-        hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
+        hash_cache: &Option<&BTreeMap<NibblePath, HashValue>>,
         tree_cache: &mut TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         let existing_leaf_key = existing_leaf_node.account_key();
@@ -485,7 +485,7 @@ where
         version: Version,
         kvs: &[(HashValue, V)],
         depth: usize,
-        hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
+        hash_cache: &Option<&BTreeMap<NibblePath, HashValue>>,
         tree_cache: &mut TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         if kvs.len() == 1 {

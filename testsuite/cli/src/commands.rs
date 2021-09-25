@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::Error;
 use diem_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 /// Print the error and bump up error counter.
 pub fn report_error(msg: &str, e: Error) {
@@ -42,7 +42,7 @@ pub fn get_commands(
     include_dev: bool,
 ) -> (
     Vec<Arc<dyn Command>>,
-    HashMap<&'static str, Arc<dyn Command>>,
+    BTreeMap<&'static str, Arc<dyn Command>>,
 ) {
     let mut commands: Vec<Arc<dyn Command>> = vec![
         Arc::new(AccountCommand {}),
@@ -53,7 +53,7 @@ pub fn get_commands(
     if include_dev {
         commands.push(Arc::new(DevCommand {}));
     }
-    let mut alias_to_cmd = HashMap::new();
+    let mut alias_to_cmd = BTreeMap::new();
     for command in &commands {
         for alias in command.get_aliases() {
             alias_to_cmd.insert(alias, Arc::clone(command));
@@ -92,7 +92,7 @@ pub fn subcommand_execute(
     client: &mut ClientProxy,
     params: &[&str],
 ) {
-    let mut commands_map = HashMap::new();
+    let mut commands_map = BTreeMap::new();
     for (i, cmd) in commands.iter().enumerate() {
         for alias in cmd.get_aliases() {
             if commands_map.insert(alias, i) != None {

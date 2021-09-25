@@ -4,7 +4,7 @@
 use move_binary_format::file_format::{
     CodeOffset, FunctionDefinitionIndex, MemberCount, StructDefinitionIndex, TableIndex,
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeMap};
 
 /// A data structure used to track any markings or extra information that is desired to be exposed
 /// in the disassembled function definition. Every marking can have multiple messages associated with it.
@@ -33,10 +33,10 @@ pub struct StructMarking {
 #[derive(Debug, Default)]
 pub struct MarkedSourceMapping {
     // Any function markings
-    function_marks: HashMap<TableIndex, FunctionMarking>,
+    function_marks: BTreeMap<TableIndex, FunctionMarking>,
 
     // Any struct marking
-    struct_marks: HashMap<TableIndex, StructMarking>,
+    struct_marks: BTreeMap<TableIndex, StructMarking>,
 }
 
 impl FunctionMarking {
@@ -88,8 +88,8 @@ impl StructMarking {
 impl MarkedSourceMapping {
     pub fn new() -> Self {
         Self {
-            function_marks: HashMap::new(),
-            struct_marks: HashMap::new(),
+            function_marks: BTreeMap::new(),
+            struct_marks: BTreeMap::new(),
         }
     }
 

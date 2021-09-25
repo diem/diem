@@ -95,7 +95,7 @@ use diem_types::{
 use std::{
     borrow::Borrow,
     cmp,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
     sync::Arc,
 };
 
@@ -220,7 +220,7 @@ where
         &self,
         update_batch: Vec<Vec<(HashValue, &V)>>,
         proof_reader: &impl ProofRead<V>,
-    ) -> Result<(Vec<(HashValue, HashMap<NibblePath, HashValue>)>, Self), UpdateError> {
+    ) -> Result<(Vec<(HashValue, BTreeMap<NibblePath, HashValue>)>, Self), UpdateError> {
         let mut current_state_tree = self.clone();
         let mut result = Vec::with_capacity(update_batch.len());
         for updates in update_batch {
@@ -246,8 +246,8 @@ where
         &self,
         // must be sorted
         touched_accounts: Vec<HashValue>,
-    ) -> HashMap<NibblePath, HashValue> {
-        let mut node_hashes = HashMap::new();
+    ) -> BTreeMap<NibblePath, HashValue> {
+        let mut node_hashes = BTreeMap::new();
         let mut nibble_path = NibblePath::new(vec![]);
         Self::collect_new_hashes(
             touched_accounts.as_slice(),
@@ -267,7 +267,7 @@ where
         depth_in_nibble: usize,
         level_within_nibble: usize,
         cur_nibble_path: &mut NibblePath,
-        node_hashes: &mut HashMap<NibblePath, HashValue>,
+        node_hashes: &mut BTreeMap<NibblePath, HashValue>,
     ) {
         assert!(depth_in_nibble <= ROOT_NIBBLE_HEIGHT);
         if keys.is_empty() {

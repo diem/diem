@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     env, fmt, process,
     time::{Duration, Instant},
 };
@@ -345,7 +345,7 @@ async fn run_health_check(
         // in future to account for actual event propagation delay
         let events = logs.recv_all_until_deadline(deadline);
         let result = health_check_runner
-            .run(&events, &HashSet::new(), PrintFailures::All)
+            .run(&events, &BTreeSet::new(), PrintFailures::All)
             .await;
         let now = Instant::now();
         if now > health_check_deadline {
@@ -659,7 +659,7 @@ impl ClusterTestRunner {
         let events = self.logs.recv_all();
         if let Err(s) = self
             .health_check_runner
-            .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+            .run(&events, &BTreeSet::new(), PrintFailures::UnexpectedOnly)
             .await
         {
             bail!(
@@ -757,7 +757,7 @@ impl ClusterTestRunner {
             let events = self.logs.recv_all_until_deadline(deadline);
             if let Ok(failed_instances) = self
                 .health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::None)
+                .run(&events, &BTreeSet::new(), PrintFailures::None)
                 .await
             {
                 if failed_instances.is_empty() {

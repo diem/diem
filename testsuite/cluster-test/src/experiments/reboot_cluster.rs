@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use diem_logger::info;
 use futures::future::try_join_all;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt::{Error, Formatter},
 };
 use structopt::StructOpt;
@@ -39,7 +39,7 @@ impl ExperimentParam for RebootClusterParams {
 
 #[async_trait]
 impl Experiment for RebootCluster {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.instances)
     }
 

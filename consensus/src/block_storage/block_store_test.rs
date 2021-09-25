@@ -23,7 +23,7 @@ use diem_types::{
     validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
 };
 use proptest::prelude::*;
-use std::{cmp::min, collections::HashSet};
+use std::{cmp::min, collections::BTreeSet};
 
 #[test]
 fn test_highest_block_and_quorum_cert() {
@@ -109,7 +109,7 @@ proptest! {
             // recursion depth
             50)
     ){
-        let authors: HashSet<Author> = private_keys.iter().map(|private_key| diem_types::account_address::from_public_key(&private_key.public_key())).collect();
+        let authors: BTreeSet<Author> = private_keys.iter().map(|private_key| diem_types::account_address::from_public_key(&private_key.public_key())).collect();
         let block_store = build_empty_tree();
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {

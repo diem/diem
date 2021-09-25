@@ -39,7 +39,7 @@ use move_transactional_test_runner::{
 };
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     path::Path,
 };
 use structopt::StructOpt;
@@ -236,7 +236,7 @@ impl<'a> MoveTestAdapter<'a> for DiemTestAdapter<'a> {
         }
 
         // TODO: rework vm-genesis and try not to compile the genesis modules twice.
-        let mut storage = FakeDataStore::new(HashMap::new());
+        let mut storage = FakeDataStore::new(BTreeMap::new());
         storage.add_write_set(GENESIS_CHANGE_SET_FRESH.write_set());
 
         Self {

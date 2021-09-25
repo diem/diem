@@ -29,7 +29,7 @@ use diem_logger::prelude::*;
 use diem_types::{ledger_info::LedgerInfo, transaction::Transaction};
 use executor_types::{Error, ExecutedTrees};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     sync::{Arc, Weak},
 };
 use storage_interface::{StartupInfo, TreeState};
@@ -45,7 +45,7 @@ pub(crate) struct SpeculationBlock {
     // The speculative execution result.
     output: ProcessedVMOutput,
     // A pointer to the global block map keyed by id to achieve O(1) lookup time complexity.
-    block_map: Arc<Mutex<HashMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
+    block_map: Arc<Mutex<BTreeMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
 }
 
 impl SpeculationBlock {
@@ -53,7 +53,7 @@ impl SpeculationBlock {
         id: HashValue,
         transactions: Vec<Transaction>,
         output: ProcessedVMOutput,
-        block_map: Arc<Mutex<HashMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
+        block_map: Arc<Mutex<BTreeMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
     ) -> Self {
         Self {
             id,
@@ -115,7 +115,7 @@ pub(crate) struct SpeculationCache {
     heads: Vec<Arc<Mutex<SpeculationBlock>>>,
     // A pointer to the global block map keyed by id to achieve O(1) lookup time complexity.
     // It is optional but an optimization.
-    block_map: Arc<Mutex<HashMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
+    block_map: Arc<Mutex<BTreeMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
 }
 
 impl SpeculationCache {
@@ -124,7 +124,7 @@ impl SpeculationCache {
             synced_trees: ExecutedTrees::new_empty(),
             committed_trees: ExecutedTrees::new_empty(),
             heads: vec![],
-            block_map: Arc::new(Mutex::new(HashMap::new())),
+            block_map: Arc::new(Mutex::new(BTreeMap::new())),
             committed_block_id: *PRE_GENESIS_BLOCK_ID,
         }
     }
@@ -148,7 +148,7 @@ impl SpeculationCache {
             synced_trees: executor_trees.clone(),
             committed_trees: executor_trees,
             heads: vec![],
-            block_map: Arc::new(Mutex::new(HashMap::new())),
+            block_map: Arc::new(Mutex::new(BTreeMap::new())),
             committed_block_id: *PRE_GENESIS_BLOCK_ID,
         }
     }
@@ -200,7 +200,7 @@ impl SpeculationCache {
 
     pub fn reset(&mut self) {
         self.heads = vec![];
-        *self.block_map.lock() = HashMap::new();
+        *self.block_map.lock() = BTreeMap::new();
     }
 
     pub fn add_block(

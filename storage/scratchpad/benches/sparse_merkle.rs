@@ -7,7 +7,7 @@ use diem_types::account_state_blob::AccountStateBlob;
 use itertools::zip_eq;
 use rand::{distributions::Standard, prelude::StdRng, seq::IteratorRandom, Rng, SeedableRng};
 use scratchpad::{test_utils::naive_smt::NaiveSmt, SparseMerkleTree};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 type ProofReader = scratchpad::test_utils::proof_reader::ProofReader<AccountStateBlob>;
 
@@ -122,7 +122,7 @@ impl Benches {
         // 1 million possible keys
         let keys = std::iter::repeat_with(|| HashValue::random_with_rng(&mut rng))
             .take(1_000_000)
-            .collect::<HashSet<_>>()
+            .collect::<BTreeSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
 

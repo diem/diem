@@ -11,7 +11,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::future::join_all;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, env};
+use std::{collections::BTreeMap, env};
 
 pub static THRESHOLD: Lazy<i64> = Lazy::new(|| {
     if let Ok(v) = env::var("FULL_NODE_HEALTH_THRESHOLD") {
@@ -52,7 +52,7 @@ impl HealthCheck for FullNodeHealthCheck {
 
         let futures = validators.iter().map(get_version);
         let val_latest_versions = join_all(futures).await;
-        let val_latest_versions: HashMap<_, _> = val_latest_versions
+        let val_latest_versions: BTreeMap<_, _> = val_latest_versions
             .into_iter()
             .map(|(instance, version)| (instance.validator_group().index, version))
             .collect();

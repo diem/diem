@@ -3,7 +3,7 @@
 
 use diem_metrics::IntCounterVec;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{BTreeMap, VecDeque},
     fmt::{Debug, Formatter, Result},
     hash::Hash,
     num::NonZeroUsize,
@@ -42,7 +42,7 @@ pub(crate) struct PerKeyQueue<K: Eq + Hash + Clone, T> {
     /// per_key_queue maintains a map from a Key to a queue
     /// of all the messages from that Key. A Key is usually
     /// represented by AccountAddress
-    per_key_queue: HashMap<K, VecDeque<T>>,
+    per_key_queue: BTreeMap<K, VecDeque<T>>,
     /// This is a (round-robin)queue of Keys which have pending messages
     /// This queue will be used for performing round robin among
     /// Keys for choosing the next message
@@ -77,7 +77,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         Self {
             queue_style,
             max_queue_size: max_queue_size_per_key,
-            per_key_queue: HashMap::new(),
+            per_key_queue: BTreeMap::new(),
             round_robin_queue: VecDeque::new(),
             num_popped_since_gc: 0,
             counters,

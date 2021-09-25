@@ -32,7 +32,7 @@ use move_vm_types::{
 use parking_lot::RwLock;
 use sha3::{Digest, Sha3_256};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
     fmt::Debug,
     hash::Hash,
     sync::Arc,
@@ -41,11 +41,11 @@ use tracing::error;
 
 type ScriptHash = [u8; 32];
 
-// A simple cache that offers both a HashMap and a Vector lookup.
+// A simple cache that offers both a BTreeMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.
 // Access to this cache is always under a `RwLock`.
 struct BinaryCache<K, V> {
-    id_map: HashMap<K, usize>,
+    id_map: BTreeMap<K, usize>,
     binaries: Vec<Arc<V>>,
 }
 
@@ -55,7 +55,7 @@ where
 {
     fn new() -> Self {
         Self {
-            id_map: HashMap::new(),
+            id_map: BTreeMap::new(),
             binaries: vec![],
         }
     }
@@ -1356,10 +1356,10 @@ pub(crate) struct Module {
 
     // function name to index into the Loader function list.
     // This allows a direct access from function name to `Function`
-    function_map: HashMap<Identifier, usize>,
+    function_map: BTreeMap<Identifier, usize>,
     // struct name to index into the Loader type list
     // This allows a direct access from struct name to `Struct`
-    struct_map: HashMap<Identifier, usize>,
+    struct_map: BTreeMap<Identifier, usize>,
 
     // a map of single-token signature indices to type.
     // Single-token signatures are usually indexed by the `SignatureIndex` in bytecode. For example,
@@ -1382,8 +1382,8 @@ impl Module {
         let mut function_instantiations = vec![];
         let mut field_handles = vec![];
         let mut field_instantiations: Vec<FieldInstantiation> = vec![];
-        let mut function_map = HashMap::new();
-        let mut struct_map = HashMap::new();
+        let mut function_map = BTreeMap::new();
+        let mut struct_map = BTreeMap::new();
         let mut single_signature_token_map = BTreeMap::new();
 
         let mut create = || {
@@ -1999,13 +1999,13 @@ impl StructInfo {
 }
 
 pub(crate) struct TypeCache {
-    structs: HashMap<usize, HashMap<Vec<Type>, StructInfo>>,
+    structs: BTreeMap<usize, BTreeMap<Vec<Type>, StructInfo>>,
 }
 
 impl TypeCache {
     fn new() -> Self {
         Self {
-            structs: HashMap::new(),
+            structs: BTreeMap::new(),
         }
     }
 }
@@ -2038,7 +2038,7 @@ impl Loader {
             .write()
             .structs
             .entry(gidx)
-            .or_insert_with(HashMap::new)
+            .or_insert_with(BTreeMap::new)
             .entry(ty_args.to_vec())
             .or_insert_with(StructInfo::new)
             .struct_tag = Some(struct_tag.clone());
@@ -2098,7 +2098,7 @@ impl Loader {
             .write()
             .structs
             .entry(gidx)
-            .or_insert_with(HashMap::new)
+            .or_insert_with(BTreeMap::new)
             .entry(ty_args.to_vec())
             .or_insert_with(StructInfo::new)
             .struct_layout = Some(struct_layout.clone());

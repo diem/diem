@@ -36,7 +36,7 @@ use futures::{
 use netcore::transport::{ConnectionOrigin, Transport};
 use short_hex_str::AsShortHexStr;
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, BTreeMap},
     marker::PhantomData,
     net::{IpAddr, Ipv4Addr},
     sync::Arc,
@@ -81,7 +81,7 @@ where
     /// Connection Listener, listening on `listen_addr`
     transport_handler: Option<TransportHandler<TTransport, TSocket>>,
     /// Map from PeerId to corresponding Peer object.
-    active_peers: HashMap<
+    active_peers: BTreeMap<
         PeerId,
         (
             ConnectionMetadata,
@@ -97,7 +97,7 @@ where
     /// Upstream handlers for RPC and DirectSend protocols. The handlers are promised fair delivery
     /// of messages across (PeerId, ProtocolId).
     upstream_handlers:
-        HashMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        BTreeMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     /// Channels to send NewPeer/LostPeer notifications to.
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
     /// Channel used to send Dial requests to the ConnectionHandler actor
@@ -110,7 +110,7 @@ where
     transport_notifs_rx: channel::Receiver<TransportNotification<TSocket>>,
     /// A map of outstanding disconnect requests.
     outstanding_disconnect_requests:
-        HashMap<ConnectionId, oneshot::Sender<Result<(), PeerManagerError>>>,
+        BTreeMap<ConnectionId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
     phantom_transport: PhantomData<TTransport>,
     /// Maximum concurrent network requests to any peer.
@@ -144,7 +144,7 @@ where
         trusted_peers: Arc<RwLock<PeerSet>>,
         requests_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
-        upstream_handlers: HashMap<
+        upstream_handlers: BTreeMap<
             ProtocolId,
             diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,
@@ -181,7 +181,7 @@ where
             time_service,
             listen_addr,
             transport_handler: Some(transport_handler),
-            active_peers: HashMap::new(),
+            active_peers: BTreeMap::new(),
             peer_metadata_storage,
             trusted_peers,
             requests_rx,
@@ -189,7 +189,7 @@ where
             transport_reqs_tx,
             transport_notifs_tx,
             transport_notifs_rx,
-            outstanding_disconnect_requests: HashMap::new(),
+            outstanding_disconnect_requests: BTreeMap::new(),
             phantom_transport: PhantomData,
             upstream_handlers,
             connection_event_handlers,
@@ -764,7 +764,7 @@ where
         network_context: NetworkContext,
         inbound_event: PeerNotification,
         peer_id: PeerId,
-        upstream_handlers: &mut HashMap<
+        upstream_handlers: &mut BTreeMap<
             ProtocolId,
             diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,

@@ -15,7 +15,7 @@ use diem_types::{account_address::from_identity_public_key, PeerId};
 use rand::SeedableRng;
 use serde::Serialize;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs::{read, File},
     io::Write,
     path::{Path, PathBuf},
@@ -99,7 +99,7 @@ impl GenerateKey {
 #[derive(Debug, StructOpt)]
 pub struct ExtractPeersFromKeys {
     #[structopt(long, parse(try_from_str = parse_public_keys_hex))]
-    keys: HashSet<x25519::PublicKey>,
+    keys: BTreeSet<x25519::PublicKey>,
     #[structopt(long)]
     output_file: Option<PathBuf>,
 }
@@ -116,11 +116,11 @@ fn parse_public_key_hex(src: &str) -> Result<x25519::PublicKey, Error> {
         .map_err(|err| Error::UnableToParse("Key", err.to_string()))
 }
 
-fn parse_public_keys_hex(src: &str) -> Result<HashSet<x25519::PublicKey>, Error> {
+fn parse_public_keys_hex(src: &str) -> Result<BTreeSet<x25519::PublicKey>, Error> {
     let input = src.trim();
 
     let strings: Vec<_> = input.split(',').collect();
-    let mut keys: HashSet<_> = HashSet::new();
+    let mut keys: BTreeSet<_> = BTreeSet::new();
     for str in strings {
         keys.insert(parse_public_key_hex(str)?);
     }
@@ -129,7 +129,7 @@ fn parse_public_keys_hex(src: &str) -> Result<HashSet<x25519::PublicKey>, Error>
 }
 
 impl ExtractPeersFromKeys {
-    pub fn execute(&self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn execute(&self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let map = self
             .keys
             .iter()
@@ -154,10 +154,10 @@ pub struct ExtractPeerFromFile {
 }
 
 impl ExtractPeerFromFile {
-    pub fn execute(self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn execute(self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let private_key = load_key::<x25519::PrivateKey>(self.key_file, self.encoding)?;
         let (peer_id, peer) = peer_from_public_key(private_key.public_key());
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         map.insert(peer_id, peer);
 
         if let Some(output_file) = self.output_file.as_ref() {
@@ -181,7 +181,7 @@ pub struct ExtractPeerFromStorage {
 }
 
 impl ExtractPeerFromStorage {
-    pub fn execute(self) -> Result<HashMap<PeerId, Peer>, Error> {
+    pub fn execute(self) -> Result<BTreeMap<PeerId, Peer>, Error> {
         let config = self
             .config
             .load()?
@@ -191,7 +191,7 @@ impl ExtractPeerFromStorage {
         let peer_id = storage.account_address(OWNER_ACCOUNT)?;
         let public_key = storage.x25519_public_from_private(key_name)?;
         let (_, peer) = peer_from_public_key(public_key);
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         map.insert(peer_id, peer);
 
         if let Some(output_file) = self.output_file.as_ref() {
@@ -203,7 +203,7 @@ impl ExtractPeerFromStorage {
 
 fn peer_from_public_key(public_key: x25519::PublicKey) -> (AccountAddress, Peer) {
     let peer_id = from_identity_public_key(public_key);
-    let mut public_keys = HashSet::new();
+    let mut public_keys = BTreeSet::new();
     public_keys.insert(public_key);
     (
         peer_id,

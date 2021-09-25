@@ -8,9 +8,9 @@ use diem_crypto::{
     HashValue,
 };
 use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeMap};
 
-type Cache = HashMap<BitVec<Msb0, u8>, HashValue>;
+type Cache = BTreeMap<BitVec<Msb0, u8>, HashValue>;
 
 struct NaiveSubTree<'a> {
     leaves: &'a [(HashValue, HashValue)],

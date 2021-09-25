@@ -4,7 +4,7 @@
 use anyhow::Result;
 use diem_logger::json_log::JsonLogEntry;
 use reqwest::{blocking, Url};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub mod node_debug_service;
 
@@ -35,11 +35,11 @@ impl NodeDebugClient {
     }
 
     /// Retrieves all node metrics for a given metric name.  Allows for filtering metrics by fields afterwards.
-    pub fn get_node_metric_with_name(&self, metric: &str) -> Result<Option<HashMap<String, i64>>> {
+    pub fn get_node_metric_with_name(&self, metric: &str) -> Result<Option<BTreeMap<String, i64>>> {
         let metrics = self.get_node_metrics()?;
         let search_string = format!("{}{{", metric);
 
-        let result: HashMap<_, _> = metrics
+        let result: BTreeMap<_, _> = metrics
             .iter()
             .filter_map(|(key, value)| {
                 if key.starts_with(&search_string) {
@@ -57,7 +57,7 @@ impl NodeDebugClient {
         }
     }
 
-    pub fn get_node_metrics(&self) -> Result<HashMap<String, i64>> {
+    pub fn get_node_metrics(&self) -> Result<BTreeMap<String, i64>> {
         let mut url = self.url.clone();
         url.set_path("metrics");
         let response = self.client.get(url).send()?;
@@ -67,7 +67,7 @@ impl NodeDebugClient {
         }
 
         response
-            .json::<HashMap<String, String>>()?
+            .json::<BTreeMap<String, String>>()?
             .into_iter()
             .map(|(k, v)| match v.parse::<i64>() {
                 Ok(v) => Ok((k, v)),
@@ -108,7 +108,7 @@ impl AsyncNodeDebugClient {
         Ok(metrics.get(metric.as_ref()).cloned())
     }
 
-    pub async fn get_node_metrics(&mut self) -> Result<HashMap<String, i64>> {
+    pub async fn get_node_metrics(&mut self) -> Result<BTreeMap<String, i64>> {
         let response = self
             .client
             .get(&format!("{}/metrics", self.addr))
@@ -116,7 +116,7 @@ impl AsyncNodeDebugClient {
             .await?;
 
         response
-            .json::<HashMap<String, String>>()
+            .json::<BTreeMap<String, String>>()
             .await?
             .into_iter()
             .map(|(k, v)| match v.parse::<i64>() {

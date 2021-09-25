@@ -14,7 +14,7 @@ use diem_types::{
     transaction::{GovernanceRole, SignedTransaction},
 };
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     time::{Duration, SystemTime},
 };
 
@@ -432,7 +432,7 @@ fn test_system_ttl() {
 
     // GC routine should clear transaction from first insert but keep last one.
     mempool.gc();
-    let batch = mempool.get_block(1, HashSet::new());
+    let batch = mempool.get_block(1, BTreeSet::new());
     assert_eq!(vec![transaction.make_signed_transaction()], batch);
 }
 
@@ -444,11 +444,11 @@ fn test_commit_callback() {
     let txns = add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 6, 1)]);
 
     // Check that pool is empty.
-    assert!(pool.get_block(1, HashSet::new()).is_empty());
+    assert!(pool.get_block(1, BTreeSet::new()).is_empty());
     // Transaction 5 got back from consensus.
     pool.remove_transaction(&TestTransaction::get_address(1), 5, false);
     // Verify that we can execute transaction 6.
-    assert_eq!(pool.get_block(1, HashSet::new())[0], txns[0]);
+    assert_eq!(pool.get_block(1, BTreeSet::new())[0], txns[0]);
 }
 
 #[test]
@@ -462,7 +462,7 @@ fn test_sequence_number_cache() {
     // for AC is 0).
     add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 6, 1)]);
     // Verify that we can execute transaction 6.
-    assert_eq!(pool.get_block(1, HashSet::new()).len(), 1);
+    assert_eq!(pool.get_block(1, BTreeSet::new()).len(), 1);
 }
 
 #[test]
@@ -559,7 +559,7 @@ fn test_parking_lot_eviction() {
     }
     // Make sure that we have correct txns in Mempool.
     let mut txns: Vec<_> = pool
-        .get_block(5, HashSet::new())
+        .get_block(5, BTreeSet::new())
         .iter()
         .map(SignedTransaction::sequence_number)
         .collect();
@@ -588,7 +588,7 @@ fn test_parking_lot_evict_only_for_ready_txn_insertion() {
 
     // Make sure that we have correct txns in Mempool.
     let mut txns: Vec<_> = pool
-        .get_block(5, HashSet::new())
+        .get_block(5, BTreeSet::new())
         .iter()
         .map(SignedTransaction::sequence_number)
         .collect();
@@ -631,7 +631,7 @@ fn test_gc_ready_transaction() {
     pool.gc_by_expiration_time(Duration::from_secs(1));
 
     // Make sure txns 2 and 3 became not ready and we can't read them from any API.
-    let block = pool.get_block(10, HashSet::new());
+    let block = pool.get_block(10, BTreeSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 0);
 
@@ -656,7 +656,7 @@ fn test_clean_stuck_transactions() {
         TimelineState::NotReady,
         GovernanceRole::NonGovernanceRole,
     );
-    let block = pool.get_block(10, HashSet::new());
+    let block = pool.get_block(10, BTreeSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 10);
 }

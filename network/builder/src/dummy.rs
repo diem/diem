@@ -30,7 +30,7 @@ use network::{
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     sync::Arc,
     time::Duration,
 };
@@ -120,7 +120,7 @@ pub fn setup_network() -> DummyNetwork {
     let mut rng = StdRng::from_seed(TEST_SEED);
     let dialer_identity_private_key = x25519::PrivateKey::generate(&mut rng);
     let dialer_identity_public_key = dialer_identity_private_key.public_key();
-    let dialer_pubkeys: HashSet<_> = vec![dialer_identity_public_key].into_iter().collect();
+    let dialer_pubkeys: BTreeSet<_> = vec![dialer_identity_public_key].into_iter().collect();
 
     // Setup keys for listener.
     let listener_identity_private_key = x25519::PrivateKey::generate(&mut rng);
@@ -136,7 +136,7 @@ pub fn setup_network() -> DummyNetwork {
         Peer::new(vec![], dialer_pubkeys, PeerRole::Validator),
     );
 
-    let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+    let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
 
     // Set up the listener network
@@ -167,7 +167,7 @@ pub fn setup_network() -> DummyNetwork {
     // Set up the dialer network
     let network_context = NetworkContext::new(role, network_id, dialer_peer_id);
 
-    let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+    let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
 
     let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,

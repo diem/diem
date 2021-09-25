@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     time::{Duration, SystemTime},
 };
 
@@ -14,7 +14,7 @@ struct ValueInfo<V> {
 pub struct TtlCache<K, V> {
     capacity: usize,
     default_timeout: Duration,
-    data: HashMap<K, ValueInfo<V>>,
+    data: BTreeMap<K, ValueInfo<V>>,
     ttl_index: BTreeMap<SystemTime, K>,
 }
 
@@ -26,7 +26,7 @@ where
         Self {
             capacity,
             default_timeout,
-            data: HashMap::new(),
+            data: BTreeMap::new(),
             ttl_index: BTreeMap::new(),
         }
     }

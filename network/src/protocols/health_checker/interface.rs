@@ -4,7 +4,7 @@
 use crate::{
     application::{
         interface::NetworkInterface,
-        storage::{LockingHashMap, PeerMetadataStorage},
+        storage::{LockingBTreeMap, PeerMetadataStorage},
         types::{PeerError, PeerState},
     },
     error::NetworkError,
@@ -40,7 +40,7 @@ impl HealthCheckData {
 /// HealthChecker's view into networking
 pub struct HealthCheckNetworkInterface {
     peer_metadata_storage: Arc<PeerMetadataStorage>,
-    app_data: LockingHashMap<PeerId, HealthCheckData>,
+    app_data: LockingBTreeMap<PeerId, HealthCheckData>,
     sender: HealthCheckerNetworkSender,
     receiver: HealthCheckerNetworkEvents,
 }
@@ -53,7 +53,7 @@ impl HealthCheckNetworkInterface {
     ) -> Self {
         Self {
             peer_metadata_storage,
-            app_data: LockingHashMap::new(),
+            app_data: LockingBTreeMap::new(),
             sender,
             receiver,
         }

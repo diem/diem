@@ -14,7 +14,7 @@ use crate::{
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, BTreeMap};
 
 //**************************************************************************************************
 // Context
@@ -40,7 +40,7 @@ pub enum Constraint {
     SingleTypeConstraint(Loc, String, Type),
 }
 pub type Constraints = Vec<Constraint>;
-pub type TParamSubst = HashMap<TParamID, Type>;
+pub type TParamSubst = BTreeMap<TParamID, Type>;
 
 pub struct FunctionInfo {
     pub defined_loc: Loc,
@@ -409,15 +409,15 @@ impl<'env> Context<'env> {
 
 #[derive(Clone, Debug)]
 pub struct Subst {
-    tvars: HashMap<TVar, Type>,
-    num_vars: HashMap<TVar, Loc>,
+    tvars: BTreeMap<TVar, Type>,
+    num_vars: BTreeMap<TVar, Loc>,
 }
 
 impl Subst {
     pub fn empty() -> Self {
         Self {
-            tvars: HashMap::new(),
-            num_vars: HashMap::new(),
+            tvars: BTreeMap::new(),
+            num_vars: BTreeMap::new(),
         }
     }
 

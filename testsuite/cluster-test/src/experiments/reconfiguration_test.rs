@@ -22,7 +22,7 @@ use diem_types::{
     on_chain_config::{ConsensusConfigV1, OnChainConsensusConfig},
 };
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt,
     time::{Duration, Instant},
 };
@@ -87,8 +87,8 @@ async fn expect_epoch(
 
 #[async_trait]
 impl Experiment for Reconfiguration {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut nodes = HashSet::new();
+    fn affected_validators(&self) -> BTreeSet<String> {
+        let mut nodes = BTreeSet::new();
         nodes.insert(self.affected_pod_name.clone());
         nodes
     }

@@ -11,12 +11,12 @@ use futures::{
     task::{Context, Poll},
 };
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, num::NonZeroU16, pin::Pin};
+use std::{collections::BTreeMap, num::NonZeroU16, pin::Pin};
 
 static SWITCHBOARD: Lazy<Mutex<SwitchBoard>> =
-    Lazy::new(|| Mutex::new(SwitchBoard(HashMap::default(), 1)));
+    Lazy::new(|| Mutex::new(SwitchBoard(BTreeMap::default(), 1)));
 
-struct SwitchBoard(HashMap<NonZeroU16, UnboundedSender<MemorySocket>>, u16);
+struct SwitchBoard(BTreeMap<NonZeroU16, UnboundedSender<MemorySocket>>, u16);
 
 /// An in-memory socket server, listening for connections.
 ///

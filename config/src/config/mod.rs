@@ -5,7 +5,7 @@ use diem_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt, fs,
     fs::File,
     io::{Read, Write},
@@ -90,7 +90,7 @@ pub struct NodeConfig {
     #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
     #[serde(default)]
-    pub failpoints: Option<HashMap<String, String>>,
+    pub failpoints: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -267,7 +267,7 @@ impl NodeConfig {
             )?;
         }
 
-        let mut network_ids = HashSet::new();
+        let mut network_ids = BTreeSet::new();
         if let Some(network) = &mut self.validator_network {
             network.load_validator_network()?;
             network_ids.insert(network.network_id);

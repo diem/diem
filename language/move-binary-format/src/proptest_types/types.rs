@@ -18,7 +18,7 @@ use proptest::{
     option,
     prelude::*,
     sample::Index as PropIndex,
-    std_facade::hash_set::HashSet,
+    std_facade::hash_set::BTreeSet,
 };
 use std::collections::BTreeSet;
 
@@ -178,7 +178,7 @@ impl StructDefinitionGen {
         self,
         state: &mut StDefnMaterializeState,
     ) -> (Option<StructDefinition>, usize) {
-        let mut field_names = HashSet::new();
+        let mut field_names = BTreeSet::new();
         let mut fields = vec![];
         match self.field_defs {
             None => (),

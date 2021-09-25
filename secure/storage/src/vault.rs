@@ -15,7 +15,7 @@ use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_vault_client::Client;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -37,7 +37,7 @@ pub struct VaultStorage {
     renew_ttl_secs: Option<u32>,
     next_renewal: AtomicU64,
     use_cas: bool,
-    secret_versions: RwLock<HashMap<String, u32>>,
+    secret_versions: RwLock<BTreeMap<String, u32>>,
 }
 
 impl VaultStorage {
@@ -62,7 +62,7 @@ impl VaultStorage {
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),
             use_cas,
-            secret_versions: RwLock::new(HashMap::new()),
+            secret_versions: RwLock::new(BTreeMap::new()),
         }
     }
 

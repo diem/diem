@@ -12,7 +12,7 @@ use hyper::{
 };
 use prometheus::{proto::MetricFamily, Encoder, TextEncoder};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     net::{SocketAddr, ToSocketAddrs},
     thread,
 };
@@ -51,10 +51,10 @@ fn whitelist_metrics(
 // filtering metrics from the Json format metrics
 // only return the whitelisted metrics
 fn whitelist_json_metrics(
-    json_metrics: HashMap<String, String>,
+    json_metrics: BTreeMap<String, String>,
     whitelist: &'static [&'static str],
-) -> HashMap<&'static str, String> {
-    let mut whitelist_metrics: HashMap<&'static str, String> = HashMap::new();
+) -> BTreeMap<&'static str, String> {
+    let mut whitelist_metrics: BTreeMap<&'static str, String> = BTreeMap::new();
     for key in whitelist {
         if let Some(metric) = json_metrics.get(*key) {
             whitelist_metrics.insert(key, metric.clone());

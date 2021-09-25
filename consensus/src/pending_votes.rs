@@ -18,7 +18,7 @@ use diem_types::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     fmt,
     sync::Arc,
 };
@@ -51,24 +51,24 @@ pub struct PendingVotes {
     /// Maps LedgerInfo digest to associated signatures (contained in a partial LedgerInfoWithSignatures).
     /// This might keep multiple LedgerInfos for the current round: either due to different proposals (byzantine behavior)
     /// or due to different NIL proposals (clients can have a different view of what block to extend).
-    li_digest_to_votes: HashMap<HashValue /* LedgerInfo digest */, LedgerInfoWithSignatures>,
+    li_digest_to_votes: BTreeMap<HashValue /* LedgerInfo digest */, LedgerInfoWithSignatures>,
     /// Tracks all the signatures of the votes for the given round. In case we succeed to
     /// aggregate 2f+1 signatures a TimeoutCertificate is formed.
     maybe_partial_tc: Option<TimeoutCertificate>,
     /// Tracks all the signatures of the 2-chain timeout for the given round.
     maybe_partial_2chain_tc: Option<TwoChainTimeoutCertificate>,
     /// Map of Author to vote. This is useful to discard multiple votes.
-    author_to_vote: HashMap<Author, Vote>,
+    author_to_vote: BTreeMap<Author, Vote>,
 }
 
 impl PendingVotes {
     /// Creates an empty PendingVotes structure for a specific epoch and round
     pub fn new() -> Self {
         PendingVotes {
-            li_digest_to_votes: HashMap::new(),
+            li_digest_to_votes: BTreeMap::new(),
             maybe_partial_tc: None,
             maybe_partial_2chain_tc: None,
-            author_to_vote: HashMap::new(),
+            author_to_vote: BTreeMap::new(),
         }
     }
 

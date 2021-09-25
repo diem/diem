@@ -23,14 +23,14 @@ use proptest::{
     sample::{select, Index as PropIndex},
 };
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeSet, BTreeMap, BTreeSet},
     hash::Hash,
 };
 
 #[derive(Debug, Default)]
 struct SignatureState {
     signatures: Vec<Signature>,
-    signature_map: HashMap<Signature, SignatureIndex>,
+    signature_map: BTreeMap<Signature, SignatureIndex>,
 }
 
 impl SignatureState {
@@ -62,7 +62,7 @@ impl SignatureState {
 #[allow(unused)]
 struct FieldHandleState {
     field_handles: Vec<FieldHandle>,
-    field_map: HashMap<FieldHandle, FieldHandleIndex>,
+    field_map: BTreeMap<FieldHandle, FieldHandleIndex>,
 }
 
 impl FieldHandleState {
@@ -91,7 +91,7 @@ where
     T: Eq + Clone + Hash,
 {
     instantiations: Vec<T>,
-    instantiation_map: HashMap<T, TableIndex>,
+    instantiation_map: BTreeMap<T, TableIndex>,
 }
 
 impl<T> InstantiationState<T>
@@ -101,7 +101,7 @@ where
     fn new() -> Self {
         InstantiationState {
             instantiations: vec![],
-            instantiation_map: HashMap::new(),
+            instantiation_map: BTreeMap::new(),
         }
     }
 
@@ -131,7 +131,7 @@ pub struct FnHandleMaterializeState<'a> {
     identifiers_len: usize,
     struct_handles: &'a [StructHandle],
     signatures: SignatureState,
-    function_handles: HashSet<(ModuleHandleIndex, IdentifierIndex)>,
+    function_handles: BTreeSet<(ModuleHandleIndex, IdentifierIndex)>,
 }
 
 impl<'a> FnHandleMaterializeState<'a> {
@@ -148,7 +148,7 @@ impl<'a> FnHandleMaterializeState<'a> {
             identifiers_len,
             struct_handles,
             signatures: SignatureState::new(signatures),
-            function_handles: HashSet::new(),
+            function_handles: BTreeSet::new(),
         }
     }
 
@@ -237,8 +237,8 @@ pub struct FnDefnMaterializeState<'a> {
     struct_defs: &'a [StructDefinition],
     signatures: SignatureState,
     function_handles: Vec<FunctionHandle>,
-    struct_def_to_field_count: HashMap<usize, usize>,
-    def_function_handles: HashSet<(ModuleHandleIndex, IdentifierIndex)>,
+    struct_def_to_field_count: BTreeMap<usize, usize>,
+    def_function_handles: BTreeSet<(ModuleHandleIndex, IdentifierIndex)>,
     field_handles: FieldHandleState,
     type_instantiations: InstantiationState<StructDefInstantiation>,
     function_instantiations: InstantiationState<FunctionInstantiation>,
@@ -254,7 +254,7 @@ impl<'a> FnDefnMaterializeState<'a> {
         struct_defs: &'a [StructDefinition],
         signatures: Vec<Signature>,
         function_handles: Vec<FunctionHandle>,
-        struct_def_to_field_count: HashMap<usize, usize>,
+        struct_def_to_field_count: BTreeMap<usize, usize>,
     ) -> Self {
         Self {
             self_module_handle_idx,
@@ -265,7 +265,7 @@ impl<'a> FnDefnMaterializeState<'a> {
             signatures: SignatureState::new(signatures),
             function_handles,
             struct_def_to_field_count,
-            def_function_handles: HashSet::new(),
+            def_function_handles: BTreeSet::new(),
             field_handles: FieldHandleState::default(),
             type_instantiations: InstantiationState::new(),
             function_instantiations: InstantiationState::new(),

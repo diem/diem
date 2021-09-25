@@ -4,7 +4,7 @@
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
 use diem_time_service::{TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
 /// threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission checks and simply
@@ -14,7 +14,7 @@ use std::collections::HashMap;
 /// securely handle key material. This should not be used in production.
 #[derive(Default)]
 pub struct InMemoryStorage {
-    data: HashMap<String, Vec<u8>>,
+    data: BTreeMap<String, Vec<u8>>,
     time_service: TimeService,
 }
 
@@ -27,7 +27,7 @@ impl InMemoryStorage {
 impl InMemoryStorage {
     pub fn new_with_time_service(time_service: TimeService) -> Self {
         Self {
-            data: HashMap::new(),
+            data: BTreeMap::new(),
             time_service,
         }
     }

@@ -22,7 +22,7 @@ use diem_types::{
     waypoint::Waypoint,
 };
 use futures::StreamExt;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::BTreeMap, sync::Arc, time::Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -36,7 +36,7 @@ pub struct EpochEndingRestoreController {
     run_mode: Arc<RestoreRunMode>,
     manifest_handle: FileHandle,
     target_version: Version,
-    trusted_waypoints: Arc<HashMap<Version, Waypoint>>,
+    trusted_waypoints: Arc<BTreeMap<Version, Waypoint>>,
 }
 
 impl EpochEndingRestoreController {

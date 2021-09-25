@@ -23,7 +23,7 @@ use move_ir_types::ast::{
     BlockLabel, ConstantName, Field_, FunctionName, ModuleIdent, ModuleName, QualifiedStructIdent,
     StructName,
 };
-use std::{clone::Clone, collections::HashMap, hash::Hash};
+use std::{clone::Clone, collections::BTreeMap, hash::Hash};
 
 macro_rules! get_or_add_item_macro {
     ($m:ident, $k_get:expr, $k_insert:expr) => {{
@@ -44,13 +44,13 @@ macro_rules! get_or_add_item_macro {
 
 pub const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
 fn get_or_add_item_ref<K: Clone + Eq + Hash>(
-    m: &mut HashMap<K, TableIndex>,
+    m: &mut BTreeMap<K, TableIndex>,
     k: &K,
 ) -> Result<TableIndex> {
     get_or_add_item_macro!(m, k, k.clone())
 }
 
-fn get_or_add_item<K: Eq + Hash>(m: &mut HashMap<K, TableIndex>, k: K) -> Result<TableIndex> {
+fn get_or_add_item<K: Eq + Hash>(m: &mut BTreeMap<K, TableIndex>, k: K) -> Result<TableIndex> {
     get_or_add_item_macro!(m, &k, k)
 }
 
@@ -60,8 +60,8 @@ pub fn ident_str(s: &str) -> Result<&IdentStr> {
 
 #[derive(Clone, Debug)]
 pub struct CompiledDependencyView<'a> {
-    structs: HashMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
-    functions: HashMap<&'a IdentStr, TableIndex>,
+    structs: BTreeMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
+    functions: BTreeMap<&'a IdentStr, TableIndex>,
 
     module_pool: &'a [ModuleHandle],
     struct_pool: &'a [StructHandle],
@@ -73,8 +73,8 @@ pub struct CompiledDependencyView<'a> {
 
 impl<'a> CompiledDependencyView<'a> {
     pub fn new(dep: &'a CompiledModule) -> Result<Self> {
-        let mut structs = HashMap::new();
-        let mut functions = HashMap::new();
+        let mut structs = BTreeMap::new();
+        let mut functions = BTreeMap::new();
 
         let self_handle = dep.self_handle_idx();
 
@@ -199,7 +199,7 @@ impl<'a> CompiledDependency<'a> {
     }
 }
 
-pub(crate) type CompiledDependencies<'a> = HashMap<ModuleIdent, CompiledDependency<'a>>;
+pub(crate) type CompiledDependencies<'a> = BTreeMap<ModuleIdent, CompiledDependency<'a>>;
 
 /// Represents all of the pools to be used in the file format, both by CompiledModule
 /// and CompiledScript.
@@ -236,31 +236,31 @@ pub(crate) struct Context<'a> {
     dependencies: CompiledDependencies<'a>,
 
     // helpers
-    aliases: HashMap<ModuleIdent, ModuleName>,
-    modules: HashMap<ModuleName, (ModuleIdent, ModuleHandle)>,
-    structs: HashMap<QualifiedStructIdent, StructHandle>,
-    struct_defs: HashMap<StructName, TableIndex>,
-    named_constants: HashMap<ConstantName, TableIndex>,
-    labels: HashMap<BlockLabel, u16>,
+    aliases: BTreeMap<ModuleIdent, ModuleName>,
+    modules: BTreeMap<ModuleName, (ModuleIdent, ModuleHandle)>,
+    structs: BTreeMap<QualifiedStructIdent, StructHandle>,
+    struct_defs: BTreeMap<StructName, TableIndex>,
+    named_constants: BTreeMap<ConstantName, TableIndex>,
+    labels: BTreeMap<BlockLabel, u16>,
 
     // queryable pools
     // TODO: lookup for Fields is not that seemless after binary format changes
     // We need multiple lookups or a better representation for fields
-    fields: HashMap<(StructHandleIndex, Field_), (StructDefinitionIndex, SignatureToken, usize)>,
-    function_handles: HashMap<(ModuleName, FunctionName), (FunctionHandle, FunctionHandleIndex)>,
-    function_signatures: HashMap<(ModuleName, FunctionName), FunctionSignature>,
+    fields: BTreeMap<(StructHandleIndex, Field_), (StructDefinitionIndex, SignatureToken, usize)>,
+    function_handles: BTreeMap<(ModuleName, FunctionName), (FunctionHandle, FunctionHandleIndex)>,
+    function_signatures: BTreeMap<(ModuleName, FunctionName), FunctionSignature>,
 
     // Simple pools
-    module_handles: HashMap<ModuleHandle, TableIndex>,
-    struct_handles: HashMap<StructHandle, TableIndex>,
-    signatures: HashMap<Signature, TableIndex>,
-    identifiers: HashMap<Identifier, TableIndex>,
-    address_identifiers: HashMap<AccountAddress, TableIndex>,
-    constant_pool: HashMap<Constant, TableIndex>,
-    field_handles: HashMap<FieldHandle, TableIndex>,
-    struct_instantiations: HashMap<StructDefInstantiation, TableIndex>,
-    function_instantiations: HashMap<FunctionInstantiation, TableIndex>,
-    field_instantiations: HashMap<FieldInstantiation, TableIndex>,
+    module_handles: BTreeMap<ModuleHandle, TableIndex>,
+    struct_handles: BTreeMap<StructHandle, TableIndex>,
+    signatures: BTreeMap<Signature, TableIndex>,
+    identifiers: BTreeMap<Identifier, TableIndex>,
+    address_identifiers: BTreeMap<AccountAddress, TableIndex>,
+    constant_pool: BTreeMap<Constant, TableIndex>,
+    field_handles: BTreeMap<FieldHandle, TableIndex>,
+    struct_instantiations: BTreeMap<StructDefInstantiation, TableIndex>,
+    function_instantiations: BTreeMap<FunctionInstantiation, TableIndex>,
+    field_instantiations: BTreeMap<FieldInstantiation, TableIndex>,
 
     // The current function index that we are on
     current_function_index: FunctionDefinitionIndex,
@@ -279,25 +279,25 @@ impl<'a> Context<'a> {
     ) -> Result<Self> {
         let context = Self {
             dependencies,
-            aliases: HashMap::new(),
-            modules: HashMap::new(),
-            structs: HashMap::new(),
-            struct_defs: HashMap::new(),
-            named_constants: HashMap::new(),
-            labels: HashMap::new(),
-            fields: HashMap::new(),
-            function_handles: HashMap::new(),
-            function_signatures: HashMap::new(),
-            module_handles: HashMap::new(),
-            struct_handles: HashMap::new(),
-            field_handles: HashMap::new(),
-            struct_instantiations: HashMap::new(),
-            function_instantiations: HashMap::new(),
-            field_instantiations: HashMap::new(),
-            signatures: HashMap::new(),
-            identifiers: HashMap::new(),
-            address_identifiers: HashMap::new(),
-            constant_pool: HashMap::new(),
+            aliases: BTreeMap::new(),
+            modules: BTreeMap::new(),
+            structs: BTreeMap::new(),
+            struct_defs: BTreeMap::new(),
+            named_constants: BTreeMap::new(),
+            labels: BTreeMap::new(),
+            fields: BTreeMap::new(),
+            function_handles: BTreeMap::new(),
+            function_signatures: BTreeMap::new(),
+            module_handles: BTreeMap::new(),
+            struct_handles: BTreeMap::new(),
+            field_handles: BTreeMap::new(),
+            struct_instantiations: BTreeMap::new(),
+            function_instantiations: BTreeMap::new(),
+            field_instantiations: BTreeMap::new(),
+            signatures: BTreeMap::new(),
+            identifiers: BTreeMap::new(),
+            address_identifiers: BTreeMap::new(),
+            constant_pool: BTreeMap::new(),
             current_function_index: FunctionDefinitionIndex::new(0),
             source_map: SourceMap::new(current_module_opt),
         };
@@ -340,7 +340,7 @@ impl<'a> Context<'a> {
         options.into_iter().map(|opt| opt.unwrap()).collect()
     }
 
-    fn materialize_map<T: Clone>(m: HashMap<T, TableIndex>) -> Vec<T> {
+    fn materialize_map<T: Clone>(m: BTreeMap<T, TableIndex>) -> Vec<T> {
         Self::materialize_pool(m.len(), m.into_iter())
     }
 
@@ -372,8 +372,8 @@ impl<'a> Context<'a> {
 
     pub fn build_index_remapping(
         &mut self,
-        label_to_index: HashMap<BlockLabel, u16>,
-    ) -> HashMap<u16, u16> {
+        label_to_index: BTreeMap<BlockLabel, u16>,
+    ) -> BTreeMap<u16, u16> {
         let labels = std::mem::take(&mut self.labels);
         label_to_index
             .into_iter()

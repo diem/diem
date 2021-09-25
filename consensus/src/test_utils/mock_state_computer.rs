@@ -14,14 +14,14 @@ use diem_logger::prelude::*;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error, StateComputeResult};
 use futures::channel::mpsc;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use termion::color::*;
 
 pub struct MockStateComputer {
     state_sync_client: mpsc::UnboundedSender<Payload>,
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
     consensus_db: Arc<MockStorage>,
-    block_cache: Mutex<HashMap<HashValue, Payload>>,
+    block_cache: Mutex<BTreeMap<HashValue, Payload>>,
 }
 
 impl MockStateComputer {
@@ -34,7 +34,7 @@ impl MockStateComputer {
             state_sync_client,
             commit_callback,
             consensus_db,
-            block_cache: Mutex::new(HashMap::new()),
+            block_cache: Mutex::new(BTreeMap::new()),
         }
     }
 }

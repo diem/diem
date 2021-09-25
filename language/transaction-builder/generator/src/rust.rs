@@ -620,14 +620,14 @@ TransactionPayload::ScriptFunction(ScriptFunction {{
         writeln!(
             self.out,
             r#"
-type TransactionScriptDecoderMap = std::collections::HashMap<Vec<u8>, Box<dyn Fn(&Script) -> Option<ScriptCall> + std::marker::Sync + std::marker::Send>>;
+type TransactionScriptDecoderMap = std::collections::BTreeMap<Vec<u8>, Box<dyn Fn(&Script) -> Option<ScriptCall> + std::marker::Sync + std::marker::Send>>;
 
 static TRANSACTION_SCRIPT_DECODER_MAP: once_cell::sync::Lazy<TransactionScriptDecoderMap> = once_cell::sync::Lazy::new(|| {{"#
         )?;
         self.out.indent();
         writeln!(
             self.out,
-            "let mut map : TransactionScriptDecoderMap = std::collections::HashMap::new();"
+            "let mut map : TransactionScriptDecoderMap = std::collections::BTreeMap::new();"
         )?;
         for abi in abis {
             writeln!(
@@ -646,14 +646,14 @@ static TRANSACTION_SCRIPT_DECODER_MAP: once_cell::sync::Lazy<TransactionScriptDe
         writeln!(
             self.out,
             r#"
-type ScriptFunctionDecoderMap = std::collections::HashMap<String, Box<dyn Fn(&TransactionPayload) -> Option<ScriptFunctionCall> + std::marker::Sync + std::marker::Send>>;
+type ScriptFunctionDecoderMap = std::collections::BTreeMap<String, Box<dyn Fn(&TransactionPayload) -> Option<ScriptFunctionCall> + std::marker::Sync + std::marker::Send>>;
 
 static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderMap> = once_cell::sync::Lazy::new(|| {{"#
         )?;
         self.out.indent();
         writeln!(
             self.out,
-            "let mut map : ScriptFunctionDecoderMap = std::collections::HashMap::new();"
+            "let mut map : ScriptFunctionDecoderMap = std::collections::BTreeMap::new();"
         )?;
         for abi in abis {
             writeln!(

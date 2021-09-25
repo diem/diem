@@ -27,13 +27,13 @@ use diem_types::{
     },
 };
 use rand::{rngs::OsRng, Rng};
-use std::{collections::HashMap, path::Path};
+use std::{collections::BTreeMap, path::Path};
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
 pub struct WalletLibrary {
     mnemonic: Mnemonic,
     key_factory: KeyFactory,
-    addr_map: HashMap<AccountAddress, ChildNumber>,
+    addr_map: BTreeMap<AccountAddress, ChildNumber>,
     key_leaf: ChildNumber,
 }
 
@@ -54,7 +54,7 @@ impl WalletLibrary {
         WalletLibrary {
             mnemonic,
             key_factory: KeyFactory::new(&seed).unwrap(),
-            addr_map: HashMap::new(),
+            addr_map: BTreeMap::new(),
             key_leaf: ChildNumber(0),
         }
     }
@@ -136,7 +136,7 @@ impl WalletLibrary {
             .addr_map
             .iter()
             .map(|(&k, &v)| (v.as_ref().to_owned(), k.to_owned()))
-            .collect::<HashMap<_, _>>();
+            .collect::<BTreeMap<_, _>>();
         for i in 0..self.addr_map.len() as u64 {
             match rev_map.get(&i) {
                 Some(account_address) => {

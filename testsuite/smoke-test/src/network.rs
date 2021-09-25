@@ -15,7 +15,7 @@ use diem_temppath::TempPath;
 use diem_types::network_address::{NetworkAddress, Protocol};
 use forge::{FullNode, LocalNode, NodeExt, Swarm};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     path::Path,
     str::FromStr,
     thread::sleep,
@@ -169,7 +169,7 @@ fn test_file_discovery() {
     );
 
     // Now when we clear the file, we shouldn't be able to connect
-    write_peerset_to_file(discovery_file.as_ref(), HashMap::new());
+    write_peerset_to_file(discovery_file.as_ref(), BTreeMap::new());
     sleep(Duration::from_millis(300));
 
     assert_eq!(

@@ -47,7 +47,7 @@ use move_core_types::{
 use move_vm_runtime::session::Session;
 use move_vm_types::gas_schedule::GasStatus;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     convert::{AsMut, AsRef},
 };
 
@@ -628,13 +628,13 @@ impl DiemVM {
         if !epilogue_writeset
             .iter()
             .map(|(ap, _)| ap)
-            .collect::<HashSet<_>>()
+            .collect::<BTreeSet<_>>()
             .is_disjoint(
                 &change_set
                     .write_set()
                     .iter()
                     .map(|(ap, _)| ap)
-                    .collect::<HashSet<_>>(),
+                    .collect::<BTreeSet<_>>(),
             )
         {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
@@ -643,13 +643,13 @@ impl DiemVM {
         if !epilogue_events
             .iter()
             .map(|event| event.key())
-            .collect::<HashSet<_>>()
+            .collect::<BTreeSet<_>>()
             .is_disjoint(
                 &change_set
                     .events()
                     .iter()
                     .map(|event| event.key())
-                    .collect::<HashSet<_>>(),
+                    .collect::<BTreeSet<_>>(),
             )
         {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);

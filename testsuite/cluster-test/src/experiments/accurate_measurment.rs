@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use core::fmt;
 use futures::FutureExt;
-use std::{collections::HashSet, time::Duration};
+use std::{collections::BTreeSet, time::Duration};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -59,8 +59,8 @@ impl ExperimentParam for AccurateMeasurementParams {
 
 #[async_trait]
 impl Experiment for AccurateMeasurement {
-    fn affected_validators(&self) -> HashSet<String> {
-        HashSet::new()
+    fn affected_validators(&self) -> BTreeSet<String> {
+        BTreeSet::new()
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {

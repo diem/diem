@@ -3,10 +3,10 @@
 
 use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
-use std::{cell::RefCell, collections::hash_map::HashMap, hash::Hash, rc::Rc};
+use std::{cell::RefCell, collections::hash_map::BTreeMap, hash::Hash, rc::Rc};
 
 pub struct ModuleCacheImpl<K, V> {
-    id_map: RefCell<HashMap<K, usize>>,
+    id_map: RefCell<BTreeMap<K, usize>>,
     modules: RefCell<Vec<Rc<V>>>,
 }
 
@@ -16,7 +16,7 @@ where
 {
     pub fn new() -> Self {
         Self {
-            id_map: RefCell::new(HashMap::new()),
+            id_map: RefCell::new(BTreeMap::new()),
             modules: RefCell::new(vec![]),
         }
     }

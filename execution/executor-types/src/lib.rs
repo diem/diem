@@ -27,7 +27,7 @@ use diem_types::{
 };
 use scratchpad::ProofRead;
 use serde::{Deserialize, Serialize};
-use std::{cmp::max, collections::HashMap, sync::Arc};
+use std::{cmp::max, collections::BTreeMap, sync::Arc};
 use storage_interface::TreeState;
 
 type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
@@ -325,11 +325,11 @@ impl ExecutedTrees {
 }
 
 pub struct ProofReader {
-    account_to_proof: HashMap<HashValue, SparseMerkleProof>,
+    account_to_proof: BTreeMap<HashValue, SparseMerkleProof>,
 }
 
 impl ProofReader {
-    pub fn new(account_to_proof: HashMap<HashValue, SparseMerkleProof>) -> Self {
+    pub fn new(account_to_proof: BTreeMap<HashValue, SparseMerkleProof>) -> Self {
         ProofReader { account_to_proof }
     }
 }

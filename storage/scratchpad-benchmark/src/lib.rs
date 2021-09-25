@@ -11,7 +11,7 @@ use diem_types::{
 use diemdb::DiemDB;
 use executor_types::ProofReader;
 use rand::Rng;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 use storage_interface::DbReader;
 
 type SparseMerkleTree = scratchpad::SparseMerkleTree<AccountStateBlob>;
@@ -67,7 +67,7 @@ pub fn run_benchmark(num_updates: usize, max_accounts: u64, blob_size: usize, db
             updates.iter().map(|(k, _)| k.hash()),
             account_state_proofs.into_iter(),
         )
-        .collect::<HashMap<_, _>>(),
+        .collect::<BTreeMap<_, _>>(),
     );
     let root = db.get_latest_state_root().unwrap().1;
     let smt = SparseMerkleTree::new(root);

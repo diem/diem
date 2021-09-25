@@ -25,7 +25,7 @@ use move_core_types::account_address::AccountAddress as MoveAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_symbol_pool::Symbol;
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, BTreeMap},
     convert::TryInto,
 };
 
@@ -40,9 +40,9 @@ fn extract_decls(
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: &G::Program,
 ) -> (
-    HashMap<ModuleIdent, usize>,
-    HashMap<(ModuleIdent, StructName), (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>)>,
-    HashMap<
+    BTreeMap<ModuleIdent, usize>,
+    BTreeMap<(ModuleIdent, StructName), (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>)>,
+    BTreeMap<
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
@@ -61,7 +61,7 @@ fn extract_decls(
     };
 
     let mut max_ordering = 0;
-    let mut orderings: HashMap<ModuleIdent, usize> = pre_compiled_modules()
+    let mut orderings: BTreeMap<ModuleIdent, usize> = pre_compiled_modules()
         .map(|(m, mdef)| {
             max_ordering = std::cmp::max(max_ordering, mdef.dependency_order);
             (m, mdef.dependency_order)
@@ -152,12 +152,12 @@ fn module(
     compilation_env: &mut CompilationEnv,
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
-    dependency_orderings: &HashMap<ModuleIdent, usize>,
-    struct_declarations: &HashMap<
+    dependency_orderings: &BTreeMap<ModuleIdent, usize>,
+    struct_declarations: &BTreeMap<
         (ModuleIdent, StructName),
         (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>),
     >,
-    function_declarations: &HashMap<
+    function_declarations: &BTreeMap<
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
@@ -255,12 +255,12 @@ fn script(
     constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
     fdef: G::Function,
-    dependency_orderings: &HashMap<ModuleIdent, usize>,
-    struct_declarations: &HashMap<
+    dependency_orderings: &BTreeMap<ModuleIdent, usize>,
+    struct_declarations: &BTreeMap<
         (ModuleIdent, StructName),
         (BTreeSet<IR::Ability>, Vec<IR::StructTypeParameter>),
     >,
-    function_declarations: &HashMap<
+    function_declarations: &BTreeMap<
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,

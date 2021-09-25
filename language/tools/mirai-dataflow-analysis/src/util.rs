@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     path::{Path, PathBuf},
     process::Output,
 };
 
-pub type TypeMap = HashMap<u32, String>;
-pub type NodeMap = HashMap<u32, String>;
+pub type TypeMap = BTreeMap<u32, String>;
+pub type NodeMap = BTreeMap<u32, String>;
 
 /// Combine stdout and stderr of a child process
 pub fn get_child_output(out: &Output) -> String {

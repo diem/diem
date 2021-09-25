@@ -14,19 +14,19 @@ use move_binary_format::{
     IndexKind,
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, BTreeMap};
 
 struct Context<'a, 'b> {
     resolver: BinaryIndexedView<'a>,
     // (Module -> CompiledModule) for (at least) all immediate dependencies
     dependency_map: BTreeMap<ModuleId, &'b CompiledModule>,
     // (Module::StructName -> handle) for all types of all dependencies
-    struct_id_to_handle_map: HashMap<(ModuleId, Identifier), StructHandleIndex>,
+    struct_id_to_handle_map: BTreeMap<(ModuleId, Identifier), StructHandleIndex>,
     // (Module::FunctionName -> handle) for all functions that can ever be called by this
     // module/script in all dependencies
-    func_id_to_handle_map: HashMap<(ModuleId, Identifier), FunctionHandleIndex>,
+    func_id_to_handle_map: BTreeMap<(ModuleId, Identifier), FunctionHandleIndex>,
     // (handle -> visibility) for all function handles found in the module being checked
-    function_visibilities: HashMap<FunctionHandleIndex, Visibility>,
+    function_visibilities: BTreeMap<FunctionHandleIndex, Visibility>,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
@@ -64,12 +64,12 @@ impl<'a, 'b> Context<'a, 'b> {
         let mut context = Self {
             resolver,
             dependency_map,
-            struct_id_to_handle_map: HashMap::new(),
-            func_id_to_handle_map: HashMap::new(),
-            function_visibilities: HashMap::new(),
+            struct_id_to_handle_map: BTreeMap::new(),
+            func_id_to_handle_map: BTreeMap::new(),
+            function_visibilities: BTreeMap::new(),
         };
 
-        let mut dependency_visibilities = HashMap::new();
+        let mut dependency_visibilities = BTreeMap::new();
         for (module_id, module) in &context.dependency_map {
             let friend_module_ids: BTreeSet<_> = module.immediate_friends().into_iter().collect();
 

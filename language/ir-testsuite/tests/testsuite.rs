@@ -14,10 +14,10 @@ use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 use move_ir_types::ast;
 use move_symbol_pool::Symbol;
-use std::{collections::HashMap, path::Path};
+use std::{collections::BTreeMap, path::Path};
 
 struct IRCompiler {
-    deps: HashMap<ModuleId, CompiledModule>,
+    deps: BTreeMap<ModuleId, CompiledModule>,
 }
 
 impl IRCompiler {

@@ -8,17 +8,17 @@ use crate::{
 use anyhow::{bail, ensure, Result};
 use diem_infallible::RwLock;
 use diem_types::transaction::Version;
-use std::collections::{hash_map::Entry, BTreeSet, HashMap};
+use std::collections::{hash_map::Entry, BTreeSet, BTreeMap};
 
 pub struct MockTreeStore<V> {
-    data: RwLock<(HashMap<NodeKey, Node<V>>, BTreeSet<StaleNodeIndex>)>,
+    data: RwLock<(BTreeMap<NodeKey, Node<V>>, BTreeSet<StaleNodeIndex>)>,
     allow_overwrite: bool,
 }
 
 impl<V> Default for MockTreeStore<V> {
     fn default() -> Self {
         Self {
-            data: RwLock::new((HashMap::new(), BTreeSet::new())),
+            data: RwLock::new((BTreeMap::new(), BTreeSet::new())),
             allow_overwrite: false,
         }
     }

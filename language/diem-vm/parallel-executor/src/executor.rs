@@ -8,7 +8,7 @@ use crate::{
     task::{ExecutionStatus, ExecutorTask, ReadWriteSetInferencer, Transaction, TransactionOutput},
 };
 use anyhow::Result as AResult;
-use mvhashmap::MVHashMap;
+use mvhashmap::MVBTreeMap;
 use num_cpus;
 use rayon::{prelude::*, scope};
 use std::{
@@ -78,7 +78,7 @@ where
             .collect();
 
         let (versioned_data_cache, max_dependency_level) =
-            MVHashMap::new_from_parallel(path_version_tuples);
+            MVBTreeMap::new_from_parallel(path_version_tuples);
         let outcomes = OutcomeArray::new(num_txns);
 
         let scheduler = Arc::new(Scheduler::new(num_txns));

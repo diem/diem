@@ -22,7 +22,7 @@ use diem_types::{
     transaction::SignedTransaction,
 };
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     ops::Bound,
     time::{Duration, SystemTime},
 };
@@ -30,7 +30,7 @@ use std::{
 /// TransactionStore is in-memory storage for all transactions in mempool.
 pub struct TransactionStore {
     // main DS
-    transactions: HashMap<AccountAddress, AccountTransactions>,
+    transactions: BTreeMap<AccountAddress, AccountTransactions>,
 
     // indexes
     priority_index: PriorityIndex,
@@ -53,7 +53,7 @@ impl TransactionStore {
     pub(crate) fn new(config: &MempoolConfig) -> Self {
         Self {
             // main DS
-            transactions: HashMap::new(),
+            transactions: BTreeMap::new(),
 
             // various indexes
             system_ttl_index: TTLIndex::new(Box::new(|t: &MempoolTransaction| t.expiration_time)),

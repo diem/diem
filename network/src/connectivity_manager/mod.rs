@@ -56,7 +56,7 @@ use serde::Serialize;
 use short_hex_str::AsShortHexStr;
 use std::{
     cmp::min,
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, BTreeMap, BTreeSet},
     fmt, mem,
     sync::Arc,
     time::Duration,
@@ -83,7 +83,7 @@ pub struct ConnectivityManager<TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<PeerSet>>,
     /// PeerId and address of remote peers to which this peer is connected.
-    connected: HashMap<PeerId, ConnectionMetadata>,
+    connected: BTreeMap<PeerId, ConnectionMetadata>,
     /// All information about peers from discovery sources.
     discovered_peers: DiscoveredPeerSet,
     /// Channel to send connection requests to PeerManager.
@@ -94,10 +94,10 @@ pub struct ConnectivityManager<TBackoff> {
     requests_rx: channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be canceled by
     /// sending over (or dropping) the associated oneshot sender.
-    dial_queue: HashMap<PeerId, oneshot::Sender<()>>,
+    dial_queue: BTreeMap<PeerId, oneshot::Sender<()>>,
     /// The state of any currently executing dials. Used to keep track of what
     /// the next dial delay and dial address should be for a given peer.
-    dial_states: HashMap<PeerId, DialState<TBackoff>>,
+    dial_states: BTreeMap<PeerId, DialState<TBackoff>>,
     /// Trigger connectivity checks every interval.
     connectivity_check_interval: Duration,
     /// Backoff strategy.
@@ -159,7 +159,7 @@ pub enum ConnectivityRequest {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
-struct DiscoveredPeerSet(HashMap<PeerId, DiscoveredPeer>);
+struct DiscoveredPeerSet(BTreeMap<PeerId, DiscoveredPeer>);
 
 impl DiscoveredPeerSet {
     fn try_remove_empty(&mut self, peer_id: &PeerId) -> bool {
@@ -221,7 +221,7 @@ struct Addresses([Vec<NetworkAddress>; DiscoverySource::NUM_VARIANTS]);
 /// Sets of `x25519::PublicKey`s for a single peer, bucketed by DiscoverySource
 /// in priority order.
 #[derive(Clone, Default, PartialEq, Serialize)]
-struct PublicKeys([HashSet<x25519::PublicKey>; DiscoverySource::NUM_VARIANTS]);
+struct PublicKeys([BTreeSet<x25519::PublicKey>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
 enum DialResult {
@@ -279,13 +279,13 @@ where
             network_context,
             time_service,
             eligible,
-            connected: HashMap::new(),
+            connected: BTreeMap::new(),
             discovered_peers: DiscoveredPeerSet::default(),
             connection_reqs_tx,
             connection_notifs_rx,
             requests_rx,
-            dial_queue: HashMap::new(),
-            dial_states: HashMap::new(),
+            dial_queue: BTreeMap::new(),
+            dial_states: BTreeMap::new(),
             connectivity_check_interval,
             backoff_strategy,
             max_delay,
@@ -883,7 +883,7 @@ impl Addresses {
 
     /// The Union isn't stable, and order is completely disregarded
     fn union(&self) -> Vec<NetworkAddress> {
-        let set: HashSet<_> = self.0.iter().flatten().cloned().collect();
+        let set: BTreeSet<_> = self.0.iter().flatten().cloned().collect();
         set.into_iter().collect()
     }
 }
@@ -908,14 +908,14 @@ impl fmt::Debug for Addresses {
 
 impl PublicKeys {
     fn len(&self) -> usize {
-        self.0.iter().map(HashSet::len).sum()
+        self.0.iter().map(BTreeSet::len).sum()
     }
 
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    fn update(&mut self, src: DiscoverySource, pubkeys: HashSet<x25519::PublicKey>) -> bool {
+    fn update(&mut self, src: DiscoverySource, pubkeys: BTreeSet<x25519::PublicKey>) -> bool {
         let src_idx = src.as_usize();
         if self.0[src_idx] != pubkeys {
             self.0[src_idx] = pubkeys;
@@ -926,10 +926,10 @@ impl PublicKeys {
     }
 
     fn clear_src(&mut self, src: DiscoverySource) -> bool {
-        self.update(src, HashSet::new())
+        self.update(src, BTreeSet::new())
     }
 
-    fn union(&self) -> HashSet<x25519::PublicKey> {
+    fn union(&self) -> BTreeSet<x25519::PublicKey> {
         self.0.iter().flatten().copied().collect()
     }
 }

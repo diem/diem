@@ -16,7 +16,7 @@ use diem_logger::info;
 use futures::future::try_join_all;
 use rand::Rng;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt,
     time::{Duration, Instant},
 };
@@ -59,7 +59,7 @@ impl ExperimentParam for TwinValidatorsParams {
 
 #[async_trait]
 impl Experiment for TwinValidators {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.twin_validators)
     }
 

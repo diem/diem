@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fmt::Display,
     fs::{create_dir_all, read_to_string},
     io::Write,
@@ -181,7 +181,7 @@ pub fn handle_package_commands(
             config.dev_mode = true;
 
             let resolution_graph = config.resolution_graph_for_package(&path)?;
-            let dep_file_map: HashMap<_, _> = resolution_graph
+            let dep_file_map: BTreeMap<_, _> = resolution_graph
                 .package_table
                 .iter()
                 .flat_map(|(_, rpkg)| {
@@ -189,7 +189,7 @@ pub fn handle_package_commands(
                         .unwrap()
                         .iter()
                         .map(|fname| (*fname, read_to_string(Path::new(fname.as_str())).unwrap()))
-                        .collect::<HashMap<_, _>>()
+                        .collect::<BTreeMap<_, _>>()
                 })
                 .collect();
             let build_plan = BuildPlan::create(resolution_graph)?;

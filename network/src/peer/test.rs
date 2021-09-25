@@ -36,7 +36,7 @@ use futures::{
 };
 use memsocket::MemorySocket;
 use netcore::transport::ConnectionOrigin;
-use std::{collections::HashSet, str::FromStr, time::Duration};
+use std::{collections::BTreeSet, str::FromStr, time::Duration};
 use tokio::runtime::{Handle, Runtime};
 use tokio_util::compat::{
     FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt,
@@ -587,7 +587,7 @@ fn peer_send_rpc() {
     let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
     let timeout = Duration::from_millis(10_000);
 
-    let mut request_ids = HashSet::new();
+    let mut request_ids = BTreeSet::new();
 
     let client = async move {
         for _ in 0..30 {
@@ -646,7 +646,7 @@ fn peer_send_rpc_concurrent() {
     let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
     let timeout = Duration::from_millis(10_000);
 
-    let mut request_ids = HashSet::new();
+    let mut request_ids = BTreeSet::new();
 
     let client = async move {
         // Send a batch of RpcRequest to server and await response data.

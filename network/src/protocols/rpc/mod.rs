@@ -72,7 +72,7 @@ use futures::{
 };
 use serde::Serialize;
 use short_hex_str::AsShortHexStr;
-use std::{cmp::PartialEq, collections::HashMap, fmt::Debug, time::Duration};
+use std::{cmp::PartialEq, collections::BTreeMap, fmt::Debug, time::Duration};
 
 pub mod error;
 
@@ -350,7 +350,7 @@ pub struct OutboundRpcs {
     /// Maps a `RequestId` into a handle to a task in the `outbound_rpc_tasks`
     /// completion queue. When a new `RpcResponse` message comes in, we will use
     /// this map to notify the corresponding task that its response has arrived.
-    pending_outbound_rpcs: HashMap<RequestId, oneshot::Sender<RpcResponse>>,
+    pending_outbound_rpcs: BTreeMap<RequestId, oneshot::Sender<RpcResponse>>,
     /// Only allow this many concurrent outbound rpcs at one time from this remote
     /// peer. New outbound requests exceeding this limit will be dropped.
     max_concurrent_outbound_rpcs: u32,
@@ -369,7 +369,7 @@ impl OutboundRpcs {
             remote_peer_id,
             request_id_gen: RequestIdGenerator::new(),
             outbound_rpc_tasks: FuturesUnordered::new(),
-            pending_outbound_rpcs: HashMap::new(),
+            pending_outbound_rpcs: BTreeMap::new(),
             max_concurrent_outbound_rpcs,
         }
     }

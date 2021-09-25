@@ -23,7 +23,7 @@ use diem_types::{
 };
 use std::{
     cmp::max,
-    collections::HashSet,
+    collections::BTreeSet,
     time::{Duration, SystemTime},
 };
 
@@ -182,7 +182,7 @@ impl Mempool {
     pub(crate) fn get_block(
         &mut self,
         batch_size: u64,
-        mut seen: HashSet<TxnPointer>,
+        mut seen: BTreeSet<TxnPointer>,
     ) -> Vec<SignedTransaction> {
         let mut result = vec![];
         // Helper DS. Helps to mitigate scenarios where account submits several transactions
@@ -191,7 +191,7 @@ impl Mempool {
         // Later txn has higher gas price and will be observed first in priority index iterator,
         // but can't be executed before first txn. Once observed, such txn will be saved in
         // `skipped` DS and rechecked once it's ancestor becomes available
-        let mut skipped = HashSet::new();
+        let mut skipped = BTreeSet::new();
         let seen_size = seen.len();
         let mut txn_walked = 0usize;
         // iterate over the queue of transactions based on gas price

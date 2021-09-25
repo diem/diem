@@ -19,7 +19,7 @@ use diem_sdk::{transaction_builder::TransactionFactory, types::LocalAccount};
 use diem_transaction_builder::stdlib::encode_update_diem_version_script;
 use diem_types::{chain_id::ChainId, transaction::TransactionPayload};
 use language_e2e_tests::common_transactions::multi_agent_p2p_script_function;
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{collections::BTreeSet, fmt, time::Duration};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -76,7 +76,7 @@ impl ExperimentParam for ValidatorVersioningParams {
 
 #[async_trait]
 impl Experiment for ValidatorVersioning {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.first_batch)
             .union(&instance::instancelist_to_set(&self.second_batch))
             .cloned()

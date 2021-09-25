@@ -14,7 +14,7 @@ use diem_types::{
 };
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (
@@ -163,11 +163,11 @@ pub(crate) fn batch_add_signed_txn(
 }
 
 // Helper struct that keeps state between `.get_block` calls. Imitates work of Consensus.
-pub struct ConsensusMock(HashSet<TxnPointer>);
+pub struct ConsensusMock(BTreeSet<TxnPointer>);
 
 impl ConsensusMock {
     pub(crate) fn new() -> Self {
-        Self(HashSet::new())
+        Self(BTreeSet::new())
     }
 
     pub(crate) fn get_block(

@@ -24,7 +24,7 @@ use netcore::{
     transport::{memory, ConnectionOrigin, Transport},
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashMap, io, sync::Arc};
+use std::{collections::BTreeMap, io, sync::Arc};
 use tokio::runtime::Runtime;
 
 /// helper to build trusted peer map
@@ -131,7 +131,7 @@ where
                 );
                 let dialer_peer_id =
                     diem_types::account_address::from_identity_public_key(dialer_key.public_key());
-                let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+                let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
 
                 (
                     listener_peer_id,

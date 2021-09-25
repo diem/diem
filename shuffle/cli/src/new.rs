@@ -14,7 +14,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     fs,
     path::{Path, PathBuf},
 };
@@ -57,7 +57,7 @@ pub struct Config {
 }
 
 // Fetches the named addresses for a particular project or genesis.
-// Uses a BTreeMap over HashMap because upstream AddressBytes does as well,
+// Uses a BTreeMap over BTreeMap because upstream AddressBytes does as well,
 // probably because order matters.
 fn fetch_named_addresses(state: &OnDiskStateView) -> Result<BTreeMap<String, AccountAddress>> {
     let address_bytes_map = state.get_named_addresses(BTreeMap::new())?;
@@ -86,7 +86,7 @@ fn write_project_config(path: &Path, config: &Config) -> Result<()> {
 // crate sibling path. ie: shuffle/cli/../../$key
 macro_rules! include_files(
     ($($key:expr),+) => {{
-        let mut m = HashMap::new();
+        let mut m = BTreeMap::new();
         $(
             m.insert($key, include_bytes!(concat!("../../", $key)).as_ref());
         )+
@@ -96,7 +96,7 @@ macro_rules! include_files(
 
 /// Embeds .move files used to generate the starter template into the binary
 /// at compilation time, for reference during project generation.
-static EMBEDDED_MOVE_STARTER_FILES: Lazy<HashMap<&str, &[u8]>> = Lazy::new(|| {
+static EMBEDDED_MOVE_STARTER_FILES: Lazy<BTreeMap<&str, &[u8]>> = Lazy::new(|| {
     include_files! {
         "move/src/modules/SampleModule.move"
     }

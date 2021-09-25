@@ -45,7 +45,7 @@ use network::{
 use network_discovery::DiscoveryChangeListener;
 use std::{
     clone::Clone,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
 use tokio::runtime::Handle;
@@ -186,7 +186,7 @@ impl NetworkBuilder {
 
         let network_context = NetworkContext::new(role, config.network_id, peer_id);
 
-        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+        let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
 
         let mut network_builder = NetworkBuilder::new(
             chain_id,
@@ -247,7 +247,7 @@ impl NetworkBuilder {
         }
 
         // Ensure there are no duplicate source types
-        let set: HashSet<_> = network_builder
+        let set: BTreeSet<_> = network_builder
             .discovery_listeners
             .as_ref()
             .unwrap()

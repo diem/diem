@@ -8,7 +8,7 @@ use crate::{
 use diem_crypto::hash::{
     CryptoHash, HashValue, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
 };
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::BTreeMap};
 
 type Children = (HashValue, Option<HashValue>);
 
@@ -27,9 +27,9 @@ pub struct MockTransactionAccumulator {
     /// The list of leaf nodes.
     leaves: Vec<HashValue>,
     /// Cache that maps child nodes to their parent node.
-    c2p: RefCell<HashMap<Children, HashValue>>,
+    c2p: RefCell<BTreeMap<Children, HashValue>>,
     /// Cache that maps from a parent node to its child nodes.
-    p2c: RefCell<HashMap<HashValue, Children>>,
+    p2c: RefCell<BTreeMap<HashValue, Children>>,
 }
 
 impl MockTransactionAccumulator {
@@ -38,8 +38,8 @@ impl MockTransactionAccumulator {
         assert!(!leaves.is_empty());
         Self {
             leaves,
-            c2p: RefCell::new(HashMap::new()),
-            p2c: RefCell::new(HashMap::new()),
+            c2p: RefCell::new(BTreeMap::new()),
+            p2c: RefCell::new(BTreeMap::new()),
         }
     }
 

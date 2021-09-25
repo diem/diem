@@ -18,12 +18,12 @@ use move_binary_format::{
     },
     IndexKind,
 };
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub struct CodeUnitVerifier<'a> {
     resolver: BinaryIndexedView<'a>,
     function_view: FunctionView<'a>,
-    name_def_map: HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+    name_def_map: BTreeMap<IdentifierIndex, FunctionDefinitionIndex>,
 }
 
 impl<'a> CodeUnitVerifier<'a> {
@@ -52,7 +52,7 @@ impl<'a> CodeUnitVerifier<'a> {
         let code_unit_verifier = CodeUnitVerifier {
             resolver,
             function_view,
-            name_def_map: HashMap::new(),
+            name_def_map: BTreeMap::new(),
         };
         code_unit_verifier.verify_common()
     }
@@ -71,7 +71,7 @@ impl<'a> CodeUnitVerifier<'a> {
         let function_handle = module.function_handle_at(function_definition.function);
         let function_view = FunctionView::function(module, index, code, function_handle);
         let resolver = BinaryIndexedView::Module(module);
-        let mut name_def_map = HashMap::new();
+        let mut name_def_map = BTreeMap::new();
         for (idx, func_def) in module.function_defs().iter().enumerate() {
             let fh = module.function_handle_at(func_def.function);
             name_def_map.insert(fh.name, FunctionDefinitionIndex(idx as u16));

@@ -15,7 +15,7 @@ use move_vm_types::{
     natives::function::NativeResult, values::Value,
 };
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{BTreeMap, VecDeque},
     fmt::Write,
 };
 
@@ -25,7 +25,7 @@ pub type NativeFunction =
 pub type NativeFunctionTable = Vec<(AccountAddress, Identifier, Identifier, NativeFunction)>;
 
 pub(crate) struct NativeFunctions(
-    HashMap<AccountAddress, HashMap<String, HashMap<String, NativeFunction>>>,
+    BTreeMap<AccountAddress, BTreeMap<String, BTreeMap<String, NativeFunction>>>,
 );
 
 impl NativeFunctions {
@@ -42,12 +42,12 @@ impl NativeFunctions {
     where
         I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
     {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         for (addr, module_name, func_name, func) in natives.into_iter() {
-            let modules = map.entry(addr).or_insert_with(HashMap::new);
+            let modules = map.entry(addr).or_insert_with(BTreeMap::new);
             let funcs = modules
                 .entry(module_name.into_string())
-                .or_insert_with(HashMap::new);
+                .or_insert_with(BTreeMap::new);
 
             if funcs.insert(func_name.into_string(), func).is_some() {
                 return Err(PartialVMError::new(StatusCode::DUPLICATE_NATIVE_FUNCTION));

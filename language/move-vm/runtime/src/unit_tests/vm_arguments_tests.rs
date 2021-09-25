@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::move_vm::MoveVM;
 use move_binary_format::{
@@ -217,13 +217,13 @@ fn make_script_function(signature: Signature) -> (CompiledModule, Identifier) {
 }
 
 struct RemoteStore {
-    modules: HashMap<ModuleId, Vec<u8>>,
+    modules: BTreeMap<ModuleId, Vec<u8>>,
 }
 
 impl RemoteStore {
     fn new() -> Self {
         Self {
-            modules: HashMap::new(),
+            modules: BTreeMap::new(),
         }
     }
 

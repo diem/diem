@@ -4,7 +4,7 @@
 use mirai_annotations::unrecoverable;
 use regex::Regex;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -95,7 +95,7 @@ fn parse_type_map(type_map_path: &Path) -> Result<TypeMap, String> {
     fs::read_to_string(type_map_path)
         .map_err(|msg| format!("Failed to parse type map: {}", msg))
         .and_then(|out| {
-            serde_json::from_str::<HashMap<u32, String>>(&out)
+            serde_json::from_str::<BTreeMap<u32, String>>(&out)
                 .map_err(|msg| format!("Failed to parse type map: {}", msg))
         })
 }
@@ -105,7 +105,7 @@ fn parse_dot_graph(graph_path: &Path) -> Result<NodeMap, String> {
     fs::read_to_string(graph_path)
         .map_err(|msg| format!("Failed to parse graph: {}", msg))
         .map(|out| {
-            let mut node_map = HashMap::<u32, String>::new();
+            let mut node_map = BTreeMap::<u32, String>::new();
             let lines = out.split('\n').collect::<Vec<&str>>();
             for line in lines.iter() {
                 if line.contains("label = ") {

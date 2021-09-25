@@ -12,7 +12,7 @@ use diem_types::{account_address::AccountAddress, transaction::GovernanceRole};
 use rand::seq::SliceRandom;
 use std::{
     cmp::Ordering,
-    collections::{btree_set::Iter, BTreeMap, BTreeSet, HashMap},
+    collections::{btree_set::Iter, BTreeMap, BTreeSet, BTreeMap},
     iter::Rev,
     ops::Bound,
     time::Duration,
@@ -276,7 +276,7 @@ pub struct ParkingLotIndex {
     // 1. for each entry (account, txns) in `data`, `txns` is never empty
     // 2. for all accounts, data.get(account_indices.get(`account`)) == (account, sequence numbers of account's txns)
     data: Vec<(AccountAddress, BTreeSet<u64>)>,
-    account_indices: HashMap<AccountAddress, usize>,
+    account_indices: BTreeMap<AccountAddress, usize>,
     size: usize,
 }
 
@@ -284,7 +284,7 @@ impl ParkingLotIndex {
     pub(crate) fn new() -> Self {
         Self {
             data: vec![],
-            account_indices: HashMap::new(),
+            account_indices: BTreeMap::new(),
             size: 0,
         }
     }

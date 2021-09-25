@@ -12,7 +12,7 @@ use move_command_line_common::{
 use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
 use move_lang::command_line::COLOR_MODE_ENV_VAR;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeMap, BTreeSet},
     env,
     fs::{self, File},
     io::{self, BufRead, Write},
@@ -62,7 +62,7 @@ fn collect_coverage(
     }
 
     // collect modules compiled for packages (to be filtered out)
-    let pkg_modules: HashSet<_> =
+    let pkg_modules: BTreeSet<_> =
         find_compiled_move_filenames(&build_dir.join(DEFAULT_PACKAGE_DIR))?
             .into_iter()
             .map(|entry| PathBuf::from(entry).file_name().unwrap().to_owned())
@@ -84,7 +84,7 @@ fn collect_coverage(
             let module_absolute_path = path_to_string(&PathBuf::from(entry).canonicalize()?)?;
             Ok((module_absolute_path, compiled_module))
         })
-        .collect::<anyhow::Result<HashMap<_, _>>>()?;
+        .collect::<anyhow::Result<BTreeMap<_, _>>>()?;
 
     // build the filter
     let mut filter = BTreeMap::new();

@@ -20,7 +20,7 @@ use comments::*;
 use move_command_line_common::files::find_move_filenames;
 use move_symbol_pool::Symbol;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, BTreeMap},
     fs::File,
     io::Read,
 };
@@ -42,7 +42,7 @@ pub(crate) fn parse_program(
         .map(Symbol::from)
         .collect::<Vec<Symbol>>();
     ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
-    let mut files: FilesSourceText = HashMap::new();
+    let mut files: FilesSourceText = BTreeMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
     let mut lib_definitions = Vec::new();

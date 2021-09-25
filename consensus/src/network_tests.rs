@@ -32,7 +32,7 @@ use network::{
     ProtocolId,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     sync::Arc,
     time::Duration,
 };
@@ -62,7 +62,7 @@ pub struct NetworkPlayground {
     /// `ConsensusNetworkImpl`.
     ///
     node_consensus_txs: Arc<
-        Mutex<HashMap<TwinId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>>,
+        Mutex<BTreeMap<TwinId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>>,
     >,
     /// Nodes' outbound handlers forward their outbound non-rpc messages to this
     /// queue.
@@ -79,7 +79,7 @@ pub struct NetworkPlayground {
     /// An author may have multiple twin IDs for Twins
     author_to_twin_ids: Arc<RwLock<AuthorToTwinIds>>,
     /// Supported protocols for peers.
-    shared_connections: Arc<RwLock<HashMap<PeerId, SupportedProtocols>>>,
+    shared_connections: Arc<RwLock<BTreeMap<PeerId, SupportedProtocols>>>,
 }
 
 impl NetworkPlayground {
@@ -87,19 +87,19 @@ impl NetworkPlayground {
         let (outbound_msgs_tx, outbound_msgs_rx) = mpsc::channel(1_024);
 
         NetworkPlayground {
-            node_consensus_txs: Arc::new(Mutex::new(HashMap::new())),
+            node_consensus_txs: Arc::new(Mutex::new(BTreeMap::new())),
             outbound_msgs_tx,
             outbound_msgs_rx,
             drop_config: Arc::new(RwLock::new(DropConfig::default())),
             drop_config_round: DropConfigRound::default(),
             executor,
             author_to_twin_ids: Arc::new(RwLock::new(AuthorToTwinIds::default())),
-            shared_connections: Arc::new(RwLock::new(HashMap::new())),
+            shared_connections: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
-    /// HashMap of supported protocols to initialize ConsensusNetworkSender.
-    pub fn peer_protocols(&self) -> Arc<RwLock<HashMap<PeerId, SupportedProtocols>>> {
+    /// BTreeMap of supported protocols to initialize ConsensusNetworkSender.
+    pub fn peer_protocols(&self) -> Arc<RwLock<BTreeMap<PeerId, SupportedProtocols>>> {
         self.shared_connections.clone()
     }
 
@@ -118,7 +118,7 @@ impl NetworkPlayground {
         mut outbound_msgs_tx: mpsc::Sender<(TwinId, PeerManagerRequest)>,
         node_consensus_txs: Arc<
             Mutex<
-                HashMap<
+                BTreeMap<
                     TwinId,
                     diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
                 >,
@@ -351,7 +351,7 @@ impl NetworkPlayground {
     /// Creates the given per round network partitions
     pub fn split_network_round(
         &mut self,
-        round_partitions: &HashMap<u64, Vec<Vec<TwinId>>>,
+        round_partitions: &BTreeMap<u64, Vec<Vec<TwinId>>>,
     ) -> bool {
         let mut ret = true;
 
@@ -400,7 +400,7 @@ impl NetworkPlayground {
 }
 
 #[derive(Default)]
-struct AuthorToTwinIds(HashMap<Author, Vec<TwinId>>);
+struct AuthorToTwinIds(BTreeMap<Author, Vec<TwinId>>);
 
 impl AuthorToTwinIds {
     pub fn extend_author_to_twin_ids(&mut self, author: Author, twin_id: TwinId) {
@@ -415,7 +415,7 @@ impl AuthorToTwinIds {
 }
 
 #[derive(Default)]
-struct DropConfig(HashMap<TwinId, HashSet<TwinId>>);
+struct DropConfig(BTreeMap<TwinId, BTreeSet<TwinId>>);
 
 impl DropConfig {
     pub fn is_message_dropped(&self, src: &TwinId, dst: &TwinId) -> bool {
@@ -423,7 +423,7 @@ impl DropConfig {
     }
 
     pub fn drop_message_for(&mut self, src: &TwinId, dst: &TwinId) -> bool {
-        self.0.entry(*src).or_insert_with(HashSet::new).insert(*dst)
+        self.0.entry(*src).or_insert_with(BTreeSet::new).insert(*dst)
     }
 
     pub fn split_network(
@@ -442,13 +442,13 @@ impl DropConfig {
     }
 
     fn add_node(&mut self, src: TwinId) {
-        self.0.insert(src, HashSet::new());
+        self.0.insert(src, BTreeSet::new());
     }
 }
 
 /// Table of per round message dropping rules
 #[derive(Default)]
-struct DropConfigRound(HashMap<u64, DropConfig>);
+struct DropConfigRound(BTreeMap<u64, DropConfig>);
 
 impl DropConfigRound {
     /// Check if the message from 'src' to 'dst' should be dropped in the given round
@@ -500,7 +500,7 @@ mod tests {
         }
 
         // Create per round partitions
-        let mut round_partitions: HashMap<u64, Vec<Vec<TwinId>>> = HashMap::new();
+        let mut round_partitions: BTreeMap<u64, Vec<Vec<TwinId>>> = BTreeMap::new();
         // Round 1 partitions: [0], [1,2]
         round_partitions.insert(1, vec![vec![nodes[0]], vec![nodes[1], nodes[2]]]);
         // Round 2 partitions: [1], [2], [3,4]
@@ -540,7 +540,7 @@ mod tests {
         let mut nodes = Vec::new();
         let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-        let shared_connections = Arc::new(RwLock::new(HashMap::new()));
+        let shared_connections = Arc::new(RwLock::new(BTreeMap::new()));
 
         for (peer_id, peer) in peers.iter().enumerate() {
             let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
@@ -639,7 +639,7 @@ mod tests {
         let mut nodes = Vec::new();
         let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-        let shared_connections = Arc::new(RwLock::new(HashMap::new()));
+        let shared_connections = Arc::new(RwLock::new(BTreeMap::new()));
 
         for (peer_id, peer) in peers.iter().enumerate() {
             let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
@@ -741,7 +741,7 @@ mod tests {
         let consensus_network_events =
             ConsensusNetworkEvents::new(peer_mgr_notifs_rx, connection_notifs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
-        let shared_connections = Arc::new(RwLock::new(HashMap::new()));
+        let shared_connections = Arc::new(RwLock::new(BTreeMap::new()));
 
         let (network_task, mut network_receivers) =
             NetworkTask::new(consensus_network_events, self_receiver, shared_connections);

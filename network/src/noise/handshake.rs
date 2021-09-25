@@ -22,7 +22,7 @@ use diem_types::PeerId;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use netcore::transport::ConnectionOrigin;
 use short_hex_str::{AsShortHexStr, ShortHexStr};
-use std::{collections::HashMap, convert::TryFrom as _, fmt::Debug, sync::Arc};
+use std::{collections::BTreeMap, convert::TryFrom as _, fmt::Debug, sync::Arc};
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.
 /// This is in order to prevent replay attacks, where the attacker does not know the client's static key,
@@ -35,7 +35,7 @@ use std::{collections::HashMap, convert::TryFrom as _, fmt::Debug, sync::Arc};
 /// we can abort the handshake early and avoid heavy Diffie-Hellman computations.
 /// If the client timestamp is valid, we store it.
 #[derive(Default)]
-pub struct AntiReplayTimestamps(HashMap<x25519::PublicKey, u64>);
+pub struct AntiReplayTimestamps(BTreeMap<x25519::PublicKey, u64>);
 
 impl AntiReplayTimestamps {
     /// The timestamp is sent as a payload, so that it is encrypted.
@@ -108,7 +108,7 @@ impl HandshakeAuthMode {
     }
 
     pub fn server_only() -> Self {
-        HandshakeAuthMode::maybe_mutual(Arc::new(RwLock::new(HashMap::default())))
+        HandshakeAuthMode::maybe_mutual(Arc::new(RwLock::new(BTreeMap::default())))
     }
 
     fn anti_replay_timestamps(&self) -> Option<&RwLock<AntiReplayTimestamps>> {
@@ -676,7 +676,7 @@ mod test {
         let client = NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(client_peer_id),
             client_private_key,
-            HandshakeAuthMode::mutual(Arc::new(RwLock::new(HashMap::new()))),
+            HandshakeAuthMode::mutual(Arc::new(RwLock::new(BTreeMap::new()))),
         );
 
         let (_, (server, server_public_key)) = build_peers(true /* is_mutual_auth */);

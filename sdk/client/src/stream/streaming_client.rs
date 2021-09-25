@@ -12,7 +12,7 @@ use diem_json_rpc_types::{
 use diem_types::event::EventKey;
 use futures::Stream;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
@@ -107,7 +107,7 @@ impl Default for StreamingClientConfig {
 #[derive(Clone)]
 pub struct StreamingClient {
     client: Arc<RwLock<WebsocketTransport>>,
-    subscriptions: Arc<RwLock<HashMap<Id, SubscriptionSender>>>,
+    subscriptions: Arc<RwLock<BTreeMap<Id, SubscriptionSender>>>,
     stream: Arc<RwLock<StreamingClientReceiver>>,
     config: Arc<StreamingClientConfig>,
 }
@@ -119,7 +119,7 @@ impl StreamingClient {
         websocket_config: Option<WebSocketConfig>,
     ) -> StreamResult<Self> {
         let client = WebsocketTransport::new(url, websocket_config).await?;
-        let subscriptions = Arc::new(RwLock::new(HashMap::new()));
+        let subscriptions = Arc::new(RwLock::new(BTreeMap::new()));
 
         let (stream, client) = client.get_stream();
 

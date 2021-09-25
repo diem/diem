@@ -22,7 +22,7 @@ use futures::{
     future::Future,
     task::{Context, Poll},
 };
-use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
+use std::{collections::BTreeMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::TransactionValidation;
@@ -35,7 +35,7 @@ where
 {
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub config: MempoolConfig,
-    pub network_senders: HashMap<NetworkId, MempoolNetworkSender>,
+    pub network_senders: BTreeMap<NetworkId, MempoolNetworkSender>,
     pub db: Arc<dyn DbReader<DpnProto>>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,

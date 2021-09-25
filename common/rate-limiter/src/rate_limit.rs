@@ -4,7 +4,7 @@
 use diem_infallible::{Mutex, RwLock};
 use diem_logger::debug;
 use diem_metrics::HistogramVec;
-use std::{cmp::min, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};
+use std::{cmp::min, collections::BTreeMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};
 use tokio::time::Duration;
 
 pub type SharedBucket = Arc<Mutex<Bucket>>;
@@ -54,7 +54,7 @@ const ONE_SEC: Duration = Duration::from_secs(1);
 pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
     label: &'static str,
     log_info: String,
-    buckets: RwLock<HashMap<Key, SharedBucket>>,
+    buckets: RwLock<BTreeMap<Key, SharedBucket>>,
     new_bucket_start_percentage: u8,
     default_bucket_size: usize,
     default_fill_rate: usize,
@@ -79,7 +79,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         Self {
             label,
             log_info,
-            buckets: RwLock::new(HashMap::new()),
+            buckets: RwLock::new(BTreeMap::new()),
             new_bucket_start_percentage,
             default_bucket_size,
             default_fill_rate,
@@ -104,7 +104,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         Self {
             label,
             log_info: String::new(),
-            buckets: RwLock::new(HashMap::new()),
+            buckets: RwLock::new(BTreeMap::new()),
             new_bucket_start_percentage: 100,
             default_bucket_size: std::usize::MAX,
             default_fill_rate: std::usize::MAX,

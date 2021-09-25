@@ -17,7 +17,7 @@ use diem_types::{
 use parking_lot::RwLock;
 use scratchpad::{AccountStatus, SparseMerkleTree};
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, BTreeMap},
     convert::TryInto,
     sync::Arc,
 };
@@ -77,8 +77,8 @@ pub struct VerifiedStateView<'a, PS: ProtocolSpec> {
     ///        | +------------------------------+ +--------------------+ |
     ///        +---------------------------------------------------------+
     /// ```
-    account_to_state_cache: RwLock<HashMap<AccountAddress, AccountState>>,
-    account_to_proof_cache: RwLock<HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>>,
+    account_to_state_cache: RwLock<BTreeMap<AccountAddress, AccountState>>,
+    account_to_proof_cache: RwLock<BTreeMap<HashValue, SparseMerkleProof<AccountStateBlob>>>,
 }
 
 impl<'a, PS: ProtocolSpec> VerifiedStateView<'a, PS> {
@@ -107,16 +107,16 @@ impl<'a, PS: ProtocolSpec> VerifiedStateView<'a, PS> {
             latest_persistent_version,
             latest_persistent_state_root,
             speculative_state,
-            account_to_state_cache: RwLock::new(HashMap::new()),
-            account_to_proof_cache: RwLock::new(HashMap::new()),
+            account_to_state_cache: RwLock::new(BTreeMap::new()),
+            account_to_proof_cache: RwLock::new(BTreeMap::new()),
         }
     }
 }
 
 impl<'a, PS: ProtocolSpec> From<VerifiedStateView<'a, PS>>
     for (
-        HashMap<AccountAddress, AccountState>,
-        HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
+        BTreeMap<AccountAddress, AccountState>,
+        BTreeMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
     )
 {
     fn from(view: VerifiedStateView<'a, PS>) -> Self {

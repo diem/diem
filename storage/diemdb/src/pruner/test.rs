@@ -6,7 +6,7 @@ use crate::{change_set::ChangeSet, state_store::StateStore, DiemDB};
 use diem_crypto::HashValue;
 use diem_temppath::TempPath;
 use diem_types::{account_address::AccountAddress, account_state_blob::AccountStateBlob};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 fn put_account_state_set(
     db: &DB,
@@ -17,7 +17,7 @@ fn put_account_state_set(
     let mut cs = ChangeSet::new();
     let root = state_store
         .put_account_state_sets(
-            vec![account_state_set.into_iter().collect::<HashMap<_, _>>()],
+            vec![account_state_set.into_iter().collect::<BTreeMap<_, _>>()],
             None,
             version,
             &mut cs,

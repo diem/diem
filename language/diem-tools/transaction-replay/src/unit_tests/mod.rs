@@ -14,11 +14,11 @@ use diem_types::{
     transaction::{Transaction, Version, WriteSetPayload},
     write_set::WriteOp,
 };
-use std::{collections::HashMap, convert::TryFrom};
+use std::{collections::BTreeMap, convert::TryFrom};
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
 pub struct TestInterface {
-    state_db: HashMap<(Version, AccountAddress), AccountStateBlob>,
+    state_db: BTreeMap<(Version, AccountAddress), AccountStateBlob>,
     transaction_store: Vec<Transaction>,
     latest_version: u64,
 }
@@ -26,7 +26,7 @@ pub struct TestInterface {
 impl TestInterface {
     #[allow(dead_code)]
     pub fn new(
-        state_db: HashMap<(Version, AccountAddress), AccountStateBlob>,
+        state_db: BTreeMap<(Version, AccountAddress), AccountStateBlob>,
         transaction_store: Vec<Transaction>,
         latest_version: u64,
     ) -> Self {
@@ -39,7 +39,7 @@ impl TestInterface {
 
     pub fn empty(version: u64) -> Self {
         Self {
-            state_db: HashMap::new(),
+            state_db: BTreeMap::new(),
             transaction_store: vec![],
             latest_version: version,
         }
@@ -47,7 +47,7 @@ impl TestInterface {
 
     pub fn genesis() -> Self {
         let changeset = generate_genesis_change_set_for_testing(GenesisOptions::Compiled);
-        let mut state_db = HashMap::new();
+        let mut state_db = BTreeMap::new();
         for (ap, op) in changeset.write_set().iter() {
             match op {
                 WriteOp::Value(v) => state_db

@@ -6,7 +6,7 @@
 use diem_swarm::faucet;
 use diem_types::chain_id::ChainId;
 use forge::{LocalSwarm, LocalVersion, Swarm, Version};
-use std::{collections::HashMap, fs::File, io::Write, num::NonZeroUsize, path::Path, sync::Arc};
+use std::{collections::BTreeMap, fs::File, io::Write, num::NonZeroUsize, path::Path, sync::Arc};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -41,7 +41,7 @@ fn main() {
 
     diem_logger::Logger::new().init();
 
-    let mut versions = HashMap::new();
+    let mut versions = BTreeMap::new();
     let version = LocalVersion::new(
         "unknown".into(),
         args.diem_node.into(),

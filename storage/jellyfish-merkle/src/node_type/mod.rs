@@ -32,7 +32,7 @@ use proptest::{collection::hash_map, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::hash_map::HashMap,
+    collections::hash_map::BTreeMap,
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
 };
@@ -162,7 +162,7 @@ impl Child {
 
 /// [`Children`] is just a collection of children belonging to a [`InternalNode`], indexed from 0 to
 /// 15, inclusive.
-pub(crate) type Children = HashMap<Nibble, Child>;
+pub(crate) type Children = BTreeMap<Nibble, Child>;
 
 /// Represents a 4-level subtree with 16 children at the bottom level. Theoretically, this reduces
 /// IOPS to query a tree by 4x since we compress 4 levels in a standard Merkle tree into 1 node.
@@ -299,7 +299,7 @@ impl InternalNode {
         }
 
         // Reconstruct children
-        let mut children = HashMap::new();
+        let mut children = BTreeMap::new();
         for _ in 0..existence_bitmap.count_ones() {
             let next_child = existence_bitmap.trailing_zeros() as u8;
             let version = deserialize_u64_varint(&mut reader)?;

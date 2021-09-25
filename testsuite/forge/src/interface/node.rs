@@ -10,7 +10,7 @@ use diem_sdk::{
     types::PeerId,
 };
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     thread,
     time::{Duration, Instant},
 };
@@ -149,7 +149,7 @@ pub trait NodeExt: Node {
     fn get_metric_with_fields(
         &self,
         metric_name: &str,
-        fields: HashMap<String, String>,
+        fields: BTreeMap<String, String>,
     ) -> Result<Option<i64>> {
         let filtered: Vec<_> = self
             .debug_client()
@@ -180,7 +180,7 @@ pub trait NodeExt: Node {
         network_id: NetworkId,
         direction: Option<&str>,
     ) -> Result<Option<i64>> {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         map.insert("network_id".to_string(), network_id.to_string());
         if let Some(direction) = direction {
             map.insert("direction".to_string(), direction.to_string());

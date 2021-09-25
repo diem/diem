@@ -13,7 +13,7 @@ use proptest::{
     prelude::*,
     strategy::{Just, Strategy},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use storage_interface::mock::MockDbReaderWriter;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
@@ -38,7 +38,7 @@ pub fn test_mempool_process_incoming_transactions_impl(
     let smp = SharedMempool {
         mempool: Arc::new(Mutex::new(CoreMempool::new(&config))),
         config: config.mempool.clone(),
-        network_senders: HashMap::new(),
+        network_senders: BTreeMap::new(),
         db: Arc::new(mock_db),
         validator: vm_validator,
         peer_manager: Arc::new(PeerManager::new(config.base.role, config.mempool)),

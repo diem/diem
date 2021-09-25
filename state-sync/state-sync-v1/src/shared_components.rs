@@ -106,7 +106,7 @@ pub(crate) mod test_utils {
         peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
         protocols::network::NewNetworkSender,
     };
-    use std::{collections::HashMap, sync::Arc};
+    use std::{collections::BTreeMap, sync::Arc};
     use storage_interface::DbReaderWriter;
 
     #[cfg(test)]
@@ -170,7 +170,7 @@ pub(crate) mod test_utils {
         let network_id = NetworkId::Validator;
         let network_senders = vec![(network_id, network_sender)]
             .into_iter()
-            .collect::<HashMap<_, _>>();
+            .collect::<BTreeMap<_, _>>();
 
         // Create channel senders and receivers
         let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();

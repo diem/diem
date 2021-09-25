@@ -88,7 +88,7 @@ impl TestHarness {
         let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
         let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
-        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+        let trusted_peers = Arc::new(RwLock::new(BTreeMap::new()));
 
         let conn_mgr = ConnectivityManager::new(
             network_context,
@@ -357,7 +357,7 @@ fn connect_to_seeds_on_startup() {
 #[test]
 fn addr_change() {
     let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // Sending address of other peer
@@ -404,7 +404,7 @@ fn addr_change() {
 #[test]
 fn lost_connection() {
     let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // Sending address of other peer
@@ -435,7 +435,7 @@ fn lost_connection() {
 #[test]
 fn disconnect() {
     let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // Sending pubkey & address of other peer
@@ -451,7 +451,7 @@ fn disconnect() {
 
         // Sending request to make other peer ineligible (by dropping the key)
         let mut peer = other_peer;
-        peer.keys = HashSet::new();
+        peer.keys = BTreeSet::new();
         peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
 
         let peers = hashmap! {other_peer_id => peer};
@@ -470,7 +470,7 @@ fn disconnect() {
 #[test]
 fn retry_on_failure() {
     let (other_peer_id, peer, _, other_addr) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // Sending pubkey set and addr of other peer
@@ -492,7 +492,7 @@ fn retry_on_failure() {
 
         // Sending request to make other peer ineligible (by removing key)
         let mut peer = peer;
-        peer.keys = HashSet::new();
+        peer.keys = BTreeSet::new();
         peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
         let peers = hashmap! {other_peer_id => peer};
         mock.send_update_discovered_peers(DiscoverySource::OnChainValidatorSet, peers)
@@ -517,7 +517,7 @@ fn retry_on_failure() {
 #[test]
 fn no_op_requests() {
     let (other_peer_id, peer, _, other_addr) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // Sending pubkey set and addr of other peer
@@ -538,7 +538,7 @@ fn no_op_requests() {
 
         // Send request to make other peer ineligible.
         let mut peer = peer;
-        peer.keys = HashSet::new();
+        peer.keys = BTreeSet::new();
         peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
         let peers = hashmap! {other_peer_id => peer};
         mock.send_update_discovered_peers(DiscoverySource::OnChainValidatorSet, peers)
@@ -565,7 +565,7 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         let (peer_id_a, peer_a, _, peer_a_addr) = test_peer(1);
@@ -602,7 +602,7 @@ fn backoff_on_failure() {
 #[test]
 fn multiple_addrs_basic() {
     let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         // For this test, the peer advertises multiple listen addresses. Assume
@@ -637,7 +637,7 @@ fn multiple_addrs_basic() {
 #[test]
 fn multiple_addrs_wrapping() {
     let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         let other_addr_1 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9091", pubkey);
@@ -674,7 +674,7 @@ fn multiple_addrs_wrapping() {
 #[test]
 fn multiple_addrs_shrinking() {
     let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
-    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
+    let (mut mock, conn_mgr) = TestHarness::new(BTreeMap::new());
 
     let test = async move {
         let other_addr_1 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9091", pubkey);
@@ -713,7 +713,7 @@ fn multiple_addrs_shrinking() {
 
 #[test]
 fn public_connection_limit() {
-    let mut seeds = HashMap::new();
+    let mut seeds = BTreeMap::new();
 
     for i in 0..=MAX_TEST_CONNECTIONS {
         let (peer_id, peer, _, _) = test_peer(i);
@@ -741,7 +741,7 @@ fn public_connection_limit() {
 #[test]
 fn basic_update_discovered_peers() {
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let (mock, mut conn_mgr) = TestHarness::new(HashMap::new());
+    let (mock, mut conn_mgr) = TestHarness::new(BTreeMap::new());
     let trusted_peers = mock.trusted_peers;
 
     // sample some example data

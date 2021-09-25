@@ -13,7 +13,7 @@ use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeSet, HashSet, VecDeque},
+    collections::{BTreeSet, BTreeSet, VecDeque},
     fmt,
 };
 
@@ -740,7 +740,7 @@ pub type Bytecode = Spanned<Bytecode_>;
 //**************************************************************************************************
 
 fn get_external_deps(imports: &[ImportDefinition]) -> Vec<ModuleId> {
-    let mut deps = HashSet::new();
+    let mut deps = BTreeSet::new();
     for dep in imports.iter() {
         let identifier = Identifier::new(dep.ident.name.0.as_str().to_owned()).unwrap();
         deps.insert(ModuleId::new(dep.ident.address, identifier));

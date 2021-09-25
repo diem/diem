@@ -22,7 +22,7 @@ use diem_json_rpc_types::{
 };
 use diem_logger::debug;
 use diem_types::protocol_spec::DpnProto;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::BTreeMap, str::FromStr, sync::Arc};
 use storage_interface::MoveDbReader;
 
 const UNKNOWN: &str = "unknown";
@@ -42,7 +42,7 @@ impl Drop for Task {
 pub struct ClientConnection {
     pub id: u64,
     pub sender: StreamSender,
-    pub tasks: Arc<Mutex<HashMap<Id, Task>>>,
+    pub tasks: Arc<Mutex<BTreeMap<Id, Task>>>,
     pub connection_context: Arc<ConnectionContext>,
     pub config: Arc<SubscriptionConfig>,
 }
@@ -57,7 +57,7 @@ impl ClientConnection {
         Self {
             id,
             sender,
-            tasks: Arc::new(Mutex::new(HashMap::new())),
+            tasks: Arc::new(Mutex::new(BTreeMap::new())),
             connection_context: Arc::new(connection_context),
             config,
         }

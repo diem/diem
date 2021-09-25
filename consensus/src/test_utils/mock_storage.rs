@@ -21,16 +21,16 @@ use diem_types::{
     protocol_spec::DpnProto,
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     sync::Arc,
 };
 use storage_interface::DbReader;
 
 pub struct MockSharedStorage {
     // Safety state
-    pub block: Mutex<HashMap<HashValue, Block>>,
-    pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
-    pub lis: Mutex<HashMap<u64, LedgerInfoWithSignatures>>,
+    pub block: Mutex<BTreeMap<HashValue, Block>>,
+    pub qc: Mutex<BTreeMap<HashValue, QuorumCert>>,
+    pub lis: Mutex<BTreeMap<u64, LedgerInfoWithSignatures>>,
     pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
@@ -42,9 +42,9 @@ pub struct MockSharedStorage {
 impl MockSharedStorage {
     pub fn new(validator_set: ValidatorSet) -> Self {
         MockSharedStorage {
-            block: Mutex::new(HashMap::new()),
-            qc: Mutex::new(HashMap::new()),
-            lis: Mutex::new(HashMap::new()),
+            block: Mutex::new(BTreeMap::new()),
+            qc: Mutex::new(BTreeMap::new()),
+            lis: Mutex::new(BTreeMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
             highest_2chain_timeout_certificate: Mutex::new(None),

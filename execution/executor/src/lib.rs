@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use std::{
-    collections::{hash_map, HashMap, HashSet},
+    collections::{hash_map, BTreeMap, BTreeSet},
     convert::TryFrom,
     marker::PhantomData,
     sync::Arc,
@@ -257,8 +257,8 @@ where
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
     fn process_vm_outputs(
-        mut account_to_state: HashMap<AccountAddress, AccountState>,
-        account_to_proof: HashMap<HashValue, SparseMerkleProof>,
+        mut account_to_state: BTreeMap<AccountAddress, AccountState>,
+        account_to_proof: BTreeMap<HashValue, SparseMerkleProof>,
         transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
@@ -372,8 +372,8 @@ where
             txn_data.resize(
                 transactions.len(),
                 TransactionData::new(
-                    HashMap::new(),
-                    HashMap::new(),
+                    BTreeMap::new(),
+                    BTreeMap::new(),
                     vec![],
                     TransactionStatus::Retry,
                     current_state_tree.root_hash(),
@@ -605,13 +605,13 @@ where
 /// on the write set. Returns the blob value of all these accounts.
 pub fn process_write_set(
     transaction: &Transaction,
-    account_to_state: &mut HashMap<AccountAddress, AccountState>,
+    account_to_state: &mut BTreeMap<AccountAddress, AccountState>,
     write_set: WriteSet,
-) -> Result<HashMap<AccountAddress, AccountStateBlob>> {
-    let mut updated_blobs = HashMap::new();
+) -> Result<BTreeMap<AccountAddress, AccountStateBlob>> {
+    let mut updated_blobs = BTreeMap::new();
 
     // Find all addresses this transaction touches while processing each write op.
-    let mut addrs = HashSet::new();
+    let mut addrs = BTreeSet::new();
     for (access_path, write_op) in write_set.into_iter() {
         let address = access_path.address;
         let path = access_path.path;

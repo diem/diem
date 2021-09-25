@@ -31,7 +31,7 @@
 //! transaction is fully executed and written to storage,  Consensus notifies Mempool about it which
 //! later drops it from its internal state.
 //!
-//! **Internals**: Internally Mempool is modeled as `HashMap<AccountAddress, AccountTransactions>`
+//! **Internals**: Internally Mempool is modeled as `BTreeMap<AccountAddress, AccountTransactions>`
 //! with various indexes built on top of it. The main index `PriorityIndex` is an ordered queue of
 //! transactions that are “ready” to be included in next block(i.e. have sequence number sequential
 //! to current for account). This queue is ordered by gas price so that if a client is willing to

@@ -91,7 +91,7 @@ use move_core_types::{
 use once_cell::sync::Lazy;
 use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     iter::Iterator,
     path::Path,
@@ -107,7 +107,7 @@ const MAX_LIMIT: u64 = 1000;
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.
 const MAX_NUM_EPOCH_ENDING_LEDGER_INFO: usize = 100;
 
-static ROCKSDB_PROPERTY_MAP: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
+static ROCKSDB_PROPERTY_MAP: Lazy<BTreeMap<&str, &str>> = Lazy::new(|| {
     [
         (
             "diem_rocksdb_live_sst_files_size_bytes",

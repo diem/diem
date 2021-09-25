@@ -20,7 +20,7 @@ use network::{
     ProtocolId,
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A struct holding a list of overriding configurations for mempool
 #[derive(Clone, Copy)]
@@ -49,9 +49,9 @@ impl MempoolOverrideConfig {
 /// A test harness representing a combined network of Nodes and the mempool interactions between them
 #[derive(Default)]
 struct TestHarness {
-    nodes: HashMap<NodeId, Node>,
+    nodes: BTreeMap<NodeId, Node>,
     /// A mapping of `PeerId` to `NodeId`.  Since network messages use `PeerId` this mapping is needed
-    peer_to_node_id: HashMap<PeerId, NodeId>,
+    peer_to_node_id: BTreeMap<PeerId, NodeId>,
 }
 
 impl TestHarness {
@@ -81,10 +81,10 @@ impl TestHarness {
         vfn_mempool_config: Option<MempoolOverrideConfig>,
         other_full_nodes_count: u32,
         fn_mempool_config: Option<MempoolOverrideConfig>,
-    ) -> (Self, HashMap<PeerRole, Vec<NodeId>>) {
+    ) -> (Self, BTreeMap<PeerRole, Vec<NodeId>>) {
         let mut harness = Self::default();
         let mut rng = StdRng::from_seed([0u8; 32]);
-        let mut peers = HashMap::<PeerRole, Vec<NodeId>>::new();
+        let mut peers = BTreeMap::<PeerRole, Vec<NodeId>>::new();
 
         // Build up validators
         for idx in 0..validator_nodes_count {
@@ -356,7 +356,7 @@ impl TestHarness {
                             let block = self
                                 .node(sender_id)
                                 .mempool()
-                                .get_block(100, HashSet::new());
+                                .get_block(100, BTreeSet::new());
                             for txn in transactions.iter() {
                                 assert!(block.contains(txn));
                             }

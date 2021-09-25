@@ -18,7 +18,7 @@ use diem_validator_interface::{
     DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
 use move_binary_format::CompiledModule;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, BTreeSet};
 
 pub fn create_release(
     // ChainID to distinguish the diem network. e.g: PREMAINNET
@@ -118,8 +118,8 @@ pub(crate) fn create_release_from_artifact(
         if !updated_version_writeset
             .iter()
             .map(|(ap, _)| ap)
-            .collect::<HashSet<_>>()
-            .is_disjoint(&modules.iter().map(|(ap, _)| ap).collect::<HashSet<_>>())
+            .collect::<BTreeSet<_>>()
+            .is_disjoint(&modules.iter().map(|(ap, _)| ap).collect::<BTreeSet<_>>())
         {
             bail!("DiemVersion WriteSet collides with module upgrade WriteSet");
         }

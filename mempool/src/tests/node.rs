@@ -36,7 +36,7 @@ use network::{
     DisconnectReason, ProtocolId,
 };
 use rand::rngs::StdRng;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use storage_interface::{mock::MockDbReaderWriter, DbReaderWriter};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
@@ -309,7 +309,7 @@ pub struct Node {
     /// `CoreMempool` for this node
     mempool: Arc<Mutex<CoreMempool>>,
     /// Network interfaces for a node
-    network_interfaces: HashMap<NetworkId, NodeNetworkInterface>,
+    network_interfaces: BTreeMap<NetworkId, NodeNetworkInterface>,
     /// Tokio runtime
     runtime: Arc<Runtime>,
     /// Subscriber for mempool events
@@ -530,7 +530,7 @@ impl NodeNetworkInterface {
 fn setup_node_network_interfaces(
     node: &NodeInfo,
 ) -> (
-    HashMap<NetworkId, NodeNetworkInterface>,
+    BTreeMap<NetworkId, NodeNetworkInterface>,
     Vec<MempoolNetworkHandle>,
 ) {
     let (network_interface, network_handle) = setup_node_network_interface(PeerNetworkId::new(
@@ -539,7 +539,7 @@ fn setup_node_network_interfaces(
     ));
 
     let mut network_handles = vec![network_handle];
-    let mut network_interfaces = HashMap::new();
+    let mut network_interfaces = BTreeMap::new();
     network_interfaces.insert(node.primary_network(), network_interface);
 
     // Add Secondary network if the node has one

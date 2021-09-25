@@ -11,7 +11,7 @@ use diem_config::config::NodeConfig;
 use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt,
     process::Stdio,
     str::FromStr,
@@ -412,8 +412,8 @@ impl fmt::Debug for Instance {
     }
 }
 
-pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
-    let mut r = HashSet::new();
+pub fn instancelist_to_set(instances: &[Instance]) -> BTreeSet<String> {
+    let mut r = BTreeSet::new();
     for instance in instances {
         r.insert(instance.peer_name().clone());
     }

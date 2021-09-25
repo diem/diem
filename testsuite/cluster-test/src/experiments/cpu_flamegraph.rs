@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     env,
     fmt::{Display, Error, Formatter},
     time::Duration,
@@ -51,7 +51,7 @@ impl ExperimentParam for CpuFlamegraphParams {
 
 #[async_trait]
 impl Experiment for CpuFlamegraph {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&[self.perf_instance.clone()])
     }
 

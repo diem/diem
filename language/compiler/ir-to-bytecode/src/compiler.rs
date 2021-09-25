@@ -23,7 +23,7 @@ use std::{
     clone::Clone,
     collections::{
         hash_map::Entry::{Occupied, Vacant},
-        BTreeSet, HashMap,
+        BTreeSet, BTreeMap,
     },
 };
 
@@ -150,7 +150,7 @@ impl ControlFlowInfo {
 // Holds information about a function being compiled.
 #[derive(Debug)]
 struct FunctionFrame {
-    locals: HashMap<Var_, u8>,
+    locals: BTreeMap<Var_, u8>,
     local_types: Signature,
     // i64 to allow the bytecode verifier to catch errors of
     // - negative stack sizes
@@ -159,14 +159,14 @@ struct FunctionFrame {
     // Theoretically, we could use a BigInt here, but that is probably overkill for any testing
     max_stack_depth: i64,
     cur_stack_depth: i64,
-    type_parameters: HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: BTreeMap<TypeVar_, TypeParameterIndex>,
     loops: Vec<LoopInfo>,
 }
 
 impl FunctionFrame {
-    fn new(type_parameters: HashMap<TypeVar_, TypeParameterIndex>) -> FunctionFrame {
+    fn new(type_parameters: BTreeMap<TypeVar_, TypeParameterIndex>) -> FunctionFrame {
         FunctionFrame {
-            locals: HashMap::new(),
+            locals: BTreeMap::new(),
             local_types: Signature(vec![]),
             max_stack_depth: 0,
             cur_stack_depth: 0,
@@ -256,7 +256,7 @@ impl FunctionFrame {
         }
     }
 
-    fn type_parameters(&self) -> &HashMap<TypeVar_, TypeParameterIndex> {
+    fn type_parameters(&self) -> &BTreeMap<TypeVar_, TypeParameterIndex> {
         &self.type_parameters
     }
 }
@@ -266,7 +266,7 @@ pub fn compile_script<'a>(
     script: Script,
     dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<(CompiledScript, SourceMap)> {
-    let mut context = Context::new(HashMap::new(), None)?;
+    let mut context = Context::new(BTreeMap::new(), None)?;
     for dep in dependencies {
         context.add_compiled_dependency(dep)?;
     }
@@ -342,7 +342,7 @@ pub fn compile_module<'a>(
     dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<(CompiledModule, SourceMap)> {
     let current_module = module.identifier;
-    let mut context = Context::new(HashMap::new(), Some(current_module))?;
+    let mut context = Context::new(BTreeMap::new(), Some(current_module))?;
     for dep in dependencies {
         context.add_compiled_dependency(dep)?;
     }
@@ -528,8 +528,8 @@ fn compile_imports(context: &mut Context, imports: Vec<ImportDefinition>) -> Res
 
 fn type_parameter_indexes<'a>(
     ast_tys: impl IntoIterator<Item = &'a TypeVar>,
-) -> Result<HashMap<TypeVar_, TypeParameterIndex>> {
-    let mut m = HashMap::new();
+) -> Result<BTreeMap<TypeVar_, TypeParameterIndex>> {
+    let mut m = BTreeMap::new();
     for (idx, ty_var) in ast_tys.into_iter().enumerate() {
         if idx > TABLE_MAX_SIZE {
             bail!("Too many type parameters")
@@ -570,7 +570,7 @@ fn ability(ab: &ast::Ability) -> Ability {
 
 fn compile_types(
     context: &mut Context,
-    type_parameters: &HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: &BTreeMap<TypeVar_, TypeParameterIndex>,
     tys: &[Type],
 ) -> Result<Vec<SignatureToken>> {
     tys.iter()
@@ -580,7 +580,7 @@ fn compile_types(
 
 fn compile_type(
     context: &mut Context,
-    type_parameters: &HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: &BTreeMap<TypeVar_, TypeParameterIndex>,
     ty: &Type,
 ) -> Result<SignatureToken> {
     Ok(match ty {
@@ -673,7 +673,7 @@ fn compile_structs(
 
 fn compile_fields(
     context: &mut Context,
-    type_parameters: &HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: &BTreeMap<TypeVar_, TypeParameterIndex>,
     sh_idx: StructHandleIndex,
     sd_idx: StructDefinitionIndex,
     sfields: StructDefinitionFields,
@@ -803,7 +803,7 @@ fn compile_function(
 
 fn compile_function_body(
     context: &mut Context,
-    type_parameters: HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: BTreeMap<TypeVar_, TypeParameterIndex>,
     formals: Vec<(Var, Type)>,
     locals: Vec<(Var, Type)>,
     block: Block_,
@@ -1572,7 +1572,7 @@ fn compile_constant(_context: &mut Context, ty: Type, value: MoveValue) -> Resul
 
 fn compile_function_body_bytecode(
     context: &mut Context,
-    type_parameters: HashMap<TypeVar_, TypeParameterIndex>,
+    type_parameters: BTreeMap<TypeVar_, TypeParameterIndex>,
     formals: Vec<(Var, Type)>,
     locals: Vec<(Var, Type)>,
     blocks: BytecodeBlocks,
@@ -1593,7 +1593,7 @@ fn compile_function_body_bytecode(
     let sig_idx = context.signature_index(locals_signature)?;
 
     let mut code = vec![];
-    let mut label_to_index: HashMap<BlockLabel, u16> = HashMap::new();
+    let mut label_to_index: BTreeMap<BlockLabel, u16> = BTreeMap::new();
     for (label, block) in blocks {
         label_to_index.insert(label.clone(), code.len() as u16);
         context.label_index(label)?;
@@ -1892,7 +1892,7 @@ fn compile_bytecode(
     Ok(())
 }
 
-fn remap_branch_offsets(code: &mut Vec<Bytecode>, fake_to_actual: &HashMap<u16, u16>) {
+fn remap_branch_offsets(code: &mut Vec<Bytecode>, fake_to_actual: &BTreeMap<u16, u16>) {
     for instr in code {
         match instr {
             Bytecode::BrTrue(offset) | Bytecode::BrFalse(offset) | Bytecode::Branch(offset) => {

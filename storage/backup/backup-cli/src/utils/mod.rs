@@ -18,7 +18,7 @@ use diem_jellyfish_merkle::{restore::JellyfishMerkleRestore, NodeBatch, TreeWrit
 use diem_types::{account_state_blob::AccountStateBlob, transaction::Version, waypoint::Waypoint};
 use diemdb::{backup::restore_handler::RestoreHandler, DiemDB, GetRestoreHandler};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     mem::size_of,
     path::{Path, PathBuf},
@@ -143,7 +143,7 @@ impl RestoreRunMode {
 #[derive(Clone)]
 pub struct GlobalRestoreOptions {
     pub target_version: Version,
-    pub trusted_waypoints: Arc<HashMap<Version, Waypoint>>,
+    pub trusted_waypoints: Arc<BTreeMap<Version, Waypoint>>,
     pub run_mode: Arc<RestoreRunMode>,
     pub concurrent_downloads: usize,
 }
@@ -193,8 +193,8 @@ pub struct TrustedWaypointOpt {
 }
 
 impl TrustedWaypointOpt {
-    pub fn verify(self) -> Result<HashMap<Version, Waypoint>> {
-        let mut trusted_waypoints = HashMap::new();
+    pub fn verify(self) -> Result<BTreeMap<Version, Waypoint>> {
+        let mut trusted_waypoints = BTreeMap::new();
         for w in self.trust_waypoint {
             trusted_waypoints
                 .insert(w.version(), w)

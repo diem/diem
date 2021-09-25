@@ -12,7 +12,7 @@ use crate::{
     network_id::NetworkId,
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
@@ -71,9 +71,9 @@ pub fn build_seed_for_network(seed_config: &NetworkConfig, seed_role: PeerRole) 
         .clone()
         .append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
-    let mut keys = HashSet::new();
+    let mut keys = BTreeSet::new();
     keys.insert(seed_pubkey);
-    let mut seeds = HashMap::default();
+    let mut seeds = BTreeMap::default();
     seeds.insert(
         seed_config.peer_id(),
         Peer::new(vec![seed_addr], keys, seed_role),

@@ -11,7 +11,7 @@ use diem_sdk::{
         account_config::{allowed_currency_code_string, XDX_NAME, XUS_NAME},
     },
 };
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::BTreeMap, str::FromStr};
 use thiserror::Error;
 use url::Url;
 
@@ -103,7 +103,7 @@ impl FromStr for Intent {
             ));
         }
         let (hrp, account_address, subaddress) = decode_account(result.host_str().unwrap())?;
-        let params: HashMap<String, String> = result.query_pairs().into_owned().collect();
+        let params: BTreeMap<String, String> = result.query_pairs().into_owned().collect();
         let amount = normalize_amount(params.get("am"))?;
         let currency = normalize_currency(params.get("c"))?;
 

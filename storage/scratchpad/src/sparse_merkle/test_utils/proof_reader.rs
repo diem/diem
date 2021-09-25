@@ -4,9 +4,9 @@
 use crate::ProofRead;
 use diem_crypto::HashValue;
 use diem_types::proof::SparseMerkleProof;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-pub struct ProofReader<V>(HashMap<HashValue, SparseMerkleProof<V>>);
+pub struct ProofReader<V>(BTreeMap<HashValue, SparseMerkleProof<V>>);
 
 impl<V: Sync> ProofReader<V> {
     pub fn new(key_with_proof: Vec<(HashValue, SparseMerkleProof<V>)>) -> Self {
@@ -16,7 +16,7 @@ impl<V: Sync> ProofReader<V> {
 
 impl<V: Sync> Default for ProofReader<V> {
     fn default() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 }
 

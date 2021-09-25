@@ -25,7 +25,7 @@ use std::{
     cmp::Ordering,
     collections::{
         hash_map::Entry::{Occupied, Vacant},
-        BTreeMap, HashMap,
+        BTreeMap, BTreeMap,
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -75,7 +75,7 @@ enum PeerScoreUpdateType {
 
 pub struct RequestManager {
     // Maps each peer to their peer score
-    peer_scores: HashMap<PeerNetworkId, f64>,
+    peer_scores: BTreeMap<PeerNetworkId, f64>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
     // duration with the same version before the next attempt to get the next chunk
     request_timeout: Duration,
@@ -85,20 +85,20 @@ pub struct RequestManager {
     // the more networks this node will send multicast requests to. Network ordering is defined by
     // NetworkId.
     multicast_network_level: NetworkId,
-    network_senders: HashMap<NetworkId, StateSyncSender>,
+    network_senders: BTreeMap<NetworkId, StateSyncSender>,
 }
 
 impl RequestManager {
     pub fn new(
         request_timeout: Duration,
         multicast_timeout: Duration,
-        network_senders: HashMap<NetworkId, StateSyncSender>,
+        network_senders: BTreeMap<NetworkId, StateSyncSender>,
     ) -> Self {
         let multicast_network_level = NetworkId::Validator;
         update_multicast_network_counter(multicast_network_level);
 
         Self {
-            peer_scores: HashMap::new(),
+            peer_scores: BTreeMap::new(),
             requests: BTreeMap::new(),
             request_timeout,
             multicast_timeout,
@@ -847,8 +847,8 @@ mod tests {
     fn calculate_pick_counts_for_validators(
         request_manager: &mut RequestManager,
         number_of_picks_to_execute: u64,
-    ) -> HashMap<PeerNetworkId, u64> {
-        let mut pick_counts = HashMap::new();
+    ) -> BTreeMap<PeerNetworkId, u64> {
+        let mut pick_counts = BTreeMap::new();
 
         for _ in 0..number_of_picks_to_execute {
             let picked_peers = request_manager.pick_peers();
@@ -867,7 +867,7 @@ mod tests {
         RequestManager::new(
             Duration::from_secs(request_timeout),
             Duration::from_secs(30),
-            HashMap::new(),
+            BTreeMap::new(),
         )
     }
 

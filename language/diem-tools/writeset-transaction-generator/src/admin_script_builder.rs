@@ -10,7 +10,7 @@ use diem_types::{
 use handlebars::Handlebars;
 use move_lang::{compiled_unit::AnnotatedCompiledUnit, Compiler, Flags};
 use serde::Serialize;
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{collections::BTreeMap, io::Write, path::PathBuf};
 use tempfile::NamedTempFile;
 
 /// The relative path to the scripts templates
@@ -52,7 +52,7 @@ pub fn encode_remove_validators_payload(validators: Vec<AccountAddress>) -> Writ
         let mut hb = Handlebars::new();
         hb.set_strict_mode(true);
         hb.register_template_file("script", script).unwrap();
-        let mut data = HashMap::new();
+        let mut data = BTreeMap::new();
         data.insert("addresses", validators);
 
         let output = hb.render("script", &data).unwrap();

@@ -23,7 +23,7 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use state_sync_v1::network::{StateSyncEvents, StateSyncSender};
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fmt,
     ops::Add,
     time::{Duration, Instant},
@@ -73,8 +73,8 @@ impl ExperimentParam for LoadTestParams {
 
 #[async_trait]
 impl Experiment for LoadTest {
-    fn affected_validators(&self) -> HashSet<String> {
-        HashSet::new()
+    fn affected_validators(&self) -> BTreeSet<String> {
+        BTreeSet::new()
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {

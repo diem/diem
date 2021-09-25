@@ -48,7 +48,7 @@ use num_traits::{
 use reqwest::Url;
 use rust_decimal::Decimal;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     fmt, fs,
     io::{stdout, Write},
@@ -106,7 +106,7 @@ pub struct ClientProxy {
     /// Created accounts.
     pub accounts: Vec<AccountData>,
     /// Address to account_ref_id map.
-    address_to_ref_id: HashMap<AccountAddress, usize>,
+    address_to_ref_id: BTreeMap<AccountAddress, usize>,
     /// Host that operates a faucet service
     faucet_url: Url,
     /// Account used for Diem Root operations (e.g., adding a new transaction script)
@@ -200,7 +200,7 @@ impl ClientProxy {
             .iter()
             .enumerate()
             .map(|(ref_id, acc_data): (usize, &AccountData)| (acc_data.address, ref_id))
-            .collect::<HashMap<AccountAddress, usize>>();
+            .collect::<BTreeMap<AccountAddress, usize>>();
 
         Ok(ClientProxy {
             chain_id,
@@ -354,7 +354,7 @@ impl ClientProxy {
             "Invalid number of arguments for getting balances"
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let currency_info: HashMap<_, _> = self
+        let currency_info: BTreeMap<_, _> = self
             .client
             .get_currency_info()?
             .into_iter()

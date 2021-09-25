@@ -19,7 +19,7 @@ use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::LogTail;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     env, fmt,
     time::{Duration, Instant},
 };
@@ -118,10 +118,10 @@ impl HealthCheckRunner {
     pub async fn run(
         &mut self,
         events: &[ValidatorEvent],
-        affected_validators_set: &HashSet<String>,
+        affected_validators_set: &BTreeSet<String>,
         print_failures: PrintFailures,
     ) -> Result<Vec<String>> {
-        let mut node_health = HashMap::new();
+        let mut node_health = BTreeMap::new();
         for instance in self.cluster.validator_instances() {
             node_health.insert(instance.peer_name().clone(), true);
         }
@@ -173,8 +173,8 @@ impl HealthCheckRunner {
         messages.push(format!(""));
         messages.push(format!(""));
 
-        let affected_validators_set_refs: HashSet<_> = affected_validators_set.iter().collect();
-        let failed_set: HashSet<_> = failed.iter().collect();
+        let affected_validators_set_refs: BTreeSet<_> = affected_validators_set.iter().collect();
+        let failed_set: BTreeSet<_> = failed.iter().collect();
         let has_unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
 
         if print_failures.should_print(has_unexpected_failures) {

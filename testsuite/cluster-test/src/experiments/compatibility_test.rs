@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use diem_logger::prelude::*;
 use futures::future::try_join_all;
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     env, fmt,
     iter::{once, Iterator},
     time::{Duration, Instant},
@@ -173,7 +173,7 @@ impl ExperimentParam for CompatiblityTestParams {
 
 #[async_trait]
 impl Experiment for CompatibilityTest {
-    fn affected_validators(&self) -> HashSet<String> {
+    fn affected_validators(&self) -> BTreeSet<String> {
         instance::instancelist_to_set(&self.first_batch)
             .union(&instance::instancelist_to_set(&self.second_batch))
             .cloned()

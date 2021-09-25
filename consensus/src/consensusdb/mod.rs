@@ -19,7 +19,7 @@ use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{Options, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME};
-use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
+use std::{collections::BTreeMap, iter::Iterator, path::Path, time::Instant};
 
 pub struct ConsensusDB {
     db: DB,
@@ -189,16 +189,16 @@ impl ConsensusDB {
     }
 
     /// Get all consensus blocks.
-    fn get_blocks(&self) -> Result<HashMap<HashValue, Block>, DbError> {
+    fn get_blocks(&self) -> Result<BTreeMap<HashValue, Block>, DbError> {
         let mut iter = self.db.iter::<BlockSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        Ok(iter.collect::<Result<HashMap<HashValue, Block>>>()?)
+        Ok(iter.collect::<Result<BTreeMap<HashValue, Block>>>()?)
     }
 
     /// Get all consensus QCs.
-    fn get_quorum_certificates(&self) -> Result<HashMap<HashValue, QuorumCert>, DbError> {
+    fn get_quorum_certificates(&self) -> Result<BTreeMap<HashValue, QuorumCert>, DbError> {
         let mut iter = self.db.iter::<QCSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        Ok(iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()?)
+        Ok(iter.collect::<Result<BTreeMap<HashValue, QuorumCert>>>()?)
     }
 }

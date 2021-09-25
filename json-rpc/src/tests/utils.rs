@@ -59,7 +59,7 @@ use move_core_types::{
 use move_vm_types::values::{Struct, Value};
 use proptest::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeMap},
     convert::TryFrom,
     net::SocketAddr,
     sync::Arc,
@@ -102,8 +102,8 @@ pub fn test_bootstrap(
 #[allow(unused)]
 pub struct MockDiemDB {
     pub version: u64,
-    pub genesis: HashMap<AccountAddress, AccountStateBlob>,
-    pub all_accounts: HashMap<AccountAddress, AccountStateBlob>,
+    pub genesis: BTreeMap<AccountAddress, AccountStateBlob>,
+    pub all_accounts: BTreeMap<AccountAddress, AccountStateBlob>,
     pub all_txns: Vec<(Transaction, KeptVMStatus)>,
     pub events: Vec<(u64, ContractEvent)>,
     pub account_state_with_proof: Vec<AccountStateWithProof>,
@@ -445,7 +445,7 @@ pub fn mock_db() -> MockDiemDB {
     let mut account_state_with_proof = gen.generate(any::<AccountStateWithProof>());
 
     let mut version = 1;
-    let mut all_accounts = HashMap::new();
+    let mut all_accounts = BTreeMap::new();
     let mut all_txns = vec![];
     let mut events = vec![];
     let mut timestamps = vec![0_u64];
@@ -460,7 +460,7 @@ pub fn mock_db() -> MockDiemDB {
             );
         }
         version += txns_to_commit.len();
-        let mut account_states = HashMap::new();
+        let mut account_states = BTreeMap::new();
         // Get the ground truth of account states.
         txns_to_commit.iter().for_each(|txn_to_commit| {
             account_states.extend(txn_to_commit.account_states().clone())

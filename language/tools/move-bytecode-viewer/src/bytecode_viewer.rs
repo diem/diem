@@ -10,7 +10,7 @@ use move_binary_format::{
     file_format::{CodeOffset, CompiledModule, FunctionDefinitionIndex},
 };
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct BytecodeInfo {
@@ -23,7 +23,7 @@ pub struct BytecodeInfo {
 pub struct BytecodeViewer<'a> {
     pub lines: Vec<String>,
     pub view: BinaryIndexedView<'a>,
-    pub line_map: HashMap<usize, BytecodeInfo>,
+    pub line_map: BTreeMap<usize, BytecodeInfo>,
 }
 
 impl<'a> BytecodeViewer<'a> {
@@ -41,7 +41,7 @@ impl<'a> BytecodeViewer<'a> {
 
         let mut base_viewer = Self {
             lines: disassembled_string.lines().map(|x| x.to_string()).collect(),
-            line_map: HashMap::new(),
+            line_map: BTreeMap::new(),
             view,
         };
         base_viewer.build_mapping();
@@ -53,9 +53,9 @@ impl<'a> BytecodeViewer<'a> {
         let fun_regex = Regex::new(r"^public\s+([a-zA-Z_]+)\(").unwrap();
         let mut current_fun = None;
         let mut current_fdef_idx = None;
-        let mut line_map = HashMap::new();
+        let mut line_map = BTreeMap::new();
 
-        let function_def_for_name: HashMap<String, u16> = self
+        let function_def_for_name: BTreeMap<String, u16> = self
             .view
             .function_defs()
             .into_iter()

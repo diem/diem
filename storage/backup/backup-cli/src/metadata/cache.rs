@@ -14,7 +14,7 @@ use diem_temppath::TempPath;
 use futures::stream::poll_fn;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     path::PathBuf,
     sync::Arc,
     time::Instant,
@@ -83,15 +83,15 @@ pub async fn sync_and_load(
                 .into_string()
                 .map_err(|s| anyhow!("into_string() failed for file name {:?}", s))
         })
-        .collect::<Result<HashSet<_>>>()?;
+        .collect::<Result<BTreeSet<_>>>()?;
 
     // List remote metadata files.
     let remote_file_handles = storage.list_metadata_files().await?;
-    let remote_file_handle_by_hash: HashMap<_, _> = remote_file_handles
+    let remote_file_handle_by_hash: BTreeMap<_, _> = remote_file_handles
         .into_iter()
         .map(|file_handle| (file_handle.file_handle_hash(), file_handle))
         .collect();
-    let remote_hashes: HashSet<_> = remote_file_handle_by_hash.keys().cloned().collect();
+    let remote_hashes: BTreeSet<_> = remote_file_handle_by_hash.keys().cloned().collect();
     info!("Metadata files listed.");
     NUM_META_FILES.set(remote_hashes.len() as i64);
 

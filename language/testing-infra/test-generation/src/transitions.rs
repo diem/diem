@@ -19,7 +19,7 @@ use move_binary_format::{
 };
 
 use move_binary_format::file_format::TableIndex;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, BTreeMap};
 
 //---------------------------------------------------------------------------
 // Type Instantiations from Unification with the Abstract Stack
@@ -29,7 +29,7 @@ use std::collections::{hash_map::Entry, HashMap};
 /// type instantiation for that index.
 #[derive(Default)]
 pub struct Subst {
-    pub subst: HashMap<usize, SignatureToken>,
+    pub subst: BTreeMap<usize, SignatureToken>,
 }
 
 impl Subst {

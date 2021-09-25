@@ -21,7 +21,7 @@ use kube::{
     api::{Api, ListParams},
     client::Client as K8sClient,
 };
-use std::{collections::HashMap, convert::TryFrom, env, process::Command, str, sync::Arc, thread};
+use std::{collections::BTreeMap, convert::TryFrom, env, process::Command, str, sync::Arc, thread};
 use tokio::{runtime::Runtime, time::Duration};
 
 const JSON_RPC_PORT: u32 = 80;
@@ -29,15 +29,15 @@ const REST_API_PORT: u32 = 8081;
 const VALIDATOR_LB: &str = "validator-fullnode-lb";
 
 pub struct K8sSwarm {
-    validators: HashMap<PeerId, K8sNode>,
-    fullnodes: HashMap<PeerId, K8sNode>,
+    validators: BTreeMap<PeerId, K8sNode>,
+    fullnodes: BTreeMap<PeerId, K8sNode>,
     root_account: LocalAccount,
     treasury_compliance_account: LocalAccount,
     designated_dealer_account: LocalAccount,
     kube_client: K8sClient,
     cluster_name: String,
     helm_repo: String,
-    versions: Arc<HashMap<Version, String>>,
+    versions: Arc<BTreeMap<Version, String>>,
     pub chain_id: ChainId,
 }
 
@@ -51,7 +51,7 @@ impl K8sSwarm {
         base_image_tag: &str,
     ) -> Result<Self> {
         let kube_client = create_k8s_client().await;
-        let fullnodes = HashMap::new();
+        let fullnodes = BTreeMap::new();
         let validators = get_validators(kube_client.clone(), image_tag).await?;
 
         let client = validators.values().next().unwrap().json_rpc_client();
@@ -97,7 +97,7 @@ impl K8sSwarm {
             })?[0];
         let designated_dealer_account = LocalAccount::new(address, account_key, sequence_number);
 
-        let mut versions = HashMap::new();
+        let mut versions = BTreeMap::new();
         let base_version = Version::new(0, base_image_tag.to_string());
         let cur_version = Version::new(1, image_tag.to_string());
         versions.insert(cur_version, image_tag.to_string());
@@ -300,7 +300,7 @@ async fn list_services(client: K8sClient) -> Result<Vec<KubeService>> {
 pub(crate) async fn get_validators(
     client: K8sClient,
     image_tag: &str,
-) -> Result<HashMap<PeerId, K8sNode>> {
+) -> Result<BTreeMap<PeerId, K8sNode>> {
     let services = list_services(client).await?;
     services
         .into_iter()
@@ -321,7 +321,7 @@ pub(crate) async fn get_validators(
             };
             Ok((node.peer_id(), node))
         })
-        .collect::<Result<HashMap<_, _>>>()
+        .collect::<Result<BTreeMap<_, _>>>()
 }
 
 fn parse_node_id(s: &str) -> Result<usize> {

@@ -20,7 +20,7 @@ use rand::{
 use serde::{Deserialize, Serialize};
 use short_hex_str::AsShortHexStr;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     path::PathBuf,
     string::ToString,
@@ -77,7 +77,7 @@ pub struct NetworkConfig {
     // Addresses of initial peers to connect to. In a mutual_authentication network,
     // we will extract the public keys from these addresses to set our initial
     // trusted peers set.  TODO: Replace usage in configs with `seeds` this is for backwards compatibility
-    pub seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
+    pub seed_addrs: BTreeMap<PeerId, Vec<NetworkAddress>>,
     // The initial peers to connect to prior to onchain discovery
     pub seeds: PeerSet,
     // The maximum size of an inbound or outbound request frame
@@ -116,7 +116,7 @@ impl NetworkConfig {
             mutual_authentication: false,
             network_address_key_backend: None,
             network_id,
-            seed_addrs: HashMap::new(),
+            seed_addrs: BTreeMap::new(),
             seeds: PeerSet::default(),
             max_frame_size: MAX_FRAME_SIZE,
             enable_proxy_protocol: false,
@@ -371,7 +371,7 @@ impl Default for RateLimitConfig {
     }
 }
 
-pub type PeerSet = HashMap<PeerId, Peer>;
+pub type PeerSet = BTreeMap<PeerId, Peer>;
 
 // TODO: Combine with RoleType?
 /// Represents the Role that a peer plays in the network ecosystem rather than the type of node.
@@ -409,15 +409,15 @@ impl Default for PeerRole {
 #[serde(default)]
 pub struct Peer {
     pub addresses: Vec<NetworkAddress>,
-    pub keys: HashSet<x25519::PublicKey>,
+    pub keys: BTreeSet<x25519::PublicKey>,
     pub role: PeerRole,
 }
 
 impl Peer {
-    /// Combines `Vec<NetworkAddress>` keys with the `HashSet` given
+    /// Combines `Vec<NetworkAddress>` keys with the `BTreeSet` given
     pub fn new(
         addresses: Vec<NetworkAddress>,
-        mut keys: HashSet<x25519::PublicKey>,
+        mut keys: BTreeSet<x25519::PublicKey>,
         role: PeerRole,
     ) -> Peer {
         let addr_keys = addresses
@@ -447,7 +447,7 @@ impl Peer {
     }
 
     pub fn from_addrs(role: PeerRole, addresses: Vec<NetworkAddress>) -> Peer {
-        let keys: HashSet<x25519::PublicKey> = addresses
+        let keys: BTreeSet<x25519::PublicKey> = addresses
             .iter()
             .filter_map(NetworkAddress::find_noise_proto)
             .collect();

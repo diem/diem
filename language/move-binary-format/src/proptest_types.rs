@@ -28,7 +28,7 @@ use crate::proptest_types::{
     signature::SignatureGen,
     types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
 };
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, BTreeMap};
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;
@@ -286,7 +286,7 @@ impl CompiledModuleStrategyGen {
                         identifiers_len,
                         struct_handles,
                     );
-                    let mut struct_def_to_field_count: HashMap<usize, usize> = HashMap::new();
+                    let mut struct_def_to_field_count: BTreeMap<usize, usize> = BTreeMap::new();
                     let mut struct_defs: Vec<StructDefinition> = vec![];
                     for struct_def_gen in struct_def_gens {
                         if let (Some(struct_def), offset) = struct_def_gen.materialize(&mut state) {

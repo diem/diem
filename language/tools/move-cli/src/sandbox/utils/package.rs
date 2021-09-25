@@ -16,7 +16,7 @@ use move_lang::{
 use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
@@ -31,9 +31,9 @@ pub struct SourceFilter<'a> {
     /// The embedded directory
     pub source_dir: &'a Dir<'a>,
     /// Source files to be included, if set to None, include everything
-    pub inclusion: Option<HashSet<&'a str>>,
+    pub inclusion: Option<BTreeSet<&'a str>>,
     /// Source files to be excluded, to exclude nothing, set it to empty
-    pub exclusion: HashSet<&'a str>,
+    pub exclusion: BTreeSet<&'a str>,
 }
 
 impl<'a> SourceFilter<'a> {

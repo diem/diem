@@ -10,7 +10,7 @@ use diem_infallible::RwLock;
 use diem_logger::debug;
 use futures::StreamExt;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -22,7 +22,7 @@ use storage_interface::MoveDbReader;
 
 #[derive(Clone)]
 pub struct ConnectionManager {
-    pub clients: Arc<RwLock<HashMap<u64, ClientConnection>>>,
+    pub clients: Arc<RwLock<BTreeMap<u64, ClientConnection>>>,
     pub diem_db: Arc<dyn MoveDbReader<DpnProto>>,
     pub config: Arc<SubscriptionConfig>,
     /// Our unique user id counter.
@@ -32,7 +32,7 @@ pub struct ConnectionManager {
 impl ConnectionManager {
     pub fn new(diem_db: Arc<dyn MoveDbReader<DpnProto>>, config: Arc<SubscriptionConfig>) -> Self {
         Self {
-            clients: Arc::new(RwLock::new(HashMap::new())),
+            clients: Arc::new(RwLock::new(BTreeMap::new())),
             diem_db,
             config,
             next_user_id: Arc::new(AtomicU64::new(0)),
