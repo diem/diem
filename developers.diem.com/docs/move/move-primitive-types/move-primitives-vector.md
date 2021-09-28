@@ -15,8 +15,8 @@ A `vector<T>` can be instantiated with any type `T`, including resource types an
 | ---------- | ----------|----------
 | `Vector::empty<T>(): vector<T>` | Create an empty vector that can store values of type `T` | Never
 | `Vector::singleton<T>(t: T): vector<T>` | Create a vector of size 1 containing `t` | Never
-| `Vector::push_back<T>(v: &mut T, t: T)` | Add `t` to the end of `v` | Never
-| `Vector::pop_back<T>(v: &mut T): T` | Remove and return the last element in `v` | If `v` is empty
+| `Vector::push_back<T>(v: &mut vector<T>, t: T)` | Add `t` to the end of `v` | Never
+| `Vector::pop_back<T>(v: &mut vector<T>): T` | Remove and return the last element in `v` | If `v` is empty
 | `Vector::borrow<T>(v: &vector<T>, i: u64): &T` | Return an immutable reference to the `T` at index `i` | If `i` is not in bounds
 | `Vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i` | If `i` is not in bounds
 | `Vector::destroy_empty<T>(v: vector<T>)` | Delete `v` | If `v` is not empty
