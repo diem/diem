@@ -141,6 +141,7 @@ members = [
     "network/memsocket",
     "network/netcore",
     "network/socket-bench-server",
+    "sample-app",
     "sdk",
     "sdk/client",
     "sdk/compatibility",

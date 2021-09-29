@@ -2,6 +2,7 @@ module 0x1::NFT {
     use Std::Event;
     use 0x1::GUID::{Self, GUID};
     use Std::Signer;
+    use Std::Vector;
 
     /// A non-fungible token of a specific `Type`, created by `id.addr`.
     /// Anyone can create a `NFT`. The access control policy for creating an `NFT<Type>` should be defined in the
@@ -20,6 +21,10 @@ module 0x1::NFT {
         content_uri: vector<u8>,
         /// cryptographic hash of the NFT's contents (e.g., hash of the bytes corresponding to a video)
         content_hash: vector<u8>
+    }
+
+    struct DmitriToken has store, drop {
+        num: u8,
     }
 
     struct MintEvent<phantom Type> has copy, drop, store {
@@ -47,20 +52,24 @@ module 0x1::NFT {
         move_to(account, Admin { mint_events: Event::new_event_handle<MintEvent<Type>>(account) })
     }
 
+    public(script) fun publish_dmitri_nft(account: signer) {
+        publish(&account, create(&account, DmitriToken { num: 123 }, Vector::empty()));
+    }
+
     /// Create a` NFT<Type>` that wraps `token`
     public fun create<Type: store + drop>(
         account: &signer, token: Type, content_uri: vector<u8>
-    ): NFT<Type> acquires Admin {
-        let creator = Signer::address_of(account);
+    ): NFT<Type> {
+        // let creator = Signer::address_of(account);
         let token_id = GUID::create(account);
-        Event::emit_event(
-            &mut borrow_global_mut<Admin<Type>>(ADMIN).mint_events,
-            MintEvent {
-                id: GUID::id(&token_id),
-                creator,
-                content_uri: copy content_uri
-            }
-        );
+        // Event::emit_event(
+        //     &mut borrow_global_mut<Admin<Type>>(ADMIN).mint_events,
+        //     MintEvent {
+        //         id: GUID::id(&token_id),
+        //         creator,
+        //         content_uri: copy content_uri
+        //     }
+        // );
         // TODO: take this as input
         let content_hash = x"";
         NFT { token, token_id, content_uri, content_hash }

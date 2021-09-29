@@ -7098,6 +7098,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "sample-app"
+version = "0.1.0"
+dependencies = [
+ "abigen",
+ "anyhow",
+ "bcs",
+ "diem-config",
+ "diem-crypto",
+ "diem-genesis-tool",
+ "diem-json-rpc-types",
+ "diem-node",
+ "diem-sdk",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "diemdb",
+ "generate-key",
+ "log",
+ "move-prover",
+ "rand 0.8.3",
+ "structopt 0.3.21",
+ "transaction-builder-generator",
+ "walkdir",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"

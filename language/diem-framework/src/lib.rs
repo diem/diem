@@ -48,9 +48,14 @@ pub fn diem_payment_modules_full_path() -> String {
 pub fn diem_stdlib_files_no_dependencies() -> Vec<String> {
     let diem_core_modules_path = path_in_crate(CORE_MODULES_DIR);
     let diem_payment_modules_path = path_in_crate(DPN_MODULES_DIR);
-    find_filenames(&[diem_core_modules_path, diem_payment_modules_path], |p| {
-        extension_equals(p, MOVE_EXTENSION)
-    })
+    find_filenames(
+        &[
+            diem_core_modules_path,
+            diem_payment_modules_path,
+            path_in_crate("experimental/sources"),
+        ],
+        |p| extension_equals(p, MOVE_EXTENSION),
+    )
     .unwrap()
 }
 

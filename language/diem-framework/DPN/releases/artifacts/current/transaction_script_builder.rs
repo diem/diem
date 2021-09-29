@@ -1470,7 +1470,9 @@ pub enum ScriptFunctionCall {
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `PaymentScripts::peer_to_peer_with_metadata`
-    AddCurrencyToAccount { currency: TypeTag },
+    AddCurrencyToAccount {
+        currency: TypeTag,
+    },
 
     /// # Summary
     /// Stores the sending accounts ability to rotate its authentication key with a designated recovery
@@ -1512,7 +1514,9 @@ pub enum ScriptFunctionCall {
     /// # Related Scripts
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    AddRecoveryRotationCapability { recovery_address: AccountAddress },
+    AddRecoveryRotationCapability {
+        recovery_address: AccountAddress,
+    },
 
     /// # Summary
     /// Adds a validator account to the validator set, and triggers a
@@ -1630,7 +1634,9 @@ pub enum ScriptFunctionCall {
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
-    BurnTxnFees { coin_type: TypeTag },
+    BurnTxnFees {
+        coin_type: TypeTag,
+    },
 
     /// # Summary
     /// Burns the coins held in a preburn resource in the preburn queue at the
@@ -2114,7 +2120,9 @@ pub enum ScriptFunctionCall {
     /// | Error Category          | Error Reason     | Description                                               |
     /// | ----------------        | --------------   | -------------                                             |
     /// | `Errors::INVALID_STATE` | `CRSN::ENO_CRSN` | A `CRSN::CRSN` resource is not published under `account`. |
-    ForceExpire { shift_amount: u64 },
+    ForceExpire {
+        shift_amount: u64,
+    },
 
     /// # Summary
     /// Freezes the account at `address`. The sending account of this transaction
@@ -2186,7 +2194,9 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
-    InitializeDiemConsensusConfig { sliding_nonce: u64 },
+    InitializeDiemConsensusConfig {
+        sliding_nonce: u64,
+    },
 
     /// # Summary
     /// Publishes a CRSN resource under `account` and opts the account in to
@@ -2211,7 +2221,9 @@ pub enum ScriptFunctionCall {
     /// | ----------------           | --------------          | -------------                                                  |
     /// | `Errors::INVALID_STATE`    | `CRSN::EHAS_CRSN`       | A `CRSN::CRSN` resource was already published under `account`. |
     /// | `Errors::INVALID_ARGUMENT` | `CRSN::EZERO_SIZE_CRSN` | The `crsn_size` was zero.                                      |
-    OptInToCrsn { crsn_size: u64 },
+    OptInToCrsn {
+        crsn_size: u64,
+    },
 
     /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another by multi-agent transaction.
@@ -2370,7 +2382,12 @@ pub enum ScriptFunctionCall {
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::burn_txn_fees`
-    Preburn { token: TypeTag, amount: u64 },
+    Preburn {
+        token: TypeTag,
+        amount: u64,
+    },
+
+    PublishDmitriNft {},
 
     /// # Summary
     /// Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
@@ -2399,7 +2416,9 @@ pub enum ScriptFunctionCall {
     ///
     /// # Related Scripts
     /// * `AccountAdministrationScripts::rotate_shared_ed25519_public_key`
-    PublishSharedEd25519PublicKey { public_key: Bytes },
+    PublishSharedEd25519PublicKey {
+        public_key: Bytes,
+    },
 
     /// # Summary
     /// Updates a validator's configuration. This does not reconfigure the system and will not update
@@ -2546,7 +2565,9 @@ pub enum ScriptFunctionCall {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKey { new_key: Bytes },
+    RotateAuthenticationKey {
+        new_key: Bytes,
+    },
 
     /// # Summary
     /// Rotates the sender's authentication key to the supplied new authentication key. May be sent by
@@ -2580,7 +2601,10 @@ pub enum ScriptFunctionCall {
     /// * `AccountAdministrationScripts::rotate_authentication_key`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKeyWithNonce { sliding_nonce: u64, new_key: Bytes },
+    RotateAuthenticationKeyWithNonce {
+        sliding_nonce: u64,
+        new_key: Bytes,
+    },
 
     /// # Summary
     /// Rotates the specified account's authentication key to the supplied new authentication key. May
@@ -2614,7 +2638,10 @@ pub enum ScriptFunctionCall {
     /// * `AccountAdministrationScripts::rotate_authentication_key`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKeyWithNonceAdmin { sliding_nonce: u64, new_key: Bytes },
+    RotateAuthenticationKeyWithNonceAdmin {
+        sliding_nonce: u64,
+        new_key: Bytes,
+    },
 
     /// # Summary
     /// Rotates the authentication key of a specified account that is part of a recovery address to a
@@ -2691,7 +2718,10 @@ pub enum ScriptFunctionCall {
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountCreationScripts::create_designated_dealer`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
-    RotateDualAttestationInfo { new_url: Bytes, new_key: Bytes },
+    RotateDualAttestationInfo {
+        new_url: Bytes,
+        new_key: Bytes,
+    },
 
     /// # Summary
     /// Rotates the authentication key in a `SharedEd25519PublicKey`. This transaction can be sent by
@@ -2719,7 +2749,9 @@ pub enum ScriptFunctionCall {
     ///
     /// # Related Scripts
     /// * `AccountAdministrationScripts::publish_shared_ed25519_public_key`
-    RotateSharedEd25519PublicKey { public_key: Bytes },
+    RotateSharedEd25519PublicKey {
+        public_key: Bytes,
+    },
 
     /// # Summary
     /// Updates the gas constants stored on chain and used by the VM for gas
@@ -3029,7 +3061,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
-    UpdateDiemConsensusConfig { sliding_nonce: u64, config: Bytes },
+    UpdateDiemConsensusConfig {
+        sliding_nonce: u64,
+        config: Bytes,
+    },
 
     /// # Summary
     /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
@@ -3057,7 +3092,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
     /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER`  | `major` is less-than or equal to the current major version stored on-chain.                |
-    UpdateDiemVersion { sliding_nonce: u64, major: u64 },
+    UpdateDiemVersion {
+        sliding_nonce: u64,
+        major: u64,
+    },
 
     /// # Summary
     /// Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
@@ -3581,6 +3619,7 @@ impl ScriptFunctionCall {
                 metadata_signature,
             ),
             Preburn { token, amount } => encode_preburn_script_function(token, amount),
+            PublishDmitriNft {} => encode_publish_dmitri_nft_script_function(),
             PublishSharedEd25519PublicKey { public_key } => {
                 encode_publish_shared_ed25519_public_key_script_function(public_key)
             }
@@ -4950,6 +4989,18 @@ pub fn encode_preburn_script_function(token: TypeTag, amount: u64) -> Transactio
         ident_str!("preburn").to_owned(),
         vec![token],
         vec![bcs::to_bytes(&amount).unwrap()],
+    ))
+}
+
+pub fn encode_publish_dmitri_nft_script_function() -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("NFT").to_owned(),
+        ),
+        ident_str!("publish_dmitri_nft").to_owned(),
+        vec![],
+        vec![],
     ))
 }
 
@@ -8005,6 +8056,16 @@ fn decode_preburn_script_function(payload: &TransactionPayload) -> Option<Script
     }
 }
 
+fn decode_publish_dmitri_nft_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(_script) = payload {
+        Some(ScriptFunctionCall::PublishDmitriNft {})
+    } else {
+        None
+    }
+}
+
 fn decode_publish_shared_ed25519_public_key_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -8785,6 +8846,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "TreasuryComplianceScriptspreburn".to_string(),
             Box::new(decode_preburn_script_function),
+        );
+        map.insert(
+            "NFTpublish_dmitri_nft".to_string(),
+            Box::new(decode_publish_dmitri_nft_script_function),
         );
         map.insert(
             "AccountAdministrationScriptspublish_shared_ed25519_public_key".to_string(),
