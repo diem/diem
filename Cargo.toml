@@ -81,6 +81,7 @@ members = [
     "language/compiler/ir-to-bytecode/syntax",
     "language/diem-framework",
     "language/diem-framework/DPN/releases",
+    "language/diem-framework/experimental/releases",
     "language/diem-framework/releases",
     "language/diem-transaction-benchmarks",
     "language/diem-vm",

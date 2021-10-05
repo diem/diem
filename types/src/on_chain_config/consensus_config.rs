@@ -1,9 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::on_chain_config::OnChainConfig;
+use crate::{
+    account_address::AccountAddress,
+    account_config::CORE_CODE_ADDRESS,
+    on_chain_config::{ConfigID, ConfigStorage, OnChainConfig},
+};
 use anyhow::{format_err, Result};
-use serde::{Deserialize, Serialize};
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
+use serde::{Deserialize, Serialize, __private::de::IdentifierDeserializer};
 
 /// The on-chain consensus config, in order to be able to add fields, we use enum to wrap the actual struct.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

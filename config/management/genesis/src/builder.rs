@@ -10,8 +10,12 @@ use diem_global_constants::{
 use diem_management::constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR};
 use diem_secure_storage::{KVStorage, Namespaced};
 use diem_types::{
+    access_path::AccessPath,
     chain_id::ChainId,
-    on_chain_config::{OnChainConsensusConfig, VMPublishingOption},
+    on_chain_config::{
+        default_access_path_for_config, experimental_version_access_path, DiemVersion,
+        OnChainConfig, OnChainConsensusConfig, VMPublishingOption,
+    },
     transaction::{
         authenticator::AuthenticationKey, ScriptFunction, Transaction, TransactionPayload,
     },
@@ -216,12 +220,15 @@ impl<S: KVStorage> GenesisBuilder<S> {
         chain_id: ChainId,
         publishing_option: Option<VMPublishingOption>,
         consensus_config: OnChainConsensusConfig,
+        diem_version_access_path: Option<AccessPath>,
     ) -> Result<Transaction> {
         let diem_root_key = self.root_key()?;
         let treasury_compliance_key = self.treasury_compliance_key()?;
         let validators = self.validators()?;
         let move_modules = self.move_modules()?;
 
+        let diem_version_access_path = diem_version_access_path
+            .unwrap_or(default_access_path_for_config(DiemVersion::CONFIG_ID));
         let genesis = vm_genesis::encode_genesis_transaction(
             diem_root_key,
             treasury_compliance_key,
@@ -230,6 +237,7 @@ impl<S: KVStorage> GenesisBuilder<S> {
             publishing_option,
             consensus_config,
             chain_id,
+            diem_version_access_path,
         );
 
         Ok(genesis)

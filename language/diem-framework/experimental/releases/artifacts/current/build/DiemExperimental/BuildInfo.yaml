@@ -2,6 +2,7 @@
 compiled_package_info:
   package_name: DiemExperimental
   address_alias_instantiation:
+    CoreFramework: "00000000000000000000000000000001"
     CurrencyInfo: 0000000000000000000000000a550c18
     DiemFramework: "00000000000000000000000000000001"
     DiemRoot: 0000000000000000000000000a550c18
@@ -43,6 +44,12 @@ compiled_package_info:
       name: CoreAddresses
     : DiemFramework
     ? address: "00000000000000000000000000000001"
+      name: CoreConfig
+    : DiemFramework
+    ? address: "00000000000000000000000000000001"
+      name: CoreVersion
+    : DiemFramework
+    ? address: "00000000000000000000000000000001"
       name: DesignatedDealer
     : DiemFramework
     ? address: "00000000000000000000000000000001"
@@ -61,9 +68,6 @@ compiled_package_info:
       name: DiemConsensusConfig
     : DiemFramework
     ? address: "00000000000000000000000000000001"
-      name: DiemId
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: DiemSystem
     : DiemFramework
     ? address: "00000000000000000000000000000001"
@@ -76,9 +80,6 @@ compiled_package_info:
       name: DiemVMConfig
     : DiemFramework
     ? address: "00000000000000000000000000000001"
-      name: DiemVersion
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: DualAttestation
     : DiemFramework
     ? address: "00000000000000000000000000000001"
@@ -87,6 +88,9 @@ compiled_package_info:
     ? address: "00000000000000000000000000000001"
       name: Event
     : Std
+    ? address: "00000000000000000000000000000001"
+      name: ExperimentalVersion
+    : DiemFramework
     ? address: "00000000000000000000000000000001"
       name: FixedPoint32
     : Std
@@ -99,9 +103,6 @@ compiled_package_info:
     ? address: "00000000000000000000000000000001"
       name: Hash
     : Std
-    ? address: "00000000000000000000000000000001"
-      name: NetworkIdentity
-    : DiemFramework
     ? address: "00000000000000000000000000000001"
       name: Option
     : Std
@@ -154,15 +155,12 @@ compiled_package_info:
       name: Vector
     : Std
     ? address: "00000000000000000000000000000001"
-      name: Vote
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: XDX
     : DiemFramework
     ? address: "00000000000000000000000000000001"
       name: XUS
     : DiemFramework
-  source_digest: ABFBD2F233D4F76C092094C0FA1CDF391912C687555AA1D3229E36E760EC149B
+  source_digest: 5D947C932079BBBFEBF82285AE613BF183C8942B520ADBAB381F0BDDFF38600E
   build_flags:
     dev_mode: false
     test_mode: false
@@ -171,4 +169,3 @@ compiled_package_info:
     install_dir: experimental/releases/artifacts/current
 dependencies:
   - MoveStdlib
-  - DiemCoreFramework

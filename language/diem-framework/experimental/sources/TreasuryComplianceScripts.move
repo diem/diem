@@ -1,0 +1,1 @@
+../../core/sources/TreasuryComplianceScripts.move

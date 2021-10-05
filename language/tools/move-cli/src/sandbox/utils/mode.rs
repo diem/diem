@@ -24,10 +24,12 @@ use super::ModuleIdWithNamedAddress;
 
 /// Content for the move stdlib directory
 const DIR_MOVE_STDLIB: Dir = include_dir!("../../move-stdlib/sources");
+/// Content for the blockchain core directory
+const DIR_CORE_FRAMEWORK: Dir = include_dir!("../../diem-framework/core/sources");
 /// Content for the nursery directory
 const DIR_MOVE_STDLIB_NURSERY: Dir = include_dir!("../../move-stdlib/nursery/sources");
 /// Content for diem framework directory
-const DIR_DIEM_FRAMEWORK: Dir = include_dir!("../../diem-framework/core/sources");
+const DIR_DIEM_FRAMEWORK: Dir = include_dir!("../../diem-framework/DPN/sources");
 
 /// Pre-defined stdlib package
 static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| {
@@ -51,6 +53,32 @@ static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| {
     )
 });
 
+/// Pre-defined core framework package
+static PACKAGE_CORE_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
+    let named_addresses = [
+        ("Std", "0x1"),
+        ("DiemFramework", "0x1"),
+        ("DiemRoot", "0xA550C18"),
+        ("CurrencyInfo", "0xA550C18"),
+        ("TreasuryCompliance", "0xB1E55ED"),
+        ("VMReserved", "0x0"),
+    ]
+    .iter()
+    .map(|(name, addr)| (name.to_string(), NumericalAddress::parse_str(addr).unwrap()))
+    .collect();
+    MovePackage::new(
+        "core".to_string(),
+        vec![SourceFilter {
+            source_dir: &DIR_CORE_FRAMEWORK,
+            inclusion: None, // include everything
+            exclusion: HashSet::new(),
+        }],
+        vec![&PACKAGE_MOVE_STDLIB],
+        named_addresses,
+        Some("DiemFramework".to_owned()),
+    )
+});
+
 static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
     // TODO: This will be removed once we have proper packages.
     let named_addresses = [
@@ -71,7 +99,7 @@ static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| {
             inclusion: None, // include everything
             exclusion: HashSet::new(),
         }],
-        vec![&PACKAGE_MOVE_STDLIB],
+        vec![&PACKAGE_CORE_FRAMEWORK],
         named_addresses,
         Some("DiemFramework".to_owned()),
     )

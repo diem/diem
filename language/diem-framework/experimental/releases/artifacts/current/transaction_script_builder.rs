@@ -2164,14 +2164,6 @@ pub enum ScriptFunctionCall {
         to_freeze_account: AccountAddress,
     },
 
-    /// gc_ballots deletes all the expired ballots of the type `Proposal`
-    /// under the provided address `addr`. The signer can be anybody
-    /// and does not need to have the same address as `addr`
-    GcBallots {
-        proposal: TypeTag,
-        addr: AccountAddress,
-    },
-
     /// # Summary
     /// Initializes the Diem consensus config that is stored on-chain.  This
     /// transaction can only be sent from the Diem Root account.
@@ -3577,7 +3569,6 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 to_freeze_account,
             } => encode_freeze_account_script_function(sliding_nonce, to_freeze_account),
-            GcBallots { proposal, addr } => encode_gc_ballots_script_function(proposal, addr),
             InitializeDiemConsensusConfig { sliding_nonce } => {
                 encode_initialize_diem_consensus_config_script_function(sliding_nonce)
             }
@@ -4715,24 +4706,6 @@ pub fn encode_freeze_account_script_function(
             bcs::to_bytes(&sliding_nonce).unwrap(),
             bcs::to_bytes(&to_freeze_account).unwrap(),
         ],
-    ))
-}
-
-/// gc_ballots deletes all the expired ballots of the type `Proposal`
-/// under the provided address `addr`. The signer can be anybody
-/// and does not need to have the same address as `addr`
-pub fn encode_gc_ballots_script_function(
-    proposal: TypeTag,
-    addr: AccountAddress,
-) -> TransactionPayload {
-    TransactionPayload::ScriptFunction(ScriptFunction::new(
-        ModuleId::new(
-            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
-            ident_str!("Vote").to_owned(),
-        ),
-        ident_str!("gc_ballots").to_owned(),
-        vec![proposal],
-        vec![bcs::to_bytes(&addr).unwrap()],
     ))
 }
 
@@ -8017,17 +7990,6 @@ fn decode_freeze_account_script_function(
     }
 }
 
-fn decode_gc_ballots_script_function(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {
-    if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::GcBallots {
-            proposal: script.ty_args().get(0)?.clone(),
-            addr: bcs::from_bytes(script.args().get(0)?).ok()?,
-        })
-    } else {
-        None
-    }
-}
-
 fn decode_initialize_diem_consensus_config_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -8869,10 +8831,6 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "TreasuryComplianceScriptsfreeze_account".to_string(),
             Box::new(decode_freeze_account_script_function),
-        );
-        map.insert(
-            "Votegc_ballots".to_string(),
-            Box::new(decode_gc_ballots_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsinitialize_diem_consensus_config".to_string(),

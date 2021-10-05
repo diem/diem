@@ -91,7 +91,9 @@ pub(crate) mod test_utils {
     };
     use diem_infallible::RwLock;
     use diem_types::{
-        on_chain_config::ON_CHAIN_CONFIG_REGISTRY,
+        on_chain_config::{
+            DiemPaymentNetworkConfigRegistry, OnChainConfigRegistry, ON_CHAIN_CONFIG_REGISTRY,
+        },
         protocol_spec::DpnProto,
         transaction::{Transaction, WriteSetPayload},
     };

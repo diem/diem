@@ -17,7 +17,9 @@ use diem_infallible::{Mutex, RwLock};
 use diem_types::{
     account_config::AccountSequenceInfo,
     mempool_status::MempoolStatusCode,
-    on_chain_config::ON_CHAIN_CONFIG_REGISTRY,
+    on_chain_config::{
+        DiemPaymentNetworkConfigRegistry, OnChainConfigRegistry, ON_CHAIN_CONFIG_REGISTRY,
+    },
     protocol_spec::DpnProto,
     transaction::{GovernanceRole, SignedTransaction},
 };

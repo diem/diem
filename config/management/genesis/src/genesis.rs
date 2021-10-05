@@ -43,6 +43,7 @@ impl Genesis {
                 chain_id,
                 None,
                 OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
+                None,
             )
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
 

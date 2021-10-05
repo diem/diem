@@ -4,11 +4,12 @@
 //! Support for mocking the Diem data store.
 
 use crate::account::AccountData;
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath,
-    on_chain_config::ConfigStorage,
+    on_chain_config,
+    on_chain_config::{get_access_path_with_config_name, ConfigAccessPaths, ConfigStorage},
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
@@ -17,6 +18,7 @@ use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    move_resource::MoveResource,
     resolver::{ModuleResolver, ResourceResolver},
 };
 use once_cell::sync::Lazy;
@@ -97,6 +99,19 @@ impl FakeDataStore {
 impl ConfigStorage for FakeDataStore {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         StateView::get(self, &access_path).unwrap_or_default()
+    }
+
+    fn fetch_config_access_path(&self, config_name: String) -> Option<AccessPath> {
+        // fetch ConfigAccessPaths
+        let bytes = StateView::get(
+            self,
+            &AccessPath::new(
+                on_chain_config::config_address(),
+                ConfigAccessPaths::resource_path(),
+            ),
+        )
+        .ok()??;
+        get_access_path_with_config_name(&bytes, config_name)
     }
 }
 
