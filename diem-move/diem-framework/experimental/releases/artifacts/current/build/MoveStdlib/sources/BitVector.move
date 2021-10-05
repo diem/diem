@@ -17,8 +17,8 @@ module Std::BitVector {
     }
 
     public fun new(length: u64): BitVector {
-        assert(length > 0, Errors::invalid_argument(ELENGTH));
-        assert(length < MAX_SIZE, Errors::invalid_argument(ELENGTH));
+        assert!(length > 0, Errors::invalid_argument(ELENGTH));
+        assert!(length < MAX_SIZE, Errors::invalid_argument(ELENGTH));
         let counter = 0;
         let bit_field = Vector::empty();
         while ({spec {
@@ -52,7 +52,7 @@ module Std::BitVector {
 
     /// Set the bit at `bit_index` in the `bitvector` regardless of its previous state.
     public fun set(bitvector: &mut BitVector, bit_index: u64) {
-        assert(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
+        assert!(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
         let x = Vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = true;
     }
@@ -68,7 +68,7 @@ module Std::BitVector {
 
     /// Unset the bit at `bit_index` in the `bitvector` regardless of its previous state.
     public fun unset(bitvector: &mut BitVector, bit_index: u64) {
-        assert(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
+        assert!(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
         let x = Vector::borrow_mut(&mut bitvector.bit_field, bit_index);
         *x = false;
     }
@@ -114,7 +114,7 @@ module Std::BitVector {
     /// Return the value of the bit at `bit_index` in the `bitvector`. `true`
     /// represents "1" and `false` represents a 0
     public fun is_index_set(bitvector: &BitVector, bit_index: u64): bool {
-        assert(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
+        assert!(bit_index < Vector::length(&bitvector.bit_field), Errors::invalid_argument(EINDEX));
         *Vector::borrow(&bitvector.bit_field, bit_index)
     }
     spec is_index_set {
@@ -143,7 +143,7 @@ module Std::BitVector {
     /// including) `start_index` in the `bitvector`. If there is no such
     /// sequence, then `0` is returned.
     public fun longest_set_sequence_starting_at(bitvector: &BitVector, start_index: u64): u64 {
-        assert(start_index < bitvector.length, Errors::invalid_argument(EINDEX));
+        assert!(start_index < bitvector.length, Errors::invalid_argument(EINDEX));
         let index = start_index;
 
         // Find the greatest index in the vector such that all indices less than it are set.

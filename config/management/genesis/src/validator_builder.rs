@@ -27,6 +27,7 @@ use diem_management::{
 };
 use diem_secure_storage::{CryptoStorage, KVStorage, OnDiskStorage, Storage};
 use diem_types::{
+    access_path::AccessPath,
     chain_id::ChainId,
     network_address::encrypted::{
         Key as NetworkAddressEncryptionKey, KeyVersion as NetworkAddressEncryptionKeyVersion,
@@ -166,6 +167,7 @@ pub struct ValidatorBuilder {
     num_validators: NonZeroUsize,
     randomize_first_validator_ports: bool,
     publishing_option: Option<VMPublishingOption>,
+    diem_version_access_path: Option<AccessPath>,
     template: NodeConfig,
 }
 
@@ -177,6 +179,7 @@ impl ValidatorBuilder {
             num_validators: NonZeroUsize::new(1).unwrap(),
             randomize_first_validator_ports: true,
             publishing_option: None,
+            diem_version_access_path: None,
             template: NodeConfig::default_for_validator(),
         }
     }
@@ -193,6 +196,11 @@ impl ValidatorBuilder {
 
     pub fn publishing_option(mut self, publishing_option: VMPublishingOption) -> Self {
         self.publishing_option = Some(publishing_option);
+        self
+    }
+
+    pub fn diem_version_access_path(mut self, diem_version_access_path: AccessPath) -> Self {
+        self.diem_version_access_path = Some(diem_version_access_path);
         self
     }
 
@@ -234,6 +242,7 @@ impl ValidatorBuilder {
             &root_keys,
             &validators,
             self.publishing_option,
+            self.diem_version_access_path,
             self.move_modules,
         )?;
 
@@ -413,6 +422,7 @@ impl ValidatorBuilder {
         root_keys: &RootKeys,
         validators: &[ValidatorConfig],
         publishing_option: Option<VMPublishingOption>,
+        diem_version_access_path: Option<AccessPath>,
         move_modules: Vec<Vec<u8>>,
     ) -> Result<(Transaction, Waypoint)> {
         let mut genesis_builder = GenesisBuilder::new(genesis_storage);
@@ -467,6 +477,7 @@ impl ValidatorBuilder {
             ChainId::test(),
             publishing_option,
             OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
+            diem_version_access_path,
         )?;
         let waypoint = create_genesis_waypoint(&genesis)?;
 

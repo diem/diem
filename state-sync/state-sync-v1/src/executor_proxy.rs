@@ -578,9 +578,9 @@ mod tests {
         // Create a reconfig subscriber with a custom config registry (including
         // a TestOnChainConfig that doesn't exist on-chain).
         let mut config_registry = ON_CHAIN_CONFIG_REGISTRY.to_owned();
-        config_registry.push(TestOnChainConfig::CONFIG_ID);
+        config_registry.push(TestOnChainConfig::config_id());
         let mut event_subscription_service =
-            EventSubscriptionService::new(&config_registry, Arc::new(RwLock::new(db_rw.clone())));
+            EventSubscriptionService::new(config_registry, Arc::new(RwLock::new(db_rw.clone())));
         let mut reconfig_receiver = event_subscription_service
             .subscribe_to_reconfigurations()
             .unwrap();

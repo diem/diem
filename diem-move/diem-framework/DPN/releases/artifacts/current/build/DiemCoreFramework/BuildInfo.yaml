@@ -2,6 +2,7 @@
 compiled_package_info:
   package_name: DiemCoreFramework
   address_alias_instantiation:
+    CoreFramework: "00000000000000000000000000000001"
     CurrencyInfo: 0000000000000000000000000a550c18
     DiemFramework: "00000000000000000000000000000001"
     DiemRoot: 0000000000000000000000000a550c18
@@ -162,7 +163,7 @@ compiled_package_info:
     ? address: "00000000000000000000000000000001"
       name: XUS
     : DiemFramework
-  source_digest: 1FD3B7BC33E90BB82005A11A724DAFDA60E7240DA8BCB16367A8047FCC36A06D
+  source_digest: 41F84575216E492E40A4EE79AAA26E0380D49C4E6D540C5BCA9CFE4B9E413BEE
   build_flags:
     dev_mode: false
     test_mode: false

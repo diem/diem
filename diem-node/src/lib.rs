@@ -17,6 +17,7 @@ use diem_logger::{prelude::*, Logger};
 use diem_metrics::metric_server;
 use diem_time_service::TimeService;
 use diem_types::{
+    access_path::AccessPath,
     account_config::diem_root_address,
     account_state::AccountState,
     chain_id::ChainId,
@@ -112,6 +113,7 @@ pub fn load_test_environment<R>(
     random_ports: bool,
     publishing_option: Option<VMPublishingOption>,
     genesis_modules: Vec<Vec<u8>>,
+    version_access_path: Option<AccessPath>,
     rng: R,
 ) where
     R: ::rand::RngCore + ::rand::CryptoRng,
@@ -136,6 +138,9 @@ pub fn load_test_environment<R>(
             .randomize_first_validator_ports(random_ports);
     if let Some(publishing_option) = publishing_option {
         builder = builder.publishing_option(publishing_option);
+    }
+    if let Some(version_access_path) = version_access_path {
+        builder = builder.diem_version_access_path(version_access_path);
     }
     let (root_keys, _genesis, genesis_waypoint, validators) = builder.build(rng).unwrap();
 

@@ -14,6 +14,11 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
+    on_chain_config,
+    on_chain_config::{
+        default_access_path_for_config, get_access_path_with_config_name, ConfigAccessPaths,
+        ConfigID,
+    },
     proof::{
         definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof,
         TransactionAccumulatorSummary,
@@ -26,7 +31,10 @@ use diem_types::{
     },
 };
 use itertools::Itertools;
-use move_core_types::resolver::{ModuleResolver, ResourceResolver};
+use move_core_types::{
+    move_resource::MoveResource,
+    resolver::{ModuleResolver, ResourceResolver},
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -470,6 +478,31 @@ impl<PS: ProtocolSpec> MoveStorage for &dyn DbReader<PS> {
                     .clone())
             })
             .collect()
+    }
+
+    fn fetch_config_by_version(&self, config_id: ConfigID, version: Version) -> Result<Vec<u8>> {
+        let config_ap_map = self.batch_fetch_resources_by_version(
+            vec![AccessPath::new(
+                on_chain_config::config_address(),
+                ConfigAccessPaths::resource_path(),
+            )],
+            version,
+        );
+        let access_path = match config_ap_map {
+            Ok(mut vec_bytes) => {
+                let path_bytes = vec_bytes
+                    .pop()
+                    .ok_or_else(|| format_err!("fail to fetch config ap map"))?;
+                match get_access_path_with_config_name(&path_bytes, config_id.name()) {
+                    Some(access_path) => access_path,
+                    _ => default_access_path_for_config(config_id),
+                }
+            }
+            _ => default_access_path_for_config(config_id),
+        };
+        self.batch_fetch_resources_by_version(vec![access_path], version)?
+            .pop()
+            .ok_or_else(|| format_err!("failed to fetch config {}", config_id))
     }
 
     fn fetch_synced_version(&self) -> Result<u64> {

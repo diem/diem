@@ -351,7 +351,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): &Element {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
     <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&t.vec, 0)
 }
 </code></pre>
@@ -522,7 +522,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): Element {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
     <a href="Vector.md#0x1_Vector_pop_back">Vector::pop_back</a>(&<b>mut</b> t.vec)
 }
 </code></pre>
@@ -564,7 +564,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): &<b>mut</b> Element {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
     <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(&<b>mut</b> t.vec, 0)
 }
 </code></pre>
@@ -605,7 +605,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;, e: Element): Element {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_some">is_some</a>(t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
     <b>let</b> vec_ref = &<b>mut</b> t.vec;
     <b>let</b> old_value = <a href="Vector.md#0x1_Vector_pop_back">Vector::pop_back</a>(vec_ref);
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(vec_ref, e);
@@ -692,7 +692,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): Element {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">is_some</a>(&t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_some">is_some</a>(&t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>));
     <b>let</b> <a href="Option.md#0x1_Option">Option</a> { vec } = t;
     <b>let</b> elem = <a href="Vector.md#0x1_Vector_pop_back">Vector::pop_back</a>(&<b>mut</b> vec);
     <a href="Vector.md#0x1_Vector_destroy_empty">Vector::destroy_empty</a>(vec);
@@ -736,7 +736,7 @@ Aborts if <code>t</code> holds a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;) {
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_none">is_none</a>(&t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_IS_SET">EOPTION_IS_SET</a>));
+    <b>assert</b>!(<a href="Option.md#0x1_Option_is_none">is_none</a>(&t), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Option.md#0x1_Option_EOPTION_IS_SET">EOPTION_IS_SET</a>));
     <b>let</b> <a href="Option.md#0x1_Option">Option</a> { vec } = t;
     <a href="Vector.md#0x1_Vector_destroy_empty">Vector::destroy_empty</a>(vec)
 }

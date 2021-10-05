@@ -84,7 +84,7 @@ module MultiToken {
         let owner_addr = GUID::id_creator_address(id);
         let tokens = &mut borrow_global_mut<TokenDataCollection<TokenType>>(owner_addr).tokens;
         let index_opt = index_of_token<TokenType>(tokens, id);
-        assert(Option::is_some(&index_opt), Errors::invalid_argument(EWRONG_TOKEN_ID));
+        assert!(Option::is_some(&index_opt), Errors::invalid_argument(EWRONG_TOKEN_ID));
         let index = Option::extract(&mut index_opt);
         Vector::borrow(tokens, index).supply
     }
@@ -94,10 +94,10 @@ module MultiToken {
         let owner_addr = GUID::id_creator_address(&nft.id);
         let tokens = &mut borrow_global_mut<TokenDataCollection<TokenType>>(owner_addr).tokens;
         let index_opt = index_of_token<TokenType>(tokens, &nft.id);
-        assert(Option::is_some(&index_opt), Errors::invalid_argument(EWRONG_TOKEN_ID));
+        assert!(Option::is_some(&index_opt), Errors::invalid_argument(EWRONG_TOKEN_ID));
         let index = Option::extract(&mut index_opt);
         let item_opt = &mut Vector::borrow_mut(tokens, index).metadata;
-        assert(Option::is_some(item_opt), Errors::invalid_state(ETOKEN_EXTRACTED));
+        assert!(Option::is_some(item_opt), Errors::invalid_state(ETOKEN_EXTRACTED));
         TokenDataWrapper { origin: owner_addr, index, metadata: Option::extract(item_opt) }
     }
 
@@ -105,9 +105,9 @@ module MultiToken {
     public fun restore_token<TokenType: store>(wrapper: TokenDataWrapper<TokenType>) acquires TokenDataCollection {
         let TokenDataWrapper { origin, index, metadata } = wrapper;
         let tokens = &mut borrow_global_mut<TokenDataCollection<TokenType>>(origin).tokens;
-        assert(Vector::length(tokens) > index, EINDEX_EXCEEDS_LENGTH);
+        assert!(Vector::length(tokens) > index, EINDEX_EXCEEDS_LENGTH);
         let item_opt = &mut Vector::borrow_mut(tokens, index).metadata;
-        assert(Option::is_none(item_opt), ETOKEN_PRESENT);
+        assert!(Option::is_none(item_opt), ETOKEN_PRESENT);
         Option::fill(item_opt, metadata);
     }
 
@@ -127,14 +127,14 @@ module MultiToken {
     /// Join two multi tokens and return a multi token with the combined value of the two.
     public fun join<TokenType: store>(token: &mut Token<TokenType>, other: Token<TokenType>) {
         let Token { id, balance } = other;
-        assert(*&token.id == id, EWRONG_TOKEN_ID);
-        assert(MAX_U64 - token.balance >= balance, ETOKEN_BALANCE_OVERFLOWS);
+        assert!(*&token.id == id, EWRONG_TOKEN_ID);
+        assert!(MAX_U64 - token.balance >= balance, ETOKEN_BALANCE_OVERFLOWS);
         token.balance = token.balance + balance
     }
 
     /// Split the token into two tokens, one with balance `amount` and the other one with balance
     public fun split<TokenType: store>(token: Token<TokenType>, amount: u64): (Token<TokenType>, Token<TokenType>) {
-        assert(token.balance >= amount, EAMOUNT_EXCEEDS_TOKEN_BALANCE);
+        assert!(token.balance >= amount, EAMOUNT_EXCEEDS_TOKEN_BALANCE);
         token.balance = token.balance - amount;
         let id = *&token.id;
         (token,
@@ -146,7 +146,7 @@ module MultiToken {
 
     /// Initialize this module, to be called in genesis.
     public fun initialize_multi_token(account: signer) {
-        assert(Signer::address_of(&account) == ADMIN, ENOT_ADMIN);
+        assert!(Signer::address_of(&account) == ADMIN, ENOT_ADMIN);
         move_to(&account, Admin {
             mint_events: Event::new_event_handle<MintEvent>(&account),
         })

@@ -81,7 +81,7 @@ impl<'r, 'l, S: MoveResolver> GenesisSession<'r, 'l, S> {
     }
     pub fn set_diem_version(&mut self, version: Version) {
         self.exec_func(
-            "DiemVersion",
+            "ExperimentalVersion",
             "set",
             vec![],
             serialize_values(&vec![

@@ -4,12 +4,13 @@
 
 use crate::{counters::CRITICAL_ERRORS, create_access_path, logging::AdapterLogSchema};
 #[allow(unused_imports)]
-use anyhow::format_err;
+use anyhow::{format_err, Result};
 use diem_logger::prelude::*;
 use diem_state_view::{StateView, StateViewId};
 use diem_types::{
     access_path::AccessPath,
-    on_chain_config::ConfigStorage,
+    on_chain_config,
+    on_chain_config::{get_access_path_with_config_name, ConfigAccessPaths, ConfigStorage},
     vm_status::StatusCode,
     write_set::{WriteOp, WriteSet},
 };
@@ -18,6 +19,7 @@ use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    move_resource::MoveResource,
     resolver::{ModuleResolver, ResourceResolver},
 };
 use std::collections::btree_map::BTreeMap;
@@ -131,6 +133,17 @@ impl<'block, S: StateView> ConfigStorage for StateViewCache<'block, S> {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         self.get(&access_path).ok()?
     }
+
+    fn fetch_config_access_path(&self, config_name: String) -> Option<AccessPath> {
+        // fetch ConfigAccessPaths
+        let bytes = self
+            .get(&AccessPath::new(
+                on_chain_config::config_address(),
+                ConfigAccessPaths::resource_path(),
+            ))
+            .ok()??;
+        get_access_path_with_config_name(&bytes, config_name)
+    }
 }
 
 // Adapter to convert a `StateView` into a `RemoteCache`.
@@ -174,5 +187,16 @@ impl<'a, S: StateView> ResourceResolver for RemoteStorage<'a, S> {
 impl<'a, S: StateView> ConfigStorage for RemoteStorage<'a, S> {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         self.get(&access_path).ok()?
+    }
+
+    fn fetch_config_access_path(&self, config_name: String) -> Option<AccessPath> {
+        // fetch ConfigAccessPaths
+        let bytes = self
+            .get(&AccessPath::new(
+                on_chain_config::config_address(),
+                ConfigAccessPaths::resource_path(),
+            ))
+            .ok()??;
+        get_access_path_with_config_name(&bytes, config_name)
     }
 }

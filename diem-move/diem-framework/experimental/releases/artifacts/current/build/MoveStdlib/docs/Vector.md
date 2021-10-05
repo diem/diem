@@ -557,7 +557,7 @@ Aborts if <code>i</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Vector.md#0x1_Vector_swap_remove">swap_remove</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): Element {
-    <b>assert</b>(!<a href="Vector.md#0x1_Vector_is_empty">is_empty</a>(v), <a href="Vector.md#0x1_Vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>);
+    <b>assert</b>!(!<a href="Vector.md#0x1_Vector_is_empty">is_empty</a>(v), <a href="Vector.md#0x1_Vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>);
     <b>let</b> last_idx = <a href="Vector.md#0x1_Vector_length">length</a>(v) - 1;
     <a href="Vector.md#0x1_Vector_swap">swap</a>(v, i, last_idx);
     <a href="Vector.md#0x1_Vector_pop_back">pop_back</a>(v)

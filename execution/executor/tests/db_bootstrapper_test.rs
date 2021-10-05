@@ -289,7 +289,7 @@ fn test_pre_genesis() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
-                ValidatorSet::CONFIG_ID.access_path(),
+                ValidatorSet::config_id().access_path(),
                 WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
@@ -368,7 +368,7 @@ fn test_new_genesis() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
-                ValidatorSet::CONFIG_ID.access_path(),
+                ValidatorSet::config_id().access_path(),
                 WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (

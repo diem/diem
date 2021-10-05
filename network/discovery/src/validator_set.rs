@@ -268,7 +268,7 @@ mod tests {
         let validator_set = ValidatorSet::new(vec![validator]);
         let mut configs = HashMap::new();
         configs.insert(
-            ValidatorSet::CONFIG_ID,
+            ValidatorSet::config_id(),
             bcs::to_bytes(&validator_set).unwrap(),
         );
         let payload = OnChainConfigPayload::new(1, Arc::new(configs));

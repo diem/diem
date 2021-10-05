@@ -27,7 +27,8 @@ mod vm_publishing_option;
 pub use self::{
     consensus_config::{ConsensusConfigV1, ConsensusConfigV2, OnChainConsensusConfig},
     diem_version::{
-        DiemVersion, DIEM_MAX_KNOWN_VERSION, DIEM_VERSION_2, DIEM_VERSION_3, DIEM_VERSION_4,
+        experimental_version_access_path, DiemVersion, DIEM_MAX_KNOWN_VERSION, DIEM_VERSION_2,
+        DIEM_VERSION_3, DIEM_VERSION_4,
     },
     registered_currencies::RegisteredCurrencies,
     validator_set::ValidatorSet,
@@ -49,11 +50,8 @@ pub fn config_address() -> AccountAddress {
 }
 
 impl ConfigID {
-    pub fn access_path(self) -> AccessPath {
-        access_path_for_config(
-            AccountAddress::from_hex_literal(self.0).expect("failed to get address"),
-            Identifier::new(self.1).expect("failed to get Identifier"),
-        )
+    pub fn name(&self) -> String {
+        self.1.to_string()
     }
 }
 
@@ -66,6 +64,37 @@ impl fmt::Display for ConfigID {
         )
     }
 }
+
+// pub trait OnChainConfigRegistry {
+//     type VMConfig: OnChainConfig;
+//     type VMPublishingOption: OnChainConfig;
+//     type Version: OnChainConfig;
+//     type ValidatorSet: OnChainConfig;
+//     type Currencies: OnChainConfig;
+//     type ConsensusConfig: OnChainConfig;
+//
+//     fn get_registry() -> Vec<ConfigID> {
+//         vec![
+//             Self::VMConfig::config_id(),
+//             Self::VMPublishingOption::config_id(),
+//             Self::Version::config_id(),
+//             Self::ValidatorSet::config_id(),
+//             Self::Currencies::config_id(),
+//             Self::ConsensusConfig::config_id(),
+//         ]
+//     }
+// }
+
+// pub struct DiemPaymentNetworkConfigRegistry();
+//
+// impl OnChainConfigRegistry for DiemPaymentNetworkConfigRegistry {
+//     type VMConfig = VMConfig;
+//     type VMPublishingOption = VMPublishingOption;
+//     type Version = DiemVersion;
+//     type ValidatorSet = ValidatorSet;
+//     type Currencies = RegisteredCurrencies;
+//     type ConsensusConfig = OnChainConsensusConfig;
+// }
 
 /// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
@@ -121,6 +150,7 @@ impl fmt::Display for OnChainConfigPayload {
 
 /// Trait to be implemented by a storage type from which to read on-chain configs
 pub trait ConfigStorage {
+    fn fetch_config_access_path(&self, config_name: String) -> Option<AccessPath>;
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>>;
 }
 
@@ -157,30 +187,46 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
         T: ConfigStorage,
     {
         storage
-            .fetch_config(Self::CONFIG_ID.access_path())
+            .fetch_config(default_access_path_for_config(Self::CONFIG_ID))
             .and_then(|bytes| Self::deserialize_into_config(&bytes).ok())
     }
+
+    // fn config_id() -> ConfigID {
+    //     ConfigID {
+    //         config_address: AccountAddress::from_hex_literal(Self::ADDRESS)
+    //             .expect("failed to get address"),
+    //         struct_tag: default_struct_tag_for_config(
+    //             Identifier::new(Self::IDENTIFIER).expect("failed to get identifier"),
+    //         ),
+    //     }
+    // }
 }
 
 pub fn new_epoch_event_key() -> EventKey {
     EventKey::new_from_address(&config_address(), 4)
 }
 
-pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {
+pub fn default_access_path_for_config(config_id: ConfigID) -> AccessPath {
     AccessPath::new(
-        address,
-        AccessPath::resource_access_vec(StructTag {
-            address: CORE_CODE_ADDRESS,
-            module: ConfigurationResource::MODULE_NAME.to_owned(),
-            name: ConfigurationResource::MODULE_NAME.to_owned(),
-            type_params: vec![TypeTag::Struct(StructTag {
-                address: CORE_CODE_ADDRESS,
-                module: config_name.clone(),
-                name: config_name,
-                type_params: vec![],
-            })],
-        }),
+        config_address(),
+        AccessPath::resource_access_vec(default_struct_tag_for_config(
+            Identifier::new(config_id.1).expect("fail to make identifier"),
+        )),
     )
+}
+
+pub fn default_struct_tag_for_config(config_name: Identifier) -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: ConfigurationResource::MODULE_NAME.to_owned(),
+        name: ConfigurationResource::MODULE_NAME.to_owned(),
+        type_params: vec![TypeTag::Struct(StructTag {
+            address: CORE_CODE_ADDRESS,
+            module: config_name.clone(),
+            name: config_name,
+            type_params: vec![],
+        })],
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -235,3 +281,35 @@ impl MoveStructType for ConfigurationResource {
 }
 
 impl MoveResource for ConfigurationResource {}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct NamedAccessPath {
+    pub name: String,
+    pub path: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct ConfigAccessPaths {
+    pub paths: Vec<NamedAccessPath>,
+}
+
+impl MoveStructType for ConfigAccessPaths {
+    const MODULE_NAME: &'static IdentStr = ident_str!("CoreConfig");
+    const STRUCT_NAME: &'static IdentStr = ident_str!("ConfigAccessPaths");
+}
+
+impl MoveResource for ConfigAccessPaths {}
+
+pub fn get_access_path_with_config_name(
+    paths_bytes: &[u8],
+    config_name: String,
+) -> Option<AccessPath> {
+    let config_access_paths = bcs::from_bytes::<ConfigAccessPaths>(paths_bytes).ok()?;
+    // look into the vector of (name, access_path) to find a config with config_name
+    for named_path in config_access_paths.paths {
+        if named_path.name == config_name {
+            return bcs::from_bytes::<AccessPath>(&named_path.path).ok();
+        }
+    }
+    None
+}

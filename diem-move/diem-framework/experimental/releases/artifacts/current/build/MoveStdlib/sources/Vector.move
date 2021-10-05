@@ -141,7 +141,7 @@ module Std::Vector {
     /// This is O(1), but does not preserve ordering of elements in the vector.
     /// Aborts if `i` is out of bounds.
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        assert(!is_empty(v), EINDEX_OUT_OF_BOUNDS);
+        assert!(!is_empty(v), EINDEX_OUT_OF_BOUNDS);
         let last_idx = length(v) - 1;
         swap(v, i, last_idx);
         pop_back(v)

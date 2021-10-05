@@ -15,6 +15,7 @@ use diem_framework_releases::{
 };
 use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
+    access_path::AccessPath,
     account_config::{
         self,
         events::{CreateAccountEvent, NewEpochEvent},
@@ -22,7 +23,8 @@ use diem_types::{
     chain_id::{ChainId, NamedChain},
     contract_event::ContractEvent,
     on_chain_config::{
-        ConsensusConfigV1, OnChainConsensusConfig, VMPublishingOption, DIEM_MAX_KNOWN_VERSION,
+        experimental_version_access_path, ConsensusConfigV1, OnChainConsensusConfig,
+        VMPublishingOption, DIEM_MAX_KNOWN_VERSION,
     },
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, ScriptFunction, Transaction, WriteSetPayload,
@@ -63,6 +65,7 @@ pub fn encode_genesis_transaction(
     vm_publishing_option: Option<VMPublishingOption>,
     consensus_config: OnChainConsensusConfig,
     chain_id: ChainId,
+    version_access_path: AccessPath,
 ) -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(encode_genesis_change_set(
         &diem_root_key,
@@ -73,6 +76,7 @@ pub fn encode_genesis_transaction(
             .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
         consensus_config,
         chain_id,
+        version_access_path,
     )))
 }
 
@@ -84,6 +88,7 @@ pub fn encode_genesis_change_set(
     vm_publishing_option: VMPublishingOption,
     consensus_config: OnChainConsensusConfig,
     chain_id: ChainId,
+    version_access_path: AccessPath,
 ) -> ChangeSet {
     let mut stdlib_modules = Vec::new();
     // create a data view for move_vm
@@ -113,6 +118,7 @@ pub fn encode_genesis_change_set(
         consensus_config,
         &xdx_ty,
         chain_id,
+        version_access_path,
     );
     // generate the genesis WriteSet
     create_and_initialize_owners_operators(&mut session, validators);
@@ -198,6 +204,7 @@ fn create_and_initialize_main_accounts(
     consensus_config: OnChainConsensusConfig,
     xdx_ty: &TypeTag,
     chain_id: ChainId,
+    version_access_path: AccessPath,
 ) {
     let diem_root_auth_key = AuthenticationKey::ed25519(diem_root_key);
     let treasury_compliance_auth_key = AuthenticationKey::ed25519(treasury_compliance_key);
@@ -222,6 +229,9 @@ fn create_and_initialize_main_accounts(
     let consensus_config_bytes =
         bcs::to_bytes(&consensus_config).expect("Failure serializing genesis consensus config");
 
+    let version_access_path_bytes = bcs::to_bytes(&version_access_path)
+        .expect("Failure serializing genesis version access path");
+
     exec_function(
         session,
         GENESIS_MODULE_NAME,
@@ -239,6 +249,7 @@ fn create_and_initialize_main_accounts(
             MoveValue::U8(chain_id.id()),
             MoveValue::U64(DIEM_MAX_KNOWN_VERSION.major),
             MoveValue::vector_u8(consensus_config_bytes),
+            MoveValue::vector_u8(version_access_path_bytes),
         ]),
     );
 
@@ -541,6 +552,8 @@ pub fn generate_test_genesis(
         vm_publishing_option,
         OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
         ChainId::test(),
+        // default_access_path_for_config(DiemVersion::CONFIG_ID),
+        experimental_version_access_path(),
     );
     (genesis, test_validators)
 }

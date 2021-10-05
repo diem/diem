@@ -1,0 +1,1 @@
+../../core/sources/CoreAddresses.move

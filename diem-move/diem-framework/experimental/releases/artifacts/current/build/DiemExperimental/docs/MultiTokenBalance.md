@@ -150,7 +150,7 @@ gallery, we combine it with the new one and make a token of greater value.
 
 <pre><code><b>public</b> <b>fun</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_add_to_gallery">add_to_gallery</a>&lt;TokenType: store&gt;(owner: address, token: Token&lt;TokenType&gt;)
 <b>acquires</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(owner), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_NOT_PUBLISHED">EBALANCE_NOT_PUBLISHED</a>);
+    <b>assert</b>!(<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(owner), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_NOT_PUBLISHED">EBALANCE_NOT_PUBLISHED</a>);
     <b>let</b> id = <a href="MultiToken.md#0x1_MultiToken_id">MultiToken::id</a>&lt;TokenType&gt;(&token);
     <b>if</b> (<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_has_token">has_token</a>&lt;TokenType&gt;(owner, &id)) {
         // If `owner` already has a token <b>with</b> the same id, remove it from the gallery
@@ -185,10 +185,10 @@ Remove a token of certain id from the owner's gallery and return it.
 
 <pre><code><b>fun</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_remove_from_gallery">remove_from_gallery</a>&lt;TokenType: store&gt;(owner: address, id: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>): Token&lt;TokenType&gt;
 <b>acquires</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(owner), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_NOT_PUBLISHED">EBALANCE_NOT_PUBLISHED</a>);
+    <b>assert</b>!(<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(owner), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_NOT_PUBLISHED">EBALANCE_NOT_PUBLISHED</a>);
     <b>let</b> gallery = &<b>mut</b> borrow_global_mut&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(owner).gallery;
     <b>let</b> index_opt = <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_index_of_token">index_of_token</a>&lt;TokenType&gt;(gallery, id);
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EID_NOT_FOUND">EID_NOT_FOUND</a>));
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EID_NOT_FOUND">EID_NOT_FOUND</a>));
     <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_remove">Vector::remove</a>(gallery, <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_extract">Option::extract</a>(&<b>mut</b> index_opt))
 }
 </code></pre>
@@ -315,13 +315,13 @@ approved operator of the owner.
 ) <b>acquires</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a> {
     <b>let</b> owner = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&account);
 
-    <b>assert</b>(amount &gt; 0, <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
+    <b>assert</b>!(amount &gt; 0, <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
 
     // Remove <a href="NFT.md#0x1_NFT">NFT</a> from `owner`'s gallery
     <b>let</b> id = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_create_id">GUID::create_id</a>(creator, creation_num);
     <b>let</b> token = <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_remove_from_gallery">remove_from_gallery</a>&lt;TokenType&gt;(owner, &id);
 
-    <b>assert</b>(amount &lt;= <a href="MultiToken.md#0x1_MultiToken_balance">MultiToken::balance</a>(&token), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
+    <b>assert</b>!(amount &lt;= <a href="MultiToken.md#0x1_MultiToken_balance">MultiToken::balance</a>(&token), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
 
     <b>if</b> (amount == <a href="MultiToken.md#0x1_MultiToken_balance">MultiToken::balance</a>(&token)) {
         // Owner does not have any token left, so add token <b>to</b> `<b>to</b>`'s gallery.
@@ -360,7 +360,7 @@ approved operator of the owner.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_publish_balance">publish_balance</a>&lt;TokenType: store&gt;(account: &signer) {
-    <b>assert</b>(!<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_ALREADY_PUBLISHED">EBALANCE_ALREADY_PUBLISHED</a>);
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt;&gt;(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_EBALANCE_ALREADY_PUBLISHED">EBALANCE_ALREADY_PUBLISHED</a>);
     move_to(account, <a href="MultiTokenBalance.md#0x1_MultiTokenBalance_TokenBalance">TokenBalance</a>&lt;TokenType&gt; { gallery: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_empty">Vector::empty</a>() });
 }
 </code></pre>

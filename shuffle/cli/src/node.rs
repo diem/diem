@@ -46,6 +46,7 @@ fn create_node(home: &Home, genesis: Option<String>) -> Result<()> {
         false,
         Some(publishing_option),
         genesis_modules,
+        None,
         rand::rngs::OsRng,
     );
     Ok(())

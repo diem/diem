@@ -388,7 +388,7 @@ fn test_missing_configs() {
     // Create a subscription service and mock database with a custom config registry that
     // includes a config that does not exist on-chain (TestOnChainConfig).
     let mut config_registry = ON_CHAIN_CONFIG_REGISTRY.to_owned();
-    config_registry.push(TestOnChainConfig::CONFIG_ID);
+    config_registry.push(TestOnChainConfig::config_id());
     let mut event_service = EventSubscriptionService::new(&config_registry, create_database());
 
     // Create a reconfig subscriber
@@ -407,7 +407,7 @@ fn test_missing_configs() {
         for config in ON_CHAIN_CONFIG_REGISTRY {
             assert!(returned_configs.contains_key(config));
         }
-        assert!(!returned_configs.contains_key(&TestOnChainConfig::CONFIG_ID));
+        assert!(!returned_configs.contains_key(&TestOnChainConfig::config_id()));
     } else {
         panic!("Expected a reconfiguration notification but got None!");
     }

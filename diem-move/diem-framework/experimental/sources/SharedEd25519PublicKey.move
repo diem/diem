@@ -1,0 +1,1 @@
+../../core/sources/SharedEd25519PublicKey.move

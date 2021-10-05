@@ -52,6 +52,7 @@ members = [
     "diem-move/diem-events-fetcher",
     "diem-move/diem-framework",
     "diem-move/diem-framework/DPN/releases",
+    "diem-move/diem-framework/experimental/releases",
     "diem-move/diem-framework/releases",
     "diem-move/diem-keygen",
     "diem-move/diem-resource-viewer",

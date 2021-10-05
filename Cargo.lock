@@ -1835,6 +1835,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-experimental-framework-releases"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "bytecode-verifier",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "framework-releases",
+ "include_dir",
+ "move-binary-format",
+ "move-command-line-common",
+ "once_cell",
+]
+
+[[package]]
 name = "diem-faucet"
 version = "0.1.0"
 dependencies = [
@@ -2339,6 +2356,7 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-data-client",
+ "diem-experimental-framework-releases",
  "diem-framework-releases",
  "diem-genesis-tool",
  "diem-infallible",

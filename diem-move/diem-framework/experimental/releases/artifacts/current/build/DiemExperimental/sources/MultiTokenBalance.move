@@ -26,7 +26,7 @@ module 0x1::MultiTokenBalance {
     /// gallery, we combine it with the new one and make a token of greater value.
     public fun add_to_gallery<TokenType: store>(owner: address, token: Token<TokenType>)
     acquires TokenBalance {
-        assert(exists<TokenBalance<TokenType>>(owner), EBALANCE_NOT_PUBLISHED);
+        assert!(exists<TokenBalance<TokenType>>(owner), EBALANCE_NOT_PUBLISHED);
         let id = MultiToken::id<TokenType>(&token);
         if (has_token<TokenType>(owner, &id)) {
             // If `owner` already has a token with the same id, remove it from the gallery
@@ -41,10 +41,10 @@ module 0x1::MultiTokenBalance {
     /// Remove a token of certain id from the owner's gallery and return it.
     fun remove_from_gallery<TokenType: store>(owner: address, id: &GUID::ID): Token<TokenType>
     acquires TokenBalance {
-        assert(exists<TokenBalance<TokenType>>(owner), EBALANCE_NOT_PUBLISHED);
+        assert!(exists<TokenBalance<TokenType>>(owner), EBALANCE_NOT_PUBLISHED);
         let gallery = &mut borrow_global_mut<TokenBalance<TokenType>>(owner).gallery;
         let index_opt = index_of_token<TokenType>(gallery, id);
-        assert(Option::is_some(&index_opt), Errors::limit_exceeded(EID_NOT_FOUND));
+        assert!(Option::is_some(&index_opt), Errors::limit_exceeded(EID_NOT_FOUND));
         Vector::remove(gallery, Option::extract(&mut index_opt))
     }
 
@@ -91,13 +91,13 @@ module 0x1::MultiTokenBalance {
     ) acquires TokenBalance {
         let owner = Signer::address_of(&account);
 
-        assert(amount > 0, EINVALID_AMOUNT_OF_TRANSFER);
+        assert!(amount > 0, EINVALID_AMOUNT_OF_TRANSFER);
 
         // Remove NFT from `owner`'s gallery
         let id = GUID::create_id(creator, creation_num);
         let token = remove_from_gallery<TokenType>(owner, &id);
 
-        assert(amount <= MultiToken::balance(&token), EINVALID_AMOUNT_OF_TRANSFER);
+        assert!(amount <= MultiToken::balance(&token), EINVALID_AMOUNT_OF_TRANSFER);
 
         if (amount == MultiToken::balance(&token)) {
             // Owner does not have any token left, so add token to `to`'s gallery.
@@ -116,7 +116,7 @@ module 0x1::MultiTokenBalance {
     }
 
     public fun publish_balance<TokenType: store>(account: &signer) {
-        assert(!exists<TokenBalance<TokenType>>(Signer::address_of(account)), EBALANCE_ALREADY_PUBLISHED);
+        assert!(!exists<TokenBalance<TokenType>>(Signer::address_of(account)), EBALANCE_ALREADY_PUBLISHED);
         move_to(account, TokenBalance<TokenType> { gallery: Vector::empty() });
     }
 }
