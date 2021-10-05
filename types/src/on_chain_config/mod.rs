@@ -5,6 +5,7 @@ use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::CORE_CODE_ADDRESS,
+    chain_marker::ChainMarkerResource,
     event::{EventHandle, EventKey},
 };
 use anyhow::{format_err, Result};
@@ -51,11 +52,8 @@ pub fn config_address() -> AccountAddress {
 }
 
 impl ConfigID {
-    pub fn access_path(self) -> AccessPath {
-        access_path_for_config(
-            AccountAddress::from_hex_literal(self.0).expect("failed to get address"),
-            Identifier::new(self.1).expect("failed to get Identifier"),
-        )
+    pub fn name(&self) -> String {
+        self.1.to_string()
     }
 }
 
@@ -124,6 +122,7 @@ impl fmt::Display for OnChainConfigPayload {
 
 /// Trait to be implemented by a storage type from which to read on-chain configs
 pub trait ConfigStorage {
+    fn fetch_chain_marker(&self) -> Option<(StructTag, ChainMarkerResource)>;
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>>;
 }
 
@@ -160,7 +159,7 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
         T: ConfigStorage,
     {
         storage
-            .fetch_config(Self::CONFIG_ID.access_path())
+            .fetch_config(default_access_path_for_config(Self::CONFIG_ID))
             .and_then(|bytes| Self::deserialize_into_config(&bytes).ok())
     }
 }
@@ -169,21 +168,51 @@ pub fn new_epoch_event_key() -> EventKey {
     EventKey::new_from_address(&config_address(), 4)
 }
 
-pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {
+pub fn default_access_path_for_config(config_id: ConfigID) -> AccessPath {
     AccessPath::new(
-        address,
-        AccessPath::resource_access_vec(StructTag {
-            address: CORE_CODE_ADDRESS,
-            module: ConfigurationResource::MODULE_NAME.to_owned(),
-            name: ConfigurationResource::MODULE_NAME.to_owned(),
-            type_params: vec![TypeTag::Struct(StructTag {
-                address: CORE_CODE_ADDRESS,
-                module: config_name.clone(),
-                name: config_name,
-                type_params: vec![],
-            })],
-        }),
+        config_address(),
+        AccessPath::resource_access_vec(default_struct_tag_for_config(
+            Identifier::new(config_id.1).expect("fail to make identifier"),
+        )),
     )
+}
+
+pub fn experimental_access_path_for_config(
+    config_id: ConfigID,
+    chain_marker_type_param: StructTag,
+    config_addr: AccountAddress,
+) -> AccessPath {
+    let struct_tag = StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: Identifier::new(config_id.1).expect("fail to make identifier"),
+        name: Identifier::new(config_id.1).expect("fail to make identifier"),
+        type_params: vec![TypeTag::Struct(chain_marker_type_param)],
+    };
+    AccessPath::new(config_addr, AccessPath::resource_access_vec(struct_tag))
+}
+
+pub fn extract_struct_type_param(mut struct_tag: StructTag) -> Option<StructTag> {
+    if struct_tag.type_params.len() != 1 {
+        return None;
+    }
+    if let TypeTag::Struct(struct_tag) = struct_tag.type_params.pop()? {
+        return Some(struct_tag);
+    }
+    None
+}
+
+pub fn default_struct_tag_for_config(config_name: Identifier) -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: ConfigurationResource::MODULE_NAME.to_owned(),
+        name: ConfigurationResource::MODULE_NAME.to_owned(),
+        type_params: vec![TypeTag::Struct(StructTag {
+            address: CORE_CODE_ADDRESS,
+            module: config_name.clone(),
+            name: config_name,
+            type_params: vec![],
+        })],
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

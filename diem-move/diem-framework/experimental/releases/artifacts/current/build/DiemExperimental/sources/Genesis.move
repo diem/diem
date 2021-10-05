@@ -6,6 +6,7 @@
 module DiemFramework::Genesis {
     use DiemFramework::AccountFreezing;
     use DiemFramework::ChainId;
+//    use DiemFramework::CoreConfig;
     use DiemFramework::XUS;
     use DiemFramework::DualAttestation;
     use DiemFramework::XDX;
@@ -17,10 +18,11 @@ module DiemFramework::Genesis {
     use DiemFramework::DiemSystem;
     use DiemFramework::DiemTimestamp;
     use DiemFramework::DiemTransactionPublishingOption;
-    use DiemFramework::DiemVersion;
+    use CoreFramework::ChainMarker;
+    use ExperimentalFramework::ExperimentalVersion;
+    use ExperimentalFramework::ExperimentalChainMarker::ExperimentalChainMarker;
     use DiemFramework::TransactionFee;
     use DiemFramework::DiemVMConfig;
-    use DiemFramework::ParallelExecutionConfig;
     use DiemFramework::ValidatorConfig;
     use DiemFramework::ValidatorOperatorConfig;
     use Std::Signer;
@@ -39,6 +41,9 @@ module DiemFramework::Genesis {
         chain_id: u8,
         initial_diem_version: u64,
         consensus_config: vector<u8>,
+        // ChainMarker arguments
+        chain_marker_signer: signer,
+        config_address: address,
     ) {
         initialize_internal(
             &dr_account,
@@ -52,6 +57,8 @@ module DiemFramework::Genesis {
             chain_id,
             initial_diem_version,
             consensus_config,
+            &chain_marker_signer,
+            config_address,
         )
     }
 
@@ -68,6 +75,9 @@ module DiemFramework::Genesis {
         chain_id: u8,
         initial_diem_version: u64,
         consensus_config: vector<u8>,
+        // ChainMarker arguments
+        chain_marker_signer: &signer,
+        config_address: address,
     ) {
         DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 
@@ -75,12 +85,10 @@ module DiemFramework::Genesis {
 
         // On-chain config setup
         DiemConfig::initialize(dr_account);
+        ChainMarker::initialize<ExperimentalChainMarker>(chain_marker_signer, config_address);
 
         // Consensus config setup
         DiemConsensusConfig::initialize(dr_account);
-
-        // Parallel execution config setup
-        ParallelExecutionConfig::initialize_parallel_execution(dr_account);
 
         // Currency setup
         Diem::initialize(dr_account);
@@ -94,7 +102,8 @@ module DiemFramework::Genesis {
         TransactionFee::initialize(tc_account);
 
         DiemSystem::initialize_validator_set(dr_account);
-        DiemVersion::initialize(dr_account, initial_diem_version);
+
+        ExperimentalVersion::initialize(dr_account, initial_diem_version);
         DualAttestation::initialize(dr_account);
         DiemBlock::initialize_block_metadata(dr_account);
 
@@ -232,8 +241,9 @@ module DiemFramework::Genesis {
         requires DiemTimestamp::is_genesis();
     }
 
+    // TODO: update tests to include chain marker signer
     #[test_only]
-    public fun setup(dr_account: &signer, tc_account: &signer) {
+    public fun setup(dr_account: &signer, tc_account: &signer, chain_marker_signer: &signer) {
         initialize_internal(
             dr_account,
             tc_account,
@@ -246,6 +256,8 @@ module DiemFramework::Genesis {
             4u8, // TESTING chain ID
             0,
             Vector::empty(),
+            chain_marker_signer,
+            @DiemRoot,
         )
     }
 }

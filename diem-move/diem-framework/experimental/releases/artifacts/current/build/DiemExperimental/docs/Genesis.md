@@ -17,6 +17,7 @@ when executing from a fresh state.
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
 <b>use</b> <a href="ChainId.md#0x1_ChainId">0x1::ChainId</a>;
+<b>use</b> <a href="ChainMarker.md#0x1_ChainMarker">0x1::ChainMarker</a>;
 <b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="DiemBlock.md#0x1_DiemBlock">0x1::DiemBlock</a>;
@@ -26,9 +27,9 @@ when executing from a fresh state.
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">0x1::DiemTransactionPublishingOption</a>;
 <b>use</b> <a href="DiemVMConfig.md#0x1_DiemVMConfig">0x1::DiemVMConfig</a>;
-<b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
-<b>use</b> <a href="ParallelExecutionConfig.md#0x1_ParallelExecutionConfig">0x1::ParallelExecutionConfig</a>;
+<b>use</b> <a href="ExperimentalChainMarker.md#0x1_ExperimentalChainMarker">0x1::ExperimentalChainMarker</a>;
+<b>use</b> <a href="ExperimentalVersion.md#0x1_ExperimentalVersion">0x1::ExperimentalVersion</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
 <b>use</b> <a href="TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
 <b>use</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
@@ -47,7 +48,7 @@ when executing from a fresh state.
 Initializes the Diem framework.
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: signer, tc_account: signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64, consensus_config: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: signer, tc_account: signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64, consensus_config: vector&lt;u8&gt;, chain_marker_signer: signer, config_address: address)
 </code></pre>
 
 
@@ -68,6 +69,9 @@ Initializes the Diem framework.
     chain_id: u8,
     initial_diem_version: u64,
     consensus_config: vector&lt;u8&gt;,
+    // <a href="ChainMarker.md#0x1_ChainMarker">ChainMarker</a> arguments
+    chain_marker_signer: signer,
+    config_address: address,
 ) {
     <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(
         &dr_account,
@@ -81,6 +85,8 @@ Initializes the Diem framework.
         chain_id,
         initial_diem_version,
         consensus_config,
+        &chain_marker_signer,
+        config_address,
     )
 }
 </code></pre>
@@ -119,7 +125,7 @@ Assume that this is called in genesis state (no timestamp).
 Initializes the Diem Framework. Internal so it can be used by both genesis code, and for testing purposes
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(dr_account: &signer, tc_account: &signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64, consensus_config: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize_internal">initialize_internal</a>(dr_account: &signer, tc_account: &signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8, initial_diem_version: u64, consensus_config: vector&lt;u8&gt;, chain_marker_signer: &signer, config_address: address)
 </code></pre>
 
 
@@ -140,6 +146,9 @@ Initializes the Diem Framework. Internal so it can be used by both genesis code,
     chain_id: u8,
     initial_diem_version: u64,
     consensus_config: vector&lt;u8&gt;,
+    // <a href="ChainMarker.md#0x1_ChainMarker">ChainMarker</a> arguments
+    chain_marker_signer: &signer,
+    config_address: address,
 ) {
     <a href="DiemAccount.md#0x1_DiemAccount_initialize">DiemAccount::initialize</a>(dr_account, x"00000000000000000000000000000000");
 
@@ -147,12 +156,10 @@ Initializes the Diem Framework. Internal so it can be used by both genesis code,
 
     // On-chain config setup
     <a href="DiemConfig.md#0x1_DiemConfig_initialize">DiemConfig::initialize</a>(dr_account);
+    <a href="ChainMarker.md#0x1_ChainMarker_initialize">ChainMarker::initialize</a>&lt;<a href="ExperimentalChainMarker.md#0x1_ExperimentalChainMarker">ExperimentalChainMarker</a>&gt;(chain_marker_signer, config_address);
 
     // Consensus config setup
     <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig_initialize">DiemConsensusConfig::initialize</a>(dr_account);
-
-    // Parallel execution config setup
-    <a href="ParallelExecutionConfig.md#0x1_ParallelExecutionConfig_initialize_parallel_execution">ParallelExecutionConfig::initialize_parallel_execution</a>(dr_account);
 
     // Currency setup
     <a href="Diem.md#0x1_Diem_initialize">Diem::initialize</a>(dr_account);
@@ -166,7 +173,8 @@ Initializes the Diem Framework. Internal so it can be used by both genesis code,
     <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account);
 
     <a href="DiemSystem.md#0x1_DiemSystem_initialize_validator_set">DiemSystem::initialize_validator_set</a>(dr_account);
-    <a href="DiemVersion.md#0x1_DiemVersion_initialize">DiemVersion::initialize</a>(dr_account, initial_diem_version);
+
+    <a href="ExperimentalVersion.md#0x1_ExperimentalVersion_initialize">ExperimentalVersion::initialize</a>(dr_account, initial_diem_version);
     <a href="DualAttestation.md#0x1_DualAttestation_initialize">DualAttestation::initialize</a>(dr_account);
     <a href="DiemBlock.md#0x1_DiemBlock_initialize_block_metadata">DiemBlock::initialize_block_metadata</a>(dr_account);
 

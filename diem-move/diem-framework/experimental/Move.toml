@@ -4,7 +4,10 @@ version = "1.5.0"
 
 [addresses]
 Std = "0x1"
+ChainMarker = "0x1"
+CoreFramework = "0x1"
 DiemFramework = "0x1"
+ExperimentalFramework = "0x1"
 DiemRoot = "0xA550C18"
 TreasuryCompliance = "0xB1E55ED"
 CurrencyInfo = "0xA550C18"

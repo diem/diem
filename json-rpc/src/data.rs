@@ -12,9 +12,14 @@ use crate::{
 };
 use anyhow::Result;
 use diem_types::{
-    account_address::AccountAddress, account_config::diem_root_address,
-    account_state::AccountState, chain_id::ChainId, event::EventKey,
-    ledger_info::LedgerInfoWithSignatures, protocol_spec::DpnProto,
+    account_address::AccountAddress,
+    account_config::diem_root_address,
+    account_state::AccountState,
+    chain_id::ChainId,
+    event::EventKey,
+    ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::{DiemVersion, OnChainConfig},
+    protocol_spec::DpnProto,
 };
 use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
 use std::{
@@ -55,8 +60,17 @@ pub fn get_metadata(
         if let Some(diem_root) = get_account_state(db, diem_root_address(), version)? {
             metadata_view.with_diem_root(&diem_root)?;
         }
+        metadata_view.diem_version = get_diem_version(db, version)?;
     }
     Ok(metadata_view)
+}
+
+pub fn get_diem_version(db: &dyn MoveDbReader<DpnProto>, version: u64) -> Result<Option<u64>> {
+    if let Ok(bytes) = db.fetch_config_by_version(DiemVersion::CONFIG_ID, version) {
+        Ok(Some(DiemVersion::deserialize_into_config(&bytes)?.major))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Returns account state (AccountView) by given address

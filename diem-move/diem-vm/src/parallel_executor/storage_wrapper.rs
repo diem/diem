@@ -4,7 +4,7 @@
 use crate::data_cache::RemoteStorage;
 use diem_parallel_executor::executor::MVHashMapView;
 use diem_state_view::{StateView, StateViewId};
-use diem_types::{access_path::AccessPath, write_set::WriteOp};
+use diem_types::{access_path::AccessPath, account_state::AccountState, write_set::WriteOp};
 use move_binary_format::errors::VMError;
 use move_core_types::{
     account_address::AccountAddress,
@@ -42,6 +42,10 @@ impl<'a, S: StateView> StateView for VersionedView<'a, S> {
             Ok(None) => self.base_view.get(access_path),
             Err(err) => Err(err),
         }
+    }
+
+    fn get_account_state(&self, _account: AccountAddress) -> anyhow::Result<Option<AccountState>> {
+        todo!()
     }
 
     fn is_genesis(&self) -> bool {

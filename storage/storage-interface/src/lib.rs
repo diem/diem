@@ -6,6 +6,7 @@ use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::diem_root_address,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof, AccountStatesChunkWithProof},
     contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
@@ -14,6 +15,10 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
+    on_chain_config::{
+        default_access_path_for_config, experimental_access_path_for_config,
+        extract_struct_type_param, ConfigID,
+    },
     proof::{
         definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof,
         SparseMerkleRangeProof, TransactionAccumulatorSummary,
@@ -26,7 +31,10 @@ use diem_types::{
     },
 };
 use itertools::Itertools;
-use move_core_types::resolver::{ModuleResolver, ResourceResolver};
+use move_core_types::{
+    language_storage::CORE_CODE_ADDRESS,
+    resolver::{ModuleResolver, ResourceResolver},
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -558,6 +566,87 @@ impl<PS: ProtocolSpec> MoveStorage for &dyn DbReader<PS> {
             .collect()
     }
 
+    fn fetch_config_by_version(&self, config_id: ConfigID, version: Version) -> Result<Vec<u8>> {
+        let chain_marker_account_state = AccountState::try_from(
+            &self
+                .get_account_state_with_proof_by_version(CORE_CODE_ADDRESS, version)?
+                .0
+                .ok_or_else(|| {
+                    format_err!("missing blob in account state/account does not exist")
+                })?,
+        )?;
+
+        match chain_marker_account_state.get_chain_marker_and_struct_tag() {
+            Ok(Some((chain_marker_struct_tag, chain_marker_resource))) => {
+                let config_addr = chain_marker_resource.config_address;
+                let access_path = experimental_access_path_for_config(
+                    config_id,
+                    extract_struct_type_param(chain_marker_struct_tag)
+                        .ok_or_else(|| format_err!("failed to extract struct tag"))?,
+                    config_addr,
+                );
+                let config_account_state = AccountState::try_from(
+                    &self
+                        .get_account_state_with_proof_by_version(config_addr, version)?
+                        .0
+                        .ok_or_else(|| {
+                            format_err!("missing blob in account state/account does not exist")
+                        })?,
+                )?;
+                match config_account_state.get(&access_path.path) {
+                    Some(bytes) => Ok(bytes.to_vec()),
+                    _ => {
+                        let diem_root_state = AccountState::try_from(
+                            &self
+                                .get_account_state_with_proof_by_version(
+                                    diem_root_address(),
+                                    version,
+                                )?
+                                .0
+                                .ok_or_else(|| {
+                                    format_err!(
+                                        "missing blob in account state/account does not exist"
+                                    )
+                                })?,
+                        )?;
+                        diem_root_state
+                            .get(&default_access_path_for_config(config_id).path)
+                            .map_or_else(
+                                || {
+                                    Err(format_err!(
+                                        "no config {} found in diem root account state",
+                                        config_id
+                                    ))
+                                },
+                                |bytes| Ok(bytes.to_vec()),
+                            )
+                    }
+                }
+            }
+            _ => {
+                let diem_root_state = AccountState::try_from(
+                    &self
+                        .get_account_state_with_proof_by_version(diem_root_address(), version)?
+                        .0
+                        .ok_or_else(|| {
+                            format_err!("missing blob in account state/account does not exist")
+                        })?,
+                )?;
+                diem_root_state
+                    .get(&default_access_path_for_config(config_id).path)
+                    .map_or_else(
+                        || {
+                            Err(format_err!(
+                                "no config {} found in diem root account state",
+                                config_id
+                            ))
+                        },
+                        |bytes| Ok(bytes.to_vec()),
+                    )
+            }
+        }
+    }
+
     fn fetch_synced_version(&self) -> Result<u64> {
         let (synced_version, _) = self
             .get_latest_transaction_info_option()
@@ -603,7 +692,10 @@ pub trait DbWriter<PS: ProtocolSpec>: Send + Sync {
 }
 
 pub trait MoveDbReader<PS: ProtocolSpec>:
-    DbReader<PS> + ResourceResolver<Error = anyhow::Error> + ModuleResolver<Error = anyhow::Error>
+    DbReader<PS>
+    + MoveStorage
+    + ResourceResolver<Error = anyhow::Error>
+    + ModuleResolver<Error = anyhow::Error>
 {
 }
 

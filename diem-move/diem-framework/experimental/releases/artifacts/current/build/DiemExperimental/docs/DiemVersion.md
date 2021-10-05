@@ -3,35 +3,30 @@
 
 # Module `0x1::DiemVersion`
 
-Maintains the version number for the Diem blockchain. The version is stored in a
-DiemConfig, and may be updated by Diem root.
+Maintains the version number for the blockchain.
 
 
--  [Struct `DiemVersion`](#0x1_DiemVersion_DiemVersion)
+-  [Resource `DiemVersion`](#0x1_DiemVersion_DiemVersion)
 -  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_DiemVersion_initialize)
 -  [Function `set`](#0x1_DiemVersion_set)
 -  [Module Specification](#@Module_Specification_1)
-    -  [Initialization](#@Initialization_2)
-    -  [Access Control](#@Access_Control_3)
-    -  [Other Invariants](#@Other_Invariants_4)
 
 
-<pre><code><b>use</b> <a href="DiemConfig.md#0x1_DiemConfig">0x1::DiemConfig</a>;
-<b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
+<pre><code><b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Capability.md#0x1_Capability">0x1::Capability</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
 </code></pre>
 
 
 
 <a name="0x1_DiemVersion_DiemVersion"></a>
 
-## Struct `DiemVersion`
+## Resource `DiemVersion`
 
 
 
-<pre><code><b>struct</b> <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> has <b>copy</b>, drop, store
+<pre><code><b>struct</b> <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt; has <b>copy</b>, drop, store, key
 </code></pre>
 
 
@@ -57,12 +52,22 @@ DiemConfig, and may be updated by Diem root.
 ## Constants
 
 
+<a name="0x1_DiemVersion_ECONFIG"></a>
+
+Error with config
+
+
+<pre><code><b>const</b> <a href="DiemVersion.md#0x1_DiemVersion_ECONFIG">ECONFIG</a>: u64 = 0;
+</code></pre>
+
+
+
 <a name="0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER"></a>
 
 Tried to set an invalid major version for the VM. Major versions must be strictly increasing
 
 
-<pre><code><b>const</b> <a href="DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a>: u64 = 0;
+<pre><code><b>const</b> <a href="DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a>: u64 = 1;
 </code></pre>
 
 
@@ -71,10 +76,10 @@ Tried to set an invalid major version for the VM. Major versions must be strictl
 
 ## Function `initialize`
 
-Publishes the DiemVersion config. Must be called during Genesis.
+Publishes the Version config.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(dr_account: &signer, initial_version: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>&lt;T&gt;(account: &signer, initial_version: u64)
 </code></pre>
 
 
@@ -83,12 +88,14 @@ Publishes the DiemVersion config. Must be called during Genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>(dr_account: &signer, initial_version: u64) {
-    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
-    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
-    <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config">DiemConfig::publish_new_config</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;(
-        dr_account,
-        <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: initial_version },
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_initialize">initialize</a>&lt;T&gt;(account: &signer, initial_version: u64) {
+    <b>assert</b>!(
+        !<b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemVersion.md#0x1_DiemVersion_ECONFIG">ECONFIG</a>)
+    );
+    move_to(
+        account,
+        <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt; { major: initial_version },
     );
 }
 </code></pre>
@@ -101,13 +108,11 @@ Publishes the DiemVersion config. Must be called during Genesis.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the DiemRoot role [[H10]][PERMISSION].
 
-
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
-<b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_PublishNewConfigAbortsIf">DiemConfig::PublishNewConfigAbortsIf</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;;
-<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_PublishNewConfigEnsures">DiemConfig::PublishNewConfigEnsures</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;{payload: <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major: initial_version }};
+<pre><code><b>let</b> config_addr = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+<b>aborts_if</b> <b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr) <b>with</b> Errors::ALREADY_PUBLISHED;
+<b>ensures</b> <b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major == initial_version;
 </code></pre>
 
 
@@ -118,10 +123,10 @@ Must abort if the signer does not have the DiemRoot role [[H10]][PERMISSION].
 
 ## Function `set`
 
-Allows Diem root to update the major version to a larger version.
+Updates the major version to a larger version.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_set">set</a>(dr_account: &signer, major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_set">set</a>&lt;T&gt;(config_addr: address, _cap: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Capability.md#0x1_Capability_Cap">Capability::Cap</a>&lt;T&gt;, major: u64)
 </code></pre>
 
 
@@ -130,22 +135,17 @@ Allows Diem root to update the major version to a larger version.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_set">set</a>(dr_account: &signer, major: u64) {
-    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_operating">DiemTimestamp::assert_operating</a>();
-
-    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
-
-    <b>let</b> old_config = <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;();
+<pre><code><b>public</b> <b>fun</b> <a href="DiemVersion.md#0x1_DiemVersion_set">set</a>&lt;T&gt;(config_addr: address, _cap: &Cap&lt;T&gt;, major: u64) <b>acquires</b> <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> {
+    <b>assert</b>!(<b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemVersion.md#0x1_DiemVersion_ECONFIG">ECONFIG</a>));
+    <b>let</b> old_major = *&borrow_global&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major;
 
     <b>assert</b>!(
-        old_config.major &lt; major,
+        old_major &lt; major,
         <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a>)
     );
 
-    <a href="DiemConfig.md#0x1_DiemConfig_set">DiemConfig::set</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;(
-        dr_account,
-        <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major }
-    );
+    <b>let</b> config = borrow_global_mut&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr);
+    config.major = major;
 }
 </code></pre>
 
@@ -157,14 +157,10 @@ Allows Diem root to update the major version to a larger version.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the DiemRoot role [[H10]][PERMISSION].
 
-
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
-<b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
-<b>aborts_if</b> <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;().major &gt;= major <b>with</b> Errors::INVALID_ARGUMENT;
-<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetAbortsIf">DiemConfig::SetAbortsIf</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;{account: dr_account};
-<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetEnsures">DiemConfig::SetEnsures</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;{payload: <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> { major }};
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr) <b>with</b> Errors::NOT_PUBLISHED;
+<b>aborts_if</b> <b>global</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major &gt;= major <b>with</b> Errors::INVALID_ARGUMENT;
+<b>ensures</b> <b>global</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major == major;
 </code></pre>
 
 
@@ -177,66 +173,10 @@ Must abort if the signer does not have the DiemRoot role [[H10]][PERMISSION].
 
 
 
-<a name="@Initialization_2"></a>
-
-### Initialization
-
-
-After genesis, version is published.
-
-
-<pre><code><b>invariant</b> [suspendable] <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;();
-</code></pre>
-
-
-
-<a name="@Access_Control_3"></a>
-
-### Access Control
-
-The permission "UpdateDiemProtocolVersion" is granted to DiemRoot [[H10]][PERMISSION].
-
-
-<pre><code><b>invariant</b> [suspendable] <b>forall</b> addr: address
-    <b>where</b> <b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;&gt;(addr): addr == @DiemRoot;
-<b>invariant</b> <b>update</b> [suspendable] <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;())
-    && <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;()
-    && <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;().major) != <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;().major
-        ==&gt; <a href="Roles.md#0x1_Roles_spec_signed_by_diem_root_role">Roles::spec_signed_by_diem_root_role</a>();
-</code></pre>
-
-
-Only "set" can modify the DiemVersion config [[H10]][PERMISSION]
-
-
-<a name="0x1_DiemVersion_DiemVersionRemainsSame"></a>
-
-
-<pre><code><b>schema</b> <a href="DiemVersion.md#0x1_DiemVersion_DiemVersionRemainsSame">DiemVersionRemainsSame</a> {
-    <b>ensures</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;()) ==&gt;
-        <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;&gt;(@DiemRoot) ==
-            <b>old</b>(<b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;&gt;(@DiemRoot));
-}
-</code></pre>
-
-
-The permission "UpdateDiemProtocolVersion" is granted to DiemRoot [[H10]][PERMISSION].
-
-
-<pre><code><b>apply</b> <a href="DiemVersion.md#0x1_DiemVersion_DiemVersionRemainsSame">DiemVersionRemainsSame</a> <b>to</b> * <b>except</b> set;
-</code></pre>
-
-
-
-<a name="@Other_Invariants_4"></a>
-
-### Other Invariants
-
-
 Version number never decreases
 
 
-<pre><code><b>invariant</b> <b>update</b> [suspendable]
-    <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt;
-        (<b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;().major) &lt;= <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&gt;().major);
+<pre><code><b>invariant</b>&lt;T&gt; <b>update</b> [suspendable]
+    <b>forall</b> config_addr: address: <b>old</b>(<b>exists</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr))
+        ==&gt; (<b>old</b>(<b>global</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major) &lt;= <b>global</b>&lt;<a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>&lt;T&gt;&gt;(config_addr).major);
 </code></pre>

@@ -609,9 +609,6 @@ impl MetadataView {
             self.script_hash_allow_list = Some(vm_publishing_option.script_allow_list);
             self.module_publishing_allowed = Some(vm_publishing_option.is_open_module);
         }
-        if let Some(diem_version) = diem_root.get_diem_version()? {
-            self.diem_version = Some(diem_version.major);
-        }
         if let Some(limit) = diem_root.get_resource::<Limit>()? {
             self.dual_attestation_limit = Some(limit.micro_xdx_limit);
         }

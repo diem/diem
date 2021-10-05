@@ -127,6 +127,11 @@ impl<'a> StateView for DebuggerStateView<'a> {
         )
     }
 
+    fn get_account_state(&self, account: AccountAddress) -> Result<Option<AccountState>> {
+        self.db
+            .get_account_state_by_version(account, self.db.get_latest_version()?)
+    }
+
     fn is_genesis(&self) -> bool {
         false
     }

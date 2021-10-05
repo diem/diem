@@ -33,6 +33,7 @@ diem-api = { path = "../api" }
 diem-config = { path = "../config" }
 diem-crypto = { path = "../crates/diem-crypto" }
 diem-data-client = { path = "../state-sync/diem-data-client" }
+diem-experimental-framework-releases = { path = "../diem-move/diem-framework/experimental/releases" }
 diem-framework-releases = { path = "../diem-move/diem-framework/DPN/releases" }
 diem-genesis-tool = {path = "../config/management/genesis", features = ["testing"] }
 diem-json-rpc = { path = "../json-rpc" }

@@ -4,11 +4,14 @@
 
 use crate::{counters::CRITICAL_ERRORS, create_access_path, logging::AdapterLogSchema};
 #[allow(unused_imports)]
-use anyhow::format_err;
+use anyhow::{format_err, Result};
 use diem_logger::prelude::*;
 use diem_state_view::{StateView, StateViewId};
 use diem_types::{
     access_path::AccessPath,
+    account_config,
+    account_state::AccountState,
+    chain_marker::ChainMarkerResource,
     on_chain_config::ConfigStorage,
     vm_status::StatusCode,
     write_set::{WriteOp, WriteSet},
@@ -105,6 +108,10 @@ impl<'block, S: StateView> StateView for StateViewCache<'block, S> {
     fn id(&self) -> StateViewId {
         self.data_view.id()
     }
+
+    fn get_account_state(&self, account: AccountAddress) -> Result<Option<AccountState>> {
+        self.data_view.get_account_state(account)
+    }
 }
 
 impl<'block, S: StateView> ModuleResolver for StateViewCache<'block, S> {
@@ -130,6 +137,16 @@ impl<'block, S: StateView> ResourceResolver for StateViewCache<'block, S> {
 impl<'block, S: StateView> ConfigStorage for StateViewCache<'block, S> {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         self.get(&access_path).ok()?
+    }
+
+    fn fetch_chain_marker(&self) -> Option<(StructTag, ChainMarkerResource)> {
+        if let Ok(Some(account_state)) = self.get_account_state(account_config::CORE_CODE_ADDRESS) {
+            println!("get account state StateViewCache");
+            return account_state
+                .get_chain_marker_and_struct_tag()
+                .unwrap_or_default();
+        }
+        None
     }
 }
 
@@ -172,6 +189,16 @@ impl<'a, S: StateView> ResourceResolver for RemoteStorage<'a, S> {
 }
 
 impl<'a, S: StateView> ConfigStorage for RemoteStorage<'a, S> {
+    fn fetch_chain_marker(&self) -> Option<(StructTag, ChainMarkerResource)> {
+        if let Ok(Some(account_state)) = self.0.get_account_state(account_config::CORE_CODE_ADDRESS)
+        {
+            return account_state
+                .get_chain_marker_and_struct_tag()
+                .unwrap_or_default();
+        }
+        None
+    }
+
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         self.get(&access_path).ok()?
     }

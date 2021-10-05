@@ -7,7 +7,10 @@
 
 use anyhow::Result;
 use diem_crypto::HashValue;
-use diem_types::{access_path::AccessPath, transaction::Version};
+use diem_types::{
+    access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
+    transaction::Version,
+};
 
 /// `StateView` is a trait that defines a read-only snapshot of the global state. It is passed to
 /// the VM for transaction execution, during which the VM is guaranteed to read anything at the
@@ -20,6 +23,9 @@ pub trait StateView: Sync {
 
     /// Gets the state for a single access path.
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>>;
+
+    /// Gets the account state for `account` returning all access paths and resource blobs underneath it
+    fn get_account_state(&self, account: AccountAddress) -> Result<Option<AccountState>>;
 
     /// VM needs this method to know whether the current state view is for genesis state creation.
     /// Currently TransactionPayload::WriteSet is only valid for genesis state creation.

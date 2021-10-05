@@ -31,7 +31,7 @@ network outside of validators and validator operators.
 
 <pre><code><b>use</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">0x1::DiemConsensusConfig</a>;
 <b>use</b> <a href="DiemVMConfig.md#0x1_DiemVMConfig">0x1::DiemVMConfig</a>;
-<b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
+<b>use</b> <a href="ExperimentalVersion.md#0x1_ExperimentalVersion">0x1::ExperimentalVersion</a>;
 <b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -96,7 +96,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="SystemAdministrationScripts.md#0x1_SystemAdministrationScripts_update_diem_version">update_diem_version</a>(account: signer, sliding_nonce: u64, major: u64) {
     <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&account, sliding_nonce);
-    <a href="DiemVersion.md#0x1_DiemVersion_set">DiemVersion::set</a>(&account, major)
+    <a href="ExperimentalVersion.md#0x1_ExperimentalVersion_set">ExperimentalVersion::set</a>(&account, major)
 }
 </code></pre>
 

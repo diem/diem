@@ -34,7 +34,7 @@ use move_bytecode_utils::Modules;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::{ModuleId, TypeTag, CORE_CODE_ADDRESS},
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
@@ -230,6 +230,9 @@ fn create_and_initialize_main_accounts(
             MoveValue::U8(chain_id.id()),
             MoveValue::U64(DIEM_MAX_KNOWN_VERSION.major),
             MoveValue::vector_u8(consensus_config_bytes),
+            MoveValue::Signer(CORE_CODE_ADDRESS),
+            // TODO: make this a param
+            MoveValue::Address(root_diem_root_address),
         ]),
     );
 }

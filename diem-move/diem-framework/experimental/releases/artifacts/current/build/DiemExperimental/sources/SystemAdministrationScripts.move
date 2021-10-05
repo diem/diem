@@ -2,7 +2,7 @@
 /// network outside of validators and validator operators.
 module DiemFramework::SystemAdministrationScripts {
     use DiemFramework::DiemConsensusConfig;
-    use DiemFramework::DiemVersion;
+    use ExperimentalFramework::ExperimentalVersion;
     use DiemFramework::DiemVMConfig;
     use DiemFramework::SlidingNonce;
 
@@ -35,7 +35,7 @@ module DiemFramework::SystemAdministrationScripts {
 
     public(script) fun update_diem_version(account: signer, sliding_nonce: u64, major: u64) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
-        DiemVersion::set(&account, major)
+        ExperimentalVersion::set(&account, major)
     }
 
     /// # Summary

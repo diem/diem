@@ -266,30 +266,18 @@ impl EventSubscriptionService {
         // Build a map from config ID to the config value found on-chain
         let mut config_id_to_config = HashMap::new();
         for config_id in self.config_registry.iter() {
-            if let Ok(config_list) = self
+            if let Ok(config) = self
                 .storage
                 .read()
                 .reader
                 .deref()
-                .batch_fetch_resources_by_version(vec![config_id.access_path()], version)
+                .fetch_config_by_version(*config_id, version)
             {
-                match &config_list[..] {
-                    [config] => {
-                        if let Some(old_entry) =
-                            config_id_to_config.insert(*config_id, config.clone())
-                        {
-                            panic!(
-                                "Unexpected config values for duplicate config id found! Key: {}, Value: {:?}!",
-                                config_id, old_entry
-                            );
-                        }
-                    }
-                    _ => {
-                        panic!(
-                            "Expected a single on-chain config, but found: {:?}",
-                            config_list
-                        );
-                    }
+                if let Some(old_entry) = config_id_to_config.insert(*config_id, config.clone()) {
+                    panic!(
+                        "Unexpected config values for duplicate config id found! Key: {}, Value: {:?}!",
+                        config_id, old_entry
+                    );
                 }
             }
         }

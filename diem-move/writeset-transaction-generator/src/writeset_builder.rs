@@ -79,6 +79,8 @@ impl<'r, 'l, S: MoveResolver> GenesisSession<'r, 'l, S> {
             serialize_values(&vec![MoveValue::Signer(diem_root_address())]),
         )
     }
+
+    // TODO: make the function called parameterizable by blockchains
     pub fn set_diem_version(&mut self, version: Version) {
         self.exec_func(
             "DiemVersion",

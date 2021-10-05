@@ -4,7 +4,10 @@
 use super::{balance_ap, encode_mint_transaction, encode_transfer_transaction, seqnum_ap, MockVM};
 use anyhow::Result;
 use diem_state_view::StateView;
-use diem_types::{access_path::AccessPath, account_address::AccountAddress, write_set::WriteOp};
+use diem_types::{
+    access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
+    write_set::WriteOp,
+};
 use diem_vm::VMExecutor;
 
 fn gen_address(index: u8) -> AccountAddress {
@@ -15,6 +18,10 @@ struct MockStateView;
 
 impl StateView for MockStateView {
     fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
+        Ok(None)
+    }
+
+    fn get_account_state(&self, _account: AccountAddress) -> Result<Option<AccountState>> {
         Ok(None)
     }
 

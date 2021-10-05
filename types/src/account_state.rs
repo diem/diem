@@ -11,18 +11,17 @@ use crate::{
         VASPDomainManager, VASPDomains,
     },
     block_metadata::DiemBlockResource,
+    chain_marker::ChainMarkerResource,
     diem_timestamp::DiemTimestampResource,
     on_chain_config::{
-        ConfigurationResource, DiemVersion, OnChainConfig, RegisteredCurrencies,
-        VMPublishingOption, ValidatorSet,
+        default_access_path_for_config, ConfigurationResource, DiemVersion, OnChainConfig,
+        RegisteredCurrencies, VMPublishingOption, ValidatorSet,
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
 use anyhow::{format_err, Error, Result};
 use move_core_types::{
-    identifier::Identifier,
-    language_storage::{StructTag, CORE_CODE_ADDRESS},
-    move_resource::MoveResource,
+    identifier::Identifier, language_storage::StructTag, move_resource::MoveResource,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
@@ -178,7 +177,7 @@ impl AccountState {
 
     pub fn get_vm_publishing_option(&self) -> Result<Option<VMPublishingOption>> {
         self.0
-            .get(&VMPublishingOption::CONFIG_ID.access_path().path)
+            .get(&default_access_path_for_config(VMPublishingOption::CONFIG_ID).path)
             .map(|bytes| VMPublishingOption::deserialize_into_config(bytes))
             .transpose()
             .map_err(Into::into)
@@ -231,12 +230,26 @@ impl AccountState {
         self.0.iter()
     }
 
+    // TODO: move this method out of account_state.rs since it's a property of the blockchain state
     pub fn get_config<T: OnChainConfig>(&self) -> Result<Option<T>> {
-        self.get_resource_impl(&T::CONFIG_ID.access_path().path)
+        self.get_resource_impl(&default_access_path_for_config(T::CONFIG_ID).path)
     }
 
     pub fn get_resource<T: MoveResource>(&self) -> Result<Option<T>> {
         self.get_resource_impl(&T::struct_tag().access_vector())
+    }
+
+    pub fn get_chain_marker_and_struct_tag(
+        &self,
+    ) -> Result<Option<(StructTag, ChainMarkerResource)>> {
+        let mut all_chain_marker_resources = self.get_resources_with_type::<ChainMarkerResource>();
+        match all_chain_marker_resources.next() {
+            Some(x) => match all_chain_marker_resources.next() {
+                None => Ok(Some(x?)),
+                _ => anyhow::bail!("More than one chain marker resource"),
+            },
+            _ => Ok(None),
+        }
     }
 
     /// Return an iterator over the module values stored under this account
@@ -276,7 +289,7 @@ impl AccountState {
         &self,
     ) -> impl Iterator<Item = Result<(StructTag, T)>> + '_ {
         self.get_resources().filter_map(|(struct_tag, bytes)| {
-            let matches_resource = struct_tag.address == CORE_CODE_ADDRESS
+            let matches_resource = struct_tag.address == T::ADDRESS
                 && struct_tag.module.as_ref() == T::MODULE_NAME
                 && struct_tag.name.as_ref() == T::STRUCT_NAME;
             if matches_resource {

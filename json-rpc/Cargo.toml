@@ -41,6 +41,7 @@ diem-logger = { path = "../common/logger" }
 diem-mempool = { path = "../mempool" }
 diem-metrics = { path = "../common/metrics" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+diem-sdk = { path = "../sdk" }
 diem-types = { path = "../types" }
 diem-temppath = { path = "../common/temppath", optional = true }
 diem-workspace-hack = { path = "../common/workspace-hack" }

@@ -331,6 +331,9 @@ fn get_latest_metadata() -> VerifyingRequest {
             .with_diem_root(&diem_root)
             .map_err(Error::rpc_response)?;
 
+        if let Some(diem_version) = diem_root.get_diem_version().map_err(Error::rpc_response)? {
+            metadata_view.diem_version = Some(diem_version.major);
+        }
         Ok(MethodResponse::GetMetadata(metadata_view))
     });
     VerifyingRequest::new(request, subrequests, callback)

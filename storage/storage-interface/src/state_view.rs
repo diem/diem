@@ -141,7 +141,15 @@ impl<'a, PS: ProtocolSpec> StateView for VerifiedStateView<'a, PS> {
             return Ok(contents.get(path).cloned());
         }
 
-        // Do most of the work outside the write lock.
+        let account_state = self.get_account_state(address)?.unwrap_or_default();
+
+        match self.account_to_state_cache.write().entry(address) {
+            Entry::Occupied(occupied) => Ok(occupied.get().get(path).cloned()),
+            Entry::Vacant(vacant) => Ok(vacant.insert(account_state).get(path).cloned()),
+        }
+    }
+
+    fn get_account_state(&self, address: AccountAddress) -> Result<Option<AccountState>> {
         let address_hash = address.hash();
         let account_blob_option = match self.speculative_state.get(address_hash) {
             AccountStatus::ExistsInScratchPad(blob) => Some(blob),
@@ -181,16 +189,10 @@ impl<'a, PS: ProtocolSpec> StateView for VerifiedStateView<'a, PS> {
         };
 
         // Now enter the locked region, and write if still empty.
-        let new_account_blob = account_blob_option
+        account_blob_option
             .as_ref()
             .map(TryInto::try_into)
-            .transpose()?
-            .unwrap_or_default();
-
-        match self.account_to_state_cache.write().entry(address) {
-            Entry::Occupied(occupied) => Ok(occupied.get().get(path).cloned()),
-            Entry::Vacant(vacant) => Ok(vacant.insert(new_account_blob).get(path).cloned()),
-        }
+            .transpose()
     }
 
     fn is_genesis(&self) -> bool {

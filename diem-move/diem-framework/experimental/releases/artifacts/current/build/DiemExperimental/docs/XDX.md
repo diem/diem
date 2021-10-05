@@ -130,7 +130,7 @@ reserve components, and creates the mint, preburn, and burn
 capabilities for <code><a href="XDX.md#0x1_XDX">XDX</a></code> coins. The <code><a href="XDX.md#0x1_XDX">XDX</a></code> currency must not already be
 registered in order for this to succeed. The sender must both be the
 correct address (<code>@CurrencyInfo</code>) and have the
-correct permissions (<code>&Capability&lt;RegisterNewCurrency&gt;</code>). Both of these
+correct permissions (<code>&<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Capability.md#0x1_Capability">Capability</a>&lt;RegisterNewCurrency&gt;</code>). Both of these
 restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_currency">Diem::register_currency</a></code> function, but also enforced here.
 
 

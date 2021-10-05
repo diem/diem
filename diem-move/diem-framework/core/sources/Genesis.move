@@ -39,6 +39,9 @@ module DiemFramework::Genesis {
         chain_id: u8,
         initial_diem_version: u64,
         consensus_config: vector<u8>,
+        // ChainMarker arguments
+        _chain_marker_signer: signer,
+        _config_address: address,
     ) {
         initialize_internal(
             &dr_account,
