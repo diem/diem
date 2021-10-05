@@ -3,7 +3,7 @@
 
 # Module `0x1::SystemAdministrationScripts`
 
-This module contains Diem Framework script functions to administer the
+This module contains Diem Framework script functions to admini
 network outside of validators and validator operators.
 
 
@@ -31,7 +31,7 @@ network outside of validators and validator operators.
 
 <pre><code><b>use</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">0x1::DiemConsensusConfig</a>;
 <b>use</b> <a href="DiemVMConfig.md#0x1_DiemVMConfig">0x1::DiemVMConfig</a>;
-<b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
+<b>use</b> <a href="ExperimentalVersion.md#0x1_ExperimentalVersion">0x1::ExperimentalVersion</a>;
 <b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -54,7 +54,7 @@ transaction can only be sent from the Diem Root account.
 
 ### Technical Description
 
-Updates the <code><a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a></code> on-chain config and emits a <code><a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> to trigger
+Updates the <code>DiemVersion</code> on-chain config and emits a <code><a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> to trigger
 a reconfiguration of the system. The <code>major</code> version that is passed in must be strictly greater
 than the current major version held on-chain. The VM reads this information and can use it to
 preserve backwards compatibility with previous major versions of the VM.
@@ -82,7 +82,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>Errors::INVALID_ARGUMENT</code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code>Errors::INVALID_ARGUMENT</code> | <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>       | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code>Errors::REQUIRES_ADDRESS</code> | <code><a href="CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                   | <code>account</code> is not the Diem Root account.                                                    |
-| <code>Errors::INVALID_ARGUMENT</code> | <code><a href="DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">DiemVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code>  | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
+| <code>Errors::INVALID_ARGUMENT</code> | <code>DiemVersion::EINVALID_MAJOR_VERSION_NUMBER</code>  | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="SystemAdministrationScripts.md#0x1_SystemAdministrationScripts_update_diem_version">update_diem_version</a>(account: signer, sliding_nonce: u64, major: u64)
@@ -96,7 +96,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="SystemAdministrationScripts.md#0x1_SystemAdministrationScripts_update_diem_version">update_diem_version</a>(account: signer, sliding_nonce: u64, major: u64) {
     <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&account, sliding_nonce);
-    <a href="DiemVersion.md#0x1_DiemVersion_set">DiemVersion::set</a>(&account, major)
+    <a href="ExperimentalVersion.md#0x1_ExperimentalVersion_set">ExperimentalVersion::set</a>(&account, major)
 }
 </code></pre>
 

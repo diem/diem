@@ -2273,6 +2273,7 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-data-client",
+ "diem-experimental-framework-releases",
  "diem-framework-releases",
  "diem-genesis-tool",
  "diem-infallible",

@@ -13,6 +13,7 @@ use crate::{
     block_metadata::DiemBlockResource,
     diem_timestamp::DiemTimestampResource,
     on_chain_config::{
+        default_access_path_for_config, get_access_path_with_config_name, ConfigAccessPaths,
         ConfigurationResource, DiemVersion, OnChainConfig, RegisteredCurrencies,
         VMPublishingOption, ValidatorSet,
     },
@@ -178,7 +179,7 @@ impl AccountState {
 
     pub fn get_vm_publishing_option(&self) -> Result<Option<VMPublishingOption>> {
         self.0
-            .get(&VMPublishingOption::CONFIG_ID.access_path().path)
+            .get(&default_access_path_for_config(VMPublishingOption::CONFIG_ID).path)
             .map(|bytes| VMPublishingOption::deserialize_into_config(bytes))
             .transpose()
             .map_err(Into::into)
@@ -232,7 +233,15 @@ impl AccountState {
     }
 
     pub fn get_config<T: OnChainConfig>(&self) -> Result<Option<T>> {
-        self.get_resource_impl(&T::CONFIG_ID.access_path().path)
+        // self.get_resource_impl(&default_access_path_for_config(T::CONFIG_ID).path)
+        let access_path = match self.0.get(&ConfigAccessPaths::resource_path()) {
+            Some(bytes) => match get_access_path_with_config_name(bytes, T::CONFIG_ID.name()) {
+                Some(path) => path,
+                _ => default_access_path_for_config(T::CONFIG_ID),
+            },
+            _ => default_access_path_for_config(T::CONFIG_ID),
+        };
+        self.get_resource_impl(&access_path.path)
     }
 
     pub fn get_resource<T: MoveResource>(&self) -> Result<Option<T>> {

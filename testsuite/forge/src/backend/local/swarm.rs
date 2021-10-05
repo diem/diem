@@ -11,8 +11,8 @@ use diem_genesis_tool::{fullnode_builder::FullnodeConfig, validator_builder::Val
 use diem_sdk::{
     crypto::ed25519::Ed25519PrivateKey,
     types::{
-        chain_id::ChainId, transaction::Transaction, waypoint::Waypoint, AccountKey, LocalAccount,
-        PeerId,
+        chain_id::ChainId, on_chain_config::experimental_version_access_path,
+        transaction::Transaction, waypoint::Waypoint, AccountKey, LocalAccount, PeerId,
     },
 };
 use std::{
@@ -153,6 +153,7 @@ impl LocalSwarmBuilder {
         )
         .num_validators(self.number_of_validators)
         .template(self.template)
+        .diem_version_access_path(experimental_version_access_path())
         .build(rng)?;
 
         // Get the initial version to start the nodes with, either the one provided or fallback to

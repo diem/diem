@@ -20,7 +20,10 @@ use diem_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     on_chain_config,
-    on_chain_config::{config_address, ConfigurationResource, OnChainConfig, ValidatorSet},
+    on_chain_config::{
+        config_address, default_access_path_for_config, ConfigurationResource, OnChainConfig,
+        ValidatorSet,
+    },
     proof::SparseMerkleRangeProof,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Transaction, TransactionPayload, Version,
@@ -288,7 +291,7 @@ fn test_pre_genesis() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
-                ValidatorSet::CONFIG_ID.access_path(),
+                default_access_path_for_config(ValidatorSet::CONFIG_ID),
                 WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
@@ -367,7 +370,7 @@ fn test_new_genesis() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
-                ValidatorSet::CONFIG_ID.access_path(),
+                default_access_path_for_config(ValidatorSet::CONFIG_ID),
                 WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (

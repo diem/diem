@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 use diem_config::config::NodeConfig;
-use diem_types::on_chain_config::VMPublishingOption;
+use diem_types::on_chain_config::{
+    default_access_path_for_config, experimental_version_access_path, DiemVersion, OnChainConfig,
+    VMPublishingOption,
+};
 use hex::FromHex;
 use rand::{rngs::StdRng, SeedableRng};
 use std::path::PathBuf;
@@ -53,6 +56,14 @@ struct Args {
         requires("test")
     )]
     lazy: bool,
+
+    #[structopt(
+        long,
+        help = "Mode of config access path and modules",
+        requires("test"),
+        possible_values(&["DPN", "experimental"])
+    )]
+    mode: Option<String>,
 }
 
 #[global_allocator]
@@ -74,8 +85,15 @@ fn main() {
         };
         let genesis_modules = if let Some(module_paths) = args.genesis_modules {
             diem_framework_releases::load_modules_from_paths(&module_paths)
+        } else if args.mode == Some("experimental".to_string()) {
+            diem_experimental_framework_releases::current_module_blobs().to_vec()
         } else {
             diem_framework_releases::current_module_blobs().to_vec()
+        };
+        let diem_version_access_path = if args.mode == Some("experimental".to_string()) {
+            experimental_version_access_path()
+        } else {
+            default_access_path_for_config(DiemVersion::CONFIG_ID)
         };
         diem_node::load_test_environment(
             args.config,
@@ -83,6 +101,7 @@ fn main() {
             args.lazy,
             publishing_option,
             genesis_modules,
+            Some(diem_version_access_path),
             rng,
         );
     } else {

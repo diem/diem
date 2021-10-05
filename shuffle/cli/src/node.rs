@@ -47,6 +47,7 @@ fn create_node(home: &Home, genesis: Option<String>) -> Result<()> {
         LAZY_ENABLED,
         Some(publishing_option),
         genesis_modules,
+        None,
         rand::rngs::OsRng,
     );
     Ok(())

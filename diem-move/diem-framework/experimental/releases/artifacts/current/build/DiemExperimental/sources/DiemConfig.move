@@ -7,7 +7,7 @@ module DiemFramework::DiemConfig {
     use Std::Errors;
     use Std::Event;
     use Std::Signer;
-    friend DiemFramework::DiemVersion;
+//    friend DiemFramework::DiemVersion;
     friend DiemFramework::RegisteredCurrencies;
     friend DiemFramework::DiemTransactionPublishingOption;
     friend DiemFramework::DiemVMConfig;

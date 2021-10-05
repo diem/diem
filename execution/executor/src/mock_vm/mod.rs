@@ -14,7 +14,8 @@ use diem_types::{
     contract_event::ContractEvent,
     event::EventKey,
     on_chain_config::{
-        config_address, new_epoch_event_key, ConfigurationResource, OnChainConfig, ValidatorSet,
+        config_address, default_access_path_for_config, new_epoch_event_key, ConfigurationResource,
+        OnChainConfig, ValidatorSet,
     },
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
@@ -222,7 +223,7 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 
 fn gen_genesis_writeset() -> WriteSet {
     let mut write_set = WriteSetMut::default();
-    let validator_set_ap = ValidatorSet::CONFIG_ID.access_path();
+    let validator_set_ap = default_access_path_for_config(ValidatorSet::CONFIG_ID);
     write_set.push((
         validator_set_ap,
         WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),

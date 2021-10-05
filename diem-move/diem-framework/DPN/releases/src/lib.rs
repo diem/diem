@@ -16,17 +16,17 @@ mod tests;
 
 /// Return a list of all available releases.
 pub fn list_all_releases() -> Result<Vec<String>> {
-    Ok(ReleaseFetcher::list_releases(&Release::DPN))
+    Ok(ReleaseFetcher::list_releases(&Release::Experimental))
 }
 
 /// Load the serialized modules from the specified release.
 pub fn load_modules_from_release(release_name: &str) -> Result<Vec<Vec<u8>>> {
-    ReleaseFetcher::new(Release::DPN, release_name).module_blobs()
+    ReleaseFetcher::new(Release::Experimental, release_name).module_blobs()
 }
 
 /// Load the error descriptions from the specified release.
 pub fn load_error_descriptions_from_release(release_name: &str) -> Result<Vec<u8>> {
-    ReleaseFetcher::new(Release::DPN, release_name).error_descriptions()
+    ReleaseFetcher::new(Release::Experimental, release_name).error_descriptions()
 }
 
 /// Load the serialized modules from the specified paths.
