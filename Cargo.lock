@@ -1464,14 +1464,17 @@ dependencies = [
  "claim",
  "diem-crypto",
  "diem-data-client",
+ "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
  "futures",
  "itertools 0.10.1",
+ "rand 0.8.4",
  "serde",
  "storage-service-types",
  "thiserror",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]

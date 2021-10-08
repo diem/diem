@@ -33,7 +33,7 @@ pub enum Error {
 /// the Data Client about invalid or malformed responses.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ResponseError {
-    InvalidData,
+    InvalidPayloadDataType,
     MissingData,
     ProofVerificationError,
 }

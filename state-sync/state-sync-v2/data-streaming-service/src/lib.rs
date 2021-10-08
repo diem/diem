@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 #![allow(dead_code)]
 
-mod availability_checks;
 mod data_notification;
 mod data_stream;
 mod error;

@@ -3,6 +3,7 @@
 
 use crate::streaming_client::Epoch;
 use diem_crypto::HashValue;
+use diem_data_client::DataClientResponse;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     ledger_info::LedgerInfoWithSignatures,
@@ -11,7 +12,7 @@ use diem_types::{
         Version,
     },
 };
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 /// A unique ID used to identify each notification.
 pub type NotificationId = u64;
@@ -32,8 +33,16 @@ pub enum DataPayload {
     TransactionsWithProof(TransactionListWithProof),
 }
 
-/// A request that has been sent to the Diem data client.
+/// A sent data notification that tracks the original client request and the
+/// client response forwarded along a stream. This is useful for re-fetching.
 #[derive(Clone, Debug)]
+pub struct SentDataNotification {
+    pub client_request: DataClientRequest,
+    pub client_response: DataClientResponse,
+}
+
+/// A request that has been sent to the Diem data client.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataClientRequest {
     AccountsWithProof(AccountsWithProofRequest),
     EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest),
@@ -42,7 +51,7 @@ pub enum DataClientRequest {
 }
 
 /// A request for fetching account states.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountsWithProofRequest {
     pub version: Version,
     pub start_index: HashValue,
@@ -50,14 +59,14 @@ pub struct AccountsWithProofRequest {
 }
 
 /// A client request for fetching epoch ending ledger infos.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EpochEndingLedgerInfosRequest {
     pub start_epoch: Epoch,
     pub end_epoch: Epoch,
 }
 
 /// A client request for fetching transactions with proofs.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionsWithProofRequest {
     pub start_version: Version,
     pub end_version: Version,
@@ -66,9 +75,26 @@ pub struct TransactionsWithProofRequest {
 }
 
 /// A client request for fetching transaction outputs with proofs.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionOutputsWithProofRequest {
     pub start_version: Version,
     pub end_version: Version,
     pub max_proof_version: Version,
+}
+
+/// A pending client response where data has been requested from the
+/// network and will be available in `client_response` when received.
+pub struct PendingClientResponse {
+    pub client_request: DataClientRequest,
+    pub client_response: Option<Result<DataClientResponse, diem_data_client::Error>>,
+}
+
+impl Debug for PendingClientResponse {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Client request: {:?}, client response: {:?}",
+            self.client_request, self.client_response
+        )
+    }
 }

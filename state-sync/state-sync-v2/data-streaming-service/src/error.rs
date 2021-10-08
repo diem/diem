@@ -15,8 +15,6 @@ pub enum Error {
     DiemDataClientResponseIsInvalid(String),
     #[error("An integer overflow has occurred: {0}")]
     IntegerOverflow(String),
-    #[error("Encountered an invalid request: {0}")]
-    InvalidRequest(String),
     #[error("No data to fetch: {0}")]
     NoDataToFetch(String),
     #[error("Unexpected error encountered: {0}")]
