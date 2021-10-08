@@ -28,6 +28,8 @@ use serde::Serialize;
 use std::{
     boxed::Box,
     convert::{From, Into, TryFrom, TryInto},
+    fmt,
+    str::FromStr,
 };
 
 #[derive(Clone, Debug)]
@@ -478,6 +480,33 @@ impl From<TransactionAuthenticator> for TransactionSignature {
             } => Self::MultiAgentSignature(
                 (sender, secondary_signer_addresses, secondary_signers).into(),
             ),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum TransactionId {
+    Hash(HashValue),
+    Version(u64),
+}
+
+impl FromStr for TransactionId {
+    type Err = anyhow::Error;
+
+    fn from_str(hash_or_version: &str) -> Result<Self, anyhow::Error> {
+        let id = match hash_or_version.parse::<u64>() {
+            Ok(version) => TransactionId::Version(version),
+            Err(_) => TransactionId::Hash(hash_or_version.parse()?),
+        };
+        Ok(id)
+    }
+}
+
+impl fmt::Display for TransactionId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Hash(h) => write!(f, "hash({})", h),
+            Self::Version(v) => write!(f, "version({})", v),
         }
     }
 }

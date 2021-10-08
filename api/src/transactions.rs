@@ -1,20 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{fmt, str::FromStr};
-
-use crate::{context::Context, page::Page};
+use crate::{context::Context, page::Page, param::TransactionIdParam};
 
 use diem_api_types::{
-    mime_types, Error, HashValue, LedgerInfo, Response, Transaction, TransactionData,
+    mime_types, Error, LedgerInfo, Response, Transaction, TransactionData, TransactionId,
 };
 use diem_types::{
     mempool_status::MempoolStatusCode,
     transaction::{SignedTransaction, TransactionInfo},
 };
 
-use anyhow::{format_err, Result};
-use serde_json::json;
+use anyhow::Result;
 use warp::{
     http::{header::CONTENT_TYPE, StatusCode},
     reply, Filter, Rejection, Reply,
@@ -30,18 +27,19 @@ pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Rej
 pub fn get_transaction(
     context: Context,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::path!("transactions" / String)
+    warp::path!("transactions" / TransactionIdParam)
         .and(warp::get())
         .and(context.filter())
         .and_then(handle_get_transaction)
 }
 
 async fn handle_get_transaction(
-    hash_or_version: String,
+    id: TransactionIdParam,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    let id = TransactionId::from_str(&hash_or_version)?;
-    Ok(Transactions::new(context)?.get_transaction(id).await?)
+    Ok(Transactions::new(context)?
+        .get_transaction(id.parse("transaction hash or version")?)
+        .await?)
 }
 
 // GET /transactions?start={u64}&limit={u16}
@@ -78,11 +76,9 @@ async fn handle_post_bcs_transactions(
     body: bytes::Bytes,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    let txn = bcs::from_bytes(&body)
-        .map_err(|_| {
-            format_err!("invalid request body: deserialize SignedTransaction BCS bytes failed")
-        })
-        .map_err(Error::bad_request)?;
+    let txn = bcs::from_bytes(&body).map_err(|_| {
+        Error::invalid_request_body("deserialize SignedTransaction BCS bytes failed".to_owned())
+    })?;
     Ok(Transactions::new(context)?.create(txn).await?)
 }
 
@@ -109,13 +105,13 @@ impl Transactions {
                 let resp = Response::new(self.ledger_info, &pending_txn)?;
                 Ok(reply::with_status(resp, StatusCode::ACCEPTED))
             }
-            MempoolStatusCode::VmError => Err(Error::bad_request(format_err!(
+            MempoolStatusCode::VmError => Err(Error::bad_request(format!(
                 "invalid transaction: {}",
                 vm_status_opt
                     .map(|s| format!("{:?}", s))
                     .unwrap_or_else(|| "UNKNOWN".to_owned())
             ))),
-            _ => Err(Error::bad_request(format_err!(
+            _ => Err(Error::bad_request(format!(
                 "transaction is rejected: {}",
                 mempool_status,
             ))),
@@ -125,9 +121,6 @@ impl Transactions {
     pub fn list(self, page: Page) -> Result<impl Reply, Error> {
         let ledger_version = self.ledger_info.version();
         let start_version = page.start(ledger_version)?;
-        if start_version > ledger_version {
-            return Err(self.transaction_not_found(TransactionId::Version(start_version)));
-        }
         let limit = page.limit()?;
 
         let data = self
@@ -157,10 +150,7 @@ impl Transactions {
     }
 
     fn transaction_not_found(&self, id: TransactionId) -> Error {
-        Error::not_found(
-            format!("could not find transaction by: {}", id),
-            json!({"ledger_version": self.ledger_info.version().to_string()}),
-        )
+        Error::not_found("transaction", id, self.ledger_info.version())
     }
 
     fn get_by_version(&self, version: u64) -> Result<Option<TransactionData<TransactionInfo>>> {
@@ -196,38 +186,6 @@ impl Transactions {
     }
 }
 
-#[derive(Clone, Debug)]
-enum TransactionId {
-    Hash(HashValue),
-    Version(u64),
-}
-
-impl FromStr for TransactionId {
-    type Err = Error;
-
-    fn from_str(hash_or_version: &str) -> Result<Self, Error> {
-        let id = match hash_or_version.parse::<u64>() {
-            Ok(version) => TransactionId::Version(version),
-            Err(_) => TransactionId::Hash(HashValue::from_str(hash_or_version).map_err(|_| {
-                Error::bad_request(format_err!(
-                    "invalid path parameter transaction hash or version: {:?}",
-                    hash_or_version,
-                ))
-            })?),
-        };
-        Ok(id)
-    }
-}
-
-impl fmt::Display for TransactionId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Hash(h) => write!(f, "Hash({})", h),
-            Self::Version(v) => write!(f, "Version({})", v),
-        }
-    }
-}
-
 #[cfg(any(test))]
 mod tests {
     use crate::test_utils::{assert_json, find_value, new_test_context};
@@ -253,7 +211,6 @@ mod tests {
         language_storage::{ModuleId, StructTag},
     };
     use serde_json::json;
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_get_transactions_output_genesis_transaction() {
@@ -411,10 +368,8 @@ mod tests {
             resp,
             json!({
               "code": 404,
-              "message": "could not find transaction by: Version(1000000)",
-              "data": {
-                "ledger_version": ledger_version.to_string()
-              }
+              "message": "transaction not found by version(1000000)",
+              "diem_ledger_version": ledger_version.to_string()
             }),
         );
     }
@@ -430,7 +385,7 @@ mod tests {
             resp,
             json!({
               "code": 400,
-              "message": "invalid parameter: start=hello"
+              "message": "invalid parameter start: hello"
             }),
         );
     }
@@ -446,7 +401,7 @@ mod tests {
             resp,
             json!({
               "code": 400,
-              "message": "invalid parameter: limit=hello"
+              "message": "invalid parameter limit: hello"
             }),
         );
     }
@@ -462,7 +417,7 @@ mod tests {
             resp,
             json!({
               "code": 400,
-              "message": "invalid parameter: limit=2000, exceed limit 1000"
+              "message": "invalid parameter limit: 2000, exceed limit 1000"
             }),
         );
     }
@@ -585,10 +540,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_transactions_output_user_transaction_with_script_payload() {
         let context = new_test_context();
-        let new_key = AuthenticationKey::from_str(
-            "717d1d400311ff8797c2441ea9c2d2da1120ce38f66afb079c2bad0919d93a09",
-        )
-        .unwrap();
+        let new_key = "717d1d400311ff8797c2441ea9c2d2da1120ce38f66afb079c2bad0919d93a09"
+            .parse()
+            .unwrap();
+
         let mut tc_account = context.tc_account();
         let txn = tc_account.sign_with_transaction_builder(
             context
@@ -1028,10 +983,8 @@ mod tests {
             resp,
             json!({
                 "code": 404,
-                "message": "could not find transaction by: Hash(0xdadfeddcca7cb6396c735e9094c76c6e4e9cb3e3ef814730693aed59bd87b31d)",
-                "data": {
-                    "ledger_version": "0"
-                }
+                "message": "transaction not found by hash(0xdadfeddcca7cb6396c735e9094c76c6e4e9cb3e3ef814730693aed59bd87b31d)",
+                "diem_ledger_version": "0"
             }),
         )
     }
@@ -1048,7 +1001,7 @@ mod tests {
             resp,
             json!({
                 "code": 400,
-                "message": "invalid path parameter transaction hash or version: \"0x1\""
+                "message": "invalid parameter transaction hash or version: 0x1"
             }),
         )
     }
@@ -1065,10 +1018,8 @@ mod tests {
             resp,
             json!({
                 "code": 404,
-                "message": "could not find transaction by: Version(10000)",
-                "data": {
-                    "ledger_version": "0"
-                }
+                "message": "transaction not found by version(10000)",
+                "diem_ledger_version": "0"
             }),
         )
     }
@@ -1111,10 +1062,8 @@ mod tests {
             not_found,
             json!({
                 "code": 404,
-                "message": "could not find transaction by: Hash(0xdadfeddcca7cb6396c735e9094c76c6e4e9cb3e3ef814730693aed59bd87b31d)",
-                "data": {
-                    "ledger_version": "0"
-                }
+                "message": "transaction not found by hash(0xdadfeddcca7cb6396c735e9094c76c6e4e9cb3e3ef814730693aed59bd87b31d)",
+                "diem_ledger_version": "0"
             }),
         )
     }

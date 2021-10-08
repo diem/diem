@@ -11,16 +11,35 @@ API routes and handlers are managed by `warp` framework; endpoints/handlers are 
 Each handler defines:
 1. Routes: all routes of the handlers supported in the file.
 2. `warp` handler: an async function returns `Result<impl Reply, Rejection>`.
-3. Resource struct and handle functions: this may not required if the endpoint logic is super simple.
-
-All HTTP input parameters should be preprocessed and converted into the right type in the `warp` handler or resource struct constructor (`new` function).
-Resource handle function should only accept typed input data.
+3. Endpoint handler: this may not be required if the endpoint logic is super simple.
 
 `index.rs` is the root of all routes, it handles `GET /`API and connects all resources' routes with error handling.
 
 The service is launched with a `Context` instance, which holds all external components (e.g. DiemDB, mempool sender).
 The `Context` object also serves as a facade of external components, and sharing some general functionalities across
 all handlers.
+
+### Parameter Handling
+
+There are four types HTTP input:
+
+1. Path parameter.
+2. Query parameter.
+3. Request body.
+4. Request header.
+
+We process parameters in three stages:
+
+1. Capture HTTP parameter values; this is done by `warp` routes definition.
+2. Parse/deserialize HTTP parameter values into API internal data types; this should be done in the `warp` handler (the async function passed into `warp::Filter#and_then` function) or endpoint handler's constructor (`new` function).
+3. Process internal data types; this is done by the endpoint handler functions.
+
+For path parameter:
+
+1. Create a `Param<TargetType>` type alias `TargetTypeParam` in the param.rs, and use it in the `warp` route definition for capturing the HTTP path parameter. We don't parse the parameter at this stage, because `warp` will drop error and return `not_found` error without a meaningful message.
+2. The `TargetType` is required to implement `FromStr` trait, and `Param#parse` uses it for parsing the HTTP path parameter string and returning `400` error code with a meaningful invalid parameter error message.
+
+Query parameters should not be required, always provide default values for the case they are not provided.
 
 ### Principles
 
@@ -38,7 +57,7 @@ API response data structures are optimized for usability across all different la
 
 `From` / `TryFrom` traits are implemented for converting between API data type and Diem core data types instead of special constructors.
 
-One exception is Move data, they are converted by procedures defined in the `convert.rs`, because Move data type definitions are defined by Move module stored in the Diem DB. However, once the type definition is retrived from database, the related `From` / `TryFrom` trait implemention is used to convert them into API data types.
+Move data are converted by procedures defined in the `convert.rs`, because Move data type definitions are defined by the Move module stored in the Diem DB. We first retrieve Move data types from the database, then convert them into API data types.
 
 ### Error Handling
 

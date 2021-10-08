@@ -1,27 +1,46 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::context::Context;
+use crate::{
+    context::Context,
+    param::{AddressParam, LedgerVersionParam},
+};
 
-use diem_api_types::{Address, Error, LedgerInfo, MoveModuleBytecode, Response};
+use diem_api_types::{Address, Error, LedgerInfo, MoveModuleBytecode, Response, TransactionId};
 use diem_types::account_state::AccountState;
 
 use anyhow::Result;
-use serde_json::json;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use warp::{Filter, Rejection, Reply};
 
 pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    get_account_resources(context.clone()).or(get_account_modules(context))
+    get_account_resources(context.clone())
+        .or(get_account_resources_by_ledger_version(context.clone()))
+        .or(get_account_modules(context.clone()))
+        .or(get_account_modules_by_ledger_version(context))
 }
 
 // GET /accounts/<address>/resources
 pub fn get_account_resources(
     context: Context,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::path!("accounts" / String / "resources")
+    warp::path!("accounts" / AddressParam / "resources")
         .and(warp::get())
         .and(context.filter())
+        .map(|address, ctx| (None, address, ctx))
+        .untuple_one()
+        .and_then(handle_get_account_resources)
+}
+
+// GET /ledger/<version>/accounts/<address>/resources
+pub fn get_account_resources_by_ledger_version(
+    context: Context,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("ledger" / LedgerVersionParam / "accounts" / AddressParam / "resources")
+        .and(warp::get())
+        .and(context.filter())
+        .map(|version, address, ctx| (Some(version), address, ctx))
+        .untuple_one()
         .and_then(handle_get_account_resources)
 }
 
@@ -29,37 +48,72 @@ pub fn get_account_resources(
 pub fn get_account_modules(
     context: Context,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::path!("accounts" / String / "modules")
+    warp::path!("accounts" / AddressParam / "modules")
         .and(warp::get())
         .and(context.filter())
+        .map(|address, ctx| (None, address, ctx))
+        .untuple_one()
+        .and_then(handle_get_account_modules)
+}
+
+// GET /ledger/<version>/accounts/<address>/modules
+pub fn get_account_modules_by_ledger_version(
+    context: Context,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("ledger" / LedgerVersionParam / "accounts" / AddressParam / "modules")
+        .and(warp::get())
+        .and(context.filter())
+        .map(|version, address, ctx| (Some(version), address, ctx))
+        .untuple_one()
         .and_then(handle_get_account_modules)
 }
 
 async fn handle_get_account_resources(
-    address: String,
+    ledger_version: Option<LedgerVersionParam>,
+    address: AddressParam,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    Ok(Account::new(address, context)?.resources()?)
+    Ok(Account::new(ledger_version, address, context)?.resources()?)
 }
 
 async fn handle_get_account_modules(
-    address: String,
+    ledger_version: Option<LedgerVersionParam>,
+    address: AddressParam,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    Ok(Account::new(address, context)?.modules()?)
+    Ok(Account::new(ledger_version, address, context)?.modules()?)
 }
 
 struct Account {
+    ledger_version: u64,
     address: Address,
-    ledger_info: LedgerInfo,
+    latest_ledger_info: LedgerInfo,
     context: Context,
 }
 
 impl Account {
-    pub fn new(address: String, context: Context) -> Result<Self, Error> {
+    pub fn new(
+        ledger_version: Option<LedgerVersionParam>,
+        address: AddressParam,
+        context: Context,
+    ) -> Result<Self, Error> {
+        let latest_ledger_info = context.get_latest_ledger_info()?;
+        let ledger_version = ledger_version
+            .map(|v| v.parse("ledger version"))
+            .unwrap_or_else(|| Ok(latest_ledger_info.version()))?;
+
+        if ledger_version > latest_ledger_info.version() {
+            return Err(Error::not_found(
+                "ledger",
+                TransactionId::Version(ledger_version),
+                latest_ledger_info.version(),
+            ));
+        }
+
         Ok(Self {
-            address: address.try_into().map_err(Error::bad_request)?,
-            ledger_info: context.get_latest_ledger_info()?,
+            ledger_version,
+            address: address.parse("account address")?,
+            latest_ledger_info,
             context,
         })
     }
@@ -69,7 +123,7 @@ impl Account {
             .context
             .move_converter()
             .try_into_resources(self.account_state()?.get_resources())?;
-        Response::new(self.ledger_info, &resources)
+        Response::new(self.latest_ledger_info, &resources)
     }
 
     pub fn modules(self) -> Result<impl Reply, Error> {
@@ -78,21 +132,25 @@ impl Account {
             .get_modules()
             .map(MoveModuleBytecode::try_from)
             .collect::<Result<Vec<MoveModuleBytecode>>>()?;
-        Response::new(self.ledger_info, &modules)
+        Response::new(self.latest_ledger_info, &modules)
     }
 
     fn account_state(&self) -> Result<AccountState, Error> {
         let state = self
             .context
-            .get_account_state(self.address.into(), self.ledger_info.version())?
+            .get_account_state(self.address.into(), self.ledger_version)?
             .ok_or_else(|| self.account_not_found())?;
         Ok(state)
     }
 
     fn account_not_found(&self) -> Error {
         Error::not_found(
-            format!("could not find account by address: {}", self.address),
-            json!({"ledger_version": self.ledger_info.ledger_version}),
+            "account",
+            format!(
+                "address({}) and ledger version({})",
+                self.address, self.ledger_version,
+            ),
+            self.latest_ledger_info.version(),
         )
     }
 }
@@ -124,10 +182,8 @@ mod tests {
         assert_eq!(
             json!({
                 "code": 404,
-                "message": "could not find account by address: 0x0",
-                "data": {
-                    "ledger_version": info.ledger_version,
-                },
+                "message": "account not found by address(0x0) and ledger version(0)",
+                "diem_ledger_version": info.ledger_version,
             }),
             resp
         );
@@ -145,7 +201,7 @@ mod tests {
             assert_eq!(
                 json!({
                     "code": 400,
-                    "message": format!("invalid account address: {}", invalid_address),
+                    "message": format!("invalid parameter account address: {}", invalid_address),
                 }),
                 resp
             );
@@ -752,11 +808,111 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn test_get_account_resources_by_ledger_version() {
+        let mut context = new_test_context();
+        let account = context.gen_account();
+        let txn = context.create_parent_vasp(&account);
+        context.commit_block(&vec![txn.clone()]);
+
+        let resources = context
+            .get(&account_resources(
+                &context.tc_account().address().to_hex_literal(),
+            ))
+            .await;
+        let tc_account = find_value(&resources, |f| f["type"]["name"] == "DiemAccount");
+        assert_eq!(tc_account["value"]["sequence_number"], "1");
+
+        let resources = context
+            .get(&account_resources_with_ledger_version(
+                &context.tc_account().address().to_hex_literal(),
+                0,
+            ))
+            .await;
+        let tc_account = find_value(&resources, |f| f["type"]["name"] == "DiemAccount");
+        assert_eq!(tc_account["value"]["sequence_number"], "0");
+    }
+
+    #[tokio::test]
+    async fn test_get_account_resources_by_ledger_version_is_too_large() {
+        let context = new_test_context();
+        let resp = context
+            .expect_status_code(404)
+            .get(&account_resources_with_ledger_version(
+                &context.tc_account().address().to_hex_literal(),
+                1000000000000000000,
+            ))
+            .await;
+        assert_json(
+            resp,
+            json!({
+                "code": 404,
+                "message": "ledger not found by version(1000000000000000000)",
+                "diem_ledger_version": "0"
+            }),
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_account_resources_by_invalid_ledger_version() {
+        let context = new_test_context();
+        let resp = context
+            .expect_status_code(400)
+            .get(&account_resources_with_ledger_version(
+                &context.tc_account().address().to_hex_literal(),
+                -1,
+            ))
+            .await;
+        assert_json(
+            resp,
+            json!({
+                "code": 400,
+                "message": "invalid parameter ledger version: -1"
+            }),
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_account_modules_by_ledger_version() {
+        let context = new_test_context();
+        let code = "a11ceb0b0300000006010002030205050703070a0c0816100c260900000001000100000102084d794d6f64756c650269640000000000000000000000000b1e55ed00010000000231010200";
+        let mut tc_account = context.tc_account();
+        let txn = tc_account.sign_with_transaction_builder(
+            context
+                .transaction_factory()
+                .module(hex::decode(code).unwrap()),
+        );
+        context.commit_block(&vec![txn.clone()]);
+
+        let modules = context
+            .get(&account_modules(
+                &context.tc_account().address().to_hex_literal(),
+            ))
+            .await;
+        assert_ne!(modules, json!([]));
+
+        let modules = context
+            .get(&account_modules_with_ledger_version(
+                &context.tc_account().address().to_hex_literal(),
+                0,
+            ))
+            .await;
+        assert_eq!(modules, json!([]));
+    }
+
     fn account_resources(address: &str) -> String {
         format!("/accounts/{}/resources", address)
     }
 
+    fn account_resources_with_ledger_version(address: &str, ledger_version: i128) -> String {
+        format!("/ledger/{}{}", ledger_version, account_resources(address))
+    }
+
     fn account_modules(address: &str) -> String {
         format!("/accounts/{}/modules", address)
+    }
+
+    fn account_modules_with_ledger_version(address: &str, ledger_version: i128) -> String {
+        format!("/ledger/{}{}", ledger_version, account_modules(address))
     }
 }

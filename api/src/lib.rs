@@ -6,6 +6,7 @@ mod context;
 mod index;
 pub(crate) mod log;
 mod page;
+pub(crate) mod param;
 pub mod runtime;
 mod transactions;
 

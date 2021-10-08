@@ -4,15 +4,21 @@
 use move_binary_format::errors::PartialVMError;
 
 use serde::{Deserialize, Serialize};
-use std::{convert::From, fmt};
+use std::{
+    convert::From,
+    fmt::{self, Display},
+};
 use warp::{http::StatusCode, reject::Reject};
+
+use crate::U64;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Error {
     pub code: u16,
     pub message: String,
+    /// Diem blockchain latest onchain ledger version.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<serde_json::Value>,
+    pub diem_ledger_version: Option<U64>,
 }
 
 impl Error {
@@ -20,15 +26,7 @@ impl Error {
         Self {
             code: code.as_u16(),
             message,
-            data: None,
-        }
-    }
-
-    pub fn new_with_data(code: StatusCode, message: String, data: serde_json::Value) -> Self {
-        Self {
-            code: code.as_u16(),
-            message,
-            data: Some(data),
+            diem_ledger_version: None,
         }
     }
 
@@ -36,12 +34,24 @@ impl Error {
         Self::new(code, err.to_string())
     }
 
-    pub fn bad_request(err: anyhow::Error) -> Self {
-        Self::from_anyhow_error(StatusCode::BAD_REQUEST, err)
+    pub fn bad_request<S: Display>(msg: S) -> Self {
+        Self::new(StatusCode::BAD_REQUEST, msg.to_string())
     }
 
-    pub fn not_found(message: String, data: serde_json::Value) -> Self {
-        Self::new_with_data(StatusCode::NOT_FOUND, message, data)
+    pub fn not_found<S: Display>(resource: &str, identifier: S, ledger_version: u64) -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            format!("{} not found by {}", resource, identifier),
+        )
+        .diem_ledger_version(ledger_version)
+    }
+
+    pub fn invalid_param<S: Display>(name: &str, value: S) -> Self {
+        Self::bad_request(format!("invalid parameter {}: {}", name, value))
+    }
+
+    pub fn invalid_request_body<S: Display>(msg: S) -> Self {
+        Self::bad_request(format!("invalid request body: {}", msg))
     }
 
     pub fn internal(err: anyhow::Error) -> Self {
@@ -51,13 +61,18 @@ impl Error {
     pub fn status_code(&self) -> StatusCode {
         StatusCode::from_u16(self.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
     }
+
+    pub fn diem_ledger_version(mut self, ledger_version: u64) -> Self {
+        self.diem_ledger_version = Some(ledger_version.into());
+        self
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}: {}", self.status_code(), &self.message)?;
-        if let Some(val) = &self.data {
-            write!(f, "\n{}", val)?;
+        if let Some(val) = &self.diem_ledger_version {
+            write!(f, "\ndiem ledger version: {}", val)?;
         }
         Ok(())
     }
