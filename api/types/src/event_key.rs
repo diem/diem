@@ -24,9 +24,9 @@ impl FromStr for EventKey {
 
     fn from_str(s: &str) -> anyhow::Result<Self, anyhow::Error> {
         if let Some(hex) = s.strip_prefix("0x") {
-            Ok(diem_types::event::EventKey::from_str(hex)?.into())
+            Ok(hex.parse::<diem_types::event::EventKey>()?.into())
         } else {
-            Ok(diem_types::event::EventKey::from_str(s)?.into())
+            Ok(s.parse::<diem_types::event::EventKey>()?.into())
         }
     }
 }
@@ -43,7 +43,7 @@ impl<'de> Deserialize<'de> for EventKey {
         D: Deserializer<'de>,
     {
         let hash = <String>::deserialize(deserializer)?;
-        EventKey::from_str(&hash).map_err(D::Error::custom)
+        hash.parse().map_err(D::Error::custom)
     }
 }
 
@@ -58,19 +58,18 @@ mod tests {
     use crate::event_key::EventKey;
 
     use serde_json::{json, Value};
-    use std::str::FromStr;
 
     #[test]
     fn test_from_and_to_string() {
         let hash = "0x00000000000000000000000000000000000000000a550c18";
-        assert_eq!(EventKey::from_str(hash).unwrap().to_string(), hash);
+        assert_eq!(hash.parse::<EventKey>().unwrap().to_string(), hash);
     }
 
     #[test]
     fn test_from_and_to_json() {
         let hex = "0x00000000000000000000000000000000000000000a550c18";
         let hash: EventKey = serde_json::from_value(json!(hex)).unwrap();
-        assert_eq!(hash, EventKey::from_str(hex).unwrap());
+        assert_eq!(hash, hex.parse().unwrap());
 
         let val: Value = serde_json::to_value(hash).unwrap();
         assert_eq!(val, json!(hex));

@@ -116,15 +116,12 @@ mod tests {
     }
 
     #[test]
-    fn test_to_string_with_data() {
-        let err = Error::new_with_data(
-            StatusCode::BAD_REQUEST,
-            "invalid address".to_owned(),
-            serde_json::json!({"hello": "world"}),
-        );
+    fn test_to_string_with_diem_ledger_version() {
+        let err = Error::new(StatusCode::BAD_REQUEST, "invalid address".to_owned())
+            .diem_ledger_version(123);
         assert_eq!(
             err.to_string(),
-            "400 Bad Request: invalid address\n{\"hello\":\"world\"}"
+            "400 Bad Request: invalid address\ndiem ledger version: 123"
         )
     }
 

@@ -24,9 +24,9 @@ impl FromStr for HashValue {
 
     fn from_str(s: &str) -> anyhow::Result<Self, anyhow::Error> {
         if let Some(hex) = s.strip_prefix("0x") {
-            Ok(diem_crypto::hash::HashValue::from_str(hex)?.into())
+            Ok(hex.parse::<diem_crypto::hash::HashValue>()?.into())
         } else {
-            Ok(diem_crypto::hash::HashValue::from_str(s)?.into())
+            Ok(s.parse::<diem_crypto::hash::HashValue>()?.into())
         }
     }
 }
@@ -43,7 +43,7 @@ impl<'de> Deserialize<'de> for HashValue {
         D: Deserializer<'de>,
     {
         let hash = <String>::deserialize(deserializer)?;
-        HashValue::from_str(&hash).map_err(D::Error::custom)
+        hash.parse().map_err(D::Error::custom)
     }
 }
 
@@ -58,17 +58,17 @@ mod tests {
     use crate::hash::HashValue;
 
     use serde_json::{json, Value};
-    use std::str::FromStr;
 
     #[test]
     fn test_from_and_to_string() {
         let hash = "0xb78e1ba6fa7f7b3a3f3ac2a31e6675d84f2261c711c3b438a252f648b26df3ed";
-        assert_eq!(HashValue::from_str(hash).unwrap().to_string(), hash);
+        assert_eq!(hash.parse::<HashValue>().unwrap().to_string(), hash);
 
         let hash_without_prefix =
             "b78e1ba6fa7f7b3a3f3ac2a31e6675d84f2261c711c3b438a252f648b26df3ed";
         assert_eq!(
-            HashValue::from_str(hash_without_prefix)
+            hash_without_prefix
+                .parse::<HashValue>()
                 .unwrap()
                 .to_string(),
             hash
@@ -79,7 +79,7 @@ mod tests {
     fn test_from_and_to_json() {
         let hex = "0xb78e1ba6fa7f7b3a3f3ac2a31e6675d84f2261c711c3b438a252f648b26df3ed";
         let hash: HashValue = serde_json::from_value(json!(hex)).unwrap();
-        assert_eq!(hash, HashValue::from_str(hex).unwrap());
+        assert_eq!(hash, hex.parse().unwrap());
 
         let val: Value = serde_json::to_value(hash).unwrap();
         assert_eq!(val, json!(hex));
