@@ -46,6 +46,7 @@ pub(crate) fn gen_li_with_sigs(
 
 pub struct TransactionCommitter {
     executor: Arc<Executor<DpnProto, DiemVM>>,
+    start_version: Version,
     version: Version,
     block_receiver: mpsc::Receiver<(HashValue, HashValue, Instant, Instant, Duration, usize)>,
 }
@@ -53,11 +54,12 @@ pub struct TransactionCommitter {
 impl TransactionCommitter {
     pub fn new(
         executor: Arc<Executor<DpnProto, DiemVM>>,
-        version: Version,
+        start_version: Version,
         block_receiver: mpsc::Receiver<(HashValue, HashValue, Instant, Instant, Duration, usize)>,
     ) -> Self {
         Self {
-            version,
+            start_version,
+            version: start_version,
             executor,
             block_receiver,
         }
@@ -83,7 +85,7 @@ impl TransactionCommitter {
                 .unwrap();
 
             report_block(
-                self.version,
+                self.version - self.start_version,
                 global_start_time,
                 execution_start_time,
                 execution_time,
