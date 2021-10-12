@@ -18,7 +18,7 @@ use diem_types::{
     transaction::{
         authenticator::{AccountAuthenticator, TransactionAuthenticator},
         default_protocol::TransactionWithProof,
-        Script, ScriptFunction, SignedTransaction, TransactionInfoTrait,
+        Script, SignedTransaction, TransactionInfoTrait,
     },
 };
 use move_core_types::identifier::Identifier;
@@ -27,7 +27,7 @@ use resource_viewer::AnnotatedMoveValue;
 use serde::{Deserialize, Serialize};
 use std::{
     boxed::Box,
-    convert::{From, Into, TryFrom, TryInto},
+    convert::{From, Into, TryFrom},
     fmt,
     str::FromStr,
 };
@@ -305,17 +305,6 @@ pub struct ScriptFunctionPayload {
     pub arguments: Vec<MoveValue>,
 }
 
-impl From<(&ScriptFunction, Vec<MoveValue>)> for ScriptFunctionPayload {
-    fn from((fun, arguments): (&ScriptFunction, Vec<MoveValue>)) -> Self {
-        Self {
-            module: fun.module().clone().into(),
-            function: fun.function().into(),
-            type_arguments: fun.ty_args().iter().map(|arg| arg.clone().into()).collect(),
-            arguments,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ScriptPayload {
     pub code: MoveScriptBytecode,
@@ -323,18 +312,15 @@ pub struct ScriptPayload {
     pub arguments: Vec<MoveValue>,
 }
 
-impl TryFrom<&Script> for ScriptPayload {
+impl TryFrom<Script> for ScriptPayload {
     type Error = anyhow::Error;
 
-    fn try_from(script: &Script) -> anyhow::Result<Self> {
+    fn try_from(script: Script) -> anyhow::Result<Self> {
+        let (code, ty_args, args) = script.into_inner();
         Ok(Self {
-            code: script.code().try_into()?,
-            type_arguments: script
-                .ty_args()
-                .iter()
-                .map(|arg| arg.clone().into())
-                .collect(),
-            arguments: script.args().iter().map(|arg| arg.clone().into()).collect(),
+            code: MoveScriptBytecode::new(code).ensure_abi()?,
+            type_arguments: ty_args.into_iter().map(|arg| arg.into()).collect(),
+            arguments: args.into_iter().map(|arg| arg.into()).collect(),
         })
     }
 }

@@ -249,6 +249,16 @@ impl AccountState {
         )
     }
 
+    /// Into an iterator over the module values stored under this account
+    pub fn into_modules(self) -> impl Iterator<Item = Vec<u8>> {
+        self.0.into_iter().filter_map(|(k, v)| {
+            match Path::try_from(&k).expect("Invalid access path") {
+                Path::Code(_) => Some(v),
+                Path::Resource(_) => None,
+            }
+        })
+    }
+
     /// Return an iterator over all resources stored under this account.
     ///
     /// Note that resource access [`Path`]s that fail to deserialize will be

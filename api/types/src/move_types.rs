@@ -702,42 +702,60 @@ impl From<&AbilitySet> for MoveFunctionGenericTypeParam {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MoveModuleBytecode {
     pub bytecode: HexEncodedBytes,
-    pub abi: MoveModule,
+    pub abi: Option<MoveModule>,
 }
 
-impl TryFrom<&Module> for MoveModuleBytecode {
-    type Error = anyhow::Error;
-    fn try_from(m: &Module) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytecode: m.code().to_vec().into(),
-            abi: CompiledModule::deserialize(m.code())?.try_into()?,
-        })
+impl MoveModuleBytecode {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self {
+            bytecode: bytes.into(),
+            abi: None,
+        }
+    }
+
+    pub fn ensure_abi(mut self) -> anyhow::Result<Self> {
+        if self.abi.is_none() {
+            let module = CompiledModule::deserialize(self.bytecode.inner())?.try_into()?;
+            self.abi = Some(module);
+        }
+        Ok(self)
+    }
+
+    pub fn into_abi(self) -> anyhow::Result<MoveModule> {
+        Ok(self.ensure_abi()?.abi.unwrap())
     }
 }
 
-impl TryFrom<&Vec<u8>> for MoveModuleBytecode {
-    type Error = anyhow::Error;
-    fn try_from(bytes: &Vec<u8>) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytecode: bytes.clone().into(),
-            abi: CompiledModule::deserialize(bytes)?.try_into()?,
-        })
+impl From<Module> for MoveModuleBytecode {
+    fn from(m: Module) -> Self {
+        Self::new(m.into_inner())
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MoveScriptBytecode {
     pub bytecode: HexEncodedBytes,
-    pub abi: MoveFunction,
+    pub abi: Option<MoveFunction>,
 }
 
-impl TryFrom<&[u8]> for MoveScriptBytecode {
-    type Error = anyhow::Error;
-    fn try_from(bytes: &[u8]) -> anyhow::Result<Self> {
-        Ok(Self {
-            bytecode: bytes.to_vec().into(),
-            abi: CompiledScript::deserialize(bytes)?.try_into()?,
-        })
+impl MoveScriptBytecode {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self {
+            bytecode: bytes.into(),
+            abi: None,
+        }
+    }
+
+    pub fn ensure_abi(mut self) -> anyhow::Result<Self> {
+        if self.abi.is_none() {
+            let func = CompiledScript::deserialize(self.bytecode.inner())?.try_into()?;
+            self.abi = Some(func);
+        }
+        Ok(self)
+    }
+
+    pub fn into_abi(self) -> anyhow::Result<MoveFunction> {
+        Ok(self.ensure_abi()?.abi.unwrap())
     }
 }
 

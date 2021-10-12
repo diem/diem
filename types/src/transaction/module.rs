@@ -18,6 +18,10 @@ impl Module {
     pub fn code(&self) -> &[u8] {
         &self.code
     }
+
+    pub fn into_inner(self) -> Vec<u8> {
+        self.code
+    }
 }
 
 impl fmt::Debug for Module {

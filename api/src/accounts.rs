@@ -10,7 +10,6 @@ use diem_api_types::{Address, Error, LedgerInfo, MoveModuleBytecode, Response, T
 use diem_types::account_state::AccountState;
 
 use anyhow::Result;
-use std::convert::TryFrom;
 use warp::{Filter, Rejection, Reply};
 
 pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -129,8 +128,9 @@ impl Account {
     pub fn modules(self) -> Result<impl Reply, Error> {
         let modules = self
             .account_state()?
-            .get_modules()
-            .map(MoveModuleBytecode::try_from)
+            .into_modules()
+            .map(MoveModuleBytecode::new)
+            .map(|m| m.ensure_abi())
             .collect::<Result<Vec<MoveModuleBytecode>>>()?;
         Response::new(self.latest_ledger_info, &modules)
     }

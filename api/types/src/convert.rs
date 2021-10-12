@@ -9,7 +9,7 @@ use crate::{
     WriteSetChange, WriteSetPayload, U128, U64,
 };
 use diem_types::{
-    access_path::Path,
+    access_path::{AccessPath, Path},
     chain_id::ChainId,
     contract_event::ContractEvent,
     transaction::{RawTransaction, ScriptFunction, SignedTransaction, TransactionInfoTrait},
@@ -48,7 +48,7 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
     }
 
     pub fn try_into_pending_transaction(&self, txn: SignedTransaction) -> Result<Transaction> {
-        let payload = self.try_into_transaction_payload(txn.payload())?;
+        let payload = self.try_into_transaction_payload(txn.payload().clone())?;
         Ok((txn, payload).into())
     }
 
@@ -70,11 +70,11 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
         let events = self.try_into_events(&data.events)?;
         let ret = match data.transaction {
             UserTransaction(txn) => {
-                let payload = self.try_into_transaction_payload(txn.payload())?;
+                let payload = self.try_into_transaction_payload(txn.payload().clone())?;
                 (data.version, &txn, &data.info, payload, events).into()
             }
             GenesisTransaction(write_set) => {
-                let payload = self.try_into_write_set_payload(&write_set)?;
+                let payload = self.try_into_write_set_payload(write_set)?;
                 (data.version, &data.info, payload, events).into()
             }
             BlockMetadata(txn) => (data.version, &txn, &data.info).into(),
@@ -84,21 +84,28 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
 
     pub fn try_into_transaction_payload(
         &self,
-        payload: &diem_types::transaction::TransactionPayload,
+        payload: diem_types::transaction::TransactionPayload,
     ) -> Result<TransactionPayload> {
         use diem_types::transaction::TransactionPayload::*;
         let ret = match payload {
             WriteSet(v) => TransactionPayload::WriteSetPayload(self.try_into_write_set_payload(v)?),
             Script(s) => TransactionPayload::ScriptPayload(s.try_into()?),
-            Module(m) => TransactionPayload::ModulePayload(m.try_into()?),
+            Module(m) => {
+                TransactionPayload::ModulePayload(MoveModuleBytecode::from(m).ensure_abi()?)
+            }
             ScriptFunction(fun) => {
-                let arguments: Vec<MoveValue> = self
-                    .inner
-                    .view_function_arguments(fun.module(), fun.function(), fun.args())?
-                    .into_iter()
-                    .map(|v| v.into())
-                    .collect();
-                TransactionPayload::ScriptFunctionPayload((fun, arguments).into())
+                let (module, function, ty_args, args) = fun.into_inner();
+                TransactionPayload::ScriptFunctionPayload(ScriptFunctionPayload {
+                    arguments: self
+                        .inner
+                        .view_function_arguments(&module, &function, &args)?
+                        .into_iter()
+                        .map(|v| v.into())
+                        .collect(),
+                    module: module.into(),
+                    function,
+                    type_arguments: ty_args.into_iter().map(|arg| arg.into()).collect(),
+                })
             }
         };
         Ok(ret)
@@ -106,30 +113,32 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
 
     pub fn try_into_write_set_payload(
         &self,
-        payload: &diem_types::transaction::WriteSetPayload,
+        payload: diem_types::transaction::WriteSetPayload,
     ) -> Result<WriteSetPayload> {
         use diem_types::transaction::WriteSetPayload::*;
         let ret = match payload {
             Script { execute_as, script } => WriteSetPayload::ScriptWriteSet {
-                execute_as: (*execute_as).into(),
+                execute_as: execute_as.into(),
                 script: script.try_into()?,
             },
-            Direct(d) => WriteSetPayload::DirectWriteSet {
-                changes: d
-                    .write_set()
-                    .iter()
-                    .map(|(access_path, op)| self.try_into_write_set_change(access_path, op))
-                    .collect::<Result<_>>()?,
-                events: self.try_into_events(d.events())?,
-            },
+            Direct(d) => {
+                let (write_set, events) = d.into_inner();
+                WriteSetPayload::DirectWriteSet {
+                    changes: write_set
+                        .into_iter()
+                        .map(|(access_path, op)| self.try_into_write_set_change(access_path, op))
+                        .collect::<Result<_>>()?,
+                    events: self.try_into_events(&events)?,
+                }
+            }
         };
         Ok(ret)
     }
 
     pub fn try_into_write_set_change(
         &self,
-        access_path: &diem_types::access_path::AccessPath,
-        op: &WriteOp,
+        access_path: AccessPath,
+        op: WriteOp,
     ) -> Result<WriteSetChange> {
         let ret = match op {
             WriteOp::Deletion => match access_path.get_path() {
@@ -145,11 +154,11 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
             WriteOp::Value(val) => match access_path.get_path() {
                 Path::Code(_) => WriteSetChange::WriteModule {
                     address: access_path.address.into(),
-                    data: val.try_into()?,
+                    data: MoveModuleBytecode::new(val).ensure_abi()?,
                 },
                 Path::Resource(typ) => WriteSetChange::WriteResource {
                     address: access_path.address.into(),
-                    data: self.try_into_resource(&typ, val)?,
+                    data: self.try_into_resource(&typ, &val)?,
                 },
             },
         };
@@ -235,9 +244,9 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
             .get_module_bytes(&module.clone().into())
             .ok_or_else(|| format_err!("could not find module by {}", module))?;
 
-        let code: MoveModuleBytecode = (&module_bytes).try_into()?;
+        let code = MoveModuleBytecode::new(module_bytes);
         let func = code
-            .abi
+            .into_abi()?
             .exposed_functions
             .into_iter()
             .find(|v| {

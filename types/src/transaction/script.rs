@@ -43,8 +43,8 @@ impl Script {
         &self.args
     }
 
-    pub fn into_inner(self) -> (Vec<u8>, Vec<TransactionArgument>) {
-        (self.code, self.args)
+    pub fn into_inner(self) -> (Vec<u8>, Vec<TypeTag>, Vec<TransactionArgument>) {
+        (self.code, self.ty_args, self.args)
     }
 }
 
@@ -97,5 +97,9 @@ impl ScriptFunction {
 
     pub fn args(&self) -> &[Vec<u8>] {
         &self.args
+    }
+
+    pub fn into_inner(self) -> (ModuleId, Identifier, Vec<TypeTag>, Vec<Vec<u8>>) {
+        (self.module, self.function, self.ty_args, self.args)
     }
 }
