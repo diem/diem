@@ -8,6 +8,12 @@ use std::{fmt, str::FromStr};
 #[derive(Clone, Debug, PartialEq, Copy)]
 pub struct Address(AccountAddress);
 
+impl Address {
+    pub fn inner(&self) -> &AccountAddress {
+        &self.0
+    }
+}
+
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0.to_hex_literal())

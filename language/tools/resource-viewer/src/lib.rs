@@ -82,6 +82,10 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
         self.cache.state.get_resource(addr, tag).ok()?
     }
 
+    pub fn get_module_bytes(&self, module: &ModuleId) -> Option<Vec<u8>> {
+        self.cache.state.get_module(module).ok()?
+    }
+
     pub fn view_function_arguments(
         &self,
         module: &ModuleId,

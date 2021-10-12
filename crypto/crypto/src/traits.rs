@@ -6,7 +6,7 @@
 //! For examples on how to use these traits, see the implementations of the [`ed25519`] or
 //! [`bls12381`] modules.
 
-use crate::hash::CryptoHash;
+use crate::hash::{CryptoHash, CryptoHasher};
 use anyhow::Result;
 use core::convert::{From, TryFrom};
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
@@ -137,6 +137,16 @@ pub trait SigningKey:
     fn verifying_key(&self) -> Self::VerifyingKeyMaterial {
         self.public_key()
     }
+}
+
+/// Returns the signing message for the given message.
+/// It is used by `SigningKey#sign` function.
+pub fn signing_message<T: CryptoHash + Serialize>(message: &T) -> Vec<u8> {
+    let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
+    bcs::serialize_into(&mut bytes, &message)
+        .map_err(|_| CryptoMaterialError::SerializationError)
+        .expect("Serialization of signable material should not fail.");
+    bytes
 }
 
 /// A type for key material that can be publicly shared, and in asymmetric

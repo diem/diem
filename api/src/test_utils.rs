@@ -212,6 +212,11 @@ impl TestContext {
             .await
     }
 
+    pub async fn post(&self, path: &str, body: Value) -> Value {
+        self.execute(warp::test::request().method("POST").path(path).json(&body))
+            .await
+    }
+
     pub async fn post_bcs_txn(&self, path: &str, body: impl AsRef<[u8]>) -> Value {
         self.execute(
             warp::test::request()

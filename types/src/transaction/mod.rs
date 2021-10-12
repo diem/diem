@@ -22,7 +22,7 @@ use diem_crypto::{
     ed25519::*,
     hash::{CryptoHash, EventAccumulatorHasher},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    traits::SigningKey,
+    traits::{signing_message, SigningKey},
     HashValue,
 };
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
@@ -378,6 +378,11 @@ impl RawTransaction {
     /// Return the sender of this transaction.
     pub fn sender(&self) -> AccountAddress {
         self.sender
+    }
+
+    /// Return the signing message for creating transaction signature.
+    pub fn signing_message(&self) -> Vec<u8> {
+        signing_message(self)
     }
 }
 

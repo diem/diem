@@ -235,11 +235,7 @@ impl SigningKey for Ed25519PrivateKey {
     type SignatureMaterial = Ed25519Signature;
 
     fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> Ed25519Signature {
-        let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
-        bcs::serialize_into(&mut bytes, &message)
-            .map_err(|_| CryptoMaterialError::SerializationError)
-            .expect("Serialization of signable material should not fail.");
-        Ed25519PrivateKey::sign_arbitrary_message(self, bytes.as_ref())
+        Ed25519PrivateKey::sign_arbitrary_message(self, signing_message(message).as_ref())
     }
 
     #[cfg(any(test, feature = "fuzzing"))]

@@ -2,19 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    transaction::TransactionOnChainData, Event, MoveResource, Transaction, TransactionData,
-    TransactionPayload, WriteSetChange, WriteSetPayload,
+    move_types::MoveFunctionVisibility,
+    transaction::{ScriptFunctionPayload, TransactionOnChainData},
+    Address, Event, HexEncodedBytes, MoveModuleBytecode, MoveModuleId, MoveResource, MoveType,
+    MoveValue, Transaction, TransactionData, TransactionPayload, UserTransactionRequest,
+    WriteSetChange, WriteSetPayload, U128, U64,
 };
 use diem_types::{
     access_path::Path,
+    chain_id::ChainId,
     contract_event::ContractEvent,
-    transaction::{SignedTransaction, TransactionInfoTrait},
+    transaction::{RawTransaction, ScriptFunction, SignedTransaction, TransactionInfoTrait},
     write_set::WriteOp,
 };
-use move_core_types::{language_storage::StructTag, resolver::MoveResolver};
+use move_core_types::{
+    identifier::Identifier, language_storage::StructTag, resolver::MoveResolver,
+};
 use resource_viewer::MoveValueAnnotator;
 
-use anyhow::Result;
+use anyhow::{ensure, format_err, Result};
+use serde_json::Value;
 use std::convert::TryInto;
 
 pub struct MoveConverter<'a, R: ?Sized> {
@@ -84,17 +91,15 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
             WriteSet(v) => TransactionPayload::WriteSetPayload(self.try_into_write_set_payload(v)?),
             Script(s) => TransactionPayload::ScriptPayload(s.try_into()?),
             Module(m) => TransactionPayload::ModulePayload(m.try_into()?),
-            ScriptFunction(fun) => TransactionPayload::ScriptFunctionPayload {
-                module: fun.module().clone().into(),
-                function: fun.function().into(),
-                type_arguments: fun.ty_args().iter().map(|arg| arg.clone().into()).collect(),
-                arguments: self
+            ScriptFunction(fun) => {
+                let arguments: Vec<MoveValue> = self
                     .inner
                     .view_function_arguments(fun.module(), fun.function(), fun.args())?
-                    .iter()
-                    .map(|v| v.clone().into())
-                    .collect(),
-            },
+                    .into_iter()
+                    .map(|v| v.into())
+                    .collect();
+                TransactionPayload::ScriptFunctionPayload((fun, arguments).into())
+            }
         };
         Ok(ret)
     }
@@ -160,5 +165,140 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
             ret.push((event, data).into());
         }
         Ok(ret)
+    }
+
+    pub fn try_into_raw_transaction(
+        &self,
+        txn: UserTransactionRequest,
+        chain_id: ChainId,
+    ) -> Result<RawTransaction> {
+        let UserTransactionRequest {
+            sender,
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+            gas_currency_code,
+            expiration_timestamp_secs,
+            payload,
+            signature: _,
+        } = txn;
+        Ok(RawTransaction::new(
+            sender.into(),
+            sequence_number.into(),
+            self.try_into_diem_core_transaction_payload(payload)?,
+            max_gas_amount.into(),
+            gas_unit_price.into(),
+            gas_currency_code,
+            expiration_timestamp_secs.into(),
+            chain_id,
+        ))
+    }
+
+    pub fn try_into_diem_core_transaction_payload(
+        &self,
+        payload: TransactionPayload,
+    ) -> Result<diem_types::transaction::TransactionPayload> {
+        use diem_types::transaction::TransactionPayload as Target;
+
+        let ret = match payload {
+            TransactionPayload::ScriptFunctionPayload(script_func_payload) => {
+                let ScriptFunctionPayload {
+                    module,
+                    function,
+                    type_arguments,
+                    arguments,
+                } = script_func_payload;
+                let args = self.try_into_move_bcs_values(&module, &function, arguments)?;
+                Target::ScriptFunction(ScriptFunction::new(
+                    module.into(),
+                    function,
+                    type_arguments
+                        .into_iter()
+                        .map(|v| v.try_into())
+                        .collect::<Result<_>>()?,
+                    args,
+                ))
+            }
+            _ => unimplemented!(),
+        };
+        Ok(ret)
+    }
+
+    pub fn try_into_move_bcs_values(
+        &self,
+        module: &MoveModuleId,
+        function: &Identifier,
+        args: Vec<MoveValue>,
+    ) -> Result<Vec<Vec<u8>>> {
+        let module_bytes = self
+            .inner
+            .get_module_bytes(&module.clone().into())
+            .ok_or_else(|| format_err!("could not find module by {}", module))?;
+
+        let code: MoveModuleBytecode = (&module_bytes).try_into()?;
+        let func = code
+            .abi
+            .exposed_functions
+            .into_iter()
+            .find(|v| {
+                matches!(v.visibility, MoveFunctionVisibility::Script) && (&v.name) == function
+            })
+            .ok_or_else(|| format_err!("could not find script function by {}", function))?;
+        let arg_types = func
+            .params
+            .into_iter()
+            .filter(|p| !matches!(p, MoveType::Signer))
+            .collect::<Vec<_>>();
+        ensure!(
+            arg_types.len() == args.len(),
+            "invalid arguments: expected {} arguments, but got {}",
+            arg_types.len(),
+            args.len()
+        );
+        arg_types
+            .iter()
+            .zip(args.into_iter())
+            .enumerate()
+            .map(|(i, (arg_type, arg))| {
+                let data = match arg {
+                    MoveValue::Json(v) => v,
+                    _ => return Err(format_err!("expect MoveValue::Json, but got {:?}", &arg)),
+                };
+
+                self.try_into_move_bcs_value(arg_type, data).map_err(|e| {
+                    format_err!("parse #{} argument({:?}) failed: {:?}", i + 1, arg_type, e)
+                })
+            })
+            .collect::<Result<Vec<Vec<u8>>>>()
+    }
+
+    pub fn try_into_move_bcs_value(&self, typ: &MoveType, val: Value) -> Result<Vec<u8>> {
+        let bcs_bytes = match typ {
+            MoveType::Bool => bcs::to_bytes(&serde_json::from_value::<bool>(val)?)?,
+            MoveType::U8 => bcs::to_bytes(&serde_json::from_value::<u8>(val)?)?,
+            MoveType::U64 => bcs::to_bytes(serde_json::from_value::<U64>(val)?.inner())?,
+            MoveType::U128 => bcs::to_bytes(serde_json::from_value::<U128>(val)?.inner())?,
+            MoveType::Address => bcs::to_bytes(serde_json::from_value::<Address>(val)?.inner())?,
+            MoveType::Vector { items } => match **items {
+                MoveType::U8 => {
+                    bcs::to_bytes(serde_json::from_value::<HexEncodedBytes>(val)?.inner())?
+                }
+                _ => {
+                    if let Value::Array(list) = val {
+                        bcs::to_bytes(
+                            &list
+                                .into_iter()
+                                .map(|v| self.try_into_move_bcs_value(&*items, v))
+                                .collect::<Result<Vec<Vec<u8>>>>()?,
+                        )?
+                    } else {
+                        return Err(format_err!("expected array, but got: {:?}", &val));
+                    }
+                }
+            },
+            // handle struct
+            _ => return Err(format_err!("unexpected move type: {:?}", &typ)),
+        };
+        Ok(bcs_bytes)
     }
 }

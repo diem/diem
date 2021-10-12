@@ -18,13 +18,13 @@ use diem_types::{
     transaction::{
         authenticator::{AccountAuthenticator, TransactionAuthenticator},
         default_protocol::TransactionWithProof,
-        Script, SignedTransaction, TransactionInfoTrait,
+        Script, ScriptFunction, SignedTransaction, TransactionInfoTrait,
     },
 };
 use move_core_types::identifier::Identifier;
 use resource_viewer::AnnotatedMoveValue;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     boxed::Box,
     convert::{From, Into, TryFrom, TryInto},
@@ -135,14 +135,7 @@ impl<T: TransactionInfoTrait> From<(u64, &SignedTransaction, &T, TransactionPayl
     ) -> Self {
         Transaction::UserTransaction(Box::new(UserTransaction {
             info: (version, info).into(),
-            sender: txn.sender().into(),
-            sequence_number: txn.sequence_number().into(),
-            max_gas_amount: txn.max_gas_amount().into(),
-            gas_unit_price: txn.gas_unit_price().into(),
-            gas_currency_code: txn.gas_currency_code().to_owned(),
-            expiration_timestamp_secs: txn.expiration_timestamp_secs().into(),
-            signature: txn.authenticator().into(),
-            payload,
+            request: (txn, payload).into(),
             events,
         }))
     }
@@ -173,6 +166,21 @@ impl<T: TransactionInfoTrait> From<(u64, &BlockMetadata, &T)> for Transaction {
             proposer: txn.proposer().into(),
             timestamp: txn.timestamp_usec().into(),
         })
+    }
+}
+
+impl From<(&SignedTransaction, TransactionPayload)> for UserTransactionRequest {
+    fn from((txn, payload): (&SignedTransaction, TransactionPayload)) -> Self {
+        Self {
+            sender: txn.sender().into(),
+            sequence_number: txn.sequence_number().into(),
+            max_gas_amount: txn.max_gas_amount().into(),
+            gas_unit_price: txn.gas_unit_price().into(),
+            gas_currency_code: txn.gas_currency_code().to_owned(),
+            expiration_timestamp_secs: txn.expiration_timestamp_secs().into(),
+            signature: Some(txn.authenticator().into()),
+            payload,
+        }
     }
 }
 
@@ -216,6 +224,13 @@ pub struct PendingTransaction {
 pub struct UserTransaction {
     #[serde(flatten)]
     pub info: TransactionInfo,
+    #[serde(flatten)]
+    pub request: UserTransactionRequest,
+    pub events: Vec<Event>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserTransactionRequest {
     pub sender: Address,
     pub sequence_number: U64,
     pub max_gas_amount: U64,
@@ -223,8 +238,7 @@ pub struct UserTransaction {
     pub gas_currency_code: String,
     pub expiration_timestamp_secs: U64,
     pub payload: TransactionPayload,
-    pub signature: TransactionSignature,
-    pub events: Vec<Event>,
+    pub signature: Option<TransactionSignature>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -246,7 +260,7 @@ pub struct BlockMetadataTransaction {
     pub timestamp: U64,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Event {
     pub key: EventKey,
     pub sequence_number: U64,
@@ -274,21 +288,35 @@ pub enum GenesisPayload {
     WriteSetPayload(WriteSetPayload),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TransactionPayload {
-    ScriptFunctionPayload {
-        module: MoveModuleId,
-        function: Identifier,
-        type_arguments: Vec<MoveType>,
-        arguments: Vec<MoveValue>,
-    },
+    ScriptFunctionPayload(ScriptFunctionPayload),
     ScriptPayload(ScriptPayload),
     ModulePayload(MoveModuleBytecode),
     WriteSetPayload(WriteSetPayload),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ScriptFunctionPayload {
+    pub module: MoveModuleId,
+    pub function: Identifier,
+    pub type_arguments: Vec<MoveType>,
+    pub arguments: Vec<MoveValue>,
+}
+
+impl From<(&ScriptFunction, Vec<MoveValue>)> for ScriptFunctionPayload {
+    fn from((fun, arguments): (&ScriptFunction, Vec<MoveValue>)) -> Self {
+        Self {
+            module: fun.module().clone().into(),
+            function: fun.function().into(),
+            type_arguments: fun.ty_args().iter().map(|arg| arg.clone().into()).collect(),
+            arguments,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ScriptPayload {
     pub code: MoveScriptBytecode,
     pub type_arguments: Vec<MoveType>,
@@ -311,7 +339,7 @@ impl TryFrom<&Script> for ScriptPayload {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum WriteSetPayload {
     ScriptWriteSet {
@@ -324,7 +352,7 @@ pub enum WriteSetPayload {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum WriteSetChange {
     DeleteModule {
@@ -345,7 +373,7 @@ pub enum WriteSetChange {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TransactionSignature {
     Ed25519Signature(Ed25519Signature),
@@ -353,27 +381,27 @@ pub enum TransactionSignature {
     MultiAgentSignature(MultiAgentSignature),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ed25519Signature {
     public_key: HexEncodedBytes,
     signature: HexEncodedBytes,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MultiEd25519Signature {
     signatures: Vec<Ed25519Signature>,
     threshold: u8,
     bitmap: HexEncodedBytes,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AccountSignature {
     Ed25519Signature(Ed25519Signature),
     MultiEd25519Signature(MultiEd25519Signature),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MultiAgentSignature {
     sender: AccountSignature,
     secondary_signer_addresses: Vec<Address>,
@@ -507,6 +535,19 @@ impl fmt::Display for TransactionId {
         match self {
             Self::Hash(h) => write!(f, "hash({})", h),
             Self::Version(v) => write!(f, "version({})", v),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TransactionSigningMessage {
+    pub message: HexEncodedBytes,
+}
+
+impl TransactionSigningMessage {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self {
+            message: bytes.into(),
         }
     }
 }

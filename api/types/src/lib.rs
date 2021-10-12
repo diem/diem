@@ -29,5 +29,6 @@ pub use response::{Response, X_DIEM_CHAIN_ID, X_DIEM_LEDGER_TIMESTAMP, X_DIEM_LE
 pub use transaction::{
     BlockMetadataTransaction, Event, GenesisTransaction, PendingTransaction, ScriptPayload,
     Transaction, TransactionData, TransactionId, TransactionOnChainData, TransactionPayload,
-    UserTransaction, WriteSetChange, WriteSetPayload,
+    TransactionSigningMessage, UserTransaction, UserTransactionRequest, WriteSetChange,
+    WriteSetPayload,
 };

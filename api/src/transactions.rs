@@ -5,10 +5,11 @@ use crate::{context::Context, page::Page, param::TransactionIdParam};
 
 use diem_api_types::{
     mime_types, Error, LedgerInfo, Response, Transaction, TransactionData, TransactionId,
+    TransactionSigningMessage, UserTransactionRequest,
 };
 use diem_types::{
     mempool_status::MempoolStatusCode,
-    transaction::{SignedTransaction, TransactionInfo},
+    transaction::{RawTransaction, SignedTransaction, TransactionInfo},
 };
 
 use anyhow::Result;
@@ -20,7 +21,8 @@ use warp::{
 pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     get_transaction(context.clone())
         .or(get_transactions(context.clone()))
-        .or(post_bcs_transactions(context))
+        .or(post_bcs_transactions(context.clone()))
+        .or(post_signing_message(context))
 }
 
 // GET /transactions/{txn-hash / version}
@@ -80,6 +82,30 @@ async fn handle_post_bcs_transactions(
         Error::invalid_request_body("deserialize SignedTransaction BCS bytes failed".to_owned())
     })?;
     Ok(Transactions::new(context)?.create(txn).await?)
+}
+
+pub fn post_signing_message(
+    context: Context,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("transactions" / "signing_message")
+        .and(warp::post())
+        .and(warp::header::exact(CONTENT_TYPE.as_str(), mime_types::JSON))
+        .and(warp::body::json())
+        .and(context.filter())
+        .and_then(handle_post_signing_message)
+}
+
+async fn handle_post_signing_message(
+    body: serde_json::Value,
+    context: Context,
+) -> Result<impl Reply, Rejection> {
+    let txn: UserTransactionRequest = serde_json::from_value(body).map_err(|e| {
+        Error::invalid_request_body(format!(
+            "deserialize into UserTransactionRequest failed: {:?}",
+            e
+        ))
+    })?;
+    Ok(Transactions::new(context)?.signing_message(txn)?)
 }
 
 struct Transactions {
@@ -149,6 +175,20 @@ impl Transactions {
         Response::new(self.ledger_info, &ret)
     }
 
+    pub fn signing_message(self, txn: UserTransactionRequest) -> Result<impl Reply, Error> {
+        let converter = self.context.move_converter();
+        let raw_txn: RawTransaction = converter
+            .try_into_raw_transaction(txn, self.context.chain_id())
+            .map_err(|e| {
+                Error::invalid_request_body(format!("invalid UserTransactionRequest: {:?}", e))
+            })?;
+
+        Response::new(
+            self.ledger_info,
+            &TransactionSigningMessage::new(raw_txn.signing_message()),
+        )
+    }
+
     fn transaction_not_found(&self, id: TransactionId) -> Error {
         Error::not_found("transaction", id, self.ledger_info.version())
     }
@@ -190,6 +230,7 @@ impl Transactions {
 mod tests {
     use crate::test_utils::{assert_json, find_value, new_test_context};
 
+    use diem_api_types::HexEncodedBytes;
     use diem_crypto::{
         hash::CryptoHash,
         multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
@@ -1066,5 +1107,66 @@ mod tests {
                 "diem_ledger_version": "0"
             }),
         )
+    }
+
+    #[tokio::test]
+    async fn test_signing_message() {
+        let mut context = new_test_context();
+        let account = context.gen_account();
+        let txn = context.create_parent_vasp(&account);
+
+        let body = json!({
+            "sender": context.tc_account().address().to_hex_literal(),
+            "sequence_number": context.tc_account().sequence_number().to_string(),
+            "gas_unit_price": txn.gas_unit_price().to_string(),
+            "max_gas_amount": txn.max_gas_amount().to_string(),
+            "gas_currency_code": txn.gas_currency_code(),
+            "expiration_timestamp_secs": txn.expiration_timestamp_secs().to_string(),
+            "payload": {
+                "type": "script_function_payload",
+                "module": { "address": "0x1", "name": "AccountCreationScripts"},
+                "function": "create_parent_vasp_account",
+                "type_arguments": [
+                    {
+                        "type": "struct",
+                        "address": "0x1",
+                        "module": "XUS",
+                        "name": "XUS",
+                        "generic_type_params": []
+                    }
+                ],
+                "arguments": [
+                    "0",     // sliding_nonce
+                    account.address().to_hex_literal(), // new_account_address
+                    format!("0x{}", hex::encode(account.authentication_key().prefix())), // auth_key_prefix
+                    format!("0x{}", hex::encode("vasp".as_bytes())), // human_name
+                    true, // add_all_currencies
+                ]
+            }
+        });
+        let resp = context.post("/transactions/signing_message", body).await;
+
+        let signing_msg = resp["message"].as_str().unwrap();
+        assert_eq!(
+            signing_msg,
+            format!(
+                "0x{}",
+                hex::encode(&txn.clone().into_raw_transaction().signing_message())
+            )
+        );
+
+        let hex_bytes: HexEncodedBytes = signing_msg.parse().unwrap();
+        let sig = context
+            .tc_account()
+            .private_key()
+            .sign_arbitrary_message(hex_bytes.inner());
+        let expected_sig = match txn.authenticator() {
+            TransactionAuthenticator::Ed25519 {
+                public_key: _,
+                signature,
+            } => signature,
+            _ => panic!("expect TransactionAuthenticator::Ed25519"),
+        };
+        assert_eq!(sig, expected_sig);
     }
 }
