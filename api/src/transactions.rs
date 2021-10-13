@@ -21,7 +21,7 @@ use warp::{
 pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     get_transaction(context.clone())
         .or(get_transactions(context.clone()))
-        .or(post_bcs_transactions(context.clone()))
+        .or(post_transactions(context.clone()))
         .or(post_signing_message(context))
 }
 
@@ -60,52 +60,76 @@ async fn handle_get_transactions(page: Page, context: Context) -> Result<impl Re
 }
 
 // POST /transactions
-pub fn post_bcs_transactions(
+pub fn post_transactions(
     context: Context,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::path!("transactions")
         .and(warp::post())
-        .and(warp::header::exact(
-            CONTENT_TYPE.as_str(),
-            mime_types::BCS_SIGNED_TRANSACTION,
-        ))
+        .and(warp::header::<String>(CONTENT_TYPE.as_str()))
         .and(warp::body::bytes())
         .and(context.filter())
-        .and_then(handle_post_bcs_transactions)
+        .and_then(handle_post_transactions)
 }
 
-async fn handle_post_bcs_transactions(
+async fn handle_post_transactions(
+    content_type: String,
     body: bytes::Bytes,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    let txn = bcs::from_bytes(&body).map_err(|_| {
-        Error::invalid_request_body("deserialize SignedTransaction BCS bytes failed".to_owned())
-    })?;
+    let txn = match content_type.to_lowercase().as_str() {
+        mime_types::BCS_SIGNED_TRANSACTION => bcs::from_bytes(&body).map_err(|_| {
+            Error::invalid_request_body("deserialize SignedTransaction BCS bytes failed".to_owned())
+        })?,
+        mime_types::JSON => {
+            let txn = deserialize_user_transaction_request(body)?;
+            let converter = context.move_converter();
+            converter
+                .try_into_signed_transaction(txn, context.chain_id())
+                .map_err(|e| {
+                    Error::invalid_request_body(format!(
+                        "failed to create SignedTransaction from UserTransactionRequest: {}",
+                        e
+                    ))
+                })?
+        }
+        _ => {
+            return Err(
+                Error::bad_request(format!("unsupported content-type: {}", content_type)).into(),
+            )
+        }
+    };
     Ok(Transactions::new(context)?.create(txn).await?)
 }
 
+// POST /transactions/signing_message
 pub fn post_signing_message(
     context: Context,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::path!("transactions" / "signing_message")
         .and(warp::post())
         .and(warp::header::exact(CONTENT_TYPE.as_str(), mime_types::JSON))
-        .and(warp::body::json())
+        .and(warp::body::bytes())
         .and(context.filter())
         .and_then(handle_post_signing_message)
 }
 
 async fn handle_post_signing_message(
-    body: serde_json::Value,
+    body: bytes::Bytes,
     context: Context,
 ) -> Result<impl Reply, Rejection> {
-    let txn: UserTransactionRequest = serde_json::from_value(body).map_err(|e| {
+    let txn = deserialize_user_transaction_request(body)?;
+    Ok(Transactions::new(context)?.signing_message(txn)?)
+}
+
+fn deserialize_user_transaction_request(
+    body: bytes::Bytes,
+) -> Result<UserTransactionRequest, Error> {
+    serde_json::from_slice(&body).map_err(|e| {
         Error::invalid_request_body(format!(
             "deserialize into UserTransactionRequest failed: {:?}",
             e
         ))
-    })?;
-    Ok(Transactions::new(context)?.signing_message(txn)?)
+    })
 }
 
 struct Transactions {
@@ -1277,7 +1301,7 @@ mod tests {
         payload: serde_json::Value,
     ) {
         let sender = context.tc_account();
-        let body = json!({
+        let mut body = json!({
             "sender": sender.address().to_hex_literal(),
             "sequence_number": sender.sequence_number().to_string(),
             "gas_unit_price": txn.gas_unit_price().to_string(),
@@ -1287,7 +1311,9 @@ mod tests {
             "payload": payload,
         });
 
-        let resp = context.post("/transactions/signing_message", body).await;
+        let resp = context
+            .post("/transactions/signing_message", body.clone())
+            .await;
 
         let signing_msg = resp["message"].as_str().unwrap();
         assert_eq!(
@@ -1311,5 +1337,22 @@ mod tests {
             _ => panic!("expect TransactionAuthenticator::Ed25519"),
         };
         assert_eq!(sig, expected_sig);
+
+        // assert transaction can be submitted into mempool and execute.
+        body["signature"] = json!({
+            "type": "ed25519_signature",
+            "public_key": format!("0x{}", hex::encode(sender.public_key().to_bytes())),
+            "signature": format!("0x{}", hex::encode(sig.to_bytes())),
+        });
+
+        context
+            .expect_status_code(202)
+            .post("/transactions", body)
+            .await;
+
+        context.commit_mempool_txns(10);
+
+        let ledger = context.get("/").await;
+        assert_eq!(ledger["ledger_version"].as_str().unwrap(), "2"); // one metadata + one txn
     }
 }

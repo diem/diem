@@ -178,6 +178,21 @@ impl<'a, R: MoveResolver + ?Sized> MoveConverter<'a, R> {
         Ok(ret)
     }
 
+    pub fn try_into_signed_transaction(
+        &self,
+        txn: UserTransactionRequest,
+        chain_id: ChainId,
+    ) -> Result<SignedTransaction> {
+        let signature = txn
+            .signature
+            .clone()
+            .ok_or_else(|| format_err!("missing signature"))?;
+        Ok(SignedTransaction::new_with_authenticator(
+            self.try_into_raw_transaction(txn, chain_id)?,
+            signature.try_into()?,
+        ))
+    }
+
     pub fn try_into_raw_transaction(
         &self,
         txn: UserTransactionRequest,

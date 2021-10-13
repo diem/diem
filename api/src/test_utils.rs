@@ -174,6 +174,14 @@ impl TestContext {
         ret
     }
 
+    pub fn commit_mempool_txns(&self, size: u64) {
+        let txns = self.mempool.get_txns(size);
+        self.commit_block(&txns);
+        for txn in txns {
+            self.mempool.remove_txn(&txn);
+        }
+    }
+
     pub fn commit_block(&self, signed_txns: &[SignedTransaction]) {
         let metadata = self.new_block_metadata();
         let txns: Vec<Transaction> = std::iter::once(Transaction::BlockMetadata(metadata.clone()))

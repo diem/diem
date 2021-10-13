@@ -27,7 +27,7 @@ use resource_viewer::AnnotatedMoveValue;
 use serde::{Deserialize, Serialize};
 use std::{
     boxed::Box,
-    convert::{From, Into, TryFrom},
+    convert::{From, Into, TryFrom, TryInto},
     fmt,
     str::FromStr,
 };
@@ -367,10 +367,32 @@ pub enum TransactionSignature {
     MultiAgentSignature(MultiAgentSignature),
 }
 
+impl TryFrom<TransactionSignature> for TransactionAuthenticator {
+    type Error = anyhow::Error;
+    fn try_from(ts: TransactionSignature) -> anyhow::Result<Self> {
+        Ok(match ts {
+            TransactionSignature::Ed25519Signature(sig) => {
+                TransactionAuthenticator::ed25519(sig.public_key()?, sig.signature()?)
+            }
+            TransactionSignature::MultiEd25519Signature(_) => todo!(),
+            TransactionSignature::MultiAgentSignature(_) => todo!(),
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ed25519Signature {
     public_key: HexEncodedBytes,
     signature: HexEncodedBytes,
+}
+
+impl Ed25519Signature {
+    pub fn public_key(&self) -> anyhow::Result<Ed25519PublicKey> {
+        Ok(self.public_key.inner().try_into()?)
+    }
+    pub fn signature(&self) -> anyhow::Result<diem_crypto::ed25519::Ed25519Signature> {
+        Ok(self.signature.inner().try_into()?)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

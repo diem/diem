@@ -557,6 +557,16 @@ impl SignedTransaction {
         }
     }
 
+    pub fn new_with_authenticator(
+        raw_txn: RawTransaction,
+        authenticator: TransactionAuthenticator,
+    ) -> Self {
+        Self {
+            raw_txn,
+            authenticator,
+        }
+    }
+
     pub fn authenticator(&self) -> TransactionAuthenticator {
         self.authenticator.clone()
     }
