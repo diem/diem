@@ -1,11 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    sparse_merkle::node::{Node, NodeHandle, SubTree},
-    test_utils::{naive_smt::NaiveSmt, proof_reader::ProofReader},
-    SparseMerkleTree,
-};
+use crate::{sparse_merkle::node::{Node, NodeHandle, SubTree}, test_utils::{naive_smt::NaiveSmt, proof_reader::ProofReader}, SparseMerkleTree, AccountStatus};
 use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_types::account_state_blob::AccountStateBlob;
 use proptest::{
@@ -67,24 +63,37 @@ pub fn arb_smt_correctness_case() -> impl Strategy<Value = Vec<Action>> {
         })
 }
 
+
+fn state_view_proof(
+    keys: &[HashValue],
+    smt: &SparseMerkleTree<AccountStateBlob>,
+    db: &mut NaiveSmt,
+) -> ProofReader<AccountStateBlob> {
+    ProofReader::new(
+        keys.iter()
+            .filter_map(|h| match smt.get(*h) {
+                AccountStatus::ExistsInScratchPad(_) | AccountStatus::DoesNotExist => None,
+                AccountStatus::ExistsInDB | AccountStatus::Unknown => Some((*h, db.get_proof(h))),
+            })
+            .collect(),
+    )
+}
+
 pub fn test_smt_correctness_impl(input: Vec<Action>) {
-    let mut naive_q = VecDeque::new();
-    naive_q.push_back(NaiveSmt::new::<AccountStateBlob>(&[]));
-    let mut serial_q = VecDeque::new();
-    serial_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
-    let mut batches_q = VecDeque::new();
-    batches_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
-    let mut updater_q = VecDeque::new();
-    updater_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
+    let mut commit_q = VecDeque::new();
+    commit_q.push_back((
+        NaiveSmt::new::<AccountStateBlob>(&[]),
+        SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+        SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+        SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+    ));
+    let mut prev_commits = Vec::new();
 
     for action in input {
         match action {
             Action::Commit => {
-                if naive_q.len() > 1 {
-                    naive_q.pop_front();
-                    serial_q.pop_front();
-                    batches_q.pop_front();
-                    updater_q.pop_front();
+                if commit_q.len() > 1 {
+                    prev_commits.push(commit_q.pop_front())
                 }
             }
             Action::Execute(block) => {
@@ -93,47 +102,45 @@ pub fn test_smt_correctness_impl(input: Vec<Action>) {
                     .map(|txn_updates| txn_updates.iter().map(|(k, v)| (*k, v)).collect())
                     .collect::<Vec<_>>();
                 let updates_flat_batch = updates.iter().flatten().cloned().collect::<Vec<_>>();
+                let keys: Vec<_> = updates_flat_batch.iter().map(|(k, _)| *k).collect();
 
-                let committed = naive_q.front_mut().unwrap();
-                let proofs = updates_flat_batch
-                    .iter()
-                    .map(|(k, _)| (*k, committed.get_proof(k)))
-                    .collect();
-                let proof_reader = ProofReader::new(proofs);
+                let (mut committed_n, committed_s, committed_b, committed_u) =
+                    commit_q.front().unwrap().clone();
 
-                let mut naive_smt = naive_q.back().unwrap().clone().update(&updates_flat_batch);
+                let (parent_n, parent_s, parent_b, parent_u) =
+                    commit_q.back().unwrap().clone();
 
-                let serial_smt = serial_q
-                    .back()
-                    .unwrap()
-                    .serial_update(updates.clone(), &proof_reader)
-                    .unwrap()
-                    .1;
-                serial_q.back().unwrap().assert_no_external_strong_ref();
+                prev_commits.pop();
+                let proofs_s = state_view_proof(&keys, &committed_s, &mut committed_n);
+                let proofs_b = state_view_proof(&keys, &committed_b, &mut committed_n);
+                let proofs_u = state_view_proof(&keys, &committed_u, &mut committed_n);
+                // emulate edge case where in-mem nodes got dropped after proofs are read
+                prev_commits.pop();
 
-                let batches_smt = batches_q
-                    .back()
-                    .unwrap()
-                    .batches_update(updates, &proof_reader)
+                let mut naive_smt = parent_n.update(&updates_flat_batch);
+                let serial_smt = parent_s
+                    .serial_update(updates.clone(), &proofs_s)
                     .unwrap()
                     .1;
-                batches_q.back().unwrap().assert_no_external_strong_ref();
+                parent_s.assert_no_external_strong_ref();
 
-                let updater_smt = updater_q
-                    .back()
+                let batches_smt = parent_b
+                    .serial_update(updates.clone(), &proofs_b)
                     .unwrap()
-                    .batch_update(updates_flat_batch, &proof_reader)
-                    .unwrap();
-                updater_q.back().unwrap().assert_no_external_strong_ref();
+                    .1;
+                parent_b.assert_no_external_strong_ref();
+
+                let updater_smt = parent_u
+                    .serial_update(updates.clone(), &proofs_u)
+                    .unwrap()
+                    .1;
+                parent_u.assert_no_external_strong_ref();
 
                 assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
                 assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
                 assert_eq!(updater_smt.root_hash(), naive_smt.get_root_hash());
 
-                naive_q.push_back(naive_smt);
-                serial_q.push_back(serial_smt);
-                batches_q.push_back(batches_smt);
-                updater_q.push_back(updater_smt);
+                commit_q.push_back((naive_smt, serial_smt, batches_smt, updater_smt));
             }
         }
     }
