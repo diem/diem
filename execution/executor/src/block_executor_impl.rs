@@ -86,10 +86,6 @@ where
 
             (output, state_compute_result)
         } else {
-            info!(
-                LogSchema::new(LogEntry::BlockExecutor).block_id(block_id),
-                "execute_block"
-            );
 
             let _timer = DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
@@ -100,6 +96,14 @@ where
             // currently committed version and the end version of the parent block won't go away
             // during execution.
             let _base_smt = read_lock.committed_trees().state_tree().clone();
+
+            info!(
+                LogSchema::new(LogEntry::BlockExecutor)
+                    .block_id(block_id)
+                    .committed_block_id(read_lock.committed_block_id())
+                    .parent_block_id(parent_block_id),
+                "execute_block"
+            );
 
             let state_view = self.get_executed_state_view_from_lock(
                 &read_lock,
