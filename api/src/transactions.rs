@@ -228,7 +228,7 @@ impl Transactions {
 
 #[cfg(any(test))]
 mod tests {
-    use crate::test_utils::{assert_json, find_value, new_test_context};
+    use crate::test_utils::{assert_json, find_value, new_test_context, TestContext};
 
     use diem_api_types::HexEncodedBytes;
     use diem_crypto::{
@@ -727,7 +727,8 @@ mod tests {
         assert_json(
             txns[0]["payload"].clone(),
             json!({
-                "type": "direct_write_set",
+                "type": "write_set_payload",
+                "write_set_type": "direct_write_set",
                 "changes": [
                     {
                         "type": "delete_module",
@@ -1110,40 +1111,182 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_signing_message() {
+    async fn test_signing_message_with_script_function_payload() {
         let mut context = new_test_context();
         let account = context.gen_account();
         let txn = context.create_parent_vasp(&account);
 
+        let payload = json!({
+            "type": "script_function_payload",
+            "module": { "address": "0x1", "name": "AccountCreationScripts"},
+            "function": "create_parent_vasp_account",
+            "type_arguments": [
+                {
+                    "type": "struct",
+                    "address": "0x1",
+                    "module": "XUS",
+                    "name": "XUS",
+                    "generic_type_params": []
+                }
+            ],
+            "arguments": [
+                "0",     // sliding_nonce
+                account.address().to_hex_literal(), // new_account_address
+                format!("0x{}", hex::encode(account.authentication_key().prefix())), // auth_key_prefix
+                format!("0x{}", hex::encode("vasp".as_bytes())), // human_name
+                true, // add_all_currencies
+            ]
+        });
+        test_signing_message_with_payload(context, txn, payload).await;
+    }
+
+    #[tokio::test]
+    async fn test_signing_message_with_module_payload() {
+        let context = new_test_context();
+        let code = "a11ceb0b0300000006010002030205050703070a0c0816100c260900000001000100000102084d794d6f64756c650269640000000000000000000000000b1e55ed00010000000231010200";
+        let mut tc_account = context.tc_account();
+        let txn = tc_account.sign_with_transaction_builder(
+            context
+                .transaction_factory()
+                .module(hex::decode(code).unwrap()),
+        );
+        let payload = json!({
+                "type": "module_payload",
+                "bytecode": format!("0x{}", code),
+        });
+
+        test_signing_message_with_payload(context, txn, payload).await;
+    }
+
+    #[tokio::test]
+    async fn test_signing_message_with_script_payload() {
+        let context = new_test_context();
+        let new_key = "717d1d400311ff8797c2441ea9c2d2da1120ce38f66afb079c2bad0919d93a09"
+            .parse()
+            .unwrap();
+
+        let mut tc_account = context.tc_account();
+        let txn = tc_account.sign_with_transaction_builder(
+            context
+                .transaction_factory()
+                .rotate_authentication_key_by_script(new_key),
+        );
+
+        let code = "a11ceb0b010000000601000202020403060f05151207277c08a3011000000001010000020001000003010200000403020001060c01080000020608000a0202060c0a020b4469656d4163636f756e74154b6579526f746174696f6e4361706162696c6974791f657874726163745f6b65795f726f746174696f6e5f6361706162696c6974791f726573746f72655f6b65795f726f746174696f6e5f6361706162696c69747919726f746174655f61757468656e7469636174696f6e5f6b657900000000000000000000000000000001000401090b0011000c020e020b0111020b02110102";
+        let payload = json!({
+                "type": "script_payload",
+                "code": {
+                    "bytecode": format!("0x{}", code)
+                },
+                "type_arguments": [],
+                "arguments": [
+                    "0x717d1d400311ff8797c2441ea9c2d2da1120ce38f66afb079c2bad0919d93a09"
+                ]
+        });
+
+        test_signing_message_with_payload(context, txn, payload).await;
+    }
+
+    #[tokio::test]
+    async fn test_signing_message_with_write_set_payload() {
+        // This test is created for testing error message for now.
+        // Update test when write_set_payload is supported
+        let context = new_test_context();
+        let mut root_account = context.root_account();
+        let code_address = AccountAddress::from_hex_literal("0x1").unwrap();
+        let txn = root_account.sign_with_transaction_builder(
+            context.transaction_factory().change_set(ChangeSet::new(
+                WriteSetMut::new(vec![
+                    (
+                        AccessPath::new(
+                            code_address,
+                            bcs::to_bytes(&Path::Code(ModuleId::new(
+                                code_address,
+                                Identifier::new("AccountAdministrationScripts").unwrap(),
+                            )))
+                            .unwrap(),
+                        ),
+                        WriteOp::Deletion,
+                    ),
+                    (
+                        AccessPath::new(
+                            context.tc_account().address(),
+                            bcs::to_bytes(&Path::Resource(StructTag {
+                                address: code_address,
+                                module: Identifier::new("AccountFreezing").unwrap(),
+                                name: Identifier::new("FreezingBit").unwrap(),
+                                type_params: vec![],
+                            }))
+                            .unwrap(),
+                        ),
+                        WriteOp::Deletion,
+                    ),
+                ])
+                .freeze()
+                .unwrap(),
+                vec![],
+            )),
+        );
+        let payload = json!({
+            "type": "write_set_payload",
+            "write_set_type": "direct_write_set",
+            "changes": [
+                {
+                    "type": "delete_module",
+                    "address": "0x1",
+                    "module": {
+                        "address": "0x1",
+                        "name": "AccountAdministrationScripts"
+                    }
+                },
+                {
+                    "type": "delete_resource",
+                    "address": "0xb1e55ed",
+                    "resource": {
+                        "type": "struct",
+                        "address": "0x1",
+                        "module": "AccountFreezing",
+                        "name": "FreezingBit",
+                        "generic_type_params": []
+                    }
+                }
+            ],
+            "events": []
+        });
+
+        let sender = context.tc_account();
         let body = json!({
-            "sender": context.tc_account().address().to_hex_literal(),
-            "sequence_number": context.tc_account().sequence_number().to_string(),
+            "sender": sender.address().to_hex_literal(),
+            "sequence_number": sender.sequence_number().to_string(),
             "gas_unit_price": txn.gas_unit_price().to_string(),
             "max_gas_amount": txn.max_gas_amount().to_string(),
             "gas_currency_code": txn.gas_currency_code(),
             "expiration_timestamp_secs": txn.expiration_timestamp_secs().to_string(),
-            "payload": {
-                "type": "script_function_payload",
-                "module": { "address": "0x1", "name": "AccountCreationScripts"},
-                "function": "create_parent_vasp_account",
-                "type_arguments": [
-                    {
-                        "type": "struct",
-                        "address": "0x1",
-                        "module": "XUS",
-                        "name": "XUS",
-                        "generic_type_params": []
-                    }
-                ],
-                "arguments": [
-                    "0",     // sliding_nonce
-                    account.address().to_hex_literal(), // new_account_address
-                    format!("0x{}", hex::encode(account.authentication_key().prefix())), // auth_key_prefix
-                    format!("0x{}", hex::encode("vasp".as_bytes())), // human_name
-                    true, // add_all_currencies
-                ]
-            }
+            "payload": payload,
         });
+
+        context
+            .expect_status_code(400)
+            .post("/transactions/signing_message", body)
+            .await;
+    }
+
+    async fn test_signing_message_with_payload(
+        context: TestContext,
+        txn: SignedTransaction,
+        payload: serde_json::Value,
+    ) {
+        let sender = context.tc_account();
+        let body = json!({
+            "sender": sender.address().to_hex_literal(),
+            "sequence_number": sender.sequence_number().to_string(),
+            "gas_unit_price": txn.gas_unit_price().to_string(),
+            "max_gas_amount": txn.max_gas_amount().to_string(),
+            "gas_currency_code": txn.gas_currency_code(),
+            "expiration_timestamp_secs": txn.expiration_timestamp_secs().to_string(),
+            "payload": payload,
+        });
+
         let resp = context.post("/transactions/signing_message", body).await;
 
         let signing_msg = resp["message"].as_str().unwrap();

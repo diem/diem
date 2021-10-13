@@ -373,7 +373,7 @@ fn test_validate_invalid_arguments() {
     let vm_validator = TestValidator::new();
 
     let address = account_config::diem_root_address();
-    let (program_script, _) =
+    let (program_script, _, _) =
         encode_peer_to_peer_with_metadata_script(xus_tag(), address, 100, vec![], vec![])
             .into_inner();
     let program = Script::new(program_script, vec![], vec![TransactionArgument::U64(42)]);

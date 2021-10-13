@@ -326,7 +326,7 @@ impl TryFrom<Script> for ScriptPayload {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "write_set_type", rename_all = "snake_case")]
 pub enum WriteSetPayload {
     ScriptWriteSet {
         execute_as: Address,
