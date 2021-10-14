@@ -160,6 +160,23 @@ where
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> anyhow::Result<(), Error> {
         let _timer = DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
+        self.do_commit_blocks(block_ids, &ledger_info_with_sigs)?;
+
+        self.cache
+            .write()
+            .prune(ledger_info_with_sigs.ledger_info())?;
+
+        // Now that the blocks are persisted successfully, we can reply to consensus
+        Ok(())
+    }
+}
+
+impl<PS, V> Executor<PS, V>
+    where
+        PS: ProtocolSpec,
+        V: VMExecutor,
+{
+    fn do_commit_blocks(&self, block_ids: Vec<HashValue>, ledger_info_with_sigs: &LedgerInfoWithSignatures) -> anyhow::Result<(), Error> {
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
         let read_lock = self.cache.read();
 
@@ -275,15 +292,10 @@ where
             self.db.writer.save_transactions(
                 txns_to_commit,
                 first_version_to_commit,
-                Some(&ledger_info_with_sigs),
+                Some(ledger_info_with_sigs),
             )?;
         }
 
-        self.cache
-            .write()
-            .prune(ledger_info_with_sigs.ledger_info())?;
-
-        // Now that the blocks are persisted successfully, we can reply to consensus
         Ok(())
     }
 }
