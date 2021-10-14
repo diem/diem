@@ -30,6 +30,9 @@ use std::{
     sync::{Arc, Weak},
 };
 use storage_interface::{StartupInfo, TreeState};
+use scratchpad::SparseMerkleTree;
+use std::collections::VecDeque;
+use diem_types::account_state_blob::AccountStateBlob;
 
 /// The struct that stores all speculation result of its counterpart in consensus.
 pub(crate) struct SpeculationBlock {
@@ -98,6 +101,9 @@ impl Drop for SpeculationBlock {
     }
 }
 
+// FIXME(aldenhu): add doc
+const SMT_CACHE_MAX: usize = 1000;
+
 /// SpeculationCache implements the block tree structrue. The tree is reprensented by a root block id,
 /// all the children of root and a global block map. Each block is an Arc<Mutx<SpeculationBlock>>
 /// with ref_count = 1. For the chidren of the root, the sole owner is `heads`. For the rest, the sole
@@ -113,6 +119,8 @@ pub(crate) struct SpeculationCache {
     // A pointer to the global block map keyed by id to achieve O(1) lookup time complexity.
     // It is optional but an optimization.
     block_map: Arc<Mutex<HashMap<HashValue, Weak<Mutex<SpeculationBlock>>>>>,
+    // FIXME(aldenhu): add doc
+    smt_cache: Mutex<VecDeque<Arc<SparseMerkleTree<AccountStateBlob>>>>,
 }
 
 impl SpeculationCache {
@@ -123,6 +131,7 @@ impl SpeculationCache {
             heads: vec![],
             block_map: Arc::new(Mutex::new(HashMap::new())),
             committed_block_id: *PRE_GENESIS_BLOCK_ID,
+            smt_cache: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -147,6 +156,7 @@ impl SpeculationCache {
             heads: vec![],
             block_map: Arc::new(Mutex::new(HashMap::new())),
             committed_block_id: *PRE_GENESIS_BLOCK_ID,
+            smt_cache: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -187,6 +197,13 @@ impl SpeculationCache {
             id
         };
         self.committed_block_id = new_root_block_id;
+        {
+            let mut locked = self.smt_cache.lock();
+            if locked.len() >= SMT_CACHE_MAX {
+                locked.pop_front();
+            }
+            locked.push_back(committed_trees.state_tree().clone())
+        }
         self.committed_trees = committed_trees.clone();
         self.synced_trees = committed_trees;
     }
