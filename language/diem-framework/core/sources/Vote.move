@@ -413,15 +413,32 @@ module DiemFramework::Vote {
         exists<Ballots<Proposal>>(ballot_address)
     }
 
+    /// TODO: Need to figure out how to deal with time
+    ///   * Advances by a positive amount between transactions (maybe bound to be reasonable?)
+    ///   * Impure function problem
+    /// A BallotID corresponds to an expired ballot
+    spec fun is_expired<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
+       // USABILITY: Awkward lookup
+       let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
+       let ballot_index = choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id;
+       let ballot = ballots[ballot_index];
+       // USABILITY: now_seconds is impure function (abort condition on is_operating)
+       // Need: (1) partial function support, (2) less strict purity requirements
+       ballot.expiration_timestamp_secs >= DiemTimestamp::spec_now_seconds()
+    }
+
     /// A BallotID is actively being voted on.
     spec fun is_active<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
+       // *** put is_expired in here.
+       // USABILITY: This is a bit verbose
        let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
-       exists i in 0..len(ballots): ballots[i].ballot_id == ballot_id
+       !is_expired<Proposal>(ballot_address, ballot_id)
+       && (exists i in 0..len(ballots): ballots[i].ballot_id == ballot_id)
     }
 
     spec create_ballot {
-         /// create_ballot inializes Proposal at the ballot_account address if
-         /// necessary.
+        /// create_ballot inializes Proposal at the ballot_account address if
+        /// necessary.
         ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
 
         /// ballot_id is the return value
