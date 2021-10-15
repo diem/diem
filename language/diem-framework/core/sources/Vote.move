@@ -405,11 +405,12 @@ spec module {
             exists<BallotCounter>(proposer_address);
 }
 
-spec fun is_initialized<Proposal>(proposer_address: Address) -> Bool {
+spec fun is_initialized<Proposal>(proposer_address: address): bool {
     exists<Proposal>(proposer_address)
 }
 
-spec create_ballot<Proposal> {
+// *** This gets a panic, not sure why.
+spec create_ballot {
     ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
 }
 
