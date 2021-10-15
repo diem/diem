@@ -87,13 +87,18 @@ impl Node for K8sNode {
         todo!()
     }
 
+    fn scale_replicas(&self, replica_num: u64) -> Result<()> {
+        scale_sts_replica(self.sts_name(), replica_num)
+    }
+
     fn start(&mut self) -> Result<()> {
-        scale_sts_replica(self.sts_name(), 1)
+        println!("Going to start node {}", self.sts_name());
+        self.scale_replicas(1)
     }
 
     fn stop(&mut self) -> Result<()> {
-        println!("going to stop node {}", self.sts_name());
-        scale_sts_replica(self.sts_name(), 0)
+        println!("Going to stop node {}", self.sts_name());
+        self.scale_replicas(0)
     }
 
     fn clear_storage(&mut self) -> Result<()> {

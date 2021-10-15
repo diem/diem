@@ -214,6 +214,10 @@ impl Node for LocalNode {
         self.config()
     }
 
+    fn scale_replicas(&self, _replica_num: u64) -> Result<()> {
+        todo!()
+    }
+
     fn start(&mut self) -> Result<()> {
         self.start()
     }

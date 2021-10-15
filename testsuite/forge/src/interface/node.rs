@@ -54,6 +54,9 @@ pub trait Node {
     /// Return a reference to the Config this Node is using
     fn config(&self) -> &NodeConfig;
 
+    /// spawn up this Node replicas
+    fn scale_replicas(&self, replica_num: u64) -> Result<()>;
+
     /// Start this Node.
     /// This should be a noop if the Node is already running.
     fn start(&mut self) -> Result<()>;

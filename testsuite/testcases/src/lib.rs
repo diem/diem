@@ -4,6 +4,7 @@
 pub mod compatibility_test;
 pub mod partial_nodes_down_test;
 pub mod performance_test;
+pub mod twin_validator;
 
 use diem_sdk::types::PeerId;
 use forge::{EmitJobRequest, NetworkContext, NodeExt, Result, TxnEmitter, TxnStats, Version};

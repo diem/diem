@@ -12,6 +12,7 @@ use structopt::StructOpt;
 use testcases::{
     compatibility_test::SimpleValidatorUpgrade, generate_traffic,
     performance_test::PerformanceBenchmark,
+    twin_validator::TwinValidator,
 };
 use url::Url;
 
@@ -253,7 +254,7 @@ fn k8s_test_suite() -> ForgeConfig<'static> {
 fn land_blocking_test_suite() -> ForgeConfig<'static> {
     ForgeConfig::default()
         .with_initial_validator_count(NonZeroUsize::new(30).unwrap())
-        .with_network_tests(&[&PerformanceBenchmark])
+        .with_network_tests(&[&TwinValidator])
 }
 
 fn land_blocking_test_compat_suite() -> ForgeConfig<'static> {
