@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::generate_traffic;
-use forge::{NetworkContext, NetworkTest, Result, Test, Validator};
+use forge::{NetworkContext, NetworkTest, Result, Test};
 use tokio::time::Duration;
 use rand::Rng;
 use std::thread;
+use diem_sdk::types::PeerId;
 
 pub struct TwinValidator;
 
@@ -24,12 +25,14 @@ impl NetworkTest for TwinValidator {
             .collect::<Vec<_>>();
         let mut validators = all_validators.clone();
         let mut rnd = rand::thread_rng();
-        let twin_node = validators.remove(rnd.gen_range(0..validators.len()));
+        let val = validators.remove(rnd.gen_range(0..validators.len()));
+        let twin_id = val.peer_id();
+        let twin_name = val.name().to_string();
         let validators = validators.iter().map(|v| {
             v.peer_id()
         }).collect::<Vec<_>>();
-        make_twin_validator(twin_node)?;
-        println!("Waiting for twin node to be up: {}", twin_node.name());
+        make_twin_validator(ctx, twin_id)?;
+        println!("Waiting for twin node to be up: {}", twin_name);
         ctx.swarm().health_check()?;
         thread::sleep(Duration::from_secs(20));
 
@@ -38,17 +41,17 @@ impl NetworkTest for TwinValidator {
         ctx.report
             .report_txn_stats(self.name().to_string(), txn_stat, duration);
 
-        remove_twin_validator(twin_node)?;
+        remove_twin_validator(ctx, twin_id)?;
         thread::sleep(Duration::from_secs(20));
 
         Ok(())
     }
 }
 
-fn make_twin_validator(node: &dyn Validator) -> Result<()> {
-    node.scale_replicas(2)
+fn make_twin_validator(ctx: &mut NetworkContext, id: PeerId) -> Result<()> {
+    ctx.swarm().validator(id).unwrap().scale_replicas(2)
 }
 
-fn remove_twin_validator(node: &dyn Validator) -> Result<()> {
-    node.scale_replicas(1)
+fn remove_twin_validator(ctx: &mut NetworkContext, id: PeerId) -> Result<()> {
+    ctx.swarm().validator(id).unwrap().scale_replicas(1)
 }
