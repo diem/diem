@@ -400,17 +400,32 @@ module DiemFramework::Vote {
 // consists of structs Ballot<Proposal> and BallotCounter.
 
 spec module {
+    /// Whenever there is a Proposal at ballot_address, there is
+    /// a BallotCounter there.
     invariant<Proposal> forall ballot_address: address
         where exists<Ballot<Proposal>>(ballot_address):
             exists<BallotCounter>(ballot_address);
 }
 
+/// Checks whether a proposal at ballot_address has been set up.
+/// The initial state for the state machine is !initialized.
 spec fun is_initialized<Proposal>(ballot_address: address): bool {
     exists<Ballots<Proposal>>(ballot_address)
 }
 
+/// create_ballot inializes Proposal at the ballot_account address if
+/// necessary.
 spec create_ballot {
     ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
 }
+
+spec module {
+     /// Once a proposal is initialized, it stays initialized forever.
+     invariant<Proposal> update forall ballot_address: address
+         where old(is_initialized<Proposal>(ballot_address)):
+             is_initialized<Proposal>(ballot_address);
+}
+
+
 
 }
