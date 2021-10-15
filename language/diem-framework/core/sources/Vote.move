@@ -396,20 +396,19 @@ module DiemFramework::Vote {
 // The following formalizes a symbolic state machine describing the voting protocol.
 // There is a state machine for each Proposal type and address, and another state
 // machine for each BallotId
-// The relevant state for a given proposer_address this module
+// The relevant state for a given ballot_address this module
 // consists of structs Ballot<Proposal> and BallotCounter.
 
 spec module {
-    invariant<Proposal> forall proposer_address: address
-        where exists<Ballot<Proposal>>(proposer_address):
-            exists<BallotCounter>(proposer_address);
+    invariant<Proposal> forall ballot_address: address
+        where exists<Ballot<Proposal>>(ballot_address):
+            exists<BallotCounter>(ballot_address);
 }
 
-spec fun is_initialized<Proposal>(proposer_address: address): bool {
-    exists<Proposal>(proposer_address)
+spec fun is_initialized<Proposal>(ballot_address: address): bool {
+    exists<Ballots<Proposal>>(ballot_address)
 }
 
-// *** This gets a panic, not sure why.
 spec create_ballot {
     ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
 }
