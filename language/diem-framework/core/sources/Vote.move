@@ -389,43 +389,49 @@ module DiemFramework::Vote {
         count
     }
 
-///****************************************************************
-/// Specs
-///****************************************************************
+    ///****************************************************************
+    /// Specs
+    ///****************************************************************
 
-// The following formalizes a symbolic state machine describing the voting protocol.
-// There is a state machine for each Proposal type and address, and another state
-// machine for each BallotId
-// The relevant state for a given ballot_address this module
-// consists of structs Ballot<Proposal> and BallotCounter.
+    // The following formalizes a symbolic state machine describing the voting protocol.
+    // There is a state machine for each Proposal type and address, and another state
+    // machine for each BallotID
+    // The relevant state for a given ballot_address this module
+    // consists of structs Ballot<Proposal> and BallotCounter.
 
-spec module {
-    /// Whenever there is a Proposal at ballot_address, there is
-    /// a BallotCounter there.
-    invariant<Proposal> forall ballot_address: address
-        where exists<Ballot<Proposal>>(ballot_address):
-            exists<BallotCounter>(ballot_address);
-}
+    spec module {
+        /// Whenever there is a Proposal at ballot_address, there is
+        /// a BallotCounter there.
+        invariant<Proposal> forall ballot_address: address
+            where exists<Ballot<Proposal>>(ballot_address):
+                exists<BallotCounter>(ballot_address);
+    }
 
-/// Checks whether a proposal at ballot_address has been set up.
-/// The initial state for the state machine is !initialized.
-spec fun is_initialized<Proposal>(ballot_address: address): bool {
-    exists<Ballots<Proposal>>(ballot_address)
-}
+    /// Checks whether a proposal at ballot_address has been set up.
+    /// The initial state for the state machine is !initialized.
+    spec fun is_initialized<Proposal>(ballot_address: address): bool {
+        exists<Ballots<Proposal>>(ballot_address)
+    }
 
-/// create_ballot inializes Proposal at the ballot_account address if
-/// necessary.
-spec create_ballot {
-    ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
-}
+    /// A BallotID is actively being voted on.
+    spec fun is_active<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
+       let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
+       exists i in 0..len(ballots): ballots[i].ballot_id == ballot_id
+    }
 
-spec module {
-     /// Once a proposal is initialized, it stays initialized forever.
-     invariant<Proposal> update forall ballot_address: address
-         where old(is_initialized<Proposal>(ballot_address)):
-             is_initialized<Proposal>(ballot_address);
-}
+    spec create_ballot {
+         /// create_ballot inializes Proposal at the ballot_account address if
+         /// necessary.
+        ensures is_initialized<Proposal>(Signer::address_of(ballot_account));
 
+        /// ballot_id is the return value
+        ensures is_active<Proposal>(Signer::address_of(ballot_account), result);
+    }
 
-
+    spec module {
+         /// Once a proposal is initialized, it stays initialized forever.
+         invariant<Proposal> update forall ballot_address: address
+             where old(is_initialized<Proposal>(ballot_address)):
+                 is_initialized<Proposal>(ballot_address);
+    }
 }
