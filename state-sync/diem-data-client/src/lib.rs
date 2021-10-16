@@ -144,19 +144,8 @@ impl GlobalDataSummary {
     /// before the global state is known, or for testing.
     pub fn empty() -> Self {
         GlobalDataSummary {
-            advertised_data: AdvertisedData {
-                account_states: vec![],
-                epoch_ending_ledger_infos: vec![],
-                synced_ledger_infos: vec![],
-                transactions: vec![],
-                transaction_outputs: vec![],
-            },
-            optimal_chunk_sizes: OptimalChunkSizes {
-                account_states_chunk_size: 0,
-                epoch_chunk_size: 0,
-                transaction_chunk_size: 0,
-                transaction_output_chunk_size: 0,
-            },
+            advertised_data: AdvertisedData::empty(),
+            optimal_chunk_sizes: OptimalChunkSizes::empty(),
         }
     }
 }
@@ -169,6 +158,17 @@ pub struct OptimalChunkSizes {
     pub epoch_chunk_size: u64,
     pub transaction_chunk_size: u64,
     pub transaction_output_chunk_size: u64,
+}
+
+impl OptimalChunkSizes {
+    pub fn empty() -> Self {
+        OptimalChunkSizes {
+            account_states_chunk_size: 0,
+            epoch_chunk_size: 0,
+            transaction_chunk_size: 0,
+            transaction_output_chunk_size: 0,
+        }
+    }
 }
 
 /// A summary of all data that is currently advertised in the network.
@@ -197,4 +197,40 @@ pub struct AdvertisedData {
     /// is (X,Y), it means all transaction outputs for versions X->Y
     /// (inclusive) are available.
     pub transaction_outputs: Vec<CompleteDataRange<Version>>,
+}
+
+impl AdvertisedData {
+    pub fn empty() -> Self {
+        AdvertisedData {
+            account_states: vec![],
+            epoch_ending_ledger_infos: vec![],
+            synced_ledger_infos: vec![],
+            transactions: vec![],
+            transaction_outputs: vec![],
+        }
+    }
+
+    /// Returns true iff all data items (`lowest` to `highest`, inclusive) can
+    /// be found in the given `advertised_ranges`.
+    pub fn contains_range(
+        lowest: u64,
+        highest: u64,
+        advertised_ranges: &[CompleteDataRange<u64>],
+    ) -> bool {
+        for item in lowest..=highest {
+            let mut item_exists = false;
+
+            for advertised_range in advertised_ranges {
+                if advertised_range.contains(item) {
+                    item_exists = true;
+                    break;
+                }
+            }
+
+            if !item_exists {
+                return false;
+            }
+        }
+        true
+    }
 }
