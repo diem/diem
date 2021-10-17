@@ -1467,6 +1467,7 @@ dependencies = [
  "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
+ "enum_dispatch",
  "futures",
  "itertools 0.10.1",
  "rand 0.8.4",

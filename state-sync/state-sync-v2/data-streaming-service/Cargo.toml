@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1.42"
+enum_dispatch = "0.3.5"
 futures = "0.3.12"
 itertools = "0.10.0"
 serde = { version = "1.0.124", default-features = false }

@@ -3,31 +3,71 @@
 
 use crate::{
     data_notification::{
-        DataClientRequest, DataClientRequest::EpochEndingLedgerInfos,
-        EpochEndingLedgerInfosRequest, SentDataNotification,
+        DataClientRequest,
+        DataClientRequest::{EpochEndingLedgerInfos, TransactionsWithProof},
+        EpochEndingLedgerInfosRequest, SentDataNotification, TransactionsWithProofRequest,
     },
     error::Error,
-    streaming_client::{Epoch, GetAllEpochEndingLedgerInfosRequest, StreamRequest},
+    streaming_client::{
+        Epoch, GetAllEpochEndingLedgerInfosRequest, GetAllTransactionsRequest, StreamRequest,
+    },
 };
-use diem_data_client::AdvertisedData;
+use diem_data_client::{AdvertisedData, OptimalChunkSizes};
+use diem_types::transaction::Version;
+use enum_dispatch::enum_dispatch;
 use itertools::Itertools;
 use std::cmp;
 
-/// An enum holding different types of data streams and progress tracking
-/// indicators for tracking and serving that data along the stream.
+/// The interface offered by each stream tracker.
+#[enum_dispatch]
+pub trait DataStreamTracker {
+    /// Creates a batch of data client requests (up to `max_number_of_requests`)
+    /// that can be sent to the diem data client to progress the stream.
+    fn create_data_client_requests(
+        &self,
+        max_number_of_requests: u64,
+        optimal_chunk_sizes: &OptimalChunkSizes,
+    ) -> Result<Vec<DataClientRequest>, Error>;
+
+    /// Returns true iff all remaining data required to satisfy the stream is
+    /// available in the given advertised data.
+    fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool;
+
+    /// Updates the last sent notification for the stream ( i.e., the last
+    /// notification that was sent to the client). This keeps track of what data
+    /// has actually been received by the stream listener.
+    fn update_notification_tracking(
+        &mut self,
+        sent_data_notification: &SentDataNotification,
+    ) -> Result<(), Error>;
+
+    /// Updates the last sent request for the stream ( i.e., the last client
+    /// request that was created and sent to the network). This keeps
+    /// track of what data has already been requested.
+    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error>;
+}
+
+/// A single progress tracker that allows each data stream type to track and
+/// update progress through the `DataStreamTracker` interface.
+#[enum_dispatch(DataStreamTracker)]
 #[derive(Debug)]
 pub enum StreamProgressTracker {
-    EpochEndingStreamTracker(EpochEndingStreamTracker),
+    EpochEndingStreamTracker,
+    TransactionStreamTracker,
 }
 
 impl StreamProgressTracker {
     pub fn new(
         stream_request: &StreamRequest,
         advertised_data: &AdvertisedData,
-    ) -> Result<StreamProgressTracker, Error> {
+    ) -> Result<Self, Error> {
+        // Identify the type of stream tracker we need based on the stream request
         match stream_request {
             StreamRequest::GetAllEpochEndingLedgerInfos(request) => {
-                StreamProgressTracker::new_epoch_ending_stream_tracker(request, advertised_data)
+                Ok(EpochEndingStreamTracker::new(request, advertised_data)?.into())
+            }
+            StreamRequest::GetAllTransactions(request) => {
+                Ok(TransactionStreamTracker::new(request)?.into())
             }
             _ => Err(Error::UnsupportedRequestEncountered(format!(
                 "Stream request not currently supported: {:?}",
@@ -35,11 +75,30 @@ impl StreamProgressTracker {
             ))),
         }
     }
+}
 
-    fn new_epoch_ending_stream_tracker(
+#[derive(Clone, Debug)]
+pub struct EpochEndingStreamTracker {
+    // The original epoch ending ledger infos request made by the client
+    pub request: GetAllEpochEndingLedgerInfosRequest,
+
+    // The last epoch ending ledger info that this stream will send to the client
+    pub end_epoch: Epoch,
+
+    // The next epoch that we're waiting to send to the client along the
+    // stream. All epochs before this have already been sent.
+    pub next_stream_epoch: Epoch,
+
+    // The next epoch that we're waiting to request from the network. All epochs
+    // before this have already been requested.
+    pub next_request_epoch: Epoch,
+}
+
+impl EpochEndingStreamTracker {
+    fn new(
         request: &GetAllEpochEndingLedgerInfosRequest,
         advertised_data: &AdvertisedData,
-    ) -> Result<StreamProgressTracker, Error> {
+    ) -> Result<Self, Error> {
         let end_epoch = match most_common_highest_epoch(advertised_data) {
             Some(max_advertised_epoch) => {
                 if max_advertised_epoch == 0 {
@@ -67,200 +126,271 @@ impl StreamProgressTracker {
             )));
         }
 
-        Ok(StreamProgressTracker::EpochEndingStreamTracker(
-            EpochEndingStreamTracker {
-                request: request.clone(),
-                end_epoch,
-                next_stream_epoch: request.start_epoch,
-                next_request_epoch: request.start_epoch,
-            },
-        ))
+        Ok(EpochEndingStreamTracker {
+            request: request.clone(),
+            end_epoch,
+            next_stream_epoch: request.start_epoch,
+            next_request_epoch: request.start_epoch,
+        })
+    }
+}
+
+impl DataStreamTracker for EpochEndingStreamTracker {
+    fn create_data_client_requests(
+        &self,
+        max_number_of_requests: u64,
+        optimal_chunk_sizes: &OptimalChunkSizes,
+    ) -> Result<Vec<DataClientRequest>, Error> {
+        create_data_client_requests(
+            self.next_request_epoch,
+            self.end_epoch,
+            max_number_of_requests,
+            optimal_chunk_sizes.epoch_chunk_size,
+            self.clone().into(),
+        )
     }
 
-    /// Updates the progress of the sent notifications using the given notification
-    pub fn update_notification_progress(
+    fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
+        let start_epoch = self.next_stream_epoch;
+        let end_epoch = self.end_epoch;
+        AdvertisedData::contains_range(
+            start_epoch,
+            end_epoch,
+            &advertised_data.epoch_ending_ledger_infos,
+        )
+    }
+
+    fn update_notification_tracking(
         &mut self,
         sent_data_notification: &SentDataNotification,
     ) -> Result<(), Error> {
-        let StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) = self;
-
         match &sent_data_notification.client_request {
             EpochEndingLedgerInfos(request) => {
-                let expected_next_epoch = stream_tracker.next_stream_epoch;
-                if request.start_epoch != expected_next_epoch
-                    || request.end_epoch < expected_next_epoch
-                {
-                    panic!(
-                        "Updating an epoch ending tracker with an old notification! Given {:?} but expected epoch: {:?}",
-                        request, expected_next_epoch
-                    );
-                }
-                stream_tracker.next_stream_epoch =
-                    request.end_epoch.checked_add(1).ok_or_else(|| {
-                        Error::IntegerOverflow("Next stream epoch has overflown!".into())
-                    })?;
-            }
-            _ => {
-                panic!(
-                    "Invalid client request {:?} found for the data stream tracker {:?}",
-                    sent_data_notification.client_request, stream_tracker
+                verify_client_request_indices(
+                    self.next_stream_epoch,
+                    request.start_epoch,
+                    request.end_epoch,
                 );
+                self.next_stream_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next stream epoch has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
             }
         }
-
         Ok(())
     }
 
-    /// Updates the progress of the requested data using the given data request
-    /// TODO(joshlind): look to clean up a lot of these range contains methods
-    pub fn update_request_progress(
-        &mut self,
-        client_request: &DataClientRequest,
-    ) -> Result<(), Error> {
-        let StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) = self;
-
+    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
         match client_request {
             EpochEndingLedgerInfos(request) => {
-                let expected_next_epoch = stream_tracker.next_request_epoch;
-                if request.start_epoch != expected_next_epoch
-                    || request.end_epoch < expected_next_epoch
-                {
-                    panic!(
-                        "Updating an epoch ending tracker with an old request! Given {:?} but expected epoch: {:?}",
-                        request, expected_next_epoch
-                    );
-                }
-                stream_tracker.next_request_epoch =
-                    request.end_epoch.checked_add(1).ok_or_else(|| {
-                        Error::IntegerOverflow("Next stream epoch has overflown!".into())
-                    })?;
-            }
-            _ => {
-                panic!(
-                    "Invalid client request {:?} found for the data stream tracker {:?}",
-                    client_request, stream_tracker
+                verify_client_request_indices(
+                    self.next_request_epoch,
+                    request.start_epoch,
+                    request.end_epoch,
                 );
+                self.next_request_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next request epoch has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
             }
         }
+        Ok(())
+    }
+}
 
+#[derive(Clone, Debug)]
+pub struct TransactionStreamTracker {
+    // The original transaction request made by the client
+    pub request: GetAllTransactionsRequest,
+
+    // The next transaction version that we're waiting to send to the client
+    // along the stream. All transactions before this have been sent.
+    pub next_stream_version: Version,
+
+    // The next transaction version that we're waiting to request from the
+    // network. All transactions before this have already been requested.
+    pub next_request_version: Epoch,
+}
+
+impl TransactionStreamTracker {
+    fn new(request: &GetAllTransactionsRequest) -> Result<Self, Error> {
+        Ok(TransactionStreamTracker {
+            request: request.clone(),
+            next_stream_version: request.start_version,
+            next_request_version: request.start_version,
+        })
+    }
+}
+
+impl DataStreamTracker for TransactionStreamTracker {
+    fn create_data_client_requests(
+        &self,
+        max_number_of_requests: u64,
+        optimal_chunk_sizes: &OptimalChunkSizes,
+    ) -> Result<Vec<DataClientRequest>, Error> {
+        create_data_client_requests(
+            self.next_request_version,
+            self.request.end_version,
+            max_number_of_requests,
+            optimal_chunk_sizes.transaction_chunk_size,
+            self.clone().into(),
+        )
+    }
+
+    fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
+        let start_version = self.next_stream_version;
+        let end_version = self.request.end_version;
+        AdvertisedData::contains_range(start_version, end_version, &advertised_data.transactions)
+    }
+
+    fn update_notification_tracking(
+        &mut self,
+        sent_data_notification: &SentDataNotification,
+    ) -> Result<(), Error> {
+        match &sent_data_notification.client_request {
+            TransactionsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_stream_version,
+                    request.start_version,
+                    request.end_version,
+                );
+                self.next_stream_version = request.end_version.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next stream version has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
+            }
+        }
         Ok(())
     }
 
-    /// Verifies that the data required by the stream can be satisfied using the
-    /// currently advertised data in the network. If not, returns an error.
-    pub fn ensure_data_is_available(&self, advertised_data: &AdvertisedData) -> Result<(), Error> {
-        match self {
-            StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => {
-                if stream_tracker.epoch_ending_ledger_infos_available(advertised_data) {
-                    return Ok(());
-                }
+    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
+        match client_request {
+            TransactionsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_request_version,
+                    request.start_version,
+                    request.end_version,
+                );
+                self.next_request_version =
+                    request.end_version.checked_add(1).ok_or_else(|| {
+                        Error::IntegerOverflow("Next request version has overflown!".into())
+                    })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
             }
         }
-
-        Err(Error::DataIsUnavailable(format!(
-            "Unable to satisfy requested data stream: {:?}, with advertised data: {:?}",
-            self, advertised_data
-        )))
+        Ok(())
     }
 }
 
-#[derive(Debug)]
-pub struct EpochEndingStreamTracker {
-    // The original epoch ending ledger infos request made by the client
-    pub request: GetAllEpochEndingLedgerInfosRequest,
-
-    // The last epoch ending ledger info that this stream will send to the client
-    pub end_epoch: Epoch,
-
-    // The next epoch that we're waiting to send to the client along the
-    // stream. All epochs before this have already been sent.
-    pub next_stream_epoch: Epoch,
-
-    // The next epoch that we're waiting to request from the network. All epochs
-    // before this have already been requested, but not necessarily sent to the
-    // client via the stream (e.g., the requests may still be in-flight).
-    pub next_request_epoch: Epoch,
+/// Verifies that the `expected_next_index` matches the `start_index` and that
+/// the `end_index` is greater than or equal to `expected_next_index`.
+fn verify_client_request_indices(expected_next_index: u64, start_index: u64, end_index: u64) {
+    if start_index != expected_next_index {
+        panic!(
+            "The start index did not match the expected next index! Given: {:?}, expected: {:?}",
+            start_index, expected_next_index
+        );
+    }
+    if end_index < expected_next_index {
+        panic!(
+            "The end index was less than the expected next index! Given: {:?}, expected: {:?}",
+            end_index, expected_next_index
+        );
+    }
 }
 
-impl EpochEndingStreamTracker {
-    /// Returns true iff all epoch ending ledger infos required by the stream
-    /// are available in the advertised data.
-    pub fn epoch_ending_ledger_infos_available(&self, advertised_data: &AdvertisedData) -> bool {
-        let start_epoch = self.request.start_epoch;
-        let end_epoch = self.end_epoch;
+fn invalid_client_request(
+    client_request: &DataClientRequest,
+    stream_progress_tracker: StreamProgressTracker,
+) {
+    panic!(
+        "Invalid client request {:?} found for the data stream tracker {:?}",
+        client_request, stream_progress_tracker
+    );
+}
 
-        // Verify all epoch ending ledger infos can be found in the advertised data
-        for epoch in start_epoch..=end_epoch {
-            let mut epoch_exists = false;
-            for epoch_range in &advertised_data.epoch_ending_ledger_infos {
-                if epoch_range.contains(epoch) {
-                    epoch_exists = true;
-                    break;
-                }
-            }
+/// Creates a batch of data client requests for the given stream progress tracker
+fn create_data_client_requests(
+    start_index: u64,
+    end_index: u64,
+    max_number_of_requests: u64,
+    optimal_chunk_size: u64,
+    stream_progress_tracker: StreamProgressTracker,
+) -> Result<Vec<DataClientRequest>, Error> {
+    // Calculate the total number of items left to satisfy the stream
+    let mut total_items_to_fetch = end_index
+        .checked_sub(start_index)
+        .and_then(|e| e.checked_add(1)) // = end_index - start_index + 1
+        .ok_or_else(|| Error::IntegerOverflow("Total items to fetch has overflown!".into()))?;
 
-            if !epoch_exists {
-                return false;
-            }
-        }
-        true
+    // Iterate until we've requested all transactions or hit the maximum number of requests
+    let mut data_client_requests = vec![];
+    let mut num_requests_made = 0;
+    let mut next_index_to_request = start_index;
+    while total_items_to_fetch > 0 && num_requests_made < max_number_of_requests {
+        // Calculate the number of items to fetch in this request
+        let num_items_to_fetch = cmp::min(total_items_to_fetch, optimal_chunk_size);
+
+        // Calculate the start and end indices for the request
+        let request_start_index = next_index_to_request;
+        let request_end_index = request_start_index
+            .checked_add(num_items_to_fetch)
+            .and_then(|e| e.checked_sub(1)) // = request_start_index + num_items_to_fetch - 1
+            .ok_or_else(|| Error::IntegerOverflow("End index to fetch has overflown!".into()))?;
+
+        // Create the data client requests
+        let data_client_request = create_data_client_request(
+            request_start_index,
+            request_end_index,
+            &stream_progress_tracker,
+        );
+        data_client_requests.push(data_client_request);
+
+        // Update the local loop state
+        next_index_to_request = request_end_index
+            .checked_add(1)
+            .ok_or_else(|| Error::IntegerOverflow("Next index to request has overflown!".into()))?;
+        total_items_to_fetch = total_items_to_fetch
+            .checked_sub(num_items_to_fetch)
+            .ok_or_else(|| Error::IntegerOverflow("Total items to fetch has overflown!".into()))?;
+        num_requests_made = num_requests_made.checked_add(1).ok_or_else(|| {
+            Error::IntegerOverflow("Number of payload requests has overflown!".into())
+        })?;
     }
 
-    /// Creates epoch ending payload requests for the Diem data client using the
-    /// given stream tracker. At most `max_number_of_requests` will be created.
-    pub fn create_epoch_ending_client_requests(
-        &mut self,
-        max_number_of_requests: u64,
-        optimal_epoch_chunk_size: u64,
-    ) -> Result<Vec<DataClientRequest>, Error> {
-        // Calculate the total number of epochs left to satisfy the stream
-        let start_epoch = self.next_request_epoch;
-        let end_epoch = self.end_epoch;
-        let mut total_epochs_to_fetch = end_epoch
-            .checked_sub(start_epoch)
-            .and_then(|e| e.checked_add(1)) // = end_epoch - start_epoch + 1
-            .ok_or_else(|| Error::IntegerOverflow("Total epochs to fetch has overflown!".into()))?;
+    Ok(data_client_requests)
+}
 
-        // Iterate until we've requested all epochs or hit the maximum number of requests
-        let mut data_client_requests = vec![];
-        let mut num_requests_made = 0;
-        let mut next_epoch_to_request = self.next_request_epoch;
-        while total_epochs_to_fetch > 0 && num_requests_made < max_number_of_requests {
-            // Calculate the number of epochs to fetch in this request
-            let num_epochs_to_fetch = cmp::min(total_epochs_to_fetch, optimal_epoch_chunk_size);
-
-            // Calculate the start and end epochs for the request
-            let request_start_epoch = next_epoch_to_request;
-            let request_end_epoch = request_start_epoch
-                .checked_add(num_epochs_to_fetch)
-                .and_then(|e| e.checked_sub(1)) // = request_start_epoch + num_epochs_to_fetch - 1
-                .ok_or_else(|| {
-                    Error::IntegerOverflow("End epoch to fetch has overflown!".into())
-                })?;
-
-            // Create the data client requests
-            let data_client_request =
-                DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-                    start_epoch: request_start_epoch,
-                    end_epoch: request_end_epoch,
-                });
-            data_client_requests.push(data_client_request);
-
-            // Update the local loop state
-            next_epoch_to_request = request_end_epoch.checked_add(1).ok_or_else(|| {
-                Error::IntegerOverflow("Next epoch to request has overflown!".into())
-            })?;
-            total_epochs_to_fetch = total_epochs_to_fetch
-                .checked_sub(num_epochs_to_fetch)
-                .ok_or_else(|| {
-                    Error::IntegerOverflow("Total epochs to fetch has overflown!".into())
-                })?;
-            num_requests_made = num_requests_made.checked_add(1).ok_or_else(|| {
-                Error::IntegerOverflow("Number of payload requests has overflown!".into())
-            })?;
+/// Creates a data client request for the given stream tracker using the
+/// specified start and end indices.
+fn create_data_client_request(
+    start_index: u64,
+    end_index: u64,
+    stream_progress_tracker: &StreamProgressTracker,
+) -> DataClientRequest {
+    match stream_progress_tracker {
+        StreamProgressTracker::EpochEndingStreamTracker(_) => {
+            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                start_epoch: start_index,
+                end_epoch: end_index,
+            })
         }
-
-        Ok(data_client_requests)
+        StreamProgressTracker::TransactionStreamTracker(stream_tracker) => {
+            DataClientRequest::TransactionsWithProof(TransactionsWithProofRequest {
+                start_version: start_index,
+                end_version: end_index,
+                max_proof_version: stream_tracker.request.max_proof_version,
+                include_events: stream_tracker.request.include_events,
+            })
+        }
     }
 }
 

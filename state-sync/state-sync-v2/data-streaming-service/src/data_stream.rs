@@ -7,7 +7,7 @@ use crate::{
         DataClientRequest, DataNotification, DataPayload, NotificationId, SentDataNotification,
     },
     error::Error,
-    stream_progress_tracker::StreamProgressTracker,
+    stream_progress_tracker::{DataStreamTracker, StreamProgressTracker},
     streaming_client::StreamRequest,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
@@ -124,8 +124,9 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         max_number_of_requests: u64,
         optimal_chunk_sizes: &OptimalChunkSizes,
     ) -> Result<(), Error> {
-        for client_request in
-            self.create_data_client_requests(max_number_of_requests, optimal_chunk_sizes)?
+        for client_request in self
+            .stream_progress_tracker
+            .create_data_client_requests(max_number_of_requests, optimal_chunk_sizes)?
         {
             // Send the client request
             let pending_client_response = self.send_client_request(client_request.clone());
@@ -136,24 +137,9 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
 
             // Update the stream progress tracker
             self.stream_progress_tracker
-                .update_request_progress(&client_request)?;
+                .update_request_tracking(&client_request)?;
         }
         Ok(())
-    }
-
-    /// Creates a batch of diem data client requests (at most `max_number_of_requests`).
-    fn create_data_client_requests(
-        &mut self,
-        max_number_of_requests: u64,
-        optimal_chunk_sizes: &OptimalChunkSizes,
-    ) -> Result<Vec<DataClientRequest>, Error> {
-        match &mut self.stream_progress_tracker {
-            StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => stream_tracker
-                .create_epoch_ending_client_requests(
-                    max_number_of_requests,
-                    optimal_chunk_sizes.epoch_chunk_size,
-                ),
-        }
     }
 
     /// Sends a given request to the data client to be forwarded to the network
@@ -178,6 +164,18 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                 tokio::spawn(async move {
                     let client_response = diem_data_client
                         .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch);
+                    let client_response = client_response.await;
+                    pending_response.lock().client_response = Some(client_response);
+                });
+            }
+            DataClientRequest::TransactionsWithProof(request) => {
+                tokio::spawn(async move {
+                    let client_response = diem_data_client.get_transactions_with_proof(
+                        request.max_proof_version,
+                        request.start_version,
+                        request.end_version,
+                        request.include_events,
+                    );
                     let client_response = client_response.await;
                     pending_response.lock().client_response = Some(client_response);
                 });
@@ -328,14 +326,22 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
 
         // Update the stream progress tracker with the sent notification
         self.stream_progress_tracker
-            .update_notification_progress(&sent_data_notification)
+            .update_notification_tracking(&sent_data_notification)
     }
 
     /// Verifies that the data required by the stream can be satisfied using the
     /// currently advertised data in the network. If not, returns an error.
     pub fn ensure_data_is_available(&self, advertised_data: &AdvertisedData) -> Result<(), Error> {
-        self.stream_progress_tracker
-            .ensure_data_is_available(advertised_data)
+        if !self
+            .stream_progress_tracker
+            .is_remaining_data_available(advertised_data)
+        {
+            return Err(Error::DataIsUnavailable(format!(
+                "Unable to satisfy stream progress tracker: {:?}, with advertised data: {:?}",
+                self.stream_progress_tracker, advertised_data
+            )));
+        }
+        Ok(())
     }
 
     /// Assumes the caller has already verified that `sent_data_requests` has
