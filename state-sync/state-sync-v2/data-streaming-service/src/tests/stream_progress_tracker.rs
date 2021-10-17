@@ -4,24 +4,24 @@
 use crate::{
     data_notification::{DataClientRequest, EpochEndingLedgerInfosRequest, SentDataNotification},
     error::Error,
-    stream_progress_tracker::StreamProgressTracker,
+    stream_progress_tracker::{DataStreamTracker, EpochEndingStreamTracker, StreamProgressTracker},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
 };
 use claim::assert_matches;
-use diem_data_client::{DataClientPayload, DataClientResponse, GlobalDataSummary};
+use diem_data_client::{
+    DataClientPayload, DataClientResponse, GlobalDataSummary, OptimalChunkSizes,
+};
 use std::cmp;
 use storage_service_types::CompleteDataRange;
 
 #[test]
-fn test_epoch_ending_requests() {
+fn test_create_epoch_ending_requests() {
     // Create a new data stream progress tracker
-    let stream_progress_tracker = create_epoch_ending_progress_tracker(0, 900);
-    let StreamProgressTracker::EpochEndingStreamTracker(mut stream_tracker) =
-        stream_progress_tracker;
+    let stream_tracker = create_epoch_ending_progress_tracker(0, 900);
 
     // Create a batch of large client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(5, 10000)
+        .create_data_client_requests(5, &create_epoch_ending_chunk_sizes(10000))
         .unwrap();
     let expected_requests = vec![DataClientRequest::EpochEndingLedgerInfos(
         EpochEndingLedgerInfosRequest {
@@ -33,7 +33,7 @@ fn test_epoch_ending_requests() {
 
     // Create a batch of regular client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(3, 50)
+        .create_data_client_requests(3, &create_epoch_ending_chunk_sizes(50))
         .unwrap();
     for (i, client_request) in client_requests.iter().enumerate() {
         let i = i as u64;
@@ -45,9 +45,9 @@ fn test_epoch_ending_requests() {
         assert_eq!(*client_request, expected_request);
     }
 
-    // Create a large batch of small client requests and verify the result
+    // Create a batch of small client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(100, 14)
+        .create_data_client_requests(100, &create_epoch_ending_chunk_sizes(14))
         .unwrap();
     for (i, client_request) in client_requests.iter().enumerate() {
         let i = i as u64;
@@ -61,18 +61,16 @@ fn test_epoch_ending_requests() {
 }
 
 #[test]
-fn test_epoch_ending_requests_dynamic() {
+fn test_create_epoch_ending_requests_dynamic() {
     // Create a new data stream progress tracker
-    let stream_progress_tracker = create_epoch_ending_progress_tracker(0, 1000);
-    let StreamProgressTracker::EpochEndingStreamTracker(mut stream_tracker) =
-        stream_progress_tracker;
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
 
     // Update the tracker with a new next request epoch
     stream_tracker.next_request_epoch = 150;
 
     // Create a batch of client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(5, 700)
+        .create_data_client_requests(5, &create_epoch_ending_chunk_sizes(700))
         .unwrap();
     let expected_requests = vec![
         DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
@@ -91,7 +89,7 @@ fn test_epoch_ending_requests_dynamic() {
 
     // Create a batch of client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(10, 50)
+        .create_data_client_requests(10, &create_epoch_ending_chunk_sizes(50))
         .unwrap();
     for (i, client_request) in client_requests.iter().enumerate() {
         let i = i as u64;
@@ -108,7 +106,7 @@ fn test_epoch_ending_requests_dynamic() {
 
     // Create a batch of client requests and verify the result
     let client_requests = stream_tracker
-        .create_epoch_ending_client_requests(5, 700)
+        .create_data_client_requests(5, &create_epoch_ending_chunk_sizes(700))
         .unwrap();
     let expected_requests = vec![DataClientRequest::EpochEndingLedgerInfos(
         EpochEndingLedgerInfosRequest {
@@ -122,7 +120,8 @@ fn test_epoch_ending_requests_dynamic() {
     stream_tracker.next_request_epoch = 1000;
 
     // Create a batch of client requests and verify an overflow error
-    let client_requests = stream_tracker.create_epoch_ending_client_requests(10, 50);
+    let client_requests =
+        stream_tracker.create_data_client_requests(10, &create_epoch_ending_chunk_sizes(50));
     assert_matches!(client_requests, Err(Error::IntegerOverflow(_)));
 }
 
@@ -168,16 +167,24 @@ fn test_epoch_ending_stream_tracker() {
 
     // Create a new data stream progress tracker and verify the most common highest
     // epoch is chosen.
-    let stream_progress_tracker =
-        StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap();
-    let StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) = stream_progress_tracker;
-    assert_eq!(stream_tracker.end_epoch, 99); // End epoch is highest - 1
+    match StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap()
+    {
+        StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => {
+            assert_eq!(stream_tracker.end_epoch, 99); // End epoch is highest - 1
+        }
+        unexpected_tracker => {
+            panic!(
+                "Expected epoch ending stream tracker but got {:?}",
+                unexpected_tracker
+            );
+        }
+    }
 }
 
 #[test]
-fn test_epoch_ending_request_progress() {
+fn test_update_epoch_ending_request_progress() {
     // Create a new data stream progress tracker
-    let mut stream_progress_tracker = create_epoch_ending_progress_tracker(0, 1000);
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
 
     // Update the progress tracker using valid sent request notifications
     for i in 0..10 {
@@ -188,49 +195,20 @@ fn test_epoch_ending_request_progress() {
                 start_epoch,
                 end_epoch,
             });
-        stream_progress_tracker
-            .update_request_progress(&client_request)
+        stream_tracker
+            .update_request_tracking(&client_request)
             .unwrap();
 
         // Verify internal state
-        let StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) =
-            &stream_progress_tracker;
         assert_eq!(stream_tracker.next_request_epoch, end_epoch + 1);
     }
 }
 
 #[test]
-fn test_epoch_ending_stream_progress() {
+#[should_panic(expected = "The start index did not match the expected next index!")]
+fn test_update_epoch_ending_request_panic() {
     // Create a new data stream progress tracker
-    let mut stream_progress_tracker = create_epoch_ending_progress_tracker(0, 1000);
-
-    // Update the progress tracker using valid sent data notifications
-    let epoch_ending_chunk_size = 100;
-    for i in 0..10 {
-        let start_epoch = i * epoch_ending_chunk_size;
-        let end_epoch = ((i + 1) * epoch_ending_chunk_size) - 1;
-        let sent_data_notification = create_sent_data_notification(
-            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-                start_epoch,
-                end_epoch,
-            }),
-        );
-        stream_progress_tracker
-            .update_notification_progress(&sent_data_notification)
-            .unwrap();
-
-        // Verify internal state
-        let StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) =
-            &stream_progress_tracker;
-        assert_eq!(stream_tracker.next_stream_epoch, end_epoch + 1);
-    }
-}
-
-#[test]
-#[should_panic(expected = "Updating an epoch ending tracker with an old request!")]
-fn test_epoch_ending_request_progress_panic() {
-    // Create a new data stream progress tracker
-    let mut stream_progress_tracker = create_epoch_ending_progress_tracker(0, 1000);
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
 
     // Update the tracker with a valid request
     let sent_data_notification =
@@ -238,8 +216,8 @@ fn test_epoch_ending_request_progress_panic() {
             start_epoch: 0,
             end_epoch: 100,
         });
-    stream_progress_tracker
-        .update_request_progress(&sent_data_notification)
+    stream_tracker
+        .update_request_tracking(&sent_data_notification)
         .unwrap();
 
     // Update the tracker with a request that misses data and verify a panic
@@ -248,16 +226,40 @@ fn test_epoch_ending_request_progress_panic() {
             start_epoch: 102,
             end_epoch: 200,
         });
-    stream_progress_tracker
-        .update_request_progress(&sent_data_notification)
+    stream_tracker
+        .update_request_tracking(&sent_data_notification)
         .unwrap();
 }
 
 #[test]
-#[should_panic(expected = "Updating an epoch ending tracker with an old notification!")]
-fn test_epoch_ending_stream_progress_panic() {
+fn test_update_epoch_ending_stream_progress() {
     // Create a new data stream progress tracker
-    let mut stream_progress_tracker = create_epoch_ending_progress_tracker(0, 1000);
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
+
+    // Update the progress tracker using valid sent data notifications
+    for i in 0..10 {
+        let start_epoch = i * 100;
+        let end_epoch = (i * 100) + 99;
+        let sent_data_notification = create_sent_data_notification(
+            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                start_epoch,
+                end_epoch,
+            }),
+        );
+        stream_tracker
+            .update_notification_tracking(&sent_data_notification)
+            .unwrap();
+
+        // Verify internal state
+        assert_eq!(stream_tracker.next_stream_epoch, end_epoch + 1);
+    }
+}
+
+#[test]
+#[should_panic(expected = "The start index did not match the expected next index!")]
+fn test_update_epoch_ending_stream_panic() {
+    // Create a new data stream progress tracker
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
 
     // Update the tracker with a valid notification
     let sent_data_notification = create_sent_data_notification(
@@ -266,8 +268,8 @@ fn test_epoch_ending_stream_progress_panic() {
             end_epoch: 100,
         }),
     );
-    stream_progress_tracker
-        .update_notification_progress(&sent_data_notification)
+    stream_tracker
+        .update_notification_tracking(&sent_data_notification)
         .unwrap();
 
     // Update the tracker with an old notification and verify a panic
@@ -277,15 +279,15 @@ fn test_epoch_ending_stream_progress_panic() {
             end_epoch: 1100,
         }),
     );
-    stream_progress_tracker
-        .update_notification_progress(&sent_data_notification)
+    stream_tracker
+        .update_notification_tracking(&sent_data_notification)
         .unwrap();
 }
 
 fn create_epoch_ending_progress_tracker(
     start_epoch: u64,
     max_advertised_epoch: u64,
-) -> StreamProgressTracker {
+) -> EpochEndingStreamTracker {
     // Create an epoch ending stream request
     let stream_request =
         StreamRequest::GetAllEpochEndingLedgerInfos(GetAllEpochEndingLedgerInfosRequest {
@@ -299,8 +301,23 @@ fn create_epoch_ending_progress_tracker(
         .epoch_ending_ledger_infos =
         vec![CompleteDataRange::new(start_epoch, max_advertised_epoch)];
 
-    // Create a new data stream progress tracker
-    StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap()
+    // Create a new epoch ending stream progress tracker
+    match StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap()
+    {
+        StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => stream_tracker,
+        unexpected_tracker => {
+            panic!(
+                "Expected epoch ending stream tracker but got {:?}",
+                unexpected_tracker
+            );
+        }
+    }
+}
+
+fn create_epoch_ending_chunk_sizes(epoch_chunk_size: u64) -> OptimalChunkSizes {
+    let mut optimal_chunk_sizes = OptimalChunkSizes::empty();
+    optimal_chunk_sizes.epoch_chunk_size = epoch_chunk_size;
+    optimal_chunk_sizes
 }
 
 fn create_sent_data_notification(client_request: DataClientRequest) -> SentDataNotification {
