@@ -10,16 +10,16 @@ use crate::{
     },
     streaming_service::DataStreamingService,
     tests::utils::{
-        MockDiemDataClient, MAX_ADVERTISED_EPOCH, MAX_NOTIFICATION_TIMEOUT_SECS,
-        MIN_ADVERTISED_EPOCH,
+        MockDiemDataClient, MAX_ADVERTISED_EPOCH, MAX_ADVERTISED_TRANSACTION,
+        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH, MIN_ADVERTISED_TRANSACTION,
     },
 };
-use claim::{assert_le, assert_matches, assert_ok};
+use claim::{assert_le, assert_matches, assert_ok, assert_some};
 use futures::StreamExt;
 use std::time::Duration;
 use tokio::time::timeout;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_notifications_epoch_ending() {
     // Create a new streaming client and service
     let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
@@ -33,7 +33,6 @@ async fn test_notifications_epoch_ending() {
 
     // Read the data notifications from the stream and verify epoch ordering
     let mut next_expected_epoch = MIN_ADVERTISED_EPOCH;
-    let expected_end_epoch = MAX_ADVERTISED_EPOCH - 1;
     loop {
         if let Ok(data_notification) = timeout(
             Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
@@ -44,10 +43,11 @@ async fn test_notifications_epoch_ending() {
             if let DataPayload::EpochEndingLedgerInfos(ledger_infos_with_sigs) =
                 data_notification.data_payload
             {
+                // Verify the epochs of the ledger infos are contiguous
                 for ledger_info_with_sigs in ledger_infos_with_sigs {
                     let epoch = ledger_info_with_sigs.ledger_info().commit_info().epoch();
                     assert_eq!(next_expected_epoch, epoch);
-                    assert_le!(epoch, expected_end_epoch);
+                    assert_le!(epoch, MAX_ADVERTISED_EPOCH);
                     next_expected_epoch += 1;
                 }
             } else {
@@ -57,12 +57,68 @@ async fn test_notifications_epoch_ending() {
                 );
             }
         } else {
-            if next_expected_epoch == expected_end_epoch + 1 {
+            if next_expected_epoch == MAX_ADVERTISED_EPOCH {
                 return; // We hit the end of the stream!
             }
             panic!(
                 "Timed out waiting for a data notification! Next expected epoch: {:?}",
                 next_expected_epoch
+            );
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_transactions() {
+    // Create a new streaming client and service
+    let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
+    tokio::spawn(streaming_service.start_service());
+
+    // Request a transaction stream (with events) and get a data stream listener
+    let mut stream_listener = streaming_client
+        .get_all_transactions(
+            MIN_ADVERTISED_TRANSACTION,
+            MAX_ADVERTISED_TRANSACTION,
+            MAX_ADVERTISED_TRANSACTION,
+            true,
+        )
+        .await
+        .unwrap();
+
+    // Read the data notifications from the stream and verify the payloads
+    let mut next_expected_transaction = MIN_ADVERTISED_TRANSACTION;
+    loop {
+        if let Ok(data_notification) = timeout(
+            Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+            stream_listener.select_next_some(),
+        )
+        .await
+        {
+            if let DataPayload::TransactionsWithProof(transactions_with_proof) =
+                data_notification.data_payload
+            {
+                // Verify the transaction start version matches the expected version
+                let first_transaction_version = transactions_with_proof.first_transaction_version;
+                assert_eq!(Some(next_expected_transaction), first_transaction_version);
+
+                // Verify the payload contains events
+                assert_some!(transactions_with_proof.events);
+
+                let num_transactions = transactions_with_proof.transactions.len();
+                next_expected_transaction += num_transactions as u64;
+            } else {
+                panic!(
+                    "Expected a transaction payload, but got: {:?}",
+                    data_notification
+                );
+            }
+        } else {
+            if next_expected_transaction == MAX_ADVERTISED_TRANSACTION + 1 {
+                return; // We hit the end of the stream!
+            }
+            panic!(
+                "Timed out waiting for a data notification! Next expected transaction: {:?}",
+                next_expected_transaction
             );
         }
     }
@@ -75,22 +131,44 @@ async fn test_stream_epoch_ending() {
     tokio::spawn(streaming_service.start_service());
 
     // Request an epoch ending stream and verify we get a data stream listener
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
-        .get_all_epoch_ending_ledger_infos(100)
+    let result = streaming_client
+        .get_all_epoch_ending_ledger_infos(MIN_ADVERTISED_EPOCH)
         .await;
     assert_ok!(result);
 
     // Try to request a stream where epoch data is missing (all data was pruned at version 100)
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
-        .get_all_epoch_ending_ledger_infos(0)
+    let result = streaming_client
+        .get_all_epoch_ending_ledger_infos(MIN_ADVERTISED_EPOCH - 1)
         .await;
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 
     // Try to request a stream where epoch data is missing (we are higher than anything advertised)
     let result = streaming_client
-        .get_all_epoch_ending_ledger_infos(10000)
+        .get_all_epoch_ending_ledger_infos(MAX_ADVERTISED_EPOCH + 1)
+        .await;
+    assert_matches!(result, Err(Error::DataIsUnavailable(_)));
+}
+
+#[tokio::test]
+async fn test_stream_transactions() {
+    // Create a new streaming client and service
+    let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
+    tokio::spawn(streaming_service.start_service());
+
+    // Request a transaction stream and verify we get a data stream listener
+    let result = streaming_client
+        .get_all_transactions(
+            MIN_ADVERTISED_TRANSACTION,
+            MAX_ADVERTISED_TRANSACTION,
+            MAX_ADVERTISED_TRANSACTION,
+            true,
+        )
+        .await;
+    assert_ok!(result);
+
+    // Try to request a stream where transaction data is missing (we are higher than anything advertised)
+    let result = streaming_client
+        .get_all_epoch_ending_ledger_infos(MAX_ADVERTISED_TRANSACTION + 1)
         .await;
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 }
@@ -102,34 +180,23 @@ async fn test_stream_unsupported() {
     tokio::spawn(streaming_service.start_service());
 
     // Request an account stream and verify it's unsupported
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone.get_all_accounts(0).await;
-    assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
-
-    // Request a transaction stream and verify it's unsupported
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
-        .get_all_transactions(0, 100, 200, true)
-        .await;
+    let result = streaming_client.get_all_accounts(0).await;
     assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
 
     // Request a transaction output stream and verify it's unsupported
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
+    let result = streaming_client
         .get_all_transaction_outputs(0, 100, 200)
         .await;
     assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
 
     // Request a continuous transaction stream and verify it's unsupported
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
+    let result = streaming_client
         .continuously_stream_transactions(0, 0, true)
         .await;
     assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
 
     // Request a continuous transaction output stream and verify it's unsupported
-    let streaming_client_clone = streaming_client.clone();
-    let result = streaming_client_clone
+    let result = streaming_client
         .continuously_stream_transaction_outputs(0, 0)
         .await;
     assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));

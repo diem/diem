@@ -8,8 +8,8 @@ use crate::{
     data_stream::{DataStream, DataStreamListener},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
     tests::utils::{
-        create_epoch_ending_client_response, create_ledger_info, MockDiemDataClient,
-        MAX_ADVERTISED_EPOCH, MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
+        create_data_client_response, create_ledger_info, MockDiemDataClient, MAX_ADVERTISED_EPOCH,
+        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
     },
 };
 use claim::{assert_ge, assert_none};
@@ -69,8 +69,10 @@ async fn test_epoch_ending_notifications() {
             start_epoch: MIN_ADVERTISED_EPOCH,
             end_epoch: MIN_ADVERTISED_EPOCH + 1,
         }),
-        client_response: Some(Ok(create_epoch_ending_client_response(
-            MIN_ADVERTISED_EPOCH,
+        client_response: Some(Ok(create_data_client_response(
+            DataClientPayload::EpochEndingLedgerInfos(vec![create_ledger_info(
+                MIN_ADVERTISED_EPOCH,
+            )]),
         ))),
     };
     insert_response_into_pending_queue(&mut data_stream, pending_response);
@@ -291,9 +293,10 @@ fn set_epoch_ending_response_in_queue(
     // Set the response at the specified index
     let (sent_requests, _) = data_stream.get_sent_requests_and_notifications();
     let pending_response = sent_requests.as_mut().unwrap().get_mut(index).unwrap();
-    pending_response.lock().client_response = Some(Ok(create_epoch_ending_client_response(
-        MIN_ADVERTISED_EPOCH,
+    let client_response = Some(Ok(create_data_client_response(
+        DataClientPayload::EpochEndingLedgerInfos(vec![create_ledger_info(MIN_ADVERTISED_EPOCH)]),
     )));
+    pending_response.lock().client_response = client_response;
 }
 
 /// Clears the pending queue of the given data stream and inserts a single
