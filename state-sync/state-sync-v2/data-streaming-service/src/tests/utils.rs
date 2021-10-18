@@ -14,9 +14,11 @@ use diem_types::{
     chain_id::ChainId,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
-        RawTransaction, Script, SignedTransaction, Transaction, TransactionListWithProof,
-        TransactionPayload,
+        default_protocol::TransactionOutputListWithProof, RawTransaction, Script,
+        SignedTransaction, Transaction, TransactionListWithProof, TransactionOutput,
+        TransactionPayload, TransactionStatus,
     },
+    write_set::WriteSet,
 };
 use rand::{rngs::OsRng, RngCore};
 use std::{collections::BTreeMap, thread, time::Duration};
@@ -26,8 +28,10 @@ use storage_service_types::CompleteDataRange;
 pub const MAX_RESPONSE_ID: u64 = 100000;
 pub const MIN_ADVERTISED_EPOCH: u64 = 100;
 pub const MAX_ADVERTISED_EPOCH: u64 = 1000;
-pub const MIN_ADVERTISED_TRANSACTION: u64 = 0;
+pub const MIN_ADVERTISED_TRANSACTION: u64 = 10;
 pub const MAX_ADVERTISED_TRANSACTION: u64 = 10000;
+pub const MIN_ADVERTISED_TRANSACTION_OUTPUT: u64 = 5000;
+pub const MAX_ADVERTISED_TRANSACTION_OUTPUT: u64 = 10000;
 
 /// Test timeout constant
 pub const MAX_NOTIFICATION_TIMEOUT_SECS: u64 = 5;
@@ -96,7 +100,10 @@ impl DiemDataClient for MockDiemDataClient {
                 MIN_ADVERTISED_TRANSACTION,
                 MAX_ADVERTISED_TRANSACTION,
             )],
-            transaction_outputs: vec![],
+            transaction_outputs: vec![CompleteDataRange::new(
+                MIN_ADVERTISED_TRANSACTION_OUTPUT,
+                MAX_ADVERTISED_TRANSACTION_OUTPUT,
+            )],
         };
         let response_payload = DataClientPayload::GlobalDataSummary(GlobalDataSummary {
             advertised_data,
@@ -117,10 +124,26 @@ impl DiemDataClient for MockDiemDataClient {
     async fn get_transaction_outputs_with_proof(
         &self,
         _proof_version: u64,
-        _start_version: u64,
-        _end_version: u64,
+        start_version: u64,
+        end_version: u64,
     ) -> Result<DataClientResponse, diem_data_client::Error> {
-        unimplemented!();
+        self.emulate_network_latencies();
+
+        // Create the requested transaction outputs
+        let mut transaction_outputs = vec![];
+        for _ in start_version..=end_version {
+            transaction_outputs.push(create_transaction_output());
+        }
+
+        // Create a transaction output list with an empty proof
+        let mut output_list_with_proof = TransactionOutputListWithProof::new_empty();
+        output_list_with_proof.first_transaction_output_version = Some(start_version);
+        output_list_with_proof.transaction_outputs = transaction_outputs;
+        let response_payload =
+            DataClientPayload::TransactionOutputsWithProof(output_list_with_proof);
+
+        // Return the transaction output list with proofs
+        Ok(create_data_client_response(response_payload))
     }
 
     async fn get_transactions_with_proof(
@@ -200,6 +223,11 @@ fn create_transaction() -> Transaction {
     let signed_transaction = SignedTransaction::new(raw_transaction, public_key, signature);
 
     Transaction::UserTransaction(signed_transaction)
+}
+
+/// Creates an empty transaction output
+fn create_transaction_output() -> TransactionOutput {
+    TransactionOutput::new(WriteSet::default(), vec![], 0, TransactionStatus::Retry)
 }
 
 /// Returns a random u64 with a value between 0 and `max_value` - 1 (inclusive).
