@@ -31,4 +31,5 @@ claim = "0.5.0"
 rand = "0.8.3"
 tokio = { version = "1.8.1", features = ["full"] }
 
+diem-types = { path = "../../../types" }
 storage-service-types = { path = "../../storage-service/types" }

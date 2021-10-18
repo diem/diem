@@ -10,9 +10,11 @@ use diem_data_client::{
 };
 use diem_types::{
     account_address::AccountAddress,
+    account_state_blob::AccountStatesChunkWithProof,
     block_info::BlockInfo,
     chain_id::ChainId,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    proof::SparseMerkleRangeProof,
     transaction::{
         default_protocol::TransactionOutputListWithProof, RawTransaction, Script,
         SignedTransaction, Transaction, TransactionListWithProof, TransactionOutput,
@@ -24,8 +26,13 @@ use rand::{rngs::OsRng, RngCore};
 use std::{collections::BTreeMap, thread, time::Duration};
 use storage_service_types::CompleteDataRange;
 
+/// The number of accounts held at any version
+pub const TOTAL_NUM_ACCOUNTS: u64 = 2000;
+
 /// Test constants for advertised data
 pub const MAX_RESPONSE_ID: u64 = 100000;
+pub const MIN_ADVERTISED_ACCOUNTS: u64 = 9500;
+pub const MAX_ADVERTISED_ACCOUNTS: u64 = 10000;
 pub const MIN_ADVERTISED_EPOCH: u64 = 100;
 pub const MAX_ADVERTISED_EPOCH: u64 = 1000;
 pub const MIN_ADVERTISED_TRANSACTION: u64 = 10;
@@ -55,10 +62,30 @@ impl DiemDataClient for MockDiemDataClient {
     async fn get_account_states_with_proof(
         &self,
         _version: u64,
-        _start_index: u64,
-        _end_index: u64,
+        start_index: u64,
+        end_index: u64,
     ) -> Result<DataClientResponse, diem_data_client::Error> {
-        unimplemented!();
+        self.emulate_network_latencies();
+
+        // Create epoch ending ledger infos according to the requested epochs
+        let mut account_blobs = vec![];
+        for _ in start_index..=end_index {
+            account_blobs.push((HashValue::random(), vec![].into()));
+        }
+
+        // Create an account states chunk with proof
+        let accounts_with_proofs = AccountStatesChunkWithProof {
+            first_index: start_index,
+            last_index: end_index,
+            first_key: HashValue::random(),
+            last_key: HashValue::random(),
+            account_blobs,
+            proof: SparseMerkleRangeProof::new(vec![]),
+        };
+        let response_payload = DataClientPayload::AccountStatesWithProof(accounts_with_proofs);
+
+        // Return the chunk
+        Ok(create_data_client_response(response_payload))
     }
 
     async fn get_epoch_ending_ledger_infos(
@@ -90,7 +117,10 @@ impl DiemDataClient for MockDiemDataClient {
 
         // Create a global data summary with a fixed set of data
         let advertised_data = AdvertisedData {
-            account_states: vec![],
+            account_states: vec![CompleteDataRange::new(
+                MIN_ADVERTISED_ACCOUNTS,
+                MAX_ADVERTISED_ACCOUNTS,
+            )],
             epoch_ending_ledger_infos: vec![CompleteDataRange::new(
                 MIN_ADVERTISED_EPOCH,
                 MAX_ADVERTISED_EPOCH,
@@ -118,7 +148,9 @@ impl DiemDataClient for MockDiemDataClient {
         &self,
         _version: u64,
     ) -> Result<DataClientResponse, diem_data_client::Error> {
-        unimplemented!();
+        Ok(create_data_client_response(
+            DataClientPayload::NumberOfAccountStates(TOTAL_NUM_ACCOUNTS),
+        ))
     }
 
     async fn get_transaction_outputs_with_proof(

@@ -10,15 +10,72 @@ use crate::{
     },
     streaming_service::DataStreamingService,
     tests::utils::{
-        MockDiemDataClient, MAX_ADVERTISED_EPOCH, MAX_ADVERTISED_TRANSACTION,
-        MAX_ADVERTISED_TRANSACTION_OUTPUT, MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
-        MIN_ADVERTISED_TRANSACTION, MIN_ADVERTISED_TRANSACTION_OUTPUT,
+        MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
+        MAX_ADVERTISED_TRANSACTION, MAX_ADVERTISED_TRANSACTION_OUTPUT,
+        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH,
+        MIN_ADVERTISED_TRANSACTION, MIN_ADVERTISED_TRANSACTION_OUTPUT, TOTAL_NUM_ACCOUNTS,
     },
 };
 use claim::{assert_le, assert_matches, assert_ok, assert_some};
 use futures::StreamExt;
 use std::time::Duration;
 use tokio::time::timeout;
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_accounts() {
+    // Create a new streaming client and service
+    let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
+    tokio::spawn(streaming_service.start_service());
+
+    // Request an account stream and get a data stream listener
+    let mut stream_listener = streaming_client
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS)
+        .await
+        .unwrap();
+
+    // Read the data notifications from the stream and verify index ordering
+    let mut next_expected_index = 0;
+    loop {
+        if let Ok(data_notification) = timeout(
+            Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+            stream_listener.select_next_some(),
+        )
+        .await
+        {
+            if let DataPayload::AccountStatesWithProof(accounts_with_proof) =
+                data_notification.data_payload
+            {
+                // Verify the account start index matches the expected index
+                assert_eq!(accounts_with_proof.first_index, next_expected_index);
+
+                // Verify the last account index matches the account list length
+                let num_accounts = accounts_with_proof.account_blobs.len() as u64;
+                assert_eq!(
+                    accounts_with_proof.last_index,
+                    next_expected_index - 1 + num_accounts
+                );
+
+                // Verify the number of account blobs is as expected
+                assert_eq!(accounts_with_proof.account_blobs.len() as u64, num_accounts);
+
+                next_expected_index += num_accounts;
+            } else {
+                panic!(
+                    "Expected an account ledger info payload, but got: {:?}",
+                    data_notification
+                );
+            }
+        } else {
+            if next_expected_index == TOTAL_NUM_ACCOUNTS {
+                return; // We hit the end of the stream!
+            }
+            panic!(
+                "Timed out waiting for a data notification! Next expected index: {:?}",
+                next_expected_index
+            );
+        }
+    }
+}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_notifications_epoch_ending() {
@@ -175,6 +232,31 @@ async fn test_notifications_transactions() {
             );
         }
     }
+}
+
+#[tokio::test]
+async fn test_stream_accounts() {
+    // Create a new streaming client and service
+    let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
+    tokio::spawn(streaming_service.start_service());
+
+    // Request an account stream and verify we get a data stream listener
+    let result = streaming_client
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1)
+        .await;
+    assert_ok!(result);
+
+    // Request a stream where accounts are missing (we are lower than advertised)
+    let result = streaming_client
+        .get_all_accounts(MIN_ADVERTISED_ACCOUNTS - 1)
+        .await;
+    assert_matches!(result, Err(Error::DataIsUnavailable(_)));
+
+    // Request a stream where accounts are missing (we are lower than advertised)
+    let result = streaming_client
+        .get_all_accounts(MAX_ADVERTISED_EPOCH + 1)
+        .await;
+    assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 }
 
 #[tokio::test]

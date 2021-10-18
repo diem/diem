@@ -214,6 +214,7 @@ pub struct AccountStatesChunkWithProof {
     // The account blobs in the chunk
     pub proof: SparseMerkleRangeProof, // The proof to ensure the chunk is in the account states
 }
+
 #[cfg(test)]
 mod tests {
     use super::{default_protocol::AccountStateWithProof, *};
