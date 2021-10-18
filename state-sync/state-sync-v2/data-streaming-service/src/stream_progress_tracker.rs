@@ -3,22 +3,24 @@
 
 use crate::{
     data_notification::{
-        DataClientRequest,
+        AccountsWithProofRequest, DataClientRequest,
         DataClientRequest::{
-            EpochEndingLedgerInfos, TransactionOutputsWithProof, TransactionsWithProof,
+            AccountsWithProof, EpochEndingLedgerInfos, TransactionOutputsWithProof,
+            TransactionsWithProof,
         },
         EpochEndingLedgerInfosRequest, SentDataNotification, TransactionOutputsWithProofRequest,
         TransactionsWithProofRequest,
     },
     error::Error,
     streaming_client::{
-        Epoch, GetAllEpochEndingLedgerInfosRequest, GetAllTransactionOutputsRequest,
-        GetAllTransactionsRequest, StreamRequest,
+        Epoch, GetAllAccountsRequest, GetAllEpochEndingLedgerInfosRequest,
+        GetAllTransactionOutputsRequest, GetAllTransactionsRequest, StreamRequest,
     },
 };
-use diem_data_client::{AdvertisedData, OptimalChunkSizes};
+use diem_data_client::{AdvertisedData, DataClientPayload, DiemDataClient, OptimalChunkSizes};
 use diem_types::transaction::Version;
 use enum_dispatch::enum_dispatch;
+use futures::executor::block_on;
 use itertools::Itertools;
 use std::cmp;
 
@@ -56,18 +58,23 @@ pub trait DataStreamTracker {
 #[enum_dispatch(DataStreamTracker)]
 #[derive(Debug)]
 pub enum StreamProgressTracker {
+    AccountsStreamTracker,
     EpochEndingStreamTracker,
     TransactionOutputStreamTracker,
     TransactionStreamTracker,
 }
 
 impl StreamProgressTracker {
-    pub fn new(
+    pub fn new<T: DiemDataClient + Send + Clone + 'static>(
         stream_request: &StreamRequest,
+        diem_data_client: T,
         advertised_data: &AdvertisedData,
     ) -> Result<Self, Error> {
         // Identify the type of stream tracker we need based on the stream request
         match stream_request {
+            StreamRequest::GetAllAccounts(request) => {
+                Ok(AccountsStreamTracker::new(request, diem_data_client)?.into())
+            }
             StreamRequest::GetAllEpochEndingLedgerInfos(request) => {
                 Ok(EpochEndingStreamTracker::new(request, advertised_data)?.into())
             }
@@ -82,6 +89,115 @@ impl StreamProgressTracker {
                 stream_request
             ))),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AccountsStreamTracker {
+    // The original accounts request made by the client
+    pub request: GetAllAccountsRequest,
+
+    // The total number of accounts to fetch.
+    pub number_of_accounts: u64,
+
+    // The next account index that we're waiting to send to the client along the
+    // stream. All accounts before this index have already been sent.
+    pub next_stream_index: u64,
+
+    // The next account index that we're waiting to request from the network.
+    // All accounts before this index have already been requested.
+    pub next_request_index: u64,
+}
+
+impl AccountsStreamTracker {
+    fn new<T: DiemDataClient + Send + Clone + 'static>(
+        request: &GetAllAccountsRequest,
+        diem_data_client: T,
+    ) -> Result<Self, Error> {
+        // TODO(joshlind): handle the case where this response is malicious.
+        let data_client_response = block_on(async {
+            diem_data_client
+                .get_number_of_account_states(request.version)
+                .await
+        })?;
+        let number_of_accounts = match data_client_response.response_payload {
+            DataClientPayload::NumberOfAccountStates(number_of_accounts) => number_of_accounts,
+            data_payload => {
+                panic!("Invalid response from diem data client: {:?}", data_payload);
+            }
+        };
+
+        Ok(AccountsStreamTracker {
+            request: request.clone(),
+            number_of_accounts,
+            next_stream_index: 0,
+            next_request_index: 0,
+        })
+    }
+}
+
+impl DataStreamTracker for AccountsStreamTracker {
+    fn create_data_client_requests(
+        &self,
+        max_number_of_requests: u64,
+        optimal_chunk_sizes: &OptimalChunkSizes,
+    ) -> Result<Vec<DataClientRequest>, Error> {
+        create_data_client_requests(
+            self.next_request_index,
+            self.number_of_accounts,
+            max_number_of_requests,
+            optimal_chunk_sizes.account_states_chunk_size,
+            self.clone().into(),
+        )
+    }
+
+    fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
+        AdvertisedData::contains_range(
+            self.request.version,
+            self.request.version,
+            &advertised_data.account_states,
+        )
+    }
+
+    fn update_notification_tracking(
+        &mut self,
+        sent_data_notification: &SentDataNotification,
+    ) -> Result<(), Error> {
+        match &sent_data_notification.client_request {
+            AccountsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_stream_index,
+                    request.start_index,
+                    request.end_index,
+                );
+                self.next_stream_index = request.end_index.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next stream index has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
+            }
+        }
+        Ok(())
+    }
+
+    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
+        match client_request {
+            AccountsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_request_index,
+                    request.start_index,
+                    request.end_index,
+                );
+                self.next_request_index = request.end_index.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next request index has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
+            }
+        }
+        Ok(())
     }
 }
 
@@ -477,6 +593,13 @@ fn create_data_client_request(
     stream_progress_tracker: &StreamProgressTracker,
 ) -> DataClientRequest {
     match stream_progress_tracker {
+        StreamProgressTracker::AccountsStreamTracker(stream_tracker) => {
+            DataClientRequest::AccountsWithProof(AccountsWithProofRequest {
+                version: stream_tracker.request.version,
+                start_index,
+                end_index,
+            })
+        }
         StreamProgressTracker::EpochEndingStreamTracker(_) => {
             DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
                 start_epoch: start_index,

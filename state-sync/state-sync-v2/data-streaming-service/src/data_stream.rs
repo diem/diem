@@ -85,7 +85,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         let data_stream_listener = DataStreamListener::new(notification_receiver);
 
         // Create a new stream progress tracker
-        let stream_progress_tracker = StreamProgressTracker::new(stream_request, advertised_data)?;
+        let stream_progress_tracker =
+            StreamProgressTracker::new(stream_request, diem_data_client.clone(), advertised_data)?;
 
         // Create a new data stream
         let data_stream = Self {
@@ -160,6 +161,17 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         let diem_data_client = self.diem_data_client.clone();
         let pending_response = pending_client_response.clone();
         match data_client_request {
+            DataClientRequest::AccountsWithProof(request) => {
+                tokio::spawn(async move {
+                    let client_response = diem_data_client.get_account_states_with_proof(
+                        request.version,
+                        request.start_index,
+                        request.end_index,
+                    );
+                    let client_response = client_response.await;
+                    pending_response.lock().client_response = Some(client_response);
+                });
+            }
             DataClientRequest::EpochEndingLedgerInfos(request) => {
                 tokio::spawn(async move {
                     let client_response = diem_data_client
@@ -190,9 +202,6 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     let client_response = client_response.await;
                     pending_response.lock().client_response = Some(client_response);
                 });
-            }
-            _ => {
-                panic!("Data client request is currently unsupported!");
             }
         }
 

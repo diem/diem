@@ -6,6 +6,7 @@ use crate::{
     error::Error,
     stream_progress_tracker::{DataStreamTracker, EpochEndingStreamTracker, StreamProgressTracker},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
+    tests::utils::MockDiemDataClient,
 };
 use claim::assert_matches;
 use diem_data_client::{
@@ -135,8 +136,11 @@ fn test_epoch_ending_stream_tracker() {
 
     // Try to create a progress stream tracker where there is no advertised data
     // and verify an error is returned.
-    let result =
-        StreamProgressTracker::new(&stream_request, &GlobalDataSummary::empty().advertised_data);
+    let result = StreamProgressTracker::new(
+        &stream_request,
+        MockDiemDataClient {},
+        &GlobalDataSummary::empty().advertised_data,
+    );
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 
     // Create a data summary with various advertised epoch ranges (common highest is zero)
@@ -151,7 +155,11 @@ fn test_epoch_ending_stream_tracker() {
 
     // Try to create a progress stream tracker where the highest epoch is zero
     // and verify an error is returned.
-    let result = StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data);
+    let result = StreamProgressTracker::new(
+        &stream_request,
+        MockDiemDataClient {},
+        &global_data_summary.advertised_data,
+    );
     assert_matches!(result, Err(Error::NoDataToFetch(_)));
 
     // Create a global data summary with non-zero advertised epoch ranges
@@ -167,7 +175,12 @@ fn test_epoch_ending_stream_tracker() {
 
     // Create a new data stream progress tracker and verify the most common highest
     // epoch is chosen.
-    match StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap()
+    match StreamProgressTracker::new(
+        &stream_request,
+        MockDiemDataClient {},
+        &global_data_summary.advertised_data,
+    )
+    .unwrap()
     {
         StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => {
             assert_eq!(stream_tracker.end_epoch, 99); // End epoch is highest - 1
@@ -302,7 +315,12 @@ fn create_epoch_ending_progress_tracker(
         vec![CompleteDataRange::new(start_epoch, max_advertised_epoch)];
 
     // Create a new epoch ending stream progress tracker
-    match StreamProgressTracker::new(&stream_request, &global_data_summary.advertised_data).unwrap()
+    match StreamProgressTracker::new(
+        &stream_request,
+        MockDiemDataClient {},
+        &global_data_summary.advertised_data,
+    )
+    .unwrap()
     {
         StreamProgressTracker::EpochEndingStreamTracker(stream_tracker) => stream_tracker,
         unexpected_tracker => {

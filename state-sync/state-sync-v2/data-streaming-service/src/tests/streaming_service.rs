@@ -52,7 +52,7 @@ async fn test_notifications_accounts() {
                 let num_accounts = accounts_with_proof.account_blobs.len() as u64;
                 assert_eq!(
                     accounts_with_proof.last_index,
-                    next_expected_index - 1 + num_accounts
+                    next_expected_index + num_accounts - 1,
                 );
 
                 // Verify the number of account blobs is as expected
@@ -66,7 +66,7 @@ async fn test_notifications_accounts() {
                 );
             }
         } else {
-            if next_expected_index == TOTAL_NUM_ACCOUNTS {
+            if next_expected_index == TOTAL_NUM_ACCOUNTS + 1 {
                 return; // We hit the end of the stream!
             }
             panic!(
@@ -366,10 +366,6 @@ async fn test_stream_unsupported() {
     // Create a new streaming client and service
     let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
     tokio::spawn(streaming_service.start_service());
-
-    // Request an account stream and verify it's unsupported
-    let result = streaming_client.get_all_accounts(0).await;
-    assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
 
     // Request a continuous transaction stream and verify it's unsupported
     let result = streaming_client
