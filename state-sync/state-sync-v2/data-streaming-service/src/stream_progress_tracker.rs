@@ -4,12 +4,16 @@
 use crate::{
     data_notification::{
         DataClientRequest,
-        DataClientRequest::{EpochEndingLedgerInfos, TransactionsWithProof},
-        EpochEndingLedgerInfosRequest, SentDataNotification, TransactionsWithProofRequest,
+        DataClientRequest::{
+            EpochEndingLedgerInfos, TransactionOutputsWithProof, TransactionsWithProof,
+        },
+        EpochEndingLedgerInfosRequest, SentDataNotification, TransactionOutputsWithProofRequest,
+        TransactionsWithProofRequest,
     },
     error::Error,
     streaming_client::{
-        Epoch, GetAllEpochEndingLedgerInfosRequest, GetAllTransactionsRequest, StreamRequest,
+        Epoch, GetAllEpochEndingLedgerInfosRequest, GetAllTransactionOutputsRequest,
+        GetAllTransactionsRequest, StreamRequest,
     },
 };
 use diem_data_client::{AdvertisedData, OptimalChunkSizes};
@@ -53,6 +57,7 @@ pub trait DataStreamTracker {
 #[derive(Debug)]
 pub enum StreamProgressTracker {
     EpochEndingStreamTracker,
+    TransactionOutputStreamTracker,
     TransactionStreamTracker,
 }
 
@@ -65,6 +70,9 @@ impl StreamProgressTracker {
         match stream_request {
             StreamRequest::GetAllEpochEndingLedgerInfos(request) => {
                 Ok(EpochEndingStreamTracker::new(request, advertised_data)?.into())
+            }
+            StreamRequest::GetAllTransactionOutputs(request) => {
+                Ok(TransactionOutputStreamTracker::new(request)?.into())
             }
             StreamRequest::GetAllTransactions(request) => {
                 Ok(TransactionStreamTracker::new(request)?.into())
@@ -193,6 +201,98 @@ impl DataStreamTracker for EpochEndingStreamTracker {
                 self.next_request_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next request epoch has overflown!".into())
                 })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TransactionOutputStreamTracker {
+    // The original transaction output request made by the client
+    pub request: GetAllTransactionOutputsRequest,
+
+    // The next transaction output version that we're waiting to send to the
+    // client along the stream. All outputs before this have been sent.
+    pub next_stream_version: Version,
+
+    // The next transaction output version that we're waiting to request from
+    // the network. All outputs before this have already been requested.
+    pub next_request_version: Epoch,
+}
+
+impl TransactionOutputStreamTracker {
+    fn new(request: &GetAllTransactionOutputsRequest) -> Result<Self, Error> {
+        Ok(TransactionOutputStreamTracker {
+            request: request.clone(),
+            next_stream_version: request.start_version,
+            next_request_version: request.start_version,
+        })
+    }
+}
+
+impl DataStreamTracker for TransactionOutputStreamTracker {
+    fn create_data_client_requests(
+        &self,
+        max_number_of_requests: u64,
+        optimal_chunk_sizes: &OptimalChunkSizes,
+    ) -> Result<Vec<DataClientRequest>, Error> {
+        create_data_client_requests(
+            self.next_request_version,
+            self.request.end_version,
+            max_number_of_requests,
+            optimal_chunk_sizes.transaction_output_chunk_size,
+            self.clone().into(),
+        )
+    }
+
+    fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
+        let start_version = self.next_stream_version;
+        let end_version = self.request.end_version;
+        AdvertisedData::contains_range(
+            start_version,
+            end_version,
+            &advertised_data.transaction_outputs,
+        )
+    }
+
+    fn update_notification_tracking(
+        &mut self,
+        sent_data_notification: &SentDataNotification,
+    ) -> Result<(), Error> {
+        match &sent_data_notification.client_request {
+            TransactionOutputsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_stream_version,
+                    request.start_version,
+                    request.end_version,
+                );
+                self.next_stream_version = request.end_version.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Next stream version has overflown!".into())
+                })?;
+            }
+            client_request => {
+                invalid_client_request(client_request, self.clone().into());
+            }
+        }
+        Ok(())
+    }
+
+    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
+        match client_request {
+            TransactionOutputsWithProof(request) => {
+                verify_client_request_indices(
+                    self.next_request_version,
+                    request.start_version,
+                    request.end_version,
+                );
+                self.next_request_version =
+                    request.end_version.checked_add(1).ok_or_else(|| {
+                        Error::IntegerOverflow("Next request version has overflown!".into())
+                    })?;
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
@@ -381,6 +481,13 @@ fn create_data_client_request(
             DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
                 start_epoch: start_index,
                 end_epoch: end_index,
+            })
+        }
+        StreamProgressTracker::TransactionOutputStreamTracker(stream_tracker) => {
+            DataClientRequest::TransactionOutputsWithProof(TransactionOutputsWithProofRequest {
+                start_version: start_index,
+                end_version: end_index,
+                max_proof_version: stream_tracker.request.max_proof_version,
             })
         }
         StreamProgressTracker::TransactionStreamTracker(stream_tracker) => {

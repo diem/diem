@@ -168,6 +168,17 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     pending_response.lock().client_response = Some(client_response);
                 });
             }
+            DataClientRequest::TransactionOutputsWithProof(request) => {
+                tokio::spawn(async move {
+                    let client_response = diem_data_client.get_transaction_outputs_with_proof(
+                        request.max_proof_version,
+                        request.start_version,
+                        request.end_version,
+                    );
+                    let client_response = client_response.await;
+                    pending_response.lock().client_response = Some(client_response);
+                });
+            }
             DataClientRequest::TransactionsWithProof(request) => {
                 tokio::spawn(async move {
                     let client_response = diem_data_client.get_transactions_with_proof(
