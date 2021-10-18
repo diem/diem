@@ -414,14 +414,14 @@ module DiemFramework::Vote {
     }
 
     /// Functions to work around single-let restriction
-    spec fun get_ballots(ballot_address: address): Ballots {
+    spec fun get_ballots<Proposal>(ballot_address: address): vector<Ballot<Proposal>> {
        global<Ballots<Proposal>>(ballot_address).ballots
     }
 
-    spec fun get_ballot_index(ballot_address: address, ballot_id: BallotID): u64 {
+    spec fun get_ballot<Proposal>(ballot_address: address, ballot_id: BallotID): Ballot<Proposal> {
          let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
-         choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id    
-    }
+         get_ballots<Proposal>(ballot_address)[choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id]
+     }
 
     /// TODO: Need to figure out how to deal with time
     ///   * Advances by a positive amount between transactions (maybe bound to be reasonable?)
@@ -429,7 +429,8 @@ module DiemFramework::Vote {
     /// A BallotID corresponds to an expired ballot
     spec fun is_expired<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
        // USABILITY: Awkward lookup
-       let ballot = get_ballots(ballot_address)[get_ballot_index(ballot_address, ballot_id)];
+       // *** Watch out for undefined result
+       let ballot = get_ballot<Proposal>(ballot_address, ballot_id);
        ballot.expiration_timestamp_secs >= DiemTimestamp::spec_now_seconds()
     }
 
