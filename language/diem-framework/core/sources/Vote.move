@@ -413,17 +413,23 @@ module DiemFramework::Vote {
         exists<Ballots<Proposal>>(ballot_address)
     }
 
+    /// Functions to work around single-let restriction
+    spec fun get_ballots(ballot_address: address): Ballots {
+       global<Ballots<Proposal>>(ballot_address).ballots
+    }
+
+    spec fun get_ballot_index(ballot_address: address, ballot_id: BallotID): u64 {
+         let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
+         choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id    
+    }
+
     /// TODO: Need to figure out how to deal with time
     ///   * Advances by a positive amount between transactions (maybe bound to be reasonable?)
     ///   * Impure function problem
     /// A BallotID corresponds to an expired ballot
     spec fun is_expired<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
        // USABILITY: Awkward lookup
-       let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
-       let ballot_index = choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id;
-       let ballot = ballots[ballot_index];
-       // USABILITY: now_seconds is impure function (abort condition on is_operating)
-       // Need: (1) partial function support, (2) less strict purity requirements
+       let ballot = get_ballots(ballot_address)[get_ballot_index(ballot_address, ballot_id)];
        ballot.expiration_timestamp_secs >= DiemTimestamp::spec_now_seconds()
     }
 
