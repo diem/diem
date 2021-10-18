@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::streaming_client::Epoch;
-use diem_crypto::HashValue;
 use diem_data_client::DataClientResponse;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
@@ -54,8 +53,8 @@ pub enum DataClientRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountsWithProofRequest {
     pub version: Version,
-    pub start_index: HashValue,
-    pub end_index: HashValue,
+    pub start_index: u64,
+    pub end_index: u64,
 }
 
 /// A client request for fetching epoch ending ledger infos.

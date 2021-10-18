@@ -54,7 +54,7 @@ fn test_get_account_states_chunk_with_proof() {
     let account_states_chunk_request =
         StorageServiceRequest::GetAccountStatesChunkWithProof(AccountStatesChunkWithProofRequest {
             version: 0,
-            start_account_key: HashValue::random(),
+            start_account_index: 0,
             expected_num_account_states: 0,
         });
 

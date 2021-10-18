@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use diem_crypto::HashValue;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     epoch_change::EpochChangeProof,
@@ -44,7 +43,7 @@ pub enum StorageServiceResponse {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountStatesChunkWithProofRequest {
     pub version: u64,                     // The version to fetch the account states at
-    pub start_account_key: HashValue,     // The account key to start fetching account states
+    pub start_account_index: u64,         // The account index to start fetching account states
     pub expected_num_account_states: u64, // Expected number of account states to fetch
 }
 

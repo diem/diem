@@ -13,7 +13,6 @@ edition = "2018"
 serde = { version = "1.0.124", default-features = false }
 thiserror = "1.0.24"
 
-diem-crypto = { path = "../../../crypto/crypto" }
 diem-infallible = { path = "../../../common/infallible" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

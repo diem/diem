@@ -55,8 +55,8 @@ impl DiemDataClient for MockDiemDataClient {
     async fn get_account_states_with_proof(
         &self,
         _version: u64,
-        _start_index: HashValue,
-        _end_index: HashValue,
+        _start_index: u64,
+        _end_index: u64,
     ) -> Result<DataClientResponse, diem_data_client::Error> {
         unimplemented!();
     }

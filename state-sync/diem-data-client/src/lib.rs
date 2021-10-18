@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 use async_trait::async_trait;
-use diem_crypto::hash::HashValue;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     ledger_info::LedgerInfoWithSignatures,
@@ -47,8 +46,8 @@ pub trait DiemDataClient {
     async fn get_account_states_with_proof(
         &self,
         version: u64,
-        start_index: HashValue,
-        end_index: HashValue,
+        start_index: u64,
+        end_index: u64,
     ) -> Result<DataClientResponse, Error>;
 
     /// Returns all epoch ending ledger infos between start and end (inclusive).
