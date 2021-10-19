@@ -2,36 +2,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account, deploy, shared};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use diem_config::config::{NodeConfig, DEFAULT_PORT};
 use diem_crypto::PrivateKey;
 use diem_sdk::{
     client::BlockingClient, transaction_builder::TransactionFactory, types::LocalAccount,
 };
 use diem_types::{chain_id::ChainId, transaction::authenticator::AuthenticationKey};
+use shared::Home;
 use std::{collections::HashMap, path::Path, process::Command};
 
 pub fn handle(project_path: &Path) -> Result<()> {
     let _config = shared::read_config(project_path)?;
     shared::generate_typescript_libraries(project_path)?;
+    let home = Home::new(shared::get_home_path().as_path())?;
 
-    let shuffle_dir = &shared::get_shuffle_dir();
-    if !Path::new(shuffle_dir.as_path()).is_dir() {
-        return Err(anyhow!(
-            "A node hasn't been created yet! Run shuffle node first"
-        ));
-    }
-    println!("{:?}", shuffle_dir);
-    let config_path = shuffle_dir.join("nodeconfig/0").join("node.yaml");
-    let config = NodeConfig::load(&config_path)
-        .with_context(|| format!("Failed to load NodeConfig from file: {:?}", config_path))?;
-
+    let config = NodeConfig::load(&home.get_node_config_path()).with_context(|| {
+        format!(
+            "Failed to load NodeConfig from file: {:?}",
+            home.get_node_config_path()
+        )
+    })?;
     let json_rpc_url = format!("http://0.0.0.0:{}", config.json_rpc.address.port());
     println!("Connecting to {}...", json_rpc_url);
     let client = BlockingClient::new(json_rpc_url);
     let factory = TransactionFactory::new(ChainId::test());
 
-    let mut new_account = create_test_account(&client, shuffle_dir, &factory)?;
+    let mut new_account = create_test_account(&client, &home, &factory)?;
     send_module_transaction(&client, &mut new_account, project_path, &factory)?;
     run_deno_test(project_path, &config)
 }
@@ -39,14 +36,12 @@ pub fn handle(project_path: &Path) -> Result<()> {
 // Set up a new test account
 fn create_test_account(
     client: &BlockingClient,
-    shuffle_dir: &Path,
+    home: &Home,
     factory: &TransactionFactory,
 ) -> Result<LocalAccount> {
-    let mut root_account = account::get_root_account(client, shuffle_dir);
-    let latest_dir = &shuffle_dir.join("accounts").join("latest");
-    let dev_key_filepath = &latest_dir.join("dev.key");
+    let mut root_account = account::get_root_account(client, home.get_root_key_path());
     // TODO: generate random key by using let new_account_key = generate_key::generate_key();
-    let new_account_key = generate_key::load_key(&dev_key_filepath);
+    let new_account_key = generate_key::load_key(home.get_latest_key_path());
     let public_key = new_account_key.public_key();
     let derived_address = AuthenticationKey::ed25519(&public_key).derived_address();
     let new_account = LocalAccount::new(derived_address, new_account_key, 0);
