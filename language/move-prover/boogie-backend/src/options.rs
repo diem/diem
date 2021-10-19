@@ -276,7 +276,9 @@ impl BoogieOptions {
     }
 
     fn get_version(tool: &str, prog: &str, args: &[&str], regex: &str) -> anyhow::Result<String> {
-        let out = match Command::new(prog).args(args).output() {
+        let xxx = Command::new(prog).args(args).output();
+        println!("{:?}", xxx);
+        let out = match  xxx {
             Ok(out) => String::from_utf8_lossy(&out.stdout).to_string(),
             Err(msg) => {
                 return Err(anyhow!(

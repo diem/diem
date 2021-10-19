@@ -635,7 +635,6 @@ impl<'env> SpecTranslator<'env> {
             self.translate_exp(exp);
             emit!(self.writer, ")");
         } else {
-            println!("vars: {:?}", vars);
             self.error(&loc, "currently only single variable binding supported");
         }
     }

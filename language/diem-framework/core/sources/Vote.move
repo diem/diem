@@ -420,7 +420,7 @@ module DiemFramework::Vote {
 
     spec fun get_ballot<Proposal>(ballot_address: address, ballot_id: BallotID): Ballot<Proposal> {
          let ballots = global<Ballots<Proposal>>(ballot_address).ballots;
-         get_ballots<Proposal>(ballot_address)[choose i in 0..len(ballots) where ballots[i].ballot_id == ballot_id]
+         get_ballots<Proposal>(ballot_address)[choose min i in 0..len(ballots) where ballots[i].ballot_id == ballot_id]
      }
 
     /// TODO: Need to figure out how to deal with time
