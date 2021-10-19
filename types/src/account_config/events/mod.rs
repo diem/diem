@@ -12,6 +12,8 @@ pub mod force_shift;
 pub mod mint;
 pub mod new_block;
 pub mod new_epoch;
+pub mod nft_mint;
+pub mod nft_transfer;
 pub mod preburn;
 pub mod received_mint;
 pub mod received_payment;

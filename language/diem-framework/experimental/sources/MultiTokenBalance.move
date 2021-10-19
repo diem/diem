@@ -1,16 +1,26 @@
 module 0x1::MultiTokenBalance {
     use Std::Errors;
-//    use Std::Event;
+    use Std::Event;
     use 0x1::GUID;
     use 0x1::MultiToken::{Self, Token};
     use Std::Option::{Self, Option};
     use Std::Signer;
     use Std::Vector;
 
+    struct TransferEvent has copy, drop, store {
+        id: GUID::ID,
+        creator: address,
+        owner: address,
+        recipient: address,
+        amount: u64,
+    }
+
     /// Balance holding tokens of `TokenType` as well as information of approved operators.
     struct TokenBalance<phantom TokenType: store> has key {
         /// Gallery full of multi tokens owned by this balance
         gallery: vector<Token<TokenType>>
+        // TODO(gegrid): do we want balance to keep all transfer events?
+        transfer_events: Event::EventHandle<TransferEvent>,
     }
 
     const MAX_U64: u128 = 18446744073709551615u128;
@@ -113,11 +123,23 @@ module 0x1::MultiTokenBalance {
             // Add tokens to `to`'s gallery
             add_to_gallery<TokenType>(to, to_token);
         }
-        // TODO: add event emission
+        Event::emit_event(
+            &mut borrow_global_mut<TokenBalance>(owner).transfer_events,
+            TransferEvent {
+                id: copy id,
+                creator: copy creator,
+                owner: copy owner,
+                recipient: copy to,
+                amount: amount,
+            }
+        )
     }
 
     public fun publish_balance<TokenType: store>(account: &signer) {
         assert(!exists<TokenBalance<TokenType>>(Signer::address_of(account)), EBALANCE_ALREADY_PUBLISHED);
-        move_to(account, TokenBalance<TokenType> { gallery: Vector::empty() });
+        move_to(account, TokenBalance<TokenType> { 
+            gallery: Vector::empty(),
+            transfer_events: Event::new_event_handle<TransferEvent>(account)
+        });
     }
 }
