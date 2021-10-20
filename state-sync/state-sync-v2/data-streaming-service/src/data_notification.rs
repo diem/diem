@@ -17,14 +17,14 @@ use std::fmt::{Debug, Formatter};
 pub type NotificationId = u64;
 
 /// A single data notification with an ID and data payload.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DataNotification {
     pub notification_id: NotificationId,
     pub data_payload: DataPayload,
 }
 
 /// A single payload (e.g. chunk) of requested data.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DataPayload {
     AccountStatesWithProof(AccountStatesChunkWithProof),
     EpochEndingLedgerInfos(Vec<LedgerInfoWithSignatures>),

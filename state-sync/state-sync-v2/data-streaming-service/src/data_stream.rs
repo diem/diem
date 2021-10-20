@@ -4,7 +4,7 @@
 use crate::{
     data_notification,
     data_notification::{
-        DataClientRequest, DataNotification, DataPayload, NotificationId, SentDataNotification,
+        DataClientRequest, DataNotification, NotificationId, SentDataNotification,
     },
     error::Error,
     stream_progress_tracker::{DataStreamTracker, StreamProgressTracker},
@@ -20,10 +20,7 @@ use futures::{stream::FusedStream, Stream};
 use std::{
     collections::{HashMap, VecDeque},
     pin::Pin,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicU64, Arc},
     task::{Context, Poll},
 };
 
@@ -315,38 +312,37 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         data_client_request: &DataClientRequest,
         data_client_response: &DataClientResponse,
     ) -> Result<(), Error> {
-        // Create a new notification id
-        let notification_id = self
-            .notification_id_generator
-            .fetch_add(1, Ordering::Relaxed);
-
-        // Send a data notification to the client
-        let data_notification = DataNotification {
-            notification_id,
-            data_payload: extract_data_payload(data_client_response),
-        };
-        self.notification_sender
-            .push((), data_notification)
-            .map_err(|error| Error::UnexpectedErrorEncountered(error.to_string()))?;
-
-        // Save the sent data notification to track any future re-fetches
-        let sent_data_notification = SentDataNotification {
-            client_request: data_client_request.clone(),
-            client_response: data_client_response.clone(),
-        };
-        if let Some(existing_notification) = self
-            .sent_notifications
-            .insert(notification_id, sent_data_notification.clone())
+        // Create a new data notification
+        if let Some(data_notification) = self
+            .stream_progress_tracker
+            .transform_client_response_into_notification(
+                data_client_request,
+                data_client_response,
+                self.notification_id_generator.clone(),
+            )?
         {
-            panic!(
-                "Duplicate sent notification found! This should not occur! ID: {}, notification: {:?}",
-                notification_id, existing_notification
-            );
+            // Create and save the data notification to track any future re-fetches
+            let sent_data_notification = SentDataNotification {
+                client_request: data_client_request.clone(),
+                client_response: data_client_response.clone(),
+            };
+            if let Some(existing_notification) = self
+                .sent_notifications
+                .insert(data_notification.notification_id, sent_data_notification)
+            {
+                panic!(
+                    "Duplicate sent notification found! This should not occur! ID: {}, notification: {:?}",
+                    data_notification.notification_id, existing_notification
+                );
+            }
+
+            // Send the notification along the stream
+            self.notification_sender
+                .push((), data_notification)
+                .map_err(|error| Error::UnexpectedErrorEncountered(error.to_string()))?;
         }
 
-        // Update the stream progress tracker with the sent notification
-        self.stream_progress_tracker
-            .update_notification_tracking(&sent_data_notification)
+        Ok(())
     }
 
     /// Verifies that the data required by the stream can be satisfied using the
@@ -414,31 +410,6 @@ impl Stream for DataStreamListener {
 impl FusedStream for DataStreamListener {
     fn is_terminated(&self) -> bool {
         self.notification_receiver.is_terminated()
-    }
-}
-
-/// Extracts the `DataPayload` out of a `DataClientResponse`. Assumes that the
-/// response has already been sanity checked.
-fn extract_data_payload(data_client_response: &DataClientResponse) -> DataPayload {
-    match &data_client_response.response_payload {
-        DataClientPayload::AccountStatesWithProof(accounts_chunk) => {
-            DataPayload::AccountStatesWithProof(accounts_chunk.clone())
-        }
-        DataClientPayload::EpochEndingLedgerInfos(ledger_infos) => {
-            DataPayload::EpochEndingLedgerInfos(ledger_infos.clone())
-        }
-        DataClientPayload::TransactionsWithProof(transactions_chunk) => {
-            DataPayload::TransactionsWithProof(transactions_chunk.clone())
-        }
-        DataClientPayload::TransactionOutputsWithProof(transactions_output_chunk) => {
-            DataPayload::TransactionOutputsWithProof(transactions_output_chunk.clone())
-        }
-        _ => {
-            panic!(
-                "The response was already sanity checked but is now type mismatched: {:?}",
-                data_client_response
-            );
-        }
     }
 }
 

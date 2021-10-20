@@ -8,8 +8,8 @@ use crate::{
             AccountsWithProof, EpochEndingLedgerInfos, TransactionOutputsWithProof,
             TransactionsWithProof,
         },
-        EpochEndingLedgerInfosRequest, SentDataNotification, TransactionOutputsWithProofRequest,
-        TransactionsWithProofRequest,
+        DataNotification, DataPayload, EpochEndingLedgerInfosRequest,
+        TransactionOutputsWithProofRequest, TransactionsWithProofRequest,
     },
     error::Error,
     streaming_client::{
@@ -17,12 +17,20 @@ use crate::{
         GetAllTransactionOutputsRequest, GetAllTransactionsRequest, StreamRequest,
     },
 };
-use diem_data_client::{AdvertisedData, DataClientPayload, DiemDataClient, OptimalChunkSizes};
+use diem_data_client::{
+    AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, OptimalChunkSizes,
+};
 use diem_types::transaction::Version;
 use enum_dispatch::enum_dispatch;
 use futures::executor::block_on;
 use itertools::Itertools;
-use std::cmp;
+use std::{
+    cmp,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
 
 /// The interface offered by each stream tracker.
 #[enum_dispatch]
@@ -39,13 +47,16 @@ pub trait DataStreamTracker {
     /// available in the given advertised data.
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool;
 
-    /// Updates the last sent notification for the stream ( i.e., the last
-    /// notification that was sent to the client). This keeps track of what data
-    /// has actually been received by the stream listener.
-    fn update_notification_tracking(
+    /// Transforms a given data client response (for the previously sent
+    /// request) into a data notification to be sent along the data stream.
+    /// Note: this call may return `None`, in which case, no notification needs
+    /// to be sent to the client.
+    fn transform_client_response_into_notification(
         &mut self,
-        sent_data_notification: &SentDataNotification,
-    ) -> Result<(), Error>;
+        client_request: &DataClientRequest,
+        client_response: &DataClientResponse,
+        notification_id_generator: Arc<AtomicU64>,
+    ) -> Result<Option<DataNotification>, Error>;
 
     /// Updates the last sent request for the stream ( i.e., the last client
     /// request that was created and sent to the network). This keeps
@@ -159,26 +170,35 @@ impl DataStreamTracker for AccountsStreamTracker {
         )
     }
 
-    fn update_notification_tracking(
+    fn transform_client_response_into_notification(
         &mut self,
-        sent_data_notification: &SentDataNotification,
-    ) -> Result<(), Error> {
-        match &sent_data_notification.client_request {
+        client_request: &DataClientRequest,
+        client_response: &DataClientResponse,
+        notification_id_generator: Arc<AtomicU64>,
+    ) -> Result<Option<DataNotification>, Error> {
+        match client_request {
             AccountsWithProof(request) => {
                 verify_client_request_indices(
                     self.next_stream_index,
                     request.start_index,
                     request.end_index,
                 );
+
+                // Update the local stream notification tracker
                 self.next_stream_index = request.end_index.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream index has overflown!".into())
                 })?;
+
+                // Create a new data notification
+                let data_notification =
+                    create_data_notification(notification_id_generator, client_response);
+                return Ok(Some(data_notification));
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
@@ -284,26 +304,35 @@ impl DataStreamTracker for EpochEndingStreamTracker {
         )
     }
 
-    fn update_notification_tracking(
+    fn transform_client_response_into_notification(
         &mut self,
-        sent_data_notification: &SentDataNotification,
-    ) -> Result<(), Error> {
-        match &sent_data_notification.client_request {
+        client_request: &DataClientRequest,
+        client_response: &DataClientResponse,
+        notification_id_generator: Arc<AtomicU64>,
+    ) -> Result<Option<DataNotification>, Error> {
+        match client_request {
             EpochEndingLedgerInfos(request) => {
                 verify_client_request_indices(
                     self.next_stream_epoch,
                     request.start_epoch,
                     request.end_epoch,
                 );
+
+                // Update the local stream notification tracker
                 self.next_stream_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream epoch has overflown!".into())
                 })?;
+
+                // Create a new data notification
+                let data_notification =
+                    create_data_notification(notification_id_generator, client_response);
+                return Ok(Some(data_notification));
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
@@ -375,26 +404,35 @@ impl DataStreamTracker for TransactionOutputStreamTracker {
         )
     }
 
-    fn update_notification_tracking(
+    fn transform_client_response_into_notification(
         &mut self,
-        sent_data_notification: &SentDataNotification,
-    ) -> Result<(), Error> {
-        match &sent_data_notification.client_request {
+        client_request: &DataClientRequest,
+        client_response: &DataClientResponse,
+        notification_id_generator: Arc<AtomicU64>,
+    ) -> Result<Option<DataNotification>, Error> {
+        match client_request {
             TransactionOutputsWithProof(request) => {
                 verify_client_request_indices(
                     self.next_stream_version,
                     request.start_version,
                     request.end_version,
                 );
+
+                // Update the local stream notification tracker
                 self.next_stream_version = request.end_version.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream version has overflown!".into())
                 })?;
+
+                // Create a new data notification
+                let data_notification =
+                    create_data_notification(notification_id_generator, client_response);
+                return Ok(Some(data_notification));
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
@@ -463,26 +501,35 @@ impl DataStreamTracker for TransactionStreamTracker {
         AdvertisedData::contains_range(start_version, end_version, &advertised_data.transactions)
     }
 
-    fn update_notification_tracking(
+    fn transform_client_response_into_notification(
         &mut self,
-        sent_data_notification: &SentDataNotification,
-    ) -> Result<(), Error> {
-        match &sent_data_notification.client_request {
+        client_request: &DataClientRequest,
+        client_response: &DataClientResponse,
+        notification_id_generator: Arc<AtomicU64>,
+    ) -> Result<Option<DataNotification>, Error> {
+        match client_request {
             TransactionsWithProof(request) => {
                 verify_client_request_indices(
                     self.next_stream_version,
                     request.start_version,
                     request.end_version,
                 );
+
+                // Update the local stream notification tracker
                 self.next_stream_version = request.end_version.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream version has overflown!".into())
                 })?;
+
+                // Create a new data notification
+                let data_notification =
+                    create_data_notification(notification_id_generator, client_response);
+                return Ok(Some(data_notification));
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
@@ -641,4 +688,38 @@ fn most_common_highest_epoch(advertised_data: &AdvertisedData) -> Option<Epoch> 
         .into_iter()
         .max_by_key(|(_, count)| *count)
         .map(|(epoch, _)| epoch)
+}
+
+/// Creates a new data notification for the given client response.
+fn create_data_notification(
+    notification_id_generator: Arc<AtomicU64>,
+    client_response: &DataClientResponse,
+) -> DataNotification {
+    let notification_id = notification_id_generator.fetch_add(1, Ordering::Relaxed);
+
+    let data_payload = match &client_response.response_payload {
+        DataClientPayload::AccountStatesWithProof(accounts_chunk) => {
+            DataPayload::AccountStatesWithProof(accounts_chunk.clone())
+        }
+        DataClientPayload::EpochEndingLedgerInfos(ledger_infos) => {
+            DataPayload::EpochEndingLedgerInfos(ledger_infos.clone())
+        }
+        DataClientPayload::TransactionsWithProof(transactions_chunk) => {
+            DataPayload::TransactionsWithProof(transactions_chunk.clone())
+        }
+        DataClientPayload::TransactionOutputsWithProof(transactions_output_chunk) => {
+            DataPayload::TransactionOutputsWithProof(transactions_output_chunk.clone())
+        }
+        _ => {
+            panic!(
+                "The client response is type mismatched: {:?}",
+                client_response
+            );
+        }
+    };
+
+    DataNotification {
+        notification_id,
+        data_payload,
+    }
 }

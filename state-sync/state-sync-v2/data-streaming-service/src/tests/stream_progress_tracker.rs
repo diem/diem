@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_notification::{DataClientRequest, EpochEndingLedgerInfosRequest, SentDataNotification},
+    data_notification::{DataClientRequest, EpochEndingLedgerInfosRequest},
     error::Error,
     stream_progress_tracker::{DataStreamTracker, EpochEndingStreamTracker, StreamProgressTracker},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
@@ -12,7 +12,10 @@ use claim::assert_matches;
 use diem_data_client::{
     DataClientPayload, DataClientResponse, GlobalDataSummary, OptimalChunkSizes,
 };
-use std::cmp;
+use std::{
+    cmp,
+    sync::{atomic::AtomicU64, Arc},
+};
 use storage_service_types::CompleteDataRange;
 
 #[test]
@@ -253,14 +256,15 @@ fn test_update_epoch_ending_stream_progress() {
     for i in 0..10 {
         let start_epoch = i * 100;
         let end_epoch = (i * 100) + 99;
-        let sent_data_notification = create_sent_data_notification(
-            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-                start_epoch,
-                end_epoch,
-            }),
-        );
-        stream_tracker
-            .update_notification_tracking(&sent_data_notification)
+        let _ = stream_tracker
+            .transform_client_response_into_notification(
+                &DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                    start_epoch,
+                    end_epoch,
+                }),
+                &create_empty_client_response(),
+                create_notification_id_generator(),
+            )
             .unwrap();
 
         // Verify internal state
@@ -275,25 +279,27 @@ fn test_update_epoch_ending_stream_panic() {
     let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
 
     // Update the tracker with a valid notification
-    let sent_data_notification = create_sent_data_notification(
-        DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-            start_epoch: 0,
-            end_epoch: 100,
-        }),
-    );
-    stream_tracker
-        .update_notification_tracking(&sent_data_notification)
+    let _ = stream_tracker
+        .transform_client_response_into_notification(
+            &DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                start_epoch: 0,
+                end_epoch: 100,
+            }),
+            &create_empty_client_response(),
+            create_notification_id_generator(),
+        )
         .unwrap();
 
     // Update the tracker with an old notification and verify a panic
-    let sent_data_notification = create_sent_data_notification(
-        DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-            start_epoch: 50,
-            end_epoch: 1100,
-        }),
-    );
-    stream_tracker
-        .update_notification_tracking(&sent_data_notification)
+    let _ = stream_tracker
+        .transform_client_response_into_notification(
+            &DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                start_epoch: 50,
+                end_epoch: 1100,
+            }),
+            &create_empty_client_response(),
+            create_notification_id_generator(),
+        )
         .unwrap();
 }
 
@@ -338,12 +344,13 @@ fn create_epoch_ending_chunk_sizes(epoch_chunk_size: u64) -> OptimalChunkSizes {
     optimal_chunk_sizes
 }
 
-fn create_sent_data_notification(client_request: DataClientRequest) -> SentDataNotification {
-    SentDataNotification {
-        client_request,
-        client_response: DataClientResponse {
-            response_id: 0,
-            response_payload: DataClientPayload::EpochEndingLedgerInfos(vec![]),
-        },
+fn create_notification_id_generator() -> Arc<AtomicU64> {
+    Arc::new(AtomicU64::new(0))
+}
+
+fn create_empty_client_response() -> DataClientResponse {
+    DataClientResponse {
+        response_id: 0,
+        response_payload: DataClientPayload::EpochEndingLedgerInfos(vec![]),
     }
 }
