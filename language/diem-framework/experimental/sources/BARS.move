@@ -61,7 +61,7 @@ module 0x1::BARSToken {
 
     #[test(admin=@DiemRoot, artist=@0x42, collector=@0x43)]
     public(script) fun test_bars(admin: signer, artist: signer, collector: signer) {
-        NFT::initialize(admin);
+        NFT::nft_initialize(admin);
 
         register_user_internal(&artist);
         register_user_internal(&collector);

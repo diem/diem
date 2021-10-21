@@ -121,7 +121,7 @@ fn create_account(
 fn init_multi_token(account: &mut LocalAccount, client: &BlockingClient) -> Result<()> {
     let txn = account.sign_with_transaction_builder(
         TransactionFactory::new(ChainId::test())
-            .payload(stdlib::encode_initialize_multi_token_script_function()),
+            .payload(stdlib::encode_nft_initialize_script_function()),
     );
     send(&client, txn)?;
     println!("Success");

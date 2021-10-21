@@ -35,7 +35,7 @@ module 0x1::NFTTests {
         let creator_addr = @0x42;
         let user_addr = @0x43;
 
-        NFT::initialize(admin);
+        NFT::nft_initialize(admin);
         NFTGallery::publish_gallery<Game>(&creator);
         NFTGallery::publish_gallery<Collection>(&creator);
         NFTGallery::publish_gallery<Pokemon>(&creator);

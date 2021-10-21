@@ -2219,6 +2219,9 @@ pub enum ScriptFunctionCall {
         amount: u64,
     },
 
+    /// Initialize this module
+    NftInitialize {},
+
     /// # Summary
     /// Publishes a CRSN resource under `account` and opts the account in to
     /// concurrent transaction processing. Upon successful execution of this
@@ -3656,6 +3659,7 @@ impl ScriptFunctionCall {
                 content_uri,
                 amount,
             } => encode_mint_bars_script_function(artist_name, content_uri, amount),
+            NftInitialize {} => encode_nft_initialize_script_function(),
             OptInToCrsn { crsn_size } => encode_opt_in_to_crsn_script_function(crsn_size),
             PeerToPeerBySigners {
                 currency,
@@ -4891,6 +4895,19 @@ pub fn encode_mint_bars_script_function(
             bcs::to_bytes(&content_uri).unwrap(),
             bcs::to_bytes(&amount).unwrap(),
         ],
+    ))
+}
+
+/// Initialize this module
+pub fn encode_nft_initialize_script_function() -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            ident_str!("NFT").to_owned(),
+        ),
+        ident_str!("nft_initialize").to_owned(),
+        vec![],
+        vec![],
     ))
 }
 
@@ -8228,6 +8245,16 @@ fn decode_mint_bars_script_function(payload: &TransactionPayload) -> Option<Scri
     }
 }
 
+fn decode_nft_initialize_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(_script) = payload {
+        Some(ScriptFunctionCall::NftInitialize {})
+    } else {
+        None
+    }
+}
+
 fn decode_opt_in_to_crsn_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -9107,6 +9134,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "BARSTokenmint_bars".to_string(),
             Box::new(decode_mint_bars_script_function),
+        );
+        map.insert(
+            "NFTnft_initialize".to_string(),
+            Box::new(decode_nft_initialize_script_function),
         );
         map.insert(
             "AccountAdministrationScriptsopt_in_to_crsn".to_string(),
