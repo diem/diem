@@ -5,10 +5,10 @@ use crate::{
     data_notification::{
         AccountsWithProofRequest, DataClientRequest,
         DataClientRequest::{
-            AccountsWithProof, EpochEndingLedgerInfos, TransactionOutputsWithProof,
-            TransactionsWithProof,
+            AccountsWithProof, EpochEndingLedgerInfos, NumberOfAccounts,
+            TransactionOutputsWithProof, TransactionsWithProof,
         },
-        DataNotification, DataPayload, EpochEndingLedgerInfosRequest,
+        DataNotification, DataPayload, EpochEndingLedgerInfosRequest, NumberOfAccountsRequest,
         TransactionOutputsWithProofRequest, TransactionsWithProofRequest,
     },
     error::Error,
@@ -18,11 +18,11 @@ use crate::{
     },
 };
 use diem_data_client::{
-    AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, OptimalChunkSizes,
+    AdvertisedData, DataClientPayload, DataClientPayload::NumberOfAccountStates,
+    DataClientResponse, OptimalChunkSizes,
 };
 use diem_types::transaction::Version;
 use enum_dispatch::enum_dispatch;
-use futures::executor::block_on;
 use itertools::Itertools;
 use std::{
     cmp,
@@ -76,15 +76,14 @@ pub enum StreamProgressTracker {
 }
 
 impl StreamProgressTracker {
-    pub fn new<T: DiemDataClient + Send + Clone + 'static>(
+    pub fn new(
         stream_request: &StreamRequest,
-        diem_data_client: T,
         advertised_data: &AdvertisedData,
     ) -> Result<Self, Error> {
         // Identify the type of stream tracker we need based on the stream request
         match stream_request {
             StreamRequest::GetAllAccounts(request) => {
-                Ok(AccountsStreamTracker::new(request, diem_data_client)?.into())
+                Ok(AccountsStreamTracker::new(request)?.into())
             }
             StreamRequest::GetAllEpochEndingLedgerInfos(request) => {
                 Ok(EpochEndingStreamTracker::new(request, advertised_data)?.into())
@@ -108,8 +107,11 @@ pub struct AccountsStreamTracker {
     // The original accounts request made by the client
     pub request: GetAllAccountsRequest,
 
-    // The total number of accounts to fetch.
-    pub number_of_accounts: u64,
+    // True iff a request has been created to fetch the number of accounts
+    pub account_num_requested: bool,
+
+    // The total number of accounts to fetch at this version
+    pub number_of_accounts: Option<u64>,
 
     // The next account index that we're waiting to send to the client along the
     // stream. All accounts before this index have already been sent.
@@ -121,26 +123,11 @@ pub struct AccountsStreamTracker {
 }
 
 impl AccountsStreamTracker {
-    fn new<T: DiemDataClient + Send + Clone + 'static>(
-        request: &GetAllAccountsRequest,
-        diem_data_client: T,
-    ) -> Result<Self, Error> {
-        // TODO(joshlind): handle the case where this response is malicious.
-        let data_client_response = block_on(async {
-            diem_data_client
-                .get_number_of_account_states(request.version)
-                .await
-        })?;
-        let number_of_accounts = match data_client_response.response_payload {
-            DataClientPayload::NumberOfAccountStates(number_of_accounts) => number_of_accounts,
-            data_payload => {
-                panic!("Invalid response from diem data client: {:?}", data_payload);
-            }
-        };
-
+    fn new(request: &GetAllAccountsRequest) -> Result<Self, Error> {
         Ok(AccountsStreamTracker {
             request: request.clone(),
-            number_of_accounts,
+            account_num_requested: false,
+            number_of_accounts: None,
             next_stream_index: 0,
             next_request_index: 0,
         })
@@ -153,13 +140,22 @@ impl DataStreamTracker for AccountsStreamTracker {
         max_number_of_requests: u64,
         optimal_chunk_sizes: &OptimalChunkSizes,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        create_data_client_requests(
-            self.next_request_index,
-            self.number_of_accounts,
-            max_number_of_requests,
-            optimal_chunk_sizes.account_states_chunk_size,
-            self.clone().into(),
-        )
+        if let Some(number_of_accounts) = self.number_of_accounts {
+            create_data_client_requests(
+                self.next_request_index,
+                number_of_accounts,
+                max_number_of_requests,
+                optimal_chunk_sizes.account_states_chunk_size,
+                self.clone().into(),
+            )
+        } else if self.account_num_requested {
+            Ok(vec![]) // Wait for the number of accounts to be returned
+        } else {
+            let client_request = DataClientRequest::NumberOfAccounts(NumberOfAccountsRequest {
+                version: self.request.version,
+            });
+            Ok(vec![client_request])
+        }
     }
 
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
@@ -194,6 +190,13 @@ impl DataStreamTracker for AccountsStreamTracker {
                     create_data_notification(notification_id_generator, client_response);
                 return Ok(Some(data_notification));
             }
+            NumberOfAccounts(_) => {
+                if let NumberOfAccountStates(number_of_accounts) = client_response.response_payload
+                {
+                    // We got a response. Save the number of accounts.
+                    self.number_of_accounts = Some(number_of_accounts);
+                }
+            }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());
             }
@@ -212,6 +215,9 @@ impl DataStreamTracker for AccountsStreamTracker {
                 self.next_request_index = request.end_index.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next request index has overflown!".into())
                 })?;
+            }
+            NumberOfAccounts(_) => {
+                self.account_num_requested = true;
             }
             client_request => {
                 invalid_client_request(client_request, self.clone().into());

@@ -45,6 +45,7 @@ pub struct SentDataNotification {
 pub enum DataClientRequest {
     AccountsWithProof(AccountsWithProofRequest),
     EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest),
+    NumberOfAccounts(NumberOfAccountsRequest),
     TransactionsWithProof(TransactionsWithProofRequest),
     TransactionOutputsWithProof(TransactionOutputsWithProofRequest),
 }
@@ -62,6 +63,12 @@ pub struct AccountsWithProofRequest {
 pub struct EpochEndingLedgerInfosRequest {
     pub start_epoch: Epoch,
     pub end_epoch: Epoch,
+}
+
+/// A client request for fetching the number of accounts at a version.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NumberOfAccountsRequest {
+    pub version: Version,
 }
 
 /// A client request for fetching transactions with proofs.

@@ -82,8 +82,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         let data_stream_listener = DataStreamListener::new(notification_receiver);
 
         // Create a new stream progress tracker
-        let stream_progress_tracker =
-            StreamProgressTracker::new(stream_request, diem_data_client.clone(), advertised_data)?;
+        let stream_progress_tracker = StreamProgressTracker::new(stream_request, advertised_data)?;
 
         // Create a new data stream
         let data_stream = Self {
@@ -112,30 +111,38 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         self.sent_data_requests = Some(VecDeque::new());
 
         // Create and send the data client requests to the network
-        self.create_and_send_client_requests(MAX_CONCURRENT_REQUESTS, &optimal_chunk_sizes)
+        self.create_and_send_client_requests(&optimal_chunk_sizes)
     }
 
-    /// Creates and sends a batch of diem data client requests (at most
-    /// `max_number_of_requests`).
+    /// Creates and sends a batch of diem data client requests to the network
     fn create_and_send_client_requests(
         &mut self,
-        max_number_of_requests: u64,
         optimal_chunk_sizes: &OptimalChunkSizes,
     ) -> Result<(), Error> {
-        for client_request in self
-            .stream_progress_tracker
-            .create_data_client_requests(max_number_of_requests, optimal_chunk_sizes)?
-        {
-            // Send the client request
-            let pending_client_response = self.send_client_request(client_request.clone());
+        // Determine how many requests (at most) can be sent to the network
+        let num_sent_requests = self.get_sent_data_requests().len() as u64;
+        let max_num_requests_to_send = MAX_CONCURRENT_REQUESTS
+            .checked_sub(num_sent_requests)
+            .ok_or_else(|| {
+                Error::IntegerOverflow("Max number of requests to send has overflown!".into())
+            })?;
 
-            // Push the pending response to the back of the sent requests queue
-            self.get_sent_data_requests()
-                .push_back(pending_client_response);
+        if max_num_requests_to_send > 0 {
+            for client_request in self
+                .stream_progress_tracker
+                .create_data_client_requests(max_num_requests_to_send, optimal_chunk_sizes)?
+            {
+                // Send the client request
+                let pending_client_response = self.send_client_request(client_request.clone());
 
-            // Update the stream progress tracker
-            self.stream_progress_tracker
-                .update_request_tracking(&client_request)?;
+                // Push the pending response to the back of the sent requests queue
+                self.get_sent_data_requests()
+                    .push_back(pending_client_response);
+
+                // Update the stream progress tracker
+                self.stream_progress_tracker
+                    .update_request_tracking(&client_request)?;
+            }
         }
         Ok(())
     }
@@ -146,7 +153,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
         data_client_request: DataClientRequest,
     ) -> PendingClientResponse {
-        // Save the request in the sent request queue
+        // Create a new pending client response
         let pending_client_response = Arc::new(Mutex::new(Box::new(
             data_notification::PendingClientResponse {
                 client_request: data_client_request.clone(),
@@ -173,6 +180,14 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                 tokio::spawn(async move {
                     let client_response = diem_data_client
                         .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch);
+                    let client_response = client_response.await;
+                    pending_response.lock().client_response = Some(client_response);
+                });
+            }
+            DataClientRequest::NumberOfAccounts(request) => {
+                tokio::spawn(async move {
+                    let client_response =
+                        diem_data_client.get_number_of_account_states(request.version);
                     let client_response = client_response.await;
                     pending_response.lock().client_response = Some(client_response);
                 });
@@ -211,8 +226,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
         optimal_chunk_sizes: OptimalChunkSizes,
     ) -> Result<(), Error> {
+        // Process any ready data responses
         for _ in 0..MAX_CONCURRENT_REQUESTS {
-            // Get the data client response at the head of the queue if it's ready
             if let Some(pending_response) = self.pop_pending_response_queue() {
                 let pending_response = pending_response.lock();
                 let client_response = pending_response
@@ -230,24 +245,25 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                                 &pending_response.client_request,
                                 client_response,
                             )?;
-                            self.create_and_send_client_requests(1, &optimal_chunk_sizes)?;
                         } else {
                             // Notify the data client and re-fetch the data
                             self.notify_bad_response(client_response);
-                            return self
-                                .resend_data_client_request(&pending_response.client_request);
+                            self.resend_data_client_request(&pending_response.client_request)?;
+                            break;
                         }
                     }
                     Err(error) => {
-                        return self
-                            .handle_data_client_error(&pending_response.client_request, error);
+                        self.handle_data_client_error(&pending_response.client_request, error)?;
+                        break;
                     }
                 }
             } else {
-                return Ok(()); // The first response hasn't arrived yet.
+                break; // The first response hasn't arrived yet.
             }
         }
-        Ok(())
+
+        // Create and send further client requests to the network
+        self.create_and_send_client_requests(&optimal_chunk_sizes)
     }
 
     /// Pops and returns the first pending client response if the response has
@@ -430,6 +446,12 @@ fn sanity_check_client_response(
             matches!(
                 data_client_response.response_payload,
                 DataClientPayload::EpochEndingLedgerInfos(_)
+            )
+        }
+        DataClientRequest::NumberOfAccounts(_) => {
+            matches!(
+                data_client_response.response_payload,
+                DataClientPayload::NumberOfAccountStates(_)
             )
         }
         DataClientRequest::TransactionsWithProof(_) => {
