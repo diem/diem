@@ -163,15 +163,15 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
         &mut self,
         data_stream_id: &DataStreamId,
     ) -> Result<(), Error> {
-        let optimal_chunk_sizes = self.global_data_summary.optimal_chunk_sizes.clone();
+        let global_data_summary = self.global_data_summary.clone();
 
         let data_stream = self.get_data_stream(data_stream_id);
         if !data_stream.data_requests_initialized() {
             // Initialize the request batch by sending out data client requests
-            data_stream.initialize_data_requests(optimal_chunk_sizes)?;
+            data_stream.initialize_data_requests(global_data_summary)?;
         } else {
             // Process any data client requests that have received responses
-            data_stream.process_data_responses(optimal_chunk_sizes)?;
+            data_stream.process_data_responses(global_data_summary)?;
         }
 
         Ok(())

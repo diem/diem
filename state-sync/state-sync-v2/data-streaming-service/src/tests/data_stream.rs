@@ -13,11 +13,14 @@ use crate::{
     },
 };
 use claim::{assert_ge, assert_none};
-use diem_data_client::{AdvertisedData, DataClientPayload, DataClientResponse, OptimalChunkSizes};
+use diem_data_client::{
+    AdvertisedData, DataClientPayload, DataClientResponse, GlobalDataSummary, OptimalChunkSizes,
+};
 use diem_infallible::Mutex;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use futures::{FutureExt, StreamExt};
 use std::{
+    cmp::min,
     sync::{atomic::AtomicU64, Arc},
     time::Duration,
 };
@@ -30,9 +33,9 @@ async fn test_epoch_ending_requests() {
     let (mut data_stream, _) = create_epoch_ending_stream(MIN_ADVERTISED_EPOCH);
 
     // Initialize the data stream
-    let epoch_chunk_size = 80;
+    let epoch_chunk_size = 15;
     data_stream
-        .initialize_data_requests(create_optimal_chunk_sizes(epoch_chunk_size))
+        .initialize_data_requests(create_global_data_summary(epoch_chunk_size))
         .unwrap();
 
     // Verify valid client requests have been created
@@ -46,7 +49,10 @@ async fn test_epoch_ending_requests() {
             sent_request.lock().client_request,
             DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
                 start_epoch: MIN_ADVERTISED_EPOCH + (i * epoch_chunk_size),
-                end_epoch: MIN_ADVERTISED_EPOCH + ((i + 1) * epoch_chunk_size) - 1,
+                end_epoch: min(
+                    MAX_ADVERTISED_EPOCH - 1,
+                    MIN_ADVERTISED_EPOCH + ((i + 1) * epoch_chunk_size) - 1
+                ),
             })
         );
     }
@@ -60,7 +66,7 @@ async fn test_epoch_ending_notifications() {
     // Initialize the data stream
     let epoch_chunk_size = 100;
     data_stream
-        .initialize_data_requests(create_optimal_chunk_sizes(epoch_chunk_size))
+        .initialize_data_requests(create_global_data_summary(epoch_chunk_size))
         .unwrap();
 
     // Clear the pending queue and insert a response
@@ -81,7 +87,7 @@ async fn test_epoch_ending_notifications() {
 
     // Process the response and verify a notification is sent to the client
     data_stream
-        .process_data_responses(create_optimal_chunk_sizes(epoch_chunk_size))
+        .process_data_responses(create_global_data_summary(epoch_chunk_size))
         .unwrap();
     verify_epoch_ending_notification(
         &mut stream_listener,
@@ -100,7 +106,7 @@ async fn test_stream_initialization() {
 
     // Initialize the data stream
     data_stream
-        .initialize_data_requests(create_optimal_chunk_sizes(100))
+        .initialize_data_requests(create_global_data_summary(100))
         .unwrap();
 
     // Verify the data stream is now initialized
@@ -117,9 +123,9 @@ async fn test_stream_data_error() {
     let (mut data_stream, mut stream_listener) = create_epoch_ending_stream(MIN_ADVERTISED_EPOCH);
 
     // Initialize the data stream
-    let optimal_chunk_sizes = create_optimal_chunk_sizes(100);
+    let global_data_summary = create_global_data_summary(100);
     data_stream
-        .initialize_data_requests(optimal_chunk_sizes.clone())
+        .initialize_data_requests(global_data_summary.clone())
         .unwrap();
 
     // Clear the pending queue and insert an error response
@@ -137,7 +143,7 @@ async fn test_stream_data_error() {
 
     // Process the responses and verify the data client request was resent to the network
     data_stream
-        .process_data_responses(optimal_chunk_sizes)
+        .process_data_responses(global_data_summary)
         .unwrap();
     assert_none!(stream_listener.select_next_some().now_or_never());
     verify_client_request_resubmitted(&mut data_stream, client_request);
@@ -149,9 +155,9 @@ async fn test_stream_invalid_response() {
     let (mut data_stream, mut stream_listener) = create_epoch_ending_stream(MIN_ADVERTISED_EPOCH);
 
     // Initialize the data stream
-    let optimal_chunk_sizes = create_optimal_chunk_sizes(100);
+    let global_data_summary = create_global_data_summary(100);
     data_stream
-        .initialize_data_requests(optimal_chunk_sizes.clone())
+        .initialize_data_requests(global_data_summary.clone())
         .unwrap();
 
     // Clear the pending queue and insert a response with an invalid type
@@ -170,7 +176,7 @@ async fn test_stream_invalid_response() {
 
     // Process the responses and verify the data client request was resent to the network
     data_stream
-        .process_data_responses(optimal_chunk_sizes)
+        .process_data_responses(global_data_summary)
         .unwrap();
     assert_none!(stream_listener.select_next_some().now_or_never());
     verify_client_request_resubmitted(&mut data_stream, client_request);
@@ -182,9 +188,9 @@ async fn test_stream_out_of_order_responses() {
     let (mut data_stream, mut stream_listener) = create_epoch_ending_stream(MIN_ADVERTISED_EPOCH);
 
     // Initialize the data stream
-    let optimal_chunk_sizes = create_optimal_chunk_sizes(1);
+    let global_data_summary = create_global_data_summary(1);
     data_stream
-        .initialize_data_requests(optimal_chunk_sizes.clone())
+        .initialize_data_requests(global_data_summary.clone())
         .unwrap();
 
     // Verify at least three requests have been made
@@ -194,14 +200,14 @@ async fn test_stream_out_of_order_responses() {
     // Set a response for the second request and verify no notifications
     set_epoch_ending_response_in_queue(&mut data_stream, 1);
     data_stream
-        .process_data_responses(optimal_chunk_sizes.clone())
+        .process_data_responses(global_data_summary.clone())
         .unwrap();
     assert_none!(stream_listener.select_next_some().now_or_never());
 
     // Set a response for the first request and verify two notifications
     set_epoch_ending_response_in_queue(&mut data_stream, 0);
     data_stream
-        .process_data_responses(optimal_chunk_sizes.clone())
+        .process_data_responses(global_data_summary.clone())
         .unwrap();
     for _ in 0..2 {
         verify_epoch_ending_notification(
@@ -216,7 +222,7 @@ async fn test_stream_out_of_order_responses() {
     set_epoch_ending_response_in_queue(&mut data_stream, 0);
     set_epoch_ending_response_in_queue(&mut data_stream, 2);
     data_stream
-        .process_data_responses(optimal_chunk_sizes.clone())
+        .process_data_responses(global_data_summary.clone())
         .unwrap();
     verify_epoch_ending_notification(
         &mut stream_listener,
@@ -229,7 +235,7 @@ async fn test_stream_out_of_order_responses() {
     set_epoch_ending_response_in_queue(&mut data_stream, 0);
     set_epoch_ending_response_in_queue(&mut data_stream, 2);
     data_stream
-        .process_data_responses(optimal_chunk_sizes.clone())
+        .process_data_responses(global_data_summary.clone())
         .unwrap();
     for _ in 0..3 {
         verify_epoch_ending_notification(
@@ -277,12 +283,18 @@ fn create_epoch_ending_stream(
     .unwrap()
 }
 
-fn create_optimal_chunk_sizes(chunk_size: u64) -> OptimalChunkSizes {
+fn create_global_data_summary(chunk_sizes: u64) -> GlobalDataSummary {
+    let mut global_data_summary = GlobalDataSummary::empty();
+    global_data_summary.optimal_chunk_sizes = create_optimal_chunk_sizes(chunk_sizes);
+    global_data_summary
+}
+
+fn create_optimal_chunk_sizes(chunk_sizes: u64) -> OptimalChunkSizes {
     OptimalChunkSizes {
-        account_states_chunk_size: chunk_size,
-        epoch_chunk_size: chunk_size,
-        transaction_chunk_size: chunk_size,
-        transaction_output_chunk_size: chunk_size,
+        account_states_chunk_size: chunk_sizes,
+        epoch_chunk_size: chunk_sizes,
+        transaction_chunk_size: chunk_sizes,
+        transaction_output_chunk_size: chunk_sizes,
     }
 }
 

@@ -12,7 +12,7 @@ use crate::{
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_data_client::{
-    AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, OptimalChunkSizes,
+    AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, GlobalDataSummary,
     ResponseError,
 };
 use diem_infallible::Mutex;
@@ -105,19 +105,19 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
     /// Initializes the data client requests by sending out the first batch
     pub fn initialize_data_requests(
         &mut self,
-        optimal_chunk_sizes: OptimalChunkSizes,
+        global_data_summary: GlobalDataSummary,
     ) -> Result<(), Error> {
         // Initialize the data client requests queue
         self.sent_data_requests = Some(VecDeque::new());
 
         // Create and send the data client requests to the network
-        self.create_and_send_client_requests(&optimal_chunk_sizes)
+        self.create_and_send_client_requests(&global_data_summary)
     }
 
     /// Creates and sends a batch of diem data client requests to the network
     fn create_and_send_client_requests(
         &mut self,
-        optimal_chunk_sizes: &OptimalChunkSizes,
+        global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
         // Determine how many requests (at most) can be sent to the network
         let num_sent_requests = self.get_sent_data_requests().len() as u64;
@@ -130,7 +130,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         if max_num_requests_to_send > 0 {
             for client_request in self
                 .stream_progress_tracker
-                .create_data_client_requests(max_num_requests_to_send, optimal_chunk_sizes)?
+                .create_data_client_requests(max_num_requests_to_send, global_data_summary)?
             {
                 // Send the client request
                 let pending_client_response = self.send_client_request(client_request.clone());
@@ -224,7 +224,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
     /// responses must be processed in FIFO order.
     pub fn process_data_responses(
         &mut self,
-        optimal_chunk_sizes: OptimalChunkSizes,
+        global_data_summary: GlobalDataSummary,
     ) -> Result<(), Error> {
         // Process any ready data responses
         for _ in 0..MAX_CONCURRENT_REQUESTS {
@@ -263,7 +263,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         }
 
         // Create and send further client requests to the network
-        self.create_and_send_client_requests(&optimal_chunk_sizes)
+        self.create_and_send_client_requests(&global_data_summary)
     }
 
     /// Pops and returns the first pending client response if the response has

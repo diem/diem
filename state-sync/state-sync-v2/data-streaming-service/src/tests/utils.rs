@@ -39,7 +39,7 @@ pub const MAX_RESPONSE_ID: u64 = 100000;
 pub const MIN_ADVERTISED_ACCOUNTS: u64 = 9500;
 pub const MAX_ADVERTISED_ACCOUNTS: u64 = 10000;
 pub const MIN_ADVERTISED_EPOCH: u64 = 100;
-pub const MAX_ADVERTISED_EPOCH: u64 = 1000;
+pub const MAX_ADVERTISED_EPOCH: u64 = 150;
 pub const MIN_ADVERTISED_TRANSACTION: u64 = 1000;
 pub const MAX_ADVERTISED_TRANSACTION: u64 = 10000;
 pub const MIN_ADVERTISED_TRANSACTION_OUTPUT: u64 = 5000;
@@ -49,10 +49,10 @@ pub const MAX_ADVERTISED_TRANSACTION_OUTPUT: u64 = 10000;
 pub const MAX_NOTIFICATION_TIMEOUT_SECS: u64 = 5;
 
 /// A simple mock of the Diem Data Client
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MockDiemDataClient {
-    epoch_ending_ledger_infos: HashMap<Epoch, LedgerInfoWithSignatures>,
-    synced_ledger_infos: Vec<LedgerInfoWithSignatures>,
+    pub epoch_ending_ledger_infos: HashMap<Epoch, LedgerInfoWithSignatures>,
+    pub synced_ledger_infos: Vec<LedgerInfoWithSignatures>,
 }
 
 impl MockDiemDataClient {
@@ -332,6 +332,14 @@ fn create_synced_ledger_infos(
             end_of_epoch,
         ));
     }
+
+    // Manually insert a synced ledger info at the last transaction and epoch
+    // to ensure we can sync right up to the end.
+    synced_ledger_infos.push(create_ledger_info(
+        MAX_ADVERTISED_TRANSACTION,
+        MAX_ADVERTISED_EPOCH,
+        false,
+    ));
 
     synced_ledger_infos
 }

@@ -104,14 +104,9 @@ async fn test_notifications_continuous_transactions() {
                 transactions_with_proof,
             ) = data_notification.data_payload
             {
+                let ledger_info = ledger_info_with_sigs.ledger_info();
                 // Verify the epoch of the ledger info
-                assert_eq!(
-                    ledger_info_with_sigs.ledger_info().epoch(),
-                    next_expected_epoch
-                );
-                if ledger_info_with_sigs.ledger_info().ends_epoch() {
-                    next_expected_epoch += 1;
-                }
+                assert_eq!(ledger_info.epoch(), next_expected_epoch);
 
                 // Verify the transaction start version matches the expected version
                 let first_transaction_version = transactions_with_proof.first_transaction_version;
@@ -120,8 +115,15 @@ async fn test_notifications_continuous_transactions() {
                 // Verify the payload contains events
                 assert_some!(transactions_with_proof.events);
 
-                let num_transactions = transactions_with_proof.transactions.len();
-                next_expected_version += num_transactions as u64;
+                let num_transactions = transactions_with_proof.transactions.len() as u64;
+                next_expected_version += num_transactions;
+
+                // Update epochs if we've hit the epoch end
+                let last_transaction_version =
+                    first_transaction_version.unwrap() + num_transactions - 1;
+                if ledger_info.version() == last_transaction_version && ledger_info.ends_epoch() {
+                    next_expected_epoch += 1;
+                }
             } else {
                 panic!(
                     "Expected a continuous transaction payload, but got: {:?}",
@@ -349,8 +351,8 @@ async fn test_stream_continuous_transactions() {
     // Request a stream where data is missing (we are higher than advertised)
     let result = streaming_client
         .continuously_stream_transactions(
-            MIN_ADVERTISED_TRANSACTION,
-            MAX_ADVERTISED_EPOCH + 1,
+            MAX_ADVERTISED_TRANSACTION + 1,
+            MIN_ADVERTISED_EPOCH,
             true,
         )
         .await;
@@ -464,12 +466,6 @@ async fn test_stream_unsupported() {
     // Create a new streaming client and service
     let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
     tokio::spawn(streaming_service.start_service());
-
-    // Request a continuous transaction stream and verify it's unsupported
-    let result = streaming_client
-        .continuously_stream_transactions(0, 0, true)
-        .await;
-    assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
 
     // Request a continuous transaction output stream and verify it's unsupported
     let result = streaming_client

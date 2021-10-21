@@ -7,7 +7,7 @@ use crate::{
     stream_progress_tracker::{DataStreamTracker, EpochEndingStreamTracker, StreamProgressTracker},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
 };
-use claim::assert_matches;
+use claim::{assert_matches, assert_ok};
 use diem_data_client::{
     DataClientPayload, DataClientResponse, GlobalDataSummary, OptimalChunkSizes,
 };
@@ -20,7 +20,7 @@ use storage_service_types::CompleteDataRange;
 #[test]
 fn test_create_epoch_ending_requests() {
     // Create a new data stream progress tracker
-    let stream_tracker = create_epoch_ending_progress_tracker(0, 900);
+    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 900);
 
     // Create a batch of large client requests and verify the result
     let client_requests = stream_tracker
@@ -122,10 +122,10 @@ fn test_create_epoch_ending_requests_dynamic() {
     // Update the tracker with a new next request epoch that is at the end
     stream_tracker.next_request_epoch = 1000;
 
-    // Create a batch of client requests and verify an overflow error
+    // Create a batch of client requests and verify no error
     let client_requests =
         stream_tracker.create_data_client_requests(10, &create_epoch_ending_chunk_sizes(50));
-    assert_matches!(client_requests, Err(Error::IntegerOverflow(_)));
+    assert_ok!(client_requests);
 }
 
 #[test]
@@ -320,10 +320,14 @@ fn create_epoch_ending_progress_tracker(
     }
 }
 
-fn create_epoch_ending_chunk_sizes(epoch_chunk_size: u64) -> OptimalChunkSizes {
+fn create_epoch_ending_chunk_sizes(epoch_chunk_size: u64) -> GlobalDataSummary {
     let mut optimal_chunk_sizes = OptimalChunkSizes::empty();
     optimal_chunk_sizes.epoch_chunk_size = epoch_chunk_size;
-    optimal_chunk_sizes
+
+    let mut global_data_summary = GlobalDataSummary::empty();
+    global_data_summary.optimal_chunk_sizes = optimal_chunk_sizes;
+
+    global_data_summary
 }
 
 fn create_notification_id_generator() -> Arc<AtomicU64> {
