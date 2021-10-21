@@ -71,7 +71,9 @@ async fn test_epoch_ending_notifications() {
         }),
         client_response: Some(Ok(create_data_client_response(
             DataClientPayload::EpochEndingLedgerInfos(vec![create_ledger_info(
+                0,
                 MIN_ADVERTISED_EPOCH,
+                true,
             )]),
         ))),
     };
@@ -83,7 +85,7 @@ async fn test_epoch_ending_notifications() {
         .unwrap();
     verify_epoch_ending_notification(
         &mut stream_listener,
-        create_ledger_info(MIN_ADVERTISED_EPOCH),
+        create_ledger_info(0, MIN_ADVERTISED_EPOCH, true),
     )
     .await;
 }
@@ -204,7 +206,7 @@ async fn test_stream_out_of_order_responses() {
     for _ in 0..2 {
         verify_epoch_ending_notification(
             &mut stream_listener,
-            create_ledger_info(MIN_ADVERTISED_EPOCH),
+            create_ledger_info(0, MIN_ADVERTISED_EPOCH, true),
         )
         .await;
     }
@@ -218,7 +220,7 @@ async fn test_stream_out_of_order_responses() {
         .unwrap();
     verify_epoch_ending_notification(
         &mut stream_listener,
-        create_ledger_info(MIN_ADVERTISED_EPOCH),
+        create_ledger_info(0, MIN_ADVERTISED_EPOCH, true),
     )
     .await;
     assert_none!(stream_listener.select_next_some().now_or_never());
@@ -232,7 +234,7 @@ async fn test_stream_out_of_order_responses() {
     for _ in 0..3 {
         verify_epoch_ending_notification(
             &mut stream_listener,
-            create_ledger_info(MIN_ADVERTISED_EPOCH),
+            create_ledger_info(0, MIN_ADVERTISED_EPOCH, true),
         )
         .await;
     }
@@ -262,7 +264,7 @@ fn create_epoch_ending_stream(
     };
 
     // Create a diem data client mock and notification generator
-    let diem_data_client = MockDiemDataClient {};
+    let diem_data_client = MockDiemDataClient::new();
     let notification_generator = Arc::new(AtomicU64::new(0));
 
     // Return the data stream and listener pair
@@ -294,7 +296,11 @@ fn set_epoch_ending_response_in_queue(
     let (sent_requests, _) = data_stream.get_sent_requests_and_notifications();
     let pending_response = sent_requests.as_mut().unwrap().get_mut(index).unwrap();
     let client_response = Some(Ok(create_data_client_response(
-        DataClientPayload::EpochEndingLedgerInfos(vec![create_ledger_info(MIN_ADVERTISED_EPOCH)]),
+        DataClientPayload::EpochEndingLedgerInfos(vec![create_ledger_info(
+            0,
+            MIN_ADVERTISED_EPOCH,
+            true,
+        )]),
     )));
     pending_response.lock().client_response = client_response;
 }

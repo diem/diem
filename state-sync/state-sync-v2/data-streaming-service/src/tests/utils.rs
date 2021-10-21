@@ -13,17 +13,22 @@ use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     block_info::BlockInfo,
     chain_id::ChainId,
+    epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::SparseMerkleRangeProof,
     transaction::{
         default_protocol::TransactionOutputListWithProof, RawTransaction, Script,
         SignedTransaction, Transaction, TransactionListWithProof, TransactionOutput,
-        TransactionPayload, TransactionStatus,
+        TransactionPayload, TransactionStatus, Version,
     },
     write_set::WriteSet,
 };
 use rand::{rngs::OsRng, RngCore};
-use std::{collections::BTreeMap, thread, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    thread,
+    time::Duration,
+};
 use storage_service_types::CompleteDataRange;
 
 /// The number of accounts held at any version
@@ -35,7 +40,7 @@ pub const MIN_ADVERTISED_ACCOUNTS: u64 = 9500;
 pub const MAX_ADVERTISED_ACCOUNTS: u64 = 10000;
 pub const MIN_ADVERTISED_EPOCH: u64 = 100;
 pub const MAX_ADVERTISED_EPOCH: u64 = 1000;
-pub const MIN_ADVERTISED_TRANSACTION: u64 = 10;
+pub const MIN_ADVERTISED_TRANSACTION: u64 = 1000;
 pub const MAX_ADVERTISED_TRANSACTION: u64 = 10000;
 pub const MIN_ADVERTISED_TRANSACTION_OUTPUT: u64 = 5000;
 pub const MAX_ADVERTISED_TRANSACTION_OUTPUT: u64 = 10000;
@@ -45,9 +50,22 @@ pub const MAX_NOTIFICATION_TIMEOUT_SECS: u64 = 5;
 
 /// A simple mock of the Diem Data Client
 #[derive(Clone)]
-pub struct MockDiemDataClient {}
+pub struct MockDiemDataClient {
+    epoch_ending_ledger_infos: HashMap<Epoch, LedgerInfoWithSignatures>,
+    synced_ledger_infos: Vec<LedgerInfoWithSignatures>,
+}
 
 impl MockDiemDataClient {
+    pub fn new() -> Self {
+        let epoch_ending_ledger_infos = create_epoch_ending_ledger_infos();
+        let synced_ledger_infos = create_synced_ledger_infos(&epoch_ending_ledger_infos);
+
+        Self {
+            epoch_ending_ledger_infos,
+            synced_ledger_infos,
+        }
+    }
+
     fn emulate_network_latencies(&self) {
         // Sleep for 100 ms
         thread::sleep(Duration::from_millis(100));
@@ -95,10 +113,11 @@ impl DiemDataClient for MockDiemDataClient {
     ) -> Result<DataClientResponse, diem_data_client::Error> {
         self.emulate_network_latencies();
 
-        // Create epoch ending ledger infos according to the requested epochs
+        // Fetch the epoch ending ledger infos according to the requested epochs
         let mut epoch_ending_ledger_infos = vec![];
         for epoch in start_epoch..=end_epoch {
-            epoch_ending_ledger_infos.push(create_ledger_info(epoch));
+            let ledger_info = self.epoch_ending_ledger_infos.get(&epoch).unwrap();
+            epoch_ending_ledger_infos.push(ledger_info.clone());
         }
         let response_payload = DataClientPayload::EpochEndingLedgerInfos(epoch_ending_ledger_infos);
 
@@ -125,7 +144,7 @@ impl DiemDataClient for MockDiemDataClient {
                 MIN_ADVERTISED_EPOCH,
                 MAX_ADVERTISED_EPOCH,
             )],
-            synced_ledger_infos: vec![],
+            synced_ledger_infos: self.synced_ledger_infos.clone(),
             transactions: vec![CompleteDataRange::new(
                 MIN_ADVERTISED_TRANSACTION,
                 MAX_ADVERTISED_TRANSACTION,
@@ -226,13 +245,95 @@ pub fn create_data_client_response(response_payload: DataClientPayload) -> DataC
     }
 }
 
-/// Creates a ledger info with the given epoch
-pub fn create_ledger_info(epoch: Epoch) -> LedgerInfoWithSignatures {
-    let block_info = BlockInfo::new(epoch, 0, HashValue::zero(), HashValue::zero(), 0, 0, None);
+/// Creates a ledger info with the given version and epoch. If `epoch_ending`
+/// is true, makes the ledger info an epoch ending ledger info.
+pub fn create_ledger_info(
+    version: Version,
+    epoch: Epoch,
+    epoch_ending: bool,
+) -> LedgerInfoWithSignatures {
+    let next_epoch_state = if epoch_ending {
+        let mut epoch_state = EpochState::empty();
+        epoch_state.epoch = epoch + 1;
+        Some(epoch_state)
+    } else {
+        None
+    };
+
+    let block_info = BlockInfo::new(
+        epoch,
+        0,
+        HashValue::zero(),
+        HashValue::zero(),
+        version,
+        0,
+        next_epoch_state,
+    );
     LedgerInfoWithSignatures::new(
         LedgerInfo::new(block_info, HashValue::zero()),
         BTreeMap::new(),
     )
+}
+
+/// Creates a epoch ending ledger infos for all epochs
+fn create_epoch_ending_ledger_infos() -> HashMap<Epoch, LedgerInfoWithSignatures> {
+    let mut current_epoch = MIN_ADVERTISED_EPOCH;
+    let mut current_version = MIN_ADVERTISED_TRANSACTION;
+
+    // Populate the epoch ending ledger infos using random intervals
+    let max_num_versions_in_epoch = (MAX_ADVERTISED_TRANSACTION - MIN_ADVERTISED_TRANSACTION)
+        / (MAX_ADVERTISED_EPOCH - MIN_ADVERTISED_EPOCH);
+    let mut epoch_ending_ledger_infos = HashMap::new();
+    while current_epoch < MAX_ADVERTISED_EPOCH {
+        let num_versions_in_epoch = create_non_zero_random_u64(max_num_versions_in_epoch);
+        current_version += num_versions_in_epoch;
+
+        if epoch_ending_ledger_infos
+            .insert(
+                current_epoch,
+                create_ledger_info(current_version, current_epoch, true),
+            )
+            .is_some()
+        {
+            panic!("Duplicate epoch ending ledger info found! This should not occur!",);
+        }
+        current_epoch += 1;
+    }
+
+    epoch_ending_ledger_infos
+}
+
+/// Creates a set of synced ledger infos for advertising
+fn create_synced_ledger_infos(
+    epoch_ending_ledger_infos: &HashMap<Epoch, LedgerInfoWithSignatures>,
+) -> Vec<LedgerInfoWithSignatures> {
+    let mut current_epoch = MIN_ADVERTISED_EPOCH;
+    let mut current_version = MIN_ADVERTISED_TRANSACTION;
+
+    // Populate the synced ledger infos
+    let mut synced_ledger_infos = vec![];
+    while current_version < MAX_ADVERTISED_TRANSACTION && current_epoch < MAX_ADVERTISED_EPOCH {
+        let random_num_versions = create_non_zero_random_u64(10);
+        current_version += random_num_versions;
+
+        let end_of_epoch_version = epoch_ending_ledger_infos
+            .get(&current_epoch)
+            .unwrap()
+            .ledger_info()
+            .version();
+        if current_version > end_of_epoch_version {
+            current_epoch += 1;
+        }
+
+        let end_of_epoch = end_of_epoch_version == current_version;
+        synced_ledger_infos.push(create_ledger_info(
+            current_version,
+            current_epoch,
+            end_of_epoch,
+        ));
+    }
+
+    synced_ledger_infos
 }
 
 /// Creates a simple test transaction
