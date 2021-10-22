@@ -185,56 +185,6 @@ fn test_epoch_ending_stream_tracker() {
 }
 
 #[test]
-fn test_update_epoch_ending_request_progress() {
-    // Create a new data stream progress tracker
-    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
-
-    // Update the progress tracker using valid sent request notifications
-    for i in 0..10 {
-        let start_epoch = i * 100;
-        let end_epoch = (i * 100) + 99;
-        let client_request =
-            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-                start_epoch,
-                end_epoch,
-            });
-        stream_tracker
-            .update_request_tracking(&client_request)
-            .unwrap();
-
-        // Verify internal state
-        assert_eq!(stream_tracker.next_request_epoch, end_epoch + 1);
-    }
-}
-
-#[test]
-#[should_panic(expected = "The start index did not match the expected next index!")]
-fn test_update_epoch_ending_request_panic() {
-    // Create a new data stream progress tracker
-    let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);
-
-    // Update the tracker with a valid request
-    let sent_data_notification =
-        DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-            start_epoch: 0,
-            end_epoch: 100,
-        });
-    stream_tracker
-        .update_request_tracking(&sent_data_notification)
-        .unwrap();
-
-    // Update the tracker with a request that misses data and verify a panic
-    let sent_data_notification =
-        DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
-            start_epoch: 102,
-            end_epoch: 200,
-        });
-    stream_tracker
-        .update_request_tracking(&sent_data_notification)
-        .unwrap();
-}
-
-#[test]
 fn test_update_epoch_ending_stream_progress() {
     // Create a new data stream progress tracker
     let mut stream_tracker = create_epoch_ending_progress_tracker(0, 1000);

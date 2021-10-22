@@ -58,11 +58,6 @@ pub trait DataStreamTracker {
         client_response: &DataClientResponse,
         notification_id_generator: Arc<AtomicU64>,
     ) -> Result<Option<DataNotification>, Error>;
-
-    /// Updates the last sent request for the stream ( i.e., the last client
-    /// request that was created and sent to the network). This keeps
-    /// track of what data has already been requested.
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error>;
 }
 
 /// A single progress tracker that allows each data stream type to track and
@@ -83,7 +78,6 @@ impl StreamProgressTracker {
         stream_request: &StreamRequest,
         advertised_data: &AdvertisedData,
     ) -> Result<Self, Error> {
-        // Identify the type of stream tracker we need based on the stream request
         match stream_request {
             StreamRequest::ContinuouslyStreamTransactions(request) => {
                 Ok(ContinuousTransactionStreamTracker::new(request)?.into())
@@ -138,6 +132,27 @@ impl AccountsStreamTracker {
             next_request_index: 0,
         })
     }
+
+    fn update_request_tracking(
+        &mut self,
+        client_requests: &[DataClientRequest],
+    ) -> Result<(), Error> {
+        for client_request in client_requests {
+            match client_request {
+                AccountsWithProof(request) => {
+                    self.next_request_index =
+                        request.end_index.checked_add(1).ok_or_else(|| {
+                            Error::IntegerOverflow("Next request index has overflown!".into())
+                        })?;
+                }
+                client_request => {
+                    invalid_client_request(client_request, self.clone().into());
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl DataStreamTracker for AccountsStreamTracker {
@@ -146,8 +161,13 @@ impl DataStreamTracker for AccountsStreamTracker {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
+        if self.number_of_accounts.is_none() && self.account_num_requested {
+            return Ok(vec![]); // Wait for the number of accounts to be returned
+        }
+
         if let Some(number_of_accounts) = self.number_of_accounts {
-            create_data_client_requests(
+            // Create the client requests
+            let client_requests = create_data_client_requests(
                 self.next_request_index,
                 number_of_accounts,
                 max_number_of_requests,
@@ -155,14 +175,17 @@ impl DataStreamTracker for AccountsStreamTracker {
                     .optimal_chunk_sizes
                     .account_states_chunk_size,
                 self.clone().into(),
-            )
-        } else if self.account_num_requested {
-            Ok(vec![]) // Wait for the number of accounts to be returned
+            )?;
+            self.update_request_tracking(&client_requests)?;
+
+            Ok(client_requests)
         } else {
-            let client_request = DataClientRequest::NumberOfAccounts(NumberOfAccountsRequest {
-                version: self.request.version,
-            });
-            Ok(vec![client_request])
+            self.account_num_requested = true;
+            Ok(vec![DataClientRequest::NumberOfAccounts(
+                NumberOfAccountsRequest {
+                    version: self.request.version,
+                },
+            )])
         }
     }
 
@@ -206,6 +229,7 @@ impl DataStreamTracker for AccountsStreamTracker {
                 {
                     // We got a response. Save the number of accounts.
                     self.number_of_accounts = Some(number_of_accounts);
+                    self.account_num_requested = false;
                 }
             }
             client_request => {
@@ -213,28 +237,6 @@ impl DataStreamTracker for AccountsStreamTracker {
             }
         }
         Ok(None)
-    }
-
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
-        match client_request {
-            AccountsWithProof(request) => {
-                verify_client_request_indices(
-                    self.next_request_index,
-                    request.start_index,
-                    request.end_index,
-                );
-                self.next_request_index = request.end_index.checked_add(1).ok_or_else(|| {
-                    Error::IntegerOverflow("Next request index has overflown!".into())
-                })?;
-            }
-            NumberOfAccounts(_) => {
-                self.account_num_requested = true;
-            }
-            client_request => {
-                invalid_client_request(client_request, self.clone().into());
-            }
-        }
-        Ok(())
     }
 }
 
@@ -269,7 +271,7 @@ impl ContinuousTransactionStreamTracker {
         })
     }
 
-    fn select_new_target_ledger_info(
+    fn select_target_ledger_info(
         &self,
         advertised_data: &AdvertisedData,
     ) -> Result<LedgerInfoWithSignatures, Error> {
@@ -294,6 +296,41 @@ impl ContinuousTransactionStreamTracker {
             .as_ref()
             .expect("No target ledger info found!")
     }
+
+    fn update_request_tracking(
+        &mut self,
+        client_requests: &[DataClientRequest],
+    ) -> Result<(), Error> {
+        for client_request in client_requests {
+            match client_request {
+                DataClientRequest::TransactionsWithProof(request) => {
+                    let (_, mut next_request_epoch) = self.next_request_version_and_epoch;
+
+                    // Update the next request version and epoch
+                    if request.end_version == self.get_target_ledger_info().ledger_info().version()
+                        && self.get_target_ledger_info().ledger_info().ends_epoch()
+                    {
+                        // We've hit an epoch change
+                        next_request_epoch =
+                            next_request_epoch.checked_add(1).ok_or_else(|| {
+                                Error::IntegerOverflow("Next request epoch has overflown!".into())
+                            })?;
+                    }
+                    let next_request_version =
+                        request.end_version.checked_add(1).ok_or_else(|| {
+                            Error::IntegerOverflow("Next request version has overflown!".into())
+                        })?;
+                    self.next_request_version_and_epoch =
+                        (next_request_version, next_request_epoch);
+                }
+                client_request => {
+                    invalid_client_request(client_request, self.clone().into());
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl DataStreamTracker for ContinuousTransactionStreamTracker {
@@ -302,46 +339,49 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        let (next_request_version, next_request_epoch) = self.next_request_version_and_epoch;
+        if self.target_ledger_info.is_none() && self.end_of_epoch_requested {
+            return Ok(vec![]); // We are waiting for the epoch ending ledger info
+        }
 
-        // Check if we have a syncing target and set one if not
+        // If we don't have a syncing target, select one.
+        let (next_request_version, next_request_epoch) = self.next_request_version_and_epoch;
         if self.target_ledger_info.is_none() {
-            if self.end_of_epoch_requested {
-                return Ok(vec![]); // We are waiting for the epoch ending ledger info
+            // Select a new ledger info from the advertised data
+            let target_ledger_info =
+                self.select_target_ledger_info(&global_data_summary.advertised_data)?;
+            if target_ledger_info.ledger_info().epoch() > next_request_epoch {
+                // There was an epoch change. Request an epoch ending ledger info.
+                self.end_of_epoch_requested = true;
+                return Ok(vec![DataClientRequest::EpochEndingLedgerInfos(
+                    EpochEndingLedgerInfosRequest {
+                        start_epoch: next_request_epoch,
+                        end_epoch: next_request_epoch,
+                    },
+                )]);
             } else {
-                // Select a new ledger info from the advertised data
-                let new_target_ledger_info =
-                    self.select_new_target_ledger_info(&global_data_summary.advertised_data)?;
-                if new_target_ledger_info.ledger_info().epoch() > next_request_epoch {
-                    // There was an epoch change. Request an epoch ending ledger info.
-                    return Ok(vec![DataClientRequest::EpochEndingLedgerInfos(
-                        EpochEndingLedgerInfosRequest {
-                            start_epoch: next_request_epoch,
-                            end_epoch: next_request_epoch,
-                        },
-                    )]);
-                } else {
-                    // Set the ledger info as the target
-                    self.target_ledger_info = Some(new_target_ledger_info);
-                }
+                self.target_ledger_info = Some(target_ledger_info);
             }
         }
 
-        // We have a target ledger info. Create pending requests for that target.
+        // We have a target ledger info.
         let target_ledger_info_version = self.get_target_ledger_info().ledger_info().version();
-        if next_request_version <= target_ledger_info_version {
-            create_data_client_requests(
-                next_request_version,
-                target_ledger_info_version,
-                max_number_of_requests,
-                global_data_summary
-                    .optimal_chunk_sizes
-                    .transaction_chunk_size,
-                self.clone().into(),
-            )
-        } else {
-            Ok(vec![]) // Wait until all notifications for the target have been sent.
+        if next_request_version > target_ledger_info_version {
+            return Ok(vec![]); // Wait until all target notifications have been sent.
         }
+
+        // Create the client requests
+        let client_requests = create_data_client_requests(
+            next_request_version,
+            target_ledger_info_version,
+            max_number_of_requests,
+            global_data_summary
+                .optimal_chunk_sizes
+                .transaction_chunk_size,
+            self.clone().into(),
+        )?;
+        self.update_request_tracking(&client_requests)?;
+
+        Ok(client_requests)
     }
 
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
@@ -425,41 +465,6 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
         }
         Ok(None)
     }
-
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
-        match client_request {
-            DataClientRequest::EpochEndingLedgerInfos(_) => {
-                self.end_of_epoch_requested = true;
-            }
-            DataClientRequest::TransactionsWithProof(request) => {
-                let (next_request_version, mut next_request_epoch) =
-                    self.next_request_version_and_epoch;
-                verify_client_request_indices(
-                    next_request_version,
-                    request.start_version,
-                    request.end_version,
-                );
-
-                // Update the next request version and epoch
-                if request.end_version == self.get_target_ledger_info().ledger_info().version()
-                    && self.get_target_ledger_info().ledger_info().ends_epoch()
-                {
-                    // We've hit an epoch change
-                    next_request_epoch = next_request_epoch.checked_add(1).ok_or_else(|| {
-                        Error::IntegerOverflow("Next request epoch has overflown!".into())
-                    })?;
-                }
-                let next_request_version = request.end_version.checked_add(1).ok_or_else(|| {
-                    Error::IntegerOverflow("Next request version has overflown!".into())
-                })?;
-                self.next_request_version_and_epoch = (next_request_version, next_request_epoch);
-            }
-            client_request => {
-                invalid_client_request(client_request, self.clone().into());
-            }
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -518,6 +523,27 @@ impl EpochEndingStreamTracker {
             next_request_epoch: request.start_epoch,
         })
     }
+
+    fn update_request_tracking(
+        &mut self,
+        client_requests: &[DataClientRequest],
+    ) -> Result<(), Error> {
+        for client_request in client_requests {
+            match client_request {
+                EpochEndingLedgerInfos(request) => {
+                    self.next_request_epoch =
+                        request.end_epoch.checked_add(1).ok_or_else(|| {
+                            Error::IntegerOverflow("Next request epoch has overflown!".into())
+                        })?;
+                }
+                client_request => {
+                    invalid_client_request(client_request, self.clone().into());
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl DataStreamTracker for EpochEndingStreamTracker {
@@ -526,13 +552,17 @@ impl DataStreamTracker for EpochEndingStreamTracker {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        create_data_client_requests(
+        // Create the client requests
+        let client_requests = create_data_client_requests(
             self.next_request_epoch,
             self.end_epoch,
             max_number_of_requests,
             global_data_summary.optimal_chunk_sizes.epoch_chunk_size,
             self.clone().into(),
-        )
+        )?;
+        self.update_request_tracking(&client_requests)?;
+
+        Ok(client_requests)
     }
 
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
@@ -578,25 +608,6 @@ impl DataStreamTracker for EpochEndingStreamTracker {
         }
         Ok(None)
     }
-
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
-        match client_request {
-            EpochEndingLedgerInfos(request) => {
-                verify_client_request_indices(
-                    self.next_request_epoch,
-                    request.start_epoch,
-                    request.end_epoch,
-                );
-                self.next_request_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
-                    Error::IntegerOverflow("Next request epoch has overflown!".into())
-                })?;
-            }
-            client_request => {
-                invalid_client_request(client_request, self.clone().into());
-            }
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -621,6 +632,27 @@ impl TransactionOutputStreamTracker {
             next_request_version: request.start_version,
         })
     }
+
+    fn update_request_tracking(
+        &mut self,
+        client_requests: &[DataClientRequest],
+    ) -> Result<(), Error> {
+        for client_request in client_requests.iter() {
+            match client_request {
+                TransactionOutputsWithProof(request) => {
+                    self.next_request_version =
+                        request.end_version.checked_add(1).ok_or_else(|| {
+                            Error::IntegerOverflow("Next request version has overflown!".into())
+                        })?;
+                }
+                client_request => {
+                    invalid_client_request(client_request, self.clone().into());
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl DataStreamTracker for TransactionOutputStreamTracker {
@@ -629,7 +661,8 @@ impl DataStreamTracker for TransactionOutputStreamTracker {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        create_data_client_requests(
+        // Create the client requests
+        let client_requests = create_data_client_requests(
             self.next_request_version,
             self.request.end_version,
             max_number_of_requests,
@@ -637,7 +670,10 @@ impl DataStreamTracker for TransactionOutputStreamTracker {
                 .optimal_chunk_sizes
                 .transaction_output_chunk_size,
             self.clone().into(),
-        )
+        )?;
+        self.update_request_tracking(&client_requests)?;
+
+        Ok(client_requests)
     }
 
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
@@ -683,26 +719,6 @@ impl DataStreamTracker for TransactionOutputStreamTracker {
         }
         Ok(None)
     }
-
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
-        match client_request {
-            TransactionOutputsWithProof(request) => {
-                verify_client_request_indices(
-                    self.next_request_version,
-                    request.start_version,
-                    request.end_version,
-                );
-                self.next_request_version =
-                    request.end_version.checked_add(1).ok_or_else(|| {
-                        Error::IntegerOverflow("Next request version has overflown!".into())
-                    })?;
-            }
-            client_request => {
-                invalid_client_request(client_request, self.clone().into());
-            }
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -727,6 +743,27 @@ impl TransactionStreamTracker {
             next_request_version: request.start_version,
         })
     }
+
+    fn update_request_tracking(
+        &mut self,
+        client_requests: &[DataClientRequest],
+    ) -> Result<(), Error> {
+        for client_request in client_requests.iter() {
+            match client_request {
+                TransactionsWithProof(request) => {
+                    self.next_request_version =
+                        request.end_version.checked_add(1).ok_or_else(|| {
+                            Error::IntegerOverflow("Next request version has overflown!".into())
+                        })?;
+                }
+                client_request => {
+                    invalid_client_request(client_request, self.clone().into());
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl DataStreamTracker for TransactionStreamTracker {
@@ -735,7 +772,8 @@ impl DataStreamTracker for TransactionStreamTracker {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        create_data_client_requests(
+        // Create the client requests
+        let client_requests = create_data_client_requests(
             self.next_request_version,
             self.request.end_version,
             max_number_of_requests,
@@ -743,7 +781,10 @@ impl DataStreamTracker for TransactionStreamTracker {
                 .optimal_chunk_sizes
                 .transaction_chunk_size,
             self.clone().into(),
-        )
+        )?;
+        self.update_request_tracking(&client_requests)?;
+
+        Ok(client_requests)
     }
 
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool {
@@ -784,26 +825,6 @@ impl DataStreamTracker for TransactionStreamTracker {
             }
         }
         Ok(None)
-    }
-
-    fn update_request_tracking(&mut self, client_request: &DataClientRequest) -> Result<(), Error> {
-        match client_request {
-            TransactionsWithProof(request) => {
-                verify_client_request_indices(
-                    self.next_request_version,
-                    request.start_version,
-                    request.end_version,
-                );
-                self.next_request_version =
-                    request.end_version.checked_add(1).ok_or_else(|| {
-                        Error::IntegerOverflow("Next request version has overflown!".into())
-                    })?;
-            }
-            client_request => {
-                invalid_client_request(client_request, self.clone().into());
-            }
-        }
-        Ok(())
     }
 }
 
