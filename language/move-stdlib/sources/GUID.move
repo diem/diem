@@ -23,9 +23,31 @@ module Std::GUID {
         addr: address
     }
 
+    /// A capability to create a privileged identifier on behalf of the given address
+    struct CreateCapability has key, store {
+        addr: address
+    }
+
+    /// GUID generator must be published ahead of first usage of `create_with_capability` function.
+    const EGUID_GENERATOR_NOT_PUBLISHED: u64 = 0;
+
+    /// Publishes create capability (also verifies that the Generator is properly prepared)
+    public fun gen_create_capability(account: &signer): CreateCapability {
+        let addr = Signer::address_of(account);
+        if (!exists<Generator>(addr)) {
+            move_to(account, Generator { counter: 0 })
+        };
+        CreateCapability { addr }
+    }
+
     /// Create a non-privileged id from `addr` and `creation_num`
     public fun create_id(addr: address, creation_num: u64): ID {
         ID { creation_num, addr }
+    }
+
+    public fun create_with_capability(addr: address, _cap: &CreateCapability): GUID acquires Generator {
+        assert(exists<Generator>(addr), EGUID_GENERATOR_NOT_PUBLISHED);
+        create_impl(addr)
     }
 
     /// Create and return a new GUID. Creates a `Generator` under `account`
@@ -35,7 +57,10 @@ module Std::GUID {
         if (!exists<Generator>(addr)) {
             move_to(account, Generator { counter: 0 })
         };
+        create_impl(addr)
+    }
 
+    fun create_impl(addr: address): GUID acquires Generator {
         let generator = borrow_global_mut<Generator>(addr);
         let creation_num = generator.counter;
         generator.counter = creation_num + 1;

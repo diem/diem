@@ -2212,8 +2212,9 @@ pub enum ScriptFunctionCall {
         sliding_nonce: u64,
     },
 
-    /// Mint `amount` copies of BARS tokens to the artist's account.
+    /// BARS account mints `amount` copies of BARS tokens to the artist's account.
     MintBars {
+        artist: AccountAddress,
         artist_name: Bytes,
         content_uri: Bytes,
         amount: u64,
@@ -2452,7 +2453,9 @@ pub enum ScriptFunctionCall {
 
     /// Call this function to set up relevant resources in order to
     /// mint and receive tokens.
-    RegisterUser {},
+    /// Note that this also gives BARS account a capability to mint BARS NFTs on behalf of the user.
+    /// (the NFTs of other types cannot be created by BARS account).
+    RegisterBarsUser {},
 
     /// # Summary
     /// Updates a validator's configuration. This does not reconfigure the system and will not update
@@ -3664,10 +3667,11 @@ impl ScriptFunctionCall {
                 encode_initialize_diem_consensus_config_script_function(sliding_nonce)
             }
             MintBars {
+                artist,
                 artist_name,
                 content_uri,
                 amount,
-            } => encode_mint_bars_script_function(artist_name, content_uri, amount),
+            } => encode_mint_bars_script_function(artist, artist_name, content_uri, amount),
             NftInitialize {} => encode_nft_initialize_script_function(),
             OptInToCrsn { crsn_size } => encode_opt_in_to_crsn_script_function(crsn_size),
             PeerToPeerBySigners {
@@ -3698,7 +3702,7 @@ impl ScriptFunctionCall {
             PublishSharedEd25519PublicKey { public_key } => {
                 encode_publish_shared_ed25519_public_key_script_function(public_key)
             }
-            RegisterUser {} => encode_register_user_script_function(),
+            RegisterBarsUser {} => encode_register_bars_user_script_function(),
             RegisterValidatorConfig {
                 validator_account,
                 consensus_pubkey,
@@ -4895,8 +4899,9 @@ pub fn encode_initialize_diem_consensus_config_script_function(
     ))
 }
 
-/// Mint `amount` copies of BARS tokens to the artist's account.
+/// BARS account mints `amount` copies of BARS tokens to the artist's account.
 pub fn encode_mint_bars_script_function(
+    artist: AccountAddress,
     artist_name: Vec<u8>,
     content_uri: Vec<u8>,
     amount: u64,
@@ -4909,6 +4914,7 @@ pub fn encode_mint_bars_script_function(
         ident_str!("mint_bars").to_owned(),
         vec![],
         vec![
+            bcs::to_bytes(&artist).unwrap(),
             bcs::to_bytes(&artist_name).unwrap(),
             bcs::to_bytes(&content_uri).unwrap(),
             bcs::to_bytes(&amount).unwrap(),
@@ -5232,13 +5238,15 @@ pub fn encode_publish_shared_ed25519_public_key_script_function(
 
 /// Call this function to set up relevant resources in order to
 /// mint and receive tokens.
-pub fn encode_register_user_script_function() -> TransactionPayload {
+/// Note that this also gives BARS account a capability to mint BARS NFTs on behalf of the user.
+/// (the NFTs of other types cannot be created by BARS account).
+pub fn encode_register_bars_user_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             ident_str!("BARSToken").to_owned(),
         ),
-        ident_str!("register_user").to_owned(),
+        ident_str!("register_bars_user").to_owned(),
         vec![],
         vec![],
     ))
@@ -8286,9 +8294,10 @@ fn decode_initialize_diem_consensus_config_script_function(
 fn decode_mint_bars_script_function(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::MintBars {
-            artist_name: bcs::from_bytes(script.args().get(0)?).ok()?,
-            content_uri: bcs::from_bytes(script.args().get(1)?).ok()?,
-            amount: bcs::from_bytes(script.args().get(2)?).ok()?,
+            artist: bcs::from_bytes(script.args().get(0)?).ok()?,
+            artist_name: bcs::from_bytes(script.args().get(1)?).ok()?,
+            content_uri: bcs::from_bytes(script.args().get(2)?).ok()?,
+            amount: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -8394,11 +8403,11 @@ fn decode_publish_shared_ed25519_public_key_script_function(
     }
 }
 
-fn decode_register_user_script_function(
+fn decode_register_bars_user_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(_script) = payload {
-        Some(ScriptFunctionCall::RegisterUser {})
+        Some(ScriptFunctionCall::RegisterBarsUser {})
     } else {
         None
     }
@@ -9243,8 +9252,8 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_publish_shared_ed25519_public_key_script_function),
         );
         map.insert(
-            "BARSTokenregister_user".to_string(),
-            Box::new(decode_register_user_script_function),
+            "BARSTokenregister_bars_user".to_string(),
+            Box::new(decode_register_bars_user_script_function),
         );
         map.insert(
             "ValidatorAdministrationScriptsregister_validator_config".to_string(),

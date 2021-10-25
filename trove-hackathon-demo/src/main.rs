@@ -53,10 +53,6 @@ enum Command {
         path: PathBuf,
     },
 
-    RegisterUser {},
-
-    MintBarsNft {},
-
     CreateAccount {
         new_account_address: String,
         new_auth_key_prefix: String,
@@ -65,6 +61,19 @@ enum Command {
     CreateBasicAccount {
         new_account_address: String,
         new_auth_key_prefix: String,
+    },
+
+    RegisterBarsUser {},
+
+    MintBarsNft {
+        #[structopt(long)]
+        creator_addr: String,
+        #[structopt(long)]
+        creator_name: String,
+        #[structopt(long)]
+        content_uri: String,
+        #[structopt(long)]
+        amount: u64,
     },
 
     /// Transfer a BARS NFT
@@ -122,8 +131,8 @@ async fn main() -> Result<()> {
 
     match args.cmd {
         Command::InitMultiToken { .. } => init_multi_token(&mut account, &client)?,
-        Command::RegisterUser { .. } => register_user(&mut account, &client)?,
-        Command::MintBarsNft { .. } => mint_bars_nft(&mut account, &client)?,
+        Command::RegisterBarsUser { .. } => register_bars_user(&mut account, &client)?,
+        Command::MintBarsNft { creator_addr, creator_name, content_uri, amount } => mint_bars_nft(&mut account, &client, creator_addr, creator_name, content_uri, amount)?,
         Command::TransferBarsNft {
             to,
             amount,
@@ -319,22 +328,23 @@ fn init_multi_token(account: &mut LocalAccount, client: &BlockingClient) -> Resu
     Ok(())
 }
 
-fn register_user(account: &mut LocalAccount, client: &BlockingClient) -> Result<()> {
+fn register_bars_user(account: &mut LocalAccount, client: &BlockingClient) -> Result<()> {
     let txn = account.sign_with_transaction_builder(
         TransactionFactory::new(ChainId::test())
-            .payload(stdlib::encode_register_user_script_function()),
+            .payload(stdlib::encode_register_bars_user_script_function()),
     );
     send(&client, txn)?;
     println!("Success");
     Ok(())
 }
 
-fn mint_bars_nft(account: &mut LocalAccount, client: &BlockingClient) -> Result<()> {
+fn mint_bars_nft(account: &mut LocalAccount, client: &BlockingClient, creator_addr: String, creator_name: String, content_uri: String, amount: u64) -> Result<()> {
     let txn = account.sign_with_transaction_builder(
         TransactionFactory::new(ChainId::test()).payload(stdlib::encode_mint_bars_script_function(
-            "Ankush".to_string().as_bytes().to_vec(),
-            "diem.com".to_string().as_bytes().to_vec(),
-            100,
+            AccountAddress::from_hex_literal(&creator_addr).unwrap(),
+            creator_name.as_bytes().to_vec(),
+            content_uri.as_bytes().to_vec(),
+            amount,
         )),
     );
     send(&client, txn)?;

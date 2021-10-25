@@ -2,5 +2,8 @@
 name = "DiemExperimental"
 version = "1.5.0"
 
+[addresses]
+BARS = "0x34CD440B72D03907100007D7BC0080A1"
+
 [dependencies]
 DiemCoreFramework = { local = "../core" }
