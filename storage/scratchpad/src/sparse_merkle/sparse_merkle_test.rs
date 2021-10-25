@@ -300,6 +300,9 @@ fn test_update() {
     let root_hash = hash_internal(y_hash, leaf3_hash);
     assert_eq!(smt1.root_hash(), root_hash);
 
+    // Verify oldest ancestor
+    assert!(Arc::ptr_eq(&smt1.get_oldest_ancestor().inner, &smt1.inner));
+
     // Next, we are going to modify key1. Create a proof for key1.
     let proof = SparseMerkleProof::new(
         Some(leaf1),
@@ -337,6 +340,9 @@ fn test_update() {
     let root_hash = hash_internal(y_hash, leaf3_hash);
     assert_eq!(smt2.root_hash(), root_hash);
 
+    // Verify oldest ancestor
+    assert_eq_pointee(&smt2.get_oldest_ancestor(), &smt1);
+
     // We now try to create another branch on top of smt1.
     let value4 = AccountStateBlob::from(b"new value 4444444444".to_vec());
     // key4 already exists in the tree.
@@ -359,8 +365,15 @@ fn test_update() {
         AccountStatus::ExistsInScratchPad(value4.clone())
     );
 
+    // Verify oldest ancestor
+    assert_eq_pointee(&smt22.get_oldest_ancestor(), &smt1);
+
     // Now prune smt1.
     drop(smt1);
+
+    // Verify oldest ancestor
+    assert_eq_pointee(&smt2.get_oldest_ancestor(), &smt2);
+    assert_eq_pointee(&smt22.get_oldest_ancestor(), &smt22);
 
     // For smt2, only key1 should be available since smt2 was constructed by updating smt1 with
     // key1.
@@ -375,6 +388,106 @@ fn test_update() {
     assert_eq!(smt22.get(key2), AccountStatus::Unknown);
     assert_eq!(smt22.get(key3), AccountStatus::Unknown);
     assert_eq!(smt22.get(key4), AccountStatus::ExistsInScratchPad(value4));
+}
+
+#[test]
+fn test_get_oldest_ancestor() {
+    let key = b"aaaaa".test_only_hash();
+    let value = AccountStateBlob::from(b"value1".to_vec());
+    let value_hash = value.hash();
+    let updates = vec![(key, &value)];
+    let leaf = SparseMerkleLeafNode::new(key, value_hash);
+    let proof = SparseMerkleProof::new(Some(leaf), vec![]);
+    let proof_reader = ProofReader::new(vec![(key, proof)]);
+
+    let update = |t: &SparseMerkleTree| t.batch_update(updates.clone(), &proof_reader).unwrap();
+
+    // smt0 - smt00 - smt000 - smt0000 - smt00000
+    //              \
+    //              |\ smt001 - smt0010 - smt00100
+    //              |        \
+    //              |          smt0011 - smt00110
+    //              |                  \
+    //              |                    smt00111
+    //              \
+    //                smt002
+
+    let smt0 = SparseMerkleTree::new(leaf.hash());
+    let smt00 = update(&smt0);
+    let smt000 = update(&smt00);
+    let smt0000 = update(&smt000);
+    let smt00000 = update(&smt0000);
+    let smt001 = update(&smt00);
+    let smt0010 = update(&smt001);
+    let smt00100 = update(&smt0010);
+    let smt0011 = update(&smt001);
+    let smt00110 = update(&smt0011);
+    let smt00111 = update(&smt0011);
+    let smt002 = update(&smt00);
+
+    assert_eq_pointee(&smt0.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt00.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt000.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt0000.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt001.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt0010.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt00100.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt0011.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt00110.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt00111.get_oldest_ancestor(), &smt0);
+    assert_eq_pointee(&smt002.get_oldest_ancestor(), &smt0);
+
+    drop(smt0);
+    assert_eq_pointee(&smt00.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt000.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt0000.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt001.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt0010.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt00100.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt0011.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt00110.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt00111.get_oldest_ancestor(), &smt00);
+    assert_eq_pointee(&smt002.get_oldest_ancestor(), &smt00);
+
+    drop(smt00);
+    assert_eq_pointee(&smt000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt0000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt001.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt0010.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt00100.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt0011.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt00110.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt00111.get_oldest_ancestor(), &smt001);
+    assert_eq_pointee(&smt002.get_oldest_ancestor(), &smt002);
+
+    drop(smt001);
+    assert_eq_pointee(&smt000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt0000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt000);
+    assert_eq_pointee(&smt0010.get_oldest_ancestor(), &smt0010);
+    assert_eq_pointee(&smt00100.get_oldest_ancestor(), &smt0010);
+    assert_eq_pointee(&smt0011.get_oldest_ancestor(), &smt0011);
+    assert_eq_pointee(&smt00110.get_oldest_ancestor(), &smt0011);
+    assert_eq_pointee(&smt00111.get_oldest_ancestor(), &smt0011);
+    assert_eq_pointee(&smt002.get_oldest_ancestor(), &smt002);
+    drop(smt000);
+    assert_eq_pointee(&smt0000.get_oldest_ancestor(), &smt0000);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt0000);
+
+    drop(smt0000);
+    assert_eq_pointee(&smt00000.get_oldest_ancestor(), &smt00000);
+    drop(smt0010);
+    assert_eq_pointee(&smt00100.get_oldest_ancestor(), &smt00100);
+    drop(smt0011);
+    assert_eq_pointee(&smt00110.get_oldest_ancestor(), &smt00110);
+    assert_eq_pointee(&smt00111.get_oldest_ancestor(), &smt00111);
+}
+
+fn assert_eq_pointee(left: &SparseMerkleTree, right: &SparseMerkleTree) {
+    assert!(Arc::ptr_eq(&left.inner, &right.inner,))
 }
 
 #[test]
