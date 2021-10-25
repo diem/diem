@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: diem/build_environment:main
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     strategy:
@@ -59,6 +62,9 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     environment:
@@ -107,6 +113,9 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:main
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     env:
@@ -140,6 +149,9 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:${{ matrix.target-branch }}
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     env:

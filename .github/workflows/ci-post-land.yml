@@ -62,6 +62,9 @@ jobs:
     runs-on: ubuntu-latest-xl
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
@@ -96,6 +99,9 @@ jobs:
       name: Sccache
     container:
       image: diem/build_environment:main
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
@@ -333,6 +339,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+        credentials:
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
