@@ -95,19 +95,19 @@ enum Command {
 
     ProposeApproveModule {
         #[structopt(long)]
-        sha: String,
+        path: PathBuf,
     },
 
     VoteApproveModule {
         #[structopt(long)]
-        sha: String,
+        path: PathBuf,
         #[structopt(long)]
         counter: u64,
     },
 
     ApproveModule {
         #[structopt(long)]
-        sha: String,
+        path: PathBuf,
     },
 }
 
@@ -161,12 +161,12 @@ async fn main() -> Result<()> {
         Command::ModulePublishSetApproval { enable } => {
             module_publish_set_approval(&mut account, &client, enable)?
         }
-        Command::ApproveModule { sha } => approve_module(&mut account, &client, sha)?,
-        Command::ProposeApproveModule { sha } => {
-            propose_approve_module(&mut account, &client, sha)?
+        Command::ApproveModule { path } => approve_module(&mut account, &client, path)?,
+        Command::ProposeApproveModule { path } => {
+            propose_approve_module(&mut account, &client, path)?
         }
-        Command::VoteApproveModule { sha, counter } => {
-            vote_approve_module(&mut account, &client, sha, counter)?
+        Command::VoteApproveModule { path, counter } => {
+            vote_approve_module(&mut account, &client, path, counter)?
         }
     }
 
@@ -176,12 +176,12 @@ async fn main() -> Result<()> {
 fn propose_approve_module(
     account: &mut LocalAccount,
     client: &BlockingClient,
-    sha: String,
+    path: PathBuf,
 ) -> Result<()> {
     let txn =
         account.sign_with_transaction_builder(TransactionFactory::new(ChainId::test()).payload(
             stdlib::encode_propose_pre_approve_module_publish_script_function(
-                hex::decode(&sha).unwrap(),
+                calc_module_hash(path),
             ),
         ));
     send(&client, txn)?;
@@ -192,13 +192,13 @@ fn propose_approve_module(
 fn vote_approve_module(
     account: &mut LocalAccount,
     client: &BlockingClient,
-    sha: String,
+    path: PathBuf,
     counter: u64,
 ) -> Result<()> {
     let txn =
         account.sign_with_transaction_builder(TransactionFactory::new(ChainId::test()).payload(
             stdlib::encode_vote_pre_approve_module_publish_script_function(
-                hex::decode(&sha).unwrap(),
+                calc_module_hash(path),
                 counter,
             ),
         ));
@@ -207,10 +207,10 @@ fn vote_approve_module(
     Ok(())
 }
 
-fn approve_module(account: &mut LocalAccount, client: &BlockingClient, sha: String) -> Result<()> {
+fn approve_module(account: &mut LocalAccount, client: &BlockingClient, path: PathBuf) -> Result<()> {
     let txn =
         account.sign_with_transaction_builder(TransactionFactory::new(ChainId::test()).payload(
-            stdlib::encode_pre_approve_module_publish_script_function(hex::decode(&sha).unwrap()),
+            stdlib::encode_pre_approve_module_publish_script_function(calc_module_hash(path)),
         ));
     send(&client, txn)?;
     println!("Success");
@@ -365,4 +365,11 @@ fn send(client: &BlockingClient, tx: diem_types::transaction::SignedTransaction)
         VMStatusView::Executed,
     );
     Ok(())
+}
+
+/// Sha3-256 module hash, the same way VM executor is doing it
+fn calc_module_hash(path: PathBuf) -> Vec<u8> {
+    let data = fs::read(path).expect("Unable to read module file");
+    let module = Module::new(data);
+    diem_crypto::HashValue::sha3_256_of(module.code()).to_vec()
 }
