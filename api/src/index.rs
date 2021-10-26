@@ -5,7 +5,7 @@ use crate::{accounts, context::Context, events, log, transactions};
 use diem_api_types::{Error, Response};
 
 use std::convert::Infallible;
-use warp::{http::StatusCode, reply, Filter, Rejection, Reply};
+use warp::{http::StatusCode, reject::MethodNotAllowed, reply, Filter, Rejection, Reply};
 
 pub fn routes(context: Context) -> impl Filter<Extract = impl Reply, Error = Infallible> + Clone {
     index(context.clone())
@@ -38,6 +38,12 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     } else if let Some(error) = err.find::<Error>() {
         code = error.status_code();
         body = reply::json(error);
+    } else if err.find::<MethodNotAllowed>().is_some() {
+        code = StatusCode::BAD_REQUEST;
+        body = reply::json(&Error::new(
+            code,
+            "Method not allowed or request body is invalid.".to_owned(),
+        ));
     } else {
         code = StatusCode::INTERNAL_SERVER_ERROR;
         body = reply::json(&Error::new(code, format!("unexpected error: {:?}", err)));
