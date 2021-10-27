@@ -27,7 +27,7 @@ jobs:
           webhook: ${{ secrets.WEBHOOK_DEPENDENCY_CHANGES }}
 
   transaction-replay:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     container:
       image: diem/build_environment:main
       volumes:

@@ -56,7 +56,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   coverage:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     container:
       image: diem/build_environment:main
       volumes:
@@ -104,7 +104,7 @@ jobs:
     # Test old client from release (prod) and pre-release (rc) branches
     # against new server in the main branch through cluster-test's
     # json-rpc interface.
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     container:
       image: diem/build_environment:main
       volumes:
@@ -137,7 +137,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   prover-inconsistency-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     container:
       image: diem/build_environment:${{ matrix.target-branch }}
       volumes:

@@ -12,7 +12,7 @@ on:
 
 jobs:
   generate-report:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     name: Comment update review report on PR
     env:
       MAX_ALLOWED_CHARS: 65536

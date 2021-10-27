@@ -142,7 +142,7 @@ jobs:
           pattern: '^rust.toolchain\|^x.toml\|^devtools\|^.github\|common/logger'
 
   dev-setup-sh-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
@@ -158,7 +158,7 @@ jobs:
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
   build-images:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     needs: prepare
     if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' }}
     outputs:
@@ -472,7 +472,7 @@ jobs:
             }
 
   non-rust-lint:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 10
     needs: prepare
     if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
@@ -494,7 +494,7 @@ jobs:
         uses: ./.github/actions/docker-checks
 
   lint:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.any-changes-founds == 'true' }}
@@ -521,7 +521,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   unit-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 60
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
@@ -562,7 +562,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   codegen-unit-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 60
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
@@ -593,7 +593,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   e2e-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 40
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
@@ -676,7 +676,7 @@ jobs:
           webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}
 
   forge-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 40
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' && needs.prepare.outputs.test-compatibility == 'true' }}
@@ -701,7 +701,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   docker-compose-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-docker-compose == 'true' }}
@@ -765,7 +765,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   coverage-unit-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 10
     needs: prepare
     if: ${{ needs.prepare.outputs.test-test-coverage == 'true' }}
@@ -793,7 +793,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   helm-test:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 20
     needs: prepare
     if: ${{ needs.prepare.outputs.test-helm == 'true' }}
@@ -863,7 +863,7 @@ jobs:
 
   # Compile (but don't run) the benchmarks, to insulate against bit rot
   build-benchmarks:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
@@ -886,7 +886,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   build-dev:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
@@ -912,7 +912,7 @@ jobs:
 
   perf-benchmarks:
     name: run-perf-benchmarks
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-20.04-xl
     timeout-minutes: 30
     needs:
       - prepare
