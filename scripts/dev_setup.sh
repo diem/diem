@@ -219,7 +219,7 @@ function install_terraform {
 }
 
 function install_kubectl {
-  VERSION=$(kubectl version client --short=true | head -1 || true)
+  VERSION=$(kubectl version --client=true --short=true | head -1 || true)
   if [[ "$VERSION" != "Client Version: v${KUBECTL_VERSION}" ]]; then
     if [[ $(uname -s) == "Darwin" ]]; then
       install_pkg kubectl brew
@@ -232,7 +232,7 @@ function install_kubectl {
       chmod +x "${INSTALL_DIR}"/kubectl
     fi
   fi
-  kubectl version client --short=true | head -1 || true
+  kubectl version --client=true --short=true | head -1 || true
 }
 
 function install_awscli {
