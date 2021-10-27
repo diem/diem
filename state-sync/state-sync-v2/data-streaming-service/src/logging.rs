@@ -32,6 +32,7 @@ pub enum LogEntry {
     CheckStreamProgress,
     DiemDataClient,
     EndOfStreamNotification,
+    HandleTerminateRequest,
     HandleStreamRequest,
     InitializeStream,
     ReceivedDataResponse,

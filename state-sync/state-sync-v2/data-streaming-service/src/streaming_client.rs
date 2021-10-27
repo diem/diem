@@ -59,19 +59,21 @@ pub trait DataStreamingClient {
         max_proof_version: Version,
     ) -> Result<DataStreamListener, Error>;
 
-    /// Refetches the payload for the data notification corresponding to the
-    /// specified `notification_id`.
+    /// Terminates the stream that sent the notification with the given
+    /// `notification_id` and provides feedback for why the payload in the
+    /// notification was invalid.
     ///
-    /// Note: this is required because data payloads may be invalid, e.g., due
-    /// to invalid or malformed data returned by a misbehaving peer or a failure
-    /// to verify a proof. The refetch request forces a refetch of the payload
-    /// and the `refetch_reason` notifies the streaming service as to why the
-    /// payload must be refetched.
-    async fn refetch_notification_payload(
+    /// Note:
+    /// 1. This is required because data payloads may be invalid, e.g., due to
+    /// malformed data returned by a misbehaving peer or an invalid proof. This
+    /// notifies the streaming service that the payload was invalid and thus the
+    /// stream should be terminated and the responsible peer penalized.
+    /// 2. Clients that wish to continue fetching data need to open a new stream.
+    async fn terminate_stream_with_feedback(
         &self,
         notification_id: NotificationId,
-        refetch_reason: PayloadRefetchReason,
-    ) -> Result<DataStreamListener, Error>;
+        payload_feedback: PayloadFeedback,
+    ) -> Result<(), Error>;
 
     /// Continuously streams transactions with proofs as the blockchain grows.
     /// The stream starts at `start_version` and `start_epoch` (inclusive).
@@ -114,7 +116,7 @@ pub enum StreamRequest {
     GetAllTransactionOutputs(GetAllTransactionOutputsRequest),
     ContinuouslyStreamTransactions(ContinuouslyStreamTransactionsRequest),
     ContinuouslyStreamTransactionOutputs(ContinuouslyStreamTransactionOutputsRequest),
-    RefetchNotificationPayload(RefetchNotificationPayloadRequest),
+    TerminateStream(TerminateStreamRequest),
 }
 
 /// A client request for fetching all account states at a specified version.
@@ -161,16 +163,16 @@ pub struct ContinuouslyStreamTransactionOutputsRequest {
     pub start_epoch: Epoch,
 }
 
-/// A client request for refetching a notification payload.
+/// A client request for terminating a stream and providing payload feedback.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RefetchNotificationPayloadRequest {
+pub struct TerminateStreamRequest {
     pub notification_id: NotificationId,
-    pub refetch_reason: PayloadRefetchReason,
+    pub payload_feedback: PayloadFeedback,
 }
 
-/// The reason for having to refetch a data payload in a data notification.
+/// The feedback for a given payload.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum PayloadRefetchReason {
+pub enum PayloadFeedback {
     InvalidPayloadData,
     PayloadTypeIsIncorrect,
     ProofVerificationFailed,
@@ -190,15 +192,23 @@ impl StreamingServiceClient {
     async fn send_stream_request(
         &self,
         client_request: StreamRequest,
-    ) -> Result<DataStreamListener, Error> {
+    ) -> Result<oneshot::Receiver<Result<DataStreamListener, Error>>, Error> {
         let mut request_sender = self.request_sender.clone();
         let (response_sender, response_receiver) = oneshot::channel();
         let request_message = StreamRequestMessage {
             stream_request: client_request,
             response_sender,
         };
-
         request_sender.send(request_message).await?;
+
+        Ok(response_receiver)
+    }
+
+    async fn send_request_and_await_response(
+        &self,
+        client_request: StreamRequest,
+    ) -> Result<DataStreamListener, Error> {
+        let response_receiver = self.send_stream_request(client_request).await?;
         response_receiver.await?
     }
 }
@@ -207,7 +217,7 @@ impl StreamingServiceClient {
 impl DataStreamingClient for StreamingServiceClient {
     async fn get_all_accounts(&self, version: u64) -> Result<DataStreamListener, Error> {
         let client_request = StreamRequest::GetAllAccounts(GetAllAccountsRequest { version });
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 
     async fn get_all_epoch_ending_ledger_infos(
@@ -218,7 +228,7 @@ impl DataStreamingClient for StreamingServiceClient {
             StreamRequest::GetAllEpochEndingLedgerInfos(GetAllEpochEndingLedgerInfosRequest {
                 start_epoch,
             });
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 
     async fn get_all_transactions(
@@ -234,7 +244,7 @@ impl DataStreamingClient for StreamingServiceClient {
             max_proof_version,
             include_events,
         });
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 
     async fn get_all_transaction_outputs(
@@ -249,20 +259,21 @@ impl DataStreamingClient for StreamingServiceClient {
                 end_version,
                 max_proof_version,
             });
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 
-    async fn refetch_notification_payload(
+    async fn terminate_stream_with_feedback(
         &self,
         notification_id: u64,
-        refetch_reason: PayloadRefetchReason,
-    ) -> Result<DataStreamListener, Error> {
-        let client_request =
-            StreamRequest::RefetchNotificationPayload(RefetchNotificationPayloadRequest {
-                notification_id,
-                refetch_reason,
-            });
-        self.send_stream_request(client_request).await
+        payload_feedback: PayloadFeedback,
+    ) -> Result<(), Error> {
+        let client_request = StreamRequest::TerminateStream(TerminateStreamRequest {
+            notification_id,
+            payload_feedback,
+        });
+        // We can ignore the receiver as no data will be sent.
+        let _ = self.send_stream_request(client_request).await?;
+        Ok(())
     }
 
     async fn continuously_stream_transactions(
@@ -277,7 +288,7 @@ impl DataStreamingClient for StreamingServiceClient {
                 start_epoch,
                 include_events,
             });
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 
     async fn continuously_stream_transaction_outputs(
@@ -291,7 +302,7 @@ impl DataStreamingClient for StreamingServiceClient {
                 start_epoch,
             },
         );
-        self.send_stream_request(client_request).await
+        self.send_request_and_await_response(client_request).await
     }
 }
 

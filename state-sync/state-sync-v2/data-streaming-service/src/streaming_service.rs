@@ -5,9 +5,15 @@ use crate::{
     data_stream::{DataStream, DataStreamId, DataStreamListener},
     error::Error,
     logging::{LogEntry, LogEvent, LogSchema},
-    streaming_client::{StreamRequestMessage, StreamingServiceListener},
+    streaming_client::{
+        PayloadFeedback, StreamRequest, StreamRequestMessage, StreamingServiceListener,
+        TerminateStreamRequest,
+    },
 };
-use diem_data_client::{DataClientPayload, DiemDataClient, GlobalDataSummary, OptimalChunkSizes};
+use diem_data_client::{
+    DataClientPayload, DiemDataClient, GlobalDataSummary, OptimalChunkSizes, ResponseError,
+    ResponseId,
+};
 use diem_logger::prelude::*;
 use futures::StreamExt;
 use std::{
@@ -80,7 +86,17 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
 
     /// Handles new stream request messages from clients
     fn handle_stream_request_message(&mut self, request_message: StreamRequestMessage) {
-        // Process the request message
+        if let StreamRequest::TerminateStream(request) = request_message.stream_request {
+            // Process the feedback request
+            if let Err(error) = self.process_terminate_stream_request(&request) {
+                error!(LogSchema::new(LogEntry::HandleTerminateRequest)
+                    .event(LogEvent::Error)
+                    .error(&error));
+            }
+            return;
+        }
+
+        // Process the stream request
         let response = self.process_new_stream_request(&request_message);
         if let Err(error) = &response {
             error!(LogSchema::new(LogEntry::HandleStreamRequest)
@@ -97,6 +113,74 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
                     error
                 )));
         }
+    }
+
+    /// Processes a request for terminating the stream that sent a specific
+    /// notification ID.
+    fn process_terminate_stream_request(
+        &mut self,
+        terminate_request: &TerminateStreamRequest,
+    ) -> Result<(), Error> {
+        let notification_id = &terminate_request.notification_id;
+
+        // Find the data stream that sent the notification
+        let data_stream_ids = self.get_all_data_stream_ids();
+        for data_stream_id in &data_stream_ids {
+            let data_stream = self.get_data_stream(data_stream_id);
+            if let Some(response_id) = data_stream.get_response_id_for_notification(notification_id)
+            {
+                info!(LogSchema::new(LogEntry::HandleTerminateRequest)
+                    .stream_id(*data_stream_id)
+                    .event(LogEvent::Success)
+                    .message(&format!(
+                        "Terminating the stream that sent notification ID: {:?}",
+                        notification_id
+                    )));
+
+                // Notify the diem data client and delete the stream
+                self.notify_bad_response(
+                    *data_stream_id,
+                    response_id,
+                    &terminate_request.payload_feedback,
+                );
+                self.data_streams.remove(notification_id);
+                return Ok(());
+            }
+        }
+
+        panic!(
+            "Unable to find the stream that sent notification ID: {:?}",
+            notification_id
+        );
+    }
+
+    /// Notifies the Diem data client of a bad client response
+    fn notify_bad_response(
+        &self,
+        data_stream_id: DataStreamId,
+        response_id: ResponseId,
+        payload_feedback: &PayloadFeedback,
+    ) {
+        let diem_data_client = self.diem_data_client.clone();
+        let response_error = extract_response_error(payload_feedback);
+
+        info!(LogSchema::new(LogEntry::HandleTerminateRequest)
+            .stream_id(data_stream_id)
+            .event(LogEvent::Success)
+            .message(&format!(
+                "Notifying the data client of a bad response. Response id: {:?}, error: {:?}",
+                response_id, response_error
+            )));
+
+        tokio::spawn(async move {
+            let client_response = diem_data_client.notify_bad_response(response_id, response_error);
+            if let Err(error) = client_response.await {
+                error!(LogSchema::new(LogEntry::DiemDataClient)
+                    .stream_id(data_stream_id)
+                    .event(LogEvent::Error)
+                    .error(&error.into()));
+            }
+        });
     }
 
     /// Creates a new stream and ensures the data for that stream is available
@@ -248,5 +332,15 @@ fn verify_optimal_chunk_sizes(optimal_chunk_sizes: &OptimalChunkSizes) -> Result
         )))
     } else {
         Ok(())
+    }
+}
+
+/// Transforms the payload feedback into a specific response error that can be
+/// sent to the Diem data client.
+fn extract_response_error(payload_feedback: &PayloadFeedback) -> ResponseError {
+    match payload_feedback {
+        PayloadFeedback::InvalidPayloadData => ResponseError::InvalidData,
+        PayloadFeedback::PayloadTypeIsIncorrect => ResponseError::InvalidPayloadDataType,
+        PayloadFeedback::ProofVerificationFailed => ResponseError::ProofVerificationError,
     }
 }

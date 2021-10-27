@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use storage_service_types::{CompleteDataRange, Epoch};
 use thiserror::Error;
 
+pub type ResponseId = u64;
+
 /// An error returned by the Diem Data Client for failed API calls.
 #[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
@@ -32,8 +34,8 @@ pub enum Error {
 /// the Data Client about invalid or malformed responses.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ResponseError {
+    InvalidData,
     InvalidPayloadDataType,
-    MissingData,
     ProofVerificationError,
 }
 
@@ -116,7 +118,7 @@ pub trait DiemDataClient {
 /// `notify_bad_response()` API call above.
 #[derive(Clone, Debug)]
 pub struct DataClientResponse {
-    pub response_id: u64,
+    pub response_id: ResponseId,
     pub response_payload: DataClientPayload,
 }
 

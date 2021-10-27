@@ -5,7 +5,7 @@ use crate::{
     data_notification::DataPayload,
     error::Error,
     streaming_client::{
-        new_streaming_service_client_listener_pair, DataStreamingClient, PayloadRefetchReason,
+        new_streaming_service_client_listener_pair, DataStreamingClient, PayloadFeedback,
         StreamingServiceClient,
     },
     streaming_service::DataStreamingService,
@@ -576,17 +576,80 @@ async fn test_stream_transactions() {
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 }
 
-#[tokio::test]
-async fn test_stream_unsupported() {
+#[tokio::test(flavor = "multi_thread")]
+#[should_panic(expected = "SelectNextSome polled after terminated")]
+async fn test_terminate_stream() {
     // Create a new streaming client and service
     let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
     tokio::spawn(streaming_service.start_service());
 
-    // Request a refetch notification payload stream and verify it's unsupported
-    let result = streaming_client
-        .refetch_notification_payload(0, PayloadRefetchReason::InvalidPayloadData)
-        .await;
-    assert_matches!(result, Err(Error::UnsupportedRequestEncountered(_)));
+    // Request an account stream
+    let mut stream_listener = streaming_client
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1)
+        .await
+        .unwrap();
+
+    // Fetch the first account notification and then terminate the stream
+    let mut next_expected_index = 0;
+    if let Ok(data_notification) = timeout(
+        Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+        stream_listener.select_next_some(),
+    )
+    .await
+    {
+        match data_notification.data_payload {
+            DataPayload::AccountStatesWithProof(accounts_with_proof) => {
+                next_expected_index += accounts_with_proof.account_blobs.len() as u64;
+            }
+            data_payload => {
+                panic!(
+                    "Expected an account ledger info payload, but got: {:?}",
+                    data_payload
+                );
+            }
+        }
+
+        // Terminate the stream
+        let result = streaming_client
+            .terminate_stream_with_feedback(
+                data_notification.notification_id,
+                PayloadFeedback::InvalidPayloadData,
+            )
+            .await;
+        assert_ok!(result);
+    } else {
+        panic!("Timed out waiting for a data notification!");
+    }
+
+    // Verify the streaming service has removed the stream
+    loop {
+        if let Ok(data_notification) = timeout(
+            Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+            stream_listener.select_next_some(),
+        )
+        .await
+        {
+            match data_notification.data_payload {
+                DataPayload::AccountStatesWithProof(accounts_with_proof) => {
+                    next_expected_index += accounts_with_proof.account_blobs.len() as u64;
+                }
+                DataPayload::EndOfStream => {
+                    panic!("The stream should have terminated!");
+                }
+                data_payload => {
+                    panic!(
+                        "Expected an account ledger info payload, but got: {:?}",
+                        data_payload
+                    );
+                }
+            }
+        } else if next_expected_index >= TOTAL_NUM_ACCOUNTS {
+            panic!(
+                "The stream should have terminated! Next expected index: {:?}",
+                next_expected_index
+            );
+        }
+    }
 }
 
 fn create_new_streaming_client_and_service() -> (

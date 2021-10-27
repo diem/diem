@@ -230,7 +230,8 @@ impl DiemDataClient for MockDiemDataClient {
         _response_id: u64,
         _response_error: ResponseError,
     ) -> Result<(), diem_data_client::Error> {
-        unimplemented!();
+        // TODO(joshlind): update me to handle some score emulation!
+        Ok(())
     }
 }
 

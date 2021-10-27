@@ -36,14 +36,6 @@ pub enum DataPayload {
     TransactionsWithProof(TransactionListWithProof),
 }
 
-/// A sent data notification that tracks the original client request and the
-/// client response forwarded along a stream. This is useful for re-fetching.
-#[derive(Clone, Debug)]
-pub struct SentDataNotification {
-    pub client_request: DataClientRequest,
-    pub client_response: DataClientResponse,
-}
-
 /// A request that has been sent to the Diem data client.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataClientRequest {

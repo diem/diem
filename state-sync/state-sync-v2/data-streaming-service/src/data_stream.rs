@@ -3,9 +3,7 @@
 
 use crate::{
     data_notification,
-    data_notification::{
-        DataClientRequest, DataNotification, DataPayload, NotificationId, SentDataNotification,
-    },
+    data_notification::{DataClientRequest, DataNotification, DataPayload, NotificationId},
     error::Error,
     logging::{LogEntry, LogEvent, LogSchema},
     stream_progress_tracker::{DataStreamTracker, StreamProgressTracker},
@@ -14,7 +12,7 @@ use crate::{
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_data_client::{
     AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, GlobalDataSummary,
-    ResponseError,
+    ResponseError, ResponseId,
 };
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -67,8 +65,10 @@ pub struct DataStream<T> {
     // a data notification can be created and sent along the stream.
     sent_data_requests: Option<VecDeque<PendingClientResponse>>,
 
-    // The data notifications already sent via this stream.
-    sent_notifications: HashMap<NotificationId, SentDataNotification>,
+    // TODO(joshlind): garbage collect me!
+    // Maps a notification ID (sent along the data stream) to a response ID
+    // received from the data client. This is useful for providing feedback.
+    notifications_to_responses: HashMap<NotificationId, ResponseId>,
 
     // The channel on which to send data notifications when they are ready.
     notification_sender: channel::diem_channel::Sender<(), DataNotification>,
@@ -102,7 +102,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             diem_data_client,
             stream_progress_tracker,
             sent_data_requests: None,
-            sent_notifications: HashMap::new(),
+            notifications_to_responses: HashMap::new(),
             notification_sender,
             notification_id_generator,
             stream_end_notification_id: None,
@@ -126,6 +126,18 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
 
         // Create and send the data client requests to the network
         self.create_and_send_client_requests(&global_data_summary)
+    }
+
+    /// Returns the response ID associated with a given `notification_id`.
+    /// Note: this method returns `None` if the `notification_id` does not match
+    /// a notification sent via this stream.
+    pub fn get_response_id_for_notification(
+        &self,
+        notification_id: &NotificationId,
+    ) -> Option<ResponseId> {
+        self.notifications_to_responses
+            .get(notification_id)
+            .cloned()
     }
 
     /// Creates and sends a batch of diem data client requests to the network
@@ -409,18 +421,15 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                 self.notification_id_generator.clone(),
             )?
         {
-            // Create and save the data notification to track any future re-fetches
-            let sent_data_notification = SentDataNotification {
-                client_request: data_client_request.clone(),
-                client_response: data_client_response.clone(),
-            };
-            if let Some(existing_notification) = self
-                .sent_notifications
-                .insert(data_notification.notification_id, sent_data_notification)
+            // Save the data notification ID and response ID
+            let notification_id = data_notification.notification_id;
+            if let Some(response_id) = self
+                .notifications_to_responses
+                .insert(notification_id, data_client_response.response_id)
             {
                 panic!(
-                    "Duplicate sent notification found! This should not occur! ID: {}, notification: {:?}",
-                    data_notification.notification_id, existing_notification
+                    "Duplicate sent notification ID found! Notification ID: {:?}, Response ID: {:?}",
+                    notification_id, response_id,
                 );
             }
 
@@ -429,7 +438,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                 (LogSchema::new(LogEntry::StreamNotification)
                     .stream_id(self.data_stream_id)
                     .event(LogEvent::Success)
-                    .message("Sent a single stream notification!"))
+                    .message(&format!(
+                        "Sent a single stream notification! Notification ID: {:?}",
+                        notification_id
+                    )))
             );
             self.send_data_notification(data_notification)?;
         }
@@ -466,10 +478,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
     ) -> (
         &mut Option<VecDeque<PendingClientResponse>>,
-        &mut HashMap<NotificationId, SentDataNotification>,
+        &mut HashMap<NotificationId, ResponseId>,
     ) {
         let sent_requests = &mut self.sent_data_requests;
-        let sent_notifications = &mut self.sent_notifications;
+        let sent_notifications = &mut self.notifications_to_responses;
 
         (sent_requests, sent_notifications)
     }

@@ -127,7 +127,7 @@ impl StreamProgressTracker {
                 Ok(TransactionStreamTracker::new(stream_request)?.into())
             }
             _ => Err(Error::UnsupportedRequestEncountered(format!(
-                "Stream request not currently supported: {:?}",
+                "Stream request not supported: {:?}",
                 stream_request
             ))),
         }
