@@ -9316,7 +9316,6 @@ dependencies = [
  "executor-test-helpers",
  "fail",
  "move-core-types",
- "ouroboros",
  "rand 0.8.4",
  "scratchpad",
  "storage-interface",

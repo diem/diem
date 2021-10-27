@@ -73,16 +73,16 @@ mod node;
 mod updater;
 mod utils;
 
+pub mod batches_update;
 #[cfg(test)]
 mod sparse_merkle_test;
 #[cfg(any(test, feature = "bench", feature = "fuzzing"))]
 pub mod test_utils;
-pub mod batches_update;
 
 use crate::sparse_merkle::{
     node::{NodeInner, SubTree},
     updater::SubTreeUpdater,
-    utils::{partition},
+    utils::partition,
 };
 use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -91,7 +91,7 @@ use diem_crypto::{
 use diem_infallible::Mutex;
 use diem_types::{
     nibble::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT},
-    proof::{SparseMerkleProof},
+    proof::SparseMerkleProof,
 };
 use std::{
     borrow::Borrow,

@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 fail = "0.4.0"
-ouroboros = "0.9.2"
 scratchpad = { path = "../storage/scratchpad" }
 diem-state-view = { path = "../storage/state-view" }
 storage-interface = { path = "../storage/storage-interface" }

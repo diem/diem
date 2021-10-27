@@ -7,7 +7,6 @@ use diem_types::{
     account_address::AccountAddress,
     account_config::{AccountResource, AccountSequenceInfo},
     account_state::AccountState,
-    account_state_blob::AccountStateBlob,
     on_chain_config::{DiemVersion, OnChainConfigPayload, VMConfig, VMPublishingOption},
     protocol_spec::DpnProto,
     transaction::{SignedTransaction, VMValidatorResult},
@@ -35,35 +34,23 @@ pub trait TransactionValidation: Send + Sync + Clone {
     fn notify_commit(&mut self);
 }
 
-#[ouroboros::self_referencing(pub_extras)]
-struct CachedStateView {
-    smt: Box<SparseMerkleTree<AccountStateBlob>>,
-    #[borrows(smt)]
-    #[covariant]
-    state_view: VerifiedStateView<'this, DpnProto>,
-}
+fn latest_state_view(db_reader: &Arc<dyn DbReader<DpnProto>>) -> VerifiedStateView<DpnProto> {
+    let (version, state_root) = db_reader.get_latest_state_root().expect("Should not fail.");
 
-impl CachedStateView {
-    pub fn create(db_reader: &Arc<dyn DbReader<DpnProto>>) -> Self {
-        let (version, state_root) = db_reader.get_latest_state_root().expect("Should not fail.");
-        let smt = SparseMerkleTree::new(state_root);
-        Self::new(Box::new(smt), move |smt| {
-            VerifiedStateView::new(
-                StateViewId::TransactionValidation {
-                    base_version: version,
-                },
-                Arc::clone(db_reader),
-                Some(version),
-                state_root,
-                smt,
-            )
-        })
-    }
+    VerifiedStateView::new(
+        StateViewId::TransactionValidation {
+            base_version: version,
+        },
+        Arc::clone(db_reader),
+        Some(version),
+        state_root,
+        SparseMerkleTree::new(state_root),
+    )
 }
 
 pub struct VMValidator {
     db_reader: Arc<dyn DbReader<DpnProto>>,
-    cached_state_view: CachedStateView,
+    cached_state_view: VerifiedStateView<DpnProto>,
     vm: DiemVM,
 }
 
@@ -75,9 +62,9 @@ impl Clone for VMValidator {
 
 impl VMValidator {
     pub fn new(db_reader: Arc<dyn DbReader<DpnProto>>) -> Self {
-        let cached_state_view = CachedStateView::create(&db_reader);
+        let cached_state_view = latest_state_view(&db_reader);
 
-        let vm = DiemVM::new_for_validation(cached_state_view.borrow_state_view());
+        let vm = DiemVM::new_for_validation(&cached_state_view);
         VMValidator {
             db_reader,
             cached_state_view,
@@ -97,9 +84,7 @@ impl TransactionValidation for VMValidator {
         });
         use diem_vm::VMValidator;
 
-        Ok(self
-            .vm
-            .validate_transaction(txn, self.cached_state_view.borrow_state_view()))
+        Ok(self.vm.validate_transaction(txn, &self.cached_state_view))
     }
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
@@ -113,8 +98,7 @@ impl TransactionValidation for VMValidator {
     }
 
     fn notify_commit(&mut self) {
-        let cached_state_view = CachedStateView::create(&self.db_reader);
-        self.cached_state_view = cached_state_view;
+        self.cached_state_view = latest_state_view(&self.db_reader);
     }
 }
 

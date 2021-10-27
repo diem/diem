@@ -333,7 +333,7 @@ pub struct ExecutedTrees {
     /// tree is presenting the latest commited state, it will have a single Subtree node (or
     /// Empty node) whose hash equals the root hash of the newest Sparse Merkle Tree in
     /// storage.
-    state_tree: Arc<SparseMerkleTree>,
+    state_tree: SparseMerkleTree,
 
     /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
     /// `state_tree`.
@@ -352,7 +352,7 @@ impl From<TreeState> for ExecutedTrees {
 
 impl ExecutedTrees {
     pub fn new_copy(
-        state_tree: Arc<SparseMerkleTree>,
+        state_tree: SparseMerkleTree,
         transaction_accumulator: Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
     ) -> Self {
         Self {
@@ -361,7 +361,7 @@ impl ExecutedTrees {
         }
     }
 
-    pub fn state_tree(&self) -> &Arc<SparseMerkleTree> {
+    pub fn state_tree(&self) -> &SparseMerkleTree {
         &self.state_tree
     }
 
@@ -388,7 +388,7 @@ impl ExecutedTrees {
         num_leaves_in_accumulator: u64,
     ) -> ExecutedTrees {
         ExecutedTrees {
-            state_tree: Arc::new(SparseMerkleTree::new(state_root_hash)),
+            state_tree: SparseMerkleTree::new(state_root_hash),
             transaction_accumulator: Arc::new(
                 InMemoryAccumulator::new(frozen_subtrees_in_accumulator, num_leaves_in_accumulator)
                     .expect("The startup info read from storage should be valid."),

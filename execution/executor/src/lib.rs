@@ -422,7 +422,7 @@ where
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees::new_copy(
-                Arc::new(current_state_tree),
+                current_state_tree,
                 Arc::new(current_transaction_accumulator),
             ),
             next_epoch_state,
@@ -452,13 +452,13 @@ where
         cache: &RwLockReadGuard<SpeculationCache>,
         id: StateViewId,
         executed_trees: &'a ExecutedTrees,
-    ) -> VerifiedStateView<'a, DpnProto> {
+    ) -> VerifiedStateView<DpnProto> {
         VerifiedStateView::new(
             id,
             Arc::clone(&self.db.reader),
             cache.committed_trees().version(),
             cache.committed_trees().state_root(),
-            executed_trees.state_tree(),
+            executed_trees.state_tree().clone(),
         )
     }
 
@@ -467,11 +467,11 @@ where
         Self::get_executed_trees_from_lock(&read_lock, block_id)
     }
 
-    fn get_executed_state_view<'a>(
+    fn get_executed_state_view(
         &self,
         id: StateViewId,
-        executed_trees: &'a ExecutedTrees,
-    ) -> VerifiedStateView<'a, DpnProto> {
+        executed_trees: &ExecutedTrees,
+    ) -> VerifiedStateView<DpnProto> {
         let read_lock = self.cache.read();
         self.get_executed_state_view_from_lock(&read_lock, id, executed_trees)
     }
@@ -496,7 +496,7 @@ where
             Arc::clone(&self.db.reader),
             read_lock.synced_trees().version(),
             read_lock.synced_trees().state_root(),
-            read_lock.synced_trees().state_tree(),
+            read_lock.synced_trees().state_tree().clone(),
         );
 
         fail_point!("executor::vm_execute_chunk", |_| {

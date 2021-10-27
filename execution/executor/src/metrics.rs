@@ -73,7 +73,7 @@ pub static DIEM_EXECUTOR_SAVE_TRANSACTIONS_SECONDS: Lazy<Histogram> = Lazy::new(
         // metric name
         "diem_executor_save_transactions_seconds",
         // metric description
-        "The time spent in seconds of calling save_transactions to storage in Diem executor"
+        "The time spent in seconds of calling save_transactions to storage in vm-validator/src/vm_validator.rs Diem executor"
     )
     .unwrap()
 });

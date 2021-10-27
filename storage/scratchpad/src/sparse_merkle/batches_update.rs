@@ -1,23 +1,26 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
-use std::cmp;
-use std::collections::BTreeMap;
-use diem_crypto::hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH};
-use diem_crypto::HashValue;
-use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
-use crate::{ProofRead};
-use crate::sparse_merkle::node::{NodeInner, SubTree};
-use crate::sparse_merkle::{IntermediateHashes, UpdateError};
-use crate::sparse_merkle::utils::{partition, swap_if};
 use super::SparseMerkleTree;
+use crate::{
+    sparse_merkle::{
+        node::{NodeInner, SubTree},
+        utils::{partition, swap_if},
+        IntermediateHashes, UpdateError,
+    },
+    ProofRead,
+};
+use diem_crypto::{
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    HashValue,
+};
+use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
+use std::{borrow::Borrow, cmp, collections::BTreeMap};
 
 impl<V> SparseMerkleTree<V>
-    where
-        V: Clone + CryptoHash + Send + Sync,
+where
+    V: Clone + CryptoHash + Send + Sync,
 {
-
     /// Constructs a new Sparse Merkle Tree, returns the SMT root hash after each update and the
     /// final SMT root. Since the tree is immutable, existing tree remains the same and may
     /// share parts with the new, returned tree. Unlike `serial_update', intermediate trees aren't
