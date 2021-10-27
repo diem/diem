@@ -8,8 +8,8 @@ use crate::{
     data_stream::{DataStream, DataStreamListener},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
     tests::utils::{
-        create_data_client_response, create_ledger_info, MockDiemDataClient, MAX_ADVERTISED_EPOCH,
-        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
+        create_data_client_response, create_ledger_info, initialize_logger, MockDiemDataClient,
+        MAX_ADVERTISED_EPOCH, MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
     },
 };
 use claim::{assert_ge, assert_none};
@@ -181,6 +181,8 @@ async fn test_stream_out_of_order_responses() {
 fn create_epoch_ending_stream(
     start_epoch: u64,
 ) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
+    initialize_logger();
+
     // Create an epoch ending stream request
     let stream_request =
         StreamRequest::GetAllEpochEndingLedgerInfos(GetAllEpochEndingLedgerInfosRequest {
@@ -205,6 +207,7 @@ fn create_epoch_ending_stream(
 
     // Return the data stream and listener pair
     DataStream::new(
+        0,
         &stream_request,
         diem_data_client,
         notification_generator,

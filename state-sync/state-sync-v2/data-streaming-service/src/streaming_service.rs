@@ -4,9 +4,11 @@
 use crate::{
     data_stream::{DataStream, DataStreamId, DataStreamListener},
     error::Error,
+    logging::{LogEntry, LogEvent, LogSchema},
     streaming_client::{StreamRequestMessage, StreamingServiceListener},
 };
 use diem_data_client::{DataClientPayload, DiemDataClient, GlobalDataSummary, OptimalChunkSizes};
+use diem_logger::prelude::*;
 use futures::StreamExt;
 use std::{
     collections::HashMap,
@@ -67,8 +69,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
                     self.handle_stream_request_message(stream_request);
                 }
                 _ = data_refresh_interval.select_next_some() => {
-                    let _ = self.refresh_global_data_summary();
-                    // TODO(joshlind): log a failure to update the global data summary
+                    self.refresh_global_data_summary();
                 }
                 _ = progress_check_interval.select_next_some() => {
                     self.check_progress_of_all_data_streams();
@@ -81,10 +82,20 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
     fn handle_stream_request_message(&mut self, request_message: StreamRequestMessage) {
         // Process the request message
         let response = self.process_new_stream_request(&request_message);
+        if let Err(error) = &response {
+            error!(LogSchema::new(LogEntry::HandleStreamRequest)
+                .event(LogEvent::Error)
+                .error(error));
+        }
 
         // Send the response to the client
-        if let Err(_error) = request_message.response_sender.send(response) {
-            // TODO(joshlind): once we support logging, log this error!
+        if let Err(error) = request_message.response_sender.send(response) {
+            error!(LogSchema::new(LogEntry::RespondToStreamRequest)
+                .event(LogEvent::Error)
+                .message(&format!(
+                    "Failed to send response for stream request: {:?}",
+                    error
+                )));
         }
     }
 
@@ -94,10 +105,12 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
         request_message: &StreamRequestMessage,
     ) -> Result<DataStreamListener, Error> {
         // Refresh the cached global data summary
-        self.refresh_global_data_summary()?;
+        self.refresh_global_data_summary();
 
         // Create a new data stream
+        let stream_id = self.stream_id_generator.fetch_add(1, Ordering::Relaxed);
         let (data_stream, stream_listener) = DataStream::new(
+            stream_id,
             &request_message.stream_request,
             self.diem_data_client.clone(),
             self.notification_id_generator.clone(),
@@ -108,20 +121,34 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
         data_stream.ensure_data_is_available(&self.global_data_summary.advertised_data)?;
 
         // Store the data stream internally
-        let stream_id = self.stream_id_generator.fetch_add(1, Ordering::Relaxed);
         if self.data_streams.insert(stream_id, data_stream).is_some() {
             panic!(
                 "Duplicate data stream found! This should not occur! ID: {:?}",
                 stream_id,
             );
         }
+        info!(LogSchema::new(LogEntry::HandleStreamRequest)
+            .stream_id(stream_id)
+            .event(LogEvent::Success)
+            .message(&format!(
+                "Stream created for request: {:?}",
+                request_message
+            )));
 
         // Return the listener
         Ok(stream_listener)
     }
 
     /// Refreshes the global data summary by communicating with the Diem data client
-    fn refresh_global_data_summary(&mut self) -> Result<(), Error> {
+    fn refresh_global_data_summary(&mut self) {
+        if let Err(error) = self.fetch_global_data_summary() {
+            error!(LogSchema::new(LogEntry::RefreshGlobalData)
+                .event(LogEvent::Error)
+                .error(&error));
+        }
+    }
+
+    fn fetch_global_data_summary(&mut self) -> Result<(), Error> {
         match self.diem_data_client.get_global_data_summary() {
             Ok(data_client_response) => {
                 match data_client_response.response_payload {
@@ -151,8 +178,11 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
     fn check_progress_of_all_data_streams(&mut self) {
         let data_stream_ids = self.get_all_data_stream_ids();
         for data_stream_id in &data_stream_ids {
-            if let Err(_error) = self.update_progress_of_data_stream(data_stream_id) {
-                // TODO(joshlind): once we support logging, log this error!
+            if let Err(error) = self.update_progress_of_data_stream(data_stream_id) {
+                error!(LogSchema::new(LogEntry::CheckStreamProgress)
+                    .stream_id(*data_stream_id)
+                    .event(LogEvent::Error)
+                    .error(&error));
             }
         }
     }
@@ -169,6 +199,12 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
         if !data_stream.data_requests_initialized() {
             // Initialize the request batch by sending out data client requests
             data_stream.initialize_data_requests(global_data_summary)?;
+            info!(
+                (LogSchema::new(LogEntry::InitializeStream)
+                    .stream_id(*data_stream_id)
+                    .event(LogEvent::Success)
+                    .message("Data stream initialized."))
+            );
         } else {
             // Process any data client requests that have received responses
             data_stream.process_data_responses(global_data_summary)?;

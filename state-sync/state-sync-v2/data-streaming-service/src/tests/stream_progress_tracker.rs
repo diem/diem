@@ -6,6 +6,7 @@ use crate::{
     error::Error,
     stream_progress_tracker::{DataStreamTracker, EpochEndingStreamTracker, StreamProgressTracker},
     streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
+    tests::utils::initialize_logger,
 };
 use claim::{assert_matches, assert_ok};
 use diem_data_client::{
@@ -244,6 +245,8 @@ fn create_epoch_ending_progress_tracker(
     start_epoch: u64,
     max_advertised_epoch: u64,
 ) -> EpochEndingStreamTracker {
+    initialize_logger();
+
     // Create an epoch ending stream request
     let stream_request =
         StreamRequest::GetAllEpochEndingLedgerInfos(GetAllEpochEndingLedgerInfosRequest {

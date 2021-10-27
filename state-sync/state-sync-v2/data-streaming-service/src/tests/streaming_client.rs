@@ -12,6 +12,7 @@ use crate::{
         GetAllTransactionsRequest, PayloadRefetchReason, RefetchNotificationPayloadRequest,
         StreamRequest, StreamingServiceListener,
     },
+    tests::utils::initialize_logger,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use claim::assert_ok;
@@ -225,6 +226,8 @@ fn spawn_service_and_expect_request(
     mut streaming_service_listener: StreamingServiceListener,
     expected_request: StreamRequest,
 ) -> JoinHandle<()> {
+    initialize_logger();
+
     std::thread::spawn(move || loop {
         if let Some(stream_request_message) =
             streaming_service_listener.select_next_some().now_or_never()
@@ -255,6 +258,8 @@ fn spawn_service_and_respond_with_error(
     mut streaming_service_listener: StreamingServiceListener,
     response_error: Error,
 ) -> JoinHandle<()> {
+    initialize_logger();
+
     std::thread::spawn(move || loop {
         if let Some(stream_request_message) =
             streaming_service_listener.select_next_some().now_or_never()

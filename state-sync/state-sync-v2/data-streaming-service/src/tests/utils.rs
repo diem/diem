@@ -8,6 +8,7 @@ use diem_data_client::{
     AdvertisedData, DataClientPayload, DataClientResponse, DiemDataClient, GlobalDataSummary,
     OptimalChunkSizes, ResponseError,
 };
+use diem_logger::Level;
 use diem_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStatesChunkWithProof,
@@ -382,4 +383,12 @@ fn create_non_zero_random_u64(max_value: u64) -> u64 {
 fn create_range_random_u64(min_value: u64, max_value: u64) -> u64 {
     let mut rng = OsRng;
     rng.gen_range(min_value..max_value)
+}
+
+/// Initializes the Diem logger for tests
+pub fn initialize_logger() {
+    diem_logger::DiemLogger::builder()
+        .is_async(false)
+        .level(Level::Info)
+        .build();
 }

@@ -10,7 +10,7 @@ use crate::{
     },
     streaming_service::DataStreamingService,
     tests::utils::{
-        MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
+        initialize_logger, MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
         MAX_ADVERTISED_TRANSACTION, MAX_ADVERTISED_TRANSACTION_OUTPUT,
         MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH,
         MIN_ADVERTISED_TRANSACTION, MIN_ADVERTISED_TRANSACTION_OUTPUT, TOTAL_NUM_ACCOUNTS,
@@ -593,6 +593,8 @@ fn create_new_streaming_client_and_service() -> (
     StreamingServiceClient,
     DataStreamingService<MockDiemDataClient>,
 ) {
+    initialize_logger();
+
     // Create a new streaming client and listener
     let (streaming_client, streaming_service_listener) =
         new_streaming_service_client_listener_pair();

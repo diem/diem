@@ -12,6 +12,7 @@ use crate::{
         TransactionOutputsWithProofRequest, TransactionsWithProofRequest,
     },
     error::Error,
+    logging::{LogEntry, LogEvent, LogSchema},
     streaming_client::{
         Epoch, GetAllAccountsRequest, GetAllEpochEndingLedgerInfosRequest, StreamRequest,
     },
@@ -20,6 +21,7 @@ use diem_data_client::{
     AdvertisedData, DataClientPayload, DataClientPayload::NumberOfAccountStates,
     DataClientResponse, GlobalDataSummary,
 };
+use diem_logger::prelude::*;
 use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use enum_dispatch::enum_dispatch;
 use itertools::Itertools;
@@ -223,6 +225,14 @@ impl DataStreamTracker for AccountsStreamTracker {
 
             Ok(client_requests)
         } else {
+            info!(
+                (LogSchema::new(LogEntry::DiemDataClient)
+                    .event(LogEvent::Pending)
+                    .message(&format!(
+                        "Requested the number of accounts at version: {:?}",
+                        self.request.version
+                    )))
+            );
             self.account_num_requested = true;
             Ok(vec![DataClientRequest::NumberOfAccounts(
                 NumberOfAccountsRequest {
@@ -281,12 +291,18 @@ impl DataStreamTracker for AccountsStreamTracker {
                 );
                 return Ok(Some(data_notification));
             }
-            NumberOfAccounts(_) => {
+            NumberOfAccounts(request) => {
                 if let NumberOfAccountStates(number_of_accounts) = client_response.response_payload
                 {
                     // We got a response. Save the number of accounts.
                     self.number_of_accounts = Some(number_of_accounts);
                     self.account_num_requested = false;
+                    info!(
+                        (LogSchema::new(LogEntry::ReceivedDataResponse)
+                            .event(LogEvent::Success)
+                            .message(&format!("Received number of accounts at version: {:?}. Total accounts: {:?}",
+                                              request.version, number_of_accounts)))
+                    );
                 }
             }
             request => invalid_client_request!(request, self),
@@ -489,6 +505,14 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
                 self.select_target_ledger_info(&global_data_summary.advertised_data)?;
             if target_ledger_info.ledger_info().epoch() > next_request_epoch {
                 // There was an epoch change. Request an epoch ending ledger info.
+                info!(
+                    (LogSchema::new(LogEntry::DiemDataClient)
+                        .event(LogEvent::Pending)
+                        .message(&format!(
+                            "Requested an epoch ending ledger info for epoch: {:?}",
+                            target_ledger_info.ledger_info().epoch()
+                        )))
+                );
                 self.end_of_epoch_requested = true;
                 return Ok(vec![DataClientRequest::EpochEndingLedgerInfos(
                     EpochEndingLedgerInfosRequest {
@@ -497,6 +521,15 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
                     },
                 )]);
             } else {
+                info!(
+                    (LogSchema::new(LogEntry::ReceivedDataResponse)
+                        .event(LogEvent::Success)
+                        .message(&format!(
+                            "Setting new target ledger info. Version: {:?}, Epoch: {:?}",
+                            target_ledger_info.ledger_info().version(),
+                            target_ledger_info.ledger_info().epoch()
+                        )))
+                );
                 self.target_ledger_info = Some(target_ledger_info);
             }
         }
@@ -566,13 +599,39 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
                 if let DataClientPayload::EpochEndingLedgerInfos(epoch_ending_ledger_infos) =
                     &client_response.response_payload
                 {
-                    if let [target_ledger_info] = &epoch_ending_ledger_infos[..] {
-                        self.target_ledger_info = Some(target_ledger_info.clone());
-                    } else {
-                        // TODO(joshlind): notify the data client of the bad response
+                    match &epoch_ending_ledger_infos[..] {
+                        [target_ledger_info] => {
+                            info!(
+                                (LogSchema::new(LogEntry::ReceivedDataResponse)
+                                    .event(LogEvent::Success)
+                                    .message(&format!(
+                                        "Received an epoch ending ledger info for epoch: {:?}. \
+                                        Setting new target version: {:?}",
+                                        target_ledger_info.ledger_info().epoch(),
+                                        target_ledger_info.ledger_info().version()
+                                    )))
+                            );
+                            self.target_ledger_info = Some(target_ledger_info.clone());
+                        }
+                        response_payload => {
+                            // TODO(joshlind): notify the data client of the bad response
+                            debug!(
+                                (LogSchema::new(LogEntry::ReceivedDataResponse)
+                                    .event(LogEvent::Error)
+                                    .message(&format!("Received an incorrect number of epoch ending ledger infos. Response: {:?}", response_payload))
+                                ));
+                        }
                     }
                 } else {
                     // TODO(joshlind): notify the data client of the bad response
+                    debug!(
+                        (LogSchema::new(LogEntry::ReceivedDataResponse)
+                            .event(LogEvent::Error)
+                            .message(&format!(
+                                "Received an invalid epoch ending ledger response: {:?}",
+                                client_response.response_payload
+                            )))
+                    );
                 }
                 self.end_of_epoch_requested = false;
                 Ok(None)
@@ -663,6 +722,14 @@ impl EpochEndingStreamTracker {
                 end_epoch, request.start_epoch
             )));
         }
+        info!(
+            (LogSchema::new(LogEntry::ReceivedDataResponse)
+                .event(LogEvent::Success)
+                .message(&format!(
+                    "Setting the end epoch for the stream at: {:?}",
+                    end_epoch
+                )))
+        );
 
         Ok(EpochEndingStreamTracker {
             request: request.clone(),

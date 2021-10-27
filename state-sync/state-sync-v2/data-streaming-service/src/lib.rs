@@ -7,6 +7,7 @@
 mod data_notification;
 mod data_stream;
 mod error;
+mod logging;
 mod stream_progress_tracker;
 mod streaming_client;
 mod streaming_service;
