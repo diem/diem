@@ -63,8 +63,6 @@ mod chunk_executor_impl;
 pub mod db_bootstrapper;
 mod transaction_replayer_impl;
 
-type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
-
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<PS, V> {
     db: DbReaderWriter,
@@ -262,12 +260,14 @@ where
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
     fn process_vm_outputs(
-        mut account_to_state: HashMap<AccountAddress, AccountState>,
-        account_to_proof: HashMap<HashValue, SparseMerkleProof>,
         transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
-        parent_trees: &ExecutedTrees,
+        // the one used by the vm during the execution which generated `vm_output`
+        state_view: VerifiedStateView<DpnProto>,
+        parent_transaction_accumulator: &Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
     ) -> Result<ProcessedVMOutput> {
+        let (mut account_to_state, account_to_proof, parent_state) =
+            state_view.unpack_after_execution();
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -300,8 +300,7 @@ where
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let (roots_with_node_hashes, current_state_tree) = parent_trees
-            .state_tree()
+        let (roots_with_node_hashes, current_state_tree) = parent_state
             .serial_update(
                 txn_blobs
                     .iter()
@@ -417,12 +416,12 @@ where
         };
 
         let current_transaction_accumulator =
-            parent_trees.txn_accumulator().append(&txn_info_hashes);
+            parent_transaction_accumulator.append(&txn_info_hashes);
 
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees::new_copy(
-                current_state_tree,
+                current_state_tree.unfreeze(),
                 Arc::new(current_transaction_accumulator),
             ),
             next_epoch_state,
@@ -536,14 +535,11 @@ where
             }
         }
 
-        let (account_to_state, account_to_proof) = state_view.into();
-
         let output = Self::process_vm_outputs(
-            account_to_state,
-            account_to_proof,
             &transactions,
             vm_outputs,
-            read_lock.synced_trees(),
+            state_view,
+            read_lock.synced_trees().txn_accumulator(),
         )?;
 
         // Since we have verified the proofs, we just need to verify that each PS::TransactionInfo

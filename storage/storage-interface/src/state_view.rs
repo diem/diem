@@ -15,7 +15,7 @@ use diem_types::{
     transaction::{Version, PRE_GENESIS_VERSION},
 };
 use parking_lot::RwLock;
-use scratchpad::{AccountStatus, SparseMerkleTree};
+use scratchpad::{AccountStatus, FrozenSparseMerkleTree, SparseMerkleTree};
 use std::{
     collections::{hash_map::Entry, HashMap},
     convert::TryInto,
@@ -39,7 +39,7 @@ pub struct VerifiedStateView<PS: ProtocolSpec> {
     latest_persistent_state_root: HashValue,
 
     /// The in-momery version of sparse Merkle tree of which the states haven't been committed.
-    speculative_state: SparseMerkleTree<AccountStateBlob>,
+    speculative_state: FrozenSparseMerkleTree<AccountStateBlob>,
 
     /// The cache of verified account states from `reader` and `speculative_state_view`,
     /// represented by a hashmap with an account address as key and a pair of an ordered
@@ -106,10 +106,24 @@ impl<PS: ProtocolSpec> VerifiedStateView<PS> {
             reader,
             latest_persistent_version,
             latest_persistent_state_root,
-            speculative_state,
+            speculative_state: speculative_state.freeze(),
             account_to_state_cache: RwLock::new(HashMap::new()),
             account_to_proof_cache: RwLock::new(HashMap::new()),
         }
+    }
+
+    pub fn unpack_after_execution(
+        self,
+    ) -> (
+        HashMap<AccountAddress, AccountState>,
+        HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
+        FrozenSparseMerkleTree<AccountStateBlob>,
+    ) {
+        (
+            self.account_to_state_cache.into_inner(),
+            self.account_to_proof_cache.into_inner(),
+            self.speculative_state,
+        )
     }
 }
 
@@ -117,13 +131,11 @@ impl<PS: ProtocolSpec> From<VerifiedStateView<PS>>
     for (
         HashMap<AccountAddress, AccountState>,
         HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
+        FrozenSparseMerkleTree<AccountStateBlob>,
     )
 {
     fn from(view: VerifiedStateView<PS>) -> Self {
-        (
-            view.account_to_state_cache.into_inner(),
-            view.account_to_proof_cache.into_inner(),
-        )
+        view.unpack_after_execution()
     }
 }
 

@@ -99,28 +99,6 @@ use std::{
     sync::{Arc, Weak},
 };
 
-/// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
-#[derive(Debug, Eq, PartialEq)]
-pub enum AccountStatus<V> {
-    /// The account exists in the tree, therefore we can give its value.
-    ExistsInScratchPad(V),
-
-    /// The account does not exist in the tree, but exists in DB. This happens when the search
-    /// reaches a leaf node that has the requested account, but the node has only the value hash
-    /// because it was loaded into memory as part of a non-inclusion proof. When we go to DB we
-    /// don't need to traverse the tree to find the same leaf, instead we can use the value hash to
-    /// look up the account content directly.
-    ExistsInDB,
-
-    /// The account does not exist in either the tree or DB. This happens when the search reaches
-    /// an empty node, or a leaf node that has a different account.
-    DoesNotExist,
-
-    /// We do not know if this account exists or not and need to go to DB to find out. This happens
-    /// when the search reaches a subtree node.
-    Unknown,
-}
-
 /// To help finding the oldest ancestor of any SMT, a branch tracker is created each time
 /// the chain of SMTs forked (two or more SMTs updating the same parent).
 #[derive(Debug)]
@@ -328,16 +306,20 @@ where
         }
     }
 
-    fn spawn(&self, child_root: SubTree<V>) -> Self {
-        Self {
-            inner: self.inner.spawn(child_root),
-        }
-    }
-
-    #[allow(dead_code)]
     fn get_oldest_ancestor(&self) -> Self {
         Self {
             inner: self.inner.get_oldest_ancestor(),
+        }
+    }
+
+    pub fn freeze(self) -> FrozenSparseMerkleTree<V> {
+        let base_smt = self.get_oldest_ancestor();
+        let base_generation = base_smt.inner.generation;
+
+        FrozenSparseMerkleTree {
+            _base_smt: base_smt,
+            base_generation,
+            smt: self,
         }
     }
 
@@ -350,6 +332,107 @@ where
 
     fn root_weak(&self) -> SubTree<V> {
         self.inner.root.weak()
+    }
+
+    /// Returns the root hash of this tree.
+    pub fn root_hash(&self) -> HashValue {
+        self.inner.root.hash()
+    }
+}
+
+/// In tests and benchmark, reference to ancestors are manually managed
+#[cfg(any(feature = "fuzzing", feature = "bench", test))]
+impl<V> SparseMerkleTree<V>
+where
+    V: Clone + CryptoHash + Send + Sync,
+{
+    pub fn serial_update(
+        &self,
+        update_batch: Vec<Vec<(HashValue, &V)>>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<(Vec<(HashValue, HashMap<NibblePath, HashValue>)>, Self), UpdateError> {
+        self.clone()
+            .freeze()
+            .serial_update(update_batch, proof_reader)
+            .map(|(hashes, smt)| (hashes, smt.unfreeze()))
+    }
+
+    pub fn batch_update(
+        &self,
+        updates: Vec<(HashValue, &V)>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<Self, UpdateError> {
+        self.clone()
+            .freeze()
+            .batch_update(updates, proof_reader)
+            .map(FrozenSparseMerkleTree::unfreeze)
+    }
+
+    pub fn get(&self, key: HashValue) -> AccountStatus<V> {
+        self.clone().freeze().get(key)
+    }
+}
+
+impl<V> Default for SparseMerkleTree<V>
+where
+    V: Clone + CryptoHash + Send + Sync,
+{
+    fn default() -> Self {
+        SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH)
+    }
+}
+
+/// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
+#[derive(Debug, Eq, PartialEq)]
+pub enum AccountStatus<V> {
+    /// The account exists in the tree, therefore we can give its value.
+    ExistsInScratchPad(V),
+
+    /// The account does not exist in the tree, but exists in DB. This happens when the search
+    /// reaches a leaf node that has the requested account, but the node has only the value hash
+    /// because it was loaded into memory as part of a non-inclusion proof. When we go to DB we
+    /// don't need to traverse the tree to find the same leaf, instead we can use the value hash to
+    /// look up the account content directly.
+    ExistsInDB,
+
+    /// The account does not exist in either the tree or DB. This happens when the search reaches
+    /// an empty node, or a leaf node that has a different account.
+    DoesNotExist,
+
+    /// We do not know if this account exists or not and need to go to DB to find out. This happens
+    /// when the search reaches a subtree node.
+    Unknown,
+}
+
+/// In the entire lifetime of this, in-mem nodes won't be dropped because a reference to the oldest
+/// SMT is held inside.
+#[derive(Clone, Debug)]
+pub struct FrozenSparseMerkleTree<V> {
+    _base_smt: SparseMerkleTree<V>,
+    base_generation: u64,
+    smt: SparseMerkleTree<V>,
+}
+
+impl<V> FrozenSparseMerkleTree<V>
+where
+    V: Clone + CryptoHash + Send + Sync,
+{
+    fn spawn(&self, child_root: SubTree<V>) -> Self {
+        Self {
+            _base_smt: self._base_smt.clone(),
+            base_generation: self.base_generation,
+            smt: SparseMerkleTree {
+                inner: self.smt.inner.spawn(child_root),
+            },
+        }
+    }
+
+    pub fn unfreeze(self) -> SparseMerkleTree<V> {
+        self.smt
+    }
+
+    pub fn root_hash(&self) -> HashValue {
+        self.smt.root_hash()
     }
 
     /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree multiple
@@ -376,7 +459,7 @@ where
                 .collect::<Vec<_>>();
             current_state_tree = current_state_tree.batch_update(updates, proof_reader)?;
             result.push((
-                current_state_tree.root_hash(),
+                current_state_tree.smt.root_hash(),
                 current_state_tree.generate_node_hashes(accounts),
             ));
         }
@@ -392,9 +475,9 @@ where
     ) -> HashMap<NibblePath, HashValue> {
         let mut node_hashes = HashMap::new();
         let mut nibble_path = NibblePath::new(vec![]);
-        Self::collect_new_hashes(
+        self.collect_new_hashes(
             touched_accounts.as_slice(),
-            self.root_weak(),
+            self.smt.root_weak(),
             0, /* depth in nibble */
             0, /* level within a nibble*/
             &mut nibble_path,
@@ -405,6 +488,7 @@ where
 
     /// Recursively generate the partial node update batch of jellyfish merkle
     fn collect_new_hashes(
+        &self,
         keys: &[HashValue],
         subtree: SubTree<V>,
         depth_in_nibble: usize,
@@ -425,7 +509,7 @@ where
             node_hashes.insert(cur_nibble_path.clone(), subtree.hash());
         }
         match subtree
-            .get_node_if_in_mem()
+            .get_node_if_in_mem(self.base_generation)
             .expect("must exist")
             .inner()
             .borrow()
@@ -440,7 +524,7 @@ where
                     &keys.iter().map(|k| (*k, ())).collect::<Vec<_>>()[..],
                     depth_in_nibble * 4 + level_within_nibble,
                 );
-                Self::collect_new_hashes(
+                self.collect_new_hashes(
                     &keys[..pivot],
                     internal_node.left.weak(),
                     next_nibble_depth,
@@ -448,7 +532,7 @@ where
                     cur_nibble_path,
                     node_hashes,
                 );
-                Self::collect_new_hashes(
+                self.collect_new_hashes(
                     &keys[pivot..],
                     internal_node.right.weak(),
                     next_nibble_depth,
@@ -491,7 +575,7 @@ where
             .into_iter()
             .collect::<Vec<_>>();
 
-        let current_root = self.root_weak();
+        let current_root = self.smt.root_weak();
         if kvs.is_empty() {
             Ok(self.clone())
         } else {
@@ -499,7 +583,7 @@ where
                 current_root,
                 &kvs[..],
                 proof_reader,
-                self.inner.generation + 1,
+                self.smt.inner.generation + 1,
             )?;
             Ok(self.spawn(root))
         }
@@ -507,11 +591,11 @@ where
 
     /// Queries a `key` in this `SparseMerkleTree`.
     pub fn get(&self, key: HashValue) -> AccountStatus<V> {
-        let mut cur = self.root_weak();
+        let mut cur = self.smt.root_weak();
         let mut bits = key.iter_bits();
 
         loop {
-            if let Some(node) = cur.get_node_if_in_mem() {
+            if let Some(node) = cur.get_node_if_in_mem(self.base_generation) {
                 if let NodeInner::Internal(internal_node) = node.inner() {
                     match bits.next() {
                         Some(bit) => {
@@ -553,20 +637,6 @@ where
             },
         };
         ret
-    }
-
-    /// Returns the root hash of this tree.
-    pub fn root_hash(&self) -> HashValue {
-        self.inner.root.hash()
-    }
-}
-
-impl<V> Default for SparseMerkleTree<V>
-where
-    V: Clone + CryptoHash + Send + Sync,
-{
-    fn default() -> Self {
-        SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH)
     }
 }
 

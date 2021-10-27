@@ -241,10 +241,16 @@ impl<V: CryptoHash> SubTree<V> {
         }
     }
 
-    pub fn get_node_if_in_mem(&self) -> Option<Arc<Node<V>>> {
+    pub fn get_node_if_in_mem(&self, min_generation: u64) -> Option<Arc<Node<V>>> {
         match self {
             Self::Empty => None,
-            Self::NonEmpty { root, .. } => root.get_if_in_mem(),
+            Self::NonEmpty { root, .. } => root.get_if_in_mem().and_then(|n| {
+                if n.generation >= min_generation {
+                    Some(n)
+                } else {
+                    None
+                }
+            }),
         }
     }
 

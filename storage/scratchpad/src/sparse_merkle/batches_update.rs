@@ -1,14 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::SparseMerkleTree;
 use crate::{
     sparse_merkle::{
         node::{NodeInner, SubTree},
         utils::{partition, swap_if},
         IntermediateHashes, UpdateError,
     },
-    ProofRead,
+    FrozenSparseMerkleTree, ProofRead, SparseMerkleTree,
 };
 use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -18,6 +17,22 @@ use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use std::{borrow::Borrow, cmp, collections::BTreeMap};
 
 impl<V> SparseMerkleTree<V>
+where
+    V: Clone + CryptoHash + Send + Sync,
+{
+    pub fn batches_update(
+        &self,
+        update_batch: Vec<Vec<(HashValue, &V)>>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<(Vec<HashValue>, Self), UpdateError> {
+        self.clone()
+            .freeze()
+            .batches_update(update_batch, proof_reader)
+            .map(|(hashes, smt)| (hashes, smt.unfreeze()))
+    }
+}
+
+impl<V> FrozenSparseMerkleTree<V>
 where
     V: Clone + CryptoHash + Send + Sync,
 {
@@ -52,14 +67,14 @@ where
             .into_iter()
             .map(|((hash, txn_id), value)| (hash, (txn_id, value))) // convert format.
             .collect();
-        let root_weak = self.root_weak();
+        let root_weak = self.smt.root_weak();
         let mut pre_hash = root_weak.hash();
         let (root, txn_hashes) = Self::batches_update_subtree(
             root_weak,
             /* subtree_depth = */ 0,
             &updates[..],
             proof_reader,
-            self.inner.generation + 1,
+            self.smt.inner.generation + 1,
         )?;
         // Convert txn_hashes to the output format, i.e. a Vec<HashValue> holding a hash value
         // after each of the update_batch.len() many transactions.

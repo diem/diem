@@ -95,11 +95,6 @@ where
             let parent_block_executed_trees =
                 Self::get_executed_trees_from_lock(&read_lock, parent_block_id)?;
 
-            // Hold a ref to the current base smt, so that all in-mem state in between the
-            // currently committed version and the end version of the parent block won't go away
-            // during execution.
-            let _base_smt = read_lock.committed_trees().state_tree().clone();
-
             let state_view = self.get_executed_state_view_from_lock(
                 &read_lock,
                 StateViewId::BlockExecution { block_id },
@@ -126,17 +121,11 @@ where
                 trace!("Execution status: {:?}", status);
             }
 
-            let (account_to_state, account_to_proof) = state_view.into();
-            let output = Self::process_vm_outputs(
-                account_to_state,
-                account_to_proof,
-                &transactions,
-                vm_outputs,
-                &parent_block_executed_trees,
-            )
-            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
-
             let parent_accu = parent_block_executed_trees.txn_accumulator();
+
+            let output =
+                Self::process_vm_outputs(&transactions, vm_outputs, state_view, parent_accu)
+                    .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
             let state_compute_result = output.compute_result(
                 parent_accu.frozen_subtree_roots().clone(),
