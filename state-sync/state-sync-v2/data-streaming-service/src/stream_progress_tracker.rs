@@ -73,6 +73,9 @@ pub trait DataStreamTracker {
     /// available in the given advertised data.
     fn is_remaining_data_available(&self, advertised_data: &AdvertisedData) -> bool;
 
+    /// Returns true iff the stream has sent all data to the stream listener.
+    fn is_stream_complete(&self) -> bool;
+
     /// Transforms a given data client response (for the previously sent
     /// request) into a data notification to be sent along the data stream.
     /// Note: this call may return `None`, in which case, no notification needs
@@ -147,6 +150,9 @@ pub struct AccountsStreamTracker {
     // The next account index that we're waiting to request from the network.
     // All accounts before this index have already been requested.
     pub next_request_index: u64,
+
+    // True iff all data has been sent across the stream.
+    pub stream_is_complete: bool,
 }
 
 impl AccountsStreamTracker {
@@ -157,6 +163,7 @@ impl AccountsStreamTracker {
             number_of_accounts: None,
             next_stream_index: 0,
             next_request_index: 0,
+            stream_is_complete: false,
         })
     }
 
@@ -180,6 +187,11 @@ impl AccountsStreamTracker {
 
         Ok(())
     }
+
+    fn get_number_of_accounts(&self) -> u64 {
+        self.number_of_accounts
+            .expect("Number of accounts is not initialized!")
+    }
 }
 
 impl DataStreamTracker for AccountsStreamTracker {
@@ -193,10 +205,14 @@ impl DataStreamTracker for AccountsStreamTracker {
         }
 
         if let Some(number_of_accounts) = self.number_of_accounts {
+            let end_account_index = number_of_accounts
+                .checked_sub(1)
+                .ok_or_else(|| Error::IntegerOverflow("End account index has overflown!".into()))?;
+
             // Create the client requests
             let client_requests = create_data_client_requests(
                 self.next_request_index,
-                number_of_accounts,
+                end_account_index,
                 max_number_of_requests,
                 global_data_summary
                     .optimal_chunk_sizes
@@ -224,6 +240,10 @@ impl DataStreamTracker for AccountsStreamTracker {
         )
     }
 
+    fn is_stream_complete(&self) -> bool {
+        self.stream_is_complete
+    }
+
     fn transform_client_response_into_notification(
         &mut self,
         client_request: &DataClientRequest,
@@ -242,6 +262,16 @@ impl DataStreamTracker for AccountsStreamTracker {
                 self.next_stream_index = request.end_index.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream index has overflown!".into())
                 })?;
+
+                // Check if the stream is complete
+                if request.end_index
+                    == self
+                        .get_number_of_accounts()
+                        .checked_sub(1)
+                        .ok_or_else(|| Error::IntegerOverflow("End index has overflown!".into()))?
+                {
+                    self.stream_is_complete = true;
+                }
 
                 // Create a new data notification
                 let data_notification = create_data_notification(
@@ -521,6 +551,10 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
         )
     }
 
+    fn is_stream_complete(&self) -> bool {
+        false // This stream type should never be complete!
+    }
+
     fn transform_client_response_into_notification(
         &mut self,
         client_request: &DataClientRequest,
@@ -593,6 +627,9 @@ pub struct EpochEndingStreamTracker {
     // The next epoch that we're waiting to request from the network. All epochs
     // before this have already been requested.
     pub next_request_epoch: Epoch,
+
+    // True iff all data has been sent across the stream.
+    pub stream_is_complete: bool,
 }
 
 impl EpochEndingStreamTracker {
@@ -632,6 +669,7 @@ impl EpochEndingStreamTracker {
             end_epoch,
             next_stream_epoch: request.start_epoch,
             next_request_epoch: request.start_epoch,
+            stream_is_complete: false,
         })
     }
 
@@ -684,6 +722,10 @@ impl DataStreamTracker for EpochEndingStreamTracker {
         )
     }
 
+    fn is_stream_complete(&self) -> bool {
+        self.stream_is_complete
+    }
+
     fn transform_client_response_into_notification(
         &mut self,
         client_request: &DataClientRequest,
@@ -702,6 +744,11 @@ impl DataStreamTracker for EpochEndingStreamTracker {
                 self.next_stream_epoch = request.end_epoch.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("Next stream epoch has overflown!".into())
                 })?;
+
+                // Check if the stream is complete
+                if request.end_epoch == self.end_epoch {
+                    self.stream_is_complete = true;
+                }
 
                 // Create a new data notification
                 let data_notification = create_data_notification(
@@ -729,6 +776,9 @@ pub struct TransactionStreamTracker {
     // The next version that we're waiting to request from the
     // network. All versions before this have already been requested.
     pub next_request_version: Version,
+
+    // True iff all data has been sent across the stream.
+    pub stream_is_complete: bool,
 }
 
 impl TransactionStreamTracker {
@@ -738,11 +788,13 @@ impl TransactionStreamTracker {
                 request: stream_request.clone(),
                 next_stream_version: request.start_version,
                 next_request_version: request.start_version,
+                stream_is_complete: false,
             }),
             StreamRequest::GetAllTransactionOutputs(request) => Ok(TransactionStreamTracker {
                 request: stream_request.clone(),
                 next_stream_version: request.start_version,
                 next_request_version: request.start_version,
+                stream_is_complete: false,
             }),
             request => invalid_stream_request!(request),
         }
@@ -752,16 +804,24 @@ impl TransactionStreamTracker {
         &mut self,
         request_start_version: Version,
         request_end_version: Version,
+        stream_end_version: Version,
     ) -> Result<(), Error> {
         verify_client_request_indices(
             self.next_stream_version,
             request_start_version,
             request_end_version,
         );
+
         // Update the local stream notification tracker
         self.next_stream_version = request_end_version
             .checked_add(1)
             .ok_or_else(|| Error::IntegerOverflow("Next stream version has overflown!".into()))?;
+
+        // Check if the stream is complete
+        if request_end_version == stream_end_version {
+            self.stream_is_complete = true;
+        }
+
         Ok(())
     }
 
@@ -856,6 +916,10 @@ impl DataStreamTracker for TransactionStreamTracker {
         )
     }
 
+    fn is_stream_complete(&self) -> bool {
+        self.stream_is_complete
+    }
+
     fn transform_client_response_into_notification(
         &mut self,
         client_request: &DataClientRequest,
@@ -863,15 +927,25 @@ impl DataStreamTracker for TransactionStreamTracker {
         notification_id_generator: Arc<AtomicU64>,
     ) -> Result<Option<DataNotification>, Error> {
         match &self.request {
-            StreamRequest::GetAllTransactions(_) => match client_request {
+            StreamRequest::GetAllTransactions(stream_request) => match client_request {
                 TransactionsWithProof(request) => {
-                    self.update_stream_version(request.start_version, request.end_version)?;
+                    let stream_end_version = stream_request.end_version;
+                    self.update_stream_version(
+                        request.start_version,
+                        request.end_version,
+                        stream_end_version,
+                    )?;
                 }
                 request => invalid_client_request!(request, self),
             },
-            StreamRequest::GetAllTransactionOutputs(_) => match client_request {
+            StreamRequest::GetAllTransactionOutputs(stream_request) => match client_request {
                 TransactionOutputsWithProof(request) => {
-                    self.update_stream_version(request.start_version, request.end_version)?;
+                    let stream_end_version = stream_request.end_version;
+                    self.update_stream_version(
+                        request.start_version,
+                        request.end_version,
+                        stream_end_version,
+                    )?;
                 }
                 request => invalid_client_request!(request, self),
             },
@@ -914,7 +988,6 @@ fn create_data_client_requests(
     stream_progress_tracker: StreamProgressTracker,
 ) -> Result<Vec<DataClientRequest>, Error> {
     if start_index > end_index {
-        // TODO(joshlind): log this occurrence! We need to handle stream completion.
         return Ok(vec![]);
     }
 

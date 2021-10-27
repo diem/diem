@@ -42,33 +42,35 @@ async fn test_notifications_accounts() {
         )
         .await
         {
-            if let DataPayload::AccountStatesWithProof(accounts_with_proof) =
-                data_notification.data_payload
-            {
-                // Verify the account start index matches the expected index
-                assert_eq!(accounts_with_proof.first_index, next_expected_index);
+            match data_notification.data_payload {
+                DataPayload::AccountStatesWithProof(accounts_with_proof) => {
+                    // Verify the account start index matches the expected index
+                    assert_eq!(accounts_with_proof.first_index, next_expected_index);
 
-                // Verify the last account index matches the account list length
-                let num_accounts = accounts_with_proof.account_blobs.len() as u64;
-                assert_eq!(
-                    accounts_with_proof.last_index,
-                    next_expected_index + num_accounts - 1,
-                );
+                    // Verify the last account index matches the account list length
+                    let num_accounts = accounts_with_proof.account_blobs.len() as u64;
+                    assert_eq!(
+                        accounts_with_proof.last_index,
+                        next_expected_index + num_accounts - 1,
+                    );
 
-                // Verify the number of account blobs is as expected
-                assert_eq!(accounts_with_proof.account_blobs.len() as u64, num_accounts);
+                    // Verify the number of account blobs is as expected
+                    assert_eq!(accounts_with_proof.account_blobs.len() as u64, num_accounts);
 
-                next_expected_index += num_accounts;
-            } else {
-                panic!(
-                    "Expected an account ledger info payload, but got: {:?}",
-                    data_notification
-                );
+                    next_expected_index += num_accounts;
+                }
+                DataPayload::EndOfStream => {
+                    assert_eq!(next_expected_index, TOTAL_NUM_ACCOUNTS);
+                    return;
+                }
+                data_payload => {
+                    panic!(
+                        "Expected an account ledger info payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
-            if next_expected_index == TOTAL_NUM_ACCOUNTS + 1 {
-                return; // We hit the end of the stream!
-            }
             panic!(
                 "Timed out waiting for a data notification! Next expected index: {:?}",
                 next_expected_index
@@ -102,32 +104,34 @@ async fn test_notifications_continuous_outputs() {
         )
         .await
         {
-            if let DataPayload::ContinuousTransactionOutputsWithProof(
-                ledger_info_with_sigs,
-                outputs_with_proofs,
-            ) = data_notification.data_payload
-            {
-                let ledger_info = ledger_info_with_sigs.ledger_info();
-                // Verify the epoch of the ledger info
-                assert_eq!(ledger_info.epoch(), next_expected_epoch);
+            match data_notification.data_payload {
+                DataPayload::ContinuousTransactionOutputsWithProof(
+                    ledger_info_with_sigs,
+                    outputs_with_proofs,
+                ) => {
+                    let ledger_info = ledger_info_with_sigs.ledger_info();
+                    // Verify the epoch of the ledger info
+                    assert_eq!(ledger_info.epoch(), next_expected_epoch);
 
-                // Verify the output start version matches the expected version
-                let first_output_version = outputs_with_proofs.first_transaction_output_version;
-                assert_eq!(Some(next_expected_version), first_output_version);
+                    // Verify the output start version matches the expected version
+                    let first_output_version = outputs_with_proofs.first_transaction_output_version;
+                    assert_eq!(Some(next_expected_version), first_output_version);
 
-                let num_outputs = outputs_with_proofs.transactions_and_outputs.len() as u64;
-                next_expected_version += num_outputs;
+                    let num_outputs = outputs_with_proofs.transactions_and_outputs.len() as u64;
+                    next_expected_version += num_outputs;
 
-                // Update epochs if we've hit the epoch end
-                let last_output_version = first_output_version.unwrap() + num_outputs - 1;
-                if ledger_info.version() == last_output_version && ledger_info.ends_epoch() {
-                    next_expected_epoch += 1;
+                    // Update epochs if we've hit the epoch end
+                    let last_output_version = first_output_version.unwrap() + num_outputs - 1;
+                    if ledger_info.version() == last_output_version && ledger_info.ends_epoch() {
+                        next_expected_epoch += 1;
+                    }
                 }
-            } else {
-                panic!(
-                    "Expected a continuous output payload, but got: {:?}",
-                    data_notification
-                );
+                data_payload => {
+                    panic!(
+                        "Expected a continuous output payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
             if next_expected_epoch == MAX_ADVERTISED_EPOCH
@@ -165,36 +169,40 @@ async fn test_notifications_continuous_transactions() {
         )
         .await
         {
-            if let DataPayload::ContinuousTransactionsWithProof(
-                ledger_info_with_sigs,
-                transactions_with_proof,
-            ) = data_notification.data_payload
-            {
-                let ledger_info = ledger_info_with_sigs.ledger_info();
-                // Verify the epoch of the ledger info
-                assert_eq!(ledger_info.epoch(), next_expected_epoch);
+            match data_notification.data_payload {
+                DataPayload::ContinuousTransactionsWithProof(
+                    ledger_info_with_sigs,
+                    transactions_with_proof,
+                ) => {
+                    let ledger_info = ledger_info_with_sigs.ledger_info();
+                    // Verify the epoch of the ledger info
+                    assert_eq!(ledger_info.epoch(), next_expected_epoch);
 
-                // Verify the transaction start version matches the expected version
-                let first_transaction_version = transactions_with_proof.first_transaction_version;
-                assert_eq!(Some(next_expected_version), first_transaction_version);
+                    // Verify the transaction start version matches the expected version
+                    let first_transaction_version =
+                        transactions_with_proof.first_transaction_version;
+                    assert_eq!(Some(next_expected_version), first_transaction_version);
 
-                // Verify the payload contains events
-                assert_some!(transactions_with_proof.events);
+                    // Verify the payload contains events
+                    assert_some!(transactions_with_proof.events);
 
-                let num_transactions = transactions_with_proof.transactions.len() as u64;
-                next_expected_version += num_transactions;
+                    let num_transactions = transactions_with_proof.transactions.len() as u64;
+                    next_expected_version += num_transactions;
 
-                // Update epochs if we've hit the epoch end
-                let last_transaction_version =
-                    first_transaction_version.unwrap() + num_transactions - 1;
-                if ledger_info.version() == last_transaction_version && ledger_info.ends_epoch() {
-                    next_expected_epoch += 1;
+                    // Update epochs if we've hit the epoch end
+                    let last_transaction_version =
+                        first_transaction_version.unwrap() + num_transactions - 1;
+                    if ledger_info.version() == last_transaction_version && ledger_info.ends_epoch()
+                    {
+                        next_expected_epoch += 1;
+                    }
                 }
-            } else {
-                panic!(
-                    "Expected a continuous transaction payload, but got: {:?}",
-                    data_notification
-                );
+                data_payload => {
+                    panic!(
+                        "Expected a continuous transaction payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
             if next_expected_epoch == MAX_ADVERTISED_EPOCH
@@ -231,26 +239,28 @@ async fn test_notifications_epoch_ending() {
         )
         .await
         {
-            if let DataPayload::EpochEndingLedgerInfos(ledger_infos_with_sigs) =
-                data_notification.data_payload
-            {
-                // Verify the epochs of the ledger infos are contiguous
-                for ledger_info_with_sigs in ledger_infos_with_sigs {
-                    let epoch = ledger_info_with_sigs.ledger_info().commit_info().epoch();
-                    assert_eq!(next_expected_epoch, epoch);
-                    assert_le!(epoch, MAX_ADVERTISED_EPOCH - 1);
-                    next_expected_epoch += 1;
+            match data_notification.data_payload {
+                DataPayload::EpochEndingLedgerInfos(ledger_infos_with_sigs) => {
+                    // Verify the epochs of the ledger infos are contiguous
+                    for ledger_info_with_sigs in ledger_infos_with_sigs {
+                        let epoch = ledger_info_with_sigs.ledger_info().commit_info().epoch();
+                        assert_eq!(next_expected_epoch, epoch);
+                        assert_le!(epoch, MAX_ADVERTISED_EPOCH - 1);
+                        next_expected_epoch += 1;
+                    }
                 }
-            } else {
-                panic!(
-                    "Expected an epoch ending ledger info payload, but got: {:?}",
-                    data_notification
-                );
+                DataPayload::EndOfStream => {
+                    assert_eq!(next_expected_epoch, MAX_ADVERTISED_EPOCH);
+                    return;
+                }
+                data_payload => {
+                    panic!(
+                        "Expected an epoch ending ledger info payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
-            if next_expected_epoch == MAX_ADVERTISED_EPOCH {
-                return; // We hit the end of the stream!
-            }
             panic!(
                 "Timed out waiting for a data notification! Next expected epoch: {:?}",
                 next_expected_epoch
@@ -284,25 +294,27 @@ async fn test_notifications_transaction_outputs() {
         )
         .await
         {
-            if let DataPayload::TransactionOutputsWithProof(outputs_with_proof) =
-                data_notification.data_payload
-            {
-                // Verify the transaction output start version matches the expected version
-                let first_output_version = outputs_with_proof.first_transaction_output_version;
-                assert_eq!(Some(next_expected_output), first_output_version);
+            match data_notification.data_payload {
+                DataPayload::TransactionOutputsWithProof(outputs_with_proof) => {
+                    // Verify the transaction output start version matches the expected version
+                    let first_output_version = outputs_with_proof.first_transaction_output_version;
+                    assert_eq!(Some(next_expected_output), first_output_version);
 
-                let num_outputs = outputs_with_proof.transactions_and_outputs.len();
-                next_expected_output += num_outputs as u64;
-            } else {
-                panic!(
-                    "Expected a transaction output payload, but got: {:?}",
-                    data_notification
-                );
+                    let num_outputs = outputs_with_proof.transactions_and_outputs.len();
+                    next_expected_output += num_outputs as u64;
+                }
+                DataPayload::EndOfStream => {
+                    assert_eq!(next_expected_output, MAX_ADVERTISED_TRANSACTION_OUTPUT + 1);
+                    return;
+                }
+                data_payload => {
+                    panic!(
+                        "Expected a transaction output payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
-            if next_expected_output == MAX_ADVERTISED_TRANSACTION_OUTPUT + 1 {
-                return; // We hit the end of the stream!
-            }
             panic!(
                 "Timed out waiting for a data notification! Next expected output: {:?}",
                 next_expected_output
@@ -337,28 +349,31 @@ async fn test_notifications_transactions() {
         )
         .await
         {
-            if let DataPayload::TransactionsWithProof(transactions_with_proof) =
-                data_notification.data_payload
-            {
-                // Verify the transaction start version matches the expected version
-                let first_transaction_version = transactions_with_proof.first_transaction_version;
-                assert_eq!(Some(next_expected_transaction), first_transaction_version);
+            match data_notification.data_payload {
+                DataPayload::TransactionsWithProof(transactions_with_proof) => {
+                    // Verify the transaction start version matches the expected version
+                    let first_transaction_version =
+                        transactions_with_proof.first_transaction_version;
+                    assert_eq!(Some(next_expected_transaction), first_transaction_version);
 
-                // Verify the payload contains events
-                assert_some!(transactions_with_proof.events);
+                    // Verify the payload contains events
+                    assert_some!(transactions_with_proof.events);
 
-                let num_transactions = transactions_with_proof.transactions.len();
-                next_expected_transaction += num_transactions as u64;
-            } else {
-                panic!(
-                    "Expected a transaction payload, but got: {:?}",
-                    data_notification
-                );
+                    let num_transactions = transactions_with_proof.transactions.len();
+                    next_expected_transaction += num_transactions as u64;
+                }
+                DataPayload::EndOfStream => {
+                    assert_eq!(next_expected_transaction, MAX_ADVERTISED_TRANSACTION + 1);
+                    return;
+                }
+                data_payload => {
+                    panic!(
+                        "Expected a transaction payload, but got: {:?}",
+                        data_payload
+                    );
+                }
             }
         } else {
-            if next_expected_transaction == MAX_ADVERTISED_TRANSACTION + 1 {
-                return; // We hit the end of the stream!
-            }
             panic!(
                 "Timed out waiting for a data notification! Next expected transaction: {:?}",
                 next_expected_transaction
