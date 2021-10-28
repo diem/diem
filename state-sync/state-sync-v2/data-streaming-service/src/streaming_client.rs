@@ -25,10 +25,16 @@ pub type Epoch = u64;
 /// assume the transactions are returned in monotonically increasing versions.
 #[async_trait]
 pub trait DataStreamingClient {
-    /// Fetches all account states at the specified version. The specified
-    /// version must be an epoch ending version, otherwise an error will be
-    /// returned. Account state proofs are at the same specified version.
-    async fn get_all_accounts(&self, version: Version) -> Result<DataStreamListener, Error>;
+    /// Fetches the account states at the specified version. If `start_index`
+    /// is specified, the account states will be fetched starting at the
+    /// `start_index` (inclusive). Otherwise, the start index will 0.
+    /// The specified version must be an epoch ending version, otherwise an
+    /// error will be returned. Account state proofs are at the same version.
+    async fn get_all_accounts(
+        &self,
+        version: Version,
+        start_index: Option<u64>,
+    ) -> Result<DataStreamListener, Error>;
 
     /// Fetches all epoch ending ledger infos starting at `start_epoch`
     /// (inclusive) and ending at the last known epoch advertised in the network.
@@ -123,6 +129,7 @@ pub enum StreamRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GetAllAccountsRequest {
     pub version: Version,
+    pub start_index: u64,
 }
 
 /// A client request for fetching all available epoch ending ledger infos.
@@ -215,8 +222,16 @@ impl StreamingServiceClient {
 
 #[async_trait]
 impl DataStreamingClient for StreamingServiceClient {
-    async fn get_all_accounts(&self, version: u64) -> Result<DataStreamListener, Error> {
-        let client_request = StreamRequest::GetAllAccounts(GetAllAccountsRequest { version });
+    async fn get_all_accounts(
+        &self,
+        version: u64,
+        start_index: Option<u64>,
+    ) -> Result<DataStreamListener, Error> {
+        let start_index = start_index.unwrap_or(0);
+        let client_request = StreamRequest::GetAllAccounts(GetAllAccountsRequest {
+            version,
+            start_index,
+        });
         self.send_request_and_await_response(client_request).await
     }
 

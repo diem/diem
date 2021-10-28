@@ -45,13 +45,14 @@ fn test_get_all_accounts() {
     let request_version = 100;
     let expected_request = StreamRequest::GetAllAccounts(GetAllAccountsRequest {
         version: request_version,
+        start_index: 0,
     });
 
     // Spawn a new server thread to handle any account stream requests
     let _handler = spawn_service_and_expect_request(streaming_service_listener, expected_request);
 
     // Send an account stream request and verify we get a data stream listener
-    let response = block_on(streaming_service_client.get_all_accounts(request_version));
+    let response = block_on(streaming_service_client.get_all_accounts(request_version, None));
     assert_ok!(response);
 }
 

@@ -29,7 +29,7 @@ async fn test_notifications_accounts() {
 
     // Request an account stream and get a data stream listener
     let mut stream_listener = streaming_client
-        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS)
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS, None)
         .await
         .unwrap();
 
@@ -58,6 +58,70 @@ async fn test_notifications_accounts() {
                     assert_eq!(accounts_with_proof.account_blobs.len() as u64, num_accounts);
 
                     next_expected_index += num_accounts;
+                }
+                DataPayload::EndOfStream => {
+                    assert_eq!(next_expected_index, TOTAL_NUM_ACCOUNTS);
+                    return;
+                }
+                data_payload => {
+                    panic!(
+                        "Expected an account ledger info payload, but got: {:?}",
+                        data_payload
+                    );
+                }
+            }
+        } else {
+            panic!(
+                "Timed out waiting for a data notification! Next expected index: {:?}",
+                next_expected_index
+            );
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_accounts_multiple_streams() {
+    // Create a new streaming client and service
+    let (streaming_client, streaming_service) = create_new_streaming_client_and_service();
+    tokio::spawn(streaming_service.start_service());
+
+    // Request a new account stream starting at the next expected index.
+    let mut next_expected_index = 0;
+    let mut stream_listener = streaming_client
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS, Some(next_expected_index))
+        .await
+        .unwrap();
+
+    // Terminate and request new account streams at increasing versions
+    loop {
+        if let Ok(data_notification) = timeout(
+            Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+            stream_listener.select_next_some(),
+        )
+        .await
+        {
+            match data_notification.data_payload {
+                DataPayload::AccountStatesWithProof(accounts_with_proof) => {
+                    // Verify the indices
+                    assert_eq!(accounts_with_proof.first_index, next_expected_index);
+                    next_expected_index += accounts_with_proof.account_blobs.len() as u64;
+
+                    if next_expected_index < TOTAL_NUM_ACCOUNTS {
+                        // Terminate the stream
+                        streaming_client
+                            .terminate_stream_with_feedback(
+                                data_notification.notification_id,
+                                PayloadFeedback::InvalidPayloadData,
+                            )
+                            .await
+                            .unwrap();
+
+                        // Fetch a new stream
+                        stream_listener = streaming_client
+                            .get_all_accounts(MAX_ADVERTISED_ACCOUNTS, Some(next_expected_index))
+                            .await
+                            .unwrap();
+                    }
                 }
                 DataPayload::EndOfStream => {
                     assert_eq!(next_expected_index, TOTAL_NUM_ACCOUNTS);
@@ -390,19 +454,19 @@ async fn test_stream_accounts() {
 
     // Request an account stream and verify we get a data stream listener
     let result = streaming_client
-        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1)
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1, None)
         .await;
     assert_ok!(result);
 
     // Request a stream where accounts are missing (we are lower than advertised)
     let result = streaming_client
-        .get_all_accounts(MIN_ADVERTISED_ACCOUNTS - 1)
+        .get_all_accounts(MIN_ADVERTISED_ACCOUNTS - 1, None)
         .await;
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 
     // Request a stream where accounts are missing (we are lower than advertised)
     let result = streaming_client
-        .get_all_accounts(MAX_ADVERTISED_EPOCH + 1)
+        .get_all_accounts(MAX_ADVERTISED_EPOCH + 1, None)
         .await;
     assert_matches!(result, Err(Error::DataIsUnavailable(_)));
 }
@@ -585,7 +649,7 @@ async fn test_terminate_stream() {
 
     // Request an account stream
     let mut stream_listener = streaming_client
-        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1)
+        .get_all_accounts(MAX_ADVERTISED_ACCOUNTS - 1, None)
         .await
         .unwrap();
 
