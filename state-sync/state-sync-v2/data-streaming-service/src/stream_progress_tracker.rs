@@ -519,7 +519,7 @@ impl DataStreamTracker for ContinuousTransactionStreamTracker {
                         .event(LogEvent::Pending)
                         .message(&format!(
                             "Requested an epoch ending ledger info for epoch: {:?}",
-                            target_ledger_info.ledger_info().epoch()
+                            next_request_epoch
                         )))
                 );
                 self.end_of_epoch_requested = true;

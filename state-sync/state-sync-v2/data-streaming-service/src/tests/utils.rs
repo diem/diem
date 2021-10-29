@@ -132,7 +132,7 @@ impl DiemDataClient for MockDiemDataClient {
         // Create a random set of optimal chunk sizes to emulate changing environments
         let optimal_chunk_sizes = OptimalChunkSizes {
             account_states_chunk_size: create_non_zero_random_u64(100),
-            epoch_chunk_size: create_non_zero_random_u64(100),
+            epoch_chunk_size: create_non_zero_random_u64(10),
             transaction_chunk_size: create_non_zero_random_u64(2000),
             transaction_output_chunk_size: create_non_zero_random_u64(100),
         };

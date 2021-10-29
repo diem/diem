@@ -158,6 +158,67 @@ async fn test_notifications_continuous_outputs() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_continuous_outputs_multiple_streams() {
+    // Create a new streaming client and service
+    let streaming_client = create_new_streaming_client_and_service();
+    let end_epoch = MIN_ADVERTISED_EPOCH + 5;
+
+    // Request a continuous output stream starting at the next expected version
+    let mut next_expected_version = MIN_ADVERTISED_TRANSACTION_OUTPUT;
+    let mut next_expected_epoch = MIN_ADVERTISED_EPOCH;
+    let mut stream_listener = streaming_client
+        .continuously_stream_transaction_outputs(next_expected_version, next_expected_epoch)
+        .await
+        .unwrap();
+
+    // Terminate and request new output streams at increasing versions
+    loop {
+        let data_notification = get_data_notification(&mut stream_listener).await.unwrap();
+        match data_notification.data_payload {
+            DataPayload::ContinuousTransactionOutputsWithProof(
+                ledger_info_with_sigs,
+                outputs_with_proofs,
+            ) => {
+                let first_output_version = outputs_with_proofs.first_transaction_output_version;
+                assert_eq!(Some(next_expected_version), first_output_version);
+
+                let num_outputs = outputs_with_proofs.transactions_and_outputs.len() as u64;
+                next_expected_version += num_outputs;
+
+                let last_output_version = first_output_version.unwrap() + num_outputs - 1;
+                let ledger_info = ledger_info_with_sigs.ledger_info();
+                if ledger_info.version() == last_output_version && ledger_info.ends_epoch() {
+                    next_expected_epoch += 1;
+                }
+                if next_expected_version < MAX_ADVERTISED_TRANSACTION_OUTPUT {
+                    // Terminate the stream
+                    streaming_client
+                        .terminate_stream_with_feedback(
+                            data_notification.notification_id,
+                            NotificationFeedback::InvalidPayloadData,
+                        )
+                        .await
+                        .unwrap();
+
+                    // Fetch a new stream
+                    stream_listener = streaming_client
+                        .continuously_stream_transaction_outputs(
+                            next_expected_version,
+                            next_expected_epoch,
+                        )
+                        .await
+                        .unwrap();
+                }
+                if next_expected_epoch > end_epoch {
+                    return;
+                }
+            }
+            data_payload => unexpected_payload_type!(data_payload),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn test_notifications_continuous_transactions() {
     // Create a new streaming client and service
     let streaming_client = create_new_streaming_client_and_service();
@@ -244,6 +305,49 @@ async fn test_notifications_epoch_ending() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_epoch_ending_multiple_streams() {
+    // Create a new streaming client and service
+    let streaming_client = create_new_streaming_client_and_service();
+
+    // Request a new epoch ending stream starting at the next expected index.
+    let mut next_expected_epoch = MIN_ADVERTISED_EPOCH;
+    let mut stream_listener = streaming_client
+        .get_all_epoch_ending_ledger_infos(next_expected_epoch)
+        .await
+        .unwrap();
+
+    // Terminate and request new epoch ending streams at increasing versions
+    loop {
+        let data_notification = get_data_notification(&mut stream_listener).await.unwrap();
+        match data_notification.data_payload {
+            DataPayload::EpochEndingLedgerInfos(ledger_infos_with_sigs) => {
+                next_expected_epoch += ledger_infos_with_sigs.len() as u64;
+                if next_expected_epoch < MAX_ADVERTISED_EPOCH - 1 {
+                    // Terminate the stream
+                    streaming_client
+                        .terminate_stream_with_feedback(
+                            data_notification.notification_id,
+                            NotificationFeedback::InvalidPayloadData,
+                        )
+                        .await
+                        .unwrap();
+
+                    // Fetch a new stream
+                    stream_listener = streaming_client
+                        .get_all_epoch_ending_ledger_infos(next_expected_epoch)
+                        .await
+                        .unwrap();
+                }
+            }
+            DataPayload::EndOfStream => {
+                return assert_eq!(next_expected_epoch, MAX_ADVERTISED_EPOCH)
+            }
+            data_payload => unexpected_payload_type!(data_payload),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn test_notifications_transaction_outputs() {
     // Create a new streaming client and service
     let streaming_client = create_new_streaming_client_and_service();
@@ -313,6 +417,62 @@ async fn test_notifications_transactions() {
             }
             DataPayload::EndOfStream => {
                 return assert_eq!(next_expected_transaction, MAX_ADVERTISED_TRANSACTION + 1)
+            }
+            data_payload => unexpected_payload_type!(data_payload),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_notifications_transactions_multiple_streams() {
+    // Create a new streaming client and service
+    let streaming_client = create_new_streaming_client_and_service();
+
+    // Request a transaction stream starting at the next expected version
+    let mut next_expected_version = MIN_ADVERTISED_TRANSACTION;
+    let mut stream_listener = streaming_client
+        .get_all_transactions(
+            next_expected_version,
+            MAX_ADVERTISED_TRANSACTION,
+            MAX_ADVERTISED_TRANSACTION,
+            true,
+        )
+        .await
+        .unwrap();
+
+    // Terminate and request new transaction streams at increasing versions
+    loop {
+        let data_notification = get_data_notification(&mut stream_listener).await.unwrap();
+        match data_notification.data_payload {
+            DataPayload::TransactionsWithProof(transactions_with_proof) => {
+                let first_transaction_version = transactions_with_proof.first_transaction_version;
+                assert_eq!(Some(next_expected_version), first_transaction_version);
+
+                next_expected_version += transactions_with_proof.transactions.len() as u64;
+                if next_expected_version < MAX_ADVERTISED_TRANSACTION {
+                    // Terminate the stream
+                    streaming_client
+                        .terminate_stream_with_feedback(
+                            data_notification.notification_id,
+                            NotificationFeedback::InvalidPayloadData,
+                        )
+                        .await
+                        .unwrap();
+
+                    // Fetch a new stream
+                    stream_listener = streaming_client
+                        .get_all_transactions(
+                            next_expected_version,
+                            MAX_ADVERTISED_TRANSACTION,
+                            MAX_ADVERTISED_TRANSACTION,
+                            true,
+                        )
+                        .await
+                        .unwrap();
+                }
+            }
+            DataPayload::EndOfStream => {
+                return assert_eq!(next_expected_version, MAX_ADVERTISED_TRANSACTION + 1)
             }
             data_payload => unexpected_payload_type!(data_payload),
         }
