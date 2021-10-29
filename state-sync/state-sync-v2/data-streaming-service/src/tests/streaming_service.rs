@@ -6,7 +6,7 @@ use crate::{
     data_stream::DataStreamListener,
     error::Error,
     streaming_client::{
-        new_streaming_service_client_listener_pair, DataStreamingClient, PayloadFeedback,
+        new_streaming_service_client_listener_pair, DataStreamingClient, NotificationFeedback,
         StreamingServiceClient,
     },
     streaming_service::DataStreamingService,
@@ -92,7 +92,7 @@ async fn test_notifications_accounts_multiple_streams() {
                     streaming_client
                         .terminate_stream_with_feedback(
                             data_notification.notification_id,
-                            PayloadFeedback::InvalidPayloadData,
+                            NotificationFeedback::InvalidPayloadData,
                         )
                         .await
                         .unwrap();
@@ -533,7 +533,7 @@ async fn test_terminate_stream() {
     let result = streaming_client
         .terminate_stream_with_feedback(
             data_notification.notification_id,
-            PayloadFeedback::InvalidPayloadData,
+            NotificationFeedback::InvalidPayloadData,
         )
         .await;
     assert_ok!(result);

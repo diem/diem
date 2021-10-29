@@ -19,10 +19,14 @@ pub type Epoch = u64;
 /// The streaming client used by state sync to fetch data from the Diem network
 /// to synchronize local state.
 ///
-/// Note: the streaming service streams data sequentially, so clients (e.g.,
+/// Notes:
+/// 1. The streaming service streams data sequentially, so clients (e.g.,
 /// state sync) can process data notifications in the order they're received.
 /// For example, if we're streaming transactions with proofs, state sync can
 /// assume the transactions are returned in monotonically increasing versions.
+/// 2. If a stream completes (possibly prematurely), an end of stream
+/// notification will be sent to the listener. Once a stream has completed, it
+/// is the responsibility of the client to terminate the stream using this API.
 #[async_trait]
 pub trait DataStreamingClient {
     /// Fetches the account states at the specified version. If `start_index`
@@ -66,19 +70,19 @@ pub trait DataStreamingClient {
     ) -> Result<DataStreamListener, Error>;
 
     /// Terminates the stream that sent the notification with the given
-    /// `notification_id` and provides feedback for why the payload in the
-    /// notification was invalid.
+    /// `notification_id` and provides feedback for the termination reason.
     ///
     /// Note:
-    /// 1. This is required because data payloads may be invalid, e.g., due to
-    /// malformed data returned by a misbehaving peer or an invalid proof. This
-    /// notifies the streaming service that the payload was invalid and thus the
-    /// stream should be terminated and the responsible peer penalized.
+    /// 1. This is required because: (i) clients must terminate completed
+    /// streams (after receiving an end of stream notification); and (ii) data
+    /// payloads may be invalid, e.g., due to malformed data returned by a
+    /// misbehaving peer. This notifies the streaming service to terminate the
+    /// stream and take any action based on the provided feedback.
     /// 2. Clients that wish to continue fetching data need to open a new stream.
     async fn terminate_stream_with_feedback(
         &self,
         notification_id: NotificationId,
-        payload_feedback: PayloadFeedback,
+        notification_feedback: NotificationFeedback,
     ) -> Result<(), Error>;
 
     /// Continuously streams transactions with proofs as the blockchain grows.
@@ -174,15 +178,16 @@ pub struct ContinuouslyStreamTransactionOutputsRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TerminateStreamRequest {
     pub notification_id: NotificationId,
-    pub payload_feedback: PayloadFeedback,
+    pub notification_feedback: NotificationFeedback,
 }
 
-/// The feedback for a given payload.
+/// The feedback for a given notification.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum PayloadFeedback {
+pub enum NotificationFeedback {
+    EndOfStream,
     InvalidPayloadData,
+    PayloadProofFailed,
     PayloadTypeIsIncorrect,
-    ProofVerificationFailed,
 }
 
 /// The streaming service client that talks to the streaming service.
@@ -280,11 +285,11 @@ impl DataStreamingClient for StreamingServiceClient {
     async fn terminate_stream_with_feedback(
         &self,
         notification_id: u64,
-        payload_feedback: PayloadFeedback,
+        notification_feedback: NotificationFeedback,
     ) -> Result<(), Error> {
         let client_request = StreamRequest::TerminateStream(TerminateStreamRequest {
             notification_id,
-            payload_feedback,
+            notification_feedback,
         });
         // We can ignore the receiver as no data will be sent.
         let _ = self.send_stream_request(client_request).await?;

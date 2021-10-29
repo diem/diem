@@ -9,7 +9,7 @@ use crate::{
         new_streaming_service_client_listener_pair, ContinuouslyStreamTransactionOutputsRequest,
         ContinuouslyStreamTransactionsRequest, DataStreamingClient, GetAllAccountsRequest,
         GetAllEpochEndingLedgerInfosRequest, GetAllTransactionOutputsRequest,
-        GetAllTransactionsRequest, PayloadFeedback, StreamRequest, StreamingServiceListener,
+        GetAllTransactionsRequest, NotificationFeedback, StreamRequest, StreamingServiceListener,
         TerminateStreamRequest,
     },
     tests::utils::initialize_logger,
@@ -202,10 +202,10 @@ fn test_terminate_stream() {
 
     // Note the request we expect to receive on the streaming service side
     let request_notification_id = 19478;
-    let payload_feedback = PayloadFeedback::InvalidPayloadData;
+    let notification_feedback = NotificationFeedback::InvalidPayloadData;
     let expected_request = StreamRequest::TerminateStream(TerminateStreamRequest {
         notification_id: request_notification_id,
-        payload_feedback: payload_feedback.clone(),
+        notification_feedback: notification_feedback.clone(),
     });
 
     // Spawn a new server thread to handle any feedback requests
@@ -214,7 +214,7 @@ fn test_terminate_stream() {
     // Provide payload feedback and verify no error is returned
     let result = block_on(
         streaming_service_client
-            .terminate_stream_with_feedback(request_notification_id, payload_feedback),
+            .terminate_stream_with_feedback(request_notification_id, notification_feedback),
     );
     assert_ok!(result);
 }

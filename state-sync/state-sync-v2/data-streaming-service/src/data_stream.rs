@@ -7,7 +7,7 @@ use crate::{
     error::Error,
     logging::{LogEntry, LogEvent, LogSchema},
     stream_progress_tracker::{DataStreamTracker, StreamProgressTracker},
-    streaming_client::StreamRequest,
+    streaming_client::{NotificationFeedback, StreamRequest},
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_data_client::{
@@ -34,6 +34,9 @@ const DATA_STREAM_CHANNEL_SIZE: usize = 1000;
 
 // Maximum number of concurrent data client requests (per stream)
 const MAX_CONCURRENT_REQUESTS: u64 = 3;
+
+// Maximum number of retries for a single client request before the stream terminates
+const MAX_REQUEST_RETRY: u64 = 10;
 
 /// A unique ID used to identify each stream.
 pub type DataStreamId = u64;
@@ -78,6 +81,11 @@ pub struct DataStream<T> {
 
     // Notification ID of the end of stream notification (when it has been sent)
     stream_end_notification_id: Option<NotificationId>,
+
+    // The current failure count of the request at the head of the request queue.
+    // If this count becomes too large, the stream is evidently blocked (i.e.,
+    // unable to make progress) and will automatically terminate.
+    request_failure_count: u64,
 }
 
 impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
@@ -106,6 +114,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             notification_sender,
             notification_id_generator,
             stream_end_notification_id: None,
+            request_failure_count: 0,
         };
 
         Ok((data_stream, data_stream_listener))
@@ -128,16 +137,49 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         self.create_and_send_client_requests(&global_data_summary)
     }
 
-    /// Returns the response ID associated with a given `notification_id`.
-    /// Note: this method returns `None` if the `notification_id` does not match
-    /// a notification sent via this stream.
-    pub fn get_response_id_for_notification(
-        &self,
-        notification_id: &NotificationId,
-    ) -> Option<ResponseId> {
+    /// Returns true iff the given `notification_id` was sent by this stream
+    pub fn sent_notification(&self, notification_id: &NotificationId) -> bool {
+        if let Some(stream_end_notification_id) = self.stream_end_notification_id {
+            if stream_end_notification_id == *notification_id {
+                return true;
+            }
+        }
+
         self.notifications_to_responses
             .get(notification_id)
-            .cloned()
+            .is_some()
+    }
+
+    /// Notifies the Diem data client of a bad client response
+    pub fn handle_notification_feedback(
+        &self,
+        notification_id: &NotificationId,
+        notification_feedback: &NotificationFeedback,
+    ) -> Result<(), Error> {
+        if self.stream_end_notification_id == Some(*notification_id) {
+            if matches!(notification_feedback, NotificationFeedback::EndOfStream) {
+                return Ok(());
+            } else {
+                return Err(Error::UnexpectedErrorEncountered(format!(
+                    "Invalid feedback given for stream end: {:?}",
+                    notification_feedback
+                )));
+            }
+        }
+
+        let response_id = *self
+            .notifications_to_responses
+            .get(notification_id)
+            .ok_or_else(|| {
+                Error::UnexpectedErrorEncountered(format!(
+                    "Response ID missing for notification ID: {:?}",
+                    notification_id
+                ))
+            })?;
+        let response_error = extract_response_error(notification_feedback);
+        self.notify_bad_response(response_id, response_error);
+
+        Ok(())
     }
 
     /// Creates and sends a batch of diem data client requests to the network
@@ -284,11 +326,13 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
         global_data_summary: GlobalDataSummary,
     ) -> Result<(), Error> {
-        // Check if the stream is complete
         if self.stream_progress_tracker.is_stream_complete()
-            && self.stream_end_notification_id.is_none()
+            || self.request_failure_count >= MAX_REQUEST_RETRY
         {
-            return self.send_end_of_stream_notification();
+            if self.stream_end_notification_id.is_none() {
+                self.send_end_of_stream_notification()?;
+            }
+            return Ok(()); // There's nothing left to do
         }
 
         // Process any ready data responses
@@ -305,15 +349,15 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                             &pending_response.client_request,
                             client_response,
                         ) {
-                            // Send a data notification and make the next data client request
                             self.send_data_notification_to_client(
                                 &pending_response.client_request,
                                 client_response,
                             )?;
                         } else {
-                            // Notify the data client and re-fetch the data
-                            self.notify_bad_response(client_response);
-                            self.resend_data_client_request(&pending_response.client_request)?;
+                            self.handle_sanity_check_failure(
+                                &pending_response.client_request,
+                                client_response,
+                            )?;
                             break;
                         }
                     }
@@ -348,7 +392,25 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         }
     }
 
-    /// Handles errors returned by the data client in relation to a request.
+    /// Handles a client response that failed sanity checks
+    fn handle_sanity_check_failure(
+        &mut self,
+        data_client_request: &DataClientRequest,
+        data_client_response: &DataClientResponse,
+    ) -> Result<(), Error> {
+        error!(LogSchema::new(LogEntry::ReceivedDataResponse)
+            .stream_id(self.data_stream_id)
+            .event(LogEvent::Error)
+            .message("Encountered a client response that failed the sanity checks!"));
+
+        self.notify_bad_response(
+            data_client_response.response_id,
+            ResponseError::InvalidPayloadDataType,
+        );
+        self.resend_data_client_request(data_client_request)
+    }
+
+    /// Handles an error returned by the data client in relation to a request
     fn handle_data_client_error(
         &mut self,
         data_client_request: &DataClientRequest,
@@ -357,10 +419,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         error!(LogSchema::new(LogEntry::ReceivedDataResponse)
             .stream_id(self.data_stream_id)
             .event(LogEvent::Error)
-            .error(&data_client_error.clone().into()));
+            .error(&data_client_error.clone().into())
+            .message("Encountered a data client error!"));
 
-        // TODO(joshlind): don't just resend the request. Identify the best
-        // way to react based on the error.
+        // TODO(joshlind): can we identify the best way to react to the error?
         self.resend_data_client_request(data_client_request)
     }
 
@@ -370,31 +432,32 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
         data_client_request: &DataClientRequest,
     ) -> Result<(), Error> {
+        // Increment the number of client failures for this request
+        self.request_failure_count += 1;
+
         // Resend the client request
         let pending_client_response = self.send_client_request(data_client_request.clone());
 
-        // Push the pending response to the head of the sent requests queue as
-        // this is a resend.
+        // Push the pending response to the head of the sent requests queue
         self.get_sent_data_requests()
             .push_front(pending_client_response);
+
         Ok(())
     }
 
     /// Notifies the Diem data client of a bad client response
-    fn notify_bad_response(&self, data_client_response: &DataClientResponse) {
-        let response_id = data_client_response.response_id;
-        let response_error = ResponseError::InvalidPayloadDataType;
+    fn notify_bad_response(&self, response_id: ResponseId, response_error: ResponseError) {
+        let data_stream_id = self.data_stream_id;
         let diem_data_client = self.diem_data_client.clone();
 
         info!(LogSchema::new(LogEntry::ReceivedDataResponse)
-            .stream_id(self.data_stream_id)
+            .stream_id(data_stream_id)
             .event(LogEvent::Error)
             .message(&format!(
                 "Notifying the data client of a bad response. Response id: {:?}, error: {:?}",
                 response_id, response_error
             )));
 
-        let data_stream_id = self.data_stream_id;
         tokio::spawn(async move {
             let client_response = diem_data_client.notify_bad_response(response_id, response_error);
             if let Err(error) = client_response.await {
@@ -444,6 +507,9 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     )))
             );
             self.send_data_notification(data_notification)?;
+
+            // Reset the failure count. We've sent a notification and can move on.
+            self.request_failure_count = 0;
         }
 
         Ok(())
@@ -552,6 +618,22 @@ fn sanity_check_client_response(
             matches!(
                 data_client_response.response_payload,
                 DataClientPayload::TransactionOutputsWithProof(_)
+            )
+        }
+    }
+}
+
+/// Transforms the notification feedback into a specific response error that
+/// can be sent to the Diem data client.
+fn extract_response_error(notification_feedback: &NotificationFeedback) -> ResponseError {
+    match notification_feedback {
+        NotificationFeedback::InvalidPayloadData => ResponseError::InvalidData,
+        NotificationFeedback::PayloadTypeIsIncorrect => ResponseError::InvalidPayloadDataType,
+        NotificationFeedback::PayloadProofFailed => ResponseError::ProofVerificationError,
+        _ => {
+            panic!(
+                "Invalid notification feedback given: {:?}",
+                notification_feedback
             )
         }
     }
