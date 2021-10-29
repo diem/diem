@@ -37,7 +37,7 @@ type SubTree = super::SubTree<AccountStateBlob>;
 fn test_replace_in_mem_leaf() {
     let key = b"hello".test_only_hash();
     let value_hash = b"world".test_only_hash();
-    let leaf = SubTree::new_leaf_with_value_hash(key, value_hash);
+    let leaf = SubTree::new_leaf_with_value_hash(key, value_hash, 0 /* generation */);
     let smt = SparseMerkleTree::new_with_root(leaf);
 
     let new_value: AccountStateBlob = vec![1, 2, 3].into();
@@ -52,7 +52,7 @@ fn test_replace_in_mem_leaf() {
 fn test_split_in_mem_leaf() {
     let key1 = HashValue::from_slice(&[0; 32]).unwrap();
     let value1_hash = b"hello".test_only_hash();
-    let leaf1 = SubTree::new_leaf_with_value_hash(key1, value1_hash);
+    let leaf1 = SubTree::new_leaf_with_value_hash(key1, value1_hash, 0 /* generation */);
     let smt = SparseMerkleTree::new_with_root(leaf1);
 
     let key2 = HashValue::from_slice(&[0xff; 32]).unwrap();
@@ -76,11 +76,12 @@ fn test_insert_at_in_mem_empty() {
     let value3: AccountStateBlob = vec![1, 2, 3].into();
 
     let internal = SubTree::new_internal(
-        SubTree::new_leaf_with_value_hash(key1, value1_hash),
-        SubTree::new_leaf_with_value_hash(key2, value2_hash),
+        SubTree::new_leaf_with_value_hash(key1, value1_hash, 0 /* generation */),
+        SubTree::new_leaf_with_value_hash(key2, value2_hash, 0 /* generation */),
+        0, /* generation */
     );
     let internal_hash = internal.hash();
-    let root = SubTree::new_internal(internal, SubTree::new_empty());
+    let root = SubTree::new_internal(internal, SubTree::new_empty(), 0 /* generation */);
     let smt = SparseMerkleTree::new_with_root(root);
 
     let root_hash = hash_internal(internal_hash, hash_leaf(key3, value3.hash()));

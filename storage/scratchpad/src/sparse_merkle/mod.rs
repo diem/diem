@@ -79,7 +79,7 @@ mod sparse_merkle_test;
 pub mod test_utils;
 
 use crate::sparse_merkle::{
-    node::{Node, SubTree},
+    node::{NodeInner, SubTree},
     updater::SubTreeUpdater,
     utils::{partition, swap_if},
 };
@@ -424,8 +424,13 @@ where
             }
             node_hashes.insert(cur_nibble_path.clone(), subtree.hash());
         }
-        match subtree.get_node_if_in_mem().expect("must exist").borrow() {
-            Node::Internal(internal_node) => {
+        match subtree
+            .get_node_if_in_mem()
+            .expect("must exist")
+            .inner()
+            .borrow()
+        {
+            NodeInner::Internal(internal_node) => {
                 let (next_nibble_depth, next_level_within_nibble) = if level_within_nibble == 3 {
                     (depth_in_nibble + 1, 0)
                 } else {
@@ -452,7 +457,7 @@ where
                     node_hashes,
                 );
             }
-            Node::Leaf(leaf_node) => {
+            NodeInner::Leaf(leaf_node) => {
                 assert_eq!(keys.len(), 1);
                 assert_eq!(keys[0], leaf_node.key);
                 if level_within_nibble != 0 {
@@ -505,6 +510,7 @@ where
             /* subtree_depth = */ 0,
             &updates[..],
             proof_reader,
+            self.inner.generation + 1,
         )?;
         // Convert txn_hashes to the output format, i.e. a Vec<HashValue> holding a hash value
         // after each of the update_batch.len() many transactions.
@@ -535,6 +541,7 @@ where
         subtree_depth: usize,
         updates: &[(HashValue, (usize, &V))],
         proof_reader: &impl ProofRead<V>,
+        generation: u64,
     ) -> Result<(SubTree<V>, IntermediateHashes), UpdateError> {
         if updates.is_empty() {
             return Ok((subtree, vec![]));
@@ -542,8 +549,8 @@ where
 
         if let SubTree::NonEmpty { root, .. } = &subtree {
             match root.get_if_in_mem() {
-                Some(arc_node) => match arc_node.borrow() {
-                    Node::Internal(internal_node) => {
+                Some(arc_node) => match arc_node.inner().borrow() {
+                    NodeInner::Internal(internal_node) => {
                         let pivot = partition(updates, subtree_depth);
                         let left_weak = internal_node.left.weak();
                         let left_hash = left_weak.hash();
@@ -555,12 +562,14 @@ where
                             subtree_depth + 1,
                             &updates[..pivot],
                             proof_reader,
+                            generation,
                         )?;
                         let (right_tree, right_hashes) = Self::batches_update_subtree(
                             right_weak,
                             subtree_depth + 1,
                             &updates[pivot..],
                             proof_reader,
+                            generation,
                         )?;
 
                         let merged_hashes = Self::merge_txn_hashes(
@@ -569,15 +578,19 @@ where
                             right_hash,
                             right_hashes,
                         );
-                        Ok((SubTree::new_internal(left_tree, right_tree), merged_hashes))
+                        Ok((
+                            SubTree::new_internal(left_tree, right_tree, generation),
+                            merged_hashes,
+                        ))
                     }
-                    Node::Leaf(leaf_node) => Self::batch_create_subtree(
+                    NodeInner::Leaf(leaf_node) => Self::batch_create_subtree(
                         subtree.weak(), // 'root' is upgraded: OK to pass weak ptr.
                         /* target_key = */ leaf_node.key,
                         /* siblings = */ vec![],
                         subtree_depth,
                         updates,
                         proof_reader,
+                        generation,
                     ),
                 },
                 // Subtree with hash only, need to use proofs.
@@ -588,6 +601,7 @@ where
                         subtree.hash(),
                         subtree_depth,
                         *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                        generation,
                     )?;
                     Ok((subtree, hashes))
                 }
@@ -601,6 +615,7 @@ where
                 subtree_depth,
                 updates,
                 proof_reader,
+                generation,
             )
         }
     }
@@ -614,6 +629,7 @@ where
         subtree_hash: HashValue,
         subtree_depth: usize,
         default_sibling_hash: HashValue,
+        generation: u64,
     ) -> Result<(SubTree<V>, IntermediateHashes, HashValue), UpdateError> {
         if updates.is_empty() {
             return Ok((
@@ -639,12 +655,17 @@ where
 
         let (subtree, hashes) = match proof.leaf() {
             Some(existing_leaf) => Self::batch_create_subtree(
-                SubTree::new_leaf_with_value_hash(existing_leaf.key(), existing_leaf.value_hash()),
+                SubTree::new_leaf_with_value_hash(
+                    existing_leaf.key(),
+                    existing_leaf.value_hash(),
+                    generation,
+                ),
                 /* target_key = */ existing_leaf.key(),
                 siblings,
                 subtree_depth,
                 updates,
                 proof_reader,
+                generation,
             )?,
             None => Self::batch_create_subtree(
                 SubTree::new_empty(),
@@ -653,6 +674,7 @@ where
                 subtree_depth,
                 updates,
                 proof_reader,
+                generation,
             )?,
         };
 
@@ -673,12 +695,13 @@ where
         subtree_depth: usize,
         updates: &[(HashValue, (usize, &V))],
         proof_reader: &impl ProofRead<V>,
+        generation: u64,
     ) -> Result<(SubTree<V>, IntermediateHashes), UpdateError> {
         if updates.is_empty() {
             return Ok((bottom_subtree, vec![]));
         }
         if siblings.len() <= subtree_depth {
-            if let Some(res) = Self::leaf_from_updates(target_key, updates) {
+            if let Some(res) = Self::leaf_from_updates(target_key, updates, generation) {
                 return Ok(res);
             }
         }
@@ -706,6 +729,7 @@ where
                     subtree_depth + 1,
                     sibling_updates,
                     proof_reader,
+                    generation,
                 )?
             }
         } else {
@@ -716,6 +740,7 @@ where
                 sibling_pre_hash,
                 subtree_depth + 1,
                 child_pre_hash,
+                generation,
             )?;
             child_pre_hash = child_hash;
             (subtree, hashes)
@@ -727,6 +752,7 @@ where
             subtree_depth + 1,
             child_updates,
             proof_reader,
+            generation,
         )?;
 
         let (left_tree, right_tree) = swap_if(child_tree, sibling_tree, child_is_right);
@@ -736,7 +762,10 @@ where
 
         let merged_hashes =
             Self::merge_txn_hashes(left_pre_hash, left_hashes, right_pre_hash, right_hashes);
-        Ok((SubTree::new_internal(left_tree, right_tree), merged_hashes))
+        Ok((
+            SubTree::new_internal(left_tree, right_tree, generation),
+            merged_hashes,
+        ))
     }
 
     /// Given a key and updates, checks if all updates are to this key. If so, generates
@@ -745,6 +774,7 @@ where
     fn leaf_from_updates(
         leaf_key: HashValue,
         updates: &[(HashValue, (usize, &V))],
+        generation: u64,
     ) -> Option<(SubTree<V>, IntermediateHashes)> {
         let first_update = updates.first().unwrap();
         let last_update = updates.last().unwrap();
@@ -763,8 +793,11 @@ where
                 (txn_id, leaf_hash, /* single_new_leaf = */ true)
             })
             .collect();
-        let final_leaf =
-            SubTree::new_leaf_with_value(leaf_key, last_update.1 .1.clone() /* value */);
+        let final_leaf = SubTree::new_leaf_with_value(
+            leaf_key,
+            last_update.1 .1.clone(), /* value */
+            generation,
+        );
         hashes.push((
             last_update.1 .0, /* txn_id */
             final_leaf.hash(),
@@ -866,7 +899,7 @@ where
 
         loop {
             if let Some(node) = cur.get_node_if_in_mem() {
-                if let Node::Internal(internal_node) = node.borrow() {
+                if let NodeInner::Internal(internal_node) = node.inner() {
                     match bits.next() {
                         Some(bit) => {
                             cur = if bit {
@@ -887,11 +920,11 @@ where
             SubTree::Empty => AccountStatus::DoesNotExist,
             SubTree::NonEmpty { root, .. } => match root.get_if_in_mem() {
                 None => AccountStatus::Unknown,
-                Some(node) => match node.borrow() {
-                    Node::Internal(_) => {
+                Some(node) => match node.inner() {
+                    NodeInner::Internal(_) => {
                         unreachable!("There is an internal node at the bottom of the tree.")
                     }
-                    Node::Leaf(leaf_node) => {
+                    NodeInner::Leaf(leaf_node) => {
                         if leaf_node.key == key {
                             match &leaf_node.value.data.get_if_in_mem() {
                                 Some(value) => {
@@ -931,7 +964,12 @@ where
         if kvs.is_empty() {
             Ok(self.clone())
         } else {
-            let root = SubTreeUpdater::update(current_root, &kvs[..], proof_reader)?;
+            let root = SubTreeUpdater::update(
+                current_root,
+                &kvs[..],
+                proof_reader,
+                self.inner.generation + 1,
+            )?;
             Ok(self.spawn(root))
         }
     }

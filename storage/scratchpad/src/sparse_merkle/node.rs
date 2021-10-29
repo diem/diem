@@ -46,13 +46,9 @@ pub(crate) struct LeafNode<V> {
     pub value: LeafValue<V>,
 }
 
-impl<V: CryptoHash> LeafNode<V> {
+impl<V> LeafNode<V> {
     pub fn new(key: HashValue, value: LeafValue<V>) -> Self {
         Self { key, value }
-    }
-
-    pub fn calc_hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.key, self.value.hash).hash()
     }
 
     pub fn clone_with_weak_value(&self) -> Self {
@@ -60,6 +56,12 @@ impl<V: CryptoHash> LeafNode<V> {
             key: self.key,
             value: self.value.weak(),
         }
+    }
+}
+
+impl<V: CryptoHash> LeafNode<V> {
+    pub fn calc_hash(&self) -> HashValue {
+        SparseMerkleLeafNode::new(self.key, self.value.hash).hash()
     }
 }
 
@@ -76,25 +78,57 @@ where
 }
 
 #[derive(Debug)]
-pub(crate) enum Node<V> {
+pub(crate) enum NodeInner<V> {
     Internal(InternalNode<V>),
     Leaf(LeafNode<V>),
 }
 
+#[derive(Debug)]
+pub(crate) struct Node<V> {
+    generation: u64,
+    inner: NodeInner<V>,
+}
+
 impl<V: CryptoHash> Node<V> {
-    pub fn new_leaf(key: HashValue, value: LeafValue<V>) -> Self {
-        Self::Leaf(LeafNode::new(key, value))
-    }
-
-    pub fn new_internal(left: SubTree<V>, right: SubTree<V>) -> Self {
-        Self::Internal(InternalNode { left, right })
-    }
-
     pub fn calc_hash(&self) -> HashValue {
-        match self {
-            Self::Internal(internal_node) => internal_node.calc_hash(),
-            Self::Leaf(leaf_node) => leaf_node.calc_hash(),
+        match &self.inner {
+            NodeInner::Internal(internal_node) => internal_node.calc_hash(),
+            NodeInner::Leaf(leaf_node) => leaf_node.calc_hash(),
         }
+    }
+}
+
+impl<V> Node<V> {
+    pub fn new_leaf(key: HashValue, value: LeafValue<V>, generation: u64) -> Self {
+        Self {
+            generation,
+            inner: NodeInner::Leaf(LeafNode::new(key, value)),
+        }
+    }
+
+    pub fn new_leaf_from_node(node: LeafNode<V>, generation: u64) -> Self {
+        Self {
+            generation,
+            inner: NodeInner::Leaf(node),
+        }
+    }
+
+    pub fn new_internal(left: SubTree<V>, right: SubTree<V>, generation: u64) -> Self {
+        Self {
+            generation,
+            inner: NodeInner::Internal(InternalNode { left, right }),
+        }
+    }
+
+    pub fn new_internal_from_node(node: InternalNode<V>, generation: u64) -> Self {
+        Self {
+            generation,
+            inner: NodeInner::Internal(node),
+        }
+    }
+
+    pub fn inner(&self) -> &NodeInner<V> {
+        &self.inner
     }
 }
 
@@ -160,16 +194,20 @@ impl<V: CryptoHash> SubTree<V> {
         }
     }
 
-    pub fn new_leaf_with_value(key: HashValue, value: V) -> Self {
-        Self::new_leaf_impl(key, LeafValue::new_with_value(value))
+    pub fn new_leaf_with_value(key: HashValue, value: V, generation: u64) -> Self {
+        Self::new_leaf_impl(key, LeafValue::new_with_value(value), generation)
     }
 
-    pub fn new_leaf_with_value_hash(key: HashValue, value_hash: HashValue) -> Self {
-        Self::new_leaf_impl(key, LeafValue::new_with_value_hash(value_hash))
+    pub fn new_leaf_with_value_hash(
+        key: HashValue,
+        value_hash: HashValue,
+        generation: u64,
+    ) -> Self {
+        Self::new_leaf_impl(key, LeafValue::new_with_value_hash(value_hash), generation)
     }
 
-    fn new_leaf_impl(key: HashValue, value: LeafValue<V>) -> Self {
-        let leaf = Node::new_leaf(key, value);
+    fn new_leaf_impl(key: HashValue, value: LeafValue<V>, generation: u64) -> Self {
+        let leaf = Node::new_leaf(key, value, generation);
 
         Self::NonEmpty {
             hash: leaf.calc_hash(),
@@ -177,8 +215,8 @@ impl<V: CryptoHash> SubTree<V> {
         }
     }
 
-    pub fn new_internal(left: Self, right: Self) -> Self {
-        let internal = Node::new_internal(left, right);
+    pub fn new_internal(left: Self, right: Self, generation: u64) -> Self {
+        let internal = Node::new_internal(left, right, generation);
 
         Self::NonEmpty {
             hash: internal.calc_hash(),

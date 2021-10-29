@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    sparse_merkle::node::{Node, NodeHandle, SubTree},
+    sparse_merkle::node::{NodeHandle, NodeInner, SubTree},
     test_utils::{naive_smt::NaiveSmt, proof_reader::ProofReader},
     SparseMerkleTree,
 };
@@ -13,7 +13,7 @@ use proptest::{
     prelude::*,
     sample::Index,
 };
-use std::{borrow::Borrow, collections::VecDeque, sync::Arc};
+use std::{collections::VecDeque, sync::Arc};
 
 type TxnOutput = Vec<(HashValue, AccountStateBlob)>;
 type BlockOutput = Vec<TxnOutput>;
@@ -156,7 +156,7 @@ fn assert_subtree_sole_strong_ref<V>(subtree: &SubTree<V>) {
     } = subtree
     {
         assert_eq!(Arc::strong_count(arc), 1);
-        if let Node::Internal(internal_node) = arc.borrow() {
+        if let NodeInner::Internal(internal_node) = arc.inner() {
             assert_subtree_sole_strong_ref(&internal_node.left);
             assert_subtree_sole_strong_ref(&internal_node.right);
         }
