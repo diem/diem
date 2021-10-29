@@ -31,7 +31,7 @@ use diem_types::{
     network_address::encrypted::{
         Key as NetworkAddressEncryptionKey, KeyVersion as NetworkAddressEncryptionKeyVersion,
     },
-    on_chain_config::{ConsensusConfigV1, OnChainConsensusConfig, VMPublishingOption},
+    on_chain_config::{ConsensusConfigV2, OnChainConsensusConfig, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, Transaction},
     waypoint::Waypoint,
 };
@@ -466,7 +466,12 @@ impl ValidatorBuilder {
         let genesis = genesis_builder.build(
             ChainId::test(),
             publishing_option,
-            OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
+            OnChainConsensusConfig::V2(ConsensusConfigV2 {
+                two_chain: true,
+                decoupled_execution: true,
+                back_pressure_limit: 10,
+                exclude_round: 20,
+            }),
         )?;
         let waypoint = create_genesis_waypoint(&genesis)?;
 

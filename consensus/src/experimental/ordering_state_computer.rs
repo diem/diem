@@ -111,6 +111,8 @@ impl StateComputer for OrderingStateComputer {
             .map_err(|_| Error::ResetDropped)?;
         rx.await.map_err(|_| Error::ResetDropped)?;
 
+        // TODO: handle the sync error, should re-push the ordered blocks to buffer manager
+        // when it's reset but sync fails.
         self.state_computer_for_sync.sync_to(target).await?;
         Ok(())
     }

@@ -31,6 +31,7 @@ use std::{
     path::PathBuf,
     process::Command,
     str::FromStr,
+    thread,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -103,6 +104,9 @@ fn test_genesis_transaction_flow() {
     swarm
         .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(60))
         .unwrap();
+
+    println!("Wait for node to synchronize on same version.");
+    thread::sleep(Duration::from_secs(1));
 
     let mut known_version = None;
     for i in 0..5 {

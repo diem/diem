@@ -6,7 +6,7 @@ use diem_management::{config::ConfigPath, error::Error, secure_backend::SharedBa
 use diem_secure_storage::Storage;
 use diem_types::{
     chain_id::ChainId,
-    on_chain_config::{ConsensusConfigV1, OnChainConsensusConfig},
+    on_chain_config::{ConsensusConfigV2, OnChainConsensusConfig},
     transaction::Transaction,
 };
 use std::{fs::File, io::Write, path::PathBuf};
@@ -42,7 +42,12 @@ impl Genesis {
             .build(
                 chain_id,
                 None,
-                OnChainConsensusConfig::V1(ConsensusConfigV1 { two_chain: true }),
+                OnChainConsensusConfig::V2(ConsensusConfigV2 {
+                    two_chain: true,
+                    decoupled_execution: true,
+                    back_pressure_limit: 10,
+                    exclude_round: 20,
+                }),
             )
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
 
