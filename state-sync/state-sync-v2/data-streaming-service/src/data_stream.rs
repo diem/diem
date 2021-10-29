@@ -36,7 +36,7 @@ const DATA_STREAM_CHANNEL_SIZE: usize = 1000;
 const MAX_CONCURRENT_REQUESTS: u64 = 3;
 
 // Maximum number of retries for a single client request before the stream terminates
-const MAX_REQUEST_RETRY: u64 = 10;
+pub const MAX_REQUEST_RETRY: u64 = 10;
 
 /// A unique ID used to identify each stream.
 pub type DataStreamId = u64;

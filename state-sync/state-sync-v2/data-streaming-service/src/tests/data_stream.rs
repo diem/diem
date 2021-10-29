@@ -5,19 +5,23 @@ use crate::{
     data_notification::{
         DataClientRequest, DataPayload, EpochEndingLedgerInfosRequest, PendingClientResponse,
     },
-    data_stream::{DataStream, DataStreamListener},
-    streaming_client::{GetAllEpochEndingLedgerInfosRequest, StreamRequest},
+    data_stream::{DataStream, DataStreamListener, MAX_REQUEST_RETRY},
+    streaming_client::{
+        GetAllAccountsRequest, GetAllEpochEndingLedgerInfosRequest, NotificationFeedback,
+        StreamRequest,
+    },
     tests::utils::{
-        create_data_client_response, create_ledger_info, initialize_logger, MockDiemDataClient,
-        MAX_ADVERTISED_EPOCH, MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_EPOCH,
+        create_data_client_response, create_ledger_info, get_data_notification, initialize_logger,
+        MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
+        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH,
     },
 };
-use claim::{assert_ge, assert_none};
+use claim::{assert_err, assert_ge, assert_none, assert_ok};
 use diem_data_client::{
     AdvertisedData, DataClientPayload, DataClientResponse, GlobalDataSummary, OptimalChunkSizes,
 };
 use diem_infallible::Mutex;
-use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use futures::{FutureExt, StreamExt};
 use std::{
     sync::{atomic::AtomicU64, Arc},
@@ -25,6 +29,70 @@ use std::{
 };
 use storage_service_types::CompleteDataRange;
 use tokio::time::timeout;
+
+#[tokio::test]
+async fn test_stream_blocked() {
+    // Create an account stream
+    let (mut data_stream, mut stream_listener) = create_account_stream(MIN_ADVERTISED_ACCOUNTS);
+
+    // Initialize the data stream
+    let global_data_summary = create_global_data_summary(100);
+    data_stream
+        .initialize_data_requests(global_data_summary.clone())
+        .unwrap();
+
+    let mut number_of_refetches = 0;
+    loop {
+        // Clear the pending queue and insert a response with an invalid type
+        let client_request =
+            DataClientRequest::EpochEndingLedgerInfos(EpochEndingLedgerInfosRequest {
+                start_epoch: 0,
+                end_epoch: 0,
+            });
+        let pending_response = PendingClientResponse {
+            client_request: client_request.clone(),
+            client_response: Some(Ok(DataClientResponse {
+                response_id: 0,
+                response_payload: DataClientPayload::NumberOfAccountStates(10),
+            })),
+        };
+        insert_response_into_pending_queue(&mut data_stream, pending_response);
+
+        // Process the data responses and force a data re-fetch
+        data_stream
+            .process_data_responses(global_data_summary.clone())
+            .unwrap();
+
+        // If we're sent a data notification, verify it's an end of stream notification!
+        if let Ok(data_notification) = timeout(
+            Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+            stream_listener.select_next_some(),
+        )
+        .await
+        {
+            match data_notification.data_payload {
+                DataPayload::EndOfStream => {
+                    assert_eq!(number_of_refetches, MAX_REQUEST_RETRY);
+
+                    // Provide incorrect feedback for the notification
+                    assert_err!(data_stream.handle_notification_feedback(
+                        &data_notification.notification_id,
+                        &NotificationFeedback::PayloadTypeIsIncorrect
+                    ));
+
+                    // Provide valid feedback for the notification
+                    assert_ok!(data_stream.handle_notification_feedback(
+                        &data_notification.notification_id,
+                        &NotificationFeedback::EndOfStream,
+                    ));
+                    return;
+                }
+                data_payload => panic!("Unexpected payload type: {:?}", data_payload),
+            }
+        }
+        number_of_refetches += 1;
+    }
+}
 
 #[tokio::test]
 async fn test_stream_initialization() {
@@ -177,21 +245,39 @@ async fn test_stream_out_of_order_responses() {
     assert_none!(stream_listener.select_next_some().now_or_never());
 }
 
+/// Creates an account stream for the given `version`.
+fn create_account_stream(version: Version) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
+    // Create an account stream request
+    let stream_request = StreamRequest::GetAllAccounts(GetAllAccountsRequest {
+        version,
+        start_index: 0,
+    });
+    create_data_stream(stream_request)
+}
+
 /// Creates an epoch ending stream starting at `start_epoch`
 fn create_epoch_ending_stream(
     start_epoch: u64,
 ) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
-    initialize_logger();
-
     // Create an epoch ending stream request
     let stream_request =
         StreamRequest::GetAllEpochEndingLedgerInfos(GetAllEpochEndingLedgerInfosRequest {
             start_epoch,
         });
+    create_data_stream(stream_request)
+}
 
-    // Create an advertised data containing only epoch ending ledger infos
+fn create_data_stream(
+    stream_request: StreamRequest,
+) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
+    initialize_logger();
+
+    // Create an advertised data
     let advertised_data = AdvertisedData {
-        account_states: vec![],
+        account_states: vec![CompleteDataRange::new(
+            MIN_ADVERTISED_ACCOUNTS,
+            MAX_ADVERTISED_ACCOUNTS,
+        )],
         epoch_ending_ledger_infos: vec![CompleteDataRange::new(
             MIN_ADVERTISED_EPOCH,
             MAX_ADVERTISED_EPOCH,
@@ -283,21 +369,13 @@ async fn verify_epoch_ending_notification(
     stream_listener: &mut DataStreamListener,
     expected_ledger_info: LedgerInfoWithSignatures,
 ) {
-    if let Ok(data_notification) = timeout(
-        Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
-        stream_listener.select_next_some(),
-    )
-    .await
-    {
-        if let DataPayload::EpochEndingLedgerInfos(ledger_infos) = data_notification.data_payload {
-            assert_eq!(ledger_infos[0], expected_ledger_info);
-        } else {
-            panic!(
-                "Expected an epoch ending ledger info payload, but got: {:?}",
-                data_notification
-            );
-        }
+    let data_notification = get_data_notification(stream_listener).await.unwrap();
+    if let DataPayload::EpochEndingLedgerInfos(ledger_infos) = data_notification.data_payload {
+        assert_eq!(ledger_infos[0], expected_ledger_info);
     } else {
-        panic!("Timed out waiting for a data notification!");
+        panic!(
+            "Expected an epoch ending ledger info payload, but got: {:?}",
+            data_notification
+        );
     }
 }

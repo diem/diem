@@ -5,4 +5,4 @@ mod data_stream;
 mod stream_progress_tracker;
 mod streaming_client;
 mod streaming_service;
-mod utils;
+pub mod utils;

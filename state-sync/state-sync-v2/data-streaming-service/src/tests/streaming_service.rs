@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_notification::{DataNotification, DataPayload},
-    data_stream::DataStreamListener,
+    data_notification::DataPayload,
     error::Error,
     streaming_client::{
         new_streaming_service_client_listener_pair, DataStreamingClient, NotificationFeedback,
@@ -11,16 +10,13 @@ use crate::{
     },
     streaming_service::DataStreamingService,
     tests::utils::{
-        initialize_logger, MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
-        MAX_ADVERTISED_TRANSACTION, MAX_ADVERTISED_TRANSACTION_OUTPUT,
-        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH,
-        MIN_ADVERTISED_TRANSACTION, MIN_ADVERTISED_TRANSACTION_OUTPUT, TOTAL_NUM_ACCOUNTS,
+        get_data_notification, initialize_logger, MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS,
+        MAX_ADVERTISED_EPOCH, MAX_ADVERTISED_TRANSACTION, MAX_ADVERTISED_TRANSACTION_OUTPUT,
+        MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH, MIN_ADVERTISED_TRANSACTION,
+        MIN_ADVERTISED_TRANSACTION_OUTPUT, TOTAL_NUM_ACCOUNTS,
     },
 };
 use claim::{assert_le, assert_matches, assert_ok, assert_some};
-use futures::StreamExt;
-use std::time::Duration;
-use tokio::time::timeout;
 
 macro_rules! unexpected_payload_type {
     ($received:expr) => {
@@ -136,6 +132,7 @@ async fn test_notifications_continuous_outputs() {
                 ) => {
                     let ledger_info = ledger_info_with_sigs.ledger_info();
                     // Verify the epoch of the ledger info
+                    assert_eq!(ledger_info.epoch(), next_expected_epoch);
                     assert_eq!(ledger_info.epoch(), next_expected_epoch);
 
                     // Verify the output start version matches the expected version
@@ -511,6 +508,41 @@ async fn test_stream_transactions() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn test_terminate_complete_stream() {
+    // Create a new streaming client and service
+    let streaming_client = create_new_streaming_client_and_service();
+
+    // Request an output stream
+    let mut stream_listener = streaming_client
+        .get_all_transaction_outputs(
+            MIN_ADVERTISED_TRANSACTION_OUTPUT,
+            MAX_ADVERTISED_TRANSACTION_OUTPUT,
+            MAX_ADVERTISED_TRANSACTION_OUTPUT,
+        )
+        .await
+        .unwrap();
+
+    // Wait until the stream is complete and then terminate it
+    loop {
+        let data_notification = get_data_notification(&mut stream_listener).await.unwrap();
+        match data_notification.data_payload {
+            DataPayload::EndOfStream => {
+                let result = streaming_client
+                    .terminate_stream_with_feedback(
+                        data_notification.notification_id,
+                        NotificationFeedback::InvalidPayloadData,
+                    )
+                    .await;
+                assert_ok!(result);
+                return;
+            }
+            DataPayload::TransactionOutputsWithProof(_) => {}
+            data_payload => unexpected_payload_type!(data_payload),
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 #[should_panic(expected = "SelectNextSome polled after terminated")]
 async fn test_terminate_stream() {
     // Create a new streaming client and service
@@ -546,23 +578,6 @@ async fn test_terminate_stream() {
             DataPayload::EndOfStream => panic!("The stream should have terminated!"),
             data_payload => unexpected_payload_type!(data_payload),
         }
-    }
-}
-
-async fn get_data_notification(
-    stream_listener: &mut DataStreamListener,
-) -> Result<DataNotification, Error> {
-    if let Ok(data_notification) = timeout(
-        Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
-        stream_listener.select_next_some(),
-    )
-    .await
-    {
-        Ok(data_notification)
-    } else {
-        Err(Error::UnexpectedErrorEncountered(
-            "Timed out waiting for a data notification!".into(),
-        ))
     }
 }
 

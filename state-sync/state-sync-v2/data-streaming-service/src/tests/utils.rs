@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::streaming_client::Epoch;
+use crate::{
+    data_notification::DataNotification, data_stream::DataStreamListener, error::Error,
+    streaming_client::Epoch,
+};
 use async_trait::async_trait;
 use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, SigningKey, Uniform};
 use diem_data_client::{
@@ -24,6 +27,7 @@ use diem_types::{
     },
     write_set::WriteSet,
 };
+use futures::StreamExt;
 use rand::{rngs::OsRng, Rng};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -31,6 +35,7 @@ use std::{
     time::Duration,
 };
 use storage_service_types::CompleteDataRange;
+use tokio::time::timeout;
 
 /// The number of accounts held at any version
 pub const TOTAL_NUM_ACCOUNTS: u64 = 2000;
@@ -392,4 +397,22 @@ pub fn initialize_logger() {
         .is_async(false)
         .level(Level::Info)
         .build();
+}
+
+/// Returns a data notification from the given stream listener
+pub async fn get_data_notification(
+    stream_listener: &mut DataStreamListener,
+) -> Result<DataNotification, Error> {
+    if let Ok(data_notification) = timeout(
+        Duration::from_secs(MAX_NOTIFICATION_TIMEOUT_SECS),
+        stream_listener.select_next_some(),
+    )
+    .await
+    {
+        Ok(data_notification)
+    } else {
+        Err(Error::UnexpectedErrorEncountered(
+            "Timed out waiting for a data notification!".into(),
+        ))
+    }
 }
