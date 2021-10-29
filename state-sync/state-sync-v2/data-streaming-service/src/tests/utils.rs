@@ -21,8 +21,8 @@ use diem_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::SparseMerkleRangeProof,
     transaction::{
-        default_protocol::TransactionOutputListWithProof, RawTransaction, Script,
-        SignedTransaction, Transaction, TransactionListWithProof, TransactionOutput,
+        default_protocol::{TransactionListWithProof, TransactionOutputListWithProof},
+        RawTransaction, Script, SignedTransaction, Transaction, TransactionOutput,
         TransactionPayload, TransactionStatus, Version,
     },
     write_set::WriteSet,
@@ -209,20 +209,8 @@ impl DiemDataClient for MockDiemDataClient {
     ) -> Result<DataClientResponse, diem_data_client::Error> {
         self.emulate_network_latencies();
 
-        // Include events if required
-        let events = if include_events { Some(vec![]) } else { None };
-
-        // Create the requested transactions
-        let mut transactions = vec![];
-        for _ in start_version..=end_version {
-            transactions.push(create_transaction());
-        }
-
-        // Create a transaction list with an empty proof
-        let mut transaction_list_with_proof = TransactionListWithProof::new_empty();
-        transaction_list_with_proof.first_transaction_version = Some(start_version);
-        transaction_list_with_proof.events = events;
-        transaction_list_with_proof.transactions = transactions;
+        let transaction_list_with_proof =
+            create_transaction_list_with_proof(start_version, end_version, include_events);
         let response_payload =
             DataClientPayload::TransactionsWithProof(transaction_list_with_proof);
 
@@ -376,7 +364,7 @@ fn create_transaction_output() -> TransactionOutput {
 }
 
 /// Returns a random u64 with a value between 0 and `max_value` - 1 (inclusive).
-fn create_random_u64(max_value: u64) -> u64 {
+pub fn create_random_u64(max_value: u64) -> u64 {
     create_range_random_u64(0, max_value)
 }
 
@@ -415,4 +403,27 @@ pub async fn get_data_notification(
             "Timed out waiting for a data notification!".into(),
         ))
     }
+}
+
+pub fn create_transaction_list_with_proof(
+    start_version: u64,
+    end_version: u64,
+    include_events: bool,
+) -> TransactionListWithProof {
+    // Include events if required
+    let events = if include_events { Some(vec![]) } else { None };
+
+    // Create the requested transactions
+    let mut transactions = vec![];
+    for _ in start_version..=end_version {
+        transactions.push(create_transaction());
+    }
+
+    // Create a transaction list with an empty proof
+    let mut transaction_list_with_proof = TransactionListWithProof::new_empty();
+    transaction_list_with_proof.first_transaction_version = Some(start_version);
+    transaction_list_with_proof.events = events;
+    transaction_list_with_proof.transactions = transactions;
+
+    transaction_list_with_proof
 }

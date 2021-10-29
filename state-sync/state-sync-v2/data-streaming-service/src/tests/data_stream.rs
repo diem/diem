@@ -5,15 +5,19 @@ use crate::{
     data_notification::{
         DataClientRequest, DataPayload, EpochEndingLedgerInfosRequest, PendingClientResponse,
     },
-    data_stream::{DataStream, DataStreamListener, MAX_REQUEST_RETRY},
+    data_stream::{
+        DataStream, DataStreamListener, MAX_NOTIFICATION_ID_MAPPINGS, MAX_REQUEST_RETRY,
+    },
     streaming_client::{
-        GetAllAccountsRequest, GetAllEpochEndingLedgerInfosRequest, NotificationFeedback,
-        StreamRequest,
+        GetAllAccountsRequest, GetAllEpochEndingLedgerInfosRequest, GetAllTransactionsRequest,
+        NotificationFeedback, StreamRequest,
     },
     tests::utils::{
-        create_data_client_response, create_ledger_info, get_data_notification, initialize_logger,
+        create_data_client_response, create_ledger_info, create_random_u64,
+        create_transaction_list_with_proof, get_data_notification, initialize_logger,
         MockDiemDataClient, MAX_ADVERTISED_ACCOUNTS, MAX_ADVERTISED_EPOCH,
-        MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS, MIN_ADVERTISED_EPOCH,
+        MAX_ADVERTISED_TRANSACTION_OUTPUT, MAX_NOTIFICATION_TIMEOUT_SECS, MIN_ADVERTISED_ACCOUNTS,
+        MIN_ADVERTISED_EPOCH, MIN_ADVERTISED_TRANSACTION_OUTPUT,
     },
 };
 use claim::{assert_err, assert_ge, assert_none, assert_ok};
@@ -91,6 +95,41 @@ async fn test_stream_blocked() {
             }
         }
         number_of_refetches += 1;
+    }
+}
+
+#[tokio::test]
+async fn test_stream_garbage_collection() {
+    // Create a transaction stream
+    let (mut data_stream, mut stream_listener) = create_transaction_stream(
+        MIN_ADVERTISED_TRANSACTION_OUTPUT,
+        MAX_ADVERTISED_TRANSACTION_OUTPUT,
+    );
+
+    // Initialize the data stream
+    let global_data_summary = create_global_data_summary(1);
+    data_stream
+        .initialize_data_requests(global_data_summary.clone())
+        .unwrap();
+
+    loop {
+        // Insert a transaction response into the queue
+        set_transaction_response_at_queue_head(&mut data_stream);
+
+        // Process the data response
+        data_stream
+            .process_data_responses(global_data_summary.clone())
+            .unwrap();
+
+        // Process the data response
+        let data_notification = get_data_notification(&mut stream_listener).await.unwrap();
+        if matches!(data_notification.data_payload, DataPayload::EndOfStream) {
+            return;
+        }
+
+        // Verify the notification to response map is garbage collected
+        let (_, sent_notifications) = data_stream.get_sent_requests_and_notifications();
+        assert!((sent_notifications.len() as u64) <= MAX_NOTIFICATION_ID_MAPPINGS);
     }
 }
 
@@ -267,6 +306,21 @@ fn create_epoch_ending_stream(
     create_data_stream(stream_request)
 }
 
+/// Creates a transaction output stream for the given `version`.
+fn create_transaction_stream(
+    start_version: Version,
+    end_version: Version,
+) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
+    // Create a transaction output stream
+    let stream_request = StreamRequest::GetAllTransactions(GetAllTransactionsRequest {
+        start_version,
+        end_version,
+        max_proof_version: end_version,
+        include_events: false,
+    });
+    create_data_stream(stream_request)
+}
+
 fn create_data_stream(
     stream_request: StreamRequest,
 ) -> (DataStream<MockDiemDataClient>, DataStreamListener) {
@@ -284,7 +338,10 @@ fn create_data_stream(
         )],
         synced_ledger_infos: vec![],
         transactions: vec![],
-        transaction_outputs: vec![],
+        transaction_outputs: vec![CompleteDataRange::new(
+            MIN_ADVERTISED_TRANSACTION_OUTPUT,
+            MAX_ADVERTISED_TRANSACTION_OUTPUT,
+        )],
     };
 
     // Create a diem data client mock and notification generator
@@ -293,7 +350,7 @@ fn create_data_stream(
 
     // Return the data stream and listener pair
     DataStream::new(
-        0,
+        create_random_u64(10000),
         &stream_request,
         diem_data_client,
         notification_generator,
@@ -334,6 +391,22 @@ fn set_epoch_ending_response_in_queue(
         )]),
     )));
     pending_response.lock().client_response = client_response;
+}
+
+/// Sets the client response at the head of the pending queue to contain an
+/// transaction response.
+fn set_transaction_response_at_queue_head(data_stream: &mut DataStream<MockDiemDataClient>) {
+    // Set the response at the specified index
+    let (sent_requests, _) = data_stream.get_sent_requests_and_notifications();
+    if !sent_requests.as_mut().unwrap().is_empty() {
+        let pending_response = sent_requests.as_mut().unwrap().get_mut(0).unwrap();
+        let client_response = Some(Ok(create_data_client_response(
+            DataClientPayload::TransactionsWithProof(create_transaction_list_with_proof(
+                0, 0, false,
+            )),
+        )));
+        pending_response.lock().client_response = client_response;
+    }
 }
 
 /// Clears the pending queue of the given data stream and inserts a single

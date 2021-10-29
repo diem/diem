@@ -18,7 +18,7 @@ use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use futures::{stream::FusedStream, Stream};
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{BTreeMap, VecDeque},
     pin::Pin,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -37,6 +37,10 @@ const MAX_CONCURRENT_REQUESTS: u64 = 3;
 
 // Maximum number of retries for a single client request before the stream terminates
 pub const MAX_REQUEST_RETRY: u64 = 10;
+
+// Maximum number of notification ID to response ID mappings held in memory.
+// Once the number of mappings grow beyond this value, garbage collection occurs.
+pub const MAX_NOTIFICATION_ID_MAPPINGS: u64 = 2000;
 
 /// A unique ID used to identify each stream.
 pub type DataStreamId = u64;
@@ -68,10 +72,9 @@ pub struct DataStream<T> {
     // a data notification can be created and sent along the stream.
     sent_data_requests: Option<VecDeque<PendingClientResponse>>,
 
-    // TODO(joshlind): garbage collect me!
     // Maps a notification ID (sent along the data stream) to a response ID
     // received from the data client. This is useful for providing feedback.
-    notifications_to_responses: HashMap<NotificationId, ResponseId>,
+    notifications_to_responses: BTreeMap<NotificationId, ResponseId>,
 
     // The channel on which to send data notifications when they are ready.
     notification_sender: channel::diem_channel::Sender<(), DataNotification>,
@@ -110,7 +113,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             diem_data_client,
             stream_progress_tracker,
             sent_data_requests: None,
-            notifications_to_responses: HashMap::new(),
+            notifications_to_responses: BTreeMap::new(),
             notification_sender,
             notification_id_generator,
             stream_end_notification_id: None,
@@ -486,15 +489,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         {
             // Save the data notification ID and response ID
             let notification_id = data_notification.notification_id;
-            if let Some(response_id) = self
-                .notifications_to_responses
-                .insert(notification_id, data_client_response.response_id)
-            {
-                panic!(
-                    "Duplicate sent notification ID found! Notification ID: {:?}, Response ID: {:?}",
-                    notification_id, response_id,
-                );
-            }
+            self.insert_notification_response_mapping(
+                notification_id,
+                data_client_response.response_id,
+            )?;
 
             // Send the notification along the stream
             debug!(
@@ -510,6 +508,62 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
 
             // Reset the failure count. We've sent a notification and can move on.
             self.request_failure_count = 0;
+        }
+
+        Ok(())
+    }
+
+    fn insert_notification_response_mapping(
+        &mut self,
+        notification_id: NotificationId,
+        response_id: ResponseId,
+    ) -> Result<(), Error> {
+        if let Some(response_id) = self
+            .notifications_to_responses
+            .insert(notification_id, response_id)
+        {
+            panic!(
+                "Duplicate sent notification ID found! Notification ID: {:?}, Response ID: {:?}",
+                notification_id, response_id,
+            );
+        }
+        self.garbage_collect_notification_response_map()
+    }
+
+    fn garbage_collect_notification_response_map(&mut self) -> Result<(), Error> {
+        let map_length = self.notifications_to_responses.len() as u64;
+        if map_length > MAX_NOTIFICATION_ID_MAPPINGS {
+            let num_entries_to_remove = map_length
+                .checked_sub(MAX_NOTIFICATION_ID_MAPPINGS)
+                .ok_or_else(|| {
+                    Error::IntegerOverflow("Number of entries to remove has overflown!".into())
+                })?;
+
+            info!(
+                (LogSchema::new(LogEntry::StreamNotification)
+                    .stream_id(self.data_stream_id)
+                    .event(LogEvent::Success)
+                    .message(&format!(
+                        "Garbage collecting {:?} items from the notification response map.",
+                        num_entries_to_remove
+                    )))
+            );
+
+            // Collect all the keys that need to removed. Note: BTreeMap keys
+            // are sorted, so we'll remove the lowest notification IDs. These
+            // will be the oldest notifications.
+            let mut all_keys = self.notifications_to_responses.keys();
+            let mut keys_to_remove = vec![];
+            for _ in 0..num_entries_to_remove {
+                if let Some(key_to_remove) = all_keys.next() {
+                    keys_to_remove.push(*key_to_remove);
+                }
+            }
+
+            // Remove the keys
+            for key_to_remove in &keys_to_remove {
+                self.notifications_to_responses.remove(key_to_remove);
+            }
         }
 
         Ok(())
@@ -544,7 +598,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         &mut self,
     ) -> (
         &mut Option<VecDeque<PendingClientResponse>>,
-        &mut HashMap<NotificationId, ResponseId>,
+        &mut BTreeMap<NotificationId, ResponseId>,
     ) {
         let sent_requests = &mut self.sent_data_requests;
         let sent_notifications = &mut self.notifications_to_responses;
