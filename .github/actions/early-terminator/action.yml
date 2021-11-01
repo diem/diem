@@ -1,0 +1,39 @@
+name: "early terminate"
+description: |
+  Terminate CI workflow earlier once job failure is detected
+inputs:
+  github-token:
+    description: 'Github token'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Post test results on PR
+      uses: actions/github-script@v4.0.2
+      with:
+        script: |
+            // use github REST apis: https://docs.github.com/en/rest/reference/actions#workflow-runs
+            const https = require('https');
+            const options = {
+              hostname: 'api.github.com',
+              path: `/repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}/cancel`,
+              headers: {
+                'Authorization': `token ${{ inputs.github-token }}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'actions/cancel-action'
+              },
+              method: 'POST'
+            }
+            const req = https.request(options, res => {
+              console.log(`statusCode: ${res.statusCode}`)
+              res.on('data', d => {
+                if (res.statusCode != 202) {
+                  let msg = JSON.parse(d)
+                  console.log(`Error: ${msg}`)
+                }
+              })
+            })
+            req.on('error', (error) => {
+              console.log(error)
+            })
+            req.end();
