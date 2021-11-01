@@ -4,7 +4,8 @@ description: |
 inputs:
   github-token:
     description: 'Github token'
-    required: true
+    required: false
+    default: ${{ github.token }}
 runs:
   using: "composite"
   steps:

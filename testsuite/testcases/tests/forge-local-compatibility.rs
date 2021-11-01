@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     ::diem_logger::Logger::init_for_testing();
 
     let tests = ForgeConfig::default()
-        .with_initial_validator_count(NonZeroUsize::new(4).unwrap())
+        .with_initial_validator_count(NonZeroUsize::new(0).unwrap())
         .with_initial_version(InitialVersion::Oldest)
         .with_network_tests(&[&SimpleValidatorUpgrade]);
 
