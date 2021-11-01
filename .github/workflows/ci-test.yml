@@ -156,6 +156,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: build image with dev-setup.sh
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   build-images:
     runs-on: ubuntu-20.04-xl
@@ -225,6 +230,11 @@ jobs:
           aws ecr get-login-password --region ${{ secrets.ENV_NOVI_ECR_AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
           docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d -i "${{ matrix.target_images }}"
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   need-base-images:
     runs-on: self-hosted
@@ -290,6 +300,11 @@ jobs:
             res=$PREV_TAG;
           fi
           echo "::set-output name=prev-tag::$(echo $res)";
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   land-blocking-test:
     name: Run land blocking test
@@ -470,6 +485,11 @@ jobs:
             if (should_fail) {
               throw "Land-blocking test failed";
             }
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   non-rust-lint:
     runs-on: ubuntu-20.04-xl
@@ -494,6 +514,11 @@ jobs:
         uses: ./.github/actions/docker-checks
       - name: deno lints
         run: deno lint ./shuffle
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   lint:
     runs-on: ubuntu-20.04-xl
@@ -521,6 +546,11 @@ jobs:
       - name: cargo fmt
         run: $pre_command && cargo xfmt --check
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   unit-test:
     runs-on: ubuntu-20.04-xl
@@ -562,6 +592,11 @@ jobs:
           name: unit-test-results
           path: target/junit-reports/unit-test.xml
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   codegen-unit-test:
     runs-on: ubuntu-20.04-xl
@@ -593,6 +628,11 @@ jobs:
           name: codegen-unit-test-results
           path: target/junit-reports/codegen-unit-test.xml
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   e2e-test:
     runs-on: ubuntu-20.04-xl
@@ -675,6 +715,11 @@ jobs:
         with:
           payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
           webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   forge-test:
     runs-on: ubuntu-20.04-xl
@@ -700,6 +745,11 @@ jobs:
         run: |
           $pre_command && cargo test -p testcases --test forge-local-compatibility
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   docker-compose-test:
     runs-on: ubuntu-20.04-xl
@@ -740,6 +790,11 @@ jobs:
           JSON_RPC_URL: "http://127.0.0.1:8080"
           FAUCET_URL: "http://127.0.0.1:8000"
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   crypto-unit-test:
     runs-on: ubuntu-20.04
@@ -763,6 +818,11 @@ jobs:
           $pre_command && cd crypto/crypto && cargo test --features='u64' --no-default-features
           $pre_command && cd crypto/crypto && cargo test --features='u32' --no-default-features
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   coverage-unit-test:
     runs-on: ubuntu-20.04-xl
@@ -791,6 +851,11 @@ jobs:
             exit 1;
           fi
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   helm-test:
     runs-on: ubuntu-20.04-xl
@@ -860,6 +925,11 @@ jobs:
         if: ${{ always() }}
         run: minikube delete
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   # Compile (but don't run) the benchmarks, to insulate against bit rot
   build-benchmarks:
@@ -884,6 +954,11 @@ jobs:
       - name: build benchmarks
         run: cargo x bench --no-run
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   build-dev:
     runs-on: ubuntu-20.04-xl
@@ -908,6 +983,11 @@ jobs:
           $pre_command && rustup target add powerpc-unknown-linux-gnu
           $pre_command && cargo xcheck -j ${max_threads} -p diem-transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   perf-benchmarks:
     name: run-perf-benchmarks
@@ -943,6 +1023,11 @@ jobs:
           retention-days: 5
           path: |
             /tmp/benches
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   build-move-analyzer-vscode-extension:
     name: Build VS Code extension for move-analyzer
@@ -981,6 +1066,11 @@ jobs:
         with:
           name: move-analyzer-vscode-extension
           path: language/move-analyzer/editors/code/move-analyzer.vsix
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   developers-site:
     name: run-developer-site-build
@@ -1015,6 +1105,11 @@ jobs:
           # or python docs `-p` on CI checks until we resolve the best way to
           # build them for deployment
           ./scripts/build_docs.sh -b
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   land-blocking-test-forge:
     name: Run land blocking test in Forge
@@ -1145,6 +1240,11 @@ jobs:
           else
             echo "::set-output name=forge-result::success";
           fi
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
   #this is a temp job here to compare lbt signals between Forge and Cluster Test
   #it will be removed once Forge LBT is turned on
