@@ -26,6 +26,7 @@ use std::{
     },
     task::{Context, Poll},
 };
+use tokio::task::JoinHandle;
 
 // Maximum channel sizes for each stream listener. If messages are not
 // consumed, they will be dropped (oldest messages first). The remaining
@@ -72,6 +73,10 @@ pub struct DataStream<T> {
     // a data notification can be created and sent along the stream.
     sent_data_requests: Option<VecDeque<PendingClientResponse>>,
 
+    // Handles of all spawned tasks. This is useful for aborting the tasks in
+    // the case the stream is terminated prematurely.
+    spawned_tasks: Vec<JoinHandle<()>>,
+
     // Maps a notification ID (sent along the data stream) to a response ID
     // received from the data client. This is useful for providing feedback.
     notifications_to_responses: BTreeMap<NotificationId, ResponseId>,
@@ -113,6 +118,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             diem_data_client,
             stream_progress_tracker,
             sent_data_requests: None,
+            spawned_tasks: vec![],
             notifications_to_responses: BTreeMap::new(),
             notification_sender,
             notification_id_generator,
@@ -155,7 +161,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
 
     /// Notifies the Diem data client of a bad client response
     pub fn handle_notification_feedback(
-        &self,
+        &mut self,
         notification_id: &NotificationId,
         notification_feedback: &NotificationFeedback,
     ) -> Result<(), Error> {
@@ -240,58 +246,49 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
         // Send the request to the network
         let diem_data_client = self.diem_data_client.clone();
         let pending_response = pending_client_response.clone();
-        match data_client_request {
-            DataClientRequest::AccountsWithProof(request) => {
-                tokio::spawn(async move {
-                    let client_response = diem_data_client.get_account_states_with_proof(
-                        request.version,
-                        request.start_index,
-                        request.end_index,
-                    );
-                    let client_response = client_response.await;
-                    pending_response.lock().client_response = Some(client_response);
-                });
-            }
-            DataClientRequest::EpochEndingLedgerInfos(request) => {
-                tokio::spawn(async move {
-                    let client_response = diem_data_client
-                        .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch);
-                    let client_response = client_response.await;
-                    pending_response.lock().client_response = Some(client_response);
-                });
-            }
-            DataClientRequest::NumberOfAccounts(request) => {
-                tokio::spawn(async move {
-                    let client_response =
-                        diem_data_client.get_number_of_account_states(request.version);
-                    let client_response = client_response.await;
-                    pending_response.lock().client_response = Some(client_response);
-                });
-            }
-            DataClientRequest::TransactionOutputsWithProof(request) => {
-                tokio::spawn(async move {
-                    let client_response = diem_data_client.get_transaction_outputs_with_proof(
-                        request.max_proof_version,
-                        request.start_version,
-                        request.end_version,
-                    );
-                    let client_response = client_response.await;
-                    pending_response.lock().client_response = Some(client_response);
-                });
-            }
-            DataClientRequest::TransactionsWithProof(request) => {
-                tokio::spawn(async move {
-                    let client_response = diem_data_client.get_transactions_with_proof(
-                        request.max_proof_version,
-                        request.start_version,
-                        request.end_version,
-                        request.include_events,
-                    );
-                    let client_response = client_response.await;
-                    pending_response.lock().client_response = Some(client_response);
-                });
-            }
-        }
+        let join_handle = match data_client_request {
+            DataClientRequest::AccountsWithProof(request) => tokio::spawn(async move {
+                let client_response = diem_data_client.get_account_states_with_proof(
+                    request.version,
+                    request.start_index,
+                    request.end_index,
+                );
+                let client_response = client_response.await;
+                pending_response.lock().client_response = Some(client_response);
+            }),
+            DataClientRequest::EpochEndingLedgerInfos(request) => tokio::spawn(async move {
+                let client_response = diem_data_client
+                    .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch);
+                let client_response = client_response.await;
+                pending_response.lock().client_response = Some(client_response);
+            }),
+            DataClientRequest::NumberOfAccounts(request) => tokio::spawn(async move {
+                let client_response =
+                    diem_data_client.get_number_of_account_states(request.version);
+                let client_response = client_response.await;
+                pending_response.lock().client_response = Some(client_response);
+            }),
+            DataClientRequest::TransactionOutputsWithProof(request) => tokio::spawn(async move {
+                let client_response = diem_data_client.get_transaction_outputs_with_proof(
+                    request.max_proof_version,
+                    request.start_version,
+                    request.end_version,
+                );
+                let client_response = client_response.await;
+                pending_response.lock().client_response = Some(client_response);
+            }),
+            DataClientRequest::TransactionsWithProof(request) => tokio::spawn(async move {
+                let client_response = diem_data_client.get_transactions_with_proof(
+                    request.max_proof_version,
+                    request.start_version,
+                    request.end_version,
+                    request.include_events,
+                );
+                let client_response = client_response.await;
+                pending_response.lock().client_response = Some(client_response);
+            }),
+        };
+        self.spawned_tasks.push(join_handle);
 
         pending_client_response
     }
@@ -449,7 +446,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
     }
 
     /// Notifies the Diem data client of a bad client response
-    fn notify_bad_response(&self, response_id: ResponseId, response_error: ResponseError) {
+    fn notify_bad_response(&mut self, response_id: ResponseId, response_error: ResponseError) {
         let data_stream_id = self.data_stream_id;
         let diem_data_client = self.diem_data_client.clone();
 
@@ -461,7 +458,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                 response_id, response_error
             )));
 
-        tokio::spawn(async move {
+        let join_handle = tokio::spawn(async move {
             let client_response = diem_data_client.notify_bad_response(response_id, response_error);
             if let Err(error) = client_response.await {
                 error!(LogSchema::new(LogEntry::DiemDataClient)
@@ -470,6 +467,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     .error(&error.into()));
             }
         });
+        self.spawned_tasks.push(join_handle);
     }
 
     /// Sends a data notification to the client along the stream
@@ -582,6 +580,13 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             )));
         }
         Ok(())
+    }
+
+    /// Terminates the stream by aborting all spawned tasks
+    pub fn terminate(&mut self) {
+        for spawned_task in &self.spawned_tasks {
+            spawned_task.abort();
+        }
     }
 
     /// Assumes the caller has already verified that `sent_data_requests` has
