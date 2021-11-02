@@ -214,6 +214,9 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
                                 error!(LogSchema::new(LogEntry::Waypoint).error(&e));
                             }
                         }
+                        CoordinatorMessage::DisableReadOnlyMode(cb_sender) => {
+                            let _ = self.disable_read_only_mode(cb_sender);
+                        }
                     };
                 },
                 (network_id, event) = network_events.select_next_some() => {
@@ -353,7 +356,8 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         cb_sender: oneshot::Sender<Result<(), Error>>,
     ) -> Result<(), Error> {
         if self.read_only_mode {
-            let read_only_error = Error::ReadOnlyMode("Unable to initialize in read-only mode!".into());
+            let read_only_error =
+                Error::ReadOnlyMode("Unable to initialize in read-only mode!".into());
             return match cb_sender.send(Err(read_only_error.clone())) {
                 Err(error) => Err(Error::CallbackSendFailed(format!(
                     "Waypoint initialization callback error: {:?}",
@@ -644,6 +648,22 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
             .local_synced_version(synced_version)
             .local_epoch(local_epoch));
         Ok(())
+    }
+
+    /// Disables read-only mode
+    fn disable_read_only_mode(
+        &mut self,
+        callback: oneshot::Sender<Result<(), Error>>,
+    ) -> Result<(), Error> {
+        self.read_only_mode = false;
+
+        match callback.send(Ok(())) {
+            Err(error) => Err(Error::CallbackSendFailed(format!(
+                "Failed to notify the callback when disabling read-only mode. Error: {:?}",
+                error
+            ))),
+            _ => Ok(()),
+        }
     }
 
     /// Returns the current SyncState of state sync.
@@ -1853,7 +1873,22 @@ mod tests {
     }
 
     #[test]
-    fn test_wait_for_initialization() {
+    fn test_disable_read_only_mode() {
+        // Create a read-only coordinator
+        let mut validator_coordinator = test_utils::create_read_only_coordinator();
+
+        // Check that disabling read-only mode resets the flag
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        assert_ok!(validator_coordinator.disable_read_only_mode(callback_sender));
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => assert_ok!(result),
+            result => panic!("Expected okay but got: {:?}", result),
+        };
+        assert!(!validator_coordinator.read_only_mode);
+    }
+
+    #[test]
+    fn test_wait_for_initialization_read_only() {
         // Create a read-only coordinator
         let mut read_only_coordinator = test_utils::create_read_only_coordinator();
 
@@ -1868,6 +1903,25 @@ mod tests {
             result => panic!("Expected read-only error but got: {:?}", result),
         };
 
+        // Disable read-only mode
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        assert_ok!(read_only_coordinator.disable_read_only_mode(callback_sender),);
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => assert_ok!(result),
+            result => panic!("Expected okay but got: {:?}", result),
+        };
+
+        // Verify initialization now works
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        assert_ok!(read_only_coordinator.wait_for_initialization(callback_sender));
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => assert_ok!(result),
+            result => panic!("Expected okay but got: {:?}", result),
+        };
+    }
+
+    #[test]
+    fn test_wait_for_initialization() {
         // Create a coordinator for a validator node
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 

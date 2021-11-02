@@ -68,6 +68,69 @@ fn test_basic_catch_up_read_only() {
 }
 
 #[test]
+fn test_validator_disable_read_only() {
+    let mut env = StateSyncEnvironment::new(2);
+
+    // Create two validators, the second in read-only mode
+    env.start_validator_peer(0, false);
+    env.setup_state_sync_peer(
+        1,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        60_000,
+        120_000,
+        false,
+        true,
+    );
+
+    let validator_1 = env.get_state_sync_peer(0);
+    let validator_2 = env.get_state_sync_peer(1);
+
+    // Disable read-only mode for validator_1 and verify it can sync
+    validator_2.disable_read_only_mode();
+
+    let synced_versions = vec![1, 2, 3, 4, 5, 20, 2000];
+    for version in synced_versions {
+        validator_1.commit(version);
+        let target_li = validator_1.latest_li();
+
+        validator_2.sync_to(target_li);
+        assert_eq!(validator_2.latest_li().ledger_info().version(), version);
+    }
+}
+
+#[test]
+fn test_fullnode_disable_read_only() {
+    let mut env = StateSyncEnvironment::new(2);
+
+    // Create a validator and fullnode (the fullnode is in read-only mode)
+    env.start_validator_peer(0, false);
+    env.setup_state_sync_peer(
+        1,
+        default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        60_000,
+        120_000,
+        false,
+        true,
+    );
+
+    let validator = env.get_state_sync_peer(0);
+    let fullnode = env.get_state_sync_peer(1);
+
+    // Disable read-only mode for the fullnode and verify it can sync
+    fullnode.disable_read_only_mode();
+
+    let synced_versions = vec![1, 2, 3, 4, 5, 20, 2000];
+    for version in synced_versions {
+        validator.commit(version);
+        assert!(fullnode.wait_for_version(version, None));
+    }
+}
+
+#[test]
 fn test_flaky_peer_sync() {
     let mut env = StateSyncEnvironment::new(2);
 
@@ -188,10 +251,22 @@ fn catch_up_through_epochs_validators() {
         false,
         true,
     );
-    env.start_validator_peer(1, false);
+    env.setup_state_sync_peer(
+        1,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        false,
+        true,
+    );
 
     let validator_0 = env.get_state_sync_peer(0);
     let validator_1 = env.get_state_sync_peer(1);
+
+    // Disable read-only mode for validator_1 and verify it can sync
+    validator_1.disable_read_only_mode();
 
     // catch up to the next epoch starting from the middle of the current one
     validator_0.commit(20);
@@ -284,6 +359,65 @@ fn catch_up_with_waypoints() {
 
     env.start_state_sync_peer(1, default_handler(), RoleType::FullNode, waypoint, false);
     let fullnode = env.get_state_sync_peer(1);
+    fullnode.wait_until_initialized();
+    assert!(fullnode.latest_li().ledger_info().version() >= 3500);
+    assert!(fullnode.latest_li().ledger_info().epoch() >= 14);
+
+    // Once caught up with the waypoint fullnode 1 continues with the regular state sync
+    assert!(fullnode.wait_for_version(5250, None));
+    assert_eq!(fullnode.latest_li().ledger_info().epoch(), 19);
+    drop(fullnode);
+
+    // Peer 2 has peer 1 as its upstream, should catch up from it.
+    env.start_fullnode_peer(2, false);
+    let fullnode = env.get_state_sync_peer(2);
+    assert!(fullnode.wait_for_version(5250, None));
+    assert_eq!(fullnode.latest_li().ledger_info().epoch(), 19);
+}
+
+#[test]
+fn catch_up_with_waypoints_read_only() {
+    let mut env = StateSyncEnvironment::new(3);
+
+    env.start_validator_peer(0, false);
+    let validator = env.get_state_sync_peer(0);
+
+    let mut curr_version = 0;
+    for _ in 1..10 {
+        curr_version += 100;
+        validator.commit(curr_version);
+
+        validator.move_to_next_epoch(vec![validator.get_validator_info().clone()], 0);
+
+        curr_version += 400;
+        // this creates an epoch that spans >1 chunk (chunk_size = 250)
+        validator.commit(curr_version);
+
+        validator.move_to_next_epoch(vec![validator.get_validator_info().clone()], 0);
+    }
+    validator.commit(5250); // At this point validator is at epoch 19 and version 5250
+
+    // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
+    let waypoint_li = validator.get_epoch_ending_ledger_info(3500);
+    let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
+    drop(validator);
+
+    env.setup_state_sync_peer(
+        1,
+        default_handler(),
+        RoleType::FullNode,
+        waypoint,
+        10_000,
+        1_000_000,
+        false,
+        true,
+    );
+    let fullnode = env.get_state_sync_peer(1);
+
+    // Disable read-only mode for the fullnode and verify it can sync
+    fullnode.disable_read_only_mode();
+
+    // Wait until initialization completes
     fullnode.wait_until_initialized();
     assert!(fullnode.latest_li().ledger_info().version() >= 3500);
     assert!(fullnode.latest_li().ledger_info().epoch() >= 14);
@@ -572,7 +706,19 @@ fn test_fullnode_catch_up_moving_target() {
     // Create validator and fullnode
     let mut env = StateSyncEnvironment::new(2);
     env.start_validator_peer(0, true);
-    env.start_fullnode_peer(1, true);
+    env.setup_state_sync_peer(
+        1,
+        default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        true,
+        true,
+    );
+
+    // Disable read-only mode for the fullnode and verify it can sync
+    env.get_state_sync_peer(1).disable_read_only_mode();
 
     // Get peer ids of nodes
     let validator_peer_id = env.get_state_sync_peer(0).get_peer_id(NetworkId::Validator);

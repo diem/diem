@@ -188,6 +188,10 @@ impl StateSyncPeer {
     pub fn wait_until_initialized(&self) {
         block_on(self.client.as_ref().unwrap().wait_until_initialized()).unwrap();
     }
+
+    pub fn disable_read_only_mode(&self) {
+        block_on(self.client.as_ref().unwrap().disable_read_only_mode()).unwrap();
+    }
 }
 
 pub struct StateSyncEnvironment {

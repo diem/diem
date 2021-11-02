@@ -10,7 +10,8 @@ use futures::{
 
 /// Messages used by the StateSyncClient for communication with the StateSyncCoordinator.
 pub enum CoordinatorMessage {
-    GetSyncState(oneshot::Sender<SyncState>), // Return the local sync state.
+    DisableReadOnlyMode(oneshot::Sender<Result<(), Error>>), // Disables read only mode for state sync.
+    GetSyncState(oneshot::Sender<SyncState>),                // Return the local sync state.
     WaitForInitialization(oneshot::Sender<Result<(), Error>>), // Wait until state sync is initialized to the waypoint.
 }
 
@@ -47,6 +48,20 @@ impl StateSyncClient {
         async move {
             sender
                 .send(CoordinatorMessage::WaitForInitialization(cb_sender))
+                .await?;
+            cb_receiver.await?
+        }
+    }
+
+    /// Disables read-only mode for state sync. This is useful when state sync v2
+    /// is unable to make progress and must fallback to state sync v1.
+    pub fn disable_read_only_mode(&self) -> impl Future<Output = Result<(), Error>> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+
+        async move {
+            sender
+                .send(CoordinatorMessage::DisableReadOnlyMode(cb_sender))
                 .await?;
             cb_receiver.await?
         }
