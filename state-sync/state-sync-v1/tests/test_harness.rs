@@ -276,6 +276,7 @@ impl StateSyncEnvironment {
             60_000,
             120_000,
             mock_network,
+            false,
         );
     }
 
@@ -288,6 +289,7 @@ impl StateSyncEnvironment {
         timeout_ms: u64,
         multicast_timeout_ms: u64,
         mock_network: bool,
+        read_only_mode: bool,
     ) {
         let (config, network_id) = setup_state_sync_config(role, timeout_ms, multicast_timeout_ms);
         let network_handles = self.setup_network_handles(index, &role, mock_network, network_id);
@@ -323,6 +325,7 @@ impl StateSyncEnvironment {
             &config,
             waypoint,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
+            read_only_mode,
         );
         peer.client = Some(bootstrapper.create_client());
         peer.consensus_notifier = Some(consensus_notifier);

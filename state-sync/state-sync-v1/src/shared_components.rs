@@ -114,7 +114,7 @@ pub(crate) mod test_utils {
         node_config: NodeConfig,
         waypoint: Waypoint,
     ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
-        create_state_sync_coordinator_for_tests(node_config, waypoint)
+        create_state_sync_coordinator_for_tests(node_config, waypoint, false)
     }
 
     pub(crate) fn create_validator_coordinator(
@@ -122,7 +122,7 @@ pub(crate) mod test_utils {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::Validator;
 
-        create_state_sync_coordinator_for_tests(node_config, Waypoint::default())
+        create_state_sync_coordinator_for_tests(node_config, Waypoint::default(), false)
     }
 
     #[cfg(test)]
@@ -131,12 +131,22 @@ pub(crate) mod test_utils {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::FullNode;
 
-        create_state_sync_coordinator_for_tests(node_config, Waypoint::default())
+        create_state_sync_coordinator_for_tests(node_config, Waypoint::default(), false)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn create_read_only_coordinator(
+    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+        let mut node_config = NodeConfig::default();
+        node_config.base.role = RoleType::Validator;
+
+        create_state_sync_coordinator_for_tests(node_config, Waypoint::default(), true)
     }
 
     fn create_state_sync_coordinator_for_tests(
         node_config: NodeConfig,
         waypoint: Waypoint,
+        read_only_mode: bool,
     ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
         // Generate a genesis change set
         let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
@@ -188,6 +198,7 @@ pub(crate) mod test_utils {
             waypoint,
             executor_proxy,
             initial_state,
+            read_only_mode,
         )
         .unwrap()
     }

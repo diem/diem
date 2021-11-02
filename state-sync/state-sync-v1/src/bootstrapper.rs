@@ -55,6 +55,7 @@ impl StateSyncBootstrapper {
             node_config,
             waypoint,
             executor_proxy,
+            false,
         )
     }
 
@@ -69,6 +70,7 @@ impl StateSyncBootstrapper {
         node_config: &NodeConfig,
         waypoint: Waypoint,
         executor_proxy: E,
+        read_only_mode: bool,
     ) -> Self {
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
         let initial_state = executor_proxy
@@ -88,6 +90,7 @@ impl StateSyncBootstrapper {
             waypoint,
             executor_proxy,
             initial_state,
+            read_only_mode,
         )
         .expect("[State Sync] Unable to create state sync coordinator!");
         runtime.spawn(coordinator.start(network));

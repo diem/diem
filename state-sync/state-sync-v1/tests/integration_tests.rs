@@ -37,6 +37,37 @@ fn test_basic_catch_up() {
 }
 
 #[test]
+fn test_basic_catch_up_read_only() {
+    let mut env = StateSyncEnvironment::new(2);
+
+    env.setup_state_sync_peer(
+        0,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        10_000,
+        10_000,
+        false,
+        true,
+    );
+    env.start_validator_peer(1, false);
+
+    let validator_1 = env.get_state_sync_peer(0);
+    let validator_2 = env.get_state_sync_peer(1);
+
+    // Test small sequential syncs, batch sync for multiple transactions and
+    // batch sync for multiple chunks.
+    let synced_versions = vec![1, 2, 3, 4, 5, 20, 2000];
+    for version in synced_versions {
+        validator_1.commit(version);
+        let target_li = validator_1.latest_li();
+
+        validator_2.sync_to(target_li);
+        assert_eq!(validator_2.latest_li().ledger_info().version(), version);
+    }
+}
+
+#[test]
 fn test_flaky_peer_sync() {
     let mut env = StateSyncEnvironment::new(2);
 
@@ -84,6 +115,7 @@ fn test_request_timeout() {
         100,
         300,
         false,
+        false,
     );
 
     let validator_0 = env.get_state_sync_peer(0);
@@ -91,6 +123,35 @@ fn test_request_timeout() {
 
     validator_0.commit(1);
     validator_1.sync_to(validator_0.latest_li());
+}
+
+#[test]
+fn test_read_only_validator() {
+    let mut env = StateSyncEnvironment::new(2);
+
+    env.setup_state_sync_peer(
+        0,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        false,
+        true,
+    );
+    env.start_fullnode_peer(1, false);
+
+    let validator = env.get_state_sync_peer(0);
+    let fullnode = env.get_state_sync_peer(1);
+
+    validator.commit(10);
+    // first sync should be fulfilled immediately after peer discovery
+    assert!(fullnode.wait_for_version(10, None));
+
+    validator.commit(20);
+    // second sync will be done via long polling cause first node should send new request
+    // after receiving first chunk immediately
+    assert!(fullnode.wait_for_version(20, None));
 }
 
 #[test]
@@ -117,7 +178,16 @@ fn test_full_node() {
 fn catch_up_through_epochs_validators() {
     let mut env = StateSyncEnvironment::new(2);
 
-    env.start_validator_peer(0, false);
+    env.setup_state_sync_peer(
+        0,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        false,
+        true,
+    );
     env.start_validator_peer(1, false);
 
     let validator_0 = env.get_state_sync_peer(0);
@@ -231,11 +301,113 @@ fn catch_up_with_waypoints() {
 }
 
 #[test]
+fn test_lagging_fullnode_read_only() {
+    let mut env = StateSyncEnvironment::new(3);
+
+    // Start 1 validator and 2 fullnodes (fullnode_1 is read-only)
+    env.start_validator_peer(0, true);
+    env.start_fullnode_peer(1, true);
+    env.setup_state_sync_peer(
+        2,
+        default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        true,
+        true,
+    );
+
+    let validator_0 = env.get_state_sync_peer(0);
+    let fullnode_0 = env.get_state_sync_peer(1);
+    let fullnode_1 = env.get_state_sync_peer(2);
+
+    // Get peer ids of nodes (across different networks)
+    let validator_0_peer_id = validator_0.get_peer_id(NetworkId::Validator);
+    let fullnode_0_peer_id_vfn = fullnode_0.get_peer_id(NetworkId::Vfn);
+    let fullnode_0_peer_id_pfn = fullnode_0.get_peer_id(NetworkId::Public);
+    let fullnode_1_peer_id_pfn = fullnode_1.get_peer_id(NetworkId::Public);
+
+    // Commit version 400 at the validator
+    validator_0.commit(400);
+    drop(validator_0);
+    drop(fullnode_0);
+    drop(fullnode_1);
+
+    // Validator and fullnode_0 discover each other
+    send_connection_notifications(&mut env, validator_0_peer_id, fullnode_0_peer_id_vfn, true);
+
+    // Fullnodes discover each other
+    send_connection_notifications(
+        &mut env,
+        fullnode_1_peer_id_pfn,
+        fullnode_0_peer_id_pfn,
+        true,
+    );
+
+    // Deliver fullnode_0 messages and verify versions and targets
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_vfn);
+    check_chunk_request(message, 0, None);
+    let (_, message) = env.deliver_msg(validator_0_peer_id);
+    check_chunk_response(message, 400, 1, 250);
+    env.get_state_sync_peer(2).wait_for_version(250, None);
+
+    // Validator loses fullnode_0
+    send_connection_notifications(&mut env, validator_0_peer_id, fullnode_0_peer_id_vfn, false);
+
+    // Fullnode_0 sends chunk request to fullnode_1
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 250, Some(400));
+
+    // Validator 0 commits to new version and fullnode 1 is fast forwarded
+    env.get_state_sync_peer(0).commit(500);
+    env.clone_storage(0, 2);
+    env.get_state_sync_peer(2).wait_for_version(500, Some(500));
+
+    // Fullnode 0 sends chunk request to fullnode 1 and commits to latest state
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 250, Some(400));
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 400, 251, 150);
+
+    // Validator 0 commits to new version and fullnode 1 is fast forwarded
+    env.get_state_sync_peer(0).commit(1000);
+    env.clone_storage(0, 2);
+    env.get_state_sync_peer(2)
+        .wait_for_version(1000, Some(1000));
+
+    // Fullnode 0 sends chunk requests to fullnode 1 and commits to latest state
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 400, None);
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 1000, 401, 250);
+
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 650, None);
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 1000, 651, 250);
+
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 900, Some(1000));
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 1000, 901, 100);
+}
+
+#[test]
 fn test_lagging_upstream_long_poll() {
     let mut env = StateSyncEnvironment::new(4);
 
     // Start 2 validators and 2 fullnodes
-    env.start_validator_peer(0, true);
+    env.setup_state_sync_peer(
+        0,
+        default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        10_000,
+        10_000,
+        true,
+        true,
+    );
     env.start_validator_peer(1, true);
     env.setup_state_sync_peer(
         2,
@@ -245,6 +417,7 @@ fn test_lagging_upstream_long_poll() {
         10_000,
         1_000_000,
         true,
+        false,
     );
     env.start_state_sync_peer(
         3,
@@ -470,6 +643,7 @@ fn test_fn_failover() {
         1_000,
         60_000,
         true,
+        false,
     );
 
     // Start up 3 PFNs
@@ -700,6 +874,7 @@ fn test_multicast_failover() {
         1_000,
         multicast_timeout_ms,
         true,
+        false,
     );
 
     // Start up 3 FNs

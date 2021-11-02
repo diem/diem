@@ -104,6 +104,11 @@ pub(crate) struct StateSyncCoordinator<T, M> {
     // peer will be notified about new chunk of transactions if it's available before expiry time
     subscriptions: HashMap<PeerNetworkId, PendingRequestInfo>,
     executor_proxy: T,
+
+    // If this is true, state sync will only respond to chunk request messages
+    // from peers, but will not attempt to synchronize the node. This is required
+    // to support the case where state sync v2 is concurrently running.
+    read_only_mode: bool,
 }
 
 impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T, M> {
@@ -116,6 +121,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         waypoint: Waypoint,
         executor_proxy: T,
         initial_state: SyncState,
+        read_only_mode: bool,
     ) -> Result<Self, Error> {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
 
@@ -152,6 +158,7 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
             target_ledger_info: None,
             initialization_listener: None,
             executor_proxy,
+            read_only_mode,
         })
     }
 
@@ -345,7 +352,16 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         &mut self,
         cb_sender: oneshot::Sender<Result<(), Error>>,
     ) -> Result<(), Error> {
-        if self.is_initialized() {
+        if self.read_only_mode {
+            let read_only_error = Error::ReadOnlyMode("Unable to initialize in read-only mode!".into());
+            return match cb_sender.send(Err(read_only_error.clone())) {
+                Err(error) => Err(Error::CallbackSendFailed(format!(
+                    "Waypoint initialization callback error: {:?}",
+                    error
+                ))),
+                _ => Err(read_only_error),
+            };
+        } else if self.is_initialized() {
             Self::send_initialization_callback(cb_sender)?;
         } else {
             self.initialization_listener = Some(cb_sender);
@@ -362,6 +378,12 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         &mut self,
         sync_notification: ConsensusSyncNotification,
     ) -> Result<(), Error> {
+        if self.read_only_mode {
+            return Err(Error::ReadOnlyMode(
+                "Unable to process a sync request from consensus!".into(),
+            ));
+        }
+
         fail_point!("state_sync_v1::process_sync_request_message", |_| {
             Err(crate::error::Error::UnexpectedError(
                 "Injected error in process_sync_request_message".into(),
@@ -1020,8 +1042,19 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
         response: GetChunkResponse,
     ) -> Result<(), Error> {
         // Ensure consensus isn't running, otherwise we might get a race with storage writes.
-        if self.is_consensus_executing() {
-            let error = Error::ConsensusIsExecuting;
+        // Likewise, ensure state sync isn't running in read-only mode.
+        let error = if self.is_consensus_executing() {
+            Some(Error::ConsensusIsExecuting)
+        } else if self.read_only_mode {
+            Some(Error::ReadOnlyMode(
+                "Received an unrequested chunk response!".into(),
+            ))
+        } else {
+            None
+        };
+
+        // Log and return the error
+        if let Some(error) = error {
             error!(LogSchema::new(LogEntry::ProcessChunkResponse,)
                 .peer(peer)
                 .error(&error));
@@ -1479,8 +1512,8 @@ impl<T: ExecutorProxyTrait, M: MempoolNotificationSender> StateSyncCoordinator<T
     /// * Kick starts the initial sync process (e.g., syncing to a waypoint or target).
     /// * Issues a new request if too much time has passed since the last request was sent.
     fn check_progress(&mut self) -> Result<(), Error> {
-        if self.is_consensus_executing() {
-            return Ok(()); // No need to check progress or issue any requests (consensus is running).
+        if self.is_consensus_executing() || self.read_only_mode {
+            return Ok(()); // No need to check progress or issue any request
         }
 
         // Check if the sync request has timed out (i.e., if we aren't committing fast enough)
@@ -1751,6 +1784,14 @@ mod tests {
 
     #[test]
     fn test_process_sync_request() {
+        // Create a read-only coordinator
+        let mut read_only_coordinator = test_utils::create_read_only_coordinator();
+
+        // Verify that read-only coordinators can't process sync requests
+        let (sync_request, _) = create_sync_notification_at_version(0);
+        let process_result = block_on(read_only_coordinator.process_sync_request(sync_request));
+        assert_matches!(process_result, Err(Error::ReadOnlyMode(_)));
+
         // Create a coordinator for a full node
         let mut full_node_coordinator = test_utils::create_full_node_coordinator();
 
@@ -1813,6 +1854,20 @@ mod tests {
 
     #[test]
     fn test_wait_for_initialization() {
+        // Create a read-only coordinator
+        let mut read_only_coordinator = test_utils::create_read_only_coordinator();
+
+        // Check initialization returns an error
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        assert_matches!(
+            read_only_coordinator.wait_for_initialization(callback_sender),
+            Err(Error::ReadOnlyMode(_))
+        );
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => assert_matches!(result, Err(Error::ReadOnlyMode(_))),
+            result => panic!("Expected read-only error but got: {:?}", result),
+        };
+
         // Create a coordinator for a validator node
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
@@ -1901,6 +1956,12 @@ mod tests {
 
     #[test]
     fn test_check_progress() {
+        // Create a read-only coordinator
+        let mut read_only_coordinator = test_utils::create_read_only_coordinator();
+
+        // Verify no error is returned when in read-only mode
+        assert_ok!(read_only_coordinator.check_progress());
+
         // Create a coordinator for a validator node
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
@@ -2049,6 +2110,33 @@ mod tests {
             &peer_network_id,
             &chunk_requests,
         );
+    }
+
+    #[test]
+    fn test_process_chunk_response_read_only() {
+        // Create a validator coordinator
+        let mut read_only_coordinator = test_utils::create_validator_coordinator();
+
+        // Make a sync request (to force consensus to yield)
+        let (sync_request, _) = create_sync_notification_at_version(10);
+        let _ = block_on(read_only_coordinator.process_sync_request(sync_request));
+
+        // Manually set the coordinator to read-only
+        read_only_coordinator.read_only_mode = true;
+
+        // Create a peer and empty chunk responses
+        let peer_network_id = PeerNetworkId::random_validator();
+        let empty_chunk_responses = create_empty_chunk_responses(10);
+
+        // Verify an error is returned when processing each chunk
+        for chunk_response in &empty_chunk_responses {
+            let result = block_on(read_only_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                chunk_response.clone(),
+            ));
+            assert_matches!(result, Err(Error::ReadOnlyMode(_)));
+        }
     }
 
     #[test]

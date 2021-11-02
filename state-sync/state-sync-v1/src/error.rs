@@ -36,6 +36,8 @@ pub enum Error {
     OldSyncRequestVersion(Version, Version),
     #[error("Processed an invalid chunk! Failed to apply the chunk: {0}")]
     ProcessInvalidChunk(String),
+    #[error("State sync is operating in read-only mode! Error: {0}")]
+    ReadOnlyMode(String),
     #[error(
         "Received a chunk for an outdated request from peer {0}. Known version: {1}, received: {2}"
     )]
