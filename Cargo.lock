@@ -2357,7 +2357,7 @@ dependencies = [
  "network",
  "network-builder",
  "rand 0.8.4",
- "state-sync-v1",
+ "state-sync-multiplexer",
  "storage-client",
  "storage-interface",
  "storage-service",
@@ -7985,6 +7985,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2beb4d1860a61f571530b3f855a1b538d0200f7871c63331ecd6f17b1f014f8"
 dependencies = [
  "version_check",
+]
+
+[[package]]
+name = "state-sync-multiplexer"
+version = "0.1.0"
+dependencies = [
+ "consensus-notifications",
+ "diem-config",
+ "diem-types",
+ "diem-workspace-hack",
+ "event-notifications",
+ "executor-types",
+ "futures",
+ "mempool-notifications",
+ "network",
+ "state-sync-v1",
+ "storage-interface",
 ]
 
 [[package]]

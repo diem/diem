@@ -167,6 +167,7 @@ members = [
     "state-sync/state-sync-v1",
     "state-sync/state-sync-v2",
     "state-sync/state-sync-v2/data-streaming-service",
+    "state-sync/state-sync-v2/state-sync-multiplexer",
     "state-sync/storage-service/client",
     "state-sync/storage-service/server",
     "state-sync/storage-service/types",

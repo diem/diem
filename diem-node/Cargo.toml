@@ -48,7 +48,7 @@ diemdb = { path = "../storage/diemdb" }
 mempool-notifications = { path = "../state-sync/inter-component/mempool-notifications" }
 network = { path = "../network" }
 network-builder = { path = "../network/builder" }
-state-sync-v1 = { path = "../state-sync/state-sync-v1" }
+state-sync-multiplexer = { path = "../state-sync/state-sync-v2/state-sync-multiplexer" }
 storage-client = { path = "../storage/storage-client" }
 storage-interface= { path = "../storage/storage-interface" }
 storage-service = { path = "../storage/storage-service" }
@@ -56,4 +56,4 @@ storage-service = { path = "../storage/storage-service" }
 [features]
 default = []
 assert-private-keys-not-cloneable = ["diem-crypto/assert-private-keys-not-cloneable"]
-failpoints = ["fail/failpoints", "consensus/failpoints", "executor/failpoints", "diem-json-rpc/failpoints", "diem-mempool/failpoints", "state-sync-v1/failpoints"]
+failpoints = ["fail/failpoints", "consensus/failpoints", "executor/failpoints", "diem-json-rpc/failpoints", "diem-mempool/failpoints"]

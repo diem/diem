@@ -30,7 +30,7 @@ use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use network::application::storage::PeerMetadataStorage;
 use network_builder::builder::NetworkBuilder;
-use state_sync_v1::bootstrapper::StateSyncBootstrapper;
+use state_sync_multiplexer::{state_sync_v1_network_config, StateSyncMultiplexer};
 use std::{
     boxed::Box,
     collections::HashSet,
@@ -57,7 +57,7 @@ const MEMPOOL_NETWORK_CHANNEL_BUFFER_SIZE: usize = 1_024;
 pub struct DiemHandle {
     _api: Runtime,
     _mempool: Runtime,
-    _state_sync_bootstrapper: StateSyncBootstrapper,
+    _state_sync: StateSyncMultiplexer,
     _network_runtimes: Vec<Runtime>,
     _consensus_runtime: Option<Runtime>,
     _debug: NodeDebugService,
@@ -382,7 +382,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
         // Create the endpoints to connect the Network to State Sync.
         let (state_sync_sender, state_sync_events) =
-            network_builder.add_p2p_service(&state_sync_v1::network::network_endpoint_config());
+            network_builder.add_p2p_service(&state_sync_v1_network_config());
         state_sync_network_handles.push((network_id, state_sync_sender, state_sync_events));
 
         // Create the endpoints to connect the Network to mempool.
@@ -423,8 +423,8 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             node_config.state_sync.client_commit_timeout_ms,
         );
 
-    // Create state sync bootstrapper
-    let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
+    // Create the state sync multiplexer
+    let state_sync = StateSyncMultiplexer::new(
         state_sync_network_handles,
         mempool_notifier,
         consensus_listener,
@@ -463,15 +463,12 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // network provider -> consensus -> state synchronizer -> network provider.  This has resulted
     // in a deadlock as observed in GitHub issue #749.
     if let Some((consensus_network_sender, consensus_network_events)) = consensus_network_handles {
-        let state_sync_client = state_sync_bootstrapper.create_client();
-
         // Make sure that state synchronizer is caught up at least to its waypoint
         // (in case it's present). There is no sense to start consensus prior to that.
         // TODO: Note that we need the networking layer to be able to discover & connect to the
         // peers with potentially outdated network identity public keys.
         debug!("Wait until state sync is initialized");
-        block_on(state_sync_client.wait_until_initialized())
-            .expect("State sync initialization failure");
+        state_sync.block_until_initialized();
         debug!("State sync initialization complete.");
 
         // Initialize and start consensus.
@@ -499,7 +496,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     DiemHandle {
         _network_runtimes: network_runtimes,
         _mempool: mempool,
-        _state_sync_bootstrapper: state_sync_bootstrapper,
+        _state_sync: state_sync,
         _consensus_runtime: consensus_runtime,
         _debug: debug_if,
         _backup: backup_service,
