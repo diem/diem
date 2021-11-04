@@ -34,18 +34,15 @@ impl StateSyncBootstrapper {
         node_config: &NodeConfig,
         waypoint: Waypoint,
         event_subscription_service: EventSubscriptionService,
+        read_only_mode: bool,
     ) -> Self {
         let runtime = Builder::new_multi_thread()
-            .thread_name("state-sync")
+            .thread_name("state-sync-v1")
             .enable_all()
             .build()
             .expect("[State Sync] Failed to create runtime!");
 
-        // We notify all reconfig subscribers upon executor proxy creation
-        let mut executor_proxy = ExecutorProxy::new(storage, executor, event_subscription_service);
-        executor_proxy
-            .notify_initial_configs()
-            .expect("Failed to notify reconfig subscribers on initialization!");
+        let executor_proxy = ExecutorProxy::new(storage, executor, event_subscription_service);
 
         Self::bootstrap_with_executor_proxy(
             runtime,
@@ -55,7 +52,7 @@ impl StateSyncBootstrapper {
             node_config,
             waypoint,
             executor_proxy,
-            false,
+            read_only_mode,
         )
     }
 

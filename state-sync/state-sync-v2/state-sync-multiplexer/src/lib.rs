@@ -6,8 +6,8 @@
 
 use consensus_notifications::ConsensusNotificationListener;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
-use diem_types::{protocol_spec::DpnProto, waypoint::Waypoint};
-use event_notifications::EventSubscriptionService;
+use diem_types::{move_resource::MoveStorage, protocol_spec::DpnProto, waypoint::Waypoint};
+use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use executor_types::ChunkExecutor;
 use futures::executor::block_on;
 use mempool_notifications::MempoolNotificationSender;
@@ -34,8 +34,27 @@ impl StateSyncMultiplexer {
         executor: Box<dyn ChunkExecutor>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
-        event_subscription_service: EventSubscriptionService,
+        mut event_subscription_service: EventSubscriptionService,
     ) -> Self {
+        // Notify subscribers of the initial on-chain config values
+        match (&*storage).fetch_synced_version() {
+            Ok(synced_version) => {
+                if let Err(error) =
+                    event_subscription_service.notify_initial_configs(synced_version)
+                {
+                    panic!(
+                        "Failed to notify subscribers of initial on-chain configs: {:?}",
+                        error
+                    )
+                }
+            }
+            Err(error) => panic!("Failed to fetch the initial synced version: {:?}", error),
+        }
+
+        // TODO(joshlind): use configs to determine the state sync v1 mode
+        let state_sync_v1_read_only = false;
+
+        // Create a state sync v1 bootstrapper
         let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
             network,
             mempool_notifier,
@@ -45,6 +64,7 @@ impl StateSyncMultiplexer {
             node_config,
             waypoint,
             event_subscription_service,
+            state_sync_v1_read_only,
         );
 
         Self {

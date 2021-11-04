@@ -27,7 +27,7 @@ use diemdb::DiemDB;
 use event_notifications::EventSubscriptionService;
 use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
-use futures::{channel::mpsc::channel, executor::block_on};
+use futures::channel::mpsc::channel;
 use network::application::storage::PeerMetadataStorage;
 use network_builder::builder::NetworkBuilder;
 use state_sync_multiplexer::{state_sync_v1_network_config, StateSyncMultiplexer};
