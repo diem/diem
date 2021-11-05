@@ -591,7 +591,7 @@ pub fn scale_sts_replica(sts_name: &str, replica_num: u64) -> Result<()> {
         .stdout(Stdio::inherit())
         .args(&scale_sts_args)
         .output()
-        .expect("failed to scale sts replicas");
+        .expect("failed to scale sts replica");
     assert!(
         scale_output.status.success(),
         "{}",
