@@ -65,7 +65,7 @@ module 0x1::Importer {
 ## Comments
 
 - Each module, struct, and public function declaration should be commented
-- Move has both doc comments `///`, regular single-line comments `//`, and block comments `/* */`
+- Move has doc comments `///`, regular single-line comments `//`, block comments `/* */`, and block doc comments `/** */`
 
 ## Formatting
 
