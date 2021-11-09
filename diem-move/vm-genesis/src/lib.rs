@@ -242,24 +242,6 @@ fn create_and_initialize_main_accounts(
             MoveValue::vector_u8(consensus_config_bytes),
         ]),
     );
-
-    // Bump the sequence number for the Association account. If we don't do this and a
-    // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
-    // arises: both the genesis transaction and the subsequent transaction have sequence
-    // number 0
-    exec_function(
-        session,
-        "DiemAccount",
-        "epilogue",
-        vec![xdx_ty.clone()],
-        serialize_values(&vec![
-            MoveValue::Signer(root_diem_root_address),
-            MoveValue::U64(/* txn_sequence_number */ 0),
-            MoveValue::U64(/* txn_gas_price */ 0),
-            MoveValue::U64(/* txn_max_gas_units */ 0),
-            MoveValue::U64(/* gas_units_remaining */ 0),
-        ]),
-    );
 }
 
 fn create_and_initialize_testnet_minting(
