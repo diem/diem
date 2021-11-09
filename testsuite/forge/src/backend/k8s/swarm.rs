@@ -1,10 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    backend::k8s::node::K8sNode, create_k8s_client, query_sequence_numbers, remove_helm_release,
-    set_validator_image_tag, ChainInfo, FullNode, Node, Result, Swarm, Validator, Version,
-};
+use crate::{backend::k8s::node::K8sNode, create_k8s_client, query_sequence_numbers, remove_helm_release, set_validator_image_tag, ChainInfo, FullNode, Node, Result, Swarm, Validator, Version, list_services};
 use anyhow::{anyhow, bail, format_err};
 use diem_config::config::NodeConfig;
 use diem_logger::*;
@@ -15,11 +12,7 @@ use diem_sdk::{
         AccountKey, LocalAccount, PeerId,
     },
 };
-use k8s_openapi::api::core::v1::Service;
-use kube::{
-    api::{Api, ListParams},
-    client::Client as K8sClient,
-};
+use kube::client::Client as K8sClient;
 use std::{collections::HashMap, convert::TryFrom, env, process::Command, str, sync::Arc, thread};
 use tokio::time::Duration;
 
@@ -264,35 +257,6 @@ impl Swarm for K8sSwarm {
 
 pub(crate) fn k8s_retry_strategy() -> impl Iterator<Item = Duration> {
     diem_retrier::exp_retry_strategy(1000, 10000, 50)
-}
-
-#[derive(Clone, Debug)]
-pub struct KubeService {
-    pub name: String,
-    pub host_ip: String,
-}
-
-impl TryFrom<Service> for KubeService {
-    type Error = anyhow::Error;
-
-    fn try_from(service: Service) -> Result<Self, Self::Error> {
-        let metadata = service.metadata;
-        let name = metadata
-            .name
-            .ok_or_else(|| format_err!("node name not found"))?;
-        let spec = service
-            .spec
-            .ok_or_else(|| format_err!("spec not found for node"))?;
-        let host_ip = spec.cluster_ip.unwrap_or_default();
-        Ok(Self { name, host_ip })
-    }
-}
-
-async fn list_services(client: K8sClient) -> Result<Vec<KubeService>> {
-    let node_api: Api<Service> = Api::all(client);
-    let lp = ListParams::default();
-    let services = node_api.list(&lp).await?.items;
-    services.into_iter().map(KubeService::try_from).collect()
 }
 
 pub(crate) async fn get_validators(

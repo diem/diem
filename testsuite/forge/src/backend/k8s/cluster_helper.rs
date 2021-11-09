@@ -30,6 +30,8 @@ use std::{
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
+use k8s_openapi::api::core::v1::{Service, Pod};
+use kube::api::ListParams;
 
 const HELM_BIN: &str = "helm";
 const KUBECTL_BIN: &str = "kubectl";
@@ -599,4 +601,57 @@ pub fn scale_sts_replica(sts_name: &str, replica_num: u64) -> Result<()> {
     );
 
     Ok(())
+}
+
+#[derive(Clone, Debug)]
+pub struct KubeService {
+    pub name: String,
+    pub host_ip: String,
+}
+
+impl TryFrom<Service> for KubeService {
+    type Error = anyhow::Error;
+
+    fn try_from(service: Service) -> Result<Self, Self::Error> {
+        let metadata = service.metadata;
+        let name = metadata
+            .name
+            .ok_or_else(|| format_err!("node name not found"))?;
+        let spec = service
+            .spec
+            .ok_or_else(|| format_err!("spec not found for node"))?;
+        let host_ip = spec.cluster_ip.unwrap_or_default();
+        Ok(Self { name, host_ip })
+    }
+}
+
+pub(crate) async fn list_services(client: K8sClient) -> Result<Vec<KubeService>> {
+    let node_api: Api<Service> = Api::all(client);
+    let lp = ListParams::default();
+    let services = node_api.list(&lp).await?.items;
+    services.into_iter().map(KubeService::try_from).collect()
+}
+
+#[derive(Clone, Debug)]
+pub struct KubePod {
+    pub name: String,
+}
+
+impl TryFrom<Pod> for KubePod {
+    type Error = anyhow::Error;
+
+    fn try_from(pod: Pod) -> Result<Self, Self::Error> {
+        let metadata = pod.metadata;
+        let name = metadata
+            .name
+            .ok_or_else(|| format_err!("node name not found"))?;
+        Ok(Self { name })
+    }
+}
+
+pub(crate) async fn list_pods(client: K8sClient) -> Result<Vec<KubePod>> {
+    let node_api: Api<Pod> = Api::all(client);
+    let lp = ListParams::default();
+    let services = node_api.list(&lp).await?.items;
+    services.into_iter().map(KubeService::try_from).collect()
 }
