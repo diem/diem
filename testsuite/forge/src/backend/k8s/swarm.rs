@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{backend::k8s::node::K8sNode, create_k8s_client, query_sequence_numbers, remove_helm_release, set_validator_image_tag, ChainInfo, FullNode, Node, Result, Swarm, Validator, Version, list_services};
+use crate::{backend::k8s::node::K8sNode, create_k8s_client, query_sequence_numbers, remove_helm_release, set_validator_image_tag, ChainInfo, FullNode, Node, Result, Swarm, Validator, Version, list_services, expose_validator_endpoint};
 use anyhow::{anyhow, bail, format_err};
 use diem_config::config::NodeConfig;
 use diem_logger::*;
@@ -18,7 +18,9 @@ use tokio::time::Duration;
 
 const JSON_RPC_PORT: u32 = 80;
 const REST_API_PORT: u32 = 8081;
-const VALIDATOR_LB: &str = "validator-fullnode-lb";
+const VALIDATOR_LB: &str = "validator-validator-lb";
+const FULLNODE_LB: &str = "validator-fullnode-lb";
+const PORT_FORWARD_START_PORT: u32 = 65000;
 
 pub struct K8sSwarm {
     validators: HashMap<PeerId, K8sNode>,
@@ -45,7 +47,7 @@ impl K8sSwarm {
     ) -> Result<Self> {
         let kube_client = create_k8s_client().await;
         let fullnodes = HashMap::new();
-        let validators = get_validators(kube_client.clone(), init_image_tag).await?;
+        let validators = get_validators1(kube_client.clone(), init_image_tag).await?;
 
         let client = validators.values().next().unwrap().json_rpc_client();
         let key = load_root_key(root_key);
@@ -139,7 +141,7 @@ impl Swarm for K8sSwarm {
         let unhealthy_nodes = nodes_healthcheck(Box::new(
             self.validators
                 .values_mut()
-                .map(|v| v as &mut dyn Validator),
+                .map(|v| v as &mut dyn Node),
         ))
         .unwrap();
         if !unhealthy_nodes.is_empty() {
@@ -266,7 +268,7 @@ pub(crate) async fn get_validators(
     let services = list_services(client).await?;
     let mut validators = services
         .into_iter()
-        .filter(|s| s.name.contains(VALIDATOR_LB))
+        .filter(|s| s.name.contains(FULLNODE_LB))
         .map(|s| {
             let node_id = parse_node_id(&s.name).expect("error to parse node id");
             let node = K8sNode {
@@ -284,7 +286,46 @@ pub(crate) async fn get_validators(
             (node.peer_id(), node)
         })
         .collect::<HashMap<_, _>>();
-    let all_nodes = Box::new(validators.values_mut().map(|v| v as &mut dyn Validator));
+    let all_nodes = Box::new(validators.values_mut().map(|v| v as &mut dyn Node));
+    let unhealthy_nodes = nodes_healthcheck(all_nodes).unwrap();
+    let mut health_nodes = HashMap::new();
+    for node in validators {
+        if !unhealthy_nodes.contains(&node.1.name) {
+            health_nodes.insert(node.0, node.1);
+        }
+    }
+
+    Ok(health_nodes)
+}
+
+pub(crate) async fn get_validators1(
+    client: K8sClient,
+    image_tag: &str,
+) -> Result<HashMap<PeerId, K8sNode>> {
+    let services = list_services(client.clone()).await?;
+    let mut validators = services
+        .into_iter()
+        .filter(|s| s.name.contains(VALIDATOR_LB))
+        .map(|s| {
+            let node_id = parse_node_id(&s.name).expect("error to parse node id");
+            let node = K8sNode {
+                name: format!("val{}", node_id),
+                sts_name: format!("val{}-diem-validator-validator", node_id),
+                // TODO: fetch this from running node
+                peer_id: PeerId::random(),
+                node_id,
+                ip: "localhost".to_string(),
+                port: PORT_FORWARD_START_PORT + node_id as u32,
+                rest_api_port: REST_API_PORT,
+                dns: s.name,
+                version: Version::new(0, image_tag.to_string()),
+            };
+            let pod_name = format!("{}-0", node.sts_name);
+            expose_validator_endpoint(&pod_name, node.port).unwrap();
+            (node.peer_id(), node)
+        })
+        .collect::<HashMap<_, _>>();
+    let all_nodes = Box::new(validators.values_mut().map(|v| v as &mut dyn Node));
     let unhealthy_nodes = nodes_healthcheck(all_nodes).unwrap();
     let mut health_nodes = HashMap::new();
     for node in validators {
@@ -314,7 +355,7 @@ fn load_tc_key(tc_key_bytes: &[u8]) -> Ed25519PrivateKey {
 }
 
 pub fn nodes_healthcheck<'a>(
-    nodes: Box<dyn Iterator<Item = &'a mut dyn Validator> + 'a>,
+    nodes: Box<dyn Iterator<Item = &'a mut dyn Node> + 'a>,
 ) -> Result<Vec<String>> {
     let unhealthy_nodes = nodes
         .filter_map(|node| {

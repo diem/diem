@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{get_validators, k8s_retry_strategy, nodes_healthcheck, Result, Validator};
-use anyhow::{bail, format_err};
+use crate::{get_validators, k8s_retry_strategy, nodes_healthcheck, Result, Node};
+use anyhow::{bail, format_err, Context};
 use diem_logger::*;
 use hyper::{Client, Uri};
 use hyper_proxy::{Intercept, Proxy, ProxyConnector};
@@ -30,7 +30,7 @@ use std::{
 };
 use tempfile::TempDir;
 use tokio::runtime::Runtime;
-use k8s_openapi::api::core::v1::{Service, Pod};
+use k8s_openapi::api::core::v1::Service;
 use kube::api::ListParams;
 
 const HELM_BIN: &str = "helm";
@@ -331,7 +331,7 @@ pub fn clean_k8s_cluster(
             .unwrap();
         vals
     });
-    let all_nodes = Box::new(validators.values_mut().map(|v| v as &mut dyn Validator));
+    let all_nodes = Box::new(validators.values_mut().map(|v| v as &mut dyn Node));
 
     // healthcheck on each of the validators wait until they all healthy
     if require_validator_healthcheck {
@@ -632,26 +632,23 @@ pub(crate) async fn list_services(client: K8sClient) -> Result<Vec<KubeService>>
     services.into_iter().map(KubeService::try_from).collect()
 }
 
-#[derive(Clone, Debug)]
-pub struct KubePod {
-    pub name: String,
-}
+pub(crate) fn expose_validator_endpoint(pod_name: &str, port: u32) -> Result<()> {
+    let port_forward_args = [
+        "port-forward",
+        &format!("pod/{}", pod_name),
+        &format!("{}:8080", port),
+    ];
+    println!("{:?}", port_forward_args);
+    let _ = Command::new(KUBECTL_BIN)
+        .stdout(Stdio::null())
+        .args(&port_forward_args)
+        .spawn()
+        .with_context(|| {
+            format!(
+                "Error port forwarding for node {}",
+                pod_name
+            )
+        })?;
 
-impl TryFrom<Pod> for KubePod {
-    type Error = anyhow::Error;
-
-    fn try_from(pod: Pod) -> Result<Self, Self::Error> {
-        let metadata = pod.metadata;
-        let name = metadata
-            .name
-            .ok_or_else(|| format_err!("node name not found"))?;
-        Ok(Self { name })
-    }
-}
-
-pub(crate) async fn list_pods(client: K8sClient) -> Result<Vec<KubePod>> {
-    let node_api: Api<Pod> = Api::all(client);
-    let lp = ListParams::default();
-    let services = node_api.list(&lp).await?.items;
-    services.into_iter().map(KubeService::try_from).collect()
+    Ok(())
 }
