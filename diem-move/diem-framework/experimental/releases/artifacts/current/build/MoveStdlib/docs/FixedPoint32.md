@@ -154,7 +154,7 @@ overflows.
     // so rescale it by shifting away the low bits.
     <b>let</b> product = unscaled_product &gt;&gt; 32;
     // Check whether the value is too large.
-    <b>assert</b>(product &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EMULTIPLICATION">EMULTIPLICATION</a>));
+    <b>assert</b>!(product &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EMULTIPLICATION">EMULTIPLICATION</a>));
     (product <b>as</b> u64)
 }
 </code></pre>
@@ -268,13 +268,13 @@ is zero or if the quotient overflows.
 
 <pre><code><b>public</b> <b>fun</b> <a href="FixedPoint32.md#0x1_FixedPoint32_divide_u64">divide_u64</a>(val: u64, divisor: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>): u64 {
     // Check for division by zero.
-    <b>assert</b>(divisor.value != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>));
+    <b>assert</b>!(divisor.value != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>));
     // First convert <b>to</b> 128 bits and then shift left <b>to</b>
     // add 32 fractional zero bits <b>to</b> the dividend.
     <b>let</b> scaled_value = (val <b>as</b> u128) &lt;&lt; 32;
     <b>let</b> quotient = scaled_value / (divisor.value <b>as</b> u128);
     // Check whether the value is too large.
-    <b>assert</b>(quotient &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION">EDIVISION</a>));
+    <b>assert</b>!(quotient &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION">EDIVISION</a>));
     // the value may be too large, which will cause the cast <b>to</b> fail
     // <b>with</b> an arithmetic error.
     (quotient <b>as</b> u64)
@@ -397,12 +397,12 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
     // fractional bits.
     <b>let</b> scaled_numerator = (numerator <b>as</b> u128) &lt;&lt; 64;
     <b>let</b> scaled_denominator = (denominator <b>as</b> u128) &lt;&lt; 32;
-    <b>assert</b>(scaled_denominator != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDENOMINATOR">EDENOMINATOR</a>));
+    <b>assert</b>!(scaled_denominator != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_EDENOMINATOR">EDENOMINATOR</a>));
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
-    <b>assert</b>(quotient != 0 || numerator == 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
+    <b>assert</b>!(quotient != 0 || numerator == 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
     // Return the quotient <b>as</b> a fixed-point number. We first need <b>to</b> check whether the cast
     // can succeed.
-    <b>assert</b>(quotient &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
+    <b>assert</b>!(quotient &lt;= <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
     <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> { value: (quotient <b>as</b> u64) }
 }
 </code></pre>

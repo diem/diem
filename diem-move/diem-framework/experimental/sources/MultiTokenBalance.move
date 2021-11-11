@@ -1,7 +1,7 @@
-module 0x1::MultiTokenBalance {
+module DiemExperimental::MultiTokenBalance {
     use Std::Errors;
     use Std::GUID;
-    use 0x1::MultiToken::{Self, Token};
+    use DiemExperimental::MultiToken::{Self, Token};
     use Std::Option::{Self, Option};
     use Std::Signer;
     use Std::Vector;

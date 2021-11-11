@@ -1,4 +1,4 @@
-module 0x1::NFT {
+module DiemExperimental::NFT {
     use Std::Event;
     use Std::GUID::{Self, GUID};
     use Std::Signer;

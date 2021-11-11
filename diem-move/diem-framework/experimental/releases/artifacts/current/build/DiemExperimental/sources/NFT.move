@@ -1,4 +1,4 @@
-module 0x1::NFT {
+module DiemExperimental::NFT {
     use Std::Event;
     use Std::GUID::{Self, GUID};
     use Std::Signer;
@@ -43,7 +43,7 @@ module 0x1::NFT {
     const ENOT_ADMIN: u64 = 0;
 
     public fun initialize<Type: store + drop>(account: &signer) {
-        assert(Signer::address_of(account) == ADMIN, ENOT_ADMIN);
+        assert!(Signer::address_of(account) == ADMIN, ENOT_ADMIN);
         move_to(account, Admin { mint_events: Event::new_event_handle<MintEvent<Type>>(account) })
     }
 

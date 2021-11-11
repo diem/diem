@@ -84,7 +84,7 @@ module Std::Option {
     /// Return an immutable reference to the value inside `t`
     /// Aborts if `t` does not hold a value
     public fun borrow<Element>(t: &Option<Element>): &Element {
-        assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
+        assert!(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::borrow(&t.vec, 0)
     }
     spec borrow {
@@ -139,7 +139,7 @@ module Std::Option {
     /// Convert a `some` option to a `none` by removing and returning the value stored inside `t`
     /// Aborts if `t` does not hold a value
     public fun extract<Element>(t: &mut Option<Element>): Element {
-        assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
+        assert!(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::pop_back(&mut t.vec)
     }
     spec extract {
@@ -152,7 +152,7 @@ module Std::Option {
     /// Return a mutable reference to the value inside `t`
     /// Aborts if `t` does not hold a value
     public fun borrow_mut<Element>(t: &mut Option<Element>): &mut Element {
-        assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
+        assert!(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         Vector::borrow_mut(&mut t.vec, 0)
     }
     spec borrow_mut {
@@ -164,7 +164,7 @@ module Std::Option {
     /// Swap the old value inside `t` with `e` and return the old value
     /// Aborts if `t` does not hold a value
     public fun swap<Element>(t: &mut Option<Element>, e: Element): Element {
-        assert(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
+        assert!(is_some(t), Errors::invalid_argument(EOPTION_NOT_SET));
         let vec_ref = &mut t.vec;
         let old_value = Vector::pop_back(vec_ref);
         Vector::push_back(vec_ref, e);
@@ -193,7 +193,7 @@ module Std::Option {
     /// Unpack `t` and return its contents
     /// Aborts if `t` does not hold a value
     public fun destroy_some<Element>(t: Option<Element>): Element {
-        assert(is_some(&t), Errors::invalid_argument(EOPTION_NOT_SET));
+        assert!(is_some(&t), Errors::invalid_argument(EOPTION_NOT_SET));
         let Option { vec } = t;
         let elem = Vector::pop_back(&mut vec);
         Vector::destroy_empty(vec);
@@ -208,7 +208,7 @@ module Std::Option {
     /// Unpack `t`
     /// Aborts if `t` holds a value
     public fun destroy_none<Element>(t: Option<Element>) {
-        assert(is_none(&t), Errors::invalid_argument(EOPTION_IS_SET));
+        assert!(is_none(&t), Errors::invalid_argument(EOPTION_IS_SET));
         let Option { vec } = t;
         Vector::destroy_empty(vec)
     }

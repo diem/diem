@@ -443,7 +443,7 @@ Returns the supply of tokens with <code>id</code> on the chain.
     <b>let</b> owner_addr = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_id_creator_address">GUID::id_creator_address</a>(id);
     <b>let</b> tokens = &<b>mut</b> borrow_global_mut&lt;<a href="MultiToken.md#0x1_MultiToken_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(owner_addr).tokens;
     <b>let</b> index_opt = <a href="MultiToken.md#0x1_MultiToken_index_of_token">index_of_token</a>&lt;TokenType&gt;(tokens, id);
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>));
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>));
     <b>let</b> index = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_extract">Option::extract</a>(&<b>mut</b> index_opt);
     <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tokens, index).supply
 }
@@ -473,10 +473,10 @@ Extract the MultiToken data of the given token into a hot potato wrapper.
     <b>let</b> owner_addr = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_id_creator_address">GUID::id_creator_address</a>(&nft.id);
     <b>let</b> tokens = &<b>mut</b> borrow_global_mut&lt;<a href="MultiToken.md#0x1_MultiToken_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(owner_addr).tokens;
     <b>let</b> index_opt = <a href="MultiToken.md#0x1_MultiToken_index_of_token">index_of_token</a>&lt;TokenType&gt;(tokens, &nft.id);
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>));
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>));
     <b>let</b> index = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_extract">Option::extract</a>(&<b>mut</b> index_opt);
     <b>let</b> item_opt = &<b>mut</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tokens, index).metadata;
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(item_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="MultiToken.md#0x1_MultiToken_ETOKEN_EXTRACTED">ETOKEN_EXTRACTED</a>));
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(item_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="MultiToken.md#0x1_MultiToken_ETOKEN_EXTRACTED">ETOKEN_EXTRACTED</a>));
     <a href="MultiToken.md#0x1_MultiToken_TokenDataWrapper">TokenDataWrapper</a> { origin: owner_addr, index, metadata: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_extract">Option::extract</a>(item_opt) }
 }
 </code></pre>
@@ -504,9 +504,9 @@ Restore the token in the wrapper back into global storage under original address
 <pre><code><b>public</b> <b>fun</b> <a href="MultiToken.md#0x1_MultiToken_restore_token">restore_token</a>&lt;TokenType: store&gt;(wrapper: <a href="MultiToken.md#0x1_MultiToken_TokenDataWrapper">TokenDataWrapper</a>&lt;TokenType&gt;) <b>acquires</b> <a href="MultiToken.md#0x1_MultiToken_TokenDataCollection">TokenDataCollection</a> {
     <b>let</b> <a href="MultiToken.md#0x1_MultiToken_TokenDataWrapper">TokenDataWrapper</a> { origin, index, metadata } = wrapper;
     <b>let</b> tokens = &<b>mut</b> borrow_global_mut&lt;<a href="MultiToken.md#0x1_MultiToken_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(origin).tokens;
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(tokens) &gt; index, <a href="MultiToken.md#0x1_MultiToken_EINDEX_EXCEEDS_LENGTH">EINDEX_EXCEEDS_LENGTH</a>);
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(tokens) &gt; index, <a href="MultiToken.md#0x1_MultiToken_EINDEX_EXCEEDS_LENGTH">EINDEX_EXCEEDS_LENGTH</a>);
     <b>let</b> item_opt = &<b>mut</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tokens, index).metadata;
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_none">Option::is_none</a>(item_opt), <a href="MultiToken.md#0x1_MultiToken_ETOKEN_PRESENT">ETOKEN_PRESENT</a>);
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_none">Option::is_none</a>(item_opt), <a href="MultiToken.md#0x1_MultiToken_ETOKEN_PRESENT">ETOKEN_PRESENT</a>);
     <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_fill">Option::fill</a>(item_opt, metadata);
 }
 </code></pre>
@@ -566,8 +566,8 @@ Join two multi tokens and return a multi token with the combined value of the tw
 
 <pre><code><b>public</b> <b>fun</b> <a href="MultiToken.md#0x1_MultiToken_join">join</a>&lt;TokenType: store&gt;(token: &<b>mut</b> <a href="MultiToken.md#0x1_MultiToken_Token">Token</a>&lt;TokenType&gt;, other: <a href="MultiToken.md#0x1_MultiToken_Token">Token</a>&lt;TokenType&gt;) {
     <b>let</b> <a href="MultiToken.md#0x1_MultiToken_Token">Token</a> { id, balance } = other;
-    <b>assert</b>(*&token.id == id, <a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>);
-    <b>assert</b>(<a href="MultiToken.md#0x1_MultiToken_MAX_U64">MAX_U64</a> - token.balance &gt;= balance, <a href="MultiToken.md#0x1_MultiToken_ETOKEN_BALANCE_OVERFLOWS">ETOKEN_BALANCE_OVERFLOWS</a>);
+    <b>assert</b>!(*&token.id == id, <a href="MultiToken.md#0x1_MultiToken_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>);
+    <b>assert</b>!(<a href="MultiToken.md#0x1_MultiToken_MAX_U64">MAX_U64</a> - token.balance &gt;= balance, <a href="MultiToken.md#0x1_MultiToken_ETOKEN_BALANCE_OVERFLOWS">ETOKEN_BALANCE_OVERFLOWS</a>);
     token.balance = token.balance + balance
 }
 </code></pre>
@@ -593,7 +593,7 @@ Split the token into two tokens, one with balance <code>amount</code> and the ot
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="MultiToken.md#0x1_MultiToken_split">split</a>&lt;TokenType: store&gt;(token: <a href="MultiToken.md#0x1_MultiToken_Token">Token</a>&lt;TokenType&gt;, amount: u64): (<a href="MultiToken.md#0x1_MultiToken_Token">Token</a>&lt;TokenType&gt;, <a href="MultiToken.md#0x1_MultiToken_Token">Token</a>&lt;TokenType&gt;) {
-    <b>assert</b>(token.balance &gt;= amount, <a href="MultiToken.md#0x1_MultiToken_EAMOUNT_EXCEEDS_TOKEN_BALANCE">EAMOUNT_EXCEEDS_TOKEN_BALANCE</a>);
+    <b>assert</b>!(token.balance &gt;= amount, <a href="MultiToken.md#0x1_MultiToken_EAMOUNT_EXCEEDS_TOKEN_BALANCE">EAMOUNT_EXCEEDS_TOKEN_BALANCE</a>);
     token.balance = token.balance - amount;
     <b>let</b> id = *&token.id;
     (token,
@@ -625,7 +625,7 @@ Initialize this module, to be called in genesis.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="MultiToken.md#0x1_MultiToken_initialize_multi_token">initialize_multi_token</a>(account: signer) {
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&account) == <a href="MultiToken.md#0x1_MultiToken_ADMIN">ADMIN</a>, <a href="MultiToken.md#0x1_MultiToken_ENOT_ADMIN">ENOT_ADMIN</a>);
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&account) == <a href="MultiToken.md#0x1_MultiToken_ADMIN">ADMIN</a>, <a href="MultiToken.md#0x1_MultiToken_ENOT_ADMIN">ENOT_ADMIN</a>);
     move_to(&account, <a href="MultiToken.md#0x1_MultiToken_Admin">Admin</a> {
         mint_events: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="MultiToken.md#0x1_MultiToken_MintEvent">MintEvent</a>&gt;(&account),
     })

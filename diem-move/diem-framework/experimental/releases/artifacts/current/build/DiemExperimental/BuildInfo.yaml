@@ -3,6 +3,7 @@ compiled_package_info:
   package_name: DiemExperimental
   address_alias_instantiation:
     CurrencyInfo: 0000000000000000000000000a550c18
+    DiemExperimental: "00000000000000000000000000000001"
     DiemFramework: "00000000000000000000000000000001"
     DiemRoot: 0000000000000000000000000a550c18
     Std: "00000000000000000000000000000001"
@@ -10,77 +11,14 @@ compiled_package_info:
     VMReserved: "00000000000000000000000000000000"
   module_resolution_metadata:
     ? address: "00000000000000000000000000000001"
-      name: AccountAdministrationScripts
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: AccountCreationScripts
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: AccountFreezing
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: AccountLimits
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: Authenticator
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: BCS
     : Std
     ? address: "00000000000000000000000000000001"
       name: BitVector
     : Std
     ? address: "00000000000000000000000000000001"
-      name: CRSN
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: Capability
     : Std
-    ? address: "00000000000000000000000000000001"
-      name: ChainId
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: CoreAddresses
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DesignatedDealer
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: Diem
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemAccount
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemBlock
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemConfig
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemConsensusConfig
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemId
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemSystem
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemTimestamp
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemTransactionPublishingOption
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemVMConfig
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DiemVersion
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: DualAttestation
-    : DiemFramework
     ? address: "00000000000000000000000000000001"
       name: Errors
     : Std
@@ -94,75 +32,27 @@ compiled_package_info:
       name: GUID
     : Std
     ? address: "00000000000000000000000000000001"
-      name: Genesis
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: Hash
     : Std
     ? address: "00000000000000000000000000000001"
-      name: NetworkIdentity
-    : DiemFramework
+      name: MultiToken
+    : DiemExperimental
+    ? address: "00000000000000000000000000000001"
+      name: MultiTokenBalance
+    : DiemExperimental
+    ? address: "00000000000000000000000000000001"
+      name: NFT
+    : DiemExperimental
     ? address: "00000000000000000000000000000001"
       name: Option
     : Std
     ? address: "00000000000000000000000000000001"
-      name: PaymentScripts
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: RecoveryAddress
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: RegisteredCurrencies
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: Roles
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: SharedEd25519PublicKey
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: Signature
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: Signer
     : Std
     ? address: "00000000000000000000000000000001"
-      name: SlidingNonce
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: SystemAdministrationScripts
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: TransactionFee
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: TreasuryComplianceScripts
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: VASP
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: VASPDomain
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: ValidatorConfig
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: ValidatorOperatorConfig
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
       name: Vector
     : Std
-    ? address: "00000000000000000000000000000001"
-      name: Vote
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: XDX
-    : DiemFramework
-    ? address: "00000000000000000000000000000001"
-      name: XUS
-    : DiemFramework
-  source_digest: ABFBD2F233D4F76C092094C0FA1CDF391912C687555AA1D3229E36E760EC149B
+  source_digest: 84338590671AE6A7F7484BBD66D6825B98E38B1CC0EC375CE2D532810510D0CE
   build_flags:
     dev_mode: false
     test_mode: false
@@ -172,4 +62,3 @@ compiled_package_info:
     force_recompilation: false
 dependencies:
   - MoveStdlib
-  - DiemCoreFramework

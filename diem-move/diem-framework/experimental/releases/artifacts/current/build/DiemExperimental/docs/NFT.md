@@ -217,7 +217,7 @@ the <code>MikePainting</code> type should only be creatable by Michelangelo's ad
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_initialize">initialize</a>&lt;Type: store + drop&gt;(account: &signer) {
-    <b>assert</b>(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="NFT.md#0x1_NFT_ADMIN">ADMIN</a>, <a href="NFT.md#0x1_NFT_ENOT_ADMIN">ENOT_ADMIN</a>);
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="NFT.md#0x1_NFT_ADMIN">ADMIN</a>, <a href="NFT.md#0x1_NFT_ENOT_ADMIN">ENOT_ADMIN</a>);
     move_to(account, <a href="NFT.md#0x1_NFT_Admin">Admin</a> { mint_events: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="NFT.md#0x1_NFT_MintEvent">MintEvent</a>&lt;Type&gt;&gt;(account) })
 }
 </code></pre>
